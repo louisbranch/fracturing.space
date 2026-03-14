@@ -109,6 +109,13 @@ func (f fakeWebParticipantClient) GetParticipant(context.Context, *statev1.GetPa
 	return &statev1.GetParticipantResponse{}, nil
 }
 
+func (f fakeWebParticipantClient) CreateParticipant(context.Context, *statev1.CreateParticipantRequest, ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.CreateParticipantResponse{Participant: &statev1.Participant{Id: "participant-created"}}, nil
+}
+
 func (f fakeWebParticipantClient) UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
 	if f.err != nil {
 		return nil, f.err

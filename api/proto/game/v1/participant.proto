@@ -85,6 +85,10 @@ message CreateParticipantRequest {
 
   // Optional avatar asset identifier.
   string avatar_asset_id = 8;
+
+  // Optional campaign access for the participant seat.
+  // Defaults to MEMBER when omitted.
+  CampaignAccess campaign_access = 9;
 }
 
 message CreateParticipantResponse {

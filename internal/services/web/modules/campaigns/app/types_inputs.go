@@ -45,6 +45,13 @@ type CreateInviteInput struct {
 	RecipientUsername string
 }
 
+// CreateParticipantInput stores participant create form values.
+type CreateParticipantInput struct {
+	Name           string
+	Role           string
+	CampaignAccess string
+}
+
 // RevokeInviteInput stores revoke-invite form values.
 type RevokeInviteInput struct {
 	InviteID string
@@ -75,4 +82,9 @@ type UpdateCampaignAIBindingInput struct {
 // CreateCharacterResult stores create-character response values.
 type CreateCharacterResult struct {
 	CharacterID string
+}
+
+// CreateParticipantResult stores participant create response values.
+type CreateParticipantResult struct {
+	ParticipantID string
 }

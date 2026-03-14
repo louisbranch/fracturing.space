@@ -28,6 +28,10 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 			_, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 			return err
 		}},
+		{name: "create participant", run: func() error {
+			_, err := svc.createParticipant(ctx, "c1", CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"})
+			return err
+		}},
 		{name: "update participant", run: func() error {
 			return svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "player"})
 		}},
@@ -81,6 +85,9 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if _, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		t.Fatalf("createCharacter() error = %v", err)
 	}
+	if _, err := svc.createParticipant(ctx, "c1", CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "manager"}); err != nil {
+		t.Fatalf("CreateParticipant() error = %v", err)
+	}
 	gateway.campaignParticipant = CampaignParticipant{
 		ID:             "p-1",
 		Name:           "Player One",
@@ -97,7 +104,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 		t.Fatalf("RevokeInvite() error = %v", err)
 	}
 
-	want := []string{"start", "update-campaign", "update-campaign-ai-binding", "end", "create-character", "update-participant", "create-invite", "revoke-invite"}
+	want := []string{"start", "update-campaign", "update-campaign-ai-binding", "end", "create-character", "create-participant", "update-participant", "create-invite", "revoke-invite"}
 	if len(gateway.calls) != len(want) {
 		t.Fatalf("len(calls) = %d, want %d (%v)", len(gateway.calls), len(want), gateway.calls)
 	}
@@ -111,6 +118,9 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	}
 	if gateway.lastEndSessionInput.SessionID != "sess-1" {
 		t.Fatalf("end session input session id = %q, want %q", gateway.lastEndSessionInput.SessionID, "sess-1")
+	}
+	if gateway.lastCreateParticipantInput.Name != "Pending Seat" || gateway.lastCreateParticipantInput.Role != "player" || gateway.lastCreateParticipantInput.CampaignAccess != "manager" {
+		t.Fatalf("create participant input = %#v", gateway.lastCreateParticipantInput)
 	}
 	if gateway.lastCreateInviteInput.ParticipantID != "p-1" || gateway.lastCreateInviteInput.RecipientUsername != "alice" {
 		t.Fatalf("create invite input = %#v", gateway.lastCreateInviteInput)
@@ -225,6 +235,69 @@ func TestMutationMethodsUseAuthorizationGatewayDecision(t *testing.T) {
 			t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
 		}
 	})
+}
+
+func TestCreateParticipantRejectsHumanGMForAIGMCampaigns(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "AI"},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}
+	svc := newService(gateway)
+
+	_, err := svc.createParticipant(contextWithResolvedUserID("user-1"), "c1", CreateParticipantInput{
+		Name:           "Pending GM",
+		Role:           "gm",
+		CampaignAccess: "member",
+	})
+	if err == nil {
+		t.Fatalf("expected createParticipant() invalid input error")
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.ai_gm_campaign_disallows_human_gm_participants" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.ai_gm_campaign_disallows_human_gm_participants")
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
+}
+
+func TestUpdateParticipantRejectsHumanGMForAIGMCampaigns(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "AI"},
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-1",
+			Name:           "Pending GM",
+			Role:           "Player",
+			CampaignAccess: "Member",
+			Controller:     "Human",
+		},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}
+	svc := newService(gateway)
+
+	err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{
+		ParticipantID: "p-1",
+		Name:          "Pending GM",
+		Role:          "gm",
+	})
+	if err == nil {
+		t.Fatalf("expected updateParticipant() invalid input error")
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.ai_gm_campaign_disallows_human_gm_participants" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.ai_gm_campaign_disallows_human_gm_participants")
+	}
+	if len(gateway.calls) != 0 {
+		t.Fatalf("mutation gateway calls = %v, want none", gateway.calls)
+	}
 }
 
 func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {

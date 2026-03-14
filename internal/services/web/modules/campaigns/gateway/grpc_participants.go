@@ -126,6 +126,48 @@ func (g GRPCGateway) CampaignParticipant(ctx context.Context, campaignID string,
 	}, nil
 }
 
+// CreateParticipant executes package-scoped creation behavior for this flow.
+func (g GRPCGateway) CreateParticipant(ctx context.Context, campaignID string, input campaignapp.CreateParticipantInput) (campaignapp.CreateParticipantResult, error) {
+	if g.ParticipantClient == nil {
+		return campaignapp.CreateParticipantResult{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return campaignapp.CreateParticipantResult{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return campaignapp.CreateParticipantResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_name_is_required", "participant name is required")
+	}
+	role := mapParticipantRoleToProto(input.Role)
+	if role == statev1.ParticipantRole_ROLE_UNSPECIFIED {
+		return campaignapp.CreateParticipantResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_role_value_is_invalid", "participant role value is invalid")
+	}
+	access := mapParticipantAccessToProto(input.CampaignAccess)
+	if access == statev1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+		return campaignapp.CreateParticipantResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_access_value_is_invalid", "campaign access value is invalid")
+	}
+
+	resp, err := g.ParticipantClient.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId:     campaignID,
+		Name:           name,
+		Role:           role,
+		Controller:     statev1.Controller_CONTROLLER_HUMAN,
+		CampaignAccess: access,
+	})
+	if err != nil {
+		return campaignapp.CreateParticipantResult{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_create_participant",
+			FallbackMessage: "failed to create participant",
+		})
+	}
+	if resp.GetParticipant() == nil {
+		return campaignapp.CreateParticipantResult{}, apperrors.EK(apperrors.KindUnknown, "error.web.message.created_participant_id_was_empty", "created participant id was empty")
+	}
+	return campaignapp.CreateParticipantResult{ParticipantID: strings.TrimSpace(resp.GetParticipant().GetId())}, nil
+}
+
 // UpdateParticipant applies this package workflow transition.
 func (g GRPCGateway) UpdateParticipant(ctx context.Context, campaignID string, input campaignapp.UpdateParticipantInput) error {
 	if g.ParticipantClient == nil {

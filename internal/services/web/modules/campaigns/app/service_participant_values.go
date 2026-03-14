@@ -9,6 +9,8 @@ const (
 	participantAccessManager   = "manager"
 	participantAccessOwner     = "owner"
 	participantControllerAI    = "ai"
+	participantControllerHuman = "human"
+	gmModeAIValue              = "ai"
 )
 
 var participantAccessValues = []string{participantAccessMember, participantAccessManager, participantAccessOwner}
@@ -45,10 +47,30 @@ func participantControllerCanonical(value string) string {
 	case "ai", "controller_ai":
 		return participantControllerAI
 	case "human", "controller_human":
-		return "human"
+		return participantControllerHuman
 	case "unassigned", "controller_unassigned":
 		return "unassigned"
 	default:
 		return ""
 	}
+}
+
+// campaignGMModeCanonical maps transport/view gm-mode labels to canonical values.
+func campaignGMModeCanonical(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "ai", "gm_mode_ai":
+		return gmModeAIValue
+	case "human", "gm_mode_human":
+		return "human"
+	case "hybrid", "gm_mode_hybrid":
+		return "hybrid"
+	default:
+		return ""
+	}
+}
+
+// campaignDisallowsHumanGMParticipants reports whether HUMAN GM seats are
+// forbidden for the workspace gm mode.
+func campaignDisallowsHumanGMParticipants(value string) bool {
+	return campaignGMModeCanonical(value) == gmModeAIValue
 }

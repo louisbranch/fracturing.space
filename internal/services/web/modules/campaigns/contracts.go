@@ -14,6 +14,7 @@ type (
 	CampaignWorkspace                          = campaignapp.CampaignWorkspace
 	CampaignParticipant                        = campaignapp.CampaignParticipant
 	CampaignParticipantAccessOption            = campaignapp.CampaignParticipantAccessOption
+	CampaignParticipantCreator                 = campaignapp.CampaignParticipantCreator
 	CampaignParticipantEditor                  = campaignapp.CampaignParticipantEditor
 	CampaignAIAgentOption                      = campaignapp.CampaignAIAgentOption
 	CampaignAIBindingEditor                    = campaignapp.CampaignAIBindingEditor
@@ -51,10 +52,12 @@ type (
 	StartSessionInput                          = campaignapp.StartSessionInput
 	EndSessionInput                            = campaignapp.EndSessionInput
 	CreateInviteInput                          = campaignapp.CreateInviteInput
+	CreateParticipantInput                     = campaignapp.CreateParticipantInput
 	RevokeInviteInput                          = campaignapp.RevokeInviteInput
 	CreateCharacterInput                       = campaignapp.CreateCharacterInput
 	UpdateCharacterInput                       = campaignapp.UpdateCharacterInput
 	CreateCharacterResult                      = campaignapp.CreateCharacterResult
+	CreateParticipantResult                    = campaignapp.CreateParticipantResult
 	UpdateParticipantInput                     = campaignapp.UpdateParticipantInput
 	UpdateCampaignAIBindingInput               = campaignapp.UpdateCampaignAIBindingInput
 	CampaignGateway                            = campaignapp.CampaignGateway

@@ -154,6 +154,11 @@ func TestStableMutationRoutesReturnParseErrorFlashKeys(t *testing.T) {
 			wantKey: "error.web.message.failed_to_parse_invite_revoke_form",
 		},
 		{
+			name:    "participant create parse error",
+			path:    routepath.AppCampaignParticipantCreate("c1"),
+			wantKey: "error.web.message.failed_to_parse_participant_create_form",
+		},
+		{
 			name:    "participant update parse error",
 			path:    routepath.AppCampaignParticipantEdit("c1", "p-manager"),
 			wantKey: "error.web.message.failed_to_parse_participant_update_form",
@@ -312,6 +317,13 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			wantFlashKey: "web.campaigns.notice_invite_revoked",
 		},
 		{
+			name:         "participant create",
+			path:         routepath.AppCampaignParticipantCreate("c1"),
+			body:         "name=Pending+Seat&role=player&campaign_access=member",
+			wantLocation: routepath.AppCampaignInvites("c1"),
+			wantFlashKey: "web.campaigns.notice_participant_created",
+		},
+		{
 			name:         "participant update",
 			path:         routepath.AppCampaignParticipantEdit("c1", "p-manager"),
 			body:         "name=Manager+One&role=player&pronouns=they%2Fthem",
@@ -468,6 +480,85 @@ func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantKey)
 			}
 		})
+	}
+}
+
+func TestParticipantCreateRouteValidatesFields(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	mount, _ := m.Mount()
+
+	tests := []struct {
+		name    string
+		body    string
+		wantKey string
+	}{
+		{
+			name:    "missing name",
+			body:    "name=   &role=player&campaign_access=member",
+			wantKey: "error.web.message.participant_name_is_required",
+		},
+		{
+			name:    "invalid role",
+			body:    "name=Pending+Seat&role=invalid&campaign_access=member",
+			wantKey: "error.web.message.participant_role_value_is_invalid",
+		},
+		{
+			name:    "invalid access",
+			body:    "name=Pending+Seat&role=player&campaign_access=invalid",
+			wantKey: "error.web.message.campaign_access_value_is_invalid",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantCreate("c1"), strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			rr := httptest.NewRecorder()
+			mount.Handler.ServeHTTP(rr, req)
+			if rr.Code != http.StatusFound {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+			}
+			notice := flashNoticeFromResponse(t, rr)
+			if notice.Key != tc.wantKey {
+				t.Fatalf("flash key = %q, want %q", notice.Key, tc.wantKey)
+			}
+			if got := rr.Header().Get("Location"); got != routepath.AppCampaignParticipantCreate("c1") {
+				t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignParticipantCreate("c1"))
+			}
+		})
+	}
+}
+
+func TestParticipantCreateRouteRejectsHumanGMForAIGMCampaigns(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items:           []CampaignSummary{{ID: "c1", Name: "First"}},
+		workspaceGMMode: "AI",
+		participants: []CampaignParticipant{{
+			ID:             "p-manager",
+			UserID:         "user-123",
+			CampaignAccess: "Manager",
+		}},
+	}, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	mount, _ := m.Mount()
+
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantCreate("c1"), strings.NewReader("name=Pending+GM&role=gm&campaign_access=member"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	notice := flashNoticeFromResponse(t, rr)
+	if notice.Key != "error.web.message.ai_gm_campaign_disallows_human_gm_participants" {
+		t.Fatalf("flash key = %q, want %q", notice.Key, "error.web.message.ai_gm_campaign_disallows_human_gm_participants")
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaignParticipantCreate("c1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignParticipantCreate("c1"))
 	}
 }
 

@@ -55,6 +55,15 @@ func parseCreateInviteInput(form url.Values) CreateInviteInput {
 	}
 }
 
+// parseCreateParticipantInput maps form values into participant-create input.
+func parseCreateParticipantInput(form url.Values) CreateParticipantInput {
+	return CreateParticipantInput{
+		Name:           strings.TrimSpace(form.Get("name")),
+		Role:           strings.TrimSpace(form.Get("role")),
+		CampaignAccess: strings.TrimSpace(form.Get("campaign_access")),
+	}
+}
+
 // parseRevokeInviteInput maps form values into invite-revoke input.
 func parseRevokeInviteInput(form url.Values) RevokeInviteInput {
 	return RevokeInviteInput{InviteID: strings.TrimSpace(form.Get("invite_id"))}

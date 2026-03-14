@@ -25,6 +25,7 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 		routepath.AppCampaign("c1"):                      "campaign-overview",
 		routepath.AppCampaignEdit("c1"):                  "campaign-edit",
 		routepath.AppCampaignParticipants("c1"):          "campaign-participants",
+		routepath.AppCampaignParticipantCreate("c1"):     "campaign-participant-create",
 		routepath.AppCampaignParticipantEdit("c1", "p1"): "campaign-participant-edit",
 		routepath.AppCampaignCharacters("c1"):            "campaign-characters",
 		routepath.AppCampaignCharacter("c1", "pc1"):      "campaign-character-detail",
@@ -1281,11 +1282,120 @@ func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testin
 	}
 }
 
-func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
+func TestMountCampaignParticipantsShowsCreateLinkWhenManageAllowed(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []CampaignParticipant{{
+			ID:             "p-manager",
+			UserID:         "user-123",
+			CampaignAccess: "Manager",
+		}},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipants("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-campaign-participants-add-link="true"`) {
+		t.Fatalf("expected create link marker in output: %q", body)
+	}
+	if !strings.Contains(body, `href="/app/campaigns/c1/participants/create"`) {
+		t.Fatalf("expected create participant href in output: %q", body)
+	}
+}
+
+func TestMountCampaignParticipantCreateRendersForm(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items:        []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []CampaignParticipant{{ID: "p-owner", UserID: "user-123", CampaignAccess: "Owner"}},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "member", Evaluated: true, Allowed: true},
+			{CheckID: "manager", Evaluated: true, Allowed: true},
+			{CheckID: "owner", Evaluated: true, Allowed: true},
+		},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantCreate("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`campaign-participant-create`,
+		`data-campaign-participant-create-page="true"`,
+		`data-campaign-participant-create-form="true"`,
+		`action="/app/campaigns/c1/participants/create"`,
+		`name="name"`,
+		`name="role"`,
+		`name="campaign_access"`,
+		`value="gm"`,
+		`value="player"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing participant create marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignParticipantCreateOmitsGMRoleForAIGMCampaigns(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "AI",
+		participants:    []CampaignParticipant{{ID: "p-owner", UserID: "user-123", CampaignAccess: "Owner"}},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "member", Evaluated: true, Allowed: true},
+			{CheckID: "manager", Evaluated: true, Allowed: true},
+			{CheckID: "owner", Evaluated: true, Allowed: true},
+		},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantCreate("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `value="gm"`) {
+		t.Fatalf("unexpected GM option for AI GM campaign: %q", body)
+	}
+	if !strings.Contains(body, `value="player"`) {
+		t.Fatalf("expected player option in output: %q", body)
+	}
+}
+
+func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "Human",
 		participant: CampaignParticipant{
 			ID:             "p-a",
 			Name:           "Aria",
@@ -1324,6 +1434,46 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing participant edit marker %q: %q", marker, body)
 		}
+	}
+}
+
+func TestMountCampaignParticipantEditOmitsGMRoleForHumanSeatsInAIGMCampaigns(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "AI",
+		participant: CampaignParticipant{
+			ID:             "p-a",
+			Name:           "Aria",
+			Role:           "GM",
+			CampaignAccess: "Member",
+			Controller:     "Human",
+			Pronouns:       "she/her",
+		},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p-a"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `value="gm"`) {
+		t.Fatalf("unexpected GM option for AI GM campaign human participant: %q", body)
+	}
+	if !strings.Contains(body, `value="player"`) {
+		t.Fatalf("expected player option in output: %q", body)
 	}
 }
 

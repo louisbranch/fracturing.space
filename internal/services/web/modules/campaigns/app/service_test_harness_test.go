@@ -93,6 +93,7 @@ type campaignGatewayStub struct {
 	lastStartSessionInput                   StartSessionInput
 	lastEndSessionInput                     EndSessionInput
 	lastCreateInviteInput                   CreateInviteInput
+	lastCreateParticipantInput              CreateParticipantInput
 	lastRevokeInviteInput                   RevokeInviteInput
 	lastUpdateParticipantInput              UpdateParticipantInput
 	applyCharacterCreationStepErr           error
@@ -297,6 +298,12 @@ func (f *campaignGatewayStub) ReleaseCharacterControl(_ context.Context, campaig
 	f.lastReleaseCharacterControlCharacterID = characterID
 	f.calls = append(f.calls, "release-character-control")
 	return f.releaseCharacterControlErr
+}
+
+func (f *campaignGatewayStub) CreateParticipant(_ context.Context, _ string, input CreateParticipantInput) (CreateParticipantResult, error) {
+	f.lastCreateParticipantInput = input
+	f.calls = append(f.calls, "create-participant")
+	return CreateParticipantResult{ParticipantID: "participant-created"}, nil
 }
 
 func (f *campaignGatewayStub) UpdateParticipant(_ context.Context, _ string, input UpdateParticipantInput) error {

@@ -30,7 +30,8 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageParticipants, campaignRecord); err != nil {
+	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityManageParticipants, campaignRecord)
+	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
 
@@ -67,7 +68,27 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if controller == participant.ControllerUnspecified {
 		controller = participant.ControllerHuman
 	}
-	access := participant.CampaignAccessMember
+	if disallowsHumanGMForCampaignGMMode(campaignRecord.GmMode, role, controller) {
+		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "ai gm campaigns cannot create human gm participants")
+	}
+	access := campaignAccessFromProto(in.GetCampaignAccess())
+	if access == participant.CampaignAccessUnspecified {
+		access = participant.CampaignAccessMember
+	} else {
+		ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
+		if err != nil {
+			return storage.ParticipantRecord{}, err
+		}
+		decision := domainauthz.CanParticipantAccessChange(
+			policyActor.CampaignAccess,
+			participant.CampaignAccessUnspecified,
+			access,
+			ownerCount,
+		)
+		if !decision.Allowed {
+			return storage.ParticipantRecord{}, participantPolicyDecisionError(decision.ReasonCode)
+		}
+	}
 
 	participantID, err := c.idGenerator()
 	if err != nil {

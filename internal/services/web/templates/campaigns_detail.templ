@@ -144,7 +144,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 											<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
 										</div>
 									} else {
-										<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+										<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignParticipantCreate(view.CampaignID) } data-campaign-participants-add-link="true">{ T(loc, "game.participants.action_add") }</a>
 									}
 								}
 							</div>
@@ -200,6 +200,44 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				}
 			</div>
 		</div>
+		} else if view.Marker == "campaign-participant-create" {
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-create-page="true">
+				<div class="card-body gap-4 p-4">
+					<h2 class="card-title">{ T(loc, "game.participants.action_add") }</h2>
+					<form method="post" action={ routepath.AppCampaignParticipantCreate(view.CampaignID) } class="space-y-4" data-campaign-participant-create-form="true">
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantCreator.Name }/>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
+							</label>
+							<select class="select select-bordered w-full" name="role">
+								if view.ParticipantCreator.AllowGMRole {
+									<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantCreator.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+								}
+								<option value="player" selected?={ campaignParticipantRoleCanonical(view.ParticipantCreator.Role) == "player" }>{ campaignParticipantRoleLabel(loc, "player") }</option>
+							</select>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
+							</label>
+							<select class="select select-bordered w-full" name="campaign_access">
+								for _, option := range view.ParticipantCreator.AccessOptions {
+									<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantCreator.CampaignAccess) == option.Value } disabled?={ !option.Allowed }>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+								}
+							</select>
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary" type="submit" disabled?={ campaignActionsLocked(view) } data-campaign-participant-create-submit-disabled={ campaignActionsLocked(view) }>{ T(loc, "game.participants.action_add") }</button>
+						</div>
+					</form>
+				</div>
+			</div>
 		} else if view.Marker == "campaign-participant-edit" {
 			<div class={ "grid grid-cols-1 gap-4", templ.KV("md:grid-cols-2", view.AIBindingEditor.Visible) } data-campaign-participant-edit-layout={ campaignParticipantEditLayout(view) } data-campaign-participant-edit-page="true">
 				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-edit-form="true">
@@ -223,7 +261,9 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									</select>
 								} else {
 									<select class="select select-bordered w-full" name="role">
-										<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+										if view.ParticipantEditor.AllowGMRole {
+											<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+										}
 										<option value="player" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "player" }>{ campaignParticipantRoleLabel(loc, "player") }</option>
 									</select>
 								}

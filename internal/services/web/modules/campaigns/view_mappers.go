@@ -228,9 +228,28 @@ func mapParticipantEditorView(editor CampaignParticipantEditor) webtemplates.Cam
 		Controller:     editor.Participant.Controller,
 		Pronouns:       editor.Participant.Pronouns,
 		CampaignAccess: editor.Participant.CampaignAccess,
+		AllowGMRole:    editor.AllowGMRole,
 		RoleReadOnly:   editor.RoleReadOnly,
 		AccessOptions:  accessOptions,
 		AccessReadOnly: editor.AccessReadOnly,
+	}
+}
+
+// mapParticipantCreatorView converts domain creator state to template view state.
+func mapParticipantCreatorView(creator CampaignParticipantCreator) webtemplates.CampaignParticipantCreatorView {
+	accessOptions := make([]webtemplates.CampaignParticipantAccessOptionView, 0, len(creator.AccessOptions))
+	for _, option := range creator.AccessOptions {
+		accessOptions = append(accessOptions, webtemplates.CampaignParticipantAccessOptionView{
+			Value:   option.Value,
+			Allowed: option.Allowed,
+		})
+	}
+	return webtemplates.CampaignParticipantCreatorView{
+		Name:           creator.Name,
+		Role:           creator.Role,
+		CampaignAccess: creator.CampaignAccess,
+		AllowGMRole:    creator.AllowGMRole,
+		AccessOptions:  accessOptions,
 	}
 }
 

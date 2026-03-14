@@ -285,6 +285,7 @@ func TestCampaignParticipantEditorLoadsAccessOptions(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "Human"},
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-a",
 			Name:           "Aria",
@@ -318,12 +319,75 @@ func TestCampaignParticipantEditorLoadsAccessOptions(t *testing.T) {
 	if !editor.AccessReadOnly {
 		t.Fatalf("editor.AccessReadOnly = %v, want true", editor.AccessReadOnly)
 	}
+	if !editor.AllowGMRole {
+		t.Fatalf("editor.AllowGMRole = %v, want true", editor.AllowGMRole)
+	}
+}
+
+func TestCampaignParticipantCreatorLoadsDefaultsAndAccessOptions(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "Human"},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+		batchAuthorizationDecisions: []AuthorizationDecision{
+			{CheckID: "member", Evaluated: true, Allowed: true},
+			{CheckID: "manager", Evaluated: true, Allowed: true},
+			{CheckID: "owner", Evaluated: true, Allowed: false},
+		},
+	}
+	svc := newService(gateway)
+
+	creator, err := svc.campaignParticipantCreator(context.Background(), "c-1")
+	if err != nil {
+		t.Fatalf("campaignParticipantCreator() error = %v", err)
+	}
+	if creator.Role != "player" {
+		t.Fatalf("creator.Role = %q, want %q", creator.Role, "player")
+	}
+	if creator.CampaignAccess != "member" {
+		t.Fatalf("creator.CampaignAccess = %q, want %q", creator.CampaignAccess, "member")
+	}
+	if !creator.AllowGMRole {
+		t.Fatalf("creator.AllowGMRole = %v, want true", creator.AllowGMRole)
+	}
+	if len(creator.AccessOptions) != 3 {
+		t.Fatalf("len(creator.AccessOptions) = %d, want 3", len(creator.AccessOptions))
+	}
+	if creator.AccessOptions[2].Allowed {
+		t.Fatalf("owner access option should remain disabled for this actor")
+	}
+}
+
+func TestCampaignParticipantCreatorDisablesGMRoleForAIGMCampaigns(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "AI"},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}
+	svc := newService(gateway)
+
+	creator, err := svc.campaignParticipantCreator(context.Background(), "c-1")
+	if err != nil {
+		t.Fatalf("campaignParticipantCreator() error = %v", err)
+	}
+	if creator.AllowGMRole {
+		t.Fatalf("creator.AllowGMRole = %v, want false", creator.AllowGMRole)
+	}
 }
 
 func TestCampaignParticipantEditorLocksAIInvariantFields(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "AI"},
 		campaignParticipant: CampaignParticipant{
 			ID:             "p-ai",
 			Name:           "Caretaker",
@@ -356,6 +420,37 @@ func TestCampaignParticipantEditorLocksAIInvariantFields(t *testing.T) {
 	}
 	if len(editor.AccessOptions) != 1 || editor.AccessOptions[0].Value != "member" {
 		t.Fatalf("editor.AccessOptions = %#v, want single member option", editor.AccessOptions)
+	}
+}
+
+func TestCampaignParticipantEditorDisablesGMRoleForHumanSeatsInAIGMCampaigns(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "AI"},
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-human",
+			Name:           "Aria",
+			Role:           "GM",
+			CampaignAccess: "Member",
+			Controller:     "Human",
+		},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated: true,
+			Allowed:   true,
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignParticipantEditor(context.Background(), "c-1", "p-human")
+	if err != nil {
+		t.Fatalf("campaignParticipantEditor() error = %v", err)
+	}
+	if editor.AllowGMRole {
+		t.Fatalf("editor.AllowGMRole = %v, want false", editor.AllowGMRole)
+	}
+	if editor.RoleReadOnly {
+		t.Fatalf("editor.RoleReadOnly = %v, want false", editor.RoleReadOnly)
 	}
 }
 

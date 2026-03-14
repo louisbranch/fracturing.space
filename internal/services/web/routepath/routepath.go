@@ -44,6 +44,7 @@ const (
 	AppCampaignSessionEndPattern              = CampaignsPrefix + "{campaignID}/sessions/end"
 	AppCampaignAIBindingPattern               = CampaignsPrefix + "{campaignID}/ai-binding"
 	AppCampaignParticipantsPattern            = CampaignsPrefix + "{campaignID}/participants"
+	AppCampaignParticipantCreatePattern       = CampaignsPrefix + "{campaignID}/participants/create"
 	AppCampaignParticipantEditPattern         = CampaignsPrefix + "{campaignID}/participants/{participantID}/edit"
 	AppCampaignCharactersPattern              = CampaignsPrefix + "{campaignID}/characters"
 	AppCampaignCharacterPattern               = CampaignsPrefix + "{campaignID}/characters/{characterID}"
@@ -117,6 +118,11 @@ func AppCampaignSession(campaignID string, sessionID string) string {
 // AppCampaignParticipants returns the campaign participants route.
 func AppCampaignParticipants(campaignID string) string {
 	return AppCampaign(campaignID) + "/participants"
+}
+
+// AppCampaignParticipantCreate returns the campaign participant-create route.
+func AppCampaignParticipantCreate(campaignID string) string {
+	return AppCampaignParticipants(campaignID) + "/create"
 }
 
 // AppCampaignParticipantEdit returns the campaign participant-edit route.

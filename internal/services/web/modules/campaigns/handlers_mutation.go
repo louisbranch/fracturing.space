@@ -171,6 +171,20 @@ func (h handlers) handleInviteCreate(w http.ResponseWriter, r *http.Request, cam
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_invite_created", routepath.AppCampaignInvites(campaignID))
 }
 
+// handleParticipantCreate handles this route in the module transport layer.
+func (h handlers) handleParticipantCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
+	redirectURL := routepath.AppCampaignParticipantCreate(campaignID)
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_participant_create_form", redirectURL) {
+		return
+	}
+	ctx, _ := h.RequestContextAndUserID(r)
+	if _, err := h.service.CreateParticipant(ctx, campaignID, parseCreateParticipantInput(r.Form)); err != nil {
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_participant", redirectURL)
+		return
+	}
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_participant_created", routepath.AppCampaignInvites(campaignID))
+}
+
 // handleInviteRevoke handles this route in the module transport layer.
 func (h handlers) handleInviteRevoke(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_invite_revoke_form", routepath.AppCampaignInvites(campaignID)) {

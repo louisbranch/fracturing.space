@@ -286,6 +286,98 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 	}
 }
 
+func TestCreateParticipant_Success_ManagerAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
+
+	eventStore := newFakeEventStore()
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-manager",
+				PayloadJSON: []byte(`{"participant_id":"participant-manager","user_id":"","name":"Quartermaster","role":"PLAYER","controller":"HUMAN","campaign_access":"MANAGER"}`),
+			}),
+		},
+	}}
+	svc := &ParticipantService{
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("participant-manager"),
+	}
+
+	resp, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId:     "c1",
+		Name:           "Quartermaster",
+		Role:           statev1.ParticipantRole_PLAYER,
+		Controller:     statev1.Controller_CONTROLLER_HUMAN,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+	if resp.Participant.GetCampaignAccess() != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Fatalf("Participant CampaignAccess = %v, want %v", resp.Participant.GetCampaignAccess(), statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
+	}
+}
+
+func TestCreateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   ownerParticipantRecord("c1", "owner-1"),
+		"manager-1": managerParticipantRecord("c1", "manager-1"),
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.CreateParticipant(contextWithParticipantID("manager-1"), &statev1.CreateParticipantRequest{
+		CampaignId:     "c1",
+		Name:           "Pending Owner",
+		Role:           statev1.ParticipantRole_PLAYER,
+		Controller:     statev1.Controller_CONTROLLER_HUMAN,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestCreateParticipant_DeniesHumanGMForAIGMCampaign(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+		GmMode: campaign.GmModeAI,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Human GM",
+		Role:       statev1.ParticipantRole_GM,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
 func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -745,6 +837,37 @@ func TestUpdateParticipant_NoFields(t *testing.T) {
 	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
 		CampaignId:    "c1",
 		ParticipantId: "p1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestUpdateParticipant_DeniesHumanGMForAIGMCampaign(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+		GmMode: campaign.GmModeAI,
+	}
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": ownerParticipantRecord("c1", "owner-1"),
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.UpdateParticipant(contextWithParticipantID("owner-1"), &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Role:          statev1.ParticipantRole_GM,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
