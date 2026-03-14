@@ -13,6 +13,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
 
+const countOpenSessionGatesQuery = `
+SELECT COUNT(*)
+FROM session_gates
+WHERE campaign_id = ? AND session_id = ? AND status = 'open';
+`
+
 // Session methods
 
 // PutSession atomically stores a session and sets it as the active session for the campaign.
@@ -362,14 +368,22 @@ func (s *Store) GetOpenSessionGate(ctx context.Context, campaignID, sessionID st
 		return storage.SessionGate{}, fmt.Errorf("session id is required")
 	}
 
+	var openGateCount int64
+	if err := s.sqlDB.QueryRowContext(ctx, countOpenSessionGatesQuery, campaignID, sessionID).Scan(&openGateCount); err != nil {
+		return storage.SessionGate{}, fmt.Errorf("count open session gates: %w", err)
+	}
+	switch {
+	case openGateCount == 0:
+		return storage.SessionGate{}, storage.ErrNotFound
+	case openGateCount > 1:
+		return storage.SessionGate{}, fmt.Errorf("get open session gate: multiple open session gates for campaign %q session %q", campaignID, sessionID)
+	}
+
 	row, err := s.q.GetOpenSessionGate(ctx, db.GetOpenSessionGateParams{
 		CampaignID: campaignID,
 		SessionID:  sessionID,
 	})
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return storage.SessionGate{}, storage.ErrNotFound
-		}
 		return storage.SessionGate{}, fmt.Errorf("get open session gate: %w", err)
 	}
 

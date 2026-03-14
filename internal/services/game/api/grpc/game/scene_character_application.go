@@ -30,7 +30,7 @@ func (a sceneApplication) AddCharacterToScene(ctx context.Context, campaignID st
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -47,8 +47,8 @@ func (a sceneApplication) AddCharacterToScene(ctx context.Context, campaignID st
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneCharacterAdd,
@@ -80,7 +80,7 @@ func (a sceneApplication) RemoveCharacterFromScene(ctx context.Context, campaign
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -97,8 +97,8 @@ func (a sceneApplication) RemoveCharacterFromScene(ctx context.Context, campaign
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneCharacterRemove,
@@ -134,7 +134,7 @@ func (a sceneApplication) TransferCharacter(ctx context.Context, campaignID stri
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -155,8 +155,8 @@ func (a sceneApplication) TransferCharacter(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneCharacterTransfer,

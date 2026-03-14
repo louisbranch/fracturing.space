@@ -53,6 +53,101 @@ type handlerEntry struct {
 	ids    idRequirement
 }
 
+// registrationRequirements keeps contributor-facing projection registration
+// readable while preserving the internal bitset checks used at dispatch time.
+type registrationRequirements struct {
+	stores storeRequirement
+	ids    idRequirement
+}
+
+type requirementOption func(*registrationRequirements)
+
+type storeDependency uint8
+
+const (
+	storeCampaign storeDependency = iota
+	storeCharacter
+	storeCampaignFork
+	storeInvite
+	storeParticipant
+	storeSession
+	storeSessionGate
+	storeSessionSpotlight
+	storeScene
+	storeSceneCharacter
+	storeSceneGate
+	storeSceneSpotlight
+	storeAdapters
+)
+
+type envelopeField uint8
+
+const (
+	fieldCampaignID envelopeField = iota
+	fieldEntityID
+	fieldSessionID
+)
+
+func requirements(options ...requirementOption) registrationRequirements {
+	var req registrationRequirements
+	for _, option := range options {
+		if option != nil {
+			option(&req)
+		}
+	}
+	return req
+}
+
+func needsStores(dependencies ...storeDependency) requirementOption {
+	return func(req *registrationRequirements) {
+		for _, dependency := range dependencies {
+			switch dependency {
+			case storeCampaign:
+				req.stores |= needCampaign
+			case storeCharacter:
+				req.stores |= needCharacter
+			case storeCampaignFork:
+				req.stores |= needCampaignFork
+			case storeInvite:
+				req.stores |= needInvite
+			case storeParticipant:
+				req.stores |= needParticipant
+			case storeSession:
+				req.stores |= needSession
+			case storeSessionGate:
+				req.stores |= needSessionGate
+			case storeSessionSpotlight:
+				req.stores |= needSessionSpotlight
+			case storeScene:
+				req.stores |= needScene
+			case storeSceneCharacter:
+				req.stores |= needSceneCharacter
+			case storeSceneGate:
+				req.stores |= needSceneGate
+			case storeSceneSpotlight:
+				req.stores |= needSceneSpotlight
+			case storeAdapters:
+				req.stores |= needAdapters
+			}
+		}
+	}
+}
+
+func needsEnvelope(fields ...envelopeField) requirementOption {
+	return func(req *registrationRequirements) {
+		for _, field := range fields {
+			switch field {
+			case fieldCampaignID:
+				req.ids |= requireCampaignID
+			case fieldEntityID:
+				req.ids |= requireEntityID
+			case fieldSessionID:
+				req.ids |= requireSessionID
+			}
+		}
+	}
+}
+
 // coreRouter is the package-level router that dispatches core projection events.
 var coreRouter = buildCoreRouter()
 
@@ -63,56 +158,56 @@ func buildCoreRouter() *CoreRouter {
 	r := NewCoreRouter()
 
 	// campaign
-	HandleProjection(r, campaign.EventTypeCreated, needCampaign, requireEntityID, Applier.applyCampaignCreated)
-	HandleProjection(r, campaign.EventTypeUpdated, needCampaign, requireCampaignID, Applier.applyCampaignUpdated)
-	HandleProjection(r, campaign.EventTypeAIBound, needCampaign, requireCampaignID, Applier.applyCampaignAIBound)
-	HandleProjection(r, campaign.EventTypeAIUnbound, needCampaign, requireCampaignID, Applier.applyCampaignAIUnbound)
-	HandleProjection(r, campaign.EventTypeAIAuthRotated, needCampaign, requireCampaignID, Applier.applyCampaignAIAuthRotated)
-	HandleProjection(r, campaign.EventTypeForked, needCampaignFork, requireCampaignID, Applier.applyCampaignForked)
+	HandleProjection(r, campaign.EventTypeCreated, requirements(needsStores(storeCampaign), needsEnvelope(fieldEntityID)), Applier.applyCampaignCreated)
+	HandleProjection(r, campaign.EventTypeUpdated, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignUpdated)
+	HandleProjection(r, campaign.EventTypeAIBound, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignAIBound)
+	HandleProjection(r, campaign.EventTypeAIUnbound, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignAIUnbound)
+	HandleProjection(r, campaign.EventTypeAIAuthRotated, requirements(needsStores(storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyCampaignAIAuthRotated)
+	HandleProjection(r, campaign.EventTypeForked, requirements(needsStores(storeCampaignFork), needsEnvelope(fieldCampaignID)), Applier.applyCampaignForked)
 
 	// participant
-	HandleProjection(r, participant.EventTypeJoined, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantJoined)
-	HandleProjection(r, participant.EventTypeUpdated, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantUpdated)
-	HandleProjectionRaw(r, participant.EventTypeLeft, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantLeft)
-	HandleProjection(r, participant.EventTypeBound, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantBound)
-	HandleProjection(r, participant.EventTypeUnbound, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applyParticipantUnbound)
-	HandleProjection(r, participant.EventTypeSeatReassigned, needParticipant|needCampaign, requireCampaignID|requireEntityID, Applier.applySeatReassigned)
+	HandleProjection(r, participant.EventTypeJoined, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantJoined)
+	HandleProjection(r, participant.EventTypeUpdated, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantUpdated)
+	HandleProjectionRaw(r, participant.EventTypeLeft, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantLeft)
+	HandleProjection(r, participant.EventTypeBound, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantBound)
+	HandleProjection(r, participant.EventTypeUnbound, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyParticipantUnbound)
+	HandleProjection(r, participant.EventTypeSeatReassigned, requirements(needsStores(storeParticipant, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applySeatReassigned)
 
 	// character
-	HandleProjection(r, character.EventTypeCreated, needCharacter|needCampaign, requireCampaignID|requireEntityID, Applier.applyCharacterCreated)
-	HandleProjection(r, character.EventTypeUpdated, needCharacter|needCampaign, requireCampaignID|requireEntityID, Applier.applyCharacterUpdated)
-	HandleProjection(r, character.EventTypeDeleted, needCharacter|needCampaign, requireCampaignID|requireEntityID, Applier.applyCharacterDeleted)
-	HandleProjection(r, character.EventTypeProfileUpdated, needAdapters, requireCampaignID|requireEntityID, Applier.applyCharacterProfileUpdated)
+	HandleProjection(r, character.EventTypeCreated, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterCreated)
+	HandleProjection(r, character.EventTypeUpdated, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterUpdated)
+	HandleProjection(r, character.EventTypeDeleted, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterDeleted)
+	HandleProjection(r, character.EventTypeProfileUpdated, requirements(needsStores(storeAdapters), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterProfileUpdated)
 
 	// invite — InviteID comes from payload with EntityID fallback for created/updated.
-	HandleProjection(r, invite.EventTypeCreated, needInvite|needCampaign, requireCampaignID, Applier.applyInviteCreated)
-	HandleProjection(r, invite.EventTypeClaimed, needInvite|needCampaign, requireCampaignID|requireEntityID, Applier.applyInviteClaimed)
-	HandleProjection(r, invite.EventTypeRevoked, needInvite|needCampaign, requireCampaignID|requireEntityID, Applier.applyInviteRevoked)
-	HandleProjection(r, invite.EventTypeUpdated, needInvite, 0, Applier.applyInviteUpdated)
+	HandleProjection(r, invite.EventTypeCreated, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyInviteCreated)
+	HandleProjection(r, invite.EventTypeClaimed, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyInviteClaimed)
+	HandleProjection(r, invite.EventTypeRevoked, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyInviteRevoked)
+	HandleProjection(r, invite.EventTypeUpdated, requirements(needsStores(storeInvite)), Applier.applyInviteUpdated)
 
 	// session — SessionID from payload with EntityID fallback, so EntityID
 	// is not a hard envelope requirement for started/ended.
-	HandleProjection(r, session.EventTypeStarted, needSession, requireCampaignID, Applier.applySessionStarted)
-	HandleProjection(r, session.EventTypeEnded, needSession, requireCampaignID, Applier.applySessionEnded)
+	HandleProjection(r, session.EventTypeStarted, requirements(needsStores(storeSession), needsEnvelope(fieldCampaignID)), Applier.applySessionStarted)
+	HandleProjection(r, session.EventTypeEnded, requirements(needsStores(storeSession), needsEnvelope(fieldCampaignID)), Applier.applySessionEnded)
 	// Gate handlers derive GateID from payload with EntityID fallback.
-	HandleProjection(r, session.EventTypeGateOpened, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateOpened)
-	HandleProjection(r, session.EventTypeGateResponseRecorded, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateResponseRecorded)
-	HandleProjection(r, session.EventTypeGateResolved, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateResolved)
-	HandleProjection(r, session.EventTypeGateAbandoned, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateAbandoned)
-	HandleProjection(r, session.EventTypeSpotlightSet, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightSet)
-	HandleProjectionRaw(r, session.EventTypeSpotlightCleared, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightCleared)
+	HandleProjection(r, session.EventTypeGateOpened, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateOpened)
+	HandleProjection(r, session.EventTypeGateResponseRecorded, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateResponseRecorded)
+	HandleProjection(r, session.EventTypeGateResolved, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateResolved)
+	HandleProjection(r, session.EventTypeGateAbandoned, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateAbandoned)
+	HandleProjection(r, session.EventTypeSpotlightSet, requirements(needsStores(storeSessionSpotlight), needsEnvelope(fieldSessionID)), Applier.applySessionSpotlightSet)
+	HandleProjectionRaw(r, session.EventTypeSpotlightCleared, requirements(needsStores(storeSessionSpotlight), needsEnvelope(fieldSessionID)), Applier.applySessionSpotlightCleared)
 
 	// scene
-	HandleProjection(r, scene.EventTypeCreated, needScene|needSceneCharacter, requireCampaignID, Applier.applySceneCreated)
-	HandleProjection(r, scene.EventTypeUpdated, needScene, requireCampaignID, Applier.applySceneUpdated)
-	HandleProjection(r, scene.EventTypeEnded, needScene|needSceneSpotlight, requireCampaignID, Applier.applySceneEnded)
-	HandleProjection(r, scene.EventTypeCharacterAdded, needSceneCharacter, requireCampaignID, Applier.applySceneCharacterAdded)
-	HandleProjection(r, scene.EventTypeCharacterRemoved, needSceneCharacter, requireCampaignID, Applier.applySceneCharacterRemoved)
-	HandleProjection(r, scene.EventTypeGateOpened, needSceneGate, requireCampaignID, Applier.applySceneGateOpened)
-	HandleProjection(r, scene.EventTypeGateResolved, needSceneGate, requireCampaignID, Applier.applySceneGateResolved)
-	HandleProjection(r, scene.EventTypeGateAbandoned, needSceneGate, requireCampaignID, Applier.applySceneGateAbandoned)
-	HandleProjection(r, scene.EventTypeSpotlightSet, needSceneSpotlight, requireCampaignID, Applier.applySceneSpotlightSet)
-	HandleProjection(r, scene.EventTypeSpotlightCleared, needSceneSpotlight, requireCampaignID, Applier.applySceneSpotlightCleared)
+	HandleProjection(r, scene.EventTypeCreated, requirements(needsStores(storeScene, storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCreated)
+	HandleProjection(r, scene.EventTypeUpdated, requirements(needsStores(storeScene), needsEnvelope(fieldCampaignID)), Applier.applySceneUpdated)
+	HandleProjection(r, scene.EventTypeEnded, requirements(needsStores(storeScene, storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneEnded)
+	HandleProjection(r, scene.EventTypeCharacterAdded, requirements(needsStores(storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCharacterAdded)
+	HandleProjection(r, scene.EventTypeCharacterRemoved, requirements(needsStores(storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCharacterRemoved)
+	HandleProjection(r, scene.EventTypeGateOpened, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateOpened)
+	HandleProjection(r, scene.EventTypeGateResolved, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateResolved)
+	HandleProjection(r, scene.EventTypeGateAbandoned, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateAbandoned)
+	HandleProjection(r, scene.EventTypeSpotlightSet, requirements(needsStores(storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneSpotlightSet)
+	HandleProjection(r, scene.EventTypeSpotlightCleared, requirements(needsStores(storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneSpotlightCleared)
 
 	return r
 }

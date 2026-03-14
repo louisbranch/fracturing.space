@@ -96,7 +96,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", status.Error(codes.InvalidArgument, "participant id is required")
 	}
 	participantID := strings.TrimSpace(in.GetParticipantId().GetValue())
-	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityManageCharacters, campaignRecord)
+	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageCharacters, campaignRecord)
 	if err != nil {
 		return "", "", err
 	}
@@ -149,8 +149,8 @@ func (c characterApplication) applyCharacterControlUpdate(ctx context.Context, c
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterUpdate,

@@ -44,10 +44,17 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 			}),
 		},
 	}}
+	stores := Stores{
+		Event:        eventStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}
 
 	err = applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		stores.SystemStores.Daggerheart,
+		stores.Write,
+		stores.Applier(),
 		"c1",
 		"s1",
 		"ch1",
@@ -106,10 +113,17 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 			}),
 		},
 	}}
+	stores := Stores{
+		Event:        eventStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}
 
 	err = applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		stores.SystemStores.Daggerheart,
+		stores.Write,
+		stores.Applier(),
 		"c1",
 		"s1",
 		"ch1",
@@ -140,10 +154,17 @@ func TestApplyStressVulnerableCondition_NoOpWhenUnchanged(t *testing.T) {
 	eventStore := newFakeEventStore()
 	dhStore := newFakeDaggerheartStore()
 	noopDomain := &fakeDomainEngine{}
+	stores := Stores{
+		Event:        eventStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Write:        domainwriteexec.WritePath{Executor: noopDomain},
+	}
 
 	err := applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: noopDomain}},
+		stores.SystemStores.Daggerheart,
+		stores.Write,
+		stores.Applier(),
 		"c1",
 		"s1",
 		"ch1",
@@ -167,10 +188,17 @@ func TestApplyStressVulnerableCondition_NoOpWhenAlreadyVulnerable(t *testing.T) 
 	eventStore := newFakeEventStore()
 	dhStore := newFakeDaggerheartStore()
 	noopDomain := &fakeDomainEngine{}
+	stores := Stores{
+		Event:        eventStore,
+		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		Write:        domainwriteexec.WritePath{Executor: noopDomain},
+	}
 
 	err := applyStressVulnerableCondition(
 		ctx,
-		Stores{Event: eventStore, SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore}, Write: domainwriteexec.WritePath{Executor: noopDomain}},
+		stores.SystemStores.Daggerheart,
+		stores.Write,
+		stores.Applier(),
 		"c1",
 		"s1",
 		"ch1",

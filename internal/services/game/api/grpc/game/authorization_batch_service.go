@@ -26,7 +26,7 @@ func (s *AuthorizationService) BatchCan(ctx context.Context, in *campaignv1.Batc
 			return nil, status.Errorf(codes.InvalidArgument, "batch authorization check at index %d is required", idx)
 		}
 
-		resp, err := s.Can(ctx, &campaignv1.CanRequest{
+		resp, err := s.evaluator.Evaluate(ctx, &campaignv1.CanRequest{
 			CampaignId: strings.TrimSpace(check.GetCampaignId()),
 			Action:     check.GetAction(),
 			Resource:   check.GetResource(),

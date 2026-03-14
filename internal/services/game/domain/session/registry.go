@@ -275,7 +275,12 @@ func validateGateOpenedPayload(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}
-	return nil
+	gateType, err := NormalizeGateType(payload.GateType)
+	if err != nil {
+		return err
+	}
+	_, err = NormalizeGateWorkflowMetadata(gateType, payload.Metadata)
+	return err
 }
 
 // validateGateResolvedPayload ensures gate resolved payloads match the gate resolve shape.

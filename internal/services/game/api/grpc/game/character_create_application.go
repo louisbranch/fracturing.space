@@ -57,7 +57,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterInvalidKind, "character kind is required")
 	}
 	notes := strings.TrimSpace(in.GetNotes())
-	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityMutateCharacters, campaignRecord)
+	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityMutateCharacters, campaignRecord)
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}
@@ -135,8 +135,8 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterCreateWithProfile,

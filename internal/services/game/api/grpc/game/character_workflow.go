@@ -99,7 +99,7 @@ func (d *characterWorkflowDeps) GetCharacterRecord(ctx context.Context, campaign
 }
 
 func (d *characterWorkflowDeps) GetCharacterSystemProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
-	return d.app.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	return d.app.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 }
 
 func (d *characterWorkflowDeps) SystemContent() storage.DaggerheartContentReadStore {
@@ -111,7 +111,7 @@ func (d *characterWorkflowDeps) ExecuteProfileUpdate(ctx context.Context, campai
 }
 
 func (d *characterWorkflowDeps) RequireReadPolicy(ctx context.Context, campaignContext workflow.CampaignContext) error {
-	return requireReadPolicy(ctx, d.app.stores, storage.CampaignRecord{ID: campaignContext.ID})
+	return requireReadPolicy(ctx, d.app.auth, storage.CampaignRecord{ID: campaignContext.ID})
 }
 
 func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, profile storage.DaggerheartCharacterProfile) *campaignv1.CharacterProfile {
@@ -121,7 +121,7 @@ func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, p
 // executeCharacterProfileUpdate builds and executes a character profile update
 // command through the domain engine.
 func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, systemProfile map[string]any) error {
-	policyActor, err := requireCharacterMutationPolicy(ctx, c.stores, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
+	policyActor, err := requireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
 	}
@@ -130,8 +130,6 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 	if actorID == "" {
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
-	applier := c.stores.Applier()
-
 	commandPayload := character.ProfileUpdatePayload{
 		CharacterID:   ids.CharacterID(characterID),
 		SystemProfile: systemProfile,
@@ -148,8 +146,8 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		applier,
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignContext.ID,
 			Type:         commandTypeCharacterProfileUpdate,

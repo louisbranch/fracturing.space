@@ -22,7 +22,7 @@ const (
 
 func rotateCampaignAIAuthEpoch(
 	ctx context.Context,
-	stores Stores,
+	deps campaignCommandExecution,
 	campaignID string,
 	reason string,
 	actorID string,
@@ -43,8 +43,8 @@ func rotateCampaignAIAuthEpoch(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores.Write,
-		stores.Applier(),
+		deps.Write,
+		deps.Applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignAIAuthRotate,

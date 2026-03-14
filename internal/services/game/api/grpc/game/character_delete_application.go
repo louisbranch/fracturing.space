@@ -38,7 +38,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	}
 	policyActor, err := requireCharacterMutationPolicy(
 		ctx,
-		c.stores,
+		c.auth,
 		campaignRecord,
 		characterID,
 	)
@@ -51,7 +51,6 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
 	reason := strings.TrimSpace(in.GetReason())
-	applier := c.stores.Applier()
 	payload := character.DeletePayload{
 		CharacterID: ids.CharacterID(characterID),
 		Reason:      reason,
@@ -67,8 +66,8 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		applier,
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterDelete,

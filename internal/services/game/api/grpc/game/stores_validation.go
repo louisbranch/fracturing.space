@@ -19,7 +19,7 @@ func (s *Stores) Validate() error {
 		return fmt.Errorf("stores not configured: %s", strings.Join(missing, ", "))
 	}
 
-	adapters, err := TryAdapterRegistryForStores(*s)
+	adapters, err := TryAdapterRegistryForProjectionStores(s.SystemStores)
 	if err != nil {
 		return fmt.Errorf("build adapter registry: %w", err)
 	}

@@ -9,6 +9,34 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
+func TestRegisterCommands_RejectsNilRegistryAndDuplicateRegistration(t *testing.T) {
+	if err := RegisterCommands(nil); err == nil {
+		t.Fatal("expected nil registry error")
+	}
+
+	registry := command.NewRegistry()
+	if err := RegisterCommands(registry); err != nil {
+		t.Fatalf("initial register commands: %v", err)
+	}
+	if err := RegisterCommands(registry); err == nil {
+		t.Fatal("expected duplicate registration error")
+	}
+}
+
+func TestRegisterEvents_RejectsNilRegistryAndDuplicateRegistration(t *testing.T) {
+	if err := RegisterEvents(nil); err == nil {
+		t.Fatal("expected nil registry error")
+	}
+
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("initial register events: %v", err)
+	}
+	if err := RegisterEvents(registry); err == nil {
+		t.Fatal("expected duplicate registration error")
+	}
+}
+
 func TestRegisterCommands_ValidatesStartPayload(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := RegisterCommands(registry); err != nil {

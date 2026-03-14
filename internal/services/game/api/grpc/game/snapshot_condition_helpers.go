@@ -3,17 +3,22 @@ package game
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func applyStressVulnerableCondition(
 	ctx context.Context,
-	stores Stores,
+	daggerheartStore storage.DaggerheartStore,
+	write domainwriteexec.WritePath,
+	applier projection.Applier,
 	campaignID string,
 	sessionID string,
 	characterID string,
@@ -24,7 +29,7 @@ func applyStressVulnerableCondition(
 	actorType event.ActorType,
 	actorID string,
 ) error {
-	if stores.SystemStores.Daggerheart == nil {
+	if daggerheartStore == nil {
 		return status.Error(codes.Internal, "daggerheart store is not configured")
 	}
 	if stressMax <= 0 {
@@ -89,7 +94,8 @@ func applyStressVulnerableCondition(
 	}
 	if err := executeDaggerheartConditionChangeCommand(
 		ctx,
-		stores,
+		write,
+		applier,
 		campaignID,
 		characterID,
 		actorType,

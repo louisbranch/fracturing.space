@@ -90,7 +90,12 @@ func (s *EventService) ListTimelineEntries(ctx context.Context, in *campaignv1.L
 		return nil, grpcerror.Internal("list timeline entries", err)
 	}
 
-	resolver := newTimelineProjectionResolver(s.stores)
+	resolver := newTimelineProjectionResolver(timelineProjectionStores{
+		Campaign:    s.stores.Campaign,
+		Participant: s.stores.Participant,
+		Character:   s.stores.Character,
+		Session:     s.stores.Session,
+	})
 	response := &campaignv1.ListTimelineEntriesResponse{
 		Entries:   make([]*campaignv1.TimelineEntry, 0, len(result.Events)),
 		TotalSize: int32(result.TotalCount),

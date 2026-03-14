@@ -4,22 +4,45 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
 )
 
 // inviteApplication coordinates invite transport use-cases across focused
 // create, claim, and revoke files.
 type inviteApplication struct {
-	stores            Stores
+	auth              Stores
+	stores            inviteApplicationStores
+	write             domainwriteexec.WritePath
+	applier           projection.Applier
 	clock             func() time.Time
 	idGenerator       func() (string, error)
 	authClient        authv1.AuthServiceClient
 	joinGrantVerifier joingrant.Verifier
 }
 
+type inviteApplicationStores struct {
+	Campaign    storage.CampaignStore
+	Participant storage.ParticipantStore
+	Invite      storage.InviteStore
+	ClaimIndex  storage.ClaimIndexStore
+	Event       storage.EventStore
+}
+
 func newInviteApplication(service *InviteService) inviteApplication {
 	app := inviteApplication{
-		stores:      service.stores,
+		auth: service.stores,
+		stores: inviteApplicationStores{
+			Campaign:    service.stores.Campaign,
+			Participant: service.stores.Participant,
+			Invite:      service.stores.Invite,
+			ClaimIndex:  service.stores.ClaimIndex,
+			Event:       service.stores.Event,
+		},
+		write:       service.stores.Write,
+		applier:     service.stores.Applier(),
 		clock:       service.clock,
 		idGenerator: service.idGenerator,
 		authClient:  service.authClient,

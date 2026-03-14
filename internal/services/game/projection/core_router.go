@@ -55,11 +55,11 @@ func (r *CoreRouter) HandledTypes() []event.Type {
 // handler receives a pre-unmarshalled payload, eliminating per-case
 // decodePayload boilerplate. The event.Event is also passed through for
 // envelope fields (CampaignID, EntityID, Timestamp, etc.).
-func HandleProjection[P any](r *CoreRouter, t event.Type, stores storeRequirement, ids idRequirement,
+func HandleProjection[P any](r *CoreRouter, t event.Type, req registrationRequirements,
 	fn func(Applier, context.Context, event.Event, P) error) {
 	r.handlers[t] = coreHandlerEntry{
-		stores: stores,
-		ids:    ids,
+		stores: req.stores,
+		ids:    req.ids,
 		apply: func(a Applier, ctx context.Context, evt event.Event) error {
 			var payload P
 			if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -74,11 +74,11 @@ func HandleProjection[P any](r *CoreRouter, t event.Type, stores storeRequiremen
 // HandleProjectionRaw registers a handler that does not unmarshal a payload.
 // Use for event types where the handler needs no payload data (e.g.
 // spotlight_cleared).
-func HandleProjectionRaw(r *CoreRouter, t event.Type, stores storeRequirement, ids idRequirement,
+func HandleProjectionRaw(r *CoreRouter, t event.Type, req registrationRequirements,
 	fn func(Applier, context.Context, event.Event) error) {
 	r.handlers[t] = coreHandlerEntry{
-		stores: stores,
-		ids:    ids,
+		stores: req.stores,
+		ids:    req.ids,
 		apply:  fn,
 	}
 	r.types = append(r.types, t)

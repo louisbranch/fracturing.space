@@ -32,7 +32,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	if err != nil {
 		return storage.InviteRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
 		return storage.InviteRecord{}, err
 	}
 	if inv.Status == invite.StatusRevoked {
@@ -44,7 +44,6 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	applier := a.stores.Applier()
 	payload := invite.RevokePayload{InviteID: ids.InviteID(inv.ID)}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -53,8 +52,8 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		applier,
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   inv.CampaignID,
 			Type:         commandTypeInviteRevoke,

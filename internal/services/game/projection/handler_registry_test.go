@@ -124,3 +124,17 @@ func TestValidateStorePreconditions_PassesWhenAllConfigured(t *testing.T) {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }
+
+func TestRequirements_MapsTypedDependenciesAndEnvelopeFields(t *testing.T) {
+	req := requirements(
+		needsStores(storeCampaign, storeSessionGate, storeAdapters),
+		needsEnvelope(fieldCampaignID, fieldSessionID),
+	)
+
+	if req.stores != needCampaign|needSessionGate|needAdapters {
+		t.Fatalf("stores = %v, want campaign|session_gate|adapters", req.stores)
+	}
+	if req.ids != requireCampaignID|requireSessionID {
+		t.Fatalf("ids = %v, want campaign_id|session_id", req.ids)
+	}
+}

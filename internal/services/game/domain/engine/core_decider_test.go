@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
 func TestNewCoreDecider_BuildsRoutesForRegisteredCoreDefinitions(t *testing.T) {
@@ -108,6 +109,36 @@ func TestCoreDeciderDecide_UsesInjectedRouteTable(t *testing.T) {
 	}
 	if decision.Events[0].Type != event.Type("custom.routed") {
 		t.Fatalf("event type = %q, want %q", decision.Events[0].Type, event.Type("custom.routed"))
+	}
+}
+
+type stubSessionLifecycle struct {
+	decision command.Decision
+	called   bool
+}
+
+func (s *stubSessionLifecycle) Start(_ aggregate.State, _ command.Command, _ func() time.Time) command.Decision {
+	s.called = true
+	return s.decision
+}
+
+func TestSessionStartRoute_UsesInjectedSessionLifecycle(t *testing.T) {
+	lifecycle := &stubSessionLifecycle{
+		decision: command.Accept(event.Event{Type: event.Type("session.started")}),
+	}
+
+	decision := sessionStartRoute(
+		CoreDecider{SessionLifecycle: lifecycle},
+		aggregate.State{},
+		command.Command{Type: session.CommandTypeStart},
+		nil,
+	)
+
+	if !lifecycle.called {
+		t.Fatal("expected injected session lifecycle to be used")
+	}
+	if len(decision.Events) != 1 || decision.Events[0].Type != session.EventTypeStarted {
+		t.Fatalf("events = %v, want one %s event", decision.Events, session.EventTypeStarted)
 	}
 }
 

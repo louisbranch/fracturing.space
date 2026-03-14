@@ -27,7 +27,7 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 	if err != nil {
 		return "", err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return "", err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -68,8 +68,8 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneCreate,
@@ -101,7 +101,7 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -128,8 +128,8 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneUpdate,
@@ -157,7 +157,7 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -177,8 +177,8 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneEnd,
@@ -206,7 +206,7 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	if err != nil {
 		return "", err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return "", err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -239,8 +239,8 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneTransition,

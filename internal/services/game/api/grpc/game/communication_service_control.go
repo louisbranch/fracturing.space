@@ -2,13 +2,10 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -359,34 +356,20 @@ func (s *CommunicationService) executeCommunicationGateOpen(
 	payload session.GateOpenedPayload,
 	requireEventsLabel string,
 ) (*campaignv1.CommunicationContext, error) {
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	return executeSessionGateCommandAndLoad(
 		ctx,
 		s.stores.Write,
 		s.stores.Applier(),
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionGateOpen,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     string(payload.GateID),
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents(requireEventsLabel+" did not emit an event"),
+		commandTypeSessionGateOpen,
+		campaignID,
+		sessionID,
+		string(payload.GateID),
+		payload,
+		requireEventsLabel,
+		func(ctx context.Context) (*campaignv1.CommunicationContext, error) {
+			return s.loadCommunicationContext(ctx, campaignID)
+		},
 	)
-	if err != nil {
-		return nil, err
-	}
-	return s.loadCommunicationContext(ctx, campaignID)
 }
 
 // executeCommunicationGateResolve reuses the session gate resolve write path while keeping refreshed communication context as the only response contract.
@@ -398,34 +381,20 @@ func (s *CommunicationService) executeCommunicationGateResolve(
 	payload session.GateResolvedPayload,
 	requireEventsLabel string,
 ) (*campaignv1.CommunicationContext, error) {
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	return executeSessionGateCommandAndLoad(
 		ctx,
 		s.stores.Write,
 		s.stores.Applier(),
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionGateResolve,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents(requireEventsLabel+" did not emit an event"),
+		commandTypeSessionGateResolve,
+		campaignID,
+		sessionID,
+		gateID,
+		payload,
+		requireEventsLabel,
+		func(ctx context.Context) (*campaignv1.CommunicationContext, error) {
+			return s.loadCommunicationContext(ctx, campaignID)
+		},
 	)
-	if err != nil {
-		return nil, err
-	}
-	return s.loadCommunicationContext(ctx, campaignID)
 }
 
 // executeCommunicationGateResponse records participant response state on the active gate while keeping communication consumers on projection-backed reads.
@@ -437,34 +406,20 @@ func (s *CommunicationService) executeCommunicationGateResponse(
 	payload session.GateResponseRecordedPayload,
 	requireEventsLabel string,
 ) (*campaignv1.CommunicationContext, error) {
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	return executeSessionGateCommandAndLoad(
 		ctx,
 		s.stores.Write,
 		s.stores.Applier(),
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionGateRespond,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents(requireEventsLabel+" did not emit an event"),
+		commandTypeSessionGateRespond,
+		campaignID,
+		sessionID,
+		gateID,
+		payload,
+		requireEventsLabel,
+		func(ctx context.Context) (*campaignv1.CommunicationContext, error) {
+			return s.loadCommunicationContext(ctx, campaignID)
+		},
 	)
-	if err != nil {
-		return nil, err
-	}
-	return s.loadCommunicationContext(ctx, campaignID)
 }
 
 // executeCommunicationGateAbandon reuses the session gate abandon write path while hiding session-specific identifiers from communication consumers.
@@ -476,34 +431,20 @@ func (s *CommunicationService) executeCommunicationGateAbandon(
 	payload session.GateAbandonedPayload,
 	requireEventsLabel string,
 ) (*campaignv1.CommunicationContext, error) {
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	return executeSessionGateCommandAndLoad(
 		ctx,
 		s.stores.Write,
 		s.stores.Applier(),
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionGateAbandon,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents(requireEventsLabel+" did not emit an event"),
+		commandTypeSessionGateAbandon,
+		campaignID,
+		sessionID,
+		gateID,
+		payload,
+		requireEventsLabel,
+		func(ctx context.Context) (*campaignv1.CommunicationContext, error) {
+			return s.loadCommunicationContext(ctx, campaignID)
+		},
 	)
-	if err != nil {
-		return nil, err
-	}
-	return s.loadCommunicationContext(ctx, campaignID)
 }
 
 // nextCommunicationGateID resolves a communication gate identifier while keeping ID generation injectable for tests.

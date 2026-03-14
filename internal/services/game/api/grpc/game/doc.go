@@ -7,6 +7,8 @@
 //   - InviteService -> invite issuance, claim, and revocation workflows
 //   - CharacterService -> character ownership and profile state
 //   - SessionService -> active session lifecycle, gates, and spotlight
+//   - CommunicationService -> communication context and session-gate-backed
+//     control workflows for chat/web consumers
 //   - SnapshotService -> replay checkpoints and materialized read state
 //   - ForkService -> campaign branching for scenario exploration
 //   - EventService -> raw event stream visibility for audit/debug
@@ -110,12 +112,20 @@
 //   - lifecycle flow (`session_lifecycle_application.go`)
 //   - gate flow (`session_gate_application.go`)
 //   - spotlight flow (`session_spotlight_application.go`)
+//   - shared gate command execution seam (`session_gate_command_execution.go`)
 //
 // Session service RPC handlers are split by transport intent:
 //   - service constructors/coordinator (`session_service.go`)
 //   - lifecycle + read handlers (`session_service_lifecycle.go`)
 //   - gate handlers (`session_service_gate.go`)
 //   - spotlight handlers (`session_service_spotlight.go`)
+//
+// Communication transport keeps chat/web-facing read assembly separate from the
+// session aggregate while routing control writes through session-owned gate
+// events:
+//   - context read assembly (`communication_service.go`)
+//   - control handlers (`communication_service_control.go`)
+//   - shared session-gate command execution seam (`session_gate_command_execution.go`)
 //
 // Snapshot transport orchestration isolates mutation paths:
 //   - character state patch flow (`snapshot_state_patch_application.go`)

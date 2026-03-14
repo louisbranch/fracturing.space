@@ -2,16 +2,12 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -35,7 +31,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -73,40 +69,24 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		Reason:   reason,
 		Metadata: metadata,
 	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.SessionGate{}, grpcerror.Internal("encode payload", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-
-	_, err = executeAndApplyDomainCommand(
+	return executeSessionGateCommandAndLoad(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionGateOpen,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents("session.gate_open did not emit an event"),
+		a.write,
+		a.applier,
+		commandTypeSessionGateOpen,
+		campaignID,
+		sessionID,
+		gateID,
+		payload,
+		"session.gate_open",
+		func(ctx context.Context) (storage.SessionGate, error) {
+			gate, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
+			if err != nil {
+				return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
+			}
+			return gate, nil
+		},
 	)
-	if err != nil {
-		return storage.SessionGate{}, err
-	}
-	gate, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
-	if err != nil {
-		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
-	}
-
-	return gate, nil
 }
 
 func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID string, in *campaignv1.ResolveSessionGateRequest) (storage.SessionGate, error) {
@@ -123,7 +103,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -147,40 +127,24 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		Decision:   strings.TrimSpace(in.GetDecision()),
 		Resolution: resolution,
 	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.SessionGate{}, grpcerror.Internal("encode payload", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-
-	_, err = executeAndApplyDomainCommand(
+	return executeSessionGateCommandAndLoad(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionGateResolve,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents("session.gate_resolve did not emit an event"),
+		a.write,
+		a.applier,
+		commandTypeSessionGateResolve,
+		campaignID,
+		sessionID,
+		gateID,
+		payload,
+		"session.gate_resolve",
+		func(ctx context.Context) (storage.SessionGate, error) {
+			updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
+			if err != nil {
+				return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
+			}
+			return updated, nil
+		},
 	)
-	if err != nil {
-		return storage.SessionGate{}, err
-	}
-	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
-	if err != nil {
-		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
-	}
-
-	return updated, nil
 }
 
 func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID string, in *campaignv1.AbandonSessionGateRequest) (storage.SessionGate, error) {
@@ -197,7 +161,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -215,38 +179,22 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		GateID: ids.GateID(gateID),
 		Reason: session.NormalizeGateReason(in.GetReason()),
 	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.SessionGate{}, grpcerror.Internal("encode payload", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-
-	_, err = executeAndApplyDomainCommand(
+	return executeSessionGateCommandAndLoad(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionGateAbandon,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session_gate",
-			EntityID:     gateID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents("session.gate_abandon did not emit an event"),
+		a.write,
+		a.applier,
+		commandTypeSessionGateAbandon,
+		campaignID,
+		sessionID,
+		gateID,
+		payload,
+		"session.gate_abandon",
+		func(ctx context.Context) (storage.SessionGate, error) {
+			updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
+			if err != nil {
+				return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
+			}
+			return updated, nil
+		},
 	)
-	if err != nil {
-		return storage.SessionGate{}, err
-	}
-	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
-	if err != nil {
-		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
-	}
-
-	return updated, nil
 }

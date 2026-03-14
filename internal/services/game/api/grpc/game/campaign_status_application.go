@@ -19,7 +19,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -32,8 +32,8 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignEnd,
@@ -62,7 +62,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -75,8 +75,8 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignArchive,
@@ -105,7 +105,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusDraft); err != nil {
@@ -114,8 +114,8 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignRestore,

@@ -1807,6 +1807,69 @@ func TestApplySessionGateOpened_MissingGateID(t *testing.T) {
 	}
 }
 
+func TestApplySessionGateResponseRecordedUpdatesProgress(t *testing.T) {
+	ctx := context.Background()
+	gateStore := newFakeSessionGateStore()
+	metadataJSON, err := json.Marshal(map[string]any{
+		"eligible_participant_ids": []string{"p1", "p2"},
+	})
+	if err != nil {
+		t.Fatalf("marshal metadata: %v", err)
+	}
+	progressJSON, err := session.BuildInitialGateProgress(session.GateTypeReadyCheck, metadataJSON)
+	if err != nil {
+		t.Fatalf("build progress: %v", err)
+	}
+	gateStore.gates["camp-1:sess-1:gate-1"] = storage.SessionGate{
+		CampaignID:   "camp-1",
+		SessionID:    "sess-1",
+		GateID:       "gate-1",
+		GateType:     session.GateTypeReadyCheck,
+		Status:       session.GateStatusOpen,
+		MetadataJSON: metadataJSON,
+		ProgressJSON: progressJSON,
+	}
+	applier := Applier{SessionGate: gateStore}
+
+	payload := testevent.SessionGateResponseRecordedPayload{
+		GateID:        "gate-1",
+		ParticipantID: "p1",
+		Decision:      "ready",
+	}
+	data, _ := json.Marshal(payload)
+	stamp := time.Date(2026, 3, 9, 19, 30, 0, 0, time.UTC)
+	evt := testevent.Event{
+		CampaignID:  "camp-1",
+		SessionID:   "sess-1",
+		Type:        testevent.TypeSessionGateResponseRecorded,
+		PayloadJSON: data,
+		Timestamp:   stamp,
+		ActorType:   testevent.ActorTypeParticipant,
+		ActorID:     "p1",
+	}
+
+	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	gate, err := gateStore.GetSessionGate(ctx, "camp-1", "sess-1", "gate-1")
+	if err != nil {
+		t.Fatalf("get gate: %v", err)
+	}
+	if len(gate.ProgressJSON) == 0 {
+		t.Fatal("expected progress JSON to be updated")
+	}
+	var progress session.GateProgress
+	if err := json.Unmarshal(gate.ProgressJSON, &progress); err != nil {
+		t.Fatalf("unmarshal progress: %v", err)
+	}
+	if progress.RespondedCount != 1 || progress.PendingCount != 1 {
+		t.Fatalf("progress counts = %#v", progress)
+	}
+	if len(progress.Responses) != 1 || progress.Responses[0].ParticipantID != "p1" || progress.Responses[0].Decision != "ready" {
+		t.Fatalf("responses = %#v", progress.Responses)
+	}
+}
+
 // --- applySessionGateResolved tests ---
 
 func TestApplySessionGateResolved(t *testing.T) {

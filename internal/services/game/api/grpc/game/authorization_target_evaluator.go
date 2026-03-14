@@ -22,6 +22,15 @@ func resolveCanCharacterOwnerParticipantID(
 	campaignID string,
 	target *campaignv1.AuthorizationTarget,
 ) (string, bool, error) {
+	return resolveCanCharacterOwnerParticipantIDWithCharacterStore(ctx, stores.Character, campaignID, target)
+}
+
+func resolveCanCharacterOwnerParticipantIDWithCharacterStore(
+	ctx context.Context,
+	characters storage.CharacterStore,
+	campaignID string,
+	target *campaignv1.AuthorizationTarget,
+) (string, bool, error) {
 	if target == nil {
 		return "", false, nil
 	}
@@ -33,7 +42,7 @@ func resolveCanCharacterOwnerParticipantID(
 	if characterID == "" {
 		return "", false, nil
 	}
-	ownerParticipantID, err := resolveCharacterMutationOwnerParticipantID(ctx, stores, campaignID, characterID)
+	ownerParticipantID, err := resolveCharacterMutationOwnerParticipantIDFromStore(ctx, characters, campaignID, characterID)
 	if err != nil {
 		return "", false, err
 	}
@@ -43,6 +52,17 @@ func resolveCanCharacterOwnerParticipantID(
 func evaluateCanParticipantGovernanceTarget(
 	ctx context.Context,
 	stores Stores,
+	campaignID string,
+	actor storage.ParticipantRecord,
+	target *campaignv1.AuthorizationTarget,
+) (domainauthz.PolicyDecision, map[string]any, bool, error) {
+	return evaluateCanParticipantGovernanceTargetWithStores(ctx, stores.Participant, stores.Character, campaignID, actor, target)
+}
+
+func evaluateCanParticipantGovernanceTargetWithStores(
+	ctx context.Context,
+	participants storage.ParticipantStore,
+	characters storage.CharacterStore,
 	campaignID string,
 	actor storage.ParticipantRecord,
 	target *campaignv1.AuthorizationTarget,
@@ -59,8 +79,8 @@ func evaluateCanParticipantGovernanceTarget(
 	requestedAccess := campaignAccessFromProto(target.GetRequestedCampaignAccess())
 	participantOperation := target.GetParticipantOperation()
 
-	if targetParticipantID != "" && targetAccess == participant.CampaignAccessUnspecified && stores.Participant != nil {
-		targetRecord, err := stores.Participant.GetParticipant(ctx, campaignID, targetParticipantID)
+	if targetParticipantID != "" && targetAccess == participant.CampaignAccessUnspecified && participants != nil {
+		targetRecord, err := participants.GetParticipant(ctx, campaignID, targetParticipantID)
 		if err != nil {
 			if !errors.Is(err, storage.ErrNotFound) {
 				return domainauthz.PolicyDecision{}, nil, false, grpcerror.Internal("load target participant", err)
@@ -96,11 +116,11 @@ func evaluateCanParticipantGovernanceTarget(
 			}
 			return decision, extraAttributes, true, nil
 		}
-		ownerCount, err := countCampaignOwners(ctx, stores.Participant, campaignID)
+		ownerCount, err := countCampaignOwners(ctx, participants, campaignID)
 		if err != nil {
 			return domainauthz.PolicyDecision{}, extraAttributes, false, err
 		}
-		targetOwnsActiveCharacters, err := participantOwnsActiveCharacters(ctx, stores.Character, campaignID, targetParticipantID)
+		targetOwnsActiveCharacters, err := participantOwnsActiveCharacters(ctx, characters, campaignID, targetParticipantID)
 		if err != nil {
 			return domainauthz.PolicyDecision{}, extraAttributes, false, err
 		}
@@ -124,7 +144,7 @@ func evaluateCanParticipantGovernanceTarget(
 		return decision, extraAttributes, true, nil
 	}
 
-	ownerCount, err := countCampaignOwners(ctx, stores.Participant, campaignID)
+	ownerCount, err := countCampaignOwners(ctx, participants, campaignID)
 	if err != nil {
 		return domainauthz.PolicyDecision{}, extraAttributes, false, err
 	}

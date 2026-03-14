@@ -29,7 +29,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityManageParticipants, campaignRecord)
+	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
@@ -49,7 +49,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		if !decision.Allowed {
 			authErr := participantPolicyDecisionError(decision.ReasonCode)
 			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
-				Store:      c.stores.Audit,
+				Store:      c.auth.Audit,
 				CampaignID: campaignID,
 				Capability: domainauthz.CapabilityManageParticipants,
 				Decision:   authzDecisionDeny,
@@ -108,7 +108,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		if !decision.Allowed {
 			authErr := participantPolicyDecisionError(decision.ReasonCode)
 			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
-				Store:      c.stores.Audit,
+				Store:      c.auth.Audit,
 				CampaignID: campaignID,
 				Capability: domainauthz.CapabilityManageParticipants,
 				Decision:   authzDecisionDeny,
@@ -147,7 +147,6 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
 	}
 
-	applier := c.stores.Applier()
 	payloadFields := make(map[string]string, len(fields))
 	for key, value := range fields {
 		stringValue, ok := value.(string)
@@ -168,8 +167,8 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		applier,
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantUpdate,
@@ -202,7 +201,11 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		if strings.TrimSpace(campaignRecord.AIAgentID) != "" {
 			if _, clearErr := clearCampaignAIBindingByCommand(
 				ctx,
-				c.stores,
+				campaignCommandExecution{
+					Campaign: c.stores.Campaign,
+					Write:    c.write,
+					Applier:  c.applier,
+				},
 				campaignID,
 				actorID,
 				actorType,
