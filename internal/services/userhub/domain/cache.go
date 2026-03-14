@@ -230,7 +230,7 @@ func (c *dashboardCache) notifyRelease(campaignIDs []string) {
 }
 
 func dashboardCampaignDependencies(dashboard Dashboard) []string {
-	set := make(map[string]struct{}, len(dashboard.Campaigns.Campaigns)+len(dashboard.Invites.Pending)+len(dashboard.ActiveSessions.Sessions))
+	set := make(map[string]struct{}, len(dashboard.Campaigns.Campaigns)+len(dashboard.Invites.Pending)+len(dashboard.ActiveSessions.Sessions)+len(dashboard.CampaignStartNudges.Nudges))
 	for _, campaign := range dashboard.Campaigns.Campaigns {
 		campaignID := strings.TrimSpace(campaign.CampaignID)
 		if campaignID == "" {
@@ -247,6 +247,13 @@ func dashboardCampaignDependencies(dashboard Dashboard) []string {
 	}
 	for _, activeSession := range dashboard.ActiveSessions.Sessions {
 		campaignID := strings.TrimSpace(activeSession.CampaignID)
+		if campaignID == "" {
+			continue
+		}
+		set[campaignID] = struct{}{}
+	}
+	for _, nudge := range dashboard.CampaignStartNudges.Nudges {
+		campaignID := strings.TrimSpace(nudge.CampaignID)
 		if campaignID == "" {
 			continue
 		}

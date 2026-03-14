@@ -29,6 +29,7 @@ func readinessBlockerToProto(locale commonv1.Locale, blocker readiness.Blocker) 
 		Code:     strings.TrimSpace(blocker.Code),
 		Message:  localizeReadinessBlockerMessage(locale, blocker),
 		Metadata: metadata,
+		Action:   readinessActionToProto(blocker.Action),
 	}
 }
 
@@ -92,4 +93,31 @@ func readinessBlockerMetadataValueOrDefault(metadata map[string]string, key, fal
 		return value
 	}
 	return fallback
+}
+
+func readinessActionToProto(action readiness.Action) *campaignv1.CampaignSessionReadinessAction {
+	return &campaignv1.CampaignSessionReadinessAction{
+		ResponsibleUserIds:        append([]string{}, action.ResponsibleUserIDs...),
+		ResponsibleParticipantIds: append([]string{}, action.ResponsibleParticipantIDs...),
+		ResolutionKind:            readinessResolutionKindToProto(action.ResolutionKind),
+		TargetParticipantId:       strings.TrimSpace(action.TargetParticipantID),
+		TargetCharacterId:         strings.TrimSpace(action.TargetCharacterID),
+	}
+}
+
+func readinessResolutionKindToProto(value readiness.ResolutionKind) campaignv1.CampaignSessionReadinessResolutionKind {
+	switch value {
+	case readiness.ResolutionKindCreateCharacter:
+		return campaignv1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_CREATE_CHARACTER
+	case readiness.ResolutionKindCompleteCharacter:
+		return campaignv1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_COMPLETE_CHARACTER
+	case readiness.ResolutionKindConfigureAIAgent:
+		return campaignv1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_CONFIGURE_AI_AGENT
+	case readiness.ResolutionKindInvitePlayer:
+		return campaignv1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_INVITE_PLAYER
+	case readiness.ResolutionKindManageParticipants:
+		return campaignv1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_MANAGE_PARTICIPANTS
+	default:
+		return campaignv1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_UNSPECIFIED
+	}
 }

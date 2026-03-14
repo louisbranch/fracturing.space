@@ -63,6 +63,12 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	if snapshot.ActiveSessionsAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameSessions) {
 		activeSessions = append(activeSessions, snapshot.ActiveSessions...)
 	}
+	campaignStartNudges := []CampaignStartNudgeItem(nil)
+	campaignStartNudgesMore := false
+	if snapshot.CampaignStartNudgesAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameReadiness) {
+		campaignStartNudges = append(campaignStartNudges, snapshot.CampaignStartNudges...)
+		campaignStartNudgesMore = snapshot.CampaignStartNudgesHasMore
+	}
 	if HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile) {
 		s.logger.Printf("dashboard: degraded dependency %s for user %s", DegradedDependencySocialProfile, userID)
 	}
@@ -80,6 +86,8 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 		DegradedDependencies:    snapshot.DegradedDependencies,
 		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile),
 		ShowAdventureBlock:      showAdventureBlock,
+		CampaignStartNudges:     campaignStartNudges,
+		CampaignStartNudgesMore: campaignStartNudgesMore,
 		ActiveSessions:          activeSessions,
 		ServiceHealth:           health,
 	}, nil

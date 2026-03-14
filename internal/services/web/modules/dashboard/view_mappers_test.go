@@ -14,6 +14,10 @@ func TestMapDashboardTemplateView(t *testing.T) {
 		DegradedDependencies:    []string{dashboardapp.DegradedDependencySocialProfile},
 		ShowPendingProfileBlock: true,
 		ShowAdventureBlock:      false,
+		CampaignStartNudges: []dashboardapp.CampaignStartNudgeItem{
+			{CampaignID: "camp-2", CampaignName: "Moonwake", BlockerMessage: "Finish Aria", ActionKind: dashboardapp.CampaignStartNudgeActionKindCompleteCharacter, TargetCharacterID: "char-1"},
+		},
+		CampaignStartNudgesMore: true,
 		ActiveSessions: []dashboardapp.ActiveSessionItem{
 			{CampaignID: "camp-1", CampaignName: "Sunfall", SessionID: "session-1", SessionName: "The Crossing"},
 		},
@@ -31,6 +35,12 @@ func TestMapDashboardTemplateView(t *testing.T) {
 	}
 	if view.Adventure.Visible {
 		t.Fatalf("Adventure.Visible = true, want false")
+	}
+	if !view.CampaignStartNudges.Visible || len(view.CampaignStartNudges.Nudges) != 1 {
+		t.Fatalf("CampaignStartNudges = %+v, want one visible nudge", view.CampaignStartNudges)
+	}
+	if view.CampaignStartNudges.Nudges[0].TargetCharacterID != "char-1" {
+		t.Fatalf("CampaignStartNudges[0].TargetCharacterID = %q, want %q", view.CampaignStartNudges.Nudges[0].TargetCharacterID, "char-1")
 	}
 	if !view.ActiveSessions.Visible || len(view.ActiveSessions.Sessions) != 1 {
 		t.Fatalf("ActiveSessions = %+v, want one visible session", view.ActiveSessions)

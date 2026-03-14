@@ -43,6 +43,7 @@ type Blocker struct {
 	Code     string
 	Message  string
 	Metadata map[string]string
+	Action   Action
 }
 
 // Report captures all readiness blockers for deterministic participant/operator feedback.
@@ -120,35 +121,39 @@ func EvaluateSessionStartReport(state aggregate.State, options ReportOptions) Re
 
 func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness CharacterSystemReadiness) []Blocker {
 	blockers := make([]Blocker, 0, 6)
+	activeParticipants := activeParticipantsByID(state)
 
 	if isAIGMMode(state.Campaign.GmMode) && strings.TrimSpace(state.Campaign.AIAgentID) == "" {
-		blockers = append(blockers, newBlocker(
+		blockers = append(blockers, newActionableBlocker(
 			RejectionCodeSessionReadinessAIAgentRequired,
 			"campaign readiness requires ai agent binding for ai gm mode",
 			nil,
+			aiAgentRequiredAction(activeParticipants),
 		))
 	}
 
-	activeParticipants := activeParticipantsByID(state)
 	if isAIGMMode(state.Campaign.GmMode) && len(activeParticipants.aiGMIDs) == 0 {
-		blockers = append(blockers, newBlocker(
+		blockers = append(blockers, newActionableBlocker(
 			RejectionCodeSessionReadinessAIGMParticipantRequired,
 			"campaign readiness requires at least one ai-controlled gm participant for ai gm mode",
 			nil,
+			ownerManageParticipantsAction(activeParticipants),
 		))
 	}
 	if len(activeParticipants.gmIDs) == 0 {
-		blockers = append(blockers, newBlocker(
+		blockers = append(blockers, newActionableBlocker(
 			RejectionCodeSessionReadinessGMRequired,
 			"campaign readiness requires at least one gm participant",
 			nil,
+			ownerManageParticipantsAction(activeParticipants),
 		))
 	}
 	if len(activeParticipants.playerIDs) == 0 {
-		blockers = append(blockers, newBlocker(
+		blockers = append(blockers, newActionableBlocker(
 			RejectionCodeSessionReadinessPlayerRequired,
 			"campaign readiness requires at least one player participant",
 			nil,
+			invitePlayerAction(activeParticipants),
 		))
 	}
 
@@ -186,10 +191,11 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 		if reason != "" {
 			metadata["reason"] = reason
 		}
-		blockers = append(blockers, newBlocker(
+		blockers = append(blockers, newActionableBlocker(
 			RejectionCodeSessionReadinessCharacterSystemRequired,
 			systemReadinessMessage(characterLabel, reason),
 			metadata,
+			completeCharacterAction(activeParticipants, controllerParticipantID, characterID),
 		))
 	}
 
@@ -209,10 +215,11 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 		if playerName != "" {
 			metadata["participant_name"] = playerName
 		}
-		blockers = append(blockers, newBlocker(
+		blockers = append(blockers, newActionableBlocker(
 			RejectionCodeSessionReadinessPlayerCharacterRequired,
 			fmt.Sprintf("campaign readiness requires player participant %s to control at least one character", playerLabel),
 			metadata,
+			createCharacterAction(activeParticipants, playerID),
 		))
 	}
 
@@ -243,7 +250,113 @@ func newBlocker(code, message string, metadata map[string]string) Blocker {
 		Code:     code,
 		Message:  message,
 		Metadata: cloned,
+		Action:   Action{},
 	}
+}
+
+func newActionableBlocker(code, message string, metadata map[string]string, action Action) Blocker {
+	blocker := newBlocker(code, message, metadata)
+	blocker.Action = cloneAction(action)
+	return blocker
+}
+
+func aiAgentRequiredAction(activeParticipants participantIndex) Action {
+	action := ownerManageParticipantsAction(activeParticipants)
+	action.ResolutionKind = ResolutionKindConfigureAIAgent
+	if len(activeParticipants.aiGMIDs) > 0 {
+		action.TargetParticipantID = activeParticipants.aiGMIDs[0]
+	}
+	return action
+}
+
+func ownerManageParticipantsAction(activeParticipants participantIndex) Action {
+	ownerIDs, ownerUserIDs := ownerParticipants(activeParticipants)
+	return Action{
+		ResponsibleUserIDs:        ownerUserIDs,
+		ResponsibleParticipantIDs: ownerIDs,
+		ResolutionKind:            ResolutionKindManageParticipants,
+	}
+}
+
+func invitePlayerAction(activeParticipants participantIndex) Action {
+	responsibleParticipants := make([]string, 0, len(activeParticipants.gmIDs))
+	responsibleUsers := make([]string, 0, len(activeParticipants.gmIDs))
+	for _, participantID := range activeParticipants.gmIDs {
+		state, ok := activeParticipants.byID[participantID]
+		if !ok {
+			continue
+		}
+		controller, controllerOK := participant.NormalizeController(string(state.Controller))
+		if controllerOK && controller == participant.ControllerAI {
+			continue
+		}
+		if userID := strings.TrimSpace(string(state.UserID)); userID != "" {
+			responsibleParticipants = append(responsibleParticipants, participantID)
+			responsibleUsers = append(responsibleUsers, userID)
+		}
+	}
+	return Action{
+		ResponsibleUserIDs:        responsibleUsers,
+		ResponsibleParticipantIDs: responsibleParticipants,
+		ResolutionKind:            ResolutionKindInvitePlayer,
+	}
+}
+
+func createCharacterAction(activeParticipants participantIndex, participantID string) Action {
+	participantID = strings.TrimSpace(participantID)
+	state, ok := activeParticipants.byID[participantID]
+	if !ok {
+		return Action{}
+	}
+	userID := strings.TrimSpace(string(state.UserID))
+	if userID == "" {
+		return Action{}
+	}
+	return Action{
+		ResponsibleUserIDs:        []string{userID},
+		ResponsibleParticipantIDs: []string{participantID},
+		ResolutionKind:            ResolutionKindCreateCharacter,
+		TargetParticipantID:       participantID,
+	}
+}
+
+func completeCharacterAction(activeParticipants participantIndex, participantID, characterID string) Action {
+	participantID = strings.TrimSpace(participantID)
+	state, ok := activeParticipants.byID[participantID]
+	if !ok {
+		return Action{}
+	}
+	userID := strings.TrimSpace(string(state.UserID))
+	if userID == "" {
+		return Action{}
+	}
+	return Action{
+		ResponsibleUserIDs:        []string{userID},
+		ResponsibleParticipantIDs: []string{participantID},
+		ResolutionKind:            ResolutionKindCompleteCharacter,
+		TargetParticipantID:       participantID,
+		TargetCharacterID:         strings.TrimSpace(characterID),
+	}
+}
+
+func ownerParticipants(activeParticipants participantIndex) ([]string, []string) {
+	participantIDs := make([]string, 0, len(activeParticipants.byID))
+	userIDs := make([]string, 0, len(activeParticipants.byID))
+	for _, candidateID := range append(append([]string{}, activeParticipants.gmIDs...), activeParticipants.playerIDs...) {
+		state, ok := activeParticipants.byID[candidateID]
+		if !ok {
+			continue
+		}
+		access, accessOK := participant.NormalizeCampaignAccess(string(state.CampaignAccess))
+		if !accessOK || access != participant.CampaignAccessOwner {
+			continue
+		}
+		if userID := strings.TrimSpace(string(state.UserID)); userID != "" {
+			participantIDs = append(participantIDs, candidateID)
+			userIDs = append(userIDs, userID)
+		}
+	}
+	return normalizeActionIDs(participantIDs), normalizeActionIDs(userIDs)
 }
 
 func campaignStatusAllowsSessionStart(status campaign.Status) bool {

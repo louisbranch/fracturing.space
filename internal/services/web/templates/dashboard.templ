@@ -14,6 +14,21 @@ type DashboardAdventureBlock struct {
 	Visible bool
 }
 
+type DashboardCampaignStartNudgeEntry struct {
+	CampaignID          string
+	CampaignName        string
+	Message             string
+	ActionKind          string
+	TargetParticipantID string
+	TargetCharacterID   string
+}
+
+type DashboardCampaignStartNudgesBlock struct {
+	Visible bool
+	HasMore bool
+	Nudges  []DashboardCampaignStartNudgeEntry
+}
+
 type DashboardActiveSessionEntry struct {
 	CampaignID   string
 	CampaignName string
@@ -38,11 +53,12 @@ type DashboardServiceHealthEntry struct {
 }
 
 type DashboardPageView struct {
-	StatusNotice   DashboardStatusNotice
-	ProfilePending DashboardProfilePendingBlock
-	Adventure      DashboardAdventureBlock
-	ActiveSessions DashboardActiveSessionsBlock
-	ServiceHealth  []DashboardServiceHealthEntry
+	StatusNotice         DashboardStatusNotice
+	ProfilePending       DashboardProfilePendingBlock
+	CampaignStartNudges  DashboardCampaignStartNudgesBlock
+	Adventure            DashboardAdventureBlock
+	ActiveSessions       DashboardActiveSessionsBlock
+	ServiceHealth        []DashboardServiceHealthEntry
 }
 
 func dashboardStatusNoticeVisible(view DashboardPageView) bool {
@@ -66,6 +82,10 @@ func dashboardProfilePendingVisible(view DashboardPageView) bool {
 
 func dashboardAdventureVisible(view DashboardPageView) bool {
 	return view.Adventure.Visible
+}
+
+func dashboardCampaignStartNudgesVisible(view DashboardPageView) bool {
+	return view.CampaignStartNudges.Visible && len(view.CampaignStartNudges.Nudges) > 0
 }
 
 func dashboardActiveSessionsVisible(view DashboardPageView) bool {
@@ -97,6 +117,52 @@ func dashboardAllServicesOperational(view DashboardPageView) bool {
 	return true
 }
 
+func dashboardCampaignStartNudgeURL(entry DashboardCampaignStartNudgeEntry) string {
+	campaignID := strings.TrimSpace(entry.CampaignID)
+	if campaignID == "" {
+		return routepath.AppCampaigns
+	}
+	switch strings.TrimSpace(entry.ActionKind) {
+	case "create_character":
+		return routepath.AppCampaignCharacterCreate(campaignID)
+	case "complete_character":
+		characterID := strings.TrimSpace(entry.TargetCharacterID)
+		if characterID != "" {
+			return routepath.AppCampaignCharacter(campaignID, characterID)
+		}
+		return routepath.AppCampaignCharacters(campaignID)
+	case "configure_ai_agent":
+		participantID := strings.TrimSpace(entry.TargetParticipantID)
+		if participantID != "" {
+			return routepath.AppCampaignParticipantEdit(campaignID, participantID)
+		}
+		return routepath.AppCampaignParticipants(campaignID)
+	case "invite_player":
+		return routepath.AppCampaignInvites(campaignID)
+	case "manage_participants":
+		return routepath.AppCampaignParticipants(campaignID)
+	default:
+		return routepath.AppCampaign(campaignID)
+	}
+}
+
+func dashboardCampaignStartNudgeCTA(entry DashboardCampaignStartNudgeEntry, loc Localizer) string {
+	switch strings.TrimSpace(entry.ActionKind) {
+	case "create_character":
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_create_character")
+	case "complete_character":
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_complete_character")
+	case "configure_ai_agent":
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_configure_ai_agent")
+	case "invite_player":
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_invite_player")
+	case "manage_participants":
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_manage_participants")
+	default:
+		return T(loc, "web.dashboard.campaign_start_nudges.cta_view_campaign")
+	}
+}
+
 templ DashboardFragment(view DashboardPageView, loc Localizer) {
 	<section id="dashboard-root" hx-history="false" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
 		if dashboardStatusNoticeVisible(view) {
@@ -125,6 +191,30 @@ templ DashboardFragment(view DashboardPageView, loc Localizer) {
 					<div class="card-actions justify-end">
 						<a href={ routepath.AppSettingsProfile } hx-get={ routepath.AppSettingsProfile } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.profile_pending.cta") }</a>
 					</div>
+				</div>
+			</section>
+		}
+		if dashboardCampaignStartNudgesVisible(view) {
+			<section id="dashboard-campaign-start-nudges" data-dashboard-block="campaign-start-nudges" class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-2">
+				<div class="card-body gap-4">
+					<h2 class="card-title">{ T(loc, "web.dashboard.campaign_start_nudges.title") }</h2>
+					<p class="text-sm opacity-80">{ T(loc, "web.dashboard.campaign_start_nudges.body") }</p>
+					<ul class="list-none space-y-3">
+						for _, entry := range view.CampaignStartNudges.Nudges {
+							<li class="flex items-center justify-between gap-3 rounded-box bg-base-100 px-4 py-3">
+								<div class="min-w-0">
+									<p class="truncate font-medium">{ entry.CampaignName }</p>
+									<p class="text-sm opacity-70">{ entry.Message }</p>
+								</div>
+								<a href={ dashboardCampaignStartNudgeURL(entry) } hx-get={ dashboardCampaignStartNudgeURL(entry) } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary btn-sm shrink-0">{ dashboardCampaignStartNudgeCTA(entry, loc) }</a>
+							</li>
+						}
+					</ul>
+					if view.CampaignStartNudges.HasMore {
+						<div class="card-actions justify-end">
+							<a href={ routepath.AppCampaigns } hx-get={ routepath.AppCampaigns } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-ghost btn-sm">{ T(loc, "web.dashboard.campaign_start_nudges.cta_view_all_campaigns") }</a>
+						</div>
+					}
 				</div>
 			</section>
 		}
