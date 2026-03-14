@@ -49,7 +49,7 @@ func parseAIAgentCredentialSelectionInput(values url.Values) string {
 // parseAIAgentCreateInput maps create-agent form values.
 func parseAIAgentCreateInput(form url.Values) settingsapp.CreateAIAgentInput {
 	return settingsapp.CreateAIAgentInput{
-		Name:         strings.TrimSpace(form.Get("name")),
+		Label:        strings.TrimSpace(form.Get("label")),
 		CredentialID: strings.TrimSpace(form.Get("credential_id")),
 		Model:        strings.TrimSpace(form.Get("model")),
 		Instructions: strings.TrimSpace(form.Get("instructions")),

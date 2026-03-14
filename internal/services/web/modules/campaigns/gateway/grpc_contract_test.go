@@ -513,8 +513,8 @@ func TestCampaignAIAgentsAndBindingMutations(t *testing.T) {
 
 	agentClient := &contractAgentClient{listResp: &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{
 		nil,
-		{Id: "agent-active", Name: "Alpha", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE},
-		{Id: "agent-inactive", Handle: "beta", Status: aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED},
+		{Id: "agent-active", Label: "alpha", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE},
+		{Id: "agent-inactive", Label: "beta", Status: aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED},
 	}}}
 	campaignClient := &contractCampaignClient{}
 	gateway := GRPCGateway{
@@ -529,10 +529,10 @@ func TestCampaignAIAgentsAndBindingMutations(t *testing.T) {
 	if len(options) != 2 {
 		t.Fatalf("len(options) = %d, want 2", len(options))
 	}
-	if !options[0].Enabled || options[0].Name != "Alpha" {
+	if !options[0].Enabled || options[0].Label != "alpha" {
 		t.Fatalf("options[0] = %#v", options[0])
 	}
-	if options[1].Enabled || options[1].Name != "beta" {
+	if options[1].Enabled || options[1].Label != "beta" {
 		t.Fatalf("options[1] = %#v", options[1])
 	}
 	if agentClient.lastListReq == nil || agentClient.lastListReq.GetPageSize() != campaignAIAgentsPageSize {

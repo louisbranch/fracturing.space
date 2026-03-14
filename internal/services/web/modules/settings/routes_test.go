@@ -180,7 +180,7 @@ func (staticGateway) ListAIAgentCredentials(context.Context, string) ([]settings
 }
 
 func (staticGateway) ListAIAgents(context.Context, string) ([]settingsapp.SettingsAIAgent, error) {
-	return []settingsapp.SettingsAIAgent{{ID: "agent-1", Name: "Narrator", Provider: "OpenAI", Model: "gpt-4o-mini", Status: "Active", CreatedAt: "2026-01-01 00:00 UTC"}}, nil
+	return []settingsapp.SettingsAIAgent{{ID: "agent-1", Label: "narrator", Provider: "OpenAI", Model: "gpt-4o-mini", Status: "Active", CreatedAt: "2026-01-01 00:00 UTC"}}, nil
 }
 
 func (staticGateway) ListAIProviderModels(context.Context, string, string) ([]settingsapp.SettingsAIModelOption, error) {

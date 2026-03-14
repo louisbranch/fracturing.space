@@ -1492,7 +1492,7 @@ func TestMountCampaignParticipantEditRendersAIBindingColumnForOwner(t *testing.T
 			Controller:     "AI",
 			Pronouns:       "it/its",
 		},
-		campaignAIAgents: []campaignapp.CampaignAIAgentOption{{ID: "agent-current", Name: "Current", Enabled: true}},
+		campaignAIAgents: []campaignapp.CampaignAIAgentOption{{ID: "agent-current", Label: "current", Enabled: true}},
 		authorizationDecision: campaignapp.AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,

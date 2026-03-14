@@ -36,8 +36,7 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 
 	createInput, err := agent.NormalizeCreateInput(agent.CreateInput{
 		OwnerUserID:     userID,
-		Name:            in.GetName(),
-		Handle:          in.GetHandle(),
+		Label:           in.GetLabel(),
 		Instructions:    in.GetInstructions(),
 		Provider:        provider,
 		Model:           in.GetModel(),
@@ -62,8 +61,7 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 	record := storage.AgentRecord{
 		ID:              created.ID,
 		OwnerUserID:     created.OwnerUserID,
-		Name:            created.Name,
-		Handle:          created.Handle,
+		Label:           created.Label,
 		Instructions:    created.Instructions,
 		Provider:        string(created.Provider),
 		Model:           created.Model,
@@ -74,6 +72,9 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 		UpdatedAt:       created.UpdatedAt,
 	}
 	if err := s.agentStore.PutAgent(ctx, record); err != nil {
+		if errors.Is(err, storage.ErrConflict) {
+			return nil, status.Error(codes.AlreadyExists, "agent label already exists")
+		}
 		return nil, status.Errorf(codes.Internal, "put agent: %v", err)
 	}
 
@@ -315,7 +316,7 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 		return nil, err
 	}
 
-	name := firstNonEmpty(strings.TrimSpace(in.GetName()), existing.Name)
+	label := firstNonEmpty(strings.TrimSpace(in.GetLabel()), existing.Label)
 	instructions := firstNonEmpty(strings.TrimSpace(in.GetInstructions()), existing.Instructions)
 	model := firstNonEmpty(strings.TrimSpace(in.GetModel()), existing.Model)
 	credentialID := strings.TrimSpace(existing.CredentialID)
@@ -329,7 +330,7 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 	normalized, err := agent.NormalizeUpdateInput(agent.UpdateInput{
 		ID:              existing.ID,
 		OwnerUserID:     existing.OwnerUserID,
-		Name:            name,
+		Label:           label,
 		Instructions:    instructions,
 		Model:           model,
 		CredentialID:    credentialID,
@@ -350,13 +351,16 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 	}
 
 	record := existing
-	record.Name = normalized.Name
+	record.Label = normalized.Label
 	record.Instructions = normalized.Instructions
 	record.Model = normalized.Model
 	record.CredentialID = normalized.CredentialID
 	record.ProviderGrantID = normalized.ProviderGrantID
 	record.UpdatedAt = s.clock().UTC()
 	if err := s.agentStore.PutAgent(ctx, record); err != nil {
+		if errors.Is(err, storage.ErrConflict) {
+			return nil, status.Error(codes.AlreadyExists, "agent label already exists")
+		}
 		return nil, status.Errorf(codes.Internal, "put agent: %v", err)
 	}
 

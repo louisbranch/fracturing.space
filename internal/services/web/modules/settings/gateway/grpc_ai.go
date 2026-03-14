@@ -7,6 +7,8 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -86,7 +88,7 @@ func (g GRPCGateway) ListAIAgents(ctx context.Context, userID string) ([]setting
 			}
 			agents = append(agents, settingsapp.SettingsAIAgent{
 				ID:           strings.TrimSpace(agent.GetId()),
-				Name:         strings.TrimSpace(agent.GetName()),
+				Label:        strings.TrimSpace(agent.GetLabel()),
 				Provider:     providerDisplayLabel(agent.GetProvider()),
 				Model:        strings.TrimSpace(agent.GetModel()),
 				Status:       agentStatusDisplayLabel(agent.GetStatus()),
@@ -137,7 +139,7 @@ func (g GRPCGateway) CreateAIKey(ctx context.Context, userID string, label strin
 		Label:    label,
 		Secret:   secret,
 	})
-	return err
+	return mapAIKeyMutationError(err)
 }
 
 // CreateAIAgent executes package-scoped creation behavior for this flow.
@@ -146,13 +148,13 @@ func (g GRPCGateway) CreateAIAgent(ctx context.Context, userID string, input set
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.ai_agent_service_client_is_not_configured", "AI agent service client is not configured")
 	}
 	_, err := g.AgentClient.CreateAgent(ctx, &aiv1.CreateAgentRequest{
-		Name:         input.Name,
+		Label:        input.Label,
 		Provider:     aiv1.Provider_PROVIDER_OPENAI,
 		Model:        input.Model,
 		CredentialId: input.CredentialID,
 		Instructions: input.Instructions,
 	})
-	return err
+	return mapAIAgentMutationError(err)
 }
 
 // RevokeAIKey applies this package workflow transition.
@@ -214,4 +216,28 @@ func isSafeCredentialPathID(value string) bool {
 		return false
 	}
 	return !strings.Contains(value, "/") && !strings.Contains(value, "\\")
+}
+
+// mapAIKeyMutationError converts transport-level key mutation conflicts into web errors.
+func mapAIKeyMutationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	st, ok := status.FromError(err)
+	if ok && st.Code() == codes.AlreadyExists {
+		return apperrors.EK(apperrors.KindConflict, "web.settings.ai_keys.error_duplicate_label", "AI key label already exists")
+	}
+	return err
+}
+
+// mapAIAgentMutationError converts transport-level agent mutation conflicts into web errors.
+func mapAIAgentMutationError(err error) error {
+	if err == nil {
+		return nil
+	}
+	st, ok := status.FromError(err)
+	if ok && st.Code() == codes.AlreadyExists {
+		return apperrors.EK(apperrors.KindConflict, "web.settings.ai_agents.error_duplicate_label", "AI agent label already exists")
+	}
+	return err
 }

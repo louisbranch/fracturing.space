@@ -55,7 +55,7 @@ type SettingsAIModelOption struct {
 
 type SettingsAIAgentRow struct {
 	ID           string
-	Name         string
+	Label        string
 	Provider     string
 	Model        string
 	Status       string
@@ -64,7 +64,7 @@ type SettingsAIAgentRow struct {
 }
 
 type SettingsAIAgentsForm struct {
-	Name              string
+	Label             string
 	CredentialID      string
 	Model             string
 	Instructions      string
@@ -346,9 +346,12 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 						<input type="hidden" name="credential_id" value={ form.CredentialID }/>
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_name") }</span>
+								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_label") }</span>
 							</label>
-							<input class="input input-bordered w-full" type="text" name="name" value={ form.Name } required/>
+							<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
+							<label class="label">
+								<span class="label-text-alt">{ T(loc, "web.settings.ai_agents.helper_label") }</span>
+							</label>
 						</div>
 						<div class="form-control">
 							<label class="label">
@@ -393,7 +396,7 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 						<table class="table table-zebra">
 							<thead>
 								<tr>
-									<th>{ T(loc, "web.settings.ai_agents.table.name") }</th>
+									<th>{ T(loc, "web.settings.ai_agents.table.label") }</th>
 									<th>{ T(loc, "web.settings.ai_agents.table.provider") }</th>
 									<th>{ T(loc, "web.settings.ai_agents.table.model") }</th>
 									<th>{ T(loc, "web.settings.ai_agents.table.status") }</th>
@@ -404,7 +407,7 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 							<tbody>
 								for _, agent := range agents {
 									<tr>
-										<td>{ agent.Name }</td>
+										<td>{ agent.Label }</td>
 										<td>{ agent.Provider }</td>
 										<td>{ agent.Model }</td>
 										<td>{ agent.Status }</td>

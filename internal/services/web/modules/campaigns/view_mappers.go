@@ -259,7 +259,7 @@ func mapAIBindingEditorView(editor campaignapp.CampaignAIBindingEditor) webtempl
 	for _, option := range editor.Options {
 		options = append(options, webtemplates.CampaignAIAgentOptionView{
 			ID:       option.ID,
-			Name:     option.Name,
+			Name:     option.Label,
 			Enabled:  option.Enabled,
 			Selected: option.Selected,
 		})

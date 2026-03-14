@@ -78,7 +78,7 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 		credentials: []settingsapp.SettingsAICredentialOption{{ID: "cred-1", Label: "Primary", Provider: "OpenAI"}},
 		agents: []settingsapp.SettingsAIAgent{{
 			ID:        "agent-1",
-			Name:      "Narrator",
+			Label:     "narrator",
 			Provider:  "OpenAI",
 			Model:     "gpt-4o-mini",
 			Status:    "Active",
@@ -106,7 +106,7 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loadAIAgentRows() error = %v", err)
 	}
-	if len(rows) != 1 || rows[0].Name != "Narrator" {
+	if len(rows) != 1 || rows[0].Label != "narrator" {
 		t.Fatalf("agent rows = %+v", rows)
 	}
 	if gw.lastRequestedUserID != "user-1" {

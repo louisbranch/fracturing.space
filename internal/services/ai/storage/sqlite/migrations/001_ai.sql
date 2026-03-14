@@ -13,11 +13,13 @@ CREATE TABLE ai_credentials (
 );
 
 CREATE INDEX ai_credentials_owner_id_idx ON ai_credentials(owner_user_id, id);
+CREATE UNIQUE INDEX ai_credentials_owner_active_label_idx ON ai_credentials(owner_user_id, lower(trim(label)))
+WHERE revoked_at IS NULL;
 
 CREATE TABLE ai_agents (
     id TEXT PRIMARY KEY,
     owner_user_id TEXT NOT NULL,
-    name TEXT NOT NULL,
+    label TEXT NOT NULL,
     provider TEXT NOT NULL,
     model TEXT NOT NULL,
     credential_id TEXT NOT NULL,
@@ -28,6 +30,7 @@ CREATE TABLE ai_agents (
 );
 
 CREATE INDEX ai_agents_owner_id_idx ON ai_agents(owner_user_id, id);
+CREATE UNIQUE INDEX ai_agents_owner_label_idx ON ai_agents(owner_user_id, lower(trim(label)));
 CREATE INDEX ai_agents_owner_provider_grant_id_idx ON ai_agents(owner_user_id, provider_grant_id);
 
 CREATE TABLE ai_provider_grants (
@@ -109,7 +112,9 @@ DROP TABLE IF EXISTS ai_provider_connect_sessions;
 DROP INDEX IF EXISTS ai_provider_grants_owner_id_idx;
 DROP TABLE IF EXISTS ai_provider_grants;
 DROP INDEX IF EXISTS ai_agents_owner_provider_grant_id_idx;
+DROP INDEX IF EXISTS ai_agents_owner_label_idx;
 DROP INDEX IF EXISTS ai_agents_owner_id_idx;
 DROP TABLE IF EXISTS ai_agents;
+DROP INDEX IF EXISTS ai_credentials_owner_active_label_idx;
 DROP INDEX IF EXISTS ai_credentials_owner_id_idx;
 DROP TABLE IF EXISTS ai_credentials;

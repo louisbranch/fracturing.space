@@ -131,7 +131,7 @@ func ensureCurrentAIAgentOption(options []CampaignAIAgentOption, currentAIAgentI
 	}
 	return append(options, CampaignAIAgentOption{
 		ID:       currentAIAgentID,
-		Name:     currentAIAgentID,
+		Label:    currentAIAgentID,
 		Enabled:  false,
 		Selected: true,
 	})

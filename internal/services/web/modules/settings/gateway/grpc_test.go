@@ -83,9 +83,9 @@ func (a *agentStub) ListAgents(_ context.Context, req *aiv1.ListAgentsRequest, _
 	a.lastListAgentsReq = req
 	a.listAgentsCalls++
 	if strings.TrimSpace(req.GetPageToken()) == "" {
-		return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-1", Name: "Narrator", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o-mini", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, Instructions: "Keep the session moving."}}, NextPageToken: "page-2"}, nil
+		return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-1", Label: "narrator", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o-mini", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, Instructions: "Keep the session moving."}}, NextPageToken: "page-2"}, nil
 	}
-	return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-2", Name: "Oracle", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, Instructions: "Answer briefly."}}}, nil
+	return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-2", Label: "oracle", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, Instructions: "Answer briefly."}}}, nil
 }
 
 func (a *agentStub) ListProviderModels(_ context.Context, req *aiv1.ListProviderModelsRequest, _ ...grpc.CallOption) (*aiv1.ListProviderModelsResponse, error) {

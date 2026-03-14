@@ -62,6 +62,9 @@ func (s *Service) CreateCredential(ctx context.Context, in *aiv1.CreateCredentia
 		UpdatedAt:        created.UpdatedAt,
 	}
 	if err := s.credentialStore.PutCredential(ctx, record); err != nil {
+		if errors.Is(err, storage.ErrConflict) {
+			return nil, status.Error(codes.AlreadyExists, "credential label already exists")
+		}
 		return nil, status.Errorf(codes.Internal, "put credential: %v", err)
 	}
 

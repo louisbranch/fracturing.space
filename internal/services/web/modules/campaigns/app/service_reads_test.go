@@ -459,8 +459,8 @@ func TestCampaignAIBindingEditorLoadsOwnerOptionsAndPreservesCurrentBinding(t *t
 
 	gateway := &campaignGatewayStub{
 		campaignAIAgents: []CampaignAIAgentOption{
-			{ID: "agent-active", Name: "Alpha", Enabled: true},
-			{ID: "agent-inactive", Name: "Beta", Enabled: false},
+			{ID: "agent-active", Label: "alpha", Enabled: true},
+			{ID: "agent-inactive", Label: "beta", Enabled: false},
 		},
 		authorizationDecision: AuthorizationDecision{
 			Evaluated:           true,
@@ -486,7 +486,7 @@ func TestCampaignAIBindingEditorLoadsOwnerOptionsAndPreservesCurrentBinding(t *t
 		t.Fatalf("len(editor.Options) = %d, want 3", len(editor.Options))
 	}
 	last := editor.Options[len(editor.Options)-1]
-	if last.ID != "agent-missing" || last.Name != "agent-missing" || last.Enabled || !last.Selected {
+	if last.ID != "agent-missing" || last.Label != "agent-missing" || last.Enabled || !last.Selected {
 		t.Fatalf("preserved current option = %#v", last)
 	}
 }
@@ -495,7 +495,7 @@ func TestCampaignAIBindingEditorFallsBackToParticipantAccessWhenAuthzOmitsActorA
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
-		campaignAIAgents: []CampaignAIAgentOption{{ID: "agent-active", Name: "Alpha", Enabled: true}},
+		campaignAIAgents: []CampaignAIAgentOption{{ID: "agent-active", Label: "alpha", Enabled: true}},
 		campaignParticipants: []CampaignParticipant{{
 			ID:             "p-owner",
 			UserID:         "user-1",

@@ -40,7 +40,7 @@ func (g GRPCGateway) CampaignAIAgents(ctx context.Context) ([]campaignapp.Campai
 		}
 		options = append(options, campaignapp.CampaignAIAgentOption{
 			ID:      agentID,
-			Name:    campaignAIAgentDisplayName(agent),
+			Label:   campaignAIAgentDisplayName(agent),
 			Enabled: agent.GetStatus() == aiv1.AgentStatus_AGENT_STATUS_ACTIVE,
 		})
 	}
@@ -75,11 +75,8 @@ func campaignAIAgentDisplayName(agent *aiv1.Agent) string {
 	if agent == nil {
 		return ""
 	}
-	if name := strings.TrimSpace(agent.GetName()); name != "" {
-		return name
-	}
-	if handle := strings.TrimSpace(agent.GetHandle()); handle != "" {
-		return handle
+	if label := strings.TrimSpace(agent.GetLabel()); label != "" {
+		return label
 	}
 	return strings.TrimSpace(agent.GetId())
 }

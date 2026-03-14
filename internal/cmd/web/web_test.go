@@ -321,6 +321,7 @@ func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
 			DaggerheartAsset:   bundle.Modules.Campaigns.DaggerheartAssetClient,
 			Session:            bundle.Modules.Campaigns.SessionClient,
 			Invite:             bundle.Modules.Campaigns.InviteClient,
+			Social:             bundle.Modules.Campaigns.SocialClient,
 		},
 		Mutation: campaigngateway.GRPCGatewayMutationDeps{
 			Campaign:    bundle.Modules.Campaigns.CampaignClient,

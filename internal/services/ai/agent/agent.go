@@ -35,8 +35,8 @@ var (
 	ErrEmptyID = errors.New("id is required")
 	// ErrEmptyOwnerUserID indicates owner user ID is required.
 	ErrEmptyOwnerUserID = errors.New("owner user id is required")
-	// ErrEmptyName indicates agent name is required.
-	ErrEmptyName = errors.New("name is required")
+	// ErrEmptyLabel indicates agent label is required.
+	ErrEmptyLabel = errors.New("label is required")
 	// ErrInvalidProvider indicates unsupported provider value.
 	ErrInvalidProvider = errors.New("provider is invalid")
 	// ErrEmptyModel indicates model is required.
@@ -45,18 +45,17 @@ var (
 	ErrMissingAuthReference = errors.New("agent auth reference is required")
 	// ErrMultipleAuthReferences indicates auth references are mutually exclusive.
 	ErrMultipleAuthReferences = errors.New("exactly one agent auth reference is allowed")
-	// ErrInvalidHandle indicates agent handle failed normalization/validation rules.
-	ErrInvalidHandle = errors.New("agent handle is invalid")
+	// ErrInvalidLabel indicates agent label failed validation rules.
+	ErrInvalidLabel = errors.New("agent label is invalid")
 )
 
-var handlePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{2,31}$`)
+var labelPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{2,31}$`)
 
 // Agent is the phase 1 domain model for an AI profile configuration.
 type Agent struct {
 	ID              string
 	OwnerUserID     string
-	Name            string
-	Handle          string
+	Label           string
 	Instructions    string
 	Provider        Provider
 	Model           string
@@ -70,8 +69,7 @@ type Agent struct {
 // CreateInput captures user-provided fields for creating an agent.
 type CreateInput struct {
 	OwnerUserID     string
-	Name            string
-	Handle          string
+	Label           string
 	Instructions    string
 	Provider        Provider
 	Model           string
@@ -83,7 +81,7 @@ type CreateInput struct {
 type UpdateInput struct {
 	ID              string
 	OwnerUserID     string
-	Name            string
+	Label           string
 	Instructions    string
 	Model           string
 	CredentialID    string
@@ -97,15 +95,13 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, ErrEmptyOwnerUserID
 	}
 
-	input.Name = strings.TrimSpace(input.Name)
-	if input.Name == "" {
-		return CreateInput{}, ErrEmptyName
+	input.Label = strings.TrimSpace(input.Label)
+	if input.Label == "" {
+		return CreateInput{}, ErrEmptyLabel
 	}
-	normalizedHandle, err := normalizeHandle(input.Handle, input.Name)
-	if err != nil {
+	if err := validateLabel(input.Label); err != nil {
 		return CreateInput{}, err
 	}
-	input.Handle = normalizedHandle
 	input.Instructions = strings.TrimSpace(input.Instructions)
 
 	input.Provider = Provider(strings.ToLower(strings.TrimSpace(string(input.Provider))))
@@ -140,7 +136,12 @@ func NormalizeUpdateInput(input UpdateInput) (UpdateInput, error) {
 		return UpdateInput{}, ErrEmptyOwnerUserID
 	}
 
-	input.Name = strings.TrimSpace(input.Name)
+	input.Label = strings.TrimSpace(input.Label)
+	if input.Label != "" {
+		if err := validateLabel(input.Label); err != nil {
+			return UpdateInput{}, err
+		}
+	}
 	input.Instructions = strings.TrimSpace(input.Instructions)
 	input.Model = strings.TrimSpace(input.Model)
 	credentialID, providerGrantID, err := normalizeAuthReference(input.CredentialID, input.ProviderGrantID, false)
@@ -176,8 +177,7 @@ func Create(input CreateInput, now func() time.Time, idGenerator func() (string,
 	return Agent{
 		ID:              agentID,
 		OwnerUserID:     normalized.OwnerUserID,
-		Name:            normalized.Name,
-		Handle:          normalized.Handle,
+		Label:           normalized.Label,
 		Instructions:    normalized.Instructions,
 		Provider:        normalized.Provider,
 		Model:           normalized.Model,
@@ -209,38 +209,9 @@ func normalizeAuthReference(credentialID string, providerGrantID string, require
 	return credentialID, providerGrantID, nil
 }
 
-func normalizeHandle(raw string, fallbackName string) (string, error) {
-	handle := strings.ToLower(strings.TrimSpace(raw))
-	if handle == "" {
-		handle = strings.ToLower(strings.TrimSpace(fallbackName))
+func validateLabel(value string) error {
+	if !labelPattern.MatchString(value) {
+		return ErrInvalidLabel
 	}
-	if handle == "" {
-		return "", ErrInvalidHandle
-	}
-
-	builder := strings.Builder{}
-	lastUnderscore := false
-	for _, r := range handle {
-		switch {
-		case r >= 'a' && r <= 'z':
-			builder.WriteRune(r)
-			lastUnderscore = false
-		case r >= '0' && r <= '9':
-			builder.WriteRune(r)
-			lastUnderscore = false
-		case r == '-' || r == '_':
-			builder.WriteRune(r)
-			lastUnderscore = false
-		case r == ' ':
-			if !lastUnderscore {
-				builder.WriteRune('_')
-				lastUnderscore = true
-			}
-		}
-	}
-	normalized := strings.Trim(builder.String(), "_-")
-	if !handlePattern.MatchString(normalized) {
-		return "", ErrInvalidHandle
-	}
-	return normalized, nil
+	return nil
 }

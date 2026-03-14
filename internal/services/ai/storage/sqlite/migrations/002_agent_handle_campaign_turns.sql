@@ -1,14 +1,5 @@
 -- +migrate Up
 
-ALTER TABLE ai_agents ADD COLUMN handle TEXT NOT NULL DEFAULT '';
-
-UPDATE ai_agents
-SET handle = id
-WHERE TRIM(handle) = '';
-
-CREATE UNIQUE INDEX IF NOT EXISTS ai_agents_owner_handle_idx
-ON ai_agents(owner_user_id, handle);
-
 CREATE TABLE ai_campaign_turns (
     id TEXT PRIMARY KEY,
     campaign_id TEXT NOT NULL,
@@ -47,4 +38,3 @@ DROP TABLE IF EXISTS ai_campaign_turn_events;
 DROP INDEX IF EXISTS ai_campaign_turns_agent_id_idx;
 DROP INDEX IF EXISTS ai_campaign_turns_campaign_id_idx;
 DROP TABLE IF EXISTS ai_campaign_turns;
-DROP INDEX IF EXISTS ai_agents_owner_handle_idx;
