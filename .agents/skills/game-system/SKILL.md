@@ -37,8 +37,8 @@ Daggerheart reference implementation.
 5. **Run full verification**:
    ```bash
    make test          # unit tests
-   make runtime       # full gRPC + MCP + scenario + storage verification
-   make verify-pr     # required before opening or updating a PR
+   make smoke         # quick gRPC + MCP + scenario confidence
+   make check         # required before opening or updating a PR
    ```
 
 ## Testing guardrails

@@ -23,7 +23,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-critical-domain coverage-pr cover-package-floors coverage-floors-ratchet cover-treemap test test-changed integration integration-smoke integration-shard integration-shard-check runtime runtime-smoke scenario scenario-full scenario-smoke scenario-shard scenario-shard-check verify-pr verify-pr-fast templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-critical-domain check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -96,8 +96,8 @@ cover-critical-domain:
 	go tool cover -func=coverage-critical-domain.out > coverage-critical-domain.func
 	@awk '/^total:/{print}' coverage-critical-domain.func
 
-coverage-pr:
-	@bash ./scripts/pr-coverage-checks.sh
+check-coverage:
+	@bash ./scripts/check-coverage.sh
 
 cover-package-floors:
 	@test -f coverage.out || (echo "coverage.out not found; run 'make cover' first" && exit 1)
@@ -116,42 +116,48 @@ test:
 test-changed:
 	@bash ./scripts/test-changed.sh
 
-integration:
-	@if [ -n "$${INTEGRATION_SHARD_TOTAL:-}" ] || [ -n "$${INTEGRATION_SHARD_INDEX:-}" ]; then \
-		$(MAKE) integration-shard; \
-	else \
-		$(MAKE) event-catalog-check; \
-		$(MAKE) topology-check; \
-		INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} go test -tags=integration ./...; \
-	fi
-
-integration-smoke:
+smoke:
 	$(MAKE) event-catalog-check
 	$(MAKE) topology-check
 	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} go test -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_PR_PATTERN)'
-
-integration-shard:
-	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} INTEGRATION_SHARD_TOTAL=$${INTEGRATION_SHARD_TOTAL:?set INTEGRATION_SHARD_TOTAL} INTEGRATION_SHARD_INDEX=$${INTEGRATION_SHARD_INDEX:?set INTEGRATION_SHARD_INDEX} bash ./scripts/integration-shard.sh
-
-integration-shard-check:
-	INTEGRATION_VERIFY_SHARDS_TOTAL=$${INTEGRATION_VERIFY_SHARDS_TOTAL:?set INTEGRATION_VERIFY_SHARDS_TOTAL} bash ./scripts/integration-shard.sh --check
-
-scenario:
-	$(MAKE) scenario-full
-
-scenario-full:
-	@bash -euo pipefail -c ' \
-		scenario_parallelism="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}"; \
-		go test -parallel="$$scenario_parallelism" -tags=scenario ./internal/test/game \
-	'
-
-scenario-smoke:
 	@bash -euo pipefail -c ' \
 		scenario_parallelism="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}"; \
 		SCENARIO_MANIFEST="$(SCENARIO_SMOKE_MANIFEST)" go test -parallel="$$scenario_parallelism" -tags=scenario ./internal/test/game \
 	'
 
-scenario-shard:
+check:
+	$(MAKE) check-core
+	$(MAKE) check-focused
+	$(MAKE) check-runtime
+	$(MAKE) check-coverage
+
+check-core:
+	$(MAKE) docs-check
+	$(MAKE) fmt-check
+	$(MAKE) i18n-check
+	$(MAKE) i18n-status-check
+	$(MAKE) negative-test-assertion-check
+	$(MAKE) test
+
+check-focused:
+	@bash ./scripts/check-focused-gates.sh
+
+check-runtime:
+	$(MAKE) event-catalog-check
+	$(MAKE) topology-check
+	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} go test -tags=integration ./...
+	@bash -euo pipefail -c ' \
+		scenario_parallelism="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}"; \
+		go test -parallel="$$scenario_parallelism" -tags=scenario ./internal/test/game \
+	'
+
+ci-integration-shard:
+	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} INTEGRATION_SHARD_TOTAL=$${INTEGRATION_SHARD_TOTAL:?set INTEGRATION_SHARD_TOTAL} INTEGRATION_SHARD_INDEX=$${INTEGRATION_SHARD_INDEX:?set INTEGRATION_SHARD_INDEX} bash ./scripts/integration-shard.sh
+
+ci-integration-shard-check:
+	INTEGRATION_VERIFY_SHARDS_TOTAL=$${INTEGRATION_VERIFY_SHARDS_TOTAL:?set INTEGRATION_VERIFY_SHARDS_TOTAL} bash ./scripts/integration-shard.sh --check
+
+ci-scenario-shard:
 	@bash -euo pipefail -c ' \
 		scenario_parallelism="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}"; \
 		SCENARIO_SHARD_TOTAL="$${SCENARIO_SHARD_TOTAL:?set SCENARIO_SHARD_TOTAL}" \
@@ -159,32 +165,8 @@ scenario-shard:
 		go test -parallel="$$scenario_parallelism" -tags=scenario ./internal/test/game \
 	'
 
-scenario-shard-check:
+ci-scenario-shard-check:
 	SCENARIO_VERIFY_SHARDS_TOTAL=$${SCENARIO_VERIFY_SHARDS_TOTAL:?set SCENARIO_VERIFY_SHARDS_TOTAL} go test -tags=scenario ./internal/test/game -run '^TestScenarioShardCoverage$$'
-
-runtime-smoke:
-	$(MAKE) integration-smoke
-	$(MAKE) scenario-smoke
-
-runtime:
-	$(MAKE) integration
-	$(MAKE) scenario-full
-
-verify-pr-fast:
-	$(MAKE) docs-check
-	$(MAKE) fmt-check
-	$(MAKE) event-catalog-check
-	$(MAKE) i18n-check
-	$(MAKE) i18n-status-check
-	$(MAKE) topology-check
-	$(MAKE) negative-test-assertion-check
-	$(MAKE) web-architecture-check
-	$(MAKE) game-architecture-check
-	$(MAKE) admin-architecture-check
-	$(MAKE) test
-
-verify-pr:
-	@bash ./scripts/verify-pr.sh
 
 docs-check: docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check
 

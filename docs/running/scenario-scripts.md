@@ -108,28 +108,20 @@ Scenario runs use a permissive in-process auth helper that generates synthetic u
 Scenario suites are part of the public runtime verification surface:
 
 ```bash
-make runtime-smoke
-make runtime
-make verify-pr
+make test
+make smoke
+make check
 ```
 
-Use `make runtime-smoke` for quick feedback while iterating and `make runtime`
-before declaring runtime-impacting work done. Use `make verify-pr` before
-opening or updating a PR.
+Use `make smoke` for quick feedback while iterating and `make check` before
+opening or updating a PR. The canonical workflow is documented in
+[Verification commands](verification.md).
 
-## Scenario Command Matrix
+## Supported verification
 
 For one-off script execution, use the scenario CLI commands above. For supported
-project verification, use the public Make surface:
-
-| Command | Use case | When to run |
-| --- | --- | --- |
-| `make test` | Fast unit/domain verification | During active implementation |
-| `make runtime-smoke` | Fast runtime confidence including scenario smoke coverage | During active scenario/runtime work |
-| `make runtime` | Full scenario and integration regression coverage | Before declaring runtime work done |
-| `make verify-pr` | PR/update gate using the repository's supported verification bundle | Before opening or updating a PR |
-| `make cover` | Coverage non-regression check for production behavior changes | When behavior changes |
-| `make cover-critical-domain` | Extra coverage guardrail for game-domain behavior changes | When changing game-domain behavior |
+project verification, use the public Make surface in
+[Verification commands](verification.md).
 
 Optional environment controls:
 

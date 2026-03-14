@@ -24,7 +24,7 @@ jobs:
         with:
           go-version: "1.26.0"
       - name: Run runtime smoke lane
-        run: make runtime-smoke
+        run: make smoke
       - name: Generate smoke runtime report
         run: |
           OUT_DIR=.tmp/test-runtime/smoke \
@@ -49,7 +49,7 @@ jobs:
         with:
           go-version: "1.26.0"
       - name: Verify integration shard coverage
-        run: INTEGRATION_VERIFY_SHARDS_TOTAL=4 make integration-shard-check
+        run: INTEGRATION_VERIFY_SHARDS_TOTAL=4 make ci-integration-shard-check
 
   integration-sharded:
     if: github.event_name != 'pull_request'
@@ -68,7 +68,7 @@ jobs:
         with:
           go-version: "1.26.0"
       - name: Run integration shard
-        run: INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=${{ matrix.shard_index }} make integration-shard
+        run: INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=${{ matrix.shard_index }} make ci-integration-shard
       - name: Generate integration shard runtime report
         run: |
           OUT_DIR=.tmp/test-runtime/integration-shard-${{ matrix.shard_index }} \
@@ -95,7 +95,7 @@ jobs:
         with:
           go-version: "1.26.0"
       - name: Verify shard coverage
-        run: SCENARIO_VERIFY_SHARDS_TOTAL=6 make scenario-shard-check
+        run: SCENARIO_VERIFY_SHARDS_TOTAL=6 make ci-scenario-shard-check
 
   scenario-sharded:
     if: github.event_name != 'pull_request'
@@ -114,7 +114,7 @@ jobs:
         with:
           go-version: "1.26.0"
       - name: Run scenario shard
-        run: SCENARIO_SHARD_TOTAL=6 SCENARIO_SHARD_INDEX=${{ matrix.shard_index }} make scenario-shard
+        run: SCENARIO_SHARD_TOTAL=6 SCENARIO_SHARD_INDEX=${{ matrix.shard_index }} make ci-scenario-shard
       - name: Generate shard runtime report
         run: |
           OUT_DIR=.tmp/test-runtime/scenario-shard-${{ matrix.shard_index }} \

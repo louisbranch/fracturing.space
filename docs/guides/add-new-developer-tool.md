@@ -53,5 +53,5 @@ Run at least:
 
 ```bash
 go test ./internal/tools/...
-make verify-pr
+make check
 ```

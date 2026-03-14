@@ -44,9 +44,9 @@ Use this skill when the user asks to:
    - Use relevant skills if changes touch those domains (`schema`, `error-handling`, `go-style`, `mcp`, `web-server`).
 
 6. **Verify**
-   - Run `make verify-pr` before pushing PR updates.
-   - Treat `make verify-pr` as the gating local parity check for the PR workflows.
-   - Use `make runtime-smoke` for faster runtime iteration and `make runtime` before declaring runtime-impacting fixes done when `make verify-pr` is not enough to explain risk.
+   - Run `make check` before pushing PR updates.
+   - Treat `make check` as the gating local parity check for the PR workflows.
+   - Use `make smoke` for faster runtime iteration when you need quick confidence before the final gate.
    - Remove stale tombstone tests instead of preserving historical expectations after a deliberate feature removal.
    - Note failures and propose fixes before proceeding.
 

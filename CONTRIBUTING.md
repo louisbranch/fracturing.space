@@ -10,7 +10,7 @@ workflow, standards, and expectations used in this repo.
 1. Fork the repo and create a branch from `main`.
 2. Use a prefixed branch name: `feat/`, `fix/`, `chore/`, or `docs/`.
 3. Make focused changes with a single intent.
-4. Run tests: `go test ./...`.
+4. Run tests: `make test`.
 5. Open a PR with a title using the same prefix style.
 
 ------------------------------------------------------------------------
@@ -18,17 +18,17 @@ workflow, standards, and expectations used in this repo.
 ## Build, Test, and Format
 
 - Build all packages: `go build ./...`
-- Run all tests: `go test ./...`
-- Run integration tests: `go test -tags=integration ./...`
+- Run all tests: `make test`
 - If `git config --local --get core.hooksPath` is not `.githooks`, run `make setup-hooks` (pre-commit formats staged Go files)
 - Verify formatting: `make fmt-check`
 - Keep `go.mod` tidy: `go mod tidy`
 
-Integration tests exercise the full gRPC + MCP + storage path. You can also
-use the Make targets documented in [integration tests](docs/running/integration-tests.md):
+Use the supported verification commands documented in
+[verification commands](docs/running/verification.md):
 
 - `make test`
-- `make integration`
+- `make smoke`
+- `make check`
 - `make cover`
 - `make web-architecture-check` (required when changing `internal/services/web/` architecture, modules, routes, or templates)
 - `make game-architecture-check` (required when changing `internal/services/game/` domain boundaries or write-path architecture guards)
@@ -103,4 +103,4 @@ When adding a new MCP tool, update the expected tools list in
 
 - No direct state writes without emitting events.
 - Added or updated tests for any new mutations.
-- `make integration` passes.
+- `make check` passes.

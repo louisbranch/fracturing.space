@@ -30,10 +30,9 @@ Canonical path: `internal/services/web/`.
   move out once cross-area ownership becomes unclear. If a feature still uses
   shared template internals, put a module-owned render seam in front first.
 
-For module internals, areas may be either:
-
-- `transport-only`, or
-- `transport + app + gateway` (preferred when orchestration/adapter boundaries are needed).
+For module internals, areas may be either `transport-only` or
+`transport + app + gateway` (preferred when orchestration/adapter boundaries are
+needed).
 
 ## Module contract
 
@@ -110,10 +109,8 @@ Required properties:
 
 ## Degraded operation model
 
-Fail closed when authz/session/dependency checks are unavailable.
-
-Do not keep placeholder mutation routes or static fake domain data in runtime
-composition.
+Fail closed when authz/session/dependency checks are unavailable. Do not keep
+placeholder mutation routes or static fake domain data in runtime composition.
 
 ## Startup dependency policy
 
@@ -138,9 +135,11 @@ composition.
 
 Minimum checks when changing web architecture, modules, or routes:
 
-- `go test ./internal/services/web/...`
-- `make web-architecture-check`
-- `make runtime`
+- `make test`
+- `make smoke`
+- `make check`
+
+`make check` automatically runs `make web-architecture-check` when web paths changed. Use focused package tests when debugging a specific web slice.
 
 ## Deep references
 

@@ -71,9 +71,9 @@ Composition owns module set selection and prefix ownership validation.
 
 Minimum checks when changing admin architecture, modules, or routes:
 
-- `go test ./internal/services/admin/...`
 - `make test`
-- `make runtime`
+- `make smoke`
+- `make check`
 
 ## Deep references
 

@@ -69,24 +69,24 @@ Verification expectations after code changes:
 
 ```bash
 make test
-make runtime
+make smoke
 ```
 
 PR/PR-update prerequisite (required before opening or updating a PR):
 
 ```bash
-make verify-pr
+make check
 ```
 
 Command guidance for agents:
 
 - Fast feedback during implementation:
   - `make test`
-  - `make runtime-smoke`
-- Full verification before declaring runtime test changes done:
-  - `make runtime`
+  - `make smoke`
+- Final verification before push or PR update:
+  - `make check`
 - PR/update verification:
-  - `make verify-pr`
+  - `make check`
 
 Run `make cover` when production behavior changes and report notable coverage impact.
 Run `make cover-critical-domain` for game-domain behavior changes.

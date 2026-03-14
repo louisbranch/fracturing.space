@@ -135,10 +135,10 @@ If your system requires projection storage:
 ## Verification
 
 After all steps:
-
 ```bash
 make test                       # Unit tests pass
-make runtime                    # Component seams work
+make smoke                      # Quick runtime confidence
+make check                      # Final local guard
 make game-architecture-check    # Parity validation passes
 ```
 

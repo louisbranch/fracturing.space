@@ -129,27 +129,18 @@ Example:
 go test -tags=integration ./...
 ```
 
-## Command Matrix
+## Supported verification commands
 
-Use the supported public command surface:
-
-| Command | Use case | When to run |
-| --- | --- | --- |
-| `make test` | Fast unit/domain verification | During active implementation |
-| `make runtime-smoke` | Fast runtime confidence across integration and scenario smoke coverage | During active runtime work before commit |
-| `make runtime` | Full deterministic runtime verification | Before declaring runtime-impacting work done |
-| `make verify-pr` | PR/update gate using the repository's supported verification bundle | Before opening or updating a PR |
-| `make cover` | Coverage non-regression check for production behavior changes | When behavior changes |
-| `make cover-critical-domain` | Extra coverage guardrail for game-domain behavior changes | When game-domain behavior changes |
-
-Raw `go test -tags=integration ./...` remains useful for low-level debugging,
-but the public contributor interface is the Make surface above.
+For the supported contributor workflow, use the canonical
+[Verification commands](verification.md) surface. Raw
+`go test -tags=integration ./...` remains useful for low-level debugging, but it
+is not the default contributor path.
 
 ## Scenario Sharding
 
 Scenario tests support deterministic sharding for CI fanout. Treat shard entry
-points as internal CI plumbing; contributors should use `make runtime-smoke`,
-`make runtime`, and `make verify-pr`.
+points as internal CI plumbing; contributors should use `make test`,
+`make smoke`, and `make check`.
 
 ## Integration Sharding
 
@@ -160,8 +151,8 @@ Top-level `Test...` names are assigned by stable hash modulo shard total.
 
 CI target guidance:
 
-- Pull requests should run the `make verify-pr` surface.
-- Main/nightly workflows may shard `make runtime` internally for fanout.
+- Pull requests should use the public `make check` surface locally.
+- Main/nightly workflows may shard full runtime lanes internally for fanout.
 - Nightly soak runs may enable shared-fixture variants as internal workflow detail.
 
 ## Runtime Reporting
@@ -176,4 +167,4 @@ workflow details rather than the public contributor command surface.
   and confirm the [event catalog](../events/event-catalog.md) is updated in the diff.
 
 - Use the public Make verification surface above; avoid depending on retired
-  `make integration*` or `make scenario*` aliases in contributor-facing docs.
+  shard/plumbing targets in contributor-facing docs.

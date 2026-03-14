@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  fast-verification:
+  check-core:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -21,8 +21,8 @@ jobs:
           go-version: "1.26.0"
       - name: Install goimports
         run: go install golang.org/x/tools/cmd/goimports@latest
-      - name: Run fast verification lane
-        run: make verify-pr-fast
+      - name: Run core verification lane
+        run: make check-core
 
   coverage:
     runs-on: ubuntu-latest
@@ -35,10 +35,10 @@ jobs:
           go-version: "1.26.0"
       - name: Run PR coverage lane
         if: github.event_name == 'pull_request'
-        run: make coverage-pr
+        run: make check-coverage
       - name: Run main coverage lane
         if: github.event_name != 'pull_request'
-        run: COVERAGE_CHECK_BASELINE=false make coverage-pr
+        run: COVERAGE_CHECK_BASELINE=false make check-coverage
       - name: Upload coverage logs
         if: always()
         uses: actions/upload-artifact@v4

@@ -21,6 +21,7 @@ Canonical runtime entrypoint.
 - [Docker Compose (local)](docker-compose.md)
 - [Production deployment](production.md)
 - [Configuration reference](configuration.md)
+- [Verification commands](verification.md)
 - [Integration tests](integration-tests.md)
 - [Seeding](seeding.md)
 - [Replay operations](replay-operations.md)
