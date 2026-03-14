@@ -79,6 +79,30 @@ func (a Applier) applyInviteClaimed(ctx context.Context, evt event.Event, payloa
 	return a.Campaign.Put(ctx, campaignRecord)
 }
 
+func (a Applier) applyInviteDeclined(ctx context.Context, evt event.Event, payload invite.DeclinePayload) error {
+	inviteID := strings.TrimSpace(evt.EntityID)
+
+	if payload.InviteID != "" && strings.TrimSpace(payload.InviteID.String()) != inviteID {
+		return fmt.Errorf("invite.declined invite_id mismatch")
+	}
+
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	if err := a.Invite.UpdateInviteStatus(ctx, inviteID, invite.StatusDeclined, updatedAt); err != nil {
+		return err
+	}
+
+	campaignRecord, err := a.Campaign.Get(ctx, string(evt.CampaignID))
+	if err != nil {
+		return err
+	}
+	campaignRecord.UpdatedAt = updatedAt
+
+	return a.Campaign.Put(ctx, campaignRecord)
+}
+
 func (a Applier) applyInviteRevoked(ctx context.Context, evt event.Event, payload invite.RevokePayload) error {
 	inviteID := strings.TrimSpace(evt.EntityID)
 

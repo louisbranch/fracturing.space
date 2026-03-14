@@ -97,8 +97,8 @@ func TestComposeWrapsProtectedModulesWithAuth(t *testing.T) {
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login" {
-		t.Fatalf("Location = %q, want %q", got, "/login")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F123" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F123")
 	}
 }
 
@@ -124,8 +124,8 @@ func TestComposeWrapsProtectedModulesWithAuthForHtmxRequest(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if got := rr.Header().Get("HX-Redirect"); got != "/login" {
-		t.Fatalf("HX-Redirect = %q, want %q", got, "/login")
+	if got := rr.Header().Get("HX-Redirect"); got != "/login?next=%2Fapp%2Fcampaigns%2F123" {
+		t.Fatalf("HX-Redirect = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F123")
 	}
 	if got := rr.Header().Get("Location"); got != "" {
 		t.Fatalf("Location = %q, want empty", got)

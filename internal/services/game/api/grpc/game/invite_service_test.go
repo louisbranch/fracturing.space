@@ -2,20 +2,149 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"google.golang.org/grpc/codes"
 )
+
+type eventAppender interface {
+	AppendEvent(context.Context, event.Event) (event.Event, error)
+}
+
+func seedParticipantJoinedEvent(t *testing.T, store eventAppender, record storage.ParticipantRecord, stamp time.Time) {
+	t.Helper()
+
+	role := record.Role
+	if role == "" {
+		role = participant.RolePlayer
+	}
+	controller := record.Controller
+	if controller == "" {
+		controller = participant.ControllerHuman
+	}
+	access := record.CampaignAccess
+	if access == "" {
+		access = participant.CampaignAccessMember
+	}
+	name := record.Name
+	if name == "" {
+		name = record.ID
+	}
+	payloadJSON, err := json.Marshal(participant.JoinPayload{
+		ParticipantID:  ids.ParticipantID(record.ID),
+		UserID:         ids.UserID(record.UserID),
+		Name:           name,
+		Role:           string(role),
+		Controller:     string(controller),
+		CampaignAccess: string(access),
+		AvatarSetID:    record.AvatarSetID,
+		AvatarAssetID:  record.AvatarAssetID,
+		Pronouns:       record.Pronouns,
+	})
+	if err != nil {
+		t.Fatalf("marshal participant join payload: %v", err)
+	}
+	if _, err := store.AppendEvent(context.Background(), event.Event{
+		CampaignID:  ids.CampaignID(record.CampaignID),
+		Type:        participant.EventTypeJoined,
+		Timestamp:   stamp,
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    record.ID,
+		PayloadJSON: payloadJSON,
+	}); err != nil {
+		t.Fatalf("append participant join event: %v", err)
+	}
+}
+
+func seedInviteCreatedEvent(t *testing.T, store eventAppender, record storage.InviteRecord, stamp time.Time) {
+	t.Helper()
+
+	status := record.Status
+	if status == invite.StatusUnspecified {
+		status = invite.StatusPending
+	}
+	payloadJSON, err := json.Marshal(invite.CreatePayload{
+		InviteID:               ids.InviteID(record.ID),
+		ParticipantID:          ids.ParticipantID(record.ParticipantID),
+		RecipientUserID:        ids.UserID(record.RecipientUserID),
+		CreatedByParticipantID: ids.ParticipantID(record.CreatedByParticipantID),
+		Status:                 string(status),
+	})
+	if err != nil {
+		t.Fatalf("marshal invite create payload: %v", err)
+	}
+	if _, err := store.AppendEvent(context.Background(), event.Event{
+		CampaignID:  ids.CampaignID(record.CampaignID),
+		Type:        invite.EventTypeCreated,
+		Timestamp:   stamp,
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "invite",
+		EntityID:    record.ID,
+		PayloadJSON: payloadJSON,
+	}); err != nil {
+		t.Fatalf("append invite create event: %v", err)
+	}
+}
+
+func seedParticipantLeftEvent(t *testing.T, store eventAppender, campaignID string, participantID string, stamp time.Time) {
+	t.Helper()
+
+	payloadJSON, err := json.Marshal(participant.LeavePayload{
+		ParticipantID: ids.ParticipantID(participantID),
+	})
+	if err != nil {
+		t.Fatalf("marshal participant leave payload: %v", err)
+	}
+	if _, err := store.AppendEvent(context.Background(), event.Event{
+		CampaignID:  ids.CampaignID(campaignID),
+		Type:        participant.EventTypeLeft,
+		Timestamp:   stamp,
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    participantID,
+		PayloadJSON: payloadJSON,
+	}); err != nil {
+		t.Fatalf("append participant left event: %v", err)
+	}
+}
+
+func seedParticipantUnboundEvent(t *testing.T, store eventAppender, campaignID string, participantID string, userID string, stamp time.Time) {
+	t.Helper()
+
+	payloadJSON, err := json.Marshal(participant.UnbindPayload{
+		ParticipantID: ids.ParticipantID(participantID),
+		UserID:        ids.UserID(userID),
+	})
+	if err != nil {
+		t.Fatalf("marshal participant unbind payload: %v", err)
+	}
+	if _, err := store.AppendEvent(context.Background(), event.Event{
+		CampaignID:  ids.CampaignID(campaignID),
+		Type:        participant.EventTypeUnbound,
+		Timestamp:   stamp,
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "participant",
+		EntityID:    participantID,
+		PayloadJSON: payloadJSON,
+	}); err != nil {
+		t.Fatalf("append participant unbound event: %v", err)
+	}
+}
 
 func TestCreateInvite_NilRequest(t *testing.T) {
 	svc := NewInviteService(Stores{}, nil)
@@ -27,7 +156,7 @@ func TestCreateInvite_RequiresDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
@@ -53,7 +182,7 @@ func TestCreateInvite_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
@@ -110,7 +239,7 @@ func TestCreateInvite_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
@@ -179,7 +308,7 @@ func TestCreateInvite_RecipientAlreadyParticipant(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
@@ -219,7 +348,7 @@ func TestCreateInvite_RecipientAlreadyHasPendingInvite(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
@@ -266,7 +395,7 @@ func TestCreateInvite_RecipientParticipantInOtherCampaignDoesNotBlock(t *testing
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -329,7 +458,7 @@ func TestCreateInvite_RecipientPendingInviteInOtherCampaignDoesNotBlock(t *testi
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -394,7 +523,7 @@ func TestCreateInvite_RecipientPendingInviteInOtherCampaignDoesNotBlock(t *testi
 
 func TestRevokeInvite_AlreadyClaimed(t *testing.T) {
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	inviteStore.invites["invite-1"] = storage.InviteRecord{ID: "invite-1", CampaignID: "campaign-1", Status: invite.StatusClaimed}
 	campaignStore := newFakeCampaignStore()
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
@@ -418,7 +547,7 @@ func TestCreateInvite_MissingParticipantIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
@@ -443,7 +572,7 @@ func TestClaimInvite_Success(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
@@ -457,30 +586,8 @@ func TestClaimInvite_Success(t *testing.T) {
 	}
 
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("participant.bind"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-1",
-				Type:        event.Type("participant.bound"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-1",
-				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
-			}),
-		},
-		command.Type("invite.claim"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-1",
-				Type:        event.Type("invite.claimed"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "invite",
-				EntityID:    "invite-1",
-				PayloadJSON: []byte(`{"invite_id":"invite-1","participant_id":"participant-1","user_id":"user-1","jti":"jwt-1"}`),
-			}),
-		},
-	}}
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
 	svc := &InviteService{
 		stores: Stores{
@@ -488,7 +595,6 @@ func TestClaimInvite_Success(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock: fixedClock(now),
 	}
@@ -517,22 +623,28 @@ func TestClaimInvite_Success(t *testing.T) {
 		t.Fatalf("participant user_id = %s, want user-1", resp.Participant.UserId)
 	}
 
-	if len(eventStore.events["campaign-1"]) != 2 {
-		t.Fatalf("event count = %d, want 2", len(eventStore.events["campaign-1"]))
+	if len(eventStore.events["campaign-1"]) != 4 {
+		t.Fatalf("event count = %d, want 4", len(eventStore.events["campaign-1"]))
 	}
-	if eventStore.events["campaign-1"][0].Type != event.Type("participant.bound") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("participant.bound"))
+	if eventStore.events["campaign-1"][0].Type != participant.EventTypeJoined {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, participant.EventTypeJoined)
 	}
-	if eventStore.events["campaign-1"][1].Type != event.Type("invite.claimed") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][1].Type, event.Type("invite.claimed"))
+	if eventStore.events["campaign-1"][1].Type != invite.EventTypeCreated {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][1].Type, invite.EventTypeCreated)
+	}
+	if eventStore.events["campaign-1"][2].Type != participant.EventTypeBound {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][2].Type, participant.EventTypeBound)
+	}
+	if eventStore.events["campaign-1"][3].Type != invite.EventTypeClaimed {
+		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][3].Type, invite.EventTypeClaimed)
 	}
 }
 
-func TestClaimInvite_RequiresDomainEngine(t *testing.T) {
+func TestClaimInvite_UsesReplayStateForSeatOccupancy(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
@@ -545,6 +657,58 @@ func TestClaimInvite_RequiresDomainEngine(t *testing.T) {
 		Status:        invite.StatusPending,
 	}
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	seedParticipantJoinedEvent(t, eventStore, storage.ParticipantRecord{
+		ID:         "participant-1",
+		CampaignID: "campaign-1",
+		UserID:     "user-existing",
+	}, now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+		},
+		clock: fixedClock(now),
+	}
+
+	signer := newJoinGrantSigner(t)
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-new", "", svc.clock())
+	ctx := contextWithUserID("user-new")
+	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+		CampaignId: "campaign-1",
+		InviteId:   "invite-1",
+		JoinGrant:  joinGrant,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if len(eventStore.events["campaign-1"]) != 2 {
+		t.Fatalf("event count = %d, want 2", len(eventStore.events["campaign-1"]))
+	}
+}
+
+func TestClaimInvite_DetectsExistingUserFromReplayState(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeBatchEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+		"participant-2": {ID: "participant-2", CampaignID: "campaign-1", UserID: "user-1"},
+	}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
+		ID:            "invite-1",
+		CampaignID:    "campaign-1",
+		ParticipantID: "participant-1",
+		Status:        invite.StatusPending,
+	}
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-2"], now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
 	svc := &InviteService{
 		stores: Stores{
@@ -559,19 +723,25 @@ func TestClaimInvite_RequiresDomainEngine(t *testing.T) {
 	signer := newJoinGrantSigner(t)
 	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
 	ctx := contextWithUserID("user-1")
-	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
 		InviteId:   "invite-1",
 		JoinGrant:  joinGrant,
 	})
-	assertStatusCode(t, err, codes.Internal)
+	if err == nil {
+		t.Fatalf("ClaimInvite() expected conflict, got response %+v", resp)
+	}
+	assertStatusCode(t, err, codes.AlreadyExists)
+	if len(eventStore.events["campaign-1"]) != 3 {
+		t.Fatalf("event count = %d, want 3", len(eventStore.events["campaign-1"]))
+	}
 }
 
-func TestClaimInvite_UsesDomainEngine(t *testing.T) {
+func TestClaimInvite_IgnoresLeftParticipantWhenCheckingExistingUser(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
@@ -584,31 +754,14 @@ func TestClaimInvite_UsesDomainEngine(t *testing.T) {
 		ParticipantID: "participant-1",
 		Status:        invite.StatusPending,
 	}
-
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("participant.bind"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-1",
-				Type:        event.Type("participant.bound"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-1",
-				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
-			}),
-		},
-		command.Type("invite.claim"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-1",
-				Type:        event.Type("invite.claimed"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "invite",
-				EntityID:    "invite-1",
-				PayloadJSON: []byte(`{"invite_id":"invite-1","participant_id":"participant-1","user_id":"user-1","jti":"jwt-1"}`),
-			}),
-		},
-	}}
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedParticipantJoinedEvent(t, eventStore, storage.ParticipantRecord{
+		ID:         "participant-2",
+		CampaignID: "campaign-1",
+		UserID:     "user-1",
+	}, now)
+	seedParticipantLeftEvent(t, eventStore, "campaign-1", "participant-2", now.Add(time.Second))
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
 	svc := &InviteService{
 		stores: Stores{
@@ -616,7 +769,6 @@ func TestClaimInvite_UsesDomainEngine(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock: fixedClock(now),
 	}
@@ -632,32 +784,66 @@ func TestClaimInvite_UsesDomainEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ClaimInvite returned error: %v", err)
 	}
-	if resp.Invite == nil {
-		t.Fatal("ClaimInvite response has nil invite")
+	if resp.Participant.GetUserId() != "user-1" {
+		t.Fatalf("participant user_id = %q, want %q", resp.Participant.GetUserId(), "user-1")
 	}
-	if resp.Participant == nil {
-		t.Fatal("ClaimInvite response has nil participant")
+	if len(eventStore.events["campaign-1"]) != 6 {
+		t.Fatalf("event count = %d, want 6", len(eventStore.events["campaign-1"]))
 	}
-	if domain.calls != 2 {
-		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
+}
+
+func TestClaimInvite_IgnoresUnboundParticipantWhenCheckingExistingUser(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeBatchEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
-	if len(domain.commands) != 2 {
-		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
+		ID:            "invite-1",
+		CampaignID:    "campaign-1",
+		ParticipantID: "participant-1",
+		Status:        invite.StatusPending,
 	}
-	if domain.commands[0].Type != command.Type("participant.bind") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.bind")
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedParticipantJoinedEvent(t, eventStore, storage.ParticipantRecord{
+		ID:         "participant-2",
+		CampaignID: "campaign-1",
+		UserID:     "user-1",
+	}, now)
+	seedParticipantUnboundEvent(t, eventStore, "campaign-1", "participant-2", "user-1", now.Add(time.Second))
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+		},
+		clock: fixedClock(now),
 	}
-	if domain.commands[1].Type != command.Type("invite.claim") {
-		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "invite.claim")
+
+	signer := newJoinGrantSigner(t)
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	ctx := contextWithUserID("user-1")
+	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+		CampaignId: "campaign-1",
+		InviteId:   "invite-1",
+		JoinGrant:  joinGrant,
+	})
+	if err != nil {
+		t.Fatalf("ClaimInvite returned error: %v", err)
 	}
-	if len(eventStore.events["campaign-1"]) != 2 {
-		t.Fatalf("event count = %d, want 2", len(eventStore.events["campaign-1"]))
+	if resp.Participant.GetUserId() != "user-1" {
+		t.Fatalf("participant user_id = %q, want %q", resp.Participant.GetUserId(), "user-1")
 	}
-	if eventStore.events["campaign-1"][0].Type != event.Type("participant.bound") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("participant.bound"))
-	}
-	if eventStore.events["campaign-1"][1].Type != event.Type("invite.claimed") {
-		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][1].Type, event.Type("invite.claimed"))
+	if len(eventStore.events["campaign-1"]) != 6 {
+		t.Fatalf("event count = %d, want 6", len(eventStore.events["campaign-1"]))
 	}
 }
 
@@ -665,7 +851,7 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
@@ -684,15 +870,8 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 		ParticipantID: "participant-1",
 		Status:        invite.StatusPending,
 	}
-
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("participant.bind"): {
-			Decision: command.Reject(command.Rejection{
-				Code:    "PARTICIPANT_AI_IDENTITY_LOCKED",
-				Message: "ai-controlled participants cannot change user identity bindings",
-			}),
-		},
-	}}
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
 	svc := &InviteService{
 		stores: Stores{
@@ -700,7 +879,6 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock: fixedClock(now),
 	}
@@ -715,17 +893,8 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 	})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 
-	if domain.calls != 1 {
-		t.Fatalf("domain calls = %d, want 1", domain.calls)
-	}
-	if len(domain.commands) != 1 {
-		t.Fatalf("domain command count = %d, want 1", len(domain.commands))
-	}
-	if domain.commands[0].Type != command.Type("participant.bind") {
-		t.Fatalf("first command type = %s, want %s", domain.commands[0].Type, command.Type("participant.bind"))
-	}
-	if len(eventStore.events["campaign-1"]) != 0 {
-		t.Fatalf("event count = %d, want 0", len(eventStore.events["campaign-1"]))
+	if len(eventStore.events["campaign-1"]) != 2 {
+		t.Fatalf("event count = %d, want 2", len(eventStore.events["campaign-1"]))
 	}
 }
 
@@ -733,7 +902,7 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
@@ -783,7 +952,7 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
@@ -796,30 +965,8 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 		Status:        invite.StatusPending,
 	}
 	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("participant.bind"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-1",
-				Type:        event.Type("participant.bound"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-1",
-				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
-			}),
-		},
-		command.Type("invite.claim"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-1",
-				Type:        event.Type("invite.claimed"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "invite",
-				EntityID:    "invite-1",
-				PayloadJSON: []byte(`{"invite_id":"invite-1","participant_id":"participant-1","user_id":"user-1","jti":"jti-1"}`),
-			}),
-		},
-	}}
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
 	svc := &InviteService{
 		stores: Stores{
@@ -827,7 +974,6 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		clock: fixedClock(now),
 	}
@@ -853,8 +999,24 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 		t.Fatalf("ClaimInvite returned error on retry: %v", err)
 	}
 
-	if len(eventStore.events["campaign-1"]) != 2 {
-		t.Fatalf("event count = %d, want 2", len(eventStore.events["campaign-1"]))
+	if len(eventStore.events["campaign-1"]) != 4 {
+		t.Fatalf("event count = %d, want 4", len(eventStore.events["campaign-1"]))
+	}
+	boundCount := 0
+	claimedCount := 0
+	for _, evt := range eventStore.events["campaign-1"] {
+		if evt.Type == participant.EventTypeBound {
+			boundCount++
+		}
+		if evt.Type == invite.EventTypeClaimed {
+			claimedCount++
+		}
+	}
+	if boundCount != 1 {
+		t.Fatalf("participant.bound count = %d, want 1", boundCount)
+	}
+	if claimedCount != 1 {
+		t.Fatalf("invite.claimed count = %d, want 1", claimedCount)
 	}
 }
 
@@ -862,7 +1024,7 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	inviteStore := newFakeInviteStore()
-	eventStore := newFakeEventStore()
+	eventStore := newFakeBatchEventStore()
 
 	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
 	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
@@ -875,20 +1037,10 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 		ParticipantID: "participant-1",
 		Status:        invite.StatusPending,
 	}
-
-	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("participant.bind"): {
-			Decision: command.Accept(event.Event{
-				CampaignID:  "campaign-1",
-				Type:        event.Type("participant.bound"),
-				Timestamp:   time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "participant",
-				EntityID:    "participant-1",
-				PayloadJSON: []byte(`{"participant_id":"participant-1","user_id":"user-1"}`),
-			}),
-		},
-	}}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-2"], now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
 	svc := &InviteService{
 		stores: Stores{
@@ -896,9 +1048,8 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		clock: fixedClock(now),
 	}
 
 	signer := newJoinGrantSigner(t)
@@ -910,6 +1061,92 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 		JoinGrant:  joinGrant,
 	})
 	assertStatusCode(t, err, codes.AlreadyExists)
+	if len(eventStore.events["campaign-1"]) != 3 {
+		t.Fatalf("event count = %d, want 3", len(eventStore.events["campaign-1"]))
+	}
+}
+
+func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeBatchEventStore()
+	socialClient := &fakeSocialClient{profile: &socialv1.UserProfile{
+		Name:          "Ariadne",
+		Pronouns:      sharedpronouns.ToProto("she/her"),
+		AvatarSetId:   "avatar-set-1",
+		AvatarAssetId: "avatar-asset-1",
+	}}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1", Name: "Pending Seat"},
+	}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
+		ID:            "invite-1",
+		CampaignID:    "campaign-1",
+		ParticipantID: "participant-1",
+		Status:        invite.StatusPending,
+	}
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "participant-1",
+				PayloadJSON: []byte(`{"participant_id":"participant-1","fields":{"name":"Ariadne","pronouns":"she/her","avatar_set_id":"avatar-set-1","avatar_asset_id":"avatar-asset-1"}}`),
+			}),
+		},
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Social:      socialClient,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+		clock: fixedClock(now),
+	}
+
+	signer := newJoinGrantSigner(t)
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	ctx := contextWithUserID("user-1")
+	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+		CampaignId: "campaign-1",
+		InviteId:   "invite-1",
+		JoinGrant:  joinGrant,
+	})
+	if err != nil {
+		t.Fatalf("ClaimInvite returned error: %v", err)
+	}
+	if resp.Participant.GetName() != "Ariadne" {
+		t.Fatalf("participant name = %q, want %q", resp.Participant.GetName(), "Ariadne")
+	}
+	if resp.Participant.GetAvatarSetId() != "avatar-set-1" {
+		t.Fatalf("participant avatar set = %q, want %q", resp.Participant.GetAvatarSetId(), "avatar-set-1")
+	}
+	if resp.Participant.GetAvatarAssetId() != "avatar-asset-1" {
+		t.Fatalf("participant avatar asset = %q, want %q", resp.Participant.GetAvatarAssetId(), "avatar-asset-1")
+	}
+	if socialClient.getUserProfileCalls != 1 {
+		t.Fatalf("GetUserProfile calls = %d, want 1", socialClient.getUserProfileCalls)
+	}
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+	if len(domain.commands) != 1 || domain.commands[0].Type != command.Type("participant.update") {
+		t.Fatalf("commands = %#v, want participant.update only", domain.commands)
+	}
 }
 
 func TestRevokeInvite_NilRequest(t *testing.T) {

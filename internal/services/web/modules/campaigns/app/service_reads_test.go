@@ -564,6 +564,42 @@ func TestCampaignParticipantEditorDeniesWhenManageParticipantForbidden(t *testin
 	}
 }
 
+func TestCampaignParticipantEditorAllowsSelfOwnedParticipant(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignWorkspace: CampaignWorkspace{ID: "c-1", Name: "Guild", GMMode: "Human"},
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-a",
+			UserID:         "user-1",
+			Name:           "Aria",
+			Role:           "Player",
+			CampaignAccess: "Member",
+			Pronouns:       "she/her",
+		},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    false,
+			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+		},
+	}
+	svc := newService(gateway)
+
+	editor, err := svc.campaignParticipantEditor(contextWithResolvedUserID("user-1"), "c-1", "p-a")
+	if err != nil {
+		t.Fatalf("campaignParticipantEditor() error = %v", err)
+	}
+	if !editor.RoleReadOnly {
+		t.Fatalf("editor.RoleReadOnly = %v, want true", editor.RoleReadOnly)
+	}
+	if !editor.AccessReadOnly {
+		t.Fatalf("editor.AccessReadOnly = %v, want true", editor.AccessReadOnly)
+	}
+	if len(editor.AccessOptions) != 1 || editor.AccessOptions[0].Value != "member" {
+		t.Fatalf("editor.AccessOptions = %#v, want single member option", editor.AccessOptions)
+	}
+}
+
 func TestCampaignCharactersSortByName(t *testing.T) {
 	t.Parallel()
 

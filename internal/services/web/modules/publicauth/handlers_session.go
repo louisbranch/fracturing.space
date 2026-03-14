@@ -38,7 +38,7 @@ func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Requ
 	if !h.service.HasValidWebSession(r.Context(), sessionID) {
 		return false
 	}
-	httpx.WriteRedirect(w, r, resolveAppRedirectPath(r.URL.Query().Get("next")))
+	httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(h.pendingID(r), h.nextPath(r)))
 	return true
 }
 
@@ -57,37 +57,37 @@ func (h handlers) hasSameOriginProof(r *http.Request) bool {
 	return requestmeta.HasSameOriginProofWithPolicy(r, h.requestMeta)
 }
 
-// resolveAppRedirectPath resolves request-scoped values needed by this package.
-func resolveAppRedirectPath(raw string) string {
+// resolveSafeRedirectPath resolves validated in-app or public invite continuation paths.
+func resolveSafeRedirectPath(raw string) string {
 	next := strings.TrimSpace(raw)
 	if next == "" {
-		return routepath.AppDashboard
+		return ""
 	}
 	parsed, err := url.Parse(next)
 	if err != nil || parsed.Scheme != "" || parsed.Host != "" || parsed.Opaque != "" {
-		return routepath.AppDashboard
+		return ""
 	}
 	rawPath := strings.TrimSpace(parsed.EscapedPath())
 	if hasEncodedSlash(rawPath) {
-		return routepath.AppDashboard
+		return ""
 	}
 	decodedPath, err := url.PathUnescape(strings.TrimSpace(parsed.Path))
 	if err != nil {
-		return routepath.AppDashboard
+		return ""
 	}
 	if hasDotSegment(decodedPath) {
-		return routepath.AppDashboard
+		return ""
 	}
 	canonicalPath := path.Clean(decodedPath)
 	if strings.TrimSpace(canonicalPath) == "." {
 		canonicalPath = "/"
 	}
 	canonicalPath = ensureLeadingSlash(canonicalPath)
-	if !strings.HasPrefix(canonicalPath, routepath.AppPrefix) {
-		return routepath.AppDashboard
+	if canonicalPath == routepath.AppPrefix || canonicalPath == strings.TrimRight(routepath.InvitePrefix, "/") {
+		return ""
 	}
-	if canonicalPath == routepath.AppPrefix {
-		return routepath.AppDashboard
+	if !strings.HasPrefix(canonicalPath, routepath.AppPrefix) && !strings.HasPrefix(canonicalPath, routepath.InvitePrefix) {
+		return ""
 	}
 	if parsed.RawQuery != "" {
 		return canonicalPath + "?" + parsed.RawQuery

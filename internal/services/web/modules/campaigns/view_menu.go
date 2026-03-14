@@ -13,7 +13,13 @@ import (
 )
 
 // campaignWorkspaceMenu builds the side navigation menu for a campaign workspace page.
-func campaignWorkspaceMenu(workspace campaignapp.CampaignWorkspace, currentPath string, sessions []campaignapp.CampaignSession, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
+func campaignWorkspaceMenu(
+	workspace campaignapp.CampaignWorkspace,
+	currentPath string,
+	sessions []campaignapp.CampaignSession,
+	canManageInvites bool,
+	loc webtemplates.Localizer,
+) *webtemplates.AppSideMenu {
 	campaignID := strings.TrimSpace(workspace.ID)
 	if campaignID == "" {
 		return nil
@@ -32,45 +38,48 @@ func campaignWorkspaceMenu(workspace campaignapp.CampaignWorkspace, currentPath 
 	participantsURL := routepath.AppCampaignParticipants(campaignID)
 	invitesURL := routepath.AppCampaignInvites(campaignID)
 	charactersURL := routepath.AppCampaignCharacters(campaignID)
+	items := []webtemplates.AppSideMenuItem{
+		{
+			Label:       webtemplates.T(loc, "game.campaign.menu.overview"),
+			URL:         overviewURL,
+			MatchPrefix: overviewURL,
+			MatchExact:  true,
+			IconID:      commonv1.IconId_ICON_ID_CAMPAIGN,
+		},
+		{
+			Label:       webtemplates.T(loc, "game.participants.title"),
+			URL:         participantsURL,
+			MatchPrefix: participantsURL,
+			Badge:       participantCount,
+			IconID:      commonv1.IconId_ICON_ID_PARTICIPANT,
+		},
+		{
+			Label:       webtemplates.T(loc, "game.characters.title"),
+			URL:         charactersURL,
+			MatchPrefix: charactersURL,
+			Badge:       characterCount,
+			IconID:      commonv1.IconId_ICON_ID_CHARACTER,
+		},
+		{
+			Label:       webtemplates.T(loc, "game.sessions.title"),
+			URL:         sessionsURL,
+			MatchPrefix: sessionsURL,
+			Badge:       strconv.Itoa(campaignSessionMenuCount(sessions)),
+			IconID:      commonv1.IconId_ICON_ID_SESSION,
+			SubItems:    sessionSubItems,
+		},
+	}
+	if canManageInvites {
+		items = append(items, webtemplates.AppSideMenuItem{
+			Label:       webtemplates.T(loc, "game.campaign_invites.title"),
+			URL:         invitesURL,
+			MatchPrefix: invitesURL,
+			IconID:      commonv1.IconId_ICON_ID_INVITES,
+		})
+	}
 	return &webtemplates.AppSideMenu{
 		CurrentPath: strings.TrimSpace(currentPath),
-		Items: []webtemplates.AppSideMenuItem{
-			{
-				Label:       webtemplates.T(loc, "game.campaign.menu.overview"),
-				URL:         overviewURL,
-				MatchPrefix: overviewURL,
-				MatchExact:  true,
-				IconID:      commonv1.IconId_ICON_ID_CAMPAIGN,
-			},
-			{
-				Label:       webtemplates.T(loc, "game.participants.title"),
-				URL:         participantsURL,
-				MatchPrefix: participantsURL,
-				Badge:       participantCount,
-				IconID:      commonv1.IconId_ICON_ID_PARTICIPANT,
-			},
-			{
-				Label:       webtemplates.T(loc, "game.characters.title"),
-				URL:         charactersURL,
-				MatchPrefix: charactersURL,
-				Badge:       characterCount,
-				IconID:      commonv1.IconId_ICON_ID_CHARACTER,
-			},
-			{
-				Label:       webtemplates.T(loc, "game.sessions.title"),
-				URL:         sessionsURL,
-				MatchPrefix: sessionsURL,
-				Badge:       strconv.Itoa(campaignSessionMenuCount(sessions)),
-				IconID:      commonv1.IconId_ICON_ID_SESSION,
-				SubItems:    sessionSubItems,
-			},
-			{
-				Label:       webtemplates.T(loc, "game.campaign_invites.title"),
-				URL:         invitesURL,
-				MatchPrefix: invitesURL,
-				IconID:      commonv1.IconId_ICON_ID_INVITES,
-			},
-		},
+		Items:       items,
 	}
 }
 

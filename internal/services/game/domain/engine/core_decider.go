@@ -180,6 +180,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		participant.CommandTypeSeatReassign:        participantRoute,
 		invite.CommandTypeCreate:                   inviteRoute,
 		invite.CommandTypeClaim:                    inviteRoute,
+		invite.CommandTypeDecline:                  inviteRoute,
 		invite.CommandTypeRevoke:                   inviteRoute,
 		invite.CommandTypeUpdate:                   inviteRoute,
 		character.CommandTypeCreate:                characterRoute,

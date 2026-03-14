@@ -38,6 +38,7 @@ func TestRoutePrefixesRemainUniqueConstants(t *testing.T) {
 	prefixes := []string{
 		routepath.AuthPrefix,
 		routepath.DiscoverPrefix,
+		routepath.InvitePrefix,
 		routepath.UserProfilePrefix,
 		routepath.DashboardPrefix,
 		routepath.CampaignsPrefix,
@@ -64,6 +65,7 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 		"campaigns":     archetypeTransportLayered,
 		"dashboard":     archetypeTransportLayered,
 		"discovery":     archetypeTransportOnly,
+		"invite":        archetypeTransportLayered,
 		"notifications": archetypeTransportLayered,
 		"profile":       archetypeTransportLayered,
 		"publicauth":    archetypeTransportLayered,

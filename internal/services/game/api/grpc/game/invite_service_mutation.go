@@ -48,6 +48,24 @@ func (s *InviteService) ClaimInvite(ctx context.Context, in *campaignv1.ClaimInv
 	}, nil
 }
 
+// DeclineInvite declines a seat-targeted invite.
+func (s *InviteService) DeclineInvite(ctx context.Context, in *campaignv1.DeclineInviteRequest) (*campaignv1.DeclineInviteResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "decline invite request is required")
+	}
+	_, err := validate.RequiredID(in.GetInviteId(), "invite id")
+	if err != nil {
+		return nil, err
+	}
+
+	updated, err := newInviteApplication(s).DeclineInvite(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &campaignv1.DeclineInviteResponse{Invite: inviteToProto(updated)}, nil
+}
+
 // RevokeInvite revokes an invite.
 func (s *InviteService) RevokeInvite(ctx context.Context, in *campaignv1.RevokeInviteRequest) (*campaignv1.RevokeInviteResponse, error) {
 	if in == nil {

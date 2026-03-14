@@ -163,10 +163,13 @@ type CampaignSessionReadiness struct {
 
 // CampaignInvite stores invite details used by campaign invites pages.
 type CampaignInvite struct {
-	ID              string `json:"id"`
-	ParticipantID   string `json:"participantId"`
-	RecipientUserID string `json:"recipientUserId"`
-	Status          string `json:"status"`
+	ID                string `json:"id"`
+	ParticipantID     string `json:"participantId"`
+	ParticipantName   string `json:"participantName"`
+	RecipientUserID   string `json:"recipientUserId"`
+	RecipientUsername string `json:"recipientUsername"`
+	HasRecipient      bool   `json:"hasRecipient"`
+	Status            string `json:"status"`
 }
 
 // InviteUserSearchResult stores one invite typeahead option.

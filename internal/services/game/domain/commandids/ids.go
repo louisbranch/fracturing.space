@@ -34,6 +34,7 @@ const (
 	ParticipantUnbind              command.Type = "participant.unbind"
 	InviteCreate                   command.Type = "invite.create"
 	InviteClaim                    command.Type = "invite.claim"
+	InviteDecline                  command.Type = "invite.decline"
 	InviteRevoke                   command.Type = "invite.revoke"
 	InviteUpdate                   command.Type = "invite.update"
 	CharacterCreate                command.Type = "character.create"

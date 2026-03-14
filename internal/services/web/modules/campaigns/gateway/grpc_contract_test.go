@@ -1440,6 +1440,8 @@ type contractInviteClient struct {
 	listResp   *statev1.ListInvitesResponse
 	listErr    error
 	createErr  error
+	claimErr   error
+	declineErr error
 	revokeErr  error
 	lastCreate *statev1.CreateInviteRequest
 }
@@ -1454,12 +1456,30 @@ func (c *contractInviteClient) ListInvites(context.Context, *statev1.ListInvites
 	return &statev1.ListInvitesResponse{}, nil
 }
 
+func (c *contractInviteClient) GetPublicInvite(context.Context, *statev1.GetPublicInviteRequest, ...grpc.CallOption) (*statev1.GetPublicInviteResponse, error) {
+	return &statev1.GetPublicInviteResponse{Invite: &statev1.Invite{}}, nil
+}
+
 func (c *contractInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
 	c.lastCreate = req
 	if c.createErr != nil {
 		return nil, c.createErr
 	}
 	return &statev1.CreateInviteResponse{}, nil
+}
+
+func (c *contractInviteClient) ClaimInvite(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
+	if c.claimErr != nil {
+		return nil, c.claimErr
+	}
+	return &statev1.ClaimInviteResponse{}, nil
+}
+
+func (c *contractInviteClient) DeclineInvite(context.Context, *statev1.DeclineInviteRequest, ...grpc.CallOption) (*statev1.DeclineInviteResponse, error) {
+	if c.declineErr != nil {
+		return nil, c.declineErr
+	}
+	return &statev1.DeclineInviteResponse{}, nil
 }
 
 func (c *contractInviteClient) RevokeInvite(context.Context, *statev1.RevokeInviteRequest, ...grpc.CallOption) (*statev1.RevokeInviteResponse, error) {
@@ -1495,6 +1515,14 @@ func (c *contractAuthClient) LookupUserByUsername(_ context.Context, req *authv1
 		return c.lookupResp, nil
 	}
 	return &authv1.LookupUserByUsernameResponse{}, nil
+}
+
+func (c *contractAuthClient) GetUser(context.Context, *authv1.GetUserRequest, ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+	return &authv1.GetUserResponse{User: &authv1.User{}}, nil
+}
+
+func (c *contractAuthClient) IssueJoinGrant(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
+	return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
 }
 
 func (c *contractSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {

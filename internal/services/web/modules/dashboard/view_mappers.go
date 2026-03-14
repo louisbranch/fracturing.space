@@ -20,6 +20,14 @@ func mapDashboardTemplateView(view dashboardapp.DashboardView) webtemplates.Dash
 			SessionName:  session.SessionName,
 		}
 	}
+	pendingInvites := make([]webtemplates.DashboardPendingInviteEntry, len(view.PendingInvites))
+	for i, invite := range view.PendingInvites {
+		pendingInvites[i] = webtemplates.DashboardPendingInviteEntry{
+			InviteID:        invite.InviteID,
+			CampaignName:    invite.CampaignName,
+			ParticipantName: invite.ParticipantName,
+		}
+	}
 	startNudges := make([]webtemplates.DashboardCampaignStartNudgeEntry, len(view.CampaignStartNudges))
 	for i, nudge := range view.CampaignStartNudges {
 		startNudges[i] = webtemplates.DashboardCampaignStartNudgeEntry{
@@ -42,6 +50,10 @@ func mapDashboardTemplateView(view dashboardapp.DashboardView) webtemplates.Dash
 	return webtemplates.DashboardPageView{
 		StatusNotice:   statusNotice,
 		ProfilePending: webtemplates.DashboardProfilePendingBlock{Visible: view.ShowPendingProfileBlock},
+		PendingInvites: webtemplates.DashboardPendingInvitesBlock{
+			Visible: len(pendingInvites) > 0,
+			Invites: pendingInvites,
+		},
 		CampaignStartNudges: webtemplates.DashboardCampaignStartNudgesBlock{
 			Visible: len(startNudges) > 0,
 			HasMore: view.CampaignStartNudgesMore,

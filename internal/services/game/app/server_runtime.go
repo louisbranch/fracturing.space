@@ -198,6 +198,7 @@ func (s *Server) closeResources() {
 	closeManagedConn(s.statusMc, "status")
 	closeManagedConn(s.aiMc, "ai")
 	closeManagedConn(s.socialMc, "social")
+	closeManagedConn(s.notificationsMc, "notifications")
 	closeManagedConn(s.authMc, "auth")
 }
 

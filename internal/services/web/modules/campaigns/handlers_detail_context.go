@@ -65,11 +65,12 @@ func campaignMainClass(coverImageURL string) string {
 
 // campaignPageContext holds the shared state loaded for any campaign detail page.
 type campaignPageContext struct {
-	workspace campaignapp.CampaignWorkspace
-	sessions  []campaignapp.CampaignSession
-	loc       webtemplates.Localizer
-	lang      string
-	locale    language.Tag
+	workspace        campaignapp.CampaignWorkspace
+	sessions         []campaignapp.CampaignSession
+	canManageInvites bool
+	loc              webtemplates.Localizer
+	lang             string
+	locale           language.Tag
 }
 
 // loadCampaignPage loads the package state needed for this request path.
@@ -84,19 +85,21 @@ func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campa
 	if err != nil {
 		return nil, nil, err
 	}
+	canManageInvites := h.service.RequireManageInvites(ctx, campaignID) == nil
 	return ctx, &campaignPageContext{
-		workspace: workspace,
-		sessions:  sessions,
-		loc:       loc,
-		lang:      lang,
-		locale:    h.RequestLocaleTag(r),
+		workspace:        workspace,
+		sessions:         sessions,
+		canManageInvites: canManageInvites,
+		loc:              loc,
+		lang:             lang,
+		locale:           h.RequestLocaleTag(r),
 	}, nil
 }
 
 // layout centralizes this web behavior in one helper seam.
 func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplates.AppMainLayoutOptions {
 	return webtemplates.AppMainLayoutOptions{
-		SideMenu: campaignWorkspaceMenu(p.workspace, currentPath, p.sessions, p.loc),
+		SideMenu: campaignWorkspaceMenu(p.workspace, currentPath, p.sessions, p.canManageInvites, p.loc),
 		MainBackground: &webtemplates.AppBackgroundImage{
 			PreviewURL: strings.TrimSpace(p.workspace.CoverPreviewURL),
 			FullURL:    strings.TrimSpace(p.workspace.CoverImageURL),
@@ -112,18 +115,19 @@ func (p *campaignPageContext) layout(campaignID, currentPath string) webtemplate
 // workspace fields. Callers set sub-page-specific fields before rendering.
 func (p *campaignPageContext) detailView(campaignID, marker string) campaignrender.DetailView {
 	return campaignrender.DetailView{
-		Marker:        marker,
-		CampaignID:    campaignID,
-		Name:          p.workspace.Name,
-		Theme:         p.workspace.Theme,
-		System:        p.workspace.System,
-		GMMode:        p.workspace.GMMode,
-		Status:        p.workspace.Status,
-		Locale:        p.workspace.Locale,
-		LocaleValue:   campaignWorkspaceLocaleFormValue(p.workspace.Locale),
-		Intent:        p.workspace.Intent,
-		AccessPolicy:  p.workspace.AccessPolicy,
-		ActionsLocked: p.outOfGameActionsLocked(),
+		Marker:           marker,
+		CampaignID:       campaignID,
+		Name:             p.workspace.Name,
+		Theme:            p.workspace.Theme,
+		System:           p.workspace.System,
+		GMMode:           p.workspace.GMMode,
+		Status:           p.workspace.Status,
+		Locale:           p.workspace.Locale,
+		LocaleValue:      campaignWorkspaceLocaleFormValue(p.workspace.Locale),
+		Intent:           p.workspace.Intent,
+		AccessPolicy:     p.workspace.AccessPolicy,
+		ActionsLocked:    p.outOfGameActionsLocked(),
+		CanManageInvites: p.canManageInvites,
 	}
 }
 

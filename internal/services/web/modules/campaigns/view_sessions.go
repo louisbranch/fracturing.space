@@ -1,10 +1,14 @@
 package campaigns
 
 import (
+	"net/http"
+	"net/url"
 	"strings"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // mapSessionsView converts domain sessions to template view items.
@@ -39,17 +43,48 @@ func mapSessionReadinessView(readiness campaignapp.CampaignSessionReadiness) cam
 }
 
 // mapInvitesView converts domain invites to template view items.
-func mapInvitesView(items []campaignapp.CampaignInvite) []campaignrender.InviteView {
+func mapInvitesView(items []campaignapp.CampaignInvite, r *http.Request) []campaignrender.InviteView {
 	result := make([]campaignrender.InviteView, 0, len(items))
 	for _, invite := range items {
 		result = append(result, campaignrender.InviteView{
-			ID:              invite.ID,
-			ParticipantID:   invite.ParticipantID,
-			RecipientUserID: invite.RecipientUserID,
-			Status:          invite.Status,
+			ID:                invite.ID,
+			ParticipantID:     invite.ParticipantID,
+			ParticipantName:   invite.ParticipantName,
+			RecipientUsername: invite.RecipientUsername,
+			HasRecipient:      invite.HasRecipient,
+			PublicURL:         absolutePublicInviteURL(r, invite.ID),
+			Status:            invite.Status,
 		})
 	}
 	return result
+}
+
+// absolutePublicInviteURL builds a same-origin invite URL so campaign managers
+// can copy the public claim link directly from the management card.
+func absolutePublicInviteURL(r *http.Request, inviteID string) string {
+	path := routepath.PublicInvite(inviteID)
+	if r == nil {
+		return path
+	}
+
+	scheme := "http"
+	if requestmeta.IsHTTPS(r) {
+		scheme = "https"
+	}
+
+	host := strings.TrimSpace(r.Host)
+	if host == "" && r.URL != nil {
+		host = strings.TrimSpace(r.URL.Host)
+	}
+	if host == "" {
+		return path
+	}
+
+	return (&url.URL{
+		Scheme: scheme,
+		Host:   host,
+		Path:   path,
+	}).String()
 }
 
 // campaignInviteIsPending reports whether an invite should still reserve a seat option.

@@ -41,6 +41,7 @@ func (h handlers) handleRecoveryFinish(w http.ResponseWriter, r *http.Request) {
 	h.writeRecoveryRevealState(w, r, recoveryRevealState{
 		Code:      finished.RecoveryCode,
 		PendingID: input.PendingID,
+		Next:      input.NextPath,
 		Mode:      recoveryRevealModeRecovery,
 	})
 	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyLoginFinishResponse(routepath.LoginRecoveryCode))
@@ -69,6 +70,7 @@ func (h handlers) handleRecoveryCodeGet(w http.ResponseWriter, r *http.Request) 
 			Copy:       copy,
 			Code:       state.Code,
 			PendingID:  state.PendingID,
+			Next:       state.Next,
 			IsRecovery: state.Mode == recoveryRevealModeRecovery,
 		}),
 	)
@@ -88,7 +90,7 @@ func (h handlers) handleRecoveryCodeAcknowledge(w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(strings.TrimSpace(r.FormValue("pending_id"))))
+	httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(strings.TrimSpace(r.FormValue("pending_id")), strings.TrimSpace(r.FormValue("next"))))
 }
 
 // writeRecoveryRevealState stores one-time recovery-code display state.

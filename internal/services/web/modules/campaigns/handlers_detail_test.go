@@ -337,10 +337,13 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 			{ID: "p1", Name: "Pending Seat", Controller: "Human"},
 		},
 		invites: []campaignapp.CampaignInvite{{
-			ID:              "inv-1",
-			ParticipantID:   "p1",
-			RecipientUserID: "user-2",
-			Status:          "Pending",
+			ID:                "inv-1",
+			ParticipantID:     "p1",
+			ParticipantName:   "Pending Seat",
+			RecipientUserID:   "user-2",
+			RecipientUsername: "river",
+			HasRecipient:      true,
+			Status:            "Pending",
 		}},
 	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 
@@ -361,8 +364,11 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 		`<h2 class="card-title">Invites</h2>`,
 		`data-campaign-invite-card-id="inv-1"`,
 		`data-campaign-invite-participant="p1"`,
-		`data-campaign-invite-recipient="user-2"`,
+		`data-campaign-invite-recipient="river"`,
+		`@river`,
 		`data-campaign-invite-status="Pending"`,
+		`data-campaign-invite-public-url="true"`,
+		`value="http://example.com/invite/inv-1"`,
 		`data-campaign-invite-create-form="true"`,
 		`data-campaign-invite-create-participant-select="true"`,
 		`data-campaign-invite-create-option-id="p-eligible"`,
@@ -380,6 +386,7 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 		`data-campaign-invite-create-option-id="p-ai"`,
 		`data-campaign-invite-create-option-id="p1"`,
 		`name="participant_id" required placeholder=`,
+		`>user-2<`,
 	} {
 		if strings.Contains(body, marker) {
 			t.Fatalf("body should not render ineligible invite selector marker %q: %q", marker, body)
@@ -419,11 +426,14 @@ func TestMountCampaignInvitesRouteHidesManageControlsWithoutInvitePermission(t *
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`data-campaign-invite-card-id="inv-1"`,
-		`class="menu-active" href="/app/campaigns/c1/invites"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing invite marker %q: %q", marker, body)
 		}
+	}
+	// Invariant: invite-manage navigation must not be exposed without permission.
+	if strings.Contains(body, `data-app-side-menu-item="/app/campaigns/c1/invites"`) {
+		t.Fatalf("body should hide invites menu item without permission: %q", body)
 	}
 	for _, marker := range []string{
 		`data-campaign-invite-create-entry="true"`,
@@ -1283,6 +1293,36 @@ func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testin
 	}
 }
 
+func TestMountCampaignParticipantsShowsEditLinkForSelfOwnedParticipant(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []campaignapp.CampaignParticipant{
+			{ID: "p-a", UserID: "user-1", Name: "Aria", Role: "Player", CampaignAccess: "Member", Controller: "Human", AvatarURL: "/static/avatars/aria.png"},
+		},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "p-a", Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+		},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipants("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `href="/app/campaigns/c1/participants/p-a/edit"`) {
+		t.Fatalf("expected self-owned participant link in output: %q", body)
+	}
+}
+
 func TestMountCampaignParticipantsShowsCreateLinkWhenManageAllowed(t *testing.T) {
 	t.Parallel()
 
@@ -1434,6 +1474,50 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing participant edit marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignParticipantEditAllowsSelfOwnedParticipant(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "Human",
+		participant: campaignapp.CampaignParticipant{
+			ID:             "p-a",
+			UserID:         "user-1",
+			Name:           "Aria",
+			Role:           "Player",
+			CampaignAccess: "Member",
+			Pronouns:       "she/her",
+		},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    false,
+			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+		},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipantEdit("c1", "p-a"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-participant-edit-form="true"`,
+		`data-campaign-participant-role-readonly="true"`,
+		`data-campaign-participant-access-readonly="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing self-edit marker %q: %q", marker, body)
 		}
 	}
 }
@@ -1978,6 +2062,38 @@ func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 				t.Fatalf("path %q expected sessions menu item before invites menu item: %q", path, body)
 			}
 		})
+	}
+}
+
+func TestMountCampaignOverviewHidesInvitesMenuWithoutPermission(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    false,
+			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+		},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaign("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-app-side-menu-item="/app/campaigns/c1/participants"`) {
+		t.Fatalf("body missing participants menu item: %q", body)
+	}
+	// Invariant: invite-manage navigation must not be exposed without permission.
+	if strings.Contains(body, `data-app-side-menu-item="/app/campaigns/c1/invites"`) {
+		t.Fatalf("body should hide invites menu item without permission: %q", body)
 	}
 }
 

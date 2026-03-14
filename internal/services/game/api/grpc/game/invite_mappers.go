@@ -27,6 +27,8 @@ func inviteStatusToProto(status invite.Status) campaignv1.InviteStatus {
 		return campaignv1.InviteStatus_PENDING
 	case invite.StatusClaimed:
 		return campaignv1.InviteStatus_CLAIMED
+	case invite.StatusDeclined:
+		return campaignv1.InviteStatus_DECLINED
 	case invite.StatusRevoked:
 		return campaignv1.InviteStatus_REVOKED
 	default:
@@ -40,6 +42,8 @@ func inviteStatusFromProto(status campaignv1.InviteStatus) invite.Status {
 		return invite.StatusPending
 	case campaignv1.InviteStatus_CLAIMED:
 		return invite.StatusClaimed
+	case campaignv1.InviteStatus_DECLINED:
+		return invite.StatusDeclined
 	case campaignv1.InviteStatus_REVOKED:
 		return invite.StatusRevoked
 	default:

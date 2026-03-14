@@ -78,8 +78,7 @@ func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaign
 		return
 	}
 	view := page.detailView(campaignID, markerInvites)
-	if err := h.service.RequireManageInvites(ctx, campaignID); err == nil {
-		view.CanManageInvites = true
+	if view.CanManageInvites {
 		participants, err := h.service.CampaignParticipants(ctx, campaignID)
 		if err != nil {
 			h.WriteError(w, r, err)
@@ -87,6 +86,6 @@ func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaign
 		}
 		view.InviteSeatOptions = mapInviteSeatOptions(participants, items)
 	}
-	view.Invites = mapInvitesView(items)
+	view.Invites = mapInvitesView(items, r)
 	h.writeCampaignDetailPage(w, r, page, campaignID, view, sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.campaign_invites.title")})
 }

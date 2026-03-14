@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -122,4 +123,45 @@ func notificationCreatedLabel(createdAt time.Time, now time.Time, loc webtemplat
 		return webtemplates.T(loc, "game.notifications.time.day_ago")
 	}
 	return webtemplates.T(loc, "game.notifications.time.days_ago", days)
+}
+
+// inviteNotificationPayload captures the routing fields used for invite deep links.
+type inviteNotificationPayload struct {
+	InviteID   string `json:"invite_id"`
+	CampaignID string `json:"campaign_id"`
+}
+
+// notificationPrimaryActionURL derives deep links for notifications that should
+// open directly into an invite action surface instead of a generic detail page.
+func notificationPrimaryActionURL(item notificationsapp.NotificationSummary) string {
+	switch strings.ToLower(strings.TrimSpace(item.MessageType)) {
+	case "campaign.invite.created.v1":
+		payload, ok := parseInviteNotificationPayload(item.PayloadJSON)
+		if !ok || payload.InviteID == "" {
+			return ""
+		}
+		return routepath.PublicInvite(payload.InviteID)
+	case "campaign.invite.accepted.v1", "campaign.invite.declined.v1":
+		payload, ok := parseInviteNotificationPayload(item.PayloadJSON)
+		if !ok || payload.CampaignID == "" {
+			return ""
+		}
+		return routepath.AppCampaign(payload.CampaignID)
+	default:
+		return ""
+	}
+}
+
+// parseInviteNotificationPayload normalizes invite notification routing payloads.
+func parseInviteNotificationPayload(raw string) (inviteNotificationPayload, bool) {
+	var payload inviteNotificationPayload
+	if strings.TrimSpace(raw) == "" {
+		return inviteNotificationPayload{}, false
+	}
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		return inviteNotificationPayload{}, false
+	}
+	payload.InviteID = strings.TrimSpace(payload.InviteID)
+	payload.CampaignID = strings.TrimSpace(payload.CampaignID)
+	return payload, payload.InviteID != "" || payload.CampaignID != ""
 }

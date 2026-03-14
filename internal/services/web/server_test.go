@@ -71,11 +71,11 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	if campaignsRR.Code != http.StatusFound {
 		t.Fatalf("campaigns status = %d, want %d", campaignsRR.Code, http.StatusFound)
 	}
-	if got := campaignsRR.Header().Get("Location"); got != "/login" {
-		t.Fatalf("campaigns redirect = %q, want %q", got, "/login")
+	if got := campaignsRR.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F123" {
+		t.Fatalf("campaigns redirect = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F123")
 	}
-	if got := dashboardRR.Header().Get("Location"); got != "/login" {
-		t.Fatalf("dashboard redirect = %q, want %q", got, "/login")
+	if got := dashboardRR.Header().Get("Location"); got != "/login?next=%2Fapp%2Fdashboard%2F" {
+		t.Fatalf("dashboard redirect = %q, want %q", got, "/login?next=%2Fapp%2Fdashboard%2F")
 	}
 	if got := dashboardNoSlashRR.Header().Get("Location"); got != "/app/dashboard/" {
 		t.Fatalf("dashboard (no slash) redirect = %q, want %q", got, "/app/dashboard/")
@@ -163,8 +163,8 @@ func TestProtectedRouteDoesNotTrustUserHeader(t *testing.T) {
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login" {
-		t.Fatalf("Location = %q, want %q", got, "/login")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fsettings%2Fprofile" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fsettings%2Fprofile")
 	}
 }
 

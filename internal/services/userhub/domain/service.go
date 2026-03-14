@@ -161,11 +161,12 @@ type InviteSummary struct {
 
 // PendingInvite captures one pending invite preview row.
 type PendingInvite struct {
-	InviteID      string
-	CampaignID    string
-	CampaignName  string
-	ParticipantID string
-	CreatedAt     time.Time
+	InviteID        string
+	CampaignID      string
+	CampaignName    string
+	ParticipantID   string
+	ParticipantName string
+	CreatedAt       time.Time
 }
 
 // NotificationSummary captures unread-notification status for one user.

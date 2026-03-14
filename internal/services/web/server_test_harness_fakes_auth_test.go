@@ -139,3 +139,11 @@ func (f *fakeWebAuthClient) LookupUserByUsername(_ context.Context, req *authv1.
 		User: &authv1.User{Id: "user-1", Username: username},
 	}, nil
 }
+
+func (f *fakeWebAuthClient) GetUser(_ context.Context, req *authv1.GetUserRequest, _ ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+	return &authv1.GetUserResponse{User: &authv1.User{Id: req.GetUserId(), Username: "viewer"}}, nil
+}
+
+func (f *fakeWebAuthClient) IssueJoinGrant(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
+	return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
+}

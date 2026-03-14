@@ -174,10 +174,13 @@ func (h handlers) handleInviteCreate(w http.ResponseWriter, r *http.Request, cam
 	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_invite_create_form", routepath.AppCampaignInvites(campaignID)) {
 		return
 	}
-	ctx, _ := h.RequestContextAndUserID(r)
+	ctx, userID := h.RequestContextAndUserID(r)
 	if err := h.service.CreateInvite(ctx, campaignID, parseCreateInviteInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_invite", routepath.AppCampaignInvites(campaignID))
 		return
+	}
+	if h.sync != nil {
+		h.sync.InviteChanged(ctx, []string{userID}, campaignID)
 	}
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_invite_created", routepath.AppCampaignInvites(campaignID))
 }
@@ -201,10 +204,13 @@ func (h handlers) handleInviteRevoke(w http.ResponseWriter, r *http.Request, cam
 	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_invite_revoke_form", routepath.AppCampaignInvites(campaignID)) {
 		return
 	}
-	ctx, _ := h.RequestContextAndUserID(r)
+	ctx, userID := h.RequestContextAndUserID(r)
 	if err := h.service.RevokeInvite(ctx, campaignID, parseRevokeInviteInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_revoke_invite", routepath.AppCampaignInvites(campaignID))
 		return
+	}
+	if h.sync != nil {
+		h.sync.InviteChanged(ctx, []string{userID}, campaignID)
 	}
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_invite_revoked", routepath.AppCampaignInvites(campaignID))
 }

@@ -18,10 +18,28 @@ func (g GRPCGateway) CampaignInvites(ctx context.Context, campaignID string) ([]
 	if g.Read.Invite == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.invite_service_client_is_not_configured", "invite service client is not configured")
 	}
+	if g.Read.Participant == nil {
+		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
+	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return []campaignapp.CampaignInvite{}, nil
 	}
+	participants, err := g.Read.Participant.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+		CampaignId: campaignID,
+		PageSize:   100,
+	})
+	if err != nil {
+		return nil, err
+	}
+	participantNames := make(map[string]string, len(participants.GetParticipants()))
+	for _, participant := range participants.GetParticipants() {
+		if participant == nil {
+			continue
+		}
+		participantNames[strings.TrimSpace(participant.GetId())] = strings.TrimSpace(participant.GetName())
+	}
+	recipientUsernames := map[string]string{}
 
 	return grpcpaging.CollectPages[campaignapp.CampaignInvite, *statev1.Invite](
 		ctx, 10,
@@ -43,11 +61,24 @@ func (g GRPCGateway) CampaignInvites(ctx context.Context, campaignID string) ([]
 			if invite == nil {
 				return campaignapp.CampaignInvite{}, false
 			}
+			recipientUserID := strings.TrimSpace(invite.GetRecipientUserId())
+			recipientUsername := ""
+			if recipientUserID != "" && g.Mutation.Auth != nil {
+				if cached, ok := recipientUsernames[recipientUserID]; ok {
+					recipientUsername = cached
+				} else if userResp, err := g.Mutation.Auth.GetUser(ctx, &authv1.GetUserRequest{UserId: recipientUserID}); err == nil && userResp != nil && userResp.GetUser() != nil {
+					recipientUsername = strings.TrimSpace(userResp.GetUser().GetUsername())
+					recipientUsernames[recipientUserID] = recipientUsername
+				}
+			}
 			return campaignapp.CampaignInvite{
-				ID:              strings.TrimSpace(invite.GetId()),
-				ParticipantID:   strings.TrimSpace(invite.GetParticipantId()),
-				RecipientUserID: strings.TrimSpace(invite.GetRecipientUserId()),
-				Status:          inviteStatusLabel(invite.GetStatus()),
+				ID:                strings.TrimSpace(invite.GetId()),
+				ParticipantID:     strings.TrimSpace(invite.GetParticipantId()),
+				ParticipantName:   participantNames[strings.TrimSpace(invite.GetParticipantId())],
+				RecipientUserID:   recipientUserID,
+				RecipientUsername: recipientUsername,
+				HasRecipient:      recipientUserID != "",
+				Status:            inviteStatusLabel(invite.GetStatus()),
 			}, true
 		},
 	)

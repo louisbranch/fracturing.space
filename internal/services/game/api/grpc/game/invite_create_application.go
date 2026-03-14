@@ -109,6 +109,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if err != nil {
 		return storage.InviteRecord{}, grpcerror.Internal("load invite", err)
 	}
+	a.notifyInviteCreated(ctx, inv)
 
 	return inv, nil
 }

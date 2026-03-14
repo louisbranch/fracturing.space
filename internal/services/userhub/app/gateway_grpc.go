@@ -181,11 +181,12 @@ func (g *grpcGameGateway) ListPendingInvitePreviews(ctx context.Context, userID 
 		}
 		invite := pending.GetInvite()
 		page.Invites = append(page.Invites, domain.PendingInvite{
-			InviteID:      invite.GetId(),
-			CampaignID:    invite.GetCampaignId(),
-			CampaignName:  pending.GetCampaign().GetName(),
-			ParticipantID: invite.GetParticipantId(),
-			CreatedAt:     invite.GetCreatedAt().AsTime(),
+			InviteID:        invite.GetId(),
+			CampaignID:      invite.GetCampaignId(),
+			CampaignName:    pending.GetCampaign().GetName(),
+			ParticipantID:   invite.GetParticipantId(),
+			ParticipantName: pending.GetParticipant().GetName(),
+			CreatedAt:       invite.GetCreatedAt().AsTime(),
 		})
 	}
 	return page, nil

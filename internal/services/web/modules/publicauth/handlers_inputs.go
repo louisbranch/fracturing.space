@@ -16,6 +16,7 @@ const maxJSONBodyBytes = 64 << 10
 type passkeyCredentialInput struct {
 	SessionID  string          `json:"session_id"`
 	PendingID  string          `json:"pending_id,omitempty"`
+	NextPath   string          `json:"next,omitempty"`
 	Credential json.RawMessage `json:"credential"`
 }
 
@@ -45,6 +46,7 @@ type recoveryFinishInput struct {
 	RecoverySessionID string          `json:"recovery_session_id"`
 	SessionID         string          `json:"session_id"`
 	PendingID         string          `json:"pending_id,omitempty"`
+	NextPath          string          `json:"next,omitempty"`
 	Credential        json.RawMessage `json:"credential"`
 }
 
@@ -57,6 +59,7 @@ func parsePasskeyCredentialInput(r *http.Request) (passkeyCredentialInput, error
 	return passkeyCredentialInput{
 		SessionID:  strings.TrimSpace(payload.SessionID),
 		PendingID:  strings.TrimSpace(payload.PendingID),
+		NextPath:   strings.TrimSpace(payload.NextPath),
 		Credential: payload.Credential,
 	}, nil
 }
@@ -110,6 +113,7 @@ func parseRecoveryFinishInput(r *http.Request) (recoveryFinishInput, error) {
 		RecoverySessionID: strings.TrimSpace(payload.RecoverySessionID),
 		SessionID:         strings.TrimSpace(payload.SessionID),
 		PendingID:         strings.TrimSpace(payload.PendingID),
+		NextPath:          strings.TrimSpace(payload.NextPath),
 		Credential:        payload.Credential,
 	}, nil
 }

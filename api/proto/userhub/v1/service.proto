@@ -94,7 +94,8 @@ message PendingInvite {
   string campaign_id = 2;
   string campaign_name = 3;
   string participant_id = 4;
-  google.protobuf.Timestamp created_at = 5;
+  string participant_name = 5;
+  google.protobuf.Timestamp created_at = 6;
 }
 
 message NotificationSummary {

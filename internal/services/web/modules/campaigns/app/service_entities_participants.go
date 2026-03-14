@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 )
 
 // campaignParticipants centralizes this web behavior in one helper seam.
@@ -94,6 +96,24 @@ func (s service) campaignParticipantEditor(ctx context.Context, campaignID strin
 		return CampaignParticipantEditor{}, err
 	}
 	currentAccess := participantAccessCanonical(participant.CampaignAccess)
+	if participantIsSelfOwned(ctx, participant) {
+		editor := CampaignParticipantEditor{
+			Participant:  participant,
+			AllowGMRole:  !campaignDisallowsHumanGMParticipants(workspace.GMMode),
+			RoleReadOnly: true,
+			AccessOptions: []CampaignParticipantAccessOption{{
+				Value:   currentAccess,
+				Allowed: true,
+			}},
+			AccessReadOnly: true,
+		}
+		if participantControllerCanonical(participant.Controller) == participantControllerAI {
+			editor.Participant.Role = "GM"
+			editor.Participant.CampaignAccess = "Member"
+			editor.AccessOptions = []CampaignParticipantAccessOption{{Value: participantAccessMember, Allowed: true}}
+		}
+		return editor, nil
+	}
 	target := &AuthorizationTarget{
 		ResourceID:           participantID,
 		TargetParticipantID:  participantID,
@@ -179,6 +199,12 @@ func (s service) hydrateParticipantEditability(ctx context.Context, campaignID s
 	if len(participants) == 0 {
 		return
 	}
+	for idx := range participants {
+		if participantIsSelfOwned(ctx, participants[idx]) {
+			participants[idx].CanEdit = true
+			participants[idx].EditReasonCode = "SELF_OWNED_PARTICIPANT"
+		}
+	}
 	if s.authzGateway == nil {
 		return
 	}
@@ -215,6 +241,16 @@ func (s service) hydrateParticipantEditability(ctx context.Context, campaignID s
 			participants[participantIndex].CanEdit = true
 		}
 	})
+}
+
+// participantIsSelfOwned identifies the narrow self-edit case so web can expose
+// the existing participant editor without broadening campaign-governance checks.
+func participantIsSelfOwned(ctx context.Context, participant CampaignParticipant) bool {
+	viewerUserID := strings.TrimSpace(grpcauthctx.UserIDFromOutgoingContext(ctx))
+	if viewerUserID == "" {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(participant.UserID), viewerUserID)
 }
 
 // participantAccessOptions centralizes this web behavior in one helper seam.

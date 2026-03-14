@@ -133,11 +133,12 @@ func inviteSummaryToProto(summary domain.InviteSummary) *userhubv1.InviteSummary
 	}
 	for _, invite := range summary.Pending {
 		result.Pending = append(result.Pending, &userhubv1.PendingInvite{
-			InviteId:      invite.InviteID,
-			CampaignId:    invite.CampaignID,
-			CampaignName:  invite.CampaignName,
-			ParticipantId: invite.ParticipantID,
-			CreatedAt:     timestamppb.New(invite.CreatedAt),
+			InviteId:        invite.InviteID,
+			CampaignId:      invite.CampaignID,
+			CampaignName:    invite.CampaignName,
+			ParticipantId:   invite.ParticipantID,
+			ParticipantName: invite.ParticipantName,
+			CreatedAt:       timestamppb.New(invite.CreatedAt),
 		})
 	}
 	return result

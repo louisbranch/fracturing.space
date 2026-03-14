@@ -127,10 +127,13 @@ func (s service) campaignInvites(ctx context.Context, campaignID string) ([]Camp
 			status = "Unspecified"
 		}
 		normalized = append(normalized, CampaignInvite{
-			ID:              strings.TrimSpace(invite.ID),
-			ParticipantID:   strings.TrimSpace(invite.ParticipantID),
-			RecipientUserID: strings.TrimSpace(invite.RecipientUserID),
-			Status:          status,
+			ID:                strings.TrimSpace(invite.ID),
+			ParticipantID:     strings.TrimSpace(invite.ParticipantID),
+			ParticipantName:   strings.TrimSpace(invite.ParticipantName),
+			RecipientUserID:   strings.TrimSpace(invite.RecipientUserID),
+			RecipientUsername: strings.TrimSpace(invite.RecipientUsername),
+			HasRecipient:      invite.HasRecipient || strings.TrimSpace(invite.RecipientUserID) != "",
+			Status:            status,
 		})
 	}
 

@@ -100,7 +100,7 @@ func TestCampaignWorkspaceMenuShowsOnlyActiveSessionSubItems(t *testing.T) {
 		},
 	}
 
-	menu := campaignWorkspaceMenu(workspace, routepath.AppCampaignParticipants("c1"), sessions, loc)
+	menu := campaignWorkspaceMenu(workspace, routepath.AppCampaignParticipants("c1"), sessions, true, loc)
 	if menu == nil {
 		t.Fatalf("campaignWorkspaceMenu(...) = nil, want non-nil")
 	}
@@ -184,7 +184,7 @@ func TestCampaignWorkspaceMenuBadgeCountsAllSessionsButSubItemsOnlyActive(t *tes
 		})
 	}
 
-	menu := campaignWorkspaceMenu(workspace, routepath.AppCampaignParticipants("c1"), sessions, loc)
+	menu := campaignWorkspaceMenu(workspace, routepath.AppCampaignParticipants("c1"), sessions, true, loc)
 	if menu == nil {
 		t.Fatalf("campaignWorkspaceMenu(...) = nil, want non-nil")
 	}
@@ -197,6 +197,27 @@ func TestCampaignWorkspaceMenuBadgeCountsAllSessionsButSubItemsOnlyActive(t *tes
 	// No active sessions, so no sub-items.
 	if len(sessionItem.SubItems) != 0 {
 		t.Fatalf("len(session subitems) = %d, want 0", len(sessionItem.SubItems))
+	}
+}
+
+func TestCampaignWorkspaceMenuHidesInvitesWithoutPermission(t *testing.T) {
+	t.Parallel()
+
+	loc := webi18n.Printer(language.English)
+	workspace := campaignapp.CampaignWorkspace{ID: "c1"}
+
+	menu := campaignWorkspaceMenu(workspace, routepath.AppCampaignParticipants("c1"), nil, false, loc)
+	if menu == nil {
+		t.Fatalf("campaignWorkspaceMenu(...) = nil, want non-nil")
+	}
+	if len(menu.Items) != 4 {
+		t.Fatalf("len(menu.Items) = %d, want 4", len(menu.Items))
+	}
+	for _, item := range menu.Items {
+		// Invariant: invite-manage navigation must not be exposed without permission.
+		if item.URL == routepath.AppCampaignInvites("c1") {
+			t.Fatalf("menu should not include invites item: %#v", menu.Items)
+		}
 	}
 }
 

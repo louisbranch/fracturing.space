@@ -178,10 +178,13 @@ type SessionReadinessView struct {
 
 // InviteView carries invite rows for the invites detail page.
 type InviteView struct {
-	ID              string
-	ParticipantID   string
-	RecipientUserID string
-	Status          string
+	ID                string
+	ParticipantID     string
+	ParticipantName   string
+	RecipientUsername string
+	HasRecipient      bool
+	PublicURL         string
+	Status            string
 }
 
 // InviteSeatOptionView carries eligible invite-seat targets for invite forms.

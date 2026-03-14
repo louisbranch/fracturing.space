@@ -22,7 +22,9 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	InviteService_CreateInvite_FullMethodName              = "/game.v1.InviteService/CreateInvite"
 	InviteService_ClaimInvite_FullMethodName               = "/game.v1.InviteService/ClaimInvite"
+	InviteService_DeclineInvite_FullMethodName             = "/game.v1.InviteService/DeclineInvite"
 	InviteService_GetInvite_FullMethodName                 = "/game.v1.InviteService/GetInvite"
+	InviteService_GetPublicInvite_FullMethodName           = "/game.v1.InviteService/GetPublicInvite"
 	InviteService_ListInvites_FullMethodName               = "/game.v1.InviteService/ListInvites"
 	InviteService_ListPendingInvites_FullMethodName        = "/game.v1.InviteService/ListPendingInvites"
 	InviteService_ListPendingInvitesForUser_FullMethodName = "/game.v1.InviteService/ListPendingInvitesForUser"
@@ -39,8 +41,12 @@ type InviteServiceClient interface {
 	CreateInvite(ctx context.Context, in *CreateInviteRequest, opts ...grpc.CallOption) (*CreateInviteResponse, error)
 	// Claim a seat-targeted invite.
 	ClaimInvite(ctx context.Context, in *ClaimInviteRequest, opts ...grpc.CallOption) (*ClaimInviteResponse, error)
+	// Decline a seat-targeted invite.
+	DeclineInvite(ctx context.Context, in *DeclineInviteRequest, opts ...grpc.CallOption) (*DeclineInviteResponse, error)
 	// Get an invite by ID.
 	GetInvite(ctx context.Context, in *GetInviteRequest, opts ...grpc.CallOption) (*GetInviteResponse, error)
+	// Get the public landing data for an invite by ID.
+	GetPublicInvite(ctx context.Context, in *GetPublicInviteRequest, opts ...grpc.CallOption) (*GetPublicInviteResponse, error)
 	// List invites for a campaign.
 	ListInvites(ctx context.Context, in *ListInvitesRequest, opts ...grpc.CallOption) (*ListInvitesResponse, error)
 	// List pending invites for a campaign.
@@ -79,10 +85,30 @@ func (c *inviteServiceClient) ClaimInvite(ctx context.Context, in *ClaimInviteRe
 	return out, nil
 }
 
+func (c *inviteServiceClient) DeclineInvite(ctx context.Context, in *DeclineInviteRequest, opts ...grpc.CallOption) (*DeclineInviteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeclineInviteResponse)
+	err := c.cc.Invoke(ctx, InviteService_DeclineInvite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *inviteServiceClient) GetInvite(ctx context.Context, in *GetInviteRequest, opts ...grpc.CallOption) (*GetInviteResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetInviteResponse)
 	err := c.cc.Invoke(ctx, InviteService_GetInvite_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *inviteServiceClient) GetPublicInvite(ctx context.Context, in *GetPublicInviteRequest, opts ...grpc.CallOption) (*GetPublicInviteResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetPublicInviteResponse)
+	err := c.cc.Invoke(ctx, InviteService_GetPublicInvite_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -139,8 +165,12 @@ type InviteServiceServer interface {
 	CreateInvite(context.Context, *CreateInviteRequest) (*CreateInviteResponse, error)
 	// Claim a seat-targeted invite.
 	ClaimInvite(context.Context, *ClaimInviteRequest) (*ClaimInviteResponse, error)
+	// Decline a seat-targeted invite.
+	DeclineInvite(context.Context, *DeclineInviteRequest) (*DeclineInviteResponse, error)
 	// Get an invite by ID.
 	GetInvite(context.Context, *GetInviteRequest) (*GetInviteResponse, error)
+	// Get the public landing data for an invite by ID.
+	GetPublicInvite(context.Context, *GetPublicInviteRequest) (*GetPublicInviteResponse, error)
 	// List invites for a campaign.
 	ListInvites(context.Context, *ListInvitesRequest) (*ListInvitesResponse, error)
 	// List pending invites for a campaign.
@@ -165,8 +195,14 @@ func (UnimplementedInviteServiceServer) CreateInvite(context.Context, *CreateInv
 func (UnimplementedInviteServiceServer) ClaimInvite(context.Context, *ClaimInviteRequest) (*ClaimInviteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClaimInvite not implemented")
 }
+func (UnimplementedInviteServiceServer) DeclineInvite(context.Context, *DeclineInviteRequest) (*DeclineInviteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeclineInvite not implemented")
+}
 func (UnimplementedInviteServiceServer) GetInvite(context.Context, *GetInviteRequest) (*GetInviteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInvite not implemented")
+}
+func (UnimplementedInviteServiceServer) GetPublicInvite(context.Context, *GetPublicInviteRequest) (*GetPublicInviteResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPublicInvite not implemented")
 }
 func (UnimplementedInviteServiceServer) ListInvites(context.Context, *ListInvitesRequest) (*ListInvitesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListInvites not implemented")
@@ -237,6 +273,24 @@ func _InviteService_ClaimInvite_Handler(srv interface{}, ctx context.Context, de
 	return interceptor(ctx, in, info, handler)
 }
 
+func _InviteService_DeclineInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeclineInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InviteServiceServer).DeclineInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InviteService_DeclineInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InviteServiceServer).DeclineInvite(ctx, req.(*DeclineInviteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _InviteService_GetInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetInviteRequest)
 	if err := dec(in); err != nil {
@@ -251,6 +305,24 @@ func _InviteService_GetInvite_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(InviteServiceServer).GetInvite(ctx, req.(*GetInviteRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InviteService_GetPublicInvite_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetPublicInviteRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InviteServiceServer).GetPublicInvite(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InviteService_GetPublicInvite_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InviteServiceServer).GetPublicInvite(ctx, req.(*GetPublicInviteRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -343,8 +415,16 @@ var InviteService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _InviteService_ClaimInvite_Handler,
 		},
 		{
+			MethodName: "DeclineInvite",
+			Handler:    _InviteService_DeclineInvite_Handler,
+		},
+		{
 			MethodName: "GetInvite",
 			Handler:    _InviteService_GetInvite_Handler,
+		},
+		{
+			MethodName: "GetPublicInvite",
+			Handler:    _InviteService_GetPublicInvite_Handler,
 		},
 		{
 			MethodName: "ListInvites",

@@ -19,6 +19,12 @@ type ClaimPayload struct {
 	JWTID         string            `json:"jti"`
 }
 
+// DeclinePayload captures the payload for invite.decline commands and invite.declined events.
+type DeclinePayload struct {
+	InviteID ids.InviteID `json:"invite_id"`
+	UserID   ids.UserID   `json:"user_id"`
+}
+
 // RevokePayload captures the payload for invite.revoke commands and invite.revoked events.
 type RevokePayload struct {
 	InviteID ids.InviteID `json:"invite_id"`
