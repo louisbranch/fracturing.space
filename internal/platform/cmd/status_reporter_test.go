@@ -180,6 +180,31 @@ func TestStartStatusReporterUsesProvidedContext(t *testing.T) {
 	}
 }
 
+func TestStartStatusReporterSkipsDialWhenStatusAddrBlank(t *testing.T) {
+	restore := stubStatusReporterDeps(t)
+	defer restore()
+
+	reporter := &fakeReporter{}
+	dialCalled := false
+	dialReporterConn = func(context.Context, string, func(string, ...any)) reporterConn {
+		dialCalled = true
+		return nil
+	}
+	newStatusReporter = func(service string, client statusv1.StatusServiceClient) statusReporter {
+		if client != nil {
+			t.Fatal("expected nil status client for blank status addr")
+		}
+		return reporter
+	}
+
+	stop := StartStatusReporter(context.Background(), "mcp", "   ")
+	stop()
+
+	if dialCalled {
+		t.Fatal("expected blank status addr to skip dialing")
+	}
+}
+
 func stubStatusReporterDeps(t *testing.T) func() {
 	t.Helper()
 	prevDial := dialReporterConn

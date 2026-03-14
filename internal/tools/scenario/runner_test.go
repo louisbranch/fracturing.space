@@ -57,8 +57,9 @@ func TestNewRunnerWithDeps_DefaultTimeout(t *testing.T) {
 // fakeAuthProvider is a test double that satisfies authProvider.
 type fakeAuthProvider struct {
 	userID string
+	err    error
 }
 
-func (f *fakeAuthProvider) CreateUser(_ string) string {
-	return f.userID
+func (f *fakeAuthProvider) CreateUser(_ string) (string, error) {
+	return f.userID, f.err
 }

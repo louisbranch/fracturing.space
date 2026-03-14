@@ -57,7 +57,7 @@ Create `internal/services/admin/modules/<area>/` with:
 
 - `go test ./internal/services/admin/...`
 - `make test`
-- `make integration`
+- `make runtime`
 
 If templates changed:
 

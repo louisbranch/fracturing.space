@@ -120,6 +120,8 @@ func TestCampaignEventCommittedInitialAfterSeqReturnsZeroOnNilContext(t *testing
 }
 
 func TestConsumeCampaignEventCommittedUpdatesEmitsEvents(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -152,6 +154,8 @@ func TestConsumeCampaignEventCommittedUpdatesEmitsEvents(t *testing.T) {
 }
 
 func TestConsumeCampaignEventCommittedUpdatesRetriesOnSubscribeError(t *testing.T) {
+	setCampaignEventRetryDelay(t, 5*time.Millisecond)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -172,6 +176,8 @@ func TestConsumeCampaignEventCommittedUpdatesRetriesOnSubscribeError(t *testing.
 }
 
 func TestCampaignEventSubscriptionWorkerLifecycle(t *testing.T) {
+	t.Parallel()
+
 	if ensure, release, stop, done := startCampaignEventCommittedSubscriptionWorker(nil, &testCampaignUpdateEventClient{}, nil); ensure != nil || release != nil || stop != nil || done != nil {
 		t.Fatal("expected nil worker hooks when context is nil")
 	}
@@ -193,10 +199,7 @@ func TestCampaignEventSubscriptionWorkerLifecycle(t *testing.T) {
 
 	worker.ensureCampaignSubscription("  camp-1  ")
 	worker.ensureCampaignSubscription("camp-1")
-	time.Sleep(20 * time.Millisecond)
-	if client.subscribeCalls != 1 {
-		t.Fatalf("subscribe calls = %d, want %d", client.subscribeCalls, 1)
-	}
+	waitForCampaignUpdateSubscribeCalls(t, client, 1, 200*time.Millisecond)
 	if len(worker.subscribers) != 1 {
 		t.Fatalf("subscriber count = %d, want %d", len(worker.subscribers), 1)
 	}
@@ -209,6 +212,8 @@ func TestCampaignEventSubscriptionWorkerLifecycle(t *testing.T) {
 }
 
 func TestWaitCampaignEventSubscriptionRetry(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if waitCampaignEventSubscriptionRetry(ctx, 50*time.Millisecond) {
@@ -218,4 +223,27 @@ func TestWaitCampaignEventSubscriptionRetry(t *testing.T) {
 	if !waitCampaignEventSubscriptionRetry(context.Background(), time.Millisecond) {
 		t.Fatal("expected retry wait to return true when timer elapses")
 	}
+}
+
+func setCampaignEventRetryDelay(t *testing.T, delay time.Duration) {
+	t.Helper()
+
+	previous := campaignEventSubscriptionRetryDelay
+	campaignEventSubscriptionRetryDelay = delay
+	t.Cleanup(func() {
+		campaignEventSubscriptionRetryDelay = previous
+	})
+}
+
+func waitForCampaignUpdateSubscribeCalls(t *testing.T, client *testCampaignUpdateEventClient, want int, timeout time.Duration) {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if client.subscribeCalls >= want {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("subscribe calls = %d, want at least %d", client.subscribeCalls, want)
 }

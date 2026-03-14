@@ -1,8 +1,8 @@
 package scenario
 
-// authProvider creates synthetic users for scenario runs.
+// authProvider creates a scenario runner user for the target runtime.
 type authProvider interface {
-	CreateUser(displayName string) string
+	CreateUser(displayName string) (string, error)
 }
 
 // runnerDeps bundles injectable dependencies for runner construction.

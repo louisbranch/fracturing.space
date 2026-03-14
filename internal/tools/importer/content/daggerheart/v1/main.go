@@ -23,7 +23,9 @@ const (
 	defaultBaseLocale = "en-US"
 	defaultSystemID   = "daggerheart"
 	defaultSystemVer  = "v1"
+)
 
+var (
 	defaultOpenRetryMaxAttempts = 5
 	defaultOpenRetryBaseDelay   = 250 * time.Millisecond
 	defaultOpenRetryMaxDelay    = 2 * time.Second

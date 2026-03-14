@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -20,22 +19,16 @@ import (
 	"testing"
 	"time"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
-	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
-	authuser "github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	mcpservice "github.com/louisbranch/fracturing.space/internal/services/mcp/service"
+	"github.com/louisbranch/fracturing.space/internal/test/testkit"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
@@ -80,10 +73,6 @@ var (
 	joinGrantKeyOnce    sync.Once
 	joinGrantPrivateKey ed25519.PrivateKey
 	joinGrantPublicKey  ed25519.PublicKey
-
-	contentSeedTemplateOnce sync.Once
-	contentSeedTemplatePath string
-	contentSeedTemplateErr  error
 
 	sharedFixtureOnce sync.Once
 	sharedFixtureData suiteFixture
@@ -160,21 +149,8 @@ func sharedSuiteFixture(t *testing.T) suiteFixture {
 			t.Fatalf("create shared fixture temp dir: %v", err)
 		}
 
-		if err := os.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db")); err != nil {
-			t.Fatalf("set shared events db path: %v", err)
-		}
-		if err := os.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db")); err != nil {
-			t.Fatalf("set shared projections db path: %v", err)
-		}
-		if err := os.Setenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH", filepath.Join(base, "game-content.db")); err != nil {
-			t.Fatalf("set shared content db path: %v", err)
-		}
-		if err := os.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", filepath.Join(base, "auth.db")); err != nil {
-			t.Fatalf("set shared auth db path: %v", err)
-		}
-		if err := os.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key"); err != nil {
-			t.Fatalf("set shared event hmac key: %v", err)
-		}
+		testkit.SetGameDBPaths(t, base, os.Setenv)
+		testkit.SetAuthDBPath(t, base, os.Setenv)
 
 		seedDaggerheartContent(t)
 		setJoinGrantProcessEnv(t)
@@ -281,34 +257,7 @@ func setAISessionGrantProcessEnv(t *testing.T) {
 
 func startAuthServer(t *testing.T) (string, func()) {
 	t.Helper()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	authServer, err := authserver.New(0, "")
-	if err != nil {
-		cancel()
-		t.Fatalf("new auth server: %v", err)
-	}
-
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- authServer.Serve(ctx)
-	}()
-
-	authAddr := authServer.Addr()
-	waitForGRPCHealth(t, authAddr)
-	stop := func() {
-		cancel()
-		select {
-		case err := <-serveErr:
-			if err != nil {
-				t.Fatalf("auth server error: %v", err)
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatalf("timed out waiting for auth server to stop")
-		}
-	}
-
-	return authAddr, stop
+	return testkit.StartAuthServer(t)
 }
 
 const (
@@ -410,52 +359,7 @@ func startMCPClientStdio(t *testing.T, grpcAddr string) (*mcp.ClientSession, fun
 
 func createAuthUser(t *testing.T, authAddr, username string) string {
 	t.Helper()
-
-	authDBPath := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AUTH_DB_PATH"))
-	if authDBPath == "" {
-		t.Fatal("FRACTURING_SPACE_AUTH_DB_PATH is required")
-	}
-	store, err := authsqlite.Open(authDBPath)
-	if err != nil {
-		t.Fatalf("open auth store: %v", err)
-	}
-	defer store.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	existing, err := store.GetUserByUsername(ctx, username)
-	if err == nil {
-		return existing.ID
-	}
-
-	created, err := authuser.CreateUser(authuser.CreateUserInput{Username: username}, nil, nil)
-	if err != nil {
-		t.Fatalf("create auth user: %v", err)
-	}
-	err = store.PutUser(ctx, created)
-	if err != nil {
-		t.Fatalf("put auth user: %v", err)
-	}
-	if strings.TrimSpace(created.ID) == "" {
-		t.Fatal("create user: missing user id")
-	}
-	if strings.TrimSpace(authAddr) != "" {
-		conn, dialErr := grpc.NewClient(
-			authAddr,
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
-			grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
-		)
-		if dialErr != nil {
-			t.Fatalf("dial auth server: %v", dialErr)
-		}
-		defer conn.Close()
-		client := authv1.NewAuthServiceClient(conn)
-		if _, lookupErr := client.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: created.Username}); lookupErr != nil {
-			t.Fatalf("lookup created auth user: %v", lookupErr)
-		}
-	}
-	return created.ID
+	return testkit.CreateAuthUser(t, authAddr, username)
 }
 
 func uniqueTestUsername(t *testing.T, parts ...string) string {
@@ -1026,228 +930,19 @@ func requireEventTypesAfterSeq(t *testing.T, ctx context.Context, client statev1
 // setTempDBPath configures a temporary database for integration tests.
 func setTempDBPath(t *testing.T) {
 	t.Helper()
-	base := t.TempDir()
-	t.Setenv("FRACTURING_SPACE_GAME_EVENTS_DB_PATH", filepath.Join(base, "game-events.db"))
-	t.Setenv("FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH", filepath.Join(base, "game-projections.db"))
-	t.Setenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH", filepath.Join(base, "game-content.db"))
-	t.Setenv("FRACTURING_SPACE_GAME_EVENT_HMAC_KEY", "test-key")
+	testkit.SetTempGameDBPaths(t)
 }
 
 // seedDaggerheartContent writes minimal catalog rows required by integration
 // readiness setup so workflow apply can validate content IDs.
 func seedDaggerheartContent(t *testing.T) {
 	t.Helper()
-
-	contentPath := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_GAME_CONTENT_DB_PATH"))
-	if contentPath == "" {
-		t.Fatal("content DB path env is required")
-	}
-
-	templatePath := ensureContentSeedTemplate(t)
-	if err := copyFile(templatePath, contentPath); err != nil {
-		t.Fatalf("copy content seed template: %v", err)
-	}
-}
-
-func ensureContentSeedTemplate(t *testing.T) string {
-	t.Helper()
-
-	contentSeedTemplateOnce.Do(func() {
-		tmpDir, err := os.MkdirTemp("", "integration-content-seed-*")
-		if err != nil {
-			contentSeedTemplateErr = fmt.Errorf("create content seed temp dir: %w", err)
-			return
-		}
-		templatePath := filepath.Join(tmpDir, "game-content-template.db")
-		store, err := storagesqlite.OpenContent(templatePath)
-		if err != nil {
-			contentSeedTemplateErr = fmt.Errorf("open content seed template store: %w", err)
-			return
-		}
-		if err := writeDaggerheartSeedData(store, time.Now().UTC()); err != nil {
-			_ = store.Close()
-			contentSeedTemplateErr = err
-			return
-		}
-		if err := store.Close(); err != nil {
-			contentSeedTemplateErr = fmt.Errorf("close content seed template store: %w", err)
-			return
-		}
-		contentSeedTemplatePath = templatePath
-	})
-
-	if contentSeedTemplateErr != nil {
-		t.Fatalf("initialize content seed template: %v", contentSeedTemplateErr)
-	}
-	return contentSeedTemplatePath
-}
-
-func writeDaggerheartSeedData(store *storagesqlite.Store, now time.Time) error {
-	ctx := context.Background()
-
-	if err := store.PutDaggerheartClass(ctx, storage.DaggerheartClass{
-		ID:              "class.guardian",
-		Name:            "Guardian",
-		StartingEvasion: 9,
-		StartingHP:      7,
-		DomainIDs:       []string{"domain.valor"},
-		CreatedAt:       now,
-		UpdatedAt:       now,
-	}); err != nil {
-		return fmt.Errorf("seed class: %w", err)
-	}
-
-	if err := store.PutDaggerheartSubclass(ctx, storage.DaggerheartSubclass{
-		ID:        "subclass.stalwart",
-		Name:      "Stalwart",
-		ClassID:   "class.guardian",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		return fmt.Errorf("seed subclass: %w", err)
-	}
-
-	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
-		ID:        "heritage.human",
-		Name:      "Human",
-		Kind:      "ancestry",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		return fmt.Errorf("seed ancestry heritage: %w", err)
-	}
-
-	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
-		ID:        "heritage.highborne",
-		Name:      "Highborne",
-		Kind:      "community",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		return fmt.Errorf("seed community heritage: %w", err)
-	}
-
-	if err := store.PutDaggerheartDomain(ctx, storage.DaggerheartDomain{
-		ID:          "domain.valor",
-		Name:        "Valor",
-		Description: "Integration seed domain",
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}); err != nil {
-		return fmt.Errorf("seed domain: %w", err)
-	}
-
-	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
-		ID:          "domain_card.valor-bare-bones",
-		Name:        "Bare Bones",
-		DomainID:    "domain.valor",
-		Level:       1,
-		Type:        "ability",
-		UsageLimit:  "None",
-		FeatureText: "Integration seed card",
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}); err != nil {
-		return fmt.Errorf("seed domain card: %w", err)
-	}
-
-	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
-		ID:          "domain_card.valor-shield-wall",
-		Name:        "Shield Wall",
-		DomainID:    "domain.valor",
-		Level:       1,
-		Type:        "ability",
-		UsageLimit:  "None",
-		FeatureText: "Integration seed card 2",
-		CreatedAt:   now,
-		UpdatedAt:   now,
-	}); err != nil {
-		return fmt.Errorf("seed domain card 2: %w", err)
-	}
-
-	if err := store.PutDaggerheartWeapon(ctx, storage.DaggerheartWeapon{
-		ID:         "weapon.longsword",
-		Name:       "Longsword",
-		Category:   "primary",
-		Tier:       1,
-		Trait:      "Agility",
-		Range:      "melee",
-		DamageDice: []storage.DaggerheartDamageDie{{Sides: 10, Count: 1}},
-		DamageType: "physical",
-		Burden:     2,
-		Feature:    "Integration seed weapon",
-		CreatedAt:  now,
-		UpdatedAt:  now,
-	}); err != nil {
-		return fmt.Errorf("seed weapon: %w", err)
-	}
-
-	if err := store.PutDaggerheartArmor(ctx, storage.DaggerheartArmor{
-		ID:                  "armor.gambeson-armor",
-		Name:                "Gambeson Armor",
-		Tier:                1,
-		BaseMajorThreshold:  6,
-		BaseSevereThreshold: 12,
-		ArmorScore:          1,
-		Feature:             "Integration seed armor",
-		CreatedAt:           now,
-		UpdatedAt:           now,
-	}); err != nil {
-		return fmt.Errorf("seed armor: %w", err)
-	}
-
-	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
-		ID:        "item.minor-health-potion",
-		Name:      "Minor Health Potion",
-		Rarity:    "common",
-		Kind:      "consumable",
-		StackMax:  99,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		return fmt.Errorf("seed health potion: %w", err)
-	}
-
-	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
-		ID:        "item.minor-stamina-potion",
-		Name:      "Minor Stamina Potion",
-		Rarity:    "common",
-		Kind:      "consumable",
-		StackMax:  99,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		return fmt.Errorf("seed stamina potion: %w", err)
-	}
-
-	return nil
-}
-
-func copyFile(src, dst string) error {
-	input, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer input.Close()
-
-	output, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = output.Close()
-	}()
-
-	if _, err := io.Copy(output, input); err != nil {
-		return err
-	}
-	return output.Sync()
+	testkit.SeedDaggerheartContent(t, testkit.ContentSeedProfileIntegration)
 }
 
 func setTempAuthDBPath(t *testing.T) {
 	t.Helper()
-	base := t.TempDir()
-	t.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", filepath.Join(base, "auth.db"))
+	testkit.SetTempAuthDBPath(t)
 }
 
 // repoRoot returns the repository root by walking up to go.mod.
@@ -1279,46 +974,7 @@ func repoRoot(t *testing.T) string {
 // waitForGRPCHealth waits for the gRPC health check to report SERVING.
 func waitForGRPCHealth(t *testing.T, addr string) {
 	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-
-	conn, err := grpc.NewClient(
-		addr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
-	)
-	if err != nil {
-		t.Fatalf("dial game server: %v", err)
-	}
-	defer conn.Close()
-
-	healthClient := grpc_health_v1.NewHealthClient(conn)
-	backoff := 100 * time.Millisecond
-	for {
-		callCtx, callCancel := context.WithTimeout(ctx, time.Second)
-		response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: ""})
-		callCancel()
-		if err == nil && response.GetStatus() == grpc_health_v1.HealthCheckResponse_SERVING {
-			return
-		}
-
-		select {
-		case <-ctx.Done():
-			if err != nil {
-				t.Fatalf("wait for gRPC health: %v", err)
-			}
-			t.Fatalf("wait for gRPC health: %v", ctx.Err())
-		case <-time.After(backoff):
-		}
-
-		if backoff < time.Second {
-			backoff *= 2
-			if backoff > time.Second {
-				backoff = time.Second
-			}
-		}
-	}
+	testkit.WaitForGRPCHealth(t, addr)
 }
 
 // intPointer returns a pointer to the provided int value.

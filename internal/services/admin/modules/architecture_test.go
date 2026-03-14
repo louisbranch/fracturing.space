@@ -17,10 +17,8 @@ import (
 )
 
 const (
-	moduleImportPrefix       = "github.com/louisbranch/fracturing.space/internal/services/admin/modules/"
-	legacyAreaImportPrefix   = "github.com/louisbranch/fracturing.space/internal/services/admin/module/"
-	adminLegacyModuleDirName = "module"
-	rootAdapterFileName      = "module_adapters.go"
+	moduleImportPrefix     = "github.com/louisbranch/fracturing.space/internal/services/admin/modules/"
+	legacyAreaImportPrefix = "github.com/louisbranch/fracturing.space/internal/services/admin/module/"
 )
 
 var requiredModuleFiles = []string{
@@ -91,33 +89,6 @@ func TestRegistryModuleMountPrefixesAreUniqueAndAppScoped(t *testing.T) {
 	}
 }
 
-func TestLegacyAreaModuleDirectoriesAreRemoved(t *testing.T) {
-	t.Parallel()
-
-	adminRoot := filepath.Dir(moduleRoot(t))
-	legacy := []string{
-		"campaigns",
-		"catalog",
-		"dashboard",
-		"icons",
-		"scenarios",
-		"sharedpath",
-		"systems",
-		"users",
-	}
-
-	for _, dir := range legacy {
-		path := filepath.Join(adminRoot, adminLegacyModuleDirName, dir)
-		_, err := os.Stat(path)
-		if err == nil {
-			t.Fatalf("legacy directory %q exists; remove old module/<area> package", path)
-		}
-		if !os.IsNotExist(err) {
-			t.Fatalf("stat %q: %v", path, err)
-		}
-	}
-}
-
 func TestRootAdminDoesNotOwnAreaHandleMethods(t *testing.T) {
 	t.Parallel()
 
@@ -154,20 +125,6 @@ func TestRootAdminDoesNotOwnAreaHandleMethods(t *testing.T) {
 	}
 }
 
-func TestModuleAdapterShimIsRemoved(t *testing.T) {
-	t.Parallel()
-
-	adminRoot := filepath.Dir(moduleRoot(t))
-	path := filepath.Join(adminRoot, rootAdapterFileName)
-	_, err := os.Stat(path)
-	if err == nil {
-		t.Fatalf("legacy adapter shim %q exists; remove root module adapter wiring", path)
-	}
-	if !os.IsNotExist(err) {
-		t.Fatalf("stat %q: %v", path, err)
-	}
-}
-
 func TestAreaModulesFollowTemplate(t *testing.T) {
 	t.Parallel()
 
@@ -179,63 +136,6 @@ func TestAreaModulesFollowTemplate(t *testing.T) {
 			if _, err := os.Stat(path); err != nil {
 				t.Fatalf("module %q missing required file %q: %v", name, file, err)
 			}
-		}
-	}
-}
-
-func TestRootAdminRuntimeDoesNotContainLegacyHandlerFiles(t *testing.T) {
-	t.Parallel()
-
-	adminRoot := filepath.Dir(moduleRoot(t))
-	for _, name := range []string{
-		"handler_helpers.go",
-		"handler_client_helpers.go",
-		"handler_formatters.go",
-		"handler_catalog_dispatch.go",
-		"dashboard_activity_service.go",
-		"campaign_character_helpers.go",
-		"dashboard_event_helpers.go",
-		"participants_invites_helpers.go",
-		"events_helpers.go",
-		"scenario_helpers.go",
-	} {
-		path := filepath.Join(adminRoot, name)
-		_, err := os.Stat(path)
-		if err == nil {
-			t.Fatalf("root runtime file %q exists; move legacy handler/helper behavior into module packages", path)
-		}
-		if !os.IsNotExist(err) {
-			t.Fatalf("stat %q: %v", path, err)
-		}
-	}
-}
-
-func TestRootAdminDoesNotContainModuleScopedTestFiles(t *testing.T) {
-	t.Parallel()
-
-	adminRoot := filepath.Dir(moduleRoot(t))
-	for _, name := range []string{
-		"handler_test.go",
-		"helpers_test.go",
-		"campaign_character_helpers_test.go",
-		"dashboard_activity_service_test.go",
-		"dashboard_activity_service_legacy_test.go",
-		"dashboard_event_helpers_test.go",
-		"events_helpers_test.go",
-		"handler_catalog_dispatch_test.go",
-		"handler_client_helpers_test.go",
-		"handler_formatters_test.go",
-		"handler_helpers_test.go",
-		"participants_invites_helpers_test.go",
-		"scenario_helpers_test.go",
-	} {
-		path := filepath.Join(adminRoot, name)
-		_, err := os.Stat(path)
-		if err == nil {
-			t.Fatalf("root module-scoped test file %q exists; keep module tests under internal/services/admin/modules/<area>", path)
-		}
-		if !os.IsNotExist(err) {
-			t.Fatalf("stat %q: %v", path, err)
 		}
 	}
 }

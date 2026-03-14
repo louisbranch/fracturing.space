@@ -140,7 +140,7 @@ Minimum checks when changing web architecture, modules, or routes:
 
 - `go test ./internal/services/web/...`
 - `make web-architecture-check`
-- `make integration`
+- `make runtime`
 
 ## Deep references
 

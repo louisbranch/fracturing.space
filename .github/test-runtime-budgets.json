@@ -1,39 +1,39 @@
 {
   "runs": {
     "integration-smoke": {
-      "baseline_seconds": 35.0,
+      "baseline_seconds": 26.0,
       "allowed_regression_pct": 20.0
     },
     "integration-smoke-pr": {
-      "baseline_seconds": 12.0,
+      "baseline_seconds": 11.0,
       "allowed_regression_pct": 20.0
     },
     "scenario-smoke": {
-      "baseline_seconds": 6.0,
+      "baseline_seconds": 8.0,
       "allowed_regression_pct": 20.0
     },
     "integration-full": {
-      "baseline_seconds": 90.0,
+      "baseline_seconds": 33.0,
       "allowed_regression_pct": 25.0
     },
     "integration-shard-0-of-4": {
-      "baseline_seconds": 30.0,
+      "baseline_seconds": 7.5,
       "allowed_regression_pct": 25.0
     },
     "integration-shard-1-of-4": {
-      "baseline_seconds": 15.0,
+      "baseline_seconds": 24.0,
       "allowed_regression_pct": 25.0
     },
     "integration-shard-2-of-4": {
-      "baseline_seconds": 15.0,
+      "baseline_seconds": 9.5,
       "allowed_regression_pct": 25.0
     },
     "integration-shard-3-of-4": {
-      "baseline_seconds": 15.0,
+      "baseline_seconds": 11.5,
       "allowed_regression_pct": 25.0
     },
     "scenario-full": {
-      "baseline_seconds": 240.0,
+      "baseline_seconds": 12.5,
       "allowed_regression_pct": 25.0
     }
   }

@@ -14,10 +14,10 @@ import (
 
 // Backoff constants for managed connection health monitoring.
 const (
-	DefaultRetryDelay   = 500 * time.Millisecond
-	MaxRetryDelay       = 10 * time.Second
-	healthyPollInterval = 10 * time.Second
-	healthCheckTimeout  = 2 * time.Second
+	DefaultRetryDelay          = 500 * time.Millisecond
+	MaxRetryDelay              = 10 * time.Second
+	healthyPollIntervalDefault = 10 * time.Second
+	healthCheckTimeout         = 2 * time.Second
 )
 
 // ManagedConnMode controls whether NewManagedConn blocks until the peer is
@@ -50,6 +50,12 @@ type ManagedConnConfig struct {
 	// StatusCapability is the capability name reported to the status service.
 	StatusCapability string
 
+	// timing overrides are used by tests to keep feedback loops fast.
+	retryDelay          time.Duration
+	maxRetryDelay       time.Duration
+	healthyPollInterval time.Duration
+	checkTimeout        time.Duration
+
 	// checkHealth overrides the default gRPC health probe. Used in tests.
 	checkHealth func(ctx context.Context, conn *gogrpc.ClientConn) error
 }
@@ -71,6 +77,10 @@ type ManagedConn struct {
 
 	cancel context.CancelFunc
 	done   chan struct{} // closed when background goroutine exits
+
+	retryDelay          time.Duration
+	maxRetryDelay       time.Duration
+	healthyPollInterval time.Duration
 
 	// checkHealth is injectable for testing.
 	checkHealth func(ctx context.Context, conn *gogrpc.ClientConn) error
@@ -108,20 +118,35 @@ func NewManagedConn(ctx context.Context, cfg ManagedConnConfig) (*ManagedConn, e
 
 	check := cfg.checkHealth
 	if check == nil {
-		check = defaultCheckHealth
+		check = newDefaultCheckHealth(cfg.checkTimeout)
+	}
+	retryDelay := cfg.retryDelay
+	if retryDelay <= 0 {
+		retryDelay = DefaultRetryDelay
+	}
+	maxRetryDelay := cfg.maxRetryDelay
+	if maxRetryDelay <= 0 {
+		maxRetryDelay = MaxRetryDelay
+	}
+	healthyPollInterval := cfg.healthyPollInterval
+	if healthyPollInterval <= 0 {
+		healthyPollInterval = healthyPollIntervalDefault
 	}
 
 	monitorCtx, cancel := context.WithCancel(context.Background())
 	mc := &ManagedConn{
-		name:        cfg.Name,
-		conn:        conn,
-		logf:        logf,
-		reporter:    cfg.StatusReporter,
-		capability:  cfg.StatusCapability,
-		ready:       make(chan struct{}),
-		cancel:      cancel,
-		done:        make(chan struct{}),
-		checkHealth: check,
+		name:                cfg.Name,
+		conn:                conn,
+		logf:                logf,
+		reporter:            cfg.StatusReporter,
+		capability:          cfg.StatusCapability,
+		ready:               make(chan struct{}),
+		cancel:              cancel,
+		done:                make(chan struct{}),
+		retryDelay:          retryDelay,
+		maxRetryDelay:       maxRetryDelay,
+		healthyPollInterval: healthyPollInterval,
+		checkHealth:         check,
 	}
 
 	go mc.monitor(monitorCtx)
@@ -174,7 +199,7 @@ func (mc *ManagedConn) monitor(ctx context.Context) {
 	defer close(mc.done)
 
 	wasHealthy := false
-	backoff := DefaultRetryDelay
+	backoff := mc.retryDelay
 
 	for {
 		if ctx.Err() != nil {
@@ -192,7 +217,7 @@ func (mc *ManagedConn) monitor(ctx context.Context) {
 				mc.reporter.SetOperational(mc.capability)
 			}
 			wasHealthy = true
-			backoff = DefaultRetryDelay
+			backoff = mc.retryDelay
 
 		case !healthy && wasHealthy:
 			mc.logf("managed conn %s: unhealthy: %v", mc.name, err)
@@ -205,13 +230,13 @@ func (mc *ManagedConn) monitor(ctx context.Context) {
 		// Choose sleep interval based on current health state.
 		interval := backoff
 		if wasHealthy {
-			interval = healthyPollInterval
+			interval = mc.healthyPollInterval
 		} else if !healthy {
 			// Increase backoff for next unhealthy cycle.
-			if backoff < MaxRetryDelay {
+			if backoff < mc.maxRetryDelay {
 				backoff *= 2
-				if backoff > MaxRetryDelay {
-					backoff = MaxRetryDelay
+				if backoff > mc.maxRetryDelay {
+					backoff = mc.maxRetryDelay
 				}
 			}
 		}
@@ -233,18 +258,24 @@ func (mc *ManagedConn) markReady() {
 	}
 }
 
-// defaultCheckHealth performs a gRPC health check with a short timeout.
-func defaultCheckHealth(ctx context.Context, conn *gogrpc.ClientConn) error {
-	checkCtx, cancel := context.WithTimeout(ctx, healthCheckTimeout)
-	defer cancel()
+// newDefaultCheckHealth performs a gRPC health check with a short timeout.
+func newDefaultCheckHealth(timeout time.Duration) func(context.Context, *gogrpc.ClientConn) error {
+	if timeout <= 0 {
+		timeout = healthCheckTimeout
+	}
 
-	client := grpc_health_v1.NewHealthClient(conn)
-	resp, err := client.Check(checkCtx, &grpc_health_v1.HealthCheckRequest{Service: ""})
-	if err != nil {
-		return err
+	return func(ctx context.Context, conn *gogrpc.ClientConn) error {
+		checkCtx, cancel := context.WithTimeout(ctx, timeout)
+		defer cancel()
+
+		client := grpc_health_v1.NewHealthClient(conn)
+		resp, err := client.Check(checkCtx, &grpc_health_v1.HealthCheckRequest{Service: ""})
+		if err != nil {
+			return err
+		}
+		if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
+			return fmt.Errorf("health status: %s", resp.GetStatus().String())
+		}
+		return nil
 	}
-	if resp.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
-		return fmt.Errorf("health status: %s", resp.GetStatus().String())
-	}
-	return nil
 }

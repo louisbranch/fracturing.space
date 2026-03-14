@@ -6,6 +6,7 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
@@ -344,6 +345,47 @@ func TestTransitionScene_MissingSourceSceneId(t *testing.T) {
 	svc := NewSceneService(Stores{})
 	_, err := svc.TransitionScene(context.Background(), &statev1.TransitionSceneRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestTransitionScene_UsesSourceSceneSessionID(t *testing.T) {
+	campaignStore := activeCampaignStore("c1")
+	participantStore := sessionManagerParticipantStore("c1")
+	sceneStore := &fakeSceneStoreForService{
+		scenes: map[string]storage.SceneRecord{
+			"c1:sc-1": {
+				CampaignID: "c1",
+				SceneID:    "sc-1",
+				SessionID:  "sess-1",
+				Name:       "Room A",
+				Active:     true,
+				CreatedAt:  time.Unix(1000, 0),
+				UpdatedAt:  time.Unix(1000, 0),
+			},
+		},
+	}
+	domain := &fakeDomainEngine{}
+
+	svc := NewSceneService(Stores{
+		Campaign:    campaignStore,
+		Participant: participantStore,
+		Scene:       sceneStore,
+		Write: domainwriteexec.WritePath{
+			Executor: domain,
+		},
+	})
+
+	_, _ = svc.TransitionScene(contextWithParticipantID("manager-1"), &statev1.TransitionSceneRequest{
+		CampaignId:    "c1",
+		SourceSceneId: "sc-1",
+		Name:          "Room B",
+	})
+
+	if domain.lastCommand.Type != commandTypeSceneTransition {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandTypeSceneTransition)
+	}
+	if domain.lastCommand.SessionID != "sess-1" {
+		t.Fatalf("command session id = %q, want %q", domain.lastCommand.SessionID, "sess-1")
+	}
 }
 
 func TestOpenSceneGate_MissingSceneId(t *testing.T) {

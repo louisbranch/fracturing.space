@@ -12,6 +12,12 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const (
+	testRetryDelay          = 10 * time.Millisecond
+	testMaxRetryDelay       = 20 * time.Millisecond
+	testHealthyPollInterval = 20 * time.Millisecond
+)
+
 func silentDialOpts() []gogrpc.DialOption {
 	return []gogrpc.DialOption{
 		gogrpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -59,7 +65,7 @@ func TestManagedConn_required_blocks_until_healthy(t *testing.T) {
 
 	var calls atomic.Int32
 	mc, err := newTestManagedConn(t, ModeRequired, func(_ context.Context, _ *gogrpc.ClientConn) error {
-		if calls.Add(1) < 3 {
+		if calls.Add(1) < 2 {
 			return errors.New("not ready")
 		}
 		return nil
@@ -77,7 +83,7 @@ func TestManagedConn_required_blocks_until_healthy(t *testing.T) {
 func TestManagedConn_required_context_cancel(t *testing.T) {
 	t.Parallel()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
 	_, err := NewManagedConn(ctx, ManagedConnConfig{
@@ -118,41 +124,17 @@ func TestManagedConn_health_transitions_report_status(t *testing.T) {
 	}
 	defer mc.Close()
 
-	// Wait for a few unhealthy cycles, then signal healthy.
-	time.Sleep(100 * time.Millisecond)
-	snap := reporter.Snapshot()
-	for _, c := range snap {
-		if c.Name == "test.dep" && c.Status != status.Unavailable {
-			t.Fatalf("expected Unavailable while unhealthy, got %v", c.Status)
-		}
-	}
+	waitForStatusCapability(t, reporter, "test.dep", status.Unavailable, 200*time.Millisecond)
 
 	healthy.Store(true)
 	if err := mc.WaitReady(ctxWithTimeout(t, 5*time.Second)); err != nil {
 		t.Fatalf("WaitReady: %v", err)
 	}
-
-	snap = reporter.Snapshot()
-	for _, c := range snap {
-		if c.Name == "test.dep" {
-			if c.Status != status.Operational {
-				t.Fatalf("expected Operational after recovery, got %v", c.Status)
-			}
-		}
-	}
+	waitForStatusCapability(t, reporter, "test.dep", status.Operational, 200*time.Millisecond)
 
 	// Simulate degradation.
 	healthy.Store(false)
-	time.Sleep(healthyPollInterval + 500*time.Millisecond)
-
-	snap = reporter.Snapshot()
-	for _, c := range snap {
-		if c.Name == "test.dep" {
-			if c.Status != status.Unavailable {
-				t.Fatalf("expected Unavailable after degradation, got %v", c.Status)
-			}
-		}
-	}
+	waitForStatusCapability(t, reporter, "test.dep", status.Unavailable, 200*time.Millisecond)
 }
 
 func TestManagedConn_close_stops_monitor(t *testing.T) {
@@ -215,14 +197,17 @@ func newTestManagedConnWithReporter(
 
 	ctx := ctxWithTimeout(t, 10*time.Second)
 	return NewManagedConn(ctx, ManagedConnConfig{
-		Name:             "test",
-		Addr:             "127.0.0.1:1",
-		Mode:             mode,
-		DialOpts:         silentDialOpts(),
-		Logf:             nopLogf,
-		StatusReporter:   reporter,
-		StatusCapability: capability,
-		checkHealth:      check,
+		Name:                "test",
+		Addr:                "127.0.0.1:1",
+		Mode:                mode,
+		DialOpts:            silentDialOpts(),
+		Logf:                nopLogf,
+		StatusReporter:      reporter,
+		StatusCapability:    capability,
+		retryDelay:          testRetryDelay,
+		maxRetryDelay:       testMaxRetryDelay,
+		healthyPollInterval: testHealthyPollInterval,
+		checkHealth:         check,
 	})
 }
 
@@ -231,4 +216,25 @@ func ctxWithTimeout(t *testing.T, d time.Duration) context.Context {
 	ctx, cancel := context.WithTimeout(context.Background(), d)
 	t.Cleanup(cancel)
 	return ctx
+}
+
+func waitForStatusCapability(t *testing.T, reporter *status.Reporter, capability string, want status.CapabilityStatus, timeout time.Duration) {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		for _, capabilityState := range reporter.Snapshot() {
+			if capabilityState.Name == capability && capabilityState.Status == want {
+				return
+			}
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+
+	for _, capabilityState := range reporter.Snapshot() {
+		if capabilityState.Name == capability {
+			t.Fatalf("capability %s status = %v, want %v", capability, capabilityState.Status, want)
+		}
+	}
+	t.Fatalf("capability %s not found in reporter snapshot", capability)
 }

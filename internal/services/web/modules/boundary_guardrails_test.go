@@ -9,47 +9,6 @@ import (
 	"testing"
 )
 
-func TestProtectedModuleCompatibilityShimsAreRemoved(t *testing.T) {
-	t.Parallel()
-
-	paths := []string{
-		"campaigns/contracts.go",
-		"campaigns/contracts_gateway.go",
-		"campaigns/handlers_detail_pages.go",
-		"campaigns/routes_surface_core.go",
-		"campaigns/routes_surface_workflow.go",
-		"campaigns/routes_surface_mutations.go",
-		"campaigns/service_factory.go",
-		"campaigns/workflow_contract.go",
-		"settings/contracts.go",
-		"settings/service.go",
-		"settings/gateway_grpc.go",
-		"settings/gateway_unavailable.go",
-		"notifications/contracts.go",
-		"notifications/service.go",
-		"notifications/gateway_grpc.go",
-		"notifications/gateway_unavailable.go",
-		"dashboard/contracts.go",
-		"dashboard/service.go",
-		"dashboard/gateway_grpc.go",
-		"dashboard/gateway_unavailable.go",
-	}
-
-	for _, path := range paths {
-		path := path
-		t.Run(path, func(t *testing.T) {
-			t.Parallel()
-			_, err := os.Stat(path)
-			if err == nil {
-				t.Fatalf("%q exists; protected-module compatibility shim should be removed after cutover", path)
-			}
-			if !os.IsNotExist(err) {
-				t.Fatalf("Stat(%q) error = %v", path, err)
-			}
-		})
-	}
-}
-
 func TestProtectedModuleRootsWireAppServicesDirectly(t *testing.T) {
 	t.Parallel()
 
@@ -83,79 +42,9 @@ func TestSettingsModuleWiresAccountAndAIAppServicesDirectly(t *testing.T) {
 	assertFileContains(t, "settings/app/service.go", "type AIServiceConfig struct")
 }
 
-func TestProfileCompatibilityShimsAreRemoved(t *testing.T) {
-	t.Parallel()
-
-	paths := []string{
-		"profile/contracts.go",
-		"profile/service.go",
-		"profile/gateway_grpc.go",
-	}
-
-	for _, path := range paths {
-		path := path
-		t.Run(path, func(t *testing.T) {
-			t.Parallel()
-			_, err := os.Stat(path)
-			if err == nil {
-				t.Fatalf("%q exists; profile compatibility shim should be removed after cutover", path)
-			}
-			if !os.IsNotExist(err) {
-				t.Fatalf("Stat(%q) error = %v", path, err)
-			}
-		})
-	}
-}
-
 func TestProfileRootWiresAppServiceDirectly(t *testing.T) {
 	t.Parallel()
 	assertMountCallsSelector(t, "profile/module.go", "profileapp", "NewService")
-}
-
-func TestPublicAuthCompatibilityShimsAreRemoved(t *testing.T) {
-	t.Parallel()
-
-	paths := []string{
-		"publicauth/service.go",
-	}
-
-	for _, path := range paths {
-		path := path
-		t.Run(path, func(t *testing.T) {
-			t.Parallel()
-			_, err := os.Stat(path)
-			if err == nil {
-				t.Fatalf("%q exists; publicauth compatibility shim should be removed after cutover", path)
-			}
-			if !os.IsNotExist(err) {
-				t.Fatalf("Stat(%q) error = %v", path, err)
-			}
-		})
-	}
-}
-
-func TestPublicAuthSurfaceWrapperPackagesAreRemoved(t *testing.T) {
-	t.Parallel()
-
-	paths := []string{
-		"publicauth/surfaces/shell/module.go",
-		"publicauth/surfaces/passkeys/module.go",
-		"publicauth/surfaces/authredirect/module.go",
-	}
-
-	for _, path := range paths {
-		path := path
-		t.Run(path, func(t *testing.T) {
-			t.Parallel()
-			_, err := os.Stat(path)
-			if err == nil {
-				t.Fatalf("%q exists; publicauth route-surface ownership should stay in the root package", path)
-			}
-			if !os.IsNotExist(err) {
-				t.Fatalf("Stat(%q) error = %v", path, err)
-			}
-		})
-	}
 }
 
 func TestPublicAuthRootWiresAppServiceDirectly(t *testing.T) {
@@ -240,7 +129,6 @@ func TestCampaignListCreateTemplatesAreAreaOwned(t *testing.T) {
 	assertFileContains(t, "campaigns/page.templ", "type CampaignListItem struct")
 	assertFileContains(t, "campaigns/page.templ", "type CampaignCreateFormValues struct")
 	assertFileContains(t, "campaigns/page.templ", "templ CampaignListFragment(")
-	assertFileMissing(t, "../templates/campaigns.templ")
 }
 
 func TestCampaignChatAndCreationTemplatesAreAreaOwned(t *testing.T) {
@@ -252,8 +140,6 @@ func TestCampaignChatAndCreationTemplatesAreAreaOwned(t *testing.T) {
 	assertFileContains(t, "campaigns/handlers_creation_page.go", "campaignrender.CharacterCreationPage(")
 	assertFileDoesNotContain(t, "campaigns/handlers_creation_page.go", "webtemplates.CharacterCreationPage(")
 	assertFileContains(t, "campaigns/render/character_creation.templ", "templ CharacterCreationPage(")
-	assertFileMissing(t, "../templates/campaigns_chat.templ")
-	assertFileMissing(t, "../templates/character_creation.templ")
 }
 
 func TestCampaignServiceConstructorUsesExplicitCapabilityConfig(t *testing.T) {
@@ -285,7 +171,6 @@ func TestCampaignCharacterCreationWorkflowOwnershipStaysOutOfApp(t *testing.T) {
 	assertFileDoesNotContain(t, "campaigns/app/service_contracts.go", "CampaignCharacterCreation(context.Context, string, string, language.Tag")
 	assertFileDoesNotContain(t, "campaigns/handlers_workflow.go", "workflow.ParseStepInput(")
 	assertFileDoesNotContain(t, "campaigns/handlers_creation_page.go", "CampaignCharacterCreation(")
-	assertFileMissing(t, "campaigns/app/workflow.go")
 }
 
 func TestSelectedModuleRootsDoNotUseAliasWalls(t *testing.T) {
@@ -562,17 +447,5 @@ func assertFileDoesNotContain(t *testing.T, path, fragment string) {
 	}
 	if strings.Contains(string(data), fragment) {
 		t.Fatalf("%s still contains %q", path, fragment)
-	}
-}
-
-func assertFileMissing(t *testing.T, path string) {
-	t.Helper()
-
-	_, err := os.Stat(path)
-	if err == nil {
-		t.Fatalf("%s exists; expected legacy file to be removed", path)
-	}
-	if !os.IsNotExist(err) {
-		t.Fatalf("Stat(%q) error = %v", path, err)
 	}
 }

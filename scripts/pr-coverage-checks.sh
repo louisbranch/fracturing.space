@@ -1,28 +1,30 @@
 #!/usr/bin/env bash
 set -euo pipefail
-#
-# Local parity script for .github/workflows/go-tests.yml (test job).
-# Keep steps in sync; intentional divergences:
-#   - coverage-badge job is CI-only (runs on main push, not locally)
-#   - coverage regression checks use local git fetch instead of CI artifact download
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+cd "$repo_root"
+
+export GOCACHE="${GOCACHE:-$repo_root/.tmp/go-cache}"
+export GOTMPDIR="${GOTMPDIR:-$repo_root/.tmp/go-build}"
+mkdir -p "$GOCACHE" "$GOTMPDIR"
+
+coverage_check_baseline="${COVERAGE_CHECK_BASELINE:-true}"
 
 run_step() {
   echo "==> $*"
   "$@"
 }
 
-run_step make docs-check
-run_step make fmt-check
-run_step make event-catalog-check
-run_step make i18n-check
-run_step make i18n-status-check
-run_step make topology-check
-run_step make negative-test-assertion-check
-run_step make web-architecture-check
-run_step make game-architecture-check
-run_step make admin-architecture-check
 run_step make cover
 run_step make cover-critical-domain
+
+if [[ "$coverage_check_baseline" != "true" ]]; then
+  echo "Coverage generation checks passed."
+  exit 0
+fi
+
+tmp_dir="$repo_root/.tmp/coverage-pr"
+mkdir -p "$tmp_dir"
 
 CURRENT=$(go tool cover -func=coverage.out | awk '/total/ {print substr($3, 1, length($3)-1)}')
 if [ -z "$CURRENT" ] || ! printf '%s\n' "$CURRENT" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
@@ -32,8 +34,8 @@ fi
 
 if git ls-remote --exit-code --heads origin badges >/dev/null 2>&1; then
   git fetch origin badges:refs/remotes/origin/badges
-  if git show origin/badges:coverage-baseline.txt > /tmp/coverage-baseline.txt; then
-    BASELINE=$(cat /tmp/coverage-baseline.txt)
+  if git show origin/badges:coverage-baseline.txt > "$tmp_dir/coverage-baseline.txt"; then
+    BASELINE=$(cat "$tmp_dir/coverage-baseline.txt")
     if [ -z "$BASELINE" ] || ! printf '%s\n' "$BASELINE" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
       echo "Invalid coverage baseline value: $BASELINE"
       exit 1
@@ -58,8 +60,8 @@ fi
 
 if git ls-remote --exit-code --heads origin badges >/dev/null 2>&1; then
   git fetch origin badges:refs/remotes/origin/badges
-  if git show origin/badges:coverage-critical-domain-baseline.txt > /tmp/coverage-critical-domain-baseline.txt; then
-    CRITICAL_BASELINE=$(cat /tmp/coverage-critical-domain-baseline.txt)
+  if git show origin/badges:coverage-critical-domain-baseline.txt > "$tmp_dir/coverage-critical-domain-baseline.txt"; then
+    CRITICAL_BASELINE=$(cat "$tmp_dir/coverage-critical-domain-baseline.txt")
     if [ -z "$CRITICAL_BASELINE" ] || ! printf '%s\n' "$CRITICAL_BASELINE" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
       echo "Invalid critical-domain coverage baseline value: $CRITICAL_BASELINE"
       exit 1
@@ -79,11 +81,11 @@ fi
 FLOORS=docs/reference/coverage-floors.json
 if git ls-remote --exit-code --heads origin badges >/dev/null 2>&1; then
   git fetch origin badges:refs/remotes/origin/badges
-  if git show origin/badges:coverage-package-floors.json > /tmp/coverage-package-floors.json; then
-    FLOORS=/tmp/coverage-package-floors.json
+  if git show origin/badges:coverage-package-floors.json > "$tmp_dir/coverage-package-floors.json"; then
+    FLOORS="$tmp_dir/coverage-package-floors.json"
   fi
 fi
 
 run_step go run ./internal/tools/coveragefloors check -profile=coverage.out -floors="$FLOORS"
 
-echo "Local CI Go Tests parity checks passed."
+echo "PR coverage checks passed."

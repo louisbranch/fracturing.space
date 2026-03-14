@@ -42,7 +42,7 @@ func run(args []string, stdout io.Writer, stderr io.Writer) error {
 	content := fmt.Sprintf(`---
 title: "Icon Catalog"
 parent: "Reference"
-nav_order: 3
+nav_order: 11
 ---
 
 %s`, icons.CatalogMarkdown())

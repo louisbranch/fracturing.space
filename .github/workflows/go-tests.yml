@@ -10,9 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  # Test job steps should stay in sync with scripts/ci-go-tests-local.sh.
-  # Intentional divergences: coverage-badge job is CI-only.
-  test:
+  fast-verification:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -23,102 +21,24 @@ jobs:
           go-version: "1.26.0"
       - name: Install goimports
         run: go install golang.org/x/tools/cmd/goimports@latest
-      - name: Run docs quality checks
-        run: make docs-check
-      - name: Check Go formatting
-        run: make fmt-check
-      - name: Verify event catalogs are up to date
-        run: make event-catalog-check
-      - name: Validate i18n catalogs
-        run: make i18n-check
-      - name: Verify i18n status artifacts are up to date
-        run: make i18n-status-check
-      - name: Verify topology-generated outputs are up to date
-        run: make topology-check
-      - name: Guard low-value negative test assertions
-        run: make negative-test-assertion-check
-      - name: Run web architecture checks
-        run: make web-architecture-check
-      - name: Run game architecture checks
-        run: make game-architecture-check
-      - name: Run admin architecture checks
-        run: make admin-architecture-check
-      - name: Run tests and generate coverage report
-        run: make cover
-      - name: Run critical-domain coverpkg report
-        run: make cover-critical-domain
-      - name: Check coverage regression against baseline
+      - name: Run fast verification lane
+        run: make verify-pr-fast
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.0"
+      - name: Run PR coverage lane
         if: github.event_name == 'pull_request'
-        run: |
-          set -euo pipefail
-          CURRENT=$(go tool cover -func=coverage.out | awk '/total/ {print substr($3, 1, length($3)-1)}')
-          if [ -z "$CURRENT" ] || ! printf '%s\n' "$CURRENT" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
-            echo "Failed to extract valid coverage percentage for PR."
-            exit 1
-          fi
-          if ! git ls-remote --exit-code --heads origin badges; then
-            echo "No badges branch found; skipping coverage regression check."
-            exit 0
-          fi
-          git fetch origin badges:refs/remotes/origin/badges
-          if ! git show origin/badges:coverage-baseline.txt > /tmp/coverage-baseline.txt; then
-            echo "No coverage-baseline.txt found; skipping coverage regression check."
-            exit 0
-          fi
-          BASELINE=$(cat /tmp/coverage-baseline.txt)
-          if [ -z "$BASELINE" ] || ! printf '%s\n' "$BASELINE" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
-            echo "Invalid coverage baseline value: $BASELINE"
-            exit 1
-          fi
-          ALLOW_DROP=0.5
-          if awk "BEGIN {exit !($CURRENT + 0 >= $BASELINE - $ALLOW_DROP)}"; then
-            echo "Coverage OK: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%)"
-            exit 0
-          fi
-          echo "Coverage regression: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%). Please add tests to restore coverage or update the baseline if this is intentional."
-          exit 1
-      - name: Check critical-domain coverage regression against baseline
-        if: github.event_name == 'pull_request'
-        run: |
-          set -euo pipefail
-          CURRENT=$(go tool cover -func=coverage-critical-domain.out | awk '/total/ {print substr($3, 1, length($3)-1)}')
-          if [ -z "$CURRENT" ] || ! printf '%s\n' "$CURRENT" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
-            echo "Failed to extract valid critical-domain coverage percentage for PR."
-            exit 1
-          fi
-          if ! git ls-remote --exit-code --heads origin badges; then
-            echo "No badges branch found; skipping critical-domain coverage regression check."
-            exit 0
-          fi
-          git fetch origin badges:refs/remotes/origin/badges
-          if ! git show origin/badges:coverage-critical-domain-baseline.txt > /tmp/coverage-critical-domain-baseline.txt; then
-            echo "No coverage-critical-domain-baseline.txt found; skipping critical-domain coverage regression check."
-            exit 0
-          fi
-          BASELINE=$(cat /tmp/coverage-critical-domain-baseline.txt)
-          if [ -z "$BASELINE" ] || ! printf '%s\n' "$BASELINE" | grep -Eq '^[0-9]+(\.[0-9]+)?$'; then
-            echo "Invalid critical-domain coverage baseline value: $BASELINE"
-            exit 1
-          fi
-          ALLOW_DROP=1.2
-          if awk "BEGIN {exit !($CURRENT + 0 >= $BASELINE - $ALLOW_DROP)}"; then
-            echo "Critical-domain coverage OK: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%)"
-            exit 0
-          fi
-          echo "Critical-domain coverage regression: current $CURRENT% vs baseline $BASELINE% (allow drop $ALLOW_DROP%). Please add tests to restore critical-domain coverage or update the baseline if intentional."
-          exit 1
-      - name: Check package coverage floor regression
-        if: github.event_name == 'pull_request'
-        run: |
-          set -euo pipefail
-          FLOORS=docs/reference/coverage-floors.json
-          if git ls-remote --exit-code --heads origin badges; then
-            git fetch origin badges:refs/remotes/origin/badges
-            if git show origin/badges:coverage-package-floors.json > /tmp/coverage-package-floors.json; then
-              FLOORS=/tmp/coverage-package-floors.json
-            fi
-          fi
-          go run ./internal/tools/coveragefloors check -profile=coverage.out -floors="$FLOORS"
+        run: make coverage-pr
+      - name: Run main coverage lane
+        if: github.event_name != 'pull_request'
+        run: COVERAGE_CHECK_BASELINE=false make coverage-pr
       - name: Upload coverage logs
         if: always()
         uses: actions/upload-artifact@v4
@@ -141,7 +61,7 @@ jobs:
 
   coverage-badge:
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    needs: test
+    needs: coverage
     runs-on: ubuntu-latest
     permissions:
       contents: write

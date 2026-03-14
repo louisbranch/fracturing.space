@@ -26,7 +26,9 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		return Config{}, err
 	}
 	cfg.Addr = serviceaddr.OrDefaultGRPCAddr(cfg.Addr, serviceaddr.ServiceGame)
-	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
+	if cfg.StatusAddr != "" {
+		cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
+	}
 
 	fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "game server address")
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP server address (for HTTP transport)")

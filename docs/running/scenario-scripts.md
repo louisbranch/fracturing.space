@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 9
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-03"
+last_reviewed: "2026-03-10"
 ---
 
 # Running Lua Scenario Scripts
@@ -105,35 +105,40 @@ Scenario runs use a permissive in-process auth helper that generates synthetic u
 
 ## Scenario Test Lanes
 
-Use the scenario-focused Make targets when validating Lua suites:
+Scenario suites are part of the public runtime verification surface:
 
 ```bash
-make scenario-smoke
-make scenario-full
-make scenario-fast
+make runtime-smoke
+make runtime
+make verify-pr
 ```
+
+Use `make runtime-smoke` for quick feedback while iterating and `make runtime`
+before declaring runtime-impacting work done. Use `make verify-pr` before
+opening or updating a PR.
 
 ## Scenario Command Matrix
 
-Use these commands by audience and intent:
+For one-off script execution, use the scenario CLI commands above. For supported
+project verification, use the public Make surface:
 
-| Audience | Command | Use case | When to run |
-| --- | --- | --- | --- |
-| Users | `make scenario-smoke` | Fast local scenario contract check | During active feature work |
-| Users | `make scenario-full` | Full scenario regression sweep | Before merging gameplay/runtime-affecting changes |
-| Users | `make scenario-fast` | Faster local full run with parallel workers | When iterating on large scenario suites locally |
-| Agents | `make scenario-smoke` | Short feedback loop | After incremental scenario/harness edits |
-| Agents | `make scenario-full` | Completion gate for scenario behavior | Before reporting done |
-| CI (PR) | `make scenario-smoke` | Fast PR gate for scenario contracts | Every pull request |
-| CI (main/nightly) | `SCENARIO_VERIFY_SHARDS_TOTAL=6 make scenario-shard-check` | Ensure shard coverage is complete/non-overlapping | Before shard matrix execution |
-| CI (main/nightly) | `SCENARIO_SHARD_TOTAL=6 SCENARIO_SHARD_INDEX=<n> make scenario-shard` | Parallel full scenario fanout | Matrix jobs on non-PR workflows |
+| Command | Use case | When to run |
+| --- | --- | --- |
+| `make test` | Fast unit/domain verification | During active implementation |
+| `make runtime-smoke` | Fast runtime confidence including scenario smoke coverage | During active scenario/runtime work |
+| `make runtime` | Full scenario and integration regression coverage | Before declaring runtime work done |
+| `make verify-pr` | PR/update gate using the repository's supported verification bundle | Before opening or updating a PR |
+| `make cover` | Coverage non-regression check for production behavior changes | When behavior changes |
+| `make cover-critical-domain` | Extra coverage guardrail for game-domain behavior changes | When changing game-domain behavior |
 
 Optional environment controls:
 
 - `SCENARIO_MANIFEST`: newline-delimited scenario list for selective runs.
 - `SCENARIO_ONLY`: comma-separated scenario names/paths.
 - `SCENARIO_FILTER`: regex filter for scenario names/paths.
-- `SCENARIO_SHARD_TOTAL` + `SCENARIO_SHARD_INDEX`: deterministic shard selection.
+
+CI may shard scenario coverage internally, but shard-specific targets are not
+part of the public contributor command surface.
 
 ## Scenario Layout
 

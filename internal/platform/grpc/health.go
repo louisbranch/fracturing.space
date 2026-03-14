@@ -9,19 +9,54 @@ import (
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
+const (
+	waitForHealthInitialBackoffDefault = 200 * time.Millisecond
+	waitForHealthMaxBackoffDefault     = time.Second
+	waitForHealthCallTimeoutDefault    = time.Second
+)
+
 // WaitForHealth blocks until the gRPC health check reports SERVING or the context ends.
 func WaitForHealth(ctx context.Context, conn *gogrpc.ClientConn, service string, logf func(string, ...any)) error {
+	return waitForHealthWithBackoff(
+		ctx,
+		conn,
+		service,
+		logf,
+		waitForHealthInitialBackoffDefault,
+		waitForHealthMaxBackoffDefault,
+		waitForHealthCallTimeoutDefault,
+	)
+}
+
+func waitForHealthWithBackoff(
+	ctx context.Context,
+	conn *gogrpc.ClientConn,
+	service string,
+	logf func(string, ...any),
+	initialBackoff time.Duration,
+	maxBackoff time.Duration,
+	callTimeout time.Duration,
+) error {
 	if conn == nil {
 		return fmt.Errorf("gRPC connection is not configured")
 	}
 	if ctx == nil {
 		ctx = context.Background()
 	}
+	if initialBackoff <= 0 {
+		initialBackoff = waitForHealthInitialBackoffDefault
+	}
+	if maxBackoff < initialBackoff {
+		maxBackoff = initialBackoff
+	}
+	if callTimeout <= 0 {
+		callTimeout = waitForHealthCallTimeoutDefault
+	}
 
 	healthClient := grpc_health_v1.NewHealthClient(conn)
-	backoff := 200 * time.Millisecond
+	backoff := initialBackoff
 	for {
-		callCtx, cancel := context.WithTimeout(ctx, time.Second)
+		callCtx, cancel := context.WithTimeout(ctx, callTimeout)
 		response, err := healthClient.Check(callCtx, &grpc_health_v1.HealthCheckRequest{Service: service})
 		cancel()
 		if err == nil && response.GetStatus() == grpc_health_v1.HealthCheckResponse_SERVING {
@@ -44,10 +79,10 @@ func WaitForHealth(ctx context.Context, conn *gogrpc.ClientConn, service string,
 		case <-time.After(backoff):
 		}
 
-		if backoff < time.Second {
+		if backoff < maxBackoff {
 			backoff *= 2
-			if backoff > time.Second {
-				backoff = time.Second
+			if backoff > maxBackoff {
+				backoff = maxBackoff
 			}
 		}
 	}

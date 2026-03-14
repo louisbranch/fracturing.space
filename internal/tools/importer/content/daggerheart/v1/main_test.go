@@ -17,6 +17,8 @@ import (
 )
 
 func TestListLocaleDirs(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	if err := os.Mkdir(filepath.Join(root, "pt-BR"), 0o755); err != nil {
 		t.Fatalf("mkdir pt-BR: %v", err)
@@ -39,6 +41,8 @@ func TestListLocaleDirs(t *testing.T) {
 }
 
 func TestReadJSONMissingFile(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	got, err := readJSON[classPayload](root, "classes.json")
 	if err != nil {
@@ -50,6 +54,8 @@ func TestReadJSONMissingFile(t *testing.T) {
 }
 
 func TestReadJSONInvalid(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "classes.json"), []byte("{"), 0o644); err != nil {
 		t.Fatalf("write classes.json: %v", err)
@@ -64,6 +70,8 @@ func TestReadJSONInvalid(t *testing.T) {
 }
 
 func TestValidateLocalePayloads(t *testing.T) {
+	t.Parallel()
+
 	locale := "en-US"
 	payloads := localePayloads{
 		Classes: &classPayload{
@@ -84,6 +92,8 @@ func TestValidateLocalePayloads(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
+	t.Parallel()
+
 	items := []string{"a", "b"}
 	if !contains(items, "b") {
 		t.Fatal("expected contains to return true")
@@ -94,6 +104,8 @@ func TestContains(t *testing.T) {
 }
 
 func TestUpsertLocaleRequiresStore(t *testing.T) {
+	t.Parallel()
+
 	err := upsertLocale(nil, nil, "en-US", true, localePayloads{}, time.Now())
 	if err == nil {
 		t.Fatal("expected error when content store is nil")
@@ -185,6 +197,8 @@ func TestRunSkipIfReadyImportsWhenCatalogNotReady(t *testing.T) {
 }
 
 func TestRunWithDepsDryRunSkipsStoreOpen(t *testing.T) {
+	t.Parallel()
+
 	openCalls := 0
 	deps := runDeps{
 		openStore: func(string) (contentStore, error) {
@@ -214,6 +228,8 @@ func TestRunWithDepsDryRunSkipsStoreOpen(t *testing.T) {
 }
 
 func TestRunWithDepsFixtureValidationError(t *testing.T) {
+	t.Parallel()
+
 	root := t.TempDir()
 	localeDir := filepath.Join(root, defaultBaseLocale)
 	if err := os.MkdirAll(localeDir, 0o755); err != nil {
@@ -242,6 +258,8 @@ func TestRunWithDepsFixtureValidationError(t *testing.T) {
 }
 
 func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
+	setOpenStoreRetryTiming(t, 5*time.Millisecond, 10*time.Millisecond)
+
 	busyErr := generateBusySQLiteError(t)
 	successPath := filepath.Join(t.TempDir(), "content.db")
 
@@ -269,6 +287,8 @@ func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
 }
 
 func TestOpenContentStoreWithRetryDoesNotRetryNonBusy(t *testing.T) {
+	t.Parallel()
+
 	var attempts int
 	openStore := func(string) (contentStore, error) {
 		attempts++
@@ -285,6 +305,8 @@ func TestOpenContentStoreWithRetryDoesNotRetryNonBusy(t *testing.T) {
 }
 
 func TestOpenContentStoreWithRetryRespectsContextCancellation(t *testing.T) {
+	t.Parallel()
+
 	busyErr := generateBusySQLiteError(t)
 	openStore := func(string) (contentStore, error) {
 		return nil, busyErr
@@ -337,4 +359,17 @@ func generateBusySQLiteError(t *testing.T) error {
 	}
 
 	return busyErr
+}
+
+func setOpenStoreRetryTiming(t *testing.T, baseDelay, maxDelay time.Duration) {
+	t.Helper()
+
+	previousBase := defaultOpenRetryBaseDelay
+	previousMax := defaultOpenRetryMaxDelay
+	defaultOpenRetryBaseDelay = baseDelay
+	defaultOpenRetryMaxDelay = maxDelay
+	t.Cleanup(func() {
+		defaultOpenRetryBaseDelay = previousBase
+		defaultOpenRetryMaxDelay = previousMax
+	})
 }

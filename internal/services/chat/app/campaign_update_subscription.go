@@ -9,7 +9,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 )
 
-const campaignEventSubscriptionRetryDelay = time.Second
+var campaignEventSubscriptionRetryDelay = time.Second
 
 type campaignEventCommittedSubscriptionWorker struct {
 	ctx         context.Context

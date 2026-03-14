@@ -13,6 +13,8 @@ import (
 )
 
 func TestAccountProfileProtoRemovesSocialFields(t *testing.T) {
+	t.Parallel()
+
 	assertMissingField := func(message protoreflect.ProtoMessage, messageName string, fieldName string) {
 		t.Helper()
 		fields := message.ProtoReflect().Descriptor().Fields()
@@ -30,6 +32,8 @@ func TestAccountProfileProtoRemovesSocialFields(t *testing.T) {
 }
 
 func TestGetProfile_Success(t *testing.T) {
+	t.Parallel()
+
 	userStore := newFakeUserStore()
 	now := time.Date(2026, 1, 23, 12, 0, 0, 0, time.UTC)
 	userStore.users["user-1"] = user.User{
@@ -54,6 +58,8 @@ func TestGetProfile_Success(t *testing.T) {
 }
 
 func TestUpdateProfile_Success(t *testing.T) {
+	t.Parallel()
+
 	userStore := newFakeUserStore()
 	createdAt := time.Date(2026, 1, 23, 8, 0, 0, 0, time.UTC)
 	userStore.users["user-1"] = user.User{
@@ -87,6 +93,8 @@ func TestUpdateProfile_Success(t *testing.T) {
 }
 
 func TestUpdateProfile_UserNotFound(t *testing.T) {
+	t.Parallel()
+
 	svc := NewAccountService(newFakeUserStore())
 	_, err := svc.UpdateProfile(context.Background(), &authv1.UpdateProfileRequest{UserId: "missing"})
 	assertStatusCode(t, err, codes.NotFound)

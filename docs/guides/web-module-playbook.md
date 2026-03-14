@@ -253,7 +253,7 @@ Run at minimum:
 - `go test ./internal/services/web/...`
 - `make web-architecture-check`
 - `make test`
-- `make integration`
+- `make runtime`
 - `make cover`
 
 Coverage must not regress.

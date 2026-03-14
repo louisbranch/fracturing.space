@@ -44,9 +44,10 @@ Use this skill when the user asks to:
    - Use relevant skills if changes touch those domains (`schema`, `error-handling`, `go-style`, `mcp`, `web-server`).
 
 6. **Verify**
-   - Run `make ci-go-tests-local` before pushing PR updates.
-   - Treat `make ci-go-tests-local` as the gating local parity check for the CI `Go Tests` workflow.
-   - Run `make test` and `make integration` after code changes (per repo policy), or rely on `make ci-go-tests-local` when it already includes these checks.
+   - Run `make verify-pr` before pushing PR updates.
+   - Treat `make verify-pr` as the gating local parity check for the PR workflows.
+   - Use `make runtime-smoke` for faster runtime iteration and `make runtime` before declaring runtime-impacting fixes done when `make verify-pr` is not enough to explain risk.
+   - Remove stale tombstone tests instead of preserving historical expectations after a deliberate feature removal.
    - Note failures and propose fixes before proceeding.
 
 7. **Update PR and enable auto-merge**

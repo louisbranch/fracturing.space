@@ -10,6 +10,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 // ---------------------------------------------------------------------------
@@ -1369,7 +1370,24 @@ func TestGetAdversary_NilAdversary(t *testing.T) {
 
 func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	var patchedProfile *daggerheartv1.DaggerheartProfile
+	baseProfile := &daggerheartv1.DaggerheartProfile{
+		Level:           2,
+		HpMax:           7,
+		StressMax:       wrapperspb.Int32(6),
+		Evasion:         wrapperspb.Int32(11),
+		MajorThreshold:  wrapperspb.Int32(6),
+		SevereThreshold: wrapperspb.Int32(12),
+		ArmorMax:        wrapperspb.Int32(1),
+		ArmorScore:      wrapperspb.Int32(1),
+	}
 	char := &fakeCharacterClient{
+		getSheet: func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			return &gamev1.GetCharacterSheetResponse{
+				Profile: &gamev1.CharacterProfile{
+					SystemProfile: &gamev1.CharacterProfile_Daggerheart{Daggerheart: baseProfile},
+				},
+			}, nil
+		},
 		patchProfile: func(_ context.Context, in *gamev1.PatchCharacterProfileRequest, _ ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
 			patchedProfile = in.GetDaggerheart()
 			return &gamev1.PatchCharacterProfileResponse{}, nil
@@ -1391,7 +1409,7 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	})
 	t.Run("custom_overrides", func(t *testing.T) {
 		patchedProfile = nil
-		args := map[string]any{"level": 5, "hp_max": 20, "armor": 3, "agility": 2}
+		args := map[string]any{"level": 5, "hp_max": 20, "armor_max": 3}
 		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1408,9 +1426,6 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 		if patchedProfile.ArmorMax.GetValue() != 3 {
 			t.Fatalf("expected armor_max=3, got %d", patchedProfile.ArmorMax.GetValue())
 		}
-		if patchedProfile.Agility.GetValue() != 2 {
-			t.Fatalf("expected agility=2, got %d", patchedProfile.Agility.GetValue())
-		}
 	})
 	t.Run("armor_max_overrides_armor", func(t *testing.T) {
 		patchedProfile = nil
@@ -1424,6 +1439,20 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 		}
 		if patchedProfile.ArmorMax.GetValue() != 5 {
 			t.Fatalf("expected armor_max=5, got %d", patchedProfile.ArmorMax.GetValue())
+		}
+	})
+	t.Run("armor_only_skips_profile_patch", func(t *testing.T) {
+		patchedProfile = nil
+		args := map[string]any{"armor": 3}
+		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if patchedProfile == nil {
+			t.Fatal("expected profile patch for armor-only override")
+		}
+		if patchedProfile.ArmorMax.GetValue() != 3 {
+			t.Fatalf("expected armor_max=3, got %d", patchedProfile.ArmorMax.GetValue())
 		}
 	})
 }

@@ -240,6 +240,8 @@ func TestBeginPasskeyLogin_Success(t *testing.T) {
 }
 
 func TestBeginAccountRegistration_Success(t *testing.T) {
+	t.Parallel()
+
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
 	svc := NewAuthService(userStore, passkeyStore, nil)
@@ -326,6 +328,8 @@ func TestBeginAccountRegistration_ReservationFailureDoesNotLeakPasskeySession(t 
 }
 
 func TestFinishAccountRegistration_Success(t *testing.T) {
+	t.Parallel()
+
 	store := openTempAuthStore(t)
 	svc := NewAuthService(store, store, nil)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
@@ -387,6 +391,8 @@ func TestFinishAccountRegistration_Success(t *testing.T) {
 }
 
 func TestFinishAccountRegistration_PersistFailureLeavesRegistrationState(t *testing.T) {
+	t.Parallel()
+
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
 	svc := NewAuthService(userStore, passkeyStore, nil)
@@ -427,6 +433,8 @@ func TestFinishAccountRegistration_PersistFailureLeavesRegistrationState(t *test
 }
 
 func TestBeginAccountRecovery_Success(t *testing.T) {
+	t.Parallel()
+
 	store := openTempAuthStore(t)
 	code, hash, err := recoverycode.Generate(bytes.NewReader(bytes.Repeat([]byte{2}, 64)))
 	if err != nil {
@@ -468,6 +476,8 @@ func TestBeginAccountRecovery_Success(t *testing.T) {
 }
 
 func TestFinishRecoveryPasskeyRegistration_Success(t *testing.T) {
+	t.Parallel()
+
 	store := openTempAuthStore(t)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 	oldCode, oldHash, err := recoverycode.Generate(bytes.NewReader(bytes.Repeat([]byte{3}, 64)))

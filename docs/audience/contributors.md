@@ -14,8 +14,13 @@ Canonical onboarding path for developers adding features, fixing bugs, or improv
 2. Follow the contribution workflow: [Contributing guide](https://github.com/louisbranch/fracturing.space/blob/main/CONTRIBUTING.md).
 3. Run baseline verification:
    - `make test`
-   - `make integration`
-4. Run docs checks for docs-heavy changes:
+   - `make runtime-smoke`
+4. Before opening or updating a PR:
+   - `make verify-pr`
+5. When production behavior changes, check coverage:
+   - `make cover`
+   - `make cover-critical-domain` for game-domain changes
+6. Run docs checks for docs-heavy changes:
    - `make docs-check`
 
 ## Good to know

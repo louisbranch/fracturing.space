@@ -61,7 +61,12 @@ func StartStatusReporter(
 		ctx = context.Background()
 	}
 
-	statusConn := dialReporterConn(ctx, statusAddr, log.Printf)
+	statusAddr = strings.TrimSpace(statusAddr)
+
+	var statusConn reporterConn
+	if statusAddr != "" {
+		statusConn = dialReporterConn(ctx, statusAddr, log.Printf)
+	}
 	var statusClient statusv1.StatusServiceClient
 	if statusConn != nil {
 		statusClient = newStatusClient(statusConn)

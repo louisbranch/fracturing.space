@@ -73,7 +73,7 @@ Minimum checks when changing admin architecture, modules, or routes:
 
 - `go test ./internal/services/admin/...`
 - `make test`
-- `make integration`
+- `make runtime`
 
 ## Deep references
 
