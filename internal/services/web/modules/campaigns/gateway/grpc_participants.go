@@ -14,6 +14,8 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+const campaignAvatarCardDeliveryWidthPX = 384
+
 // CampaignParticipants centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string) ([]campaignapp.CampaignParticipant, error) {
 	if g.Read.Participant == nil {
@@ -66,6 +68,7 @@ func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string
 					avatarEntityID,
 					strings.TrimSpace(participant.GetAvatarSetId()),
 					strings.TrimSpace(participant.GetAvatarAssetId()),
+					campaignAvatarCardDeliveryWidthPX,
 				),
 			}, true
 		},
@@ -122,6 +125,7 @@ func (g GRPCGateway) CampaignParticipant(ctx context.Context, campaignID string,
 			avatarEntityID,
 			strings.TrimSpace(participant.GetAvatarSetId()),
 			strings.TrimSpace(participant.GetAvatarAssetId()),
+			campaignAvatarCardDeliveryWidthPX,
 		),
 	}, nil
 }

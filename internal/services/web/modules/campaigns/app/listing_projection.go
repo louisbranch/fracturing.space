@@ -11,6 +11,9 @@ import (
 // campaignThemePromptLimit keeps campaign cards compact and scan-friendly.
 const campaignThemePromptLimit = 80
 const campaignCoverFallbackPath = "/static/campaign-cover-fallback.svg"
+const campaignCoverCardDeliveryWidthPX = 640
+const campaignCoverBackgroundPreviewWidthPX = 128
+const campaignCoverBackgroundFullWidthPX = 1600
 
 var campaignCoverManifest = catalog.CampaignCoverManifest()
 
@@ -31,13 +34,14 @@ func TruncateCampaignTheme(themePrompt string) string {
 	return truncateCampaignTheme(themePrompt)
 }
 
-// campaignCoverImageURL resolves the final card image URL with a deterministic fallback.
-func campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID string) string {
+// campaignCoverImageURL resolves one campaign cover URL for a web slot with deterministic fallback.
+func campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID string, deliveryWidthPX int) string {
 	resolvedCoverSetID, resolvedCoverAssetID := resolveCampaignCoverSelection(campaignID, coverSetID, coverAssetID)
 	resolvedCDNAssetID := catalog.ResolveCDNAssetID(resolvedCoverSetID, resolvedCoverAssetID)
 	resolvedAssetURL, err := imagecdn.New(assetBaseURL).URL(imagecdn.Request{
 		AssetID:   resolvedCDNAssetID,
 		Extension: ".png",
+		Delivery:  &imagecdn.Delivery{WidthPX: deliveryWidthPX},
 	})
 	if err == nil {
 		return resolvedAssetURL
@@ -49,9 +53,19 @@ func campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID st
 	return fallbackURL
 }
 
-// CampaignCoverImageURL resolves the final card image URL with a deterministic fallback.
+// CampaignCoverImageURL resolves the campaign-list card image URL with deterministic fallback.
 func CampaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID string) string {
-	return campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID)
+	return campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID, campaignCoverCardDeliveryWidthPX)
+}
+
+// CampaignCoverPreviewImageURL resolves the low-resolution workspace background preview URL.
+func CampaignCoverPreviewImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID string) string {
+	return campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID, campaignCoverBackgroundPreviewWidthPX)
+}
+
+// CampaignCoverBackgroundImageURL resolves the full workspace background URL.
+func CampaignCoverBackgroundImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID string) string {
+	return campaignCoverImageURL(assetBaseURL, campaignID, coverSetID, coverAssetID, campaignCoverBackgroundFullWidthPX)
 }
 
 // resolveCampaignCoverSelection ensures campaign cards always have a valid catalog asset.

@@ -26,6 +26,7 @@ func TestMapPublicProfileTemplateViewBuildsAvatarURLFromProfileIdentity(t *testi
 		"user-1",
 		"avatar_set_v1",
 		"apothecary_journeyman",
+		publicProfileAvatarDeliveryWidthPX,
 	)
 	if view.AvatarURL != wantAvatarURL {
 		t.Fatalf("AvatarURL = %q, want %q", view.AvatarURL, wantAvatarURL)
@@ -50,6 +51,7 @@ func TestMapPublicProfileTemplateViewFallsBackToUsernameWhenUserIDMissing(t *tes
 		"louis",
 		"avatar_set_v1",
 		"apothecary_journeyman",
+		publicProfileAvatarDeliveryWidthPX,
 	)
 	if view.AvatarURL != wantAvatarURL {
 		t.Fatalf("AvatarURL = %q, want %q", view.AvatarURL, wantAvatarURL)

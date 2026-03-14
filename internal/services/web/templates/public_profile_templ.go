@@ -284,8 +284,10 @@ func PublicProfilePage(view PublicProfileView, loc Localizer) templ.Component {
 		templ_7745c5c3_Err = AppImage(AppImageView{
 			Src:        publicProfileValue(view.AvatarURL),
 			Alt:        publicProfileAvatarAlt(view),
+			WidthPX:    2,
+			HeightPX:   3,
+			Loading:    "eager",
 			FrameClass: "w-full",
-			FrameStyle: "aspect-ratio: 1 / 1;",
 			ImageClass: "h-full w-full object-cover",
 		}).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {

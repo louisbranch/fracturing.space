@@ -111,22 +111,47 @@ function appMainMetadata(main) {
 	var routeArea = appMainRouteArea(main);
 	var metadata = main.querySelector("[data-app-main-style]");
 	if (!metadata) {
-		return routeArea ? { routeArea: routeArea } : null;
+		return routeArea ? {
+			routeArea: routeArea,
+			style: main.getAttribute("data-default-style") || "",
+			backgroundPreviewURL: main.getAttribute("data-default-background-preview") || "",
+			backgroundFullURL: main.getAttribute("data-default-background-full") || "",
+		} : null;
 	}
 
 	var metadataRouteArea = metadata.getAttribute("data-app-route-area");
 	return {
 		style: metadata.getAttribute("data-app-main-style") || "",
 		extraClass: metadata.getAttribute("data-app-main-extra-class") || "",
+		backgroundPreviewURL: metadata.getAttribute("data-app-main-background-preview") || "",
+		backgroundFullURL: metadata.getAttribute("data-app-main-background-full") || "",
 		routeArea: metadataRouteArea ? String(metadataRouteArea).trim() : routeArea,
 	};
 }
 
-function isCampaignMainStyle(style) {
+function appMainBackgroundStyle(backgroundURL) {
+	if (!backgroundURL) {
+		return "";
+	}
 	return (
-		typeof style === "string" &&
-		style.indexOf("background-image:") === 0
+		"background-image: url(\"" + backgroundURL + "\"); " +
+		"background-size: cover; background-position: center; background-repeat: no-repeat;"
 	);
+}
+
+function composeMainStyle(baseStyle, backgroundURL) {
+	baseStyle = baseStyle || "";
+	var backgroundStyle = appMainBackgroundStyle(backgroundURL);
+	if (!backgroundStyle) {
+		return baseStyle;
+	}
+	if (!baseStyle) {
+		return backgroundStyle;
+	}
+	if (baseStyle.charAt(baseStyle.length - 1) === ";") {
+		return baseStyle + " " + backgroundStyle;
+	}
+	return baseStyle + "; " + backgroundStyle;
 }
 
 function shouldUseCampaignWorkspaceStyle(metadata) {
@@ -136,25 +161,113 @@ function shouldUseCampaignWorkspaceStyle(metadata) {
 	if (isCampaignWorkspaceMetadata(metadata)) {
 		return true;
 	}
-	return isCampaignMainStyle(metadata.style);
+	return !!(metadata.backgroundPreviewURL || metadata.backgroundFullURL);
+}
+
+var prewarmedImageURLs = Object.create(null);
+
+function prewarmImageURL(url) {
+	url = typeof url === "string" ? url.trim() : "";
+	if (!url || prewarmedImageURLs[url]) {
+		return;
+	}
+	prewarmedImageURLs[url] = true;
+	var img = new Image();
+	img.decoding = "async";
+	img.src = url;
+}
+
+function prewarmDeclaredImages(root) {
+	var scope = root || document;
+	if (!scope || typeof scope.querySelectorAll !== "function") {
+		return;
+	}
+	scope.querySelectorAll("[data-image-prefetch-url]").forEach(function(node) {
+		prewarmImageURL(node.getAttribute("data-image-prefetch-url") || "");
+	});
+}
+
+function preloadBackgroundImage(url, onReady) {
+	url = typeof url === "string" ? url.trim() : "";
+	if (!url) {
+		if (typeof onReady === "function") {
+			onReady("");
+		}
+		return;
+	}
+	var img = new Image();
+	var settled = false;
+	function resolve(resolvedURL) {
+		if (settled) {
+			return;
+		}
+		settled = true;
+		if (typeof onReady === "function") {
+			onReady(resolvedURL);
+		}
+	}
+	img.decoding = "async";
+	img.onload = function() {
+		resolve(url);
+	};
+	img.onerror = function() {
+		resolve("");
+	};
+	img.src = url;
+	if (typeof img.decode === "function") {
+		img.decode().then(function() {
+			resolve(url);
+		}).catch(function() {
+			// Let onload/onerror resolve the request.
+		});
+	}
 }
 
 function syncCampaignMainState(main, metadata) {
 	metadata = metadata || appMainMetadata(main);
-	var style = "";
+	var baseStyle = "";
 	var extraClass = "";
 	var defaultClass = mainDefaultClass(main);
+	var previewURL = "";
+	var fullURL = "";
 
 	if (metadata) {
-		style = metadata.style;
+		baseStyle = metadata.style;
 		extraClass = metadata.extraClass;
+		previewURL = metadata.backgroundPreviewURL;
+		fullURL = metadata.backgroundFullURL;
 	}
-	if (!style) {
-		style = main.getAttribute("data-default-style") || "";
+	if (!baseStyle) {
+		baseStyle = main.getAttribute("data-default-style") || "";
+	}
+	if (!previewURL) {
+		previewURL = main.getAttribute("data-default-background-preview") || "";
+	}
+	if (!fullURL) {
+		fullURL = main.getAttribute("data-default-background-full") || "";
 	}
 
-	main.setAttribute("style", style);
-	main.className = appMainContainerClass(style, extraClass, defaultClass, main);
+	var initialBackgroundURL = previewURL || fullURL || "";
+	main.setAttribute("style", composeMainStyle(baseStyle, initialBackgroundURL));
+	main.className = appMainContainerClass(composeMainStyle(baseStyle, initialBackgroundURL), extraClass, defaultClass, main);
+
+	if (!fullURL || fullURL === initialBackgroundURL) {
+		main.removeAttribute("data-main-background-token");
+		return;
+	}
+
+	var token = fullURL + "::" + String(Date.now());
+	main.setAttribute("data-main-background-token", token);
+	preloadBackgroundImage(fullURL, function(resolvedURL) {
+		if (!resolvedURL) {
+			return;
+		}
+		if (main.getAttribute("data-main-background-token") !== token) {
+			return;
+		}
+		main.setAttribute("style", composeMainStyle(baseStyle, resolvedURL));
+		main.className = appMainContainerClass(composeMainStyle(baseStyle, resolvedURL), extraClass, defaultClass, main);
+	});
 }
 
 function syncMainStateForRoute() {
@@ -171,16 +284,24 @@ function syncMainStateForRoute() {
 
 	var defaultStyle = main.getAttribute("data-default-style") || "";
 	var defaultClass = mainDefaultClass(main);
-
-	if (isCampaignMainStyle(defaultStyle)) {
-		main.removeAttribute("style");
+	var defaultPreviewURL = main.getAttribute("data-default-background-preview") || "";
+	var defaultFullURL = main.getAttribute("data-default-background-full") || "";
+	var hasDefaultBackground = !!(defaultPreviewURL || defaultFullURL);
+	if (hasDefaultBackground) {
 		defaultClass = mainFallbackClass(main);
-	} else {
+	}
+
+	main.removeAttribute("data-main-background-token");
+	if (hasDefaultBackground) {
 		if (defaultStyle) {
 			main.setAttribute("style", defaultStyle);
 		} else {
 			main.removeAttribute("style");
 		}
+	} else if (defaultStyle || defaultPreviewURL || defaultFullURL) {
+		main.setAttribute("style", composeMainStyle(defaultStyle, defaultPreviewURL || defaultFullURL || ""));
+	} else {
+		main.removeAttribute("style");
 	}
 
 	if (main.className !== defaultClass) {
@@ -285,8 +406,10 @@ function convertLocalTimes() {
 
 syncAppChromeState();
 convertLocalTimes();
+prewarmDeclaredImages(document);
 document.addEventListener("DOMContentLoaded", function() {
 	syncAppChromeState();
+	prewarmDeclaredImages(document);
 });
 window.addEventListener("popstate", function() {
 	syncAppChromeState();
@@ -309,8 +432,10 @@ document.addEventListener("htmx:beforeSwap", function(event) {
 });
 document.addEventListener("htmx:afterSwap", function(event) {
 	syncAppChromeState(appPathFromHtmxDetail(event && event.detail));
+	prewarmDeclaredImages(event && event.detail ? event.detail.target : document);
 });
 document.addEventListener("htmx:afterSettle", function(event) {
 	syncAppChromeState(appPathFromHtmxDetail(event && event.detail));
 	convertLocalTimes();
+	prewarmDeclaredImages(event && event.detail ? event.detail.target : document);
 });

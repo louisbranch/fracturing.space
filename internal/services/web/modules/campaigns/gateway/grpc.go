@@ -259,7 +259,8 @@ func (g GRPCGateway) CampaignWorkspace(ctx context.Context, campaignID string) (
 		AccessPolicy:     campaignAccessPolicyLabel(campaign.GetAccessPolicy()),
 		ParticipantCount: strconv.FormatInt(int64(campaign.GetParticipantCount()), 10),
 		CharacterCount:   strconv.FormatInt(int64(campaign.GetCharacterCount()), 10),
-		CoverImageURL:    campaignapp.CampaignCoverImageURL(g.AssetBaseURL, resolvedCampaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId()),
+		CoverPreviewURL:  campaignapp.CampaignCoverPreviewImageURL(g.AssetBaseURL, resolvedCampaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId()),
+		CoverImageURL:    campaignapp.CampaignCoverBackgroundImageURL(g.AssetBaseURL, resolvedCampaignID, campaign.GetCoverSetId(), campaign.GetCoverAssetId()),
 	}, nil
 }
 

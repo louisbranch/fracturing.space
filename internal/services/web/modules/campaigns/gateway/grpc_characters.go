@@ -114,6 +114,7 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 					avatarEntityID,
 					strings.TrimSpace(character.GetAvatarSetId()),
 					strings.TrimSpace(character.GetAvatarAssetId()),
+					campaignAvatarCardDeliveryWidthPX,
 				),
 			}, true
 		},

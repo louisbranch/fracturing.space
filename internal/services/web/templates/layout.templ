@@ -142,13 +142,18 @@ type AppSideMenu struct {
 	Items       []AppSideMenuItem
 }
 
-type AppMainLayoutOptions struct {
-	MainStyle              string
-	MainClass              string
-	MainBackgroundImageURL string
-	SideMenu               *AppSideMenu
-	Metadata               AppMainLayoutMetadata
-}
+	type AppMainLayoutOptions struct {
+		MainStyle              string
+		MainClass              string
+		MainBackground         *AppBackgroundImage
+		SideMenu               *AppSideMenu
+		Metadata               AppMainLayoutMetadata
+	}
+
+	type AppBackgroundImage struct {
+		PreviewURL string
+		FullURL    string
+	}
 
 type AppToast struct {
 	Kind    string
@@ -157,9 +162,17 @@ type AppToast struct {
 
 const breadcrumbLabelMaxChars = 32
 
-func appMainLayoutMainStyle(layout AppMainLayoutOptions) string {
+func appMainLayoutBaseStyle(layout AppMainLayoutOptions) string {
 	style := strings.TrimSpace(layout.MainStyle)
-	backgroundImageURL := appMainLayoutMainBackgroundImageURL(layout)
+	return style
+}
+
+func appMainLayoutMainStyle(layout AppMainLayoutOptions) string {
+	return appMainLayoutStyleWithBackground(appMainLayoutBaseStyle(layout), appMainLayoutMainBackgroundPreviewURL(layout))
+}
+
+func appMainLayoutStyleWithBackground(style string, backgroundImageURL string) string {
+	style = strings.TrimSpace(style)
 	if backgroundImageURL == "" {
 		return style
 	}
@@ -178,8 +191,18 @@ func appMainLayoutMainClass(layout AppMainLayoutOptions) string {
 	return strings.TrimSpace(layout.MainClass)
 }
 
-func appMainLayoutMainBackgroundImageURL(layout AppMainLayoutOptions) string {
-	return strings.TrimSpace(layout.MainBackgroundImageURL)
+func appMainLayoutMainBackgroundPreviewURL(layout AppMainLayoutOptions) string {
+	if layout.MainBackground == nil {
+		return ""
+	}
+	return strings.TrimSpace(layout.MainBackground.PreviewURL)
+}
+
+func appMainLayoutMainBackgroundFullURL(layout AppMainLayoutOptions) string {
+	if layout.MainBackground == nil {
+		return ""
+	}
+	return strings.TrimSpace(layout.MainBackground.FullURL)
 }
 
 func appMainLayoutMetadata(layout AppMainLayoutOptions) AppMainLayoutMetadata {
@@ -394,7 +417,7 @@ func truncateBreadcrumbLabel(label string) string {
 }
 
 func appMainHeaderUsesBackgroundContrast(layout AppMainLayoutOptions) bool {
-	return appMainLayoutMainBackgroundImageURL(layout) != ""
+	return appMainLayoutMainBackgroundPreviewURL(layout) != "" || appMainLayoutMainBackgroundFullURL(layout) != ""
 }
 
 func appMainHeaderClass(layout AppMainLayoutOptions) string {
@@ -537,8 +560,10 @@ templ AppMainContentWithLayout(header *AppMainHeader, layout AppMainLayoutOption
 		</div>
 	}
 	<div
-		data-app-main-style={ appMainLayoutMainStyle(layout) }
+		data-app-main-style={ appMainLayoutBaseStyle(layout) }
 		data-app-main-extra-class={ appMainLayoutMainClass(layout) }
+		data-app-main-background-preview={ appMainLayoutMainBackgroundPreviewURL(layout) }
+		data-app-main-background-full={ appMainLayoutMainBackgroundFullURL(layout) }
 		data-app-route-area={ appMainRouteArea(layout) }
 		class="sr-only"
 		aria-hidden="true"
@@ -626,6 +651,10 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 								@AppImage(AppImageView{
 									Src:           viewer.AvatarURL,
 									Alt:           viewerLocalizedName(viewer, loc),
+									WidthPX:       1,
+									HeightPX:      1,
+									Loading:       "eager",
+									FetchPriority: "high",
 									FrameClass:    "w-10 rounded-full",
 									ImageClass:    "h-full w-full object-cover rounded-full",
 									SkeletonClass: "rounded-full",
@@ -661,7 +690,9 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 			class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
 			style={ appMainLayoutMainStyle(layout) }
 			data-app-route-area={ appMainRouteArea(layout) }
-			data-default-style={ appMainLayoutMainStyle(layout) }
+			data-default-style={ appMainLayoutBaseStyle(layout) }
+			data-default-background-preview={ appMainLayoutMainBackgroundPreviewURL(layout) }
+			data-default-background-full={ appMainLayoutMainBackgroundFullURL(layout) }
 			data-default-class={ appMainContainerClass(appMainLayoutMainStyle(layout), appMainLayoutMainClass(layout)) }
 			data-fallback-class={ appMainContainerClass("", "") }
 			aria-label={ T(loc, "layout.main_content_aria_label") }

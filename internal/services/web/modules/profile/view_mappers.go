@@ -8,6 +8,8 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
+const publicProfileAvatarDeliveryWidthPX = 512
+
 // mapPublicProfileTemplateView maps values across transport and template boundaries.
 func mapPublicProfileTemplateView(profile profileapp.Profile, assetBaseURL string, viewerSignedIn bool) webtemplates.PublicProfileView {
 	entityID := strings.TrimSpace(profile.UserID)
@@ -26,6 +28,7 @@ func mapPublicProfileTemplateView(profile profileapp.Profile, assetBaseURL strin
 			entityID,
 			strings.TrimSpace(profile.AvatarSetID),
 			strings.TrimSpace(profile.AvatarAssetID),
+			publicProfileAvatarDeliveryWidthPX,
 		),
 		ViewerSignedIn: viewerSignedIn,
 	}

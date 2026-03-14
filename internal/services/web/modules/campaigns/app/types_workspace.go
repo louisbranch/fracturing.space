@@ -26,6 +26,7 @@ type CampaignWorkspace struct {
 	AccessPolicy     string `json:"accessPolicy"`
 	ParticipantCount string `json:"participantCount"`
 	CharacterCount   string `json:"characterCount"`
+	CoverPreviewURL  string `json:"coverPreviewUrl"`
 	CoverImageURL    string `json:"coverImageUrl"`
 }
 

@@ -99,7 +99,10 @@ func TestAppMainContentWithLayoutAddsCoverHeaderClassForBackgroundImages(t *test
 			{Label: "The Guildhouse"},
 		},
 	}, AppMainLayoutOptions{
-		MainBackgroundImageURL: "/static/campaign-covers/guildhouse.png",
+		MainBackground: &AppBackgroundImage{
+			PreviewURL: "/static/campaign-covers/guildhouse-preview.png",
+			FullURL:    "/static/campaign-covers/guildhouse.png",
+		},
 	}).Render(context.Background(), &buf)
 	if err != nil {
 		t.Fatalf("render AppMainContentWithLayout: %v", err)
@@ -109,6 +112,8 @@ func TestAppMainContentWithLayoutAddsCoverHeaderClassForBackgroundImages(t *test
 	for _, marker := range []string{
 		`campaign-cover-header`,
 		`<h1 class="mb-0">The Guildhouse</h1>`,
+		`data-app-main-background-preview="/static/campaign-covers/guildhouse-preview.png"`,
+		`data-app-main-background-full="/static/campaign-covers/guildhouse.png"`,
 	} {
 		if !strings.Contains(got, marker) {
 			t.Fatalf("AppMainContentWithLayout output missing marker %q: %q", marker, got)

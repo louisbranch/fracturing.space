@@ -346,6 +346,8 @@ templ creationSelectableOptionCard(
 				@AppImage(AppImageView{
 					Src:        imageURL,
 					Alt:        name,
+					WidthPX:    3,
+					HeightPX:   4,
 					FrameClass: "h-full w-full",
 					ImageClass: "h-full w-full object-cover",
 				})
@@ -407,6 +409,13 @@ templ creationCheckboxOptionCard(id string, name string, imageURL string, checkb
 
 templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
 	<div class="grid gap-6 lg:grid-cols-[14rem_1fr]" data-character-creation-page="true">
+		if len(view.Creation.NextStepPrefetchURLs) > 0 {
+			<div class="sr-only" aria-hidden="true" data-image-prefetch-root="character-creation">
+				for _, imageURL := range view.Creation.NextStepPrefetchURLs {
+					<div data-image-prefetch-url={ imageURL }></div>
+				}
+			</div>
+		}
 		<!-- Step Navigator -->
 		<aside class="h-fit">
 			<ul class="steps steps-vertical w-full">

@@ -47,12 +47,12 @@ func daggerheartAssetLookupKey(entityID, entityType string, assetType daggerhear
 }
 
 // mapCatalogAssetReference projects one proto asset ref into the web catalog shape.
-func mapCatalogAssetReference(assetBaseURL string, asset *daggerheartv1.DaggerheartAssetRef) campaignapp.CatalogAssetReference {
+func mapCatalogAssetReference(assetBaseURL string, asset *daggerheartv1.DaggerheartAssetRef, deliveryWidthPX int) campaignapp.CatalogAssetReference {
 	if asset == nil {
 		return campaignapp.CatalogAssetReference{Status: "unavailable"}
 	}
 	return campaignapp.CatalogAssetReference{
-		URL:     resolveDaggerheartAssetURL(assetBaseURL, asset.GetCdnAssetId()),
+		URL:     resolveDaggerheartAssetURL(assetBaseURL, asset.GetCdnAssetId(), deliveryWidthPX),
 		Status:  daggerheartAssetStatusLabel(asset.GetStatus()),
 		SetID:   strings.TrimSpace(asset.GetSetId()),
 		AssetID: strings.TrimSpace(asset.GetAssetId()),
@@ -74,7 +74,7 @@ func daggerheartAssetStatusLabel(status daggerheartv1.DaggerheartAssetStatus) st
 }
 
 // resolveDaggerheartAssetURL resolves one CDN URL from a pre-resolved CDN asset id.
-func resolveDaggerheartAssetURL(assetBaseURL, cdnAssetID string) string {
+func resolveDaggerheartAssetURL(assetBaseURL, cdnAssetID string, deliveryWidthPX int) string {
 	normalizedAssetID := strings.TrimSpace(cdnAssetID)
 	if normalizedAssetID == "" {
 		return ""
@@ -82,6 +82,7 @@ func resolveDaggerheartAssetURL(assetBaseURL, cdnAssetID string) string {
 	resolvedAssetURL, err := imagecdn.New(assetBaseURL).URL(imagecdn.Request{
 		AssetID:   normalizedAssetID,
 		Extension: ".png",
+		Delivery:  &imagecdn.Delivery{WidthPX: deliveryWidthPX},
 	})
 	if err != nil {
 		return ""

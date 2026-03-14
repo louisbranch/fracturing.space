@@ -72,8 +72,10 @@ templ PublicProfilePage(view PublicProfileView, loc Localizer) {
 					@AppImage(AppImageView{
 						Src:        publicProfileValue(view.AvatarURL),
 						Alt:        publicProfileAvatarAlt(view),
+						WidthPX:    2,
+						HeightPX:   3,
+						Loading:    "eager",
 						FrameClass: "w-full",
-						FrameStyle: "aspect-ratio: 1 / 1;",
 						ImageClass: "h-full w-full object-cover",
 					})
 				</figure>
