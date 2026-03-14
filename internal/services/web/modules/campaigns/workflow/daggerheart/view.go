@@ -27,6 +27,7 @@ func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) w
 	view.Armor = mapCreationArmor(creation.Armor, cdn)
 	view.PotionItems = mapCreationItems(creation.PotionItems, cdn)
 	view.DomainCards = mapCreationDomainCards(creation.DomainCards, cdn)
+	view.NextStepPrefetchURLs = creationNextStepPrefetchURLs(view)
 
 	return view
 }
@@ -60,39 +61,121 @@ func domainLookupByID(domains []campaignapp.CatalogDomain) map[string]domainView
 // newCreationView initializes template view state from normalized creation data.
 func newCreationView(creation campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
 	return webtemplates.CampaignCharacterCreationView{
-		Ready:             creation.Progress.Ready,
-		NextStep:          creation.Progress.NextStep,
-		UnmetReasons:      append([]string(nil), creation.Progress.UnmetReasons...),
-		ClassID:           creation.Profile.ClassID,
-		SubclassID:        creation.Profile.SubclassID,
-		AncestryID:        creation.Profile.AncestryID,
-		CommunityID:       creation.Profile.CommunityID,
-		Agility:           creation.Profile.Agility,
-		Strength:          creation.Profile.Strength,
-		Finesse:           creation.Profile.Finesse,
-		Instinct:          creation.Profile.Instinct,
-		Presence:          creation.Profile.Presence,
-		Knowledge:         creation.Profile.Knowledge,
-		PrimaryWeaponID:   creation.Profile.PrimaryWeaponID,
-		SecondaryWeaponID: creation.Profile.SecondaryWeaponID,
-		ArmorID:           creation.Profile.ArmorID,
-		PotionItemID:      creation.Profile.PotionItemID,
-		Description:       creation.Profile.Description,
-		Background:        creation.Profile.Background,
-		Experiences:       mapCreationExperiences(creation.Profile.Experiences),
-		DomainCardIDs:     append([]string(nil), creation.Profile.DomainCardIDs...),
-		Connections:       creation.Profile.Connections,
-		Steps:             nil,
-		Classes:           nil,
-		Subclasses:        nil,
-		Ancestries:        nil,
-		Communities:       nil,
-		PrimaryWeapons:    nil,
-		SecondaryWeapons:  nil,
-		Armor:             nil,
-		PotionItems:       nil,
-		DomainCards:       nil,
+		Ready:                creation.Progress.Ready,
+		NextStep:             creation.Progress.NextStep,
+		UnmetReasons:         append([]string(nil), creation.Progress.UnmetReasons...),
+		ClassID:              creation.Profile.ClassID,
+		SubclassID:           creation.Profile.SubclassID,
+		AncestryID:           creation.Profile.AncestryID,
+		CommunityID:          creation.Profile.CommunityID,
+		Agility:              creation.Profile.Agility,
+		Strength:             creation.Profile.Strength,
+		Finesse:              creation.Profile.Finesse,
+		Instinct:             creation.Profile.Instinct,
+		Presence:             creation.Profile.Presence,
+		Knowledge:            creation.Profile.Knowledge,
+		PrimaryWeaponID:      creation.Profile.PrimaryWeaponID,
+		SecondaryWeaponID:    creation.Profile.SecondaryWeaponID,
+		ArmorID:              creation.Profile.ArmorID,
+		PotionItemID:         creation.Profile.PotionItemID,
+		Description:          creation.Profile.Description,
+		Background:           creation.Profile.Background,
+		Experiences:          mapCreationExperiences(creation.Profile.Experiences),
+		DomainCardIDs:        append([]string(nil), creation.Profile.DomainCardIDs...),
+		Connections:          creation.Profile.Connections,
+		Steps:                nil,
+		Classes:              nil,
+		Subclasses:           nil,
+		Ancestries:           nil,
+		Communities:          nil,
+		PrimaryWeapons:       nil,
+		SecondaryWeapons:     nil,
+		Armor:                nil,
+		PotionItems:          nil,
+		DomainCards:          nil,
+		NextStepPrefetchURLs: nil,
 	}
+}
+
+// creationNextStepPrefetchURLs derives immediate next-step images for client-side prewarming.
+func creationNextStepPrefetchURLs(view webtemplates.CampaignCharacterCreationView) []string {
+	urls := []string{}
+	switch view.NextStep {
+	case 1:
+		urls = append(urls, creationHeritageImageURLs(view.Ancestries)...)
+		urls = append(urls, creationHeritageImageURLs(view.Communities)...)
+	case 3:
+		urls = append(urls, creationWeaponImageURLs(view.PrimaryWeapons)...)
+		urls = append(urls, creationWeaponImageURLs(view.SecondaryWeapons)...)
+		urls = append(urls, creationArmorImageURLs(view.Armor)...)
+		urls = append(urls, creationItemImageURLs(view.PotionItems)...)
+	case 5:
+		urls = append(urls, creationDomainCardImageURLs(view.DomainCards)...)
+	}
+	return dedupeNonEmptyURLs(urls)
+}
+
+// creationHeritageImageURLs extracts heritage illustrations for the next-step prefetch list.
+func creationHeritageImageURLs(items []webtemplates.CampaignCreationHeritageView) []string {
+	urls := make([]string, 0, len(items))
+	for _, item := range items {
+		urls = append(urls, strings.TrimSpace(item.ImageURL))
+	}
+	return urls
+}
+
+// creationWeaponImageURLs extracts weapon illustrations for the next-step prefetch list.
+func creationWeaponImageURLs(items []webtemplates.CampaignCreationWeaponView) []string {
+	urls := make([]string, 0, len(items))
+	for _, item := range items {
+		urls = append(urls, strings.TrimSpace(item.ImageURL))
+	}
+	return urls
+}
+
+// creationArmorImageURLs extracts armor illustrations for the next-step prefetch list.
+func creationArmorImageURLs(items []webtemplates.CampaignCreationArmorView) []string {
+	urls := make([]string, 0, len(items))
+	for _, item := range items {
+		urls = append(urls, strings.TrimSpace(item.ImageURL))
+	}
+	return urls
+}
+
+// creationItemImageURLs extracts item illustrations for the next-step prefetch list.
+func creationItemImageURLs(items []webtemplates.CampaignCreationItemView) []string {
+	urls := make([]string, 0, len(items))
+	for _, item := range items {
+		urls = append(urls, strings.TrimSpace(item.ImageURL))
+	}
+	return urls
+}
+
+// creationDomainCardImageURLs extracts domain-card illustrations for the next-step prefetch list.
+func creationDomainCardImageURLs(items []webtemplates.CampaignCreationDomainCardView) []string {
+	urls := make([]string, 0, len(items))
+	for _, item := range items {
+		urls = append(urls, strings.TrimSpace(item.ImageURL))
+	}
+	return urls
+}
+
+// dedupeNonEmptyURLs keeps prefetch metadata stable so the browser avoids redundant image warmups.
+func dedupeNonEmptyURLs(urls []string) []string {
+	seen := map[string]struct{}{}
+	deduped := make([]string, 0, len(urls))
+	for _, raw := range urls {
+		url := strings.TrimSpace(raw)
+		if url == "" {
+			continue
+		}
+		if _, ok := seen[url]; ok {
+			continue
+		}
+		seen[url] = struct{}{}
+		deduped = append(deduped, url)
+	}
+	return deduped
 }
 
 // mapCreationExperiences maps profile experiences to template view rows.

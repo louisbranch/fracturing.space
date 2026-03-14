@@ -89,9 +89,13 @@ func (s service) campaignWorkspace(ctx context.Context, campaignID string) (Camp
 	if workspace.AccessPolicy == "" {
 		workspace.AccessPolicy = "Unspecified"
 	}
+	workspace.CoverPreviewURL = strings.TrimSpace(workspace.CoverPreviewURL)
+	if workspace.CoverPreviewURL == "" {
+		workspace.CoverPreviewURL = CampaignCoverPreviewImageURL("", campaignID, "", "")
+	}
 	workspace.CoverImageURL = strings.TrimSpace(workspace.CoverImageURL)
 	if workspace.CoverImageURL == "" {
-		workspace.CoverImageURL = campaignCoverImageURL("", campaignID, "", "")
+		workspace.CoverImageURL = CampaignCoverBackgroundImageURL("", campaignID, "", "")
 	}
 	return workspace, nil
 }

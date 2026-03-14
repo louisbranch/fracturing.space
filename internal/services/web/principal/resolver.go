@@ -78,6 +78,8 @@ type requestSnapshot struct {
 // snapshotContextKey keeps the request snapshot private to this package.
 type snapshotContextKey struct{}
 
+const viewerAvatarDeliveryWidthPX = 40
+
 // New builds a resolver from startup dependencies.
 func New(deps Dependencies) Resolver {
 	return Resolver{deps: deps}
@@ -314,7 +316,7 @@ func defaultViewer(
 ) module.Viewer {
 	viewer := module.Viewer{
 		DisplayName: "Adventurer",
-		AvatarURL:   websupport.AvatarImageURL(assetBaseURL, "user", userID, "", ""),
+		AvatarURL:   websupport.AvatarImageURL(assetBaseURL, "user", userID, "", "", viewerAvatarDeliveryWidthPX),
 		ProfileURL:  routepath.AppDashboard,
 	}
 	if resolveUnread != nil {
@@ -342,7 +344,7 @@ func applyUserProfile(
 	avatarSetID := strings.TrimSpace(record.GetAvatarSetId())
 	avatarAssetID := strings.TrimSpace(record.GetAvatarAssetId())
 	if avatarSetID != "" || avatarAssetID != "" {
-		viewer.AvatarURL = websupport.AvatarImageURL(assetBaseURL, "user", userID, avatarSetID, avatarAssetID)
+		viewer.AvatarURL = websupport.AvatarImageURL(assetBaseURL, "user", userID, avatarSetID, avatarAssetID, viewerAvatarDeliveryWidthPX)
 	}
 	return viewer
 }

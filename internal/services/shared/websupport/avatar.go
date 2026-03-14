@@ -8,10 +8,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
 )
 
-const avatarPortraitCardWidthPX = 192
-
 // AvatarImageURL resolves an avatar image URL for a given catalog selection.
-func AvatarImageURL(assetBaseURL, role, entityID, avatarSetID, avatarAssetID string) string {
+func AvatarImageURL(assetBaseURL, role, entityID, avatarSetID, avatarAssetID string, deliveryWidthPX int) string {
 	resolvedSetID, resolvedAssetID := ResolveWebAvatarSelection(role, entityID, avatarSetID, avatarAssetID)
 	resolvedCDNAssetID := catalog.ResolveCDNAssetID(resolvedSetID, resolvedAssetID)
 	portrait := ResolveWebAvatarPortrait(role, entityID, resolvedSetID)
@@ -24,7 +22,7 @@ func AvatarImageURL(assetBaseURL, role, entityID, avatarSetID, avatarAssetID str
 			WidthPX:  portrait.WidthPX,
 			HeightPX: portrait.HeightPX,
 		},
-		Delivery: &imagecdn.Delivery{WidthPX: avatarPortraitCardWidthPX},
+		Delivery: &imagecdn.Delivery{WidthPX: deliveryWidthPX},
 	})
 	if err == nil {
 		return resolvedAssetURL

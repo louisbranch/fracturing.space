@@ -1,11 +1,19 @@
 package templates
 
-import "strings"
+import (
+	"strconv"
+	"strings"
+)
 
 // AppImageView defines configurable classes for shared image rendering.
 type AppImageView struct {
 	Src           string
 	Alt           string
+	WidthPX       int
+	HeightPX      int
+	Loading       string
+	Decoding      string
+	FetchPriority string
 	FrameClass    string
 	FrameStyle    string
 	ImageClass    string
@@ -26,7 +34,21 @@ func appImageFrameClass(view AppImageView) string {
 }
 
 func appImageFrameStyle(view AppImageView) string {
-	return appImageValue(view.FrameStyle)
+	base := appImageValue(view.FrameStyle)
+	if view.WidthPX <= 0 || view.HeightPX <= 0 {
+		return base
+	}
+	aspectRatio := "aspect-ratio: " + strconv.Itoa(view.WidthPX) + " / " + strconv.Itoa(view.HeightPX) + ";"
+	if base == "" {
+		return aspectRatio
+	}
+	if strings.Contains(strings.ToLower(base), "aspect-ratio:") {
+		return base
+	}
+	if strings.HasSuffix(base, ";") {
+		return base + " " + aspectRatio
+	}
+	return base + "; " + aspectRatio
 }
 
 func appImageSkeletonClass(view AppImageView) string {
@@ -47,19 +69,143 @@ func appImageClass(view AppImageView) string {
 	return base + " " + imageClass
 }
 
+func appImageDimensionValue(value int) string {
+	if value <= 0 {
+		return ""
+	}
+	return strconv.Itoa(value)
+}
+
+func appImageLoadingValue(view AppImageView) string {
+	switch strings.ToLower(appImageValue(view.Loading)) {
+	case "eager":
+		return "eager"
+	case "lazy", "":
+		return "lazy"
+	default:
+		return "lazy"
+	}
+}
+
+func appImageDecodingValue(view AppImageView) string {
+	switch strings.ToLower(appImageValue(view.Decoding)) {
+	case "sync":
+		return "sync"
+	case "auto":
+		return "auto"
+	case "async", "":
+		return "async"
+	default:
+		return "async"
+	}
+}
+
+func appImageFetchPriorityValue(view AppImageView) string {
+	switch strings.ToLower(appImageValue(view.FetchPriority)) {
+	case "high":
+		return "high"
+	case "low":
+		return "low"
+	case "auto":
+		return "auto"
+	default:
+		return ""
+	}
+}
+
+func appImageHasDimensions(view AppImageView) bool {
+	return view.WidthPX > 0 && view.HeightPX > 0
+}
+
 templ AppImage(view AppImageView) {
 	if appImageFrameStyle(view) != "" {
 		<div class={ appImageFrameClass(view) } style={ appImageFrameStyle(view) } data-image-frame="true">
 			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
 			if appImageValue(view.Src) != "" {
-				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) }/>
+				if appImageFetchPriorityValue(view) != "" && appImageHasDimensions(view) {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						width={ appImageDimensionValue(view.WidthPX) }
+						height={ appImageDimensionValue(view.HeightPX) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+						fetchpriority={ appImageFetchPriorityValue(view) }
+					/>
+				} else if appImageFetchPriorityValue(view) != "" {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+						fetchpriority={ appImageFetchPriorityValue(view) }
+					/>
+				} else if appImageHasDimensions(view) {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						width={ appImageDimensionValue(view.WidthPX) }
+						height={ appImageDimensionValue(view.HeightPX) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+					/>
+				} else {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+					/>
+				}
 			}
 		</div>
 	} else {
 		<div class={ appImageFrameClass(view) } data-image-frame="true">
 			<div class={ appImageSkeletonClass(view) } aria-hidden="true" data-image-skeleton="true"></div>
 			if appImageValue(view.Src) != "" {
-				<img src={ appImageValue(view.Src) } alt={ appImageValue(view.Alt) } class={ appImageClass(view) }/>
+				if appImageFetchPriorityValue(view) != "" && appImageHasDimensions(view) {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						width={ appImageDimensionValue(view.WidthPX) }
+						height={ appImageDimensionValue(view.HeightPX) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+						fetchpriority={ appImageFetchPriorityValue(view) }
+					/>
+				} else if appImageFetchPriorityValue(view) != "" {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+						fetchpriority={ appImageFetchPriorityValue(view) }
+					/>
+				} else if appImageHasDimensions(view) {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						width={ appImageDimensionValue(view.WidthPX) }
+						height={ appImageDimensionValue(view.HeightPX) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+					/>
+				} else {
+					<img
+						src={ appImageValue(view.Src) }
+						alt={ appImageValue(view.Alt) }
+						class={ appImageClass(view) }
+						loading={ appImageLoadingValue(view) }
+						decoding={ appImageDecodingValue(view) }
+					/>
+				}
 			}
 		</div>
 	}

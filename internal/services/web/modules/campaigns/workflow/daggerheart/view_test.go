@@ -222,6 +222,72 @@ func TestCreationViewResolvesCommunityImageURL(t *testing.T) {
 	}
 }
 
+func TestCreationViewAddsHeritagePrefetchURLsForClassStep(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		Progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 1},
+		Ancestries: []campaignapp.CatalogHeritage{
+			{ID: "heritage.elf", Name: "Elf", Kind: "ancestry"},
+		},
+		Communities: []campaignapp.CatalogHeritage{
+			{ID: "heritage.loreborne", Name: "Loreborne", Kind: "community"},
+		},
+	}
+
+	view := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
+	if len(view.NextStepPrefetchURLs) != 2 {
+		t.Fatalf("len(NextStepPrefetchURLs) = %d, want 2", len(view.NextStepPrefetchURLs))
+	}
+	for _, got := range view.NextStepPrefetchURLs {
+		if got == "" {
+			t.Fatalf("NextStepPrefetchURLs contained empty entry: %+v", view.NextStepPrefetchURLs)
+		}
+	}
+}
+
+func TestCreationViewAddsEquipmentPrefetchURLsForTraitsStep(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		Progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 3},
+		PrimaryWeapons: []campaignapp.CatalogWeapon{
+			{ID: "weapon-1", Name: "Sword", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/weapon-1.png"}},
+		},
+		SecondaryWeapons: []campaignapp.CatalogWeapon{
+			{ID: "weapon-2", Name: "Dagger", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/weapon-2.png"}},
+		},
+		Armor: []campaignapp.CatalogArmor{
+			{ID: "armor-1", Name: "Leather", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/armor-1.png"}},
+		},
+		PotionItems: []campaignapp.CatalogItem{
+			{ID: "item-1", Name: "Potion", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/item-1.png"}},
+		},
+	}
+
+	view := New("").CreationView(creation)
+	if len(view.NextStepPrefetchURLs) != 4 {
+		t.Fatalf("len(NextStepPrefetchURLs) = %d, want 4", len(view.NextStepPrefetchURLs))
+	}
+}
+
+func TestCreationViewAddsDomainCardPrefetchURLsForExperiencesStep(t *testing.T) {
+	t.Parallel()
+
+	creation := campaignapp.CampaignCharacterCreation{
+		Progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 5},
+		DomainCards: []campaignapp.CatalogDomainCard{
+			{ID: "card-1", Name: "Arcane Bolt", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/card-1.png"}},
+			{ID: "card-2", Name: "Arcane Shield", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/card-2.png"}},
+		},
+	}
+
+	view := New("").CreationView(creation)
+	if len(view.NextStepPrefetchURLs) != 2 {
+		t.Fatalf("len(NextStepPrefetchURLs) = %d, want 2", len(view.NextStepPrefetchURLs))
+	}
+}
+
 func TestCreationViewResolvesSubclassImageURL(t *testing.T) {
 	t.Parallel()
 

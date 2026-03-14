@@ -380,6 +380,7 @@ type CampaignCharacterCreationView struct {
 	Experiences      []CampaignCreationExperienceView
 	DomainCardIDs    []string
 	Connections      string
+	NextStepPrefetchURLs []string
 	Steps            []CampaignCharacterCreationStepView
 	Classes          []CampaignCreationClassView
 	Subclasses       []CampaignCreationSubclassView
@@ -905,8 +906,9 @@ templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
 								@AppImage(AppImageView{
 									Src:        item.CoverImageURL,
 									Alt:        item.Name + " cover",
+									WidthPX:    16,
+									HeightPX:   9,
 									FrameClass: "w-full",
-									FrameStyle: "aspect-ratio: 16 / 9;",
 									ImageClass: "h-full w-full object-cover",
 								})
 						</a>
@@ -914,8 +916,9 @@ templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
 						@AppImage(AppImageView{
 							Src:        item.CoverImageURL,
 							Alt:        item.Name + " cover",
+							WidthPX:    16,
+							HeightPX:   9,
 							FrameClass: "w-full",
-							FrameStyle: "aspect-ratio: 16 / 9;",
 							ImageClass: "h-full w-full object-cover",
 						})
 					}

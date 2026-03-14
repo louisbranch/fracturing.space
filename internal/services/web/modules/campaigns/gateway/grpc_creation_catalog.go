@@ -13,6 +13,9 @@ import (
 	"golang.org/x/text/language"
 )
 
+const creationIllustrationDeliveryWidthPX = 384
+const creationIconDeliveryWidthPX = 64
+
 // CharacterCreationCatalog centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag language.Tag) (campaignapp.CampaignCharacterCreationCatalog, error) {
 	if g.Read.DaggerheartContent == nil {
@@ -103,10 +106,12 @@ func mapCatalogClasses(
 			Illustration: mapCatalogAssetReference(
 				assetBaseURL,
 				assetLookup.get(classID, "class", daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ILLUSTRATION),
+				creationIllustrationDeliveryWidthPX,
 			),
 			Icon: mapCatalogAssetReference(
 				assetBaseURL,
 				assetLookup.get(classID, "class", daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_CLASS_ICON),
+				creationIconDeliveryWidthPX,
 			),
 		})
 	}
@@ -152,6 +157,7 @@ func mapCatalogSubclasses(
 					"subclass",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_SUBCLASS_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}
@@ -182,6 +188,7 @@ func mapCatalogHeritages(
 			Illustration: mapCatalogAssetReference(
 				assetBaseURL,
 				assetLookup.get(heritageID, kind, heritageAssetType(kind)),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}
@@ -225,6 +232,7 @@ func mapCatalogDomains(
 					"domain",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 			Icon: mapCatalogAssetReference(
 				assetBaseURL,
@@ -233,6 +241,7 @@ func mapCatalogDomains(
 					"domain",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_ICON,
 				),
+				creationIconDeliveryWidthPX,
 			),
 		})
 	}
@@ -270,6 +279,7 @@ func mapCatalogWeapons(
 					"weapon",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_WEAPON_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}
@@ -305,6 +315,7 @@ func mapCatalogArmor(
 					"armor",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ARMOR_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}
@@ -337,6 +348,7 @@ func mapCatalogItems(
 					"item",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ITEM_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}
@@ -373,6 +385,7 @@ func mapCatalogDomainCards(
 					"domain_card",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_DOMAIN_CARD_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}
@@ -404,6 +417,7 @@ func mapCatalogAdversaries(
 					"adversary",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ADVERSARY_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}
@@ -435,6 +449,7 @@ func mapCatalogEnvironments(
 					"environment",
 					daggerheartv1.DaggerheartAssetType_DAGGERHEART_ASSET_TYPE_ENVIRONMENT_ILLUSTRATION,
 				),
+				creationIllustrationDeliveryWidthPX,
 			),
 		})
 	}

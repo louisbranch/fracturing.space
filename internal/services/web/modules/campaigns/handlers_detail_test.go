@@ -1936,8 +1936,14 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 		t.Fatalf("htmx status = %d, want %d", htmxRR.Code, http.StatusOK)
 	}
 	body = htmxRR.Body.String()
-	if !strings.Contains(body, `data-app-main-style="background-image: url(`) {
-		t.Fatalf("htmx body = %q, want campaign main style metadata", body)
+	if !strings.Contains(body, `data-app-main-background-preview="`) {
+		t.Fatalf("htmx body = %q, want campaign preview background metadata", body)
+	}
+	if !strings.Contains(body, `data-app-main-background-full="`) {
+		t.Fatalf("htmx body = %q, want campaign full background metadata", body)
+	}
+	if strings.Contains(body, `data-app-main-style="background-image: url(`) {
+		t.Fatalf("htmx body = %q, want base style metadata without inline background image", body)
 	}
 	if !strings.Contains(body, `data-app-route-area="campaign-workspace"`) {
 		t.Fatalf("htmx body = %q, want campaign workspace route metadata", body)

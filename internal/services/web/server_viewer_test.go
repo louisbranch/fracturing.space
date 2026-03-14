@@ -466,7 +466,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 
 	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "apothecary_journeyman"}}}
 	assetBaseURL := "https://cdn.example.com/avatars"
-	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "avatar_set_v1", "apothecary_journeyman")
+	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "avatar_set_v1", "apothecary_journeyman", 40)
 	auth := newFakeWebAuthClient()
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	h, err := NewHandler(Config{
@@ -573,7 +573,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 
 	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale"}}}
 	assetBaseURL := "https://cdn.example.com/avatars"
-	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "", "")
+	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "", "", 40)
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(

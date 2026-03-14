@@ -338,3 +338,34 @@ func TestCreationStepClassSubclassRendersDisabledNextUntilSelectionsComplete(t *
 		t.Fatalf("expected next button to start enabled when class/subclass are complete: %q", completeMarkup)
 	}
 }
+
+func TestCharacterCreationPageRendersNextStepImagePrefetchHints(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			NextStepPrefetchURLs: []string{
+				"https://cdn.example.com/armor-1.png",
+				"https://cdn.example.com/item-1.png",
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := CharacterCreationPage(view, nil).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render CharacterCreationPage: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`data-image-prefetch-root="character-creation"`,
+		`data-image-prefetch-url="https://cdn.example.com/armor-1.png"`,
+		`data-image-prefetch-url="https://cdn.example.com/item-1.png"`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("CharacterCreationPage output missing marker %q: %q", marker, got)
+		}
+	}
+}
