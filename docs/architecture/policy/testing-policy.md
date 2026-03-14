@@ -27,20 +27,16 @@ Canonical testing and coverage policy for production behavior changes.
 Expected verification commands:
 
 - `make test`
-- `make runtime`
-- `make cover`
+- `make smoke`
+- `make check`
 
 For game-domain behavior changes, also run:
 
 - `make cover-critical-domain`
 
-For fast feedback during implementation, prefer:
-
-- `make runtime-smoke`
-
-Before opening or updating a PR, run:
-
-- `make verify-pr`
+Focused diagnostics remain available via `make cover`, `make docs-check`, and
+the architecture-specific checks. The canonical workflow is documented in
+[Verification commands](../../running/verification.md).
 
 If a change is intentionally test-neutral (docs-only or no-behavior refactor),
 call that out explicitly in the PR.

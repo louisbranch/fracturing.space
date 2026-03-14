@@ -55,9 +55,9 @@ Create `internal/services/admin/modules/<area>/` with:
 
 ## Required checks
 
-- `go test ./internal/services/admin/...`
 - `make test`
-- `make runtime`
+- `make smoke`
+- `make check`
 
 If templates changed:
 

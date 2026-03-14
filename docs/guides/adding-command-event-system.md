@@ -55,7 +55,8 @@ Use these step labels first before deep code tracing.
 ## 6. Regenerate and verify
 
 - `go test ./...`
-- `make runtime`
+- `make smoke`
+- `make check`
 - `make event-catalog-check`
 - `make docs-check`
 

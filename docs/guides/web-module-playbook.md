@@ -250,13 +250,14 @@ selected through explicit surface registration owned by composition.
 
 Run at minimum:
 
-- `go test ./internal/services/web/...`
-- `make web-architecture-check`
 - `make test`
-- `make runtime`
+- `make smoke`
+- `make check`
 - `make cover`
 
-Coverage must not regress.
+Use `make web-architecture-check` and focused web package tests when you need
+web-specific diagnostics during iteration. `make check` automatically runs the
+web architecture gate when web paths changed.
 
 ## Definition of Done
 

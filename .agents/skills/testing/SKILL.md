@@ -51,9 +51,8 @@ Example:
 
 - Use the public verification surface from `AGENTS.md` after code changes:
   - `make test`
-  - `make runtime-smoke` for fast runtime feedback
-  - `make runtime` before declaring runtime-impacting work done
-  - `make verify-pr` before opening or updating a PR
+  - `make smoke` for fast runtime feedback
+  - `make check` before pushing or updating a PR
 - If a command cannot run locally, report why and what risk remains.
 
 ## Removal Policy
