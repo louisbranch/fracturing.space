@@ -73,7 +73,7 @@ func (h handlers) writeSettingsPage(
 
 // loadAIKeyRows resolves settings AI key rows for template rendering.
 func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]SettingsAIKeyRow, error) {
-	keys, err := h.aiKeys.ListAIKeys(ctx, userID)
+	keys, err := h.ai.ListAIKeys(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]SettingsA
 
 // loadAIAgentCredentialOptions resolves active credential options for template rendering.
 func (h handlers) loadAIAgentCredentialOptions(ctx context.Context, userID string) ([]SettingsAICredentialOption, error) {
-	options, err := h.aiAgents.ListAIAgentCredentials(ctx, userID)
+	options, err := h.ai.ListAIAgentCredentials(ctx, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (h handlers) loadAIAgentCredentialOptions(ctx context.Context, userID strin
 
 // loadAIAgentRows resolves settings AI agent rows for template rendering.
 func (h handlers) loadAIAgentRows(ctx context.Context, userID string) ([]SettingsAIAgentRow, error) {
-	agents, err := h.aiAgents.ListAIAgents(ctx, userID)
+	agents, err := h.ai.ListAIAgents(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

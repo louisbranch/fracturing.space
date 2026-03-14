@@ -5,14 +5,29 @@ import (
 	"strings"
 )
 
+// CampaignCharacters centralizes this web behavior in one helper seam.
+func (s characterReadService) CampaignCharacters(ctx context.Context, campaignID string, options CharacterReadContext) ([]CampaignCharacter, error) {
+	return s.campaignCharacters(ctx, campaignID, options)
+}
+
+// CampaignCharacter centralizes this web behavior in one helper seam.
+func (s characterReadService) CampaignCharacter(ctx context.Context, campaignID string, characterID string, options CharacterReadContext) (CampaignCharacter, error) {
+	return s.campaignCharacter(ctx, campaignID, characterID, options)
+}
+
+// CampaignCharacterEditor centralizes this web behavior in one helper seam.
+func (s characterReadService) CampaignCharacterEditor(ctx context.Context, campaignID string, characterID string, options CharacterReadContext) (CampaignCharacterEditor, error) {
+	return s.campaignCharacterEditor(ctx, campaignID, characterID, options)
+}
+
 // campaignCharacters centralizes this web behavior in one helper seam.
-func (s service) campaignCharacters(ctx context.Context, campaignID string, options CampaignCharactersReadOptions) ([]CampaignCharacter, error) {
+func (s characterReadService) campaignCharacters(ctx context.Context, campaignID string, options CharacterReadContext) ([]CampaignCharacter, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return []CampaignCharacter{}, nil
 	}
 
-	characters, err := s.readGateway.CampaignCharacters(ctx, campaignID, options)
+	characters, err := s.read.CampaignCharacters(ctx, campaignID, options)
 	if err != nil {
 		return nil, err
 	}
@@ -61,52 +76,64 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string, opti
 }
 
 // campaignCharacter centralizes this web behavior in one helper seam.
-func (s service) campaignCharacter(ctx context.Context, campaignID string, characterID string) (CampaignCharacter, error) {
+func (s characterReadService) campaignCharacter(ctx context.Context, campaignID string, characterID string, options CharacterReadContext) (CampaignCharacter, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	characterID = strings.TrimSpace(characterID)
 	if campaignID == "" || characterID == "" {
 		return CampaignCharacter{}, nil
 	}
 
-	characters, err := s.campaignCharacters(ctx, campaignID, CampaignCharactersReadOptions{})
+	character, err := s.read.CampaignCharacter(ctx, campaignID, characterID, options)
 	if err != nil {
 		return CampaignCharacter{}, err
 	}
-	for _, character := range characters {
-		if strings.TrimSpace(character.ID) == characterID {
-			return character, nil
+	normalized := normalizeCampaignCharacter(character)
+	if strings.TrimSpace(normalized.ID) == "" {
+		return CampaignCharacter{}, nil
+	}
+	if s.auth.gateway != nil {
+		decision, err := s.auth.gateway.CanCampaignAction(
+			ctx,
+			campaignID,
+			campaignAuthzActionMutate,
+			campaignAuthzResourceCharacter,
+			&AuthorizationTarget{ResourceID: normalized.ID},
+		)
+		if err == nil {
+			normalized.EditReasonCode = strings.TrimSpace(decision.ReasonCode)
+			normalized.CanEdit = decision.Evaluated && decision.Allowed
 		}
 	}
-	return CampaignCharacter{}, nil
+	return normalized, nil
 }
 
 // campaignCharacterEditor centralizes this web behavior in one helper seam.
-func (s service) campaignCharacterEditor(ctx context.Context, campaignID string, characterID string) (CampaignCharacterEditor, error) {
+func (s characterReadService) campaignCharacterEditor(ctx context.Context, campaignID string, characterID string, options CharacterReadContext) (CampaignCharacterEditor, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	characterID = strings.TrimSpace(characterID)
 	if campaignID == "" || characterID == "" {
 		return CampaignCharacterEditor{}, nil
 	}
 
-	character, err := s.campaignCharacter(ctx, campaignID, characterID)
+	character, err := s.campaignCharacter(ctx, campaignID, characterID, options)
 	if err != nil {
 		return CampaignCharacterEditor{}, err
 	}
 	if strings.TrimSpace(character.ID) == "" {
 		return CampaignCharacterEditor{}, nil
 	}
-	if err := s.requirePolicyWithTarget(ctx, campaignID, policyMutateCharacter, characterID); err != nil {
+	if err := s.auth.requirePolicyWithTarget(ctx, campaignID, policyMutateCharacter, characterID); err != nil {
 		return CampaignCharacterEditor{}, err
 	}
 	return CampaignCharacterEditor{Character: character}, nil
 }
 
 // hydrateCharacterEditability centralizes this web behavior in one helper seam.
-func (s service) hydrateCharacterEditability(ctx context.Context, campaignID string, characters []CampaignCharacter) {
+func (s characterReadService) hydrateCharacterEditability(ctx context.Context, campaignID string, characters []CampaignCharacter) {
 	if len(characters) == 0 {
 		return
 	}
-	if s.authzGateway == nil {
+	if s.batchAuthorization == nil {
 		return
 	}
 
@@ -128,7 +155,7 @@ func (s service) hydrateCharacterEditability(ctx context.Context, campaignID str
 		return
 	}
 
-	decisions, err := s.authzGateway.BatchCanCampaignAction(ctx, campaignID, checks)
+	decisions, err := s.batchAuthorization.BatchCanCampaignAction(ctx, campaignID, checks)
 	if err != nil {
 		return
 	}
@@ -161,4 +188,39 @@ func normalizeCampaignCharacterDaggerheartSummary(summary *CampaignCharacterDagg
 		return nil
 	}
 	return normalized
+}
+
+// normalizeCampaignCharacter keeps character detail/edit views stable even when backend rows are partial.
+func normalizeCampaignCharacter(character CampaignCharacter) CampaignCharacter {
+	characterID := strings.TrimSpace(character.ID)
+	characterName := strings.TrimSpace(character.Name)
+	if characterName == "" {
+		if characterID != "" {
+			characterName = characterID
+		} else {
+			characterName = "Unknown character"
+		}
+	}
+	kind := strings.TrimSpace(character.Kind)
+	if kind == "" {
+		kind = "Unspecified"
+	}
+	controller := strings.TrimSpace(character.Controller)
+	if controller == "" {
+		controller = "Unassigned"
+	}
+	return CampaignCharacter{
+		ID:                      characterID,
+		Name:                    characterName,
+		Kind:                    kind,
+		Controller:              controller,
+		ControllerParticipantID: strings.TrimSpace(character.ControllerParticipantID),
+		Pronouns:                strings.TrimSpace(character.Pronouns),
+		Aliases:                 append([]string(nil), character.Aliases...),
+		AvatarURL:               strings.TrimSpace(character.AvatarURL),
+		OwnedByViewer:           character.OwnedByViewer,
+		CanEdit:                 character.CanEdit,
+		EditReasonCode:          strings.TrimSpace(character.EditReasonCode),
+		Daggerheart:             normalizeCampaignCharacterDaggerheartSummary(character.Daggerheart),
+	}
 }

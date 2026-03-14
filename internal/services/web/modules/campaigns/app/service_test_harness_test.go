@@ -186,11 +186,23 @@ func (f *campaignGatewayStub) CampaignParticipant(_ context.Context, _ string, p
 	return CampaignParticipant{ID: strings.TrimSpace(participantID)}, nil
 }
 
-func (f *campaignGatewayStub) CampaignCharacters(context.Context, string, CampaignCharactersReadOptions) ([]CampaignCharacter, error) {
+func (f *campaignGatewayStub) CampaignCharacters(context.Context, string, CharacterReadContext) ([]CampaignCharacter, error) {
 	if f.campaignCharactersErr != nil {
 		return nil, f.campaignCharactersErr
 	}
 	return f.campaignCharacters, nil
+}
+
+func (f *campaignGatewayStub) CampaignCharacter(_ context.Context, _ string, characterID string, _ CharacterReadContext) (CampaignCharacter, error) {
+	if f.campaignCharactersErr != nil {
+		return CampaignCharacter{}, f.campaignCharactersErr
+	}
+	for _, character := range f.campaignCharacters {
+		if strings.TrimSpace(character.ID) == strings.TrimSpace(characterID) {
+			return character, nil
+		}
+	}
+	return CampaignCharacter{ID: strings.TrimSpace(characterID)}, nil
 }
 
 func (f *campaignGatewayStub) CampaignSessions(context.Context, string) ([]CampaignSession, error) {

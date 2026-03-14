@@ -4,8 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/a-h/templ"
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
-	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 )
 
@@ -34,12 +34,12 @@ func (h handlers) writeCampaignDetailPage(
 	r *http.Request,
 	page *campaignPageContext,
 	campaignID string,
-	view campaignrender.DetailView,
+	body templ.Component,
 	extra ...sharedtemplates.BreadcrumbItem,
 ) {
 	crumbs := campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc, extra...)
 	h.WritePage(w, r, page.title(campaignID), http.StatusOK,
 		page.header(campaignID, crumbs),
 		page.layout(campaignID, r.URL.Path),
-		campaignrender.Fragment(view, page.loc))
+		body)
 }

@@ -40,7 +40,7 @@ func (h handlers) handleInviteSearch(w http.ResponseWriter, r *http.Request, cam
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	results, err := h.service.SearchInviteUsers(ctx, campaignID, campaignapp.SearchInviteUsersInput{
+	results, err := h.inviteReads.SearchInviteUsers(ctx, campaignID, campaignapp.SearchInviteUsersInput{
 		ViewerUserID: userID,
 		Query:        input.Query,
 		Limit:        input.Limit,
@@ -54,22 +54,14 @@ func (h handlers) handleInviteSearch(w http.ResponseWriter, r *http.Request, cam
 
 // parseInviteSearchInput decodes and normalizes one invite-search request body.
 func parseInviteSearchInput(r *http.Request) (inviteSearchInput, error) {
-	if r == nil || r.Body == nil {
-		return inviteSearchInput{}, invalidInviteSearchJSONBodyError()
-	}
 	var payload inviteSearchInput
-	if err := jsoninput.DecodeStrict(r, &payload, inviteSearchMaxJSONBodyBytes); err != nil {
-		return inviteSearchInput{}, invalidInviteSearchJSONBodyError()
+	if err := jsoninput.DecodeStrictInvalidInput(r, &payload, inviteSearchMaxJSONBodyBytes); err != nil {
+		return inviteSearchInput{}, err
 	}
 	return inviteSearchInput{
 		Query: strings.TrimSpace(payload.Query),
 		Limit: payload.Limit,
 	}, nil
-}
-
-// invalidInviteSearchJSONBodyError returns a stable invalid-input error for malformed JSON.
-func invalidInviteSearchJSONBodyError() error {
-	return apperrors.E(apperrors.KindInvalidInput, "Invalid JSON body.")
 }
 
 // newInviteSearchResponse maps app-layer results into the JSON response contract.

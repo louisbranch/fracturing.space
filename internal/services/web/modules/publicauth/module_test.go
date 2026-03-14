@@ -18,13 +18,13 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	if got := New(Config{}).ID(); got != "public" {
 		t.Fatalf("ID() = %q, want %q", got, "public")
 	}
-	if got := New(Config{Gateway: publicauthgateway.NewGRPCGateway(fakeAuthClient{})}).ID(); got != "public" {
+	if got := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "").ID(); got != "public" {
 		t.Fatalf("ID() = %q, want %q", got, "public")
 	}
 }
 
 func TestPasskeyRegisterStartAcceptsUsername(t *testing.T) {
-	m := New(Config{Gateway: publicauthgateway.NewGRPCGateway(fakeAuthClient{})})
+	m := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "")
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -57,11 +57,7 @@ func TestSurfaceSelectionControlsModuleIdentityAndPrefix(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			m := New(Config{
-				Gateway:     nil,
-				RequestMeta: requestmeta.SchemePolicy{},
-				Surface:     tc.surface,
-			})
+			m := newModuleFromGateway(nil, "", withRequestMeta(requestmeta.SchemePolicy{}), withSurface(tc.surface))
 			if got := m.ID(); got != tc.wantID {
 				t.Fatalf("ID() = %q, want %q", got, tc.wantID)
 			}

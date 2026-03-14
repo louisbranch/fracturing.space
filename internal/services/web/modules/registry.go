@@ -3,6 +3,7 @@ package modules
 import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
 // RegistryBuilder builds public/protected module sets from registry inputs.
@@ -16,7 +17,7 @@ type Registry struct{}
 // RegistryInput carries the dependencies and options needed to compose module sets.
 type RegistryInput struct {
 	Dependencies     Dependencies
-	Resolvers        ModuleResolvers
+	Principal        requestresolver.PrincipalResolver
 	PublicOptions    PublicModuleOptions
 	ProtectedOptions ProtectedModuleOptions
 }
@@ -34,10 +35,10 @@ func NewRegistryBuilder() RegistryBuilder {
 
 // Build composes module sets for the requested stability mode.
 func (Registry) Build(input RegistryInput) RegistryOutput {
-	publicModules := defaultPublicModules(input.Dependencies, input.Resolvers, input.PublicOptions)
+	publicModules := defaultPublicModules(input.Dependencies, input.Principal, input.PublicOptions)
 	protectedModules := buildProtectedModules(
 		input.Dependencies,
-		input.Resolvers,
+		input.Principal,
 		input.ProtectedOptions,
 	)
 

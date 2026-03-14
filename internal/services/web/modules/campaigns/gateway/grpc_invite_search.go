@@ -10,11 +10,11 @@ import (
 )
 
 // SearchInviteUsers loads ranked invite-search matches from social.
-func (g GRPCGateway) SearchInviteUsers(ctx context.Context, input campaignapp.SearchInviteUsersInput) ([]campaignapp.InviteUserSearchResult, error) {
-	if g.Read.Social == nil {
+func (g inviteReadGateway) SearchInviteUsers(ctx context.Context, input campaignapp.SearchInviteUsersInput) ([]campaignapp.InviteUserSearchResult, error) {
+	if g.read.Social == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.social_service_client_is_not_configured", "social service client is not configured")
 	}
-	resp, err := g.Read.Social.SearchUsers(ctx, &socialv1.SearchUsersRequest{
+	resp, err := g.read.Social.SearchUsers(ctx, &socialv1.SearchUsersRequest{
 		ViewerUserId: strings.TrimSpace(input.ViewerUserID),
 		Query:        strings.TrimSpace(input.Query),
 		Limit:        int32(input.Limit),

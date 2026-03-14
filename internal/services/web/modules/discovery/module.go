@@ -29,7 +29,7 @@ func (Module) ID() string { return "discovery" }
 
 // Healthy reports whether the discovery module has an operational gateway.
 func (m Module) Healthy() bool {
-	return IsGatewayHealthy(m.gateway)
+	return discoveryapp.IsGatewayHealthy(m.gateway)
 }
 
 // Mount wires discovery route handlers.

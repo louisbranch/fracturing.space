@@ -12,8 +12,8 @@ import (
 )
 
 // CharacterCreationProfile centralizes this web behavior in one helper seam.
-func (g GRPCGateway) CharacterCreationProfile(ctx context.Context, campaignID string, characterID string) (campaignapp.CampaignCharacterCreationProfile, error) {
-	if g.Read.Character == nil {
+func (g characterCreationReadGateway) CharacterCreationProfile(ctx context.Context, campaignID string, characterID string) (campaignapp.CampaignCharacterCreationProfile, error) {
+	if g.read.Character == nil {
 		return campaignapp.CampaignCharacterCreationProfile{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -22,7 +22,7 @@ func (g GRPCGateway) CharacterCreationProfile(ctx context.Context, campaignID st
 		return campaignapp.CampaignCharacterCreationProfile{}, apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
 
-	resp, err := g.Read.Character.GetCharacterSheet(ctx, &statev1.GetCharacterSheetRequest{
+	resp, err := g.read.Character.GetCharacterSheet(ctx, &statev1.GetCharacterSheetRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})

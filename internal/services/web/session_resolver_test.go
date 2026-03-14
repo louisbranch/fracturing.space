@@ -68,10 +68,9 @@ func TestSessionResolverAuthRequiredRejectsNoSession(t *testing.T) {
 
 	auth := newFakeWebAuthClient()
 	r := principal.New(principal.Dependencies{SessionClient: auth})
-	check := r.AuthRequired()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
-	if check(req) {
+	if r.AuthRequired(req) {
 		t.Fatalf("AuthRequired = true, want false without session")
 	}
 }
@@ -81,12 +80,11 @@ func TestSessionResolverAuthRequiredAcceptsValidSession(t *testing.T) {
 
 	auth := newFakeWebAuthClient()
 	r := principal.New(principal.Dependencies{SessionClient: auth})
-	check := r.AuthRequired()
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 
-	if !check(req) {
+	if !r.AuthRequired(req) {
 		t.Fatalf("AuthRequired = false, want true with valid session")
 	}
 }

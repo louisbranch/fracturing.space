@@ -2,40 +2,33 @@
 package modules
 
 import (
-	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
-	dashboardgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/gateway"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
-	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
-	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
-	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
-	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 )
-
-// ModuleResolvers carries request-scoped resolver functions derived from the
-// principal resolver. The server constructs these after building the principal
-// resolver and passes them to registry functions for module composition.
-type ModuleResolvers struct {
-	ResolveViewer   module.ResolveViewer
-	ResolveSignedIn module.ResolveSignedIn
-	ResolveUserID   module.ResolveUserID
-	ResolveLanguage module.ResolveLanguage
-}
 
 // Dependencies carries the gRPC clients and shared config required to compose
 // the web module registry. Each client field is typed as the narrow interface
 // defined by the consuming module, so modules physically cannot access clients
 // they were not given.
 //
-// Request-scoped resolvers (viewer, user-id, language) are provided separately
-// via ModuleResolvers since they are derived by the server after construction.
+// Request-scoped principal resolution is provided separately via
+// platform/requestresolver since it is derived by the server after
+// construction.
 type Dependencies struct {
 	AssetBaseURL string
 
 	// Campaigns owns all campaign/session/character/invite/authz clients.
 	Campaigns CampaignDependencies
+
+	// Invite owns public invite reads/mutations and invite-driven dashboard sync.
+	Invite InviteDependencies
 
 	// Dashboard owns userhub and status health dependencies.
 	Dashboard DashboardDependencies
@@ -60,76 +53,39 @@ type Dependencies struct {
 }
 
 // CampaignDependencies contains campaign feature clients.
-type CampaignDependencies struct {
-	CampaignClient           CampaignClient
-	CommunicationClient      campaigngateway.CommunicationClient
-	AgentClient              campaigngateway.AgentClient
-	ParticipantClient        ParticipantClient
-	CharacterClient          CharacterClient
-	DaggerheartContentClient campaigngateway.DaggerheartContentClient
-	DaggerheartAssetClient   campaigngateway.DaggerheartAssetClient
-	SessionClient            SessionClient
-	InviteClient             InviteClient
-	SocialClient             campaigngateway.SocialClient
-	AuthClient               campaigngateway.AuthClient
-	AuthorizationClient      campaigngateway.AuthorizationClient
-}
+type CampaignDependencies = campaigns.Dependencies
 
 // CampaignClient keeps composition ownership on the generated campaigns client
 // while the gateway consumes narrower read/mutation bundles internally.
-type CampaignClient interface {
-	campaigngateway.CampaignReadClient
-	campaigngateway.CampaignMutationClient
-}
+type CampaignClient = campaigns.CampaignClient
 
 // ParticipantClient keeps one composition-owned participant client while the
 // gateway consumes separate read and mutation seams internally.
-type ParticipantClient interface {
-	campaigngateway.ParticipantReadClient
-	campaigngateway.ParticipantMutationClient
-}
+type ParticipantClient = campaigns.ParticipantClient
 
 // CharacterClient keeps one composition-owned character client while the
 // gateway consumes separate read and mutation seams internally.
-type CharacterClient interface {
-	campaigngateway.CharacterReadClient
-	campaigngateway.CharacterMutationClient
-}
+type CharacterClient = campaigns.CharacterClient
 
 // SessionClient keeps one composition-owned session client while the gateway
 // consumes separate read and mutation seams internally.
-type SessionClient interface {
-	campaigngateway.SessionReadClient
-	campaigngateway.SessionMutationClient
-}
+type SessionClient = campaigns.SessionClient
 
 // InviteClient keeps one composition-owned invite client while the gateway
 // consumes separate read and mutation seams internally.
-type InviteClient interface {
-	campaigngateway.InviteReadClient
-	campaigngateway.InviteMutationClient
-}
+type InviteClient = campaigns.InviteClient
+
+// InviteDependencies contains public-invite feature clients.
+type InviteDependencies = invite.Dependencies
 
 // DashboardDependencies contains dashboard feature clients.
-type DashboardDependencies struct {
-	UserHubClient dashboardgateway.UserHubClient
-	StatusClient  statusv1.StatusServiceClient
-}
+type DashboardDependencies = dashboard.Dependencies
 
 // ProfileDependencies contains profile feature clients.
-type ProfileDependencies struct {
-	AuthClient   profilegateway.AuthClient
-	SocialClient profilegateway.SocialClient
-}
+type ProfileDependencies = profile.Dependencies
 
 // SettingsDependencies contains settings feature clients.
-type SettingsDependencies struct {
-	SocialClient     settingsgateway.SocialClient
-	AccountClient    settingsgateway.AccountClient
-	PasskeyClient    settingsgateway.PasskeyClient
-	CredentialClient settingsgateway.CredentialClient
-	AgentClient      settingsgateway.AgentClient
-}
+type SettingsDependencies = settings.Dependencies
 
 // DashboardSyncDependencies contains shared mutation-sync clients.
 type DashboardSyncDependencies struct {
@@ -138,17 +94,10 @@ type DashboardSyncDependencies struct {
 }
 
 // PublicAuthDependencies contains public-auth feature clients.
-type PublicAuthDependencies struct {
-	AuthClient  publicauthgateway.AuthClient
-	AuthBaseURL string
-}
+type PublicAuthDependencies = publicauth.Dependencies
 
 // NotificationDependencies contains notification feature clients.
-type NotificationDependencies struct {
-	NotificationClient notificationsgateway.NotificationClient
-}
+type NotificationDependencies = notifications.Dependencies
 
 // DiscoveryDependencies contains discovery feature clients.
-type DiscoveryDependencies struct {
-	DiscoveryClient discovery.DiscoveryClient
-}
+type DiscoveryDependencies = discovery.Dependencies

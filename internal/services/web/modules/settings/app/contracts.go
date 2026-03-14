@@ -106,9 +106,3 @@ type AIService interface {
 	AIKeyService
 	AIAgentService
 }
-
-// Service exposes settings orchestration methods used by transport handlers.
-type Service interface {
-	AccountService
-	AIService
-}

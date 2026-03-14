@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
-	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -25,10 +25,10 @@ func newHandlers(base publichandler.Base, service discoveryapp.Service) handlers
 
 // handleIndex handles this route in the module transport layer.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
-	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
+	requestPage := requestresolver.ResolveLocalizedPage(w, r, nil)
 	page := h.service.LoadPage(r.Context())
 	entries := mapEntriesToView(page.Entries)
-	h.writeDiscoveryPage(w, r, loc, lang, entries)
+	h.writeDiscoveryPage(w, r, requestPage.Localizer, requestPage.Language, entries)
 }
 
 // writeDiscoveryPage writes the discovery page shell and content fragment.

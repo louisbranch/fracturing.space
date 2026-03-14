@@ -64,7 +64,7 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 	moduleArchetypes := map[string]string{
 		"campaigns":     archetypeTransportLayered,
 		"dashboard":     archetypeTransportLayered,
-		"discovery":     archetypeTransportOnly,
+		"discovery":     archetypeTransportLayered,
 		"invite":        archetypeTransportLayered,
 		"notifications": archetypeTransportLayered,
 		"profile":       archetypeTransportLayered,
@@ -146,6 +146,26 @@ func TestSelectedModulesKeepContributorOwnedTransportSplits(t *testing.T) {
 	}
 }
 
+func TestSelectedModulesKeepAreaOwnedCompositionEntrypoints(t *testing.T) {
+	t.Parallel()
+
+	for _, mod := range []string{
+		"campaigns",
+		"dashboard",
+		"discovery",
+		"invite",
+		"notifications",
+		"profile",
+		"publicauth",
+		"settings",
+	} {
+		path := filepath.Join(mod, "composition.go")
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("module %q missing area-owned composition entrypoint %q: %v", mod, path, err)
+		}
+	}
+}
+
 func TestSelectedModulesKeepContributorOwnedAppAndGatewaySplits(t *testing.T) {
 	t.Parallel()
 
@@ -195,10 +215,11 @@ func TestModulesMountDoNotReadGatewayClientsFromDependencies(t *testing.T) {
 func TestProtectedModuleHandlersDoNotBypassBaseResolverMethods(t *testing.T) {
 	t.Parallel()
 
-	// Protected module handlers embed modulehandler.Base whose resolver fields
-	// are unexported. This guard detects direct calls to webctx.WithResolvedUserID
-	// or webi18n.ResolveTag in handler files, which would bypass the designed
-	// Base methods (RequestContextAndUserID, RequestLocaleTag, PageLocalizer, etc.).
+	// Protected module handlers embed modulehandler.Base, which now embeds the
+	// shared requestresolver seam while keeping user-id helpers local. This
+	// guard detects direct calls to webctx.WithResolvedUserID that would bypass
+	// the designed Base methods (RequestContextAndUserID, RequestLocaleTag,
+	// PageLocalizer, etc.).
 	forbiddenImports := map[string]struct{}{
 		"github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx": {},
 	}

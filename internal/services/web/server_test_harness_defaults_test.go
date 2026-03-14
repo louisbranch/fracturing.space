@@ -31,14 +31,20 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           defaultCampaignClient(),
 					CommunicationClient:      defaultCommunicationClient(),
+					AgentClient:              fakeAgentClient{},
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),
 					DaggerheartContentClient: defaultDaggerheartContentClient(),
 					DaggerheartAssetClient:   defaultDaggerheartAssetClient(),
 					SessionClient:            defaultSessionClient(),
 					InviteClient:             defaultInviteClient(),
+					SocialClient:             social,
 					AuthClient:               auth,
 					AuthorizationClient:      defaultAuthorizationClient(),
+				},
+				Invite: modules.InviteDependencies{
+					InviteClient: defaultInviteClient(),
+					AuthClient:   auth,
 				},
 				Settings: modules.SettingsDependencies{
 					SocialClient:     social,

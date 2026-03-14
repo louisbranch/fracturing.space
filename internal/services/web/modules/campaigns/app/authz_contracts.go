@@ -49,12 +49,6 @@ type BatchAuthorizationGateway interface {
 	BatchCanCampaignAction(context.Context, string, []AuthorizationCheck) ([]AuthorizationDecision, error)
 }
 
-// AuthzGateway combines unary and batch authorization checks.
-type AuthzGateway interface {
-	AuthorizationGateway
-	BatchAuthorizationGateway
-}
-
 // AuthorizationAction defines an action dimension for campaign authz checks.
 type AuthorizationAction string
 

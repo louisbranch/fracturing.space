@@ -173,14 +173,6 @@ type CampaignCharacterCreationProfile struct {
 	Connections       string                                `json:"connections"`
 }
 
-// CampaignCharacterCreationData stores the generic read-side inputs needed to
-// assemble one system-specific character-creation workflow view.
-type CampaignCharacterCreationData struct {
-	Progress CampaignCharacterCreationProgress `json:"progress"`
-	Catalog  CampaignCharacterCreationCatalog  `json:"catalog"`
-	Profile  CampaignCharacterCreationProfile  `json:"profile"`
-}
-
 // CampaignCharacterCreationStepInput stores one character creation step in domain form.
 type CampaignCharacterCreationStepInput struct {
 	ClassSubclass *CampaignCharacterCreationStepClassSubclass `json:"classSubclass,omitempty"`
@@ -252,20 +244,4 @@ type CampaignCharacterCreationStepDomainCards struct {
 // CampaignCharacterCreationStepConnections stores player connections step input.
 type CampaignCharacterCreationStepConnections struct {
 	Connections string `json:"connections"`
-}
-
-// CampaignCharacterCreation stores character-detail workflow UI data.
-type CampaignCharacterCreation struct {
-	Progress         CampaignCharacterCreationProgress `json:"progress"`
-	Profile          CampaignCharacterCreationProfile  `json:"profile"`
-	Classes          []CatalogClass                    `json:"classes"`
-	Subclasses       []CatalogSubclass                 `json:"subclasses"`
-	Ancestries       []CatalogHeritage                 `json:"ancestries"`
-	Communities      []CatalogHeritage                 `json:"communities"`
-	PrimaryWeapons   []CatalogWeapon                   `json:"primaryWeapons"`
-	SecondaryWeapons []CatalogWeapon                   `json:"secondaryWeapons"`
-	Armor            []CatalogArmor                    `json:"armor"`
-	PotionItems      []CatalogItem                     `json:"potionItems"`
-	DomainCards      []CatalogDomainCard               `json:"domainCards"`
-	Domains          []CatalogDomain                   `json:"domains"`
 }

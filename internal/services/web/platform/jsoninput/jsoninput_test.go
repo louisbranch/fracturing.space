@@ -7,6 +7,8 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
 func TestDecodeStrictRejectsNilRequest(t *testing.T) {
@@ -84,5 +86,19 @@ func TestDecodeStrictDecodesSinglePayload(t *testing.T) {
 	}
 	if payload.Name != " louis " {
 		t.Fatalf("payload.Name = %q, want %q", payload.Name, " louis ")
+	}
+}
+
+func TestDecodeStrictInvalidInputMapsMalformedBodies(t *testing.T) {
+	t.Parallel()
+
+	var payload struct{ Name string }
+	if status := apperrors.HTTPStatus(DecodeStrictInvalidInput(nil, &payload, 32)); status != http.StatusBadRequest {
+		t.Fatalf("nil request status = %d, want %d", status, http.StatusBadRequest)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/passkeys/register/start", strings.NewReader(`{"name":`))
+	if status := apperrors.HTTPStatus(DecodeStrictInvalidInput(req, &payload, 32)); status != http.StatusBadRequest {
+		t.Fatalf("invalid json status = %d, want %d", status, http.StatusBadRequest)
 	}
 }

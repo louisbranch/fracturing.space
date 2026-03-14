@@ -14,6 +14,7 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -25,17 +26,28 @@ import (
 // Embed this in module handler structs to get standard user resolution, localization,
 // page rendering, and error writing without duplicating boilerplate.
 type Base struct {
-	resolveUserID   module.ResolveUserID
-	resolveLanguage module.ResolveLanguage
-	resolveViewer   module.ResolveViewer
+	requestresolver.Base
+	resolveUserID module.ResolveUserID
 }
 
 // NewBase builds a handler base from explicit resolver functions.
 func NewBase(resolveUserID module.ResolveUserID, resolveLanguage module.ResolveLanguage, resolveViewer module.ResolveViewer) Base {
 	return Base{
-		resolveUserID:   resolveUserID,
-		resolveLanguage: resolveLanguage,
-		resolveViewer:   resolveViewer,
+		Base:          requestresolver.New(resolveLanguage, resolveViewer),
+		resolveUserID: resolveUserID,
+	}
+}
+
+// NewBaseFromPrincipal builds a handler base from the shared principal
+// resolver seam used by root composition.
+func NewBaseFromPrincipal(resolver requestresolver.PrincipalResolver) Base {
+	var resolveUserID module.ResolveUserID
+	if resolver != nil {
+		resolveUserID = resolver.ResolveUserID
+	}
+	return Base{
+		Base:          requestresolver.NewFromPageResolver(resolver),
+		resolveUserID: resolveUserID,
 	}
 }
 
@@ -43,31 +55,18 @@ func NewBase(resolveUserID module.ResolveUserID, resolveLanguage module.ResolveL
 // that do not exercise user resolution, localization, or viewer state.
 func NewTestBase() Base {
 	return Base{
-		resolveUserID:   func(*http.Request) string { return "" },
-		resolveLanguage: func(*http.Request) string { return "" },
-		resolveViewer:   func(*http.Request) module.Viewer { return module.Viewer{} },
+		Base: requestresolver.New(
+			func(*http.Request) string { return "" },
+			func(*http.Request) module.Viewer { return module.Viewer{} },
+		),
+		resolveUserID: func(*http.Request) string { return "" },
 	}
-}
-
-// ResolveRequestViewer resolves app chrome viewer state for a request.
-func (b Base) ResolveRequestViewer(r *http.Request) module.Viewer {
-	if b.resolveViewer == nil {
-		return module.Viewer{}
-	}
-	return b.resolveViewer(r)
-}
-
-// ResolveRequestLanguage returns the effective request language.
-func (b Base) ResolveRequestLanguage(r *http.Request) string {
-	if b.resolveLanguage == nil {
-		return ""
-	}
-	return b.resolveLanguage(r)
 }
 
 // PageLocalizer resolves a localizer and language tag from the request.
 func (b Base) PageLocalizer(w http.ResponseWriter, r *http.Request) (webtemplates.Localizer, string) {
-	return webi18n.ResolveLocalizer(w, r, b.resolveLanguage)
+	page := requestresolver.ResolveLocalizedPage(w, r, &b)
+	return page.Localizer, page.Language
 }
 
 // WriteError renders a localized module error response.
@@ -99,7 +98,7 @@ func (b Base) RequestContextAndUserID(r *http.Request) (context.Context, string)
 // for locale resolution. Prefer ResolveRequestLanguage for display language and
 // RequestContextAndUserID for user-scoped context.
 func (b Base) RequestLocaleTag(r *http.Request) language.Tag {
-	return webi18n.ResolveTag(r, b.resolveLanguage)
+	return webi18n.ResolveTag(r, b.ResolveRequestLanguage)
 }
 
 // WritePage renders a full module page (HTMX-aware) with the given title, header,

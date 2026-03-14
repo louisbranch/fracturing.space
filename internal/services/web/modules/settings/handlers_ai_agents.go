@@ -6,6 +6,7 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -19,7 +20,7 @@ func (h handlers) handleAIAgentsGet(w http.ResponseWriter, r *http.Request) {
 		CredentialID: parseAIAgentCredentialSelectionInput(r.URL.Query()),
 	}
 	if form.CredentialID != "" {
-		models, err := h.aiAgents.ListAIProviderModels(ctx, userID, form.CredentialID)
+		models, err := h.ai.ListAIProviderModels(ctx, userID, form.CredentialID)
 		if err != nil {
 			statusCode := apperrors.HTTPStatus(err)
 			if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
@@ -38,12 +39,12 @@ func (h handlers) handleAIAgentsGet(w http.ResponseWriter, r *http.Request) {
 // handleAIAgentsCreate handles this route in the module transport layer.
 func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := r.ParseForm(); err != nil {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_ai_agent_form", "failed to parse ai agent form"))
+	if err := forminput.ParseInvalidInput(r, "error.web.message.failed_to_parse_ai_agent_form", "failed to parse ai agent form"); err != nil {
+		h.WriteError(w, r, err)
 		return
 	}
 	input := parseAIAgentCreateInput(r.PostForm)
-	if err := h.aiAgents.CreateAIAgent(ctx, userID, input); err != nil {
+	if err := h.ai.CreateAIAgent(ctx, userID, input); err != nil {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
 			loc, lang := h.PageLocalizer(w, r)
@@ -54,7 +55,7 @@ func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
 				Instructions: input.Instructions,
 			}
 			if form.CredentialID != "" {
-				models, modelErr := h.aiAgents.ListAIProviderModels(ctx, userID, form.CredentialID)
+				models, modelErr := h.ai.ListAIProviderModels(ctx, userID, form.CredentialID)
 				if modelErr == nil {
 					form.ModelOptions = mapAIModelTemplateOptions(models)
 				}
@@ -72,7 +73,7 @@ func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
 // handleAIAgentDelete deletes one AI agent from the settings surface.
 func (h handlers) handleAIAgentDelete(w http.ResponseWriter, r *http.Request, agentID string) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.aiAgents.DeleteAIAgent(ctx, userID, agentID); err != nil {
+	if err := h.ai.DeleteAIAgent(ctx, userID, agentID); err != nil {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
 			h.writeFlashNotice(w, r, flashnotice.Notice{Kind: flashnotice.KindError, Key: apperrors.LocalizationKey(err)})

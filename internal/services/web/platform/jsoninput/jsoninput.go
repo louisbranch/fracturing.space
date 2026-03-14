@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
 // DecodeStrict decodes one JSON object with size and trailing-token guards.
@@ -27,6 +29,16 @@ func DecodeStrict(r *http.Request, target any, maxBytes int64) error {
 	}
 	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+
+// DecodeStrictInvalidInput decodes one JSON object with strict field/size
+// constraints and maps any malformed body to the standard web invalid-input
+// transport error.
+func DecodeStrictInvalidInput(r *http.Request, target any, maxBytes int64) error {
+	if err := DecodeStrict(r, target, maxBytes); err != nil {
+		return apperrors.E(apperrors.KindInvalidInput, "Invalid JSON body.")
 	}
 	return nil
 }

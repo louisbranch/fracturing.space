@@ -18,8 +18,8 @@ import (
 )
 
 // CampaignCharacters centralizes this web behavior in one helper seam.
-func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string, options campaignapp.CampaignCharactersReadOptions) ([]campaignapp.CampaignCharacter, error) {
-	if g.Read.Character == nil {
+func (g characterReadGateway) CampaignCharacters(ctx context.Context, campaignID string, options campaignapp.CharacterReadContext) ([]campaignapp.CampaignCharacter, error) {
+	if g.read.Character == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -31,63 +31,15 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string, 
 	if err != nil {
 		return nil, err
 	}
-
-	// Collect participant names so character controller labels can be resolved.
-	type participantEntry struct {
-		ID     string
-		UserID string
-		Name   string
-	}
-	participantNamesByID := map[string]string{}
-	viewerParticipantID := ""
-	viewerUserID := strings.TrimSpace(options.ViewerUserID)
-	if g.Read.Participant != nil {
-		entries, err := grpcpaging.CollectPages[participantEntry, *statev1.Participant](
-			ctx, 10,
-			func(ctx context.Context, pageToken string) ([]*statev1.Participant, string, error) {
-				resp, err := g.Read.Participant.ListParticipants(ctx, &statev1.ListParticipantsRequest{
-					CampaignId: campaignID,
-					PageSize:   10,
-					PageToken:  pageToken,
-				})
-				if err != nil {
-					return nil, "", err
-				}
-				if resp == nil {
-					return nil, "", nil
-				}
-				return resp.GetParticipants(), resp.GetNextPageToken(), nil
-			},
-			func(p *statev1.Participant) (participantEntry, bool) {
-				if p == nil {
-					return participantEntry{}, false
-				}
-				id := strings.TrimSpace(p.GetId())
-				if id == "" {
-					return participantEntry{}, false
-				}
-				return participantEntry{
-					ID:     id,
-					UserID: strings.TrimSpace(p.GetUserId()),
-					Name:   participantDisplayName(p),
-				}, true
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-		for _, e := range entries {
-			participantNamesByID[e.ID] = e.Name
-			if viewerParticipantID == "" && viewerUserID != "" && strings.EqualFold(strings.TrimSpace(e.UserID), viewerUserID) {
-				viewerParticipantID = e.ID
-			}
-		}
+	participantLabels, err := g.characterParticipantLabels(ctx, campaignID, options)
+	if err != nil {
+		return nil, err
 	}
 
 	return grpcpaging.CollectPages[campaignapp.CampaignCharacter, *statev1.Character](
 		ctx, 10,
 		func(ctx context.Context, pageToken string) ([]*statev1.Character, string, error) {
-			resp, err := g.Read.Character.ListCharacters(ctx, &statev1.ListCharactersRequest{
+			resp, err := g.read.Character.ListCharacters(ctx, &statev1.ListCharactersRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 				PageToken:  pageToken,
@@ -105,61 +57,70 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string, 
 				return campaignapp.CampaignCharacter{}, false
 			}
 			characterID := strings.TrimSpace(character.GetId())
-			avatarEntityID := characterID
-			if avatarEntityID == "" {
-				avatarEntityID = campaignID
-			}
-			controllerParticipantID := strings.TrimSpace(character.GetParticipantId().GetValue())
-			controllerLabel := strings.TrimSpace(participantNamesByID[controllerParticipantID])
-			if controllerLabel == "" {
-				if controllerParticipantID == "" {
-					controllerLabel = "Unassigned"
-				} else {
-					controllerLabel = controllerParticipantID
-				}
-			}
-			return campaignapp.CampaignCharacter{
-				ID:                      characterID,
-				Name:                    characterDisplayName(character),
-				Kind:                    characterKindLabel(character.GetKind()),
-				Controller:              controllerLabel,
-				ControllerParticipantID: controllerParticipantID,
-				Pronouns:                pronouns.FromProto(character.GetPronouns()),
-				Aliases:                 append([]string(nil), character.GetAliases()...),
-				OwnedByViewer:           viewerParticipantID != "" && controllerParticipantID == viewerParticipantID,
-				Daggerheart:             daggerheartSummariesByCharacterID[characterID],
-				AvatarURL: websupport.AvatarImageURL(
-					g.AssetBaseURL,
-					catalog.AvatarRoleCharacter,
-					avatarEntityID,
-					strings.TrimSpace(character.GetAvatarSetId()),
-					strings.TrimSpace(character.GetAvatarAssetId()),
-					campaignAvatarCardDeliveryWidthPX,
-				),
-			}, true
+			return g.mapCharacter(character, campaignID, participantLabels, daggerheartSummariesByCharacterID[characterID]), true
 		},
 	)
+}
+
+// CampaignCharacter loads one character entity for detail and edit flows
+// without first materializing the full character collection.
+func (g characterReadGateway) CampaignCharacter(ctx context.Context, campaignID string, characterID string, options campaignapp.CharacterReadContext) (campaignapp.CampaignCharacter, error) {
+	if g.read.Character == nil {
+		return campaignapp.CampaignCharacter{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return campaignapp.CampaignCharacter{}, apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+
+	resp, err := g.read.Character.GetCharacterSheet(ctx, &statev1.GetCharacterSheetRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return campaignapp.CampaignCharacter{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_load_character",
+			FallbackMessage: "failed to load character",
+		})
+	}
+	if resp == nil || resp.GetCharacter() == nil {
+		return campaignapp.CampaignCharacter{}, apperrors.E(apperrors.KindNotFound, "character not found")
+	}
+
+	participantLabels, err := g.characterParticipantLabels(ctx, campaignID, options)
+	if err != nil {
+		return campaignapp.CampaignCharacter{}, err
+	}
+	var daggerheartSummary *campaignapp.CampaignCharacterDaggerheartSummary
+	if summaryMap, err := g.daggerheartCharacterSummaries(ctx, campaignID, options); err != nil {
+		return campaignapp.CampaignCharacter{}, err
+	} else {
+		daggerheartSummary = summaryMap[characterID]
+	}
+	return g.mapCharacter(resp.GetCharacter(), campaignID, participantLabels, daggerheartSummary), nil
 }
 
 // daggerheartCharacterSummaries batches profile and catalog reads so the
 // characters page can render localized Daggerheart card summaries without N+1
 // sheet requests.
-func (g GRPCGateway) daggerheartCharacterSummaries(
+func (g characterReadGateway) daggerheartCharacterSummaries(
 	ctx context.Context,
 	campaignID string,
-	options campaignapp.CampaignCharactersReadOptions,
+	options campaignapp.CharacterReadContext,
 ) (map[string]*campaignapp.CampaignCharacterDaggerheartSummary, error) {
 	if !strings.EqualFold(strings.TrimSpace(options.System), "Daggerheart") {
 		return nil, nil
 	}
-	if g.Read.DaggerheartContent == nil {
+	if g.read.DaggerheartContent == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart content client is not configured")
 	}
 
 	profiles, err := grpcpaging.CollectPages[*statev1.CharacterProfile, *statev1.CharacterProfile](
 		ctx, 10,
 		func(ctx context.Context, pageToken string) ([]*statev1.CharacterProfile, string, error) {
-			resp, err := g.Read.Character.ListCharacterProfiles(ctx, &statev1.ListCharacterProfilesRequest{
+			resp, err := g.read.Character.ListCharacterProfiles(ctx, &statev1.ListCharacterProfilesRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 				PageToken:  pageToken,
@@ -193,7 +154,7 @@ func (g GRPCGateway) daggerheartCharacterSummaries(
 	if locale == commonv1.Locale_LOCALE_UNSPECIFIED {
 		locale = commonv1.Locale_LOCALE_EN_US
 	}
-	catalogResp, err := g.Read.DaggerheartContent.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
+	catalogResp, err := g.read.DaggerheartContent.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
 	if err != nil {
 		return nil, err
 	}
@@ -285,9 +246,115 @@ func daggerheartCharacterCardNameMaps(
 	return classNames, subclassNames, ancestryNames, communityNames
 }
 
+// characterParticipantLabels keeps participant display names and viewer ownership lookup together for character mapping.
+type characterParticipantLabels struct {
+	namesByID           map[string]string
+	viewerParticipantID string
+}
+
+// characterParticipantLabels loads participant labels once so entity and list character reads share viewer/controller mapping.
+func (g characterReadGateway) characterParticipantLabels(ctx context.Context, campaignID string, options campaignapp.CharacterReadContext) (characterParticipantLabels, error) {
+	labels := characterParticipantLabels{namesByID: map[string]string{}}
+	if g.read.Participant == nil {
+		return labels, nil
+	}
+	viewerUserID := strings.TrimSpace(options.ViewerUserID)
+	type participantEntry struct {
+		ID     string
+		UserID string
+		Name   string
+	}
+	entries, err := grpcpaging.CollectPages[participantEntry, *statev1.Participant](
+		ctx, 10,
+		func(ctx context.Context, pageToken string) ([]*statev1.Participant, string, error) {
+			resp, err := g.read.Participant.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+				CampaignId: campaignID,
+				PageSize:   10,
+				PageToken:  pageToken,
+			})
+			if err != nil {
+				return nil, "", err
+			}
+			if resp == nil {
+				return nil, "", nil
+			}
+			return resp.GetParticipants(), resp.GetNextPageToken(), nil
+		},
+		func(p *statev1.Participant) (participantEntry, bool) {
+			if p == nil {
+				return participantEntry{}, false
+			}
+			id := strings.TrimSpace(p.GetId())
+			if id == "" {
+				return participantEntry{}, false
+			}
+			return participantEntry{
+				ID:     id,
+				UserID: strings.TrimSpace(p.GetUserId()),
+				Name:   participantDisplayName(p),
+			}, true
+		},
+	)
+	if err != nil {
+		return characterParticipantLabels{}, err
+	}
+	for _, entry := range entries {
+		labels.namesByID[entry.ID] = entry.Name
+		if labels.viewerParticipantID == "" && viewerUserID != "" && strings.EqualFold(strings.TrimSpace(entry.UserID), viewerUserID) {
+			labels.viewerParticipantID = entry.ID
+		}
+	}
+	return labels, nil
+}
+
+// mapCharacter translates one character row into the app-facing character view model.
+func (g characterReadGateway) mapCharacter(
+	character *statev1.Character,
+	campaignID string,
+	participantLabels characterParticipantLabels,
+	daggerheartSummary *campaignapp.CampaignCharacterDaggerheartSummary,
+) campaignapp.CampaignCharacter {
+	if character == nil {
+		return campaignapp.CampaignCharacter{}
+	}
+	characterID := strings.TrimSpace(character.GetId())
+	avatarEntityID := characterID
+	if avatarEntityID == "" {
+		avatarEntityID = campaignID
+	}
+	controllerParticipantID := strings.TrimSpace(character.GetParticipantId().GetValue())
+	controllerLabel := strings.TrimSpace(participantLabels.namesByID[controllerParticipantID])
+	if controllerLabel == "" {
+		if controllerParticipantID == "" {
+			controllerLabel = "Unassigned"
+		} else {
+			controllerLabel = controllerParticipantID
+		}
+	}
+	return campaignapp.CampaignCharacter{
+		ID:                      characterID,
+		Name:                    characterDisplayName(character),
+		Kind:                    characterKindLabel(character.GetKind()),
+		Controller:              controllerLabel,
+		ControllerParticipantID: controllerParticipantID,
+		Pronouns:                pronouns.FromProto(character.GetPronouns()),
+		Aliases:                 append([]string(nil), character.GetAliases()...),
+		OwnedByViewer:           participantLabels.viewerParticipantID != "" && controllerParticipantID == participantLabels.viewerParticipantID,
+		Daggerheart:             daggerheartSummary,
+		AvatarURL: websupport.AvatarImageURL(
+			g.assetBaseURL,
+			catalog.AvatarRoleCharacter,
+			avatarEntityID,
+			strings.TrimSpace(character.GetAvatarSetId()),
+			strings.TrimSpace(character.GetAvatarAssetId()),
+			campaignAvatarCardDeliveryWidthPX,
+		),
+	}
+}
+
 // UpdateCharacter applies a character update via gRPC.
-func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, characterID string, input campaignapp.UpdateCharacterInput) error {
-	if g.Mutation.Character == nil {
+func (g characterMutationGateway) UpdateCharacter(ctx context.Context, campaignID string, characterID string, input campaignapp.UpdateCharacterInput) error {
+	if g.mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -310,7 +377,7 @@ func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, cha
 		req.Pronouns = pronouns.ToProto(pronounsValue)
 	}
 
-	_, err := g.Mutation.Character.UpdateCharacter(ctx, req)
+	_, err := g.mutation.Character.UpdateCharacter(ctx, req)
 	if err != nil {
 		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,
@@ -322,8 +389,8 @@ func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, cha
 }
 
 // DeleteCharacter applies a character deletion via gRPC.
-func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, characterID string) error {
-	if g.Mutation.Character == nil {
+func (g characterMutationGateway) DeleteCharacter(ctx context.Context, campaignID string, characterID string) error {
+	if g.mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -332,7 +399,7 @@ func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, cha
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
 
-	_, err := g.Mutation.Character.DeleteCharacter(ctx, &statev1.DeleteCharacterRequest{
+	_, err := g.mutation.Character.DeleteCharacter(ctx, &statev1.DeleteCharacterRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})
@@ -346,85 +413,9 @@ func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, cha
 	return nil
 }
 
-// SetCharacterController applies an explicit controller update via gRPC.
-func (g GRPCGateway) SetCharacterController(ctx context.Context, campaignID string, characterID string, participantID string) error {
-	if g.Mutation.Character == nil {
-		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
-	}
-	campaignID = strings.TrimSpace(campaignID)
-	characterID = strings.TrimSpace(characterID)
-	if campaignID == "" || characterID == "" {
-		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
-	}
-
-	_, err := g.Mutation.Character.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
-		CampaignId:    campaignID,
-		CharacterId:   characterID,
-		ParticipantId: wrapperspb.String(strings.TrimSpace(participantID)),
-	})
-	if err != nil {
-		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
-			FallbackKind:    apperrors.KindUnknown,
-			FallbackKey:     "error.web.message.failed_to_set_character_controller",
-			FallbackMessage: "failed to set character controller",
-		})
-	}
-	return nil
-}
-
-// ClaimCharacterControl claims character control via gRPC.
-func (g GRPCGateway) ClaimCharacterControl(ctx context.Context, campaignID string, characterID string) error {
-	if g.Mutation.Character == nil {
-		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
-	}
-	campaignID = strings.TrimSpace(campaignID)
-	characterID = strings.TrimSpace(characterID)
-	if campaignID == "" || characterID == "" {
-		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
-	}
-
-	_, err := g.Mutation.Character.ClaimCharacterControl(ctx, &statev1.ClaimCharacterControlRequest{
-		CampaignId:  campaignID,
-		CharacterId: characterID,
-	})
-	if err != nil {
-		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
-			FallbackKind:    apperrors.KindUnknown,
-			FallbackKey:     "error.web.message.failed_to_claim_character_control",
-			FallbackMessage: "failed to claim character control",
-		})
-	}
-	return nil
-}
-
-// ReleaseCharacterControl releases character control via gRPC.
-func (g GRPCGateway) ReleaseCharacterControl(ctx context.Context, campaignID string, characterID string) error {
-	if g.Mutation.Character == nil {
-		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
-	}
-	campaignID = strings.TrimSpace(campaignID)
-	characterID = strings.TrimSpace(characterID)
-	if campaignID == "" || characterID == "" {
-		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
-	}
-
-	_, err := g.Mutation.Character.ReleaseCharacterControl(ctx, &statev1.ReleaseCharacterControlRequest{
-		CampaignId:  campaignID,
-		CharacterId: characterID,
-	})
-	if err != nil {
-		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
-			FallbackKind:    apperrors.KindUnknown,
-			FallbackKey:     "error.web.message.failed_to_release_character_control",
-			FallbackMessage: "failed to release character control",
-		})
-	}
-	return nil
-}
-
 // CreateCharacter executes package-scoped creation behavior for this flow.
-func (g GRPCGateway) CreateCharacter(ctx context.Context, campaignID string, input campaignapp.CreateCharacterInput) (campaignapp.CreateCharacterResult, error) {
-	if g.Mutation.Character == nil {
+func (g characterMutationGateway) CreateCharacter(ctx context.Context, campaignID string, input campaignapp.CreateCharacterInput) (campaignapp.CreateCharacterResult, error) {
+	if g.mutation.Character == nil {
 		return campaignapp.CreateCharacterResult{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -440,7 +431,7 @@ func (g GRPCGateway) CreateCharacter(ctx context.Context, campaignID string, inp
 		return campaignapp.CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid")
 	}
 
-	resp, err := g.Mutation.Character.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+	resp, err := g.mutation.Character.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
 		CampaignId: campaignID,
 		Name:       name,
 		Kind:       kind,

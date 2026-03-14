@@ -109,7 +109,7 @@ func TestCharacterCreationProgressMapsResponse(t *testing.T) {
 			UnmetReasons: []string{"ancestry and community selection are required"},
 		}},
 	}
-	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Character: characterClient}}
+	gateway := GRPCGateway{CreationRead: GRPCGatewayCreationReadDeps{Character: characterClient}}
 
 	progress, err := gateway.CharacterCreationProgress(context.Background(), "c1", "char-1")
 	if err != nil {
@@ -261,7 +261,7 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 		},
 	}
 	gateway := GRPCGateway{
-		Read: GRPCGatewayReadDeps{
+		CreationRead: GRPCGatewayCreationReadDeps{
 			DaggerheartContent: contentClient,
 			DaggerheartAsset:   contentClient,
 		},
@@ -341,7 +341,7 @@ func TestCharacterCreationCatalogDefaultsLocaleToEnglishUS(t *testing.T) {
 	t.Parallel()
 
 	contentClient := &fakeDaggerheartContentClient{}
-	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{DaggerheartContent: contentClient, DaggerheartAsset: contentClient}}
+	gateway := GRPCGateway{CreationRead: GRPCGatewayCreationReadDeps{DaggerheartContent: contentClient, DaggerheartAsset: contentClient}}
 
 	if _, err := gateway.CharacterCreationCatalog(context.Background(), language.Und); err != nil {
 		t.Fatalf("CharacterCreationCatalog() error = %v", err)
@@ -372,7 +372,7 @@ func TestCharacterCreationCatalog_ContinuesWhenAssetMapFails(t *testing.T) {
 		assetMapErr: errors.New("asset map unavailable"),
 	}
 	gateway := GRPCGateway{
-		Read: GRPCGatewayReadDeps{
+		CreationRead: GRPCGatewayCreationReadDeps{
 			DaggerheartContent: contentClient,
 			DaggerheartAsset:   contentClient,
 		},
@@ -415,7 +415,7 @@ func TestCharacterCreationProfileMapsDaggerheartFields(t *testing.T) {
 			Connections:          "Bonded with the harbor watch.",
 		}}}},
 	}
-	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Character: characterClient}}
+	gateway := GRPCGateway{CreationRead: GRPCGatewayCreationReadDeps{Character: characterClient}}
 
 	profile, err := gateway.CharacterCreationProfile(context.Background(), "c1", "char-1")
 	if err != nil {
@@ -448,7 +448,7 @@ func TestApplyAndResetCharacterCreationWorkflowForwardRequests(t *testing.T) {
 	t.Parallel()
 
 	characterClient := &fakeCharacterWorkflowClient{}
-	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Character: characterClient}}
+	gateway := GRPCGateway{CreationMutation: GRPCGatewayCreationMutationDeps{Character: characterClient}}
 
 	step := &campaignapp.CampaignCharacterCreationStepInput{Details: &campaignapp.CampaignCharacterCreationStepDetails{}}
 	if err := gateway.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", step); err != nil {

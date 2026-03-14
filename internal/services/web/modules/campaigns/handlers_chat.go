@@ -19,7 +19,7 @@ func (h handlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID 
 		h.WriteError(w, r, err)
 		return
 	}
-	surface, err := h.service.CampaignGameSurface(ctx, campaignID)
+	surface, err := h.game.CampaignGameSurface(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

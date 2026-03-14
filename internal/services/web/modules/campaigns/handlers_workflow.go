@@ -5,6 +5,7 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -13,22 +14,22 @@ import (
 
 // handleCharacterCreationStep applies the next character creation workflow step.
 func (h handlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
-	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_creation_form", routepath.AppCampaignCharacterCreation(campaignID, characterID)) {
+	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_creation_form", routepath.AppCampaignCharacterCreation(campaignID, characterID)) {
 		return
 	}
 
 	ctx, _ := h.RequestContextAndUserID(r)
 
-	workspace, err := h.service.CampaignWorkspace(ctx, campaignID)
+	workspace, err := h.workspace.CampaignWorkspace(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	if !h.creation.Enabled(workspace.System) {
+	if !h.creationPages.Enabled(workspace.System) {
 		h.WriteNotFound(w, r)
 		return
 	}
-	if err := h.creation.ApplyStep(ctx, campaignID, characterID, workspace.System, r.Form); err != nil {
+	if err := h.creationMutation.ApplyStep(ctx, campaignID, characterID, workspace.System, r.Form); err != nil {
 		h.writeCreationStepError(w, r, err, campaignID, characterID)
 		return
 	}
@@ -50,7 +51,7 @@ func (h handlers) writeCreationStepError(w http.ResponseWriter, r *http.Request,
 // handleCharacterCreationReset handles this route in the module transport layer.
 func (h handlers) handleCharacterCreationReset(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.creation.Reset(ctx, campaignID, characterID); err != nil {
+	if err := h.creationMutation.Reset(ctx, campaignID, characterID); err != nil {
 		h.writeCreationStepError(w, r, err, campaignID, characterID)
 		return
 	}

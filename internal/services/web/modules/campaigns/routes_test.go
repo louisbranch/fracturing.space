@@ -11,12 +11,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-func newRouteTestService(gw fakeGateway) campaignapp.Service {
-	return campaignapp.NewService(campaignapp.ServiceConfig{
-		ReadGateway:     gw,
-		MutationGateway: gw,
-		AuthzGateway:    gw,
-	})
+func newRouteTestServiceConfig(gw fakeGateway) campaignapp.ServiceConfig {
+	return serviceConfigWithGateway(gw)
 }
 
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
@@ -24,8 +20,8 @@ func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 
 	registerStableRoutes(
 		nil,
-		newHandlers(
-			newRouteTestService(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
+		newHandlersFromConfig(
+			newRouteTestServiceConfig(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
 			modulehandler.NewTestBase(),
 			"",
 			nil,
@@ -66,8 +62,8 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 	mux := http.NewServeMux()
 	registerStableRoutes(
 		mux,
-		newHandlers(
-			newRouteTestService(fakeGateway{
+		newHandlersFromConfig(
+			newRouteTestServiceConfig(fakeGateway{
 				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 				participants: []campaignapp.CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
 				characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
@@ -134,8 +130,8 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 	mux := http.NewServeMux()
 	registerStableRoutes(
 		mux,
-		newHandlers(
-			newRouteTestService(fakeGateway{
+		newHandlersFromConfig(
+			newRouteTestServiceConfig(fakeGateway{
 				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 				participants: []campaignapp.CampaignParticipant{{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"}},
 				participant:  campaignapp.CampaignParticipant{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},

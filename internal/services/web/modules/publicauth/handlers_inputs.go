@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"strings"
 
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/jsoninput"
 )
 
@@ -120,16 +119,5 @@ func parseRecoveryFinishInput(r *http.Request) (recoveryFinishInput, error) {
 
 // decodeJSONBodyStrict decodes one JSON object with strict field/size constraints.
 func decodeJSONBodyStrict(r *http.Request, target any) error {
-	if r == nil || r.Body == nil {
-		return invalidJSONBodyError()
-	}
-	if err := jsoninput.DecodeStrict(r, target, maxJSONBodyBytes); err != nil {
-		return invalidJSONBodyError()
-	}
-	return nil
-}
-
-// invalidJSONBodyError returns a stable invalid-input error for malformed JSON.
-func invalidJSONBodyError() error {
-	return apperrors.E(apperrors.KindInvalidInput, "Invalid JSON body.")
+	return jsoninput.DecodeStrictInvalidInput(r, target, maxJSONBodyBytes)
 }

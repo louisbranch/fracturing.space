@@ -50,20 +50,28 @@ func TestLoadAIKeyRowsUsesServiceResult(t *testing.T) {
 			CanRevoke: true,
 		}},
 	}
-	svc := settingsapp.NewService(settingsapp.ServiceConfig{
-		ProfileGateway:  gw,
-		LocaleGateway:   gw,
-		SecurityGateway: gw,
-		AIKeyGateway:    gw,
-		AIAgentGateway:  gw,
+	h := newHandlers(handlersConfig{
+		Services: handlerServices{
+			Account: settingsapp.NewAccountService(settingsapp.AccountServiceConfig{
+				ProfileGateway:  gw,
+				LocaleGateway:   gw,
+				SecurityGateway: gw,
+			}),
+			AI: settingsapp.NewAIService(settingsapp.AIServiceConfig{
+				AIKeyGateway:   gw,
+				AIAgentGateway: gw,
+			}),
+		},
+		Availability: settingsSurfaceAvailability{
+			profile:  true,
+			locale:   true,
+			security: true,
+			aiKeys:   true,
+			aiAgents: true,
+		},
+		Base:   modulehandler.NewTestBase(),
+		Policy: requestmeta.SchemePolicy{},
 	})
-	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
-		profile:  true,
-		locale:   true,
-		security: true,
-		aiKeys:   true,
-		aiAgents: true,
-	}, modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
 
 	rows, err := h.loadAIKeyRows(context.Background(), "user-1")
 	if err != nil {
@@ -93,20 +101,28 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 			CreatedAt:           "2026-01-01 00:00 UTC",
 		}},
 	}
-	svc := settingsapp.NewService(settingsapp.ServiceConfig{
-		ProfileGateway:  gw,
-		LocaleGateway:   gw,
-		SecurityGateway: gw,
-		AIKeyGateway:    gw,
-		AIAgentGateway:  gw,
+	h := newHandlers(handlersConfig{
+		Services: handlerServices{
+			Account: settingsapp.NewAccountService(settingsapp.AccountServiceConfig{
+				ProfileGateway:  gw,
+				LocaleGateway:   gw,
+				SecurityGateway: gw,
+			}),
+			AI: settingsapp.NewAIService(settingsapp.AIServiceConfig{
+				AIKeyGateway:   gw,
+				AIAgentGateway: gw,
+			}),
+		},
+		Availability: settingsSurfaceAvailability{
+			profile:  true,
+			locale:   true,
+			security: true,
+			aiKeys:   true,
+			aiAgents: true,
+		},
+		Base:   modulehandler.NewTestBase(),
+		Policy: requestmeta.SchemePolicy{},
 	})
-	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
-		profile:  true,
-		locale:   true,
-		security: true,
-		aiKeys:   true,
-		aiAgents: true,
-	}, modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
 
 	options, err := h.loadAIAgentCredentialOptions(context.Background(), "user-1")
 	if err != nil {

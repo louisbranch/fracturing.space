@@ -6,20 +6,10 @@ import (
 	"log/slog"
 	"strings"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
-	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
-	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
-	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	grpc "google.golang.org/grpc"
 )
 
@@ -64,8 +54,8 @@ func (p startupDependencyPolicy) managedConnMode() platformgrpc.ManagedConnMode 
 // newManagedConn wraps platformgrpc.NewManagedConn for testability.
 var newManagedConn = platformgrpc.NewManagedConn
 
-// dependencyInputSetter maps one connected dependency into principal/module bundles.
-type dependencyInputSetter func(*principal.Dependencies, *modules.Dependencies, *grpc.ClientConn)
+// dependencyInputSetter maps one connected dependency into the web runtime bundle.
+type dependencyInputSetter func(*web.DependencyBundle, *grpc.ClientConn)
 
 // dependencyRequirement describes one startup dependency and its wiring step.
 type dependencyRequirement struct {
@@ -103,7 +93,7 @@ func dependencyRequirementAuth(address string) dependencyRequirement {
 		policy:     startupDependencyRequired,
 		capability: "web.auth.integration",
 		surfaces:   []string{"principal", "publicauth", "profile", "settings"},
-		setInput:   setDependencyAuth,
+		setInput:   web.BindAuthDependency,
 	}
 }
 
@@ -115,7 +105,7 @@ func dependencyRequirementSocial(address string) dependencyRequirement {
 		policy:     startupDependencyRequired,
 		capability: "web.social.integration",
 		surfaces:   []string{"principal", "profile", "settings", "campaigns"},
-		setInput:   setDependencySocial,
+		setInput:   web.BindSocialDependency,
 	}
 }
 
@@ -127,7 +117,7 @@ func dependencyRequirementGame(address string) dependencyRequirement {
 		policy:     startupDependencyRequired,
 		capability: "web.game.integration",
 		surfaces:   []string{"campaigns", "dashboard-sync"},
-		setInput:   setDependencyGame,
+		setInput:   web.BindGameDependency,
 	}
 }
 
@@ -139,7 +129,7 @@ func dependencyRequirementAI(address string) dependencyRequirement {
 		policy:     startupDependencyOptional,
 		capability: "web.ai.integration",
 		surfaces:   []string{"settings.ai", "campaigns.ai"},
-		setInput:   setDependencyAI,
+		setInput:   web.BindAIDependency,
 	}
 }
 
@@ -151,7 +141,7 @@ func dependencyRequirementDiscovery(address string) dependencyRequirement {
 		policy:     startupDependencyOptional,
 		capability: "web.discovery.integration",
 		surfaces:   []string{"discovery"},
-		setInput:   setDependencyDiscovery,
+		setInput:   web.BindDiscoveryDependency,
 	}
 }
 
@@ -163,7 +153,7 @@ func dependencyRequirementUserHub(address string) dependencyRequirement {
 		policy:     startupDependencyOptional,
 		capability: "web.userhub.integration",
 		surfaces:   []string{"dashboard", "dashboard-sync"},
-		setInput:   setDependencyUserHub,
+		setInput:   web.BindUserHubDependency,
 	}
 }
 
@@ -175,7 +165,7 @@ func dependencyRequirementNotifications(address string) dependencyRequirement {
 		policy:     startupDependencyOptional,
 		capability: "web.notifications.integration",
 		surfaces:   []string{"principal", "notifications"},
-		setInput:   setDependencyNotifications,
+		setInput:   web.BindNotificationsDependency,
 	}
 }
 
@@ -187,75 +177,9 @@ func dependencyRequirementStatus(address string, reporter *platformstatus.Report
 		policy:     startupDependencyOptional,
 		capability: "web.status.integration",
 		surfaces:   []string{"dashboard.health"},
-		setInput:   setDependencyStatus,
+		setInput:   web.BindStatusDependency,
 		onConnect:  bindStatusReporter(reporter),
 	}
-}
-
-// setDependencyAuth wires auth clients into principal and module bundles.
-func setDependencyAuth(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	authClient := authv1.NewAuthServiceClient(conn)
-	accountClient := authv1.NewAccountServiceClient(conn)
-	p.SessionClient = authClient
-	p.AccountClient = accountClient
-	m.PublicAuth.AuthClient = authClient
-	m.Campaigns.AuthClient = authClient
-	m.Profile.AuthClient = authClient
-	m.Settings.AccountClient = accountClient
-	m.Settings.PasskeyClient = authClient
-}
-
-// setDependencySocial wires social clients into principal and module bundles.
-func setDependencySocial(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	socialClient := socialv1.NewSocialServiceClient(conn)
-	p.SocialClient = socialClient
-	m.Campaigns.SocialClient = socialClient
-	m.Profile.SocialClient = socialClient
-	m.Settings.SocialClient = socialClient
-}
-
-// setDependencyGame wires game clients into module bundles.
-func setDependencyGame(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	m.Campaigns.CampaignClient = statev1.NewCampaignServiceClient(conn)
-	m.Campaigns.CommunicationClient = statev1.NewCommunicationServiceClient(conn)
-	m.Campaigns.ParticipantClient = statev1.NewParticipantServiceClient(conn)
-	m.Campaigns.CharacterClient = statev1.NewCharacterServiceClient(conn)
-	m.Campaigns.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
-	m.Campaigns.DaggerheartAssetClient = daggerheartv1.NewDaggerheartAssetServiceClient(conn)
-	m.Campaigns.SessionClient = statev1.NewSessionServiceClient(conn)
-	m.Campaigns.InviteClient = statev1.NewInviteServiceClient(conn)
-	m.Campaigns.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)
-	m.DashboardSync.GameEventClient = statev1.NewEventServiceClient(conn)
-}
-
-// setDependencyAI wires AI clients into module bundles.
-func setDependencyAI(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	m.Settings.CredentialClient = aiv1.NewCredentialServiceClient(conn)
-	m.Settings.AgentClient = aiv1.NewAgentServiceClient(conn)
-	m.Campaigns.AgentClient = aiv1.NewAgentServiceClient(conn)
-}
-
-// setDependencyDiscovery wires discovery clients into module bundles.
-func setDependencyDiscovery(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	m.Discovery.DiscoveryClient = discoveryv1.NewDiscoveryServiceClient(conn)
-}
-
-// setDependencyUserHub wires userhub clients into module bundles.
-func setDependencyUserHub(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	m.Dashboard.UserHubClient = userhubv1.NewUserHubServiceClient(conn)
-	m.DashboardSync.UserHubControlClient = userhubv1.NewUserHubControlServiceClient(conn)
-}
-
-// setDependencyNotifications wires notifications clients into principal and module bundles.
-func setDependencyNotifications(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	notificationClient := notificationsv1.NewNotificationServiceClient(conn)
-	p.NotificationClient = notificationClient
-	m.Notifications.NotificationClient = notificationClient
-}
-
-// setDependencyStatus wires the status client into dashboard dependencies.
-func setDependencyStatus(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
-	m.Dashboard.StatusClient = statusv1.NewStatusServiceClient(conn)
 }
 
 // bindStatusReporter late-binds the status reporter client once the connection
@@ -287,8 +211,7 @@ func bootstrapDependencies(
 	reporter *platformstatus.Reporter,
 	logger *slog.Logger,
 ) (web.DependencyBundle, managedConns, error) {
-	principalDeps := principal.Dependencies{AssetBaseURL: assetBaseURL}
-	modDeps := modules.Dependencies{AssetBaseURL: assetBaseURL}
+	bundle := web.NewDependencyBundle(assetBaseURL)
 	var conns managedConns
 	logger = defaultLogger(logger)
 
@@ -314,14 +237,14 @@ func bootstrapDependencies(
 		}
 		conns = append(conns, mc)
 		if dep.setInput != nil {
-			dep.setInput(&principalDeps, &modDeps, mc.Conn())
+			dep.setInput(&bundle, mc.Conn())
 		}
 		if dep.onConnect != nil {
 			dep.onConnect(ctx, mc)
 		}
 	}
 
-	return web.DependencyBundle{Principal: principalDeps, Modules: modDeps}, conns, nil
+	return bundle, conns, nil
 }
 
 // defaultLogger normalizes nil logger inputs to the process default logger.

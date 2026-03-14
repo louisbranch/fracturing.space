@@ -91,3 +91,55 @@ func TestClear(t *testing.T) {
 		t.Fatalf("cookie max-age = %d, want < 0", cookie.MaxAge)
 	}
 }
+
+func TestAllowsMutationWithPolicy(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		req    *http.Request
+		policy requestmeta.SchemePolicy
+		want   bool
+	}{
+		{
+			name: "nil request denied",
+			req:  nil,
+			want: false,
+		},
+		{
+			name: "anonymous request allowed",
+			req:  httptest.NewRequest(http.MethodPost, "https://app.example.test/logout", nil),
+			want: true,
+		},
+		{
+			name: "cookie request without proof denied",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, "https://app.example.test/logout", nil)
+				req.AddCookie(&http.Cookie{Name: Name, Value: "sess-1"})
+				return req
+			}(),
+			want: false,
+		},
+		{
+			name: "cookie request with same-origin proof allowed",
+			req: func() *http.Request {
+				req := httptest.NewRequest(http.MethodPost, "https://app.example.test/logout", nil)
+				req.Host = "app.example.test"
+				req.Header.Set("Origin", "https://app.example.test")
+				req.AddCookie(&http.Cookie{Name: Name, Value: "sess-1"})
+				return req
+			}(),
+			want: true,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := AllowsMutationWithPolicy(tc.req, tc.policy); got != tc.want {
+				t.Fatalf("AllowsMutationWithPolicy() = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}

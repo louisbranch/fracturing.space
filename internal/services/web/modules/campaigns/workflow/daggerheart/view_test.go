@@ -3,7 +3,7 @@ package daggerheart
 import (
 	"testing"
 
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
 
 func TestIsDaggerheartSystemAndNewWorkflow(t *testing.T) {
@@ -26,16 +26,16 @@ func TestIsDaggerheartSystemAndNewWorkflow(t *testing.T) {
 func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Progress: campaignapp.CampaignCharacterCreationProgress{
+	creation := catalogCreation{
+		Progress: campaignworkflow.Progress{
 			Ready:        true,
 			NextStep:     4,
 			UnmetReasons: []string{"choose-class"},
-			Steps: []campaignapp.CampaignCharacterCreationStep{
+			Steps: []campaignworkflow.Step{
 				{Step: 1, Key: "class_subclass", Complete: true},
 			},
 		},
-		Profile: campaignapp.CampaignCharacterCreationProfile{
+		Profile: campaignworkflow.Profile{
 			ClassID:           "class-1",
 			SubclassID:        "subclass-1",
 			AncestryID:        "ancestry-1",
@@ -51,51 +51,51 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 			ArmorID:           "armor-1",
 			PotionItemID:      "item-1",
 			Background:        "Scholar",
-			Experiences: []campaignapp.CampaignCharacterCreationExperience{
+			Experiences: []campaignworkflow.Experience{
 				{Name: "Wanderer", Modifier: "2"},
 			},
 			DomainCardIDs: []string{"card-1"},
 			Connections:   "Known ally",
 		},
-		Classes: []campaignapp.CatalogClass{{
+		Classes: []campaignworkflow.Class{{
 			ID:          "class-1",
 			Name:        "Bard",
 			DomainIDs:   []string{"domain.sage", "domain.arcana"},
-			HopeFeature: campaignapp.CatalogFeature{Name: "Make a Scene", Description: "Spend 3 Hope to force an NPC to make a scene."},
-			Features: []campaignapp.CatalogFeature{
+			HopeFeature: campaignworkflow.Feature{Name: "Make a Scene", Description: "Spend 3 Hope to force an NPC to make a scene."},
+			Features: []campaignworkflow.Feature{
 				{Name: "Bardic Knowledge", Description: "You have advantage on knowledge checks related to lore."},
 			},
 		}},
-		Subclasses: []campaignapp.CatalogSubclass{{
+		Subclasses: []campaignworkflow.Subclass{{
 			ID:      "subclass-1",
 			Name:    "Lore",
 			ClassID: "class-1",
-			Foundation: []campaignapp.CatalogFeature{
+			Foundation: []campaignworkflow.Feature{
 				{Name: "Lore Master", Description: "You gain advantage on recall checks."},
 			},
 		}},
-		Ancestries: []campaignapp.CatalogHeritage{{
+		Ancestries: []campaignworkflow.Heritage{{
 			ID:   "ancestry-1",
 			Name: "Elf",
-			Features: []campaignapp.CatalogFeature{
+			Features: []campaignworkflow.Feature{
 				{Name: "Darkvision", Description: "You can see in darkness as if it were dim light."},
 			},
 		}},
-		Communities: []campaignapp.CatalogHeritage{{
+		Communities: []campaignworkflow.Heritage{{
 			ID:   "community-1",
 			Name: "Loreborne",
-			Features: []campaignapp.CatalogFeature{
+			Features: []campaignworkflow.Feature{
 				{Name: "Bookworm", Description: "You gain advantage on knowledge recall."},
 			},
 		}},
-		PrimaryWeapons:   []campaignapp.CatalogWeapon{{ID: "weapon-1", Name: "Sword"}},
-		SecondaryWeapons: []campaignapp.CatalogWeapon{{ID: "weapon-2", Name: "Dagger"}},
-		Armor:            []campaignapp.CatalogArmor{{ID: "armor-1", Name: "Leather"}},
-		PotionItems:      []campaignapp.CatalogItem{{ID: "item-1", Name: "Minor Potion"}},
-		DomainCards:      []campaignapp.CatalogDomainCard{{ID: "card-1", Name: "Arcane Bolt", DomainID: "arcana", Level: 1}},
-		Domains: []campaignapp.CatalogDomain{
-			{ID: "domain.sage", Name: "Sage", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/sage-icon.png"}},
-			{ID: "domain.arcana", Name: "Arcana", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/arcana-icon.png"}},
+		PrimaryWeapons:   []campaignworkflow.Weapon{{ID: "weapon-1", Name: "Sword"}},
+		SecondaryWeapons: []campaignworkflow.Weapon{{ID: "weapon-2", Name: "Dagger"}},
+		Armor:            []campaignworkflow.Armor{{ID: "armor-1", Name: "Leather"}},
+		PotionItems:      []campaignworkflow.Item{{ID: "item-1", Name: "Minor Potion"}},
+		DomainCards:      []campaignworkflow.DomainCard{{ID: "card-1", Name: "Arcane Bolt", DomainID: "arcana", Level: 1}},
+		Domains: []campaignworkflow.Domain{
+			{ID: "domain.sage", Name: "Sage", Icon: campaignworkflow.AssetReference{URL: "https://cdn.example.com/domain/sage-icon.png"}},
+			{ID: "domain.arcana", Name: "Arcana", Icon: campaignworkflow.AssetReference{URL: "https://cdn.example.com/domain/arcana-icon.png"}},
 		},
 	}
 
@@ -169,8 +169,8 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 func TestCreationViewResolvesClassImageURL(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Classes: []campaignapp.CatalogClass{{ID: "class.bard", Name: "Bard"}},
+	creation := catalogCreation{
+		Classes: []campaignworkflow.Class{{ID: "class.bard", Name: "Bard"}},
 	}
 
 	// Without AssetBaseURL, ImageURL should be empty.
@@ -189,8 +189,8 @@ func TestCreationViewResolvesClassImageURL(t *testing.T) {
 func TestCreationViewResolvesAncestryImageURL(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Ancestries: []campaignapp.CatalogHeritage{{ID: "heritage.elf", Name: "Elf", Kind: "ancestry"}},
+	creation := catalogCreation{
+		Ancestries: []campaignworkflow.Heritage{{ID: "heritage.elf", Name: "Elf", Kind: "ancestry"}},
 	}
 
 	viewNoURL := New("").CreationView(creation)
@@ -207,8 +207,8 @@ func TestCreationViewResolvesAncestryImageURL(t *testing.T) {
 func TestCreationViewResolvesCommunityImageURL(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Communities: []campaignapp.CatalogHeritage{{ID: "heritage.loreborne", Name: "Loreborne", Kind: "community"}},
+	creation := catalogCreation{
+		Communities: []campaignworkflow.Heritage{{ID: "heritage.loreborne", Name: "Loreborne", Kind: "community"}},
 	}
 
 	viewNoURL := New("").CreationView(creation)
@@ -225,12 +225,12 @@ func TestCreationViewResolvesCommunityImageURL(t *testing.T) {
 func TestCreationViewAddsHeritagePrefetchURLsForClassStep(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 1},
-		Ancestries: []campaignapp.CatalogHeritage{
+	creation := catalogCreation{
+		Progress: campaignworkflow.Progress{NextStep: 1},
+		Ancestries: []campaignworkflow.Heritage{
 			{ID: "heritage.elf", Name: "Elf", Kind: "ancestry"},
 		},
-		Communities: []campaignapp.CatalogHeritage{
+		Communities: []campaignworkflow.Heritage{
 			{ID: "heritage.loreborne", Name: "Loreborne", Kind: "community"},
 		},
 	}
@@ -249,19 +249,19 @@ func TestCreationViewAddsHeritagePrefetchURLsForClassStep(t *testing.T) {
 func TestCreationViewAddsEquipmentPrefetchURLsForTraitsStep(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 3},
-		PrimaryWeapons: []campaignapp.CatalogWeapon{
-			{ID: "weapon-1", Name: "Sword", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/weapon-1.png"}},
+	creation := catalogCreation{
+		Progress: campaignworkflow.Progress{NextStep: 3},
+		PrimaryWeapons: []campaignworkflow.Weapon{
+			{ID: "weapon-1", Name: "Sword", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/weapon-1.png"}},
 		},
-		SecondaryWeapons: []campaignapp.CatalogWeapon{
-			{ID: "weapon-2", Name: "Dagger", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/weapon-2.png"}},
+		SecondaryWeapons: []campaignworkflow.Weapon{
+			{ID: "weapon-2", Name: "Dagger", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/weapon-2.png"}},
 		},
-		Armor: []campaignapp.CatalogArmor{
-			{ID: "armor-1", Name: "Leather", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/armor-1.png"}},
+		Armor: []campaignworkflow.Armor{
+			{ID: "armor-1", Name: "Leather", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/armor-1.png"}},
 		},
-		PotionItems: []campaignapp.CatalogItem{
-			{ID: "item-1", Name: "Potion", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/item-1.png"}},
+		PotionItems: []campaignworkflow.Item{
+			{ID: "item-1", Name: "Potion", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/item-1.png"}},
 		},
 	}
 
@@ -274,11 +274,11 @@ func TestCreationViewAddsEquipmentPrefetchURLsForTraitsStep(t *testing.T) {
 func TestCreationViewAddsDomainCardPrefetchURLsForExperiencesStep(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 5},
-		DomainCards: []campaignapp.CatalogDomainCard{
-			{ID: "card-1", Name: "Arcane Bolt", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/card-1.png"}},
-			{ID: "card-2", Name: "Arcane Shield", Illustration: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/card-2.png"}},
+	creation := catalogCreation{
+		Progress: campaignworkflow.Progress{NextStep: 5},
+		DomainCards: []campaignworkflow.DomainCard{
+			{ID: "card-1", Name: "Arcane Bolt", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/card-1.png"}},
+			{ID: "card-2", Name: "Arcane Shield", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/card-2.png"}},
 		},
 	}
 
@@ -291,8 +291,8 @@ func TestCreationViewAddsDomainCardPrefetchURLsForExperiencesStep(t *testing.T) 
 func TestCreationViewResolvesSubclassImageURL(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Subclasses: []campaignapp.CatalogSubclass{{ID: "subclass.stalwart", Name: "Stalwart", ClassID: "class.guardian"}},
+	creation := catalogCreation{
+		Subclasses: []campaignworkflow.Subclass{{ID: "subclass.stalwart", Name: "Stalwart", ClassID: "class.guardian"}},
 	}
 
 	// Without AssetBaseURL, ImageURL should be empty.
@@ -311,25 +311,25 @@ func TestCreationViewResolvesSubclassImageURL(t *testing.T) {
 func TestCreationViewUsesCatalogEquipmentIllustrationURLs(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		PrimaryWeapons: []campaignapp.CatalogWeapon{{
+	creation := catalogCreation{
+		PrimaryWeapons: []campaignworkflow.Weapon{{
 			ID:   "weapon.battleaxe",
 			Name: "Battleaxe",
-			Illustration: campaignapp.CatalogAssetReference{
+			Illustration: campaignworkflow.AssetReference{
 				URL: "https://cdn.example.com/weapons/battleaxe.png",
 			},
 		}},
-		Armor: []campaignapp.CatalogArmor{{
+		Armor: []campaignworkflow.Armor{{
 			ID:   "armor.chainmail-armor",
 			Name: "Chainmail Armor",
-			Illustration: campaignapp.CatalogAssetReference{
+			Illustration: campaignworkflow.AssetReference{
 				URL: "https://cdn.example.com/armor/chainmail.png",
 			},
 		}},
-		PotionItems: []campaignapp.CatalogItem{{
+		PotionItems: []campaignworkflow.Item{{
 			ID:   "item.minor-health-potion",
 			Name: "Minor Health Potion",
-			Illustration: campaignapp.CatalogAssetReference{
+			Illustration: campaignworkflow.AssetReference{
 				URL: "https://cdn.example.com/items/minor-health-potion.png",
 			},
 		}},
@@ -350,10 +350,10 @@ func TestCreationViewUsesCatalogEquipmentIllustrationURLs(t *testing.T) {
 func TestCreationViewResolvesEquipmentImageURLFallback(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		PrimaryWeapons: []campaignapp.CatalogWeapon{{ID: "weapon.battleaxe", Name: "Battleaxe"}},
-		Armor:          []campaignapp.CatalogArmor{{ID: "armor.chainmail-armor", Name: "Chainmail Armor"}},
-		PotionItems:    []campaignapp.CatalogItem{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}},
+	creation := catalogCreation{
+		PrimaryWeapons: []campaignworkflow.Weapon{{ID: "weapon.battleaxe", Name: "Battleaxe"}},
+		Armor:          []campaignworkflow.Armor{{ID: "armor.chainmail-armor", Name: "Chainmail Armor"}},
+		PotionItems:    []campaignworkflow.Item{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}},
 	}
 
 	viewNoURL := New("").CreationView(creation)
@@ -382,18 +382,18 @@ func TestCreationViewResolvesEquipmentImageURLFallback(t *testing.T) {
 func TestCreationViewClassDomainWatermarksSkipMissingIconsAndCapAtTwo(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		Classes: []campaignapp.CatalogClass{
+	creation := catalogCreation{
+		Classes: []campaignworkflow.Class{
 			{
 				ID:        "class.druid",
 				Name:      "Druid",
 				DomainIDs: []string{"domain.sage", "domain.arcana", "domain.bone"},
 			},
 		},
-		Domains: []campaignapp.CatalogDomain{
-			{ID: "domain.sage", Name: "Sage", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/sage.png"}},
-			{ID: "domain.arcana", Name: "Arcana", Icon: campaignapp.CatalogAssetReference{URL: ""}},
-			{ID: "domain.bone", Name: "Bone", Icon: campaignapp.CatalogAssetReference{URL: "https://cdn.example.com/domain/bone.png"}},
+		Domains: []campaignworkflow.Domain{
+			{ID: "domain.sage", Name: "Sage", Icon: campaignworkflow.AssetReference{URL: "https://cdn.example.com/domain/sage.png"}},
+			{ID: "domain.arcana", Name: "Arcana", Icon: campaignworkflow.AssetReference{URL: ""}},
+			{ID: "domain.bone", Name: "Bone", Icon: campaignworkflow.AssetReference{URL: "https://cdn.example.com/domain/bone.png"}},
 		},
 	}
 
@@ -415,12 +415,12 @@ func TestCreationViewClassDomainWatermarksSkipMissingIconsAndCapAtTwo(t *testing
 func TestCreationViewUsesCatalogDomainCardIllustrationURL(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		DomainCards: []campaignapp.CatalogDomainCard{
+	creation := catalogCreation{
+		DomainCards: []campaignworkflow.DomainCard{
 			{
 				ID:   "domain_card.arcana-runeward",
 				Name: "Runeward",
-				Illustration: campaignapp.CatalogAssetReference{
+				Illustration: campaignworkflow.AssetReference{
 					URL: "https://cdn.example.com/domain-cards/runeward.png",
 				},
 			},
@@ -439,8 +439,8 @@ func TestCreationViewUsesCatalogDomainCardIllustrationURL(t *testing.T) {
 func TestCreationViewResolvesDomainCardImageURLFallback(t *testing.T) {
 	t.Parallel()
 
-	creation := campaignapp.CampaignCharacterCreation{
-		DomainCards: []campaignapp.CatalogDomainCard{
+	creation := catalogCreation{
+		DomainCards: []campaignworkflow.DomainCard{
 			{
 				ID:   "domain_card.arcana-runeward",
 				Name: "Runeward",

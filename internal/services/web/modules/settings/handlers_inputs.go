@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/jsoninput"
 )
 
@@ -59,8 +58,8 @@ func parseAIAgentCreateInput(form url.Values) settingsapp.CreateAIAgentInput {
 // parsePasskeyCredentialInput parses and normalizes one settings passkey credential payload.
 func parsePasskeyCredentialInput(r *http.Request) (passkeyCredentialInput, error) {
 	var payload passkeyCredentialInput
-	if err := jsoninput.DecodeStrict(r, &payload, maxJSONBodyBytes); err != nil {
-		return passkeyCredentialInput{}, apperrors.E(apperrors.KindInvalidInput, "Invalid JSON body.")
+	if err := jsoninput.DecodeStrictInvalidInput(r, &payload, maxJSONBodyBytes); err != nil {
+		return passkeyCredentialInput{}, err
 	}
 	return passkeyCredentialInput{
 		SessionID:  strings.TrimSpace(payload.SessionID),

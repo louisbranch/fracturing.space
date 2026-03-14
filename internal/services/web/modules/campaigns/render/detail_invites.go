@@ -1,0 +1,32 @@
+package render
+
+import "github.com/a-h/templ"
+
+// InvitesPageView carries invite-management page state only.
+type InvitesPageView struct {
+	CampaignDetailBaseView
+	Invites           []InviteView
+	InviteSeatOptions []InviteSeatOptionView
+}
+
+// InvitesFragment renders the invite-management page.
+func InvitesFragment(view InvitesPageView, loc Localizer) templ.Component {
+	return invitesFragment(view, loc)
+}
+
+// InviteView carries invite rows for the invites detail page.
+type InviteView struct {
+	ID                string
+	ParticipantID     string
+	ParticipantName   string
+	RecipientUsername string
+	HasRecipient      bool
+	PublicURL         string
+	Status            string
+}
+
+// InviteSeatOptionView carries eligible invite-seat targets for invite forms.
+type InviteSeatOptionView struct {
+	ParticipantID string
+	Label         string
+}

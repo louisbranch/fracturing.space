@@ -7,7 +7,7 @@ import (
 	"golang.org/x/text/language"
 )
 
-func TestCampaignCharacterCreationDataLoadsGenericInputs(t *testing.T) {
+func TestCampaignCharacterCreationPageReadsLoadGenericInputs(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
@@ -21,31 +21,39 @@ func TestCampaignCharacterCreationDataLoadsGenericInputs(t *testing.T) {
 		},
 	})
 
-	data, err := svc.campaignCharacterCreationData(context.Background(), "c1", "char-1", language.AmericanEnglish)
+	progress, err := svc.campaignCharacterCreationProgress(context.Background(), "c1", "char-1")
 	if err != nil {
-		t.Fatalf("campaignCharacterCreationData() error = %v", err)
+		t.Fatalf("campaignCharacterCreationProgress() error = %v", err)
 	}
-	if data.Progress.NextStep != 2 {
-		t.Fatalf("NextStep = %d, want 2", data.Progress.NextStep)
+	if progress.NextStep != 2 {
+		t.Fatalf("NextStep = %d, want 2", progress.NextStep)
 	}
-	if data.Profile.ClassID != "warrior" {
-		t.Fatalf("ClassID = %q, want %q", data.Profile.ClassID, "warrior")
+	profile, err := svc.campaignCharacterCreationProfile(context.Background(), "c1", "char-1")
+	if err != nil {
+		t.Fatalf("campaignCharacterCreationProfile() error = %v", err)
 	}
-	if len(data.Catalog.Classes) != 1 || data.Catalog.Classes[0].ID != "warrior" {
-		t.Fatalf("Classes = %#v, want single warrior class", data.Catalog.Classes)
+	if profile.ClassID != "warrior" {
+		t.Fatalf("ClassID = %q, want %q", profile.ClassID, "warrior")
+	}
+	catalog, err := svc.campaignCharacterCreationCatalog(context.Background(), language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("campaignCharacterCreationCatalog() error = %v", err)
+	}
+	if len(catalog.Classes) != 1 || catalog.Classes[0].ID != "warrior" {
+		t.Fatalf("Classes = %#v, want single warrior class", catalog.Classes)
 	}
 }
 
-func TestCampaignCharacterCreationDataForwardsCatalogLocale(t *testing.T) {
+func TestCampaignCharacterCreationCatalogForwardsLocale(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{}
 	svc := newService(gateway)
 
 	ptBR := language.MustParse("pt-BR")
-	_, err := svc.campaignCharacterCreationData(context.Background(), "c1", "char-1", ptBR)
+	_, err := svc.campaignCharacterCreationCatalog(context.Background(), ptBR)
 	if err != nil {
-		t.Fatalf("campaignCharacterCreationData() error = %v", err)
+		t.Fatalf("campaignCharacterCreationCatalog() error = %v", err)
 	}
 	if gateway.characterCreationCatalogLocale != ptBR {
 		t.Fatalf("catalog locale = %v, want %v", gateway.characterCreationCatalogLocale, ptBR)

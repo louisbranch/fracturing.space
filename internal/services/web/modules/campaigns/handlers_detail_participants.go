@@ -4,9 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
-	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 )
 
 // handleParticipants handles this route in the module transport layer.
@@ -16,17 +15,13 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 	if !ok {
 		return
 	}
-	items, err := h.service.CampaignParticipants(ctx, campaignID)
+	items, err := h.participantReads.CampaignParticipants(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	view := page.detailView(campaignID, markerParticipants)
-	if err := h.service.RequireManageParticipants(ctx, campaignID); err == nil {
-		view.CanManageParticipants = true
-	}
-	view.Participants = mapParticipantsView(items, viewerUserID)
-	h.writeCampaignDetailPage(w, r, page, campaignID, view, sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.participants.title")})
+	view := page.participantsView(campaignID, items, viewerUserID, h.authorization.RequireManageParticipants(ctx, campaignID) == nil)
+	h.writeCampaignDetailPage(w, r, page, campaignID, campaignrender.ParticipantsFragment(view, page.loc), page.participantsBreadcrumbs()...)
 }
 
 // handleParticipantCreatePage handles this route in the module transport layer.
@@ -35,22 +30,19 @@ func (h handlers) handleParticipantCreatePage(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	creator, err := h.service.CampaignParticipantCreator(ctx, campaignID)
+	creator, err := h.participantReads.CampaignParticipantCreator(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	view := page.detailView(campaignID, markerParticipantCreate)
-	view.CanManageParticipants = true
-	view.ParticipantCreator = mapParticipantCreatorView(creator)
+	view := page.participantCreateView(campaignID, creator)
 	h.writeCampaignDetailPage(
 		w,
 		r,
 		page,
 		campaignID,
-		view,
-		sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.participants.title"), URL: routepath.AppCampaignParticipants(campaignID)},
-		sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.participants.action_add")},
+		campaignrender.ParticipantCreateFragment(view, page.loc),
+		page.participantCreateBreadcrumbs(campaignID)...,
 	)
 }
 
@@ -60,32 +52,27 @@ func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, 
 	if !ok {
 		return
 	}
-	editor, err := h.service.CampaignParticipantEditor(ctx, campaignID, participantID)
+	editor, err := h.participantReads.CampaignParticipantEditor(ctx, campaignID, participantID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	view := page.detailView(campaignID, markerParticipantEdit)
-	view.ParticipantID = editor.Participant.ID
-	view.ParticipantEditor = mapParticipantEditorView(editor)
-	if strings.TrimSpace(view.ParticipantID) == "" {
-		view.ParticipantID = participantID
-	}
+	var aiBinding *campaignapp.CampaignAIBindingEditor
 	if strings.EqualFold(strings.TrimSpace(editor.Participant.Controller), "AI") {
-		aiBinding, err := h.service.CampaignAIBindingEditor(ctx, campaignID, page.workspace.AIAgentID)
+		binding, err := h.automationReads.CampaignAIBindingEditor(ctx, campaignID, page.workspace.AIAgentID)
 		if err != nil {
 			h.WriteError(w, r, err)
 			return
 		}
-		view.AIBindingEditor = mapAIBindingEditorView(aiBinding)
+		aiBinding = &binding
 	}
+	view := page.participantEditView(campaignID, participantID, editor, aiBinding)
 	h.writeCampaignDetailPage(
 		w,
 		r,
 		page,
 		campaignID,
-		view,
-		sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.participants.title"), URL: routepath.AppCampaignParticipants(campaignID)},
-		sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.participants.action_edit")},
+		campaignrender.ParticipantEditFragment(view, page.loc),
+		page.participantEditBreadcrumbs(campaignID)...,
 	)
 }

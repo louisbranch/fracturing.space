@@ -6,105 +6,122 @@ import (
 	"golang.org/x/text/language"
 )
 
-// Service orchestrates campaign workspace reads and mutations.
-type Service interface {
+// CampaignCatalogService exposes campaign catalog reads and mutations.
+type CampaignCatalogService interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
+}
+
+// CampaignWorkspaceService exposes campaign workspace reads used by transport.
+type CampaignWorkspaceService interface {
 	CampaignName(context.Context, string) string
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
+}
+
+// CampaignGameService exposes game-surface reads used by transport.
+type CampaignGameService interface {
 	CampaignGameSurface(context.Context, string) (CampaignGameSurface, error)
+}
+
+// CampaignParticipantReadService exposes participant-focused reads and editor
+// state.
+type CampaignParticipantReadService interface {
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
 	CampaignParticipantCreator(context.Context, string) (CampaignParticipantCreator, error)
 	CampaignParticipantEditor(context.Context, string, string) (CampaignParticipantEditor, error)
+}
+
+// CampaignParticipantMutationService exposes participant create/update
+// mutations.
+type CampaignParticipantMutationService interface {
+	CreateParticipant(context.Context, string, CreateParticipantInput) (CreateParticipantResult, error)
+	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
+}
+
+// CampaignAutomationReadService exposes participant-adjacent automation editor
+// reads.
+type CampaignAutomationReadService interface {
 	CampaignAIBindingEditor(context.Context, string, string) (CampaignAIBindingEditor, error)
-	CampaignCharacters(context.Context, string, CampaignCharactersReadOptions) ([]CampaignCharacter, error)
-	CampaignCharacterEditor(context.Context, string, string) (CampaignCharacterEditor, error)
-	CampaignCharacterControl(context.Context, string, string, string) (CampaignCharacterControl, error)
+}
+
+// CampaignAutomationMutationService exposes participant-adjacent automation
+// mutations.
+type CampaignAutomationMutationService interface {
+	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
+}
+
+// CampaignCharacterReadService exposes character list/entity/editor reads.
+type CampaignCharacterReadService interface {
+	CampaignCharacters(context.Context, string, CharacterReadContext) ([]CampaignCharacter, error)
+	CampaignCharacter(context.Context, string, string, CharacterReadContext) (CampaignCharacter, error)
+	CampaignCharacterEditor(context.Context, string, string, CharacterReadContext) (CampaignCharacterEditor, error)
+}
+
+// CampaignCharacterControlService exposes character-control detail state and
+// control mutations.
+type CampaignCharacterControlService interface {
+	CampaignCharacterControl(context.Context, string, string, string, CharacterReadContext) (CampaignCharacterControl, error)
+	SetCharacterController(context.Context, string, string, string) error
+	ClaimCharacterControl(context.Context, string, string, string) error
+	ReleaseCharacterControl(context.Context, string, string, string) error
+}
+
+// CampaignCharacterMutationService exposes character create/update/delete
+// mutations.
+type CampaignCharacterMutationService interface {
+	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
+	UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error
+	DeleteCharacter(context.Context, string, string) error
+}
+
+// CampaignSessionReadService exposes session list/readiness reads.
+type CampaignSessionReadService interface {
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error)
+}
+
+// CampaignSessionMutationService exposes session lifecycle mutations.
+type CampaignSessionMutationService interface {
+	StartSession(context.Context, string, StartSessionInput) error
+	EndSession(context.Context, string, EndSessionInput) error
+}
+
+// CampaignInviteReadService exposes invite-focused reads and search.
+type CampaignInviteReadService interface {
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	SearchInviteUsers(context.Context, string, SearchInviteUsersInput) ([]InviteUserSearchResult, error)
+}
+
+// CampaignInviteMutationService exposes invite create/revoke mutations.
+type CampaignInviteMutationService interface {
+	CreateInvite(context.Context, string, CreateInviteInput) error
+	RevokeInvite(context.Context, string, RevokeInviteInput) error
+}
+
+// CampaignConfigurationService exposes campaign-level settings mutations.
+type CampaignConfigurationService interface {
+	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
+}
+
+// CampaignAuthorizationService exposes transport-facing authorization checks.
+type CampaignAuthorizationService interface {
 	RequireManageCampaign(context.Context, string) error
 	RequireManageParticipants(context.Context, string) error
 	RequireManageInvites(context.Context, string) error
 	RequireMutateCharacters(context.Context, string) error
-	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
-	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
-	StartSession(context.Context, string, StartSessionInput) error
-	EndSession(context.Context, string, EndSessionInput) error
-	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
-	UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error
-	DeleteCharacter(context.Context, string, string) error
-	SetCharacterController(context.Context, string, string, string) error
-	ClaimCharacterControl(context.Context, string, string, string) error
-	ReleaseCharacterControl(context.Context, string, string, string) error
-	CreateParticipant(context.Context, string, CreateParticipantInput) (CreateParticipantResult, error)
-	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
-	CreateInvite(context.Context, string, CreateInviteInput) error
-	RevokeInvite(context.Context, string, RevokeInviteInput) error
-	CampaignCharacterCreationData(context.Context, string, string, language.Tag) (CampaignCharacterCreationData, error)
+}
+
+// CampaignCharacterCreationPageService exposes character-creation page reads.
+type CampaignCharacterCreationPageService interface {
+	CampaignCharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error)
+	CampaignCharacterCreationCatalog(context.Context, language.Tag) (CampaignCharacterCreationCatalog, error)
+	CampaignCharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error)
+}
+
+// CampaignCharacterCreationMutationService exposes character-creation workflow
+// progress reads and mutations.
+type CampaignCharacterCreationMutationService interface {
 	CampaignCharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error)
 	ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error
 	ResetCharacterCreationWorkflow(context.Context, string, string) error
-}
-
-// ServiceConfig keeps constructor dependencies explicit by capability.
-type ServiceConfig struct {
-	ReadGateway     ReadGateway
-	MutationGateway MutationGateway
-	AuthzGateway    AuthzGateway
-}
-
-// service defines an internal contract used at this web package boundary.
-type service struct {
-	readGateway     ReadGateway
-	mutationGateway MutationGateway
-	authzGateway    AuthzGateway
-}
-
-// NewService constructs a service from explicit read, mutation, and authz seams.
-func NewService(config ServiceConfig) Service {
-	return newServiceWithConfig(config)
-}
-
-// IsGatewayHealthy reports whether the read gateway is present and operational.
-func IsGatewayHealthy(readGateway ReadGateway) bool {
-	if readGateway == nil {
-		return false
-	}
-	_, unavailable := readGateway.(unavailableGateway)
-	return !unavailable
-}
-
-// newService keeps package-local tests on a convenient combined-gateway seam.
-func newService(gateway CampaignGateway) service {
-	if gateway == nil {
-		return newServiceWithConfig(ServiceConfig{})
-	}
-	var authz AuthzGateway
-	if checker, ok := gateway.(AuthzGateway); ok {
-		authz = checker
-	}
-	return newServiceWithConfig(ServiceConfig{
-		ReadGateway:     gateway,
-		MutationGateway: gateway,
-		AuthzGateway:    authz,
-	})
-}
-
-// newServiceWithConfig builds package wiring for this web seam.
-func newServiceWithConfig(config ServiceConfig) service {
-	readGateway := config.ReadGateway
-	if readGateway == nil {
-		readGateway = unavailableGateway{}
-	}
-	mutationGateway := config.MutationGateway
-	if mutationGateway == nil {
-		mutationGateway = unavailableGateway{}
-	}
-	return service{
-		readGateway:     readGateway,
-		mutationGateway: mutationGateway,
-		authzGateway:    config.AuthzGateway,
-	}
 }

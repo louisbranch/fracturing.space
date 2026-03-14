@@ -5,24 +5,14 @@ import (
 
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
-
-// PrincipalResolvers carries request-scoped resolution callbacks built by the
-// server from principal dependencies.
-type PrincipalResolvers struct {
-	AuthRequired    func(*http.Request) bool
-	ResolveViewer   module.ResolveViewer
-	ResolveSignedIn module.ResolveSignedIn
-	ResolveUserID   module.ResolveUserID
-	ResolveLanguage module.ResolveLanguage
-}
 
 // ComposeInput describes the contracts needed to compose the application mux.
 type ComposeInput struct {
-	Principal PrincipalResolvers
+	Principal requestresolver.PrincipalResolver
 
 	ModuleDependencies modules.Dependencies
 
@@ -34,24 +24,18 @@ type ComposeInput struct {
 
 // ComposeAppHandler builds the web app handler with selected module sets.
 func ComposeAppHandler(input ComposeInput) (http.Handler, error) {
-	authRequired := input.Principal.AuthRequired
-	if authRequired == nil {
-		authRequired = func(*http.Request) bool { return false }
-	}
-
 	registryBuilder := input.RegistryBuilder
 	if registryBuilder == nil {
 		registryBuilder = modules.NewRegistryBuilder()
 	}
+	var authRequired func(*http.Request) bool
+	if input.Principal != nil {
+		authRequired = input.Principal.AuthRequired
+	}
 
 	built := registryBuilder.Build(modules.RegistryInput{
 		Dependencies: input.ModuleDependencies,
-		Resolvers: modules.ModuleResolvers{
-			ResolveViewer:   input.Principal.ResolveViewer,
-			ResolveSignedIn: input.Principal.ResolveSignedIn,
-			ResolveUserID:   input.Principal.ResolveUserID,
-			ResolveLanguage: input.Principal.ResolveLanguage,
-		},
+		Principal:    input.Principal,
 		PublicOptions: modules.PublicModuleOptions{
 			RequestSchemePolicy: input.RequestSchemePolicy,
 		},

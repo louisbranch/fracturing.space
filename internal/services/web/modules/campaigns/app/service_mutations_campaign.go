@@ -7,12 +7,22 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// CreateCampaign executes package-scoped creation behavior for this flow.
+func (s catalogService) CreateCampaign(ctx context.Context, input CreateCampaignInput) (CreateCampaignResult, error) {
+	return s.createCampaign(ctx, input)
+}
+
+// UpdateCampaign applies this package workflow transition.
+func (s configurationService) UpdateCampaign(ctx context.Context, campaignID string, input UpdateCampaignInput) error {
+	return s.updateCampaign(ctx, campaignID, input)
+}
+
 // createCampaign executes package-scoped creation behavior for this flow.
-func (s service) createCampaign(ctx context.Context, input CreateCampaignInput) (CreateCampaignResult, error) {
+func (s catalogService) createCampaign(ctx context.Context, input CreateCampaignInput) (CreateCampaignResult, error) {
 	if strings.TrimSpace(input.Name) == "" {
 		return CreateCampaignResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_name_is_required", "campaign name is required")
 	}
-	created, err := s.mutationGateway.CreateCampaign(ctx, input)
+	created, err := s.mutation.CreateCampaign(ctx, input)
 	if err != nil {
 		return CreateCampaignResult{}, err
 	}
@@ -23,16 +33,16 @@ func (s service) createCampaign(ctx context.Context, input CreateCampaignInput) 
 }
 
 // updateCampaign applies this package workflow transition.
-func (s service) updateCampaign(ctx context.Context, campaignID string, input UpdateCampaignInput) error {
+func (s configurationService) updateCampaign(ctx context.Context, campaignID string, input UpdateCampaignInput) error {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
 	}
-	if err := s.requireManageCampaign(ctx, campaignID); err != nil {
+	if err := s.auth.requireManageCampaign(ctx, campaignID); err != nil {
 		return err
 	}
 
-	current, err := s.campaignWorkspace(ctx, campaignID)
+	current, err := s.configurationWorkspace(ctx, campaignID)
 	if err != nil {
 		return err
 	}
@@ -44,7 +54,17 @@ func (s service) updateCampaign(ctx context.Context, campaignID string, input Up
 	if !changed {
 		return nil
 	}
-	return s.mutationGateway.UpdateCampaign(ctx, campaignID, patch)
+	return s.mutation.UpdateCampaign(ctx, campaignID, patch)
+}
+
+// configurationWorkspace loads the current campaign settings baseline used to
+// validate configuration mutations without widening the generic workspace seam.
+func (s configurationService) configurationWorkspace(ctx context.Context, campaignID string) (CampaignWorkspace, error) {
+	workspace, err := loadCampaignWorkspace(ctx, s.workspace, campaignID)
+	if err != nil {
+		return CampaignWorkspace{}, err
+	}
+	return normalizeCampaignWorkspace(campaignID, workspace), nil
 }
 
 // buildCampaignUpdatePatch maps validated campaign edit form input into a mutation patch.

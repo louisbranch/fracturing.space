@@ -17,8 +17,8 @@ import (
 const campaignAvatarCardDeliveryWidthPX = 384
 
 // CampaignParticipants centralizes this web behavior in one helper seam.
-func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string) ([]campaignapp.CampaignParticipant, error) {
-	if g.Read.Participant == nil {
+func (g participantReadGateway) CampaignParticipants(ctx context.Context, campaignID string) ([]campaignapp.CampaignParticipant, error) {
+	if g.read.Participant == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -29,7 +29,7 @@ func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string
 	return grpcpaging.CollectPages[campaignapp.CampaignParticipant, *statev1.Participant](
 		ctx, 10,
 		func(ctx context.Context, pageToken string) ([]*statev1.Participant, string, error) {
-			resp, err := g.Read.Participant.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+			resp, err := g.read.Participant.ListParticipants(ctx, &statev1.ListParticipantsRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 				PageToken:  pageToken,
@@ -63,7 +63,7 @@ func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string
 				Controller:     participantControllerLabel(participant.GetController()),
 				Pronouns:       pronouns.FromProto(participant.GetPronouns()),
 				AvatarURL: websupport.AvatarImageURL(
-					g.AssetBaseURL,
+					g.assetBaseURL,
 					catalog.AvatarRoleParticipant,
 					avatarEntityID,
 					strings.TrimSpace(participant.GetAvatarSetId()),
@@ -76,8 +76,8 @@ func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string
 }
 
 // CampaignParticipant centralizes this web behavior in one helper seam.
-func (g GRPCGateway) CampaignParticipant(ctx context.Context, campaignID string, participantID string) (campaignapp.CampaignParticipant, error) {
-	if g.Read.Participant == nil {
+func (g participantReadGateway) CampaignParticipant(ctx context.Context, campaignID string, participantID string) (campaignapp.CampaignParticipant, error) {
+	if g.read.Participant == nil {
 		return campaignapp.CampaignParticipant{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -89,7 +89,7 @@ func (g GRPCGateway) CampaignParticipant(ctx context.Context, campaignID string,
 		return campaignapp.CampaignParticipant{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
 	}
 
-	resp, err := g.Read.Participant.GetParticipant(ctx, &statev1.GetParticipantRequest{
+	resp, err := g.read.Participant.GetParticipant(ctx, &statev1.GetParticipantRequest{
 		CampaignId:    campaignID,
 		ParticipantId: participantID,
 	})
@@ -120,7 +120,7 @@ func (g GRPCGateway) CampaignParticipant(ctx context.Context, campaignID string,
 		Controller:     participantControllerLabel(participant.GetController()),
 		Pronouns:       pronouns.FromProto(participant.GetPronouns()),
 		AvatarURL: websupport.AvatarImageURL(
-			g.AssetBaseURL,
+			g.assetBaseURL,
 			catalog.AvatarRoleParticipant,
 			avatarEntityID,
 			strings.TrimSpace(participant.GetAvatarSetId()),
@@ -131,8 +131,8 @@ func (g GRPCGateway) CampaignParticipant(ctx context.Context, campaignID string,
 }
 
 // CreateParticipant executes package-scoped creation behavior for this flow.
-func (g GRPCGateway) CreateParticipant(ctx context.Context, campaignID string, input campaignapp.CreateParticipantInput) (campaignapp.CreateParticipantResult, error) {
-	if g.Mutation.Participant == nil {
+func (g participantMutationGateway) CreateParticipant(ctx context.Context, campaignID string, input campaignapp.CreateParticipantInput) (campaignapp.CreateParticipantResult, error) {
+	if g.mutation.Participant == nil {
 		return campaignapp.CreateParticipantResult{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -152,7 +152,7 @@ func (g GRPCGateway) CreateParticipant(ctx context.Context, campaignID string, i
 		return campaignapp.CreateParticipantResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_access_value_is_invalid", "campaign access value is invalid")
 	}
 
-	resp, err := g.Mutation.Participant.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+	resp, err := g.mutation.Participant.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
 		CampaignId:     campaignID,
 		Name:           name,
 		Role:           role,
@@ -173,8 +173,8 @@ func (g GRPCGateway) CreateParticipant(ctx context.Context, campaignID string, i
 }
 
 // UpdateParticipant applies this package workflow transition.
-func (g GRPCGateway) UpdateParticipant(ctx context.Context, campaignID string, input campaignapp.UpdateParticipantInput) error {
-	if g.Mutation.Participant == nil {
+func (g participantMutationGateway) UpdateParticipant(ctx context.Context, campaignID string, input campaignapp.UpdateParticipantInput) error {
+	if g.mutation.Participant == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.participant_service_client_is_not_configured", "participant service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -205,7 +205,7 @@ func (g GRPCGateway) UpdateParticipant(ctx context.Context, campaignID string, i
 		request.CampaignAccess = access
 	}
 
-	_, err := g.Mutation.Participant.UpdateParticipant(ctx, request)
+	_, err := g.mutation.Participant.UpdateParticipant(ctx, request)
 	if err != nil {
 		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,

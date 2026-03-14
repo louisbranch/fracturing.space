@@ -11,6 +11,7 @@ import (
 
 	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -18,7 +19,7 @@ import (
 func TestRecoveryPageURLAndLoginPageURLPreserveSafeState(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{})
+	h := newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{})
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?pending_id=pending-1&next=%2Finvite%2Finv-1", nil)
 
 	if got := h.recoveryPageURL(req); got != routepath.LoginRecovery+"?next=%2Finvite%2Finv-1&pending_id=pending-1" {
@@ -32,7 +33,7 @@ func TestRecoveryPageURLAndLoginPageURLPreserveSafeState(t *testing.T) {
 func TestRecoveryPageURLRejectsUnsafeNext(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{})
+	h := newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{})
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?pending_id=pending-1&next=https://evil.example/app", nil)
 
 	if got := h.nextPath(req); got != "" {
@@ -46,7 +47,7 @@ func TestRecoveryPageURLRejectsUnsafeNext(t *testing.T) {
 func TestHandleAuthLoginRedirectsToLoginWithSafeNext(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{})
+	h := newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{})
 	req := httptest.NewRequest(http.MethodGet, routepath.AuthLogin+"?pending_id=pending-1&next=%2Finvite%2Finv-1", nil)
 	rr := httptest.NewRecorder()
 
@@ -63,7 +64,7 @@ func TestHandleAuthLoginRedirectsToLoginWithSafeNext(t *testing.T) {
 func TestHandleRecoveryCodeAcknowledgeRequiresSameOriginAndAcknowledgement(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{})
+	h := newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{})
 
 	forbiddenReq := httptest.NewRequest(http.MethodPost, routepath.LoginRecoveryCodeAcknowledge, strings.NewReader("acknowledged=yes"))
 	forbiddenReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -87,7 +88,7 @@ func TestHandleRecoveryCodeAcknowledgeRequiresSameOriginAndAcknowledgement(t *te
 func TestHandleRecoveryCodeAcknowledgeRedirectsToSafeNext(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{})
+	h := newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{})
 	form := url.Values{}
 	form.Set("acknowledged", "yes")
 	form.Set("next", "/invite/inv-1")
@@ -110,7 +111,13 @@ func TestHandleRecoveryCodeAcknowledgeRedirectsToSafeNext(t *testing.T) {
 func TestRedirectAuthenticatedToAppUsesValidatedNextPath(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(publicauthGatewayStub{}, ""), requestmeta.SchemePolicy{}, func(*http.Request) bool { return true })
+	h := newHandlersFromGateway(publicauthGatewayStub{}, "", requestmeta.SchemePolicy{}, requestresolver.NewPrincipal(
+		nil,
+		func(*http.Request) bool { return true },
+		nil,
+		nil,
+		nil,
+	))
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?next=%2Finvite%2Finv-1", nil)
 	req.AddCookie(&http.Cookie{Name: sessioncookie.Name, Value: "sess-1"})
 	rr := httptest.NewRecorder()

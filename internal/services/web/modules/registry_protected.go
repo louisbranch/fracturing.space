@@ -8,21 +8,22 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
 // defaultProtectedModules returns stable authenticated web modules.
-func defaultProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []module.Module {
-	return buildProtectedModules(deps, res, opts)
+func defaultProtectedModules(deps Dependencies, principal requestresolver.PrincipalResolver, opts ProtectedModuleOptions) []module.Module {
+	return buildProtectedModules(deps, principal, opts)
 }
 
 // buildProtectedModules centralizes protected module ordering while keeping
 // production wiring inside the owning area packages.
 func buildProtectedModules(
 	deps Dependencies,
-	res ModuleResolvers,
+	principal requestresolver.PrincipalResolver,
 	opts ProtectedModuleOptions,
 ) []module.Module {
-	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
+	base := modulehandler.NewBaseFromPrincipal(principal)
 	dashboardSync := dashboardsync.New(deps.DashboardSync.UserHubControlClient, deps.DashboardSync.GameEventClient, nil)
 
 	protected := []module.Module{
@@ -48,23 +49,13 @@ func buildProtectedModules(
 			NotificationClient: deps.Notifications.NotificationClient,
 		}))
 	}
-	protected = append(protected, campaigns.Compose(campaigns.CompositionConfig{
-		Base:                     base,
-		ChatFallbackPort:         opts.ChatFallbackPort,
-		DashboardSync:            dashboardSync,
-		AssetBaseURL:             deps.AssetBaseURL,
-		CampaignClient:           deps.Campaigns.CampaignClient,
-		CommunicationClient:      deps.Campaigns.CommunicationClient,
-		AgentClient:              deps.Campaigns.AgentClient,
-		ParticipantClient:        deps.Campaigns.ParticipantClient,
-		CharacterClient:          deps.Campaigns.CharacterClient,
-		DaggerheartContentClient: deps.Campaigns.DaggerheartContentClient,
-		DaggerheartAssetClient:   deps.Campaigns.DaggerheartAssetClient,
-		SessionClient:            deps.Campaigns.SessionClient,
-		InviteClient:             deps.Campaigns.InviteClient,
-		SocialClient:             deps.Campaigns.SocialClient,
-		AuthClient:               deps.Campaigns.AuthClient,
-		AuthorizationClient:      deps.Campaigns.AuthorizationClient,
-	}))
+	if campaignsModule, ok := campaigns.ComposeProtected(campaigns.ProtectedSurfaceOptions{
+		Base:             base,
+		ChatFallbackPort: opts.ChatFallbackPort,
+		DashboardSync:    dashboardSync,
+		AssetBaseURL:     deps.AssetBaseURL,
+	}, deps.Campaigns); ok {
+		protected = append(protected, campaignsModule)
+	}
 	return protected
 }

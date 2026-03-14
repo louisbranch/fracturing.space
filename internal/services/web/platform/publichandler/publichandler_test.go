@@ -8,6 +8,7 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
 func TestIsViewerSignedInUsesSignedInResolver(t *testing.T) {
@@ -28,6 +29,28 @@ func TestIsViewerSignedInReturnsFalseWithoutSignedInResolver(t *testing.T) {
 	base := NewBase(WithResolveViewer(func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "signed in"} }))
 	if got := base.IsViewerSignedIn(httptest.NewRequest(http.MethodGet, "/", nil)); got {
 		t.Fatalf("IsViewerSignedIn() = %v, want false", got)
+	}
+}
+
+func TestNewBaseFromPrincipalUsesGroupedPrincipalResolver(t *testing.T) {
+	t.Parallel()
+
+	base := NewBaseFromPrincipal(requestresolver.NewPrincipal(
+		nil,
+		func(*http.Request) bool { return true },
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-CA" },
+		func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Louis"} },
+	))
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	if !base.IsViewerSignedIn(req) {
+		t.Fatalf("IsViewerSignedIn() = false, want true")
+	}
+	if got := base.ResolveRequestViewer(req).DisplayName; got != "Louis" {
+		t.Fatalf("ResolveRequestViewer().DisplayName = %q, want %q", got, "Louis")
+	}
+	if got := base.ResolveRequestLanguage(req); got != "en-CA" {
+		t.Fatalf("ResolveRequestLanguage() = %q, want %q", got, "en-CA")
 	}
 }
 

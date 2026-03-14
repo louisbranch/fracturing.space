@@ -9,19 +9,12 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
-
-// RequestResolver resolves viewer and language state from a request.
-// This decouples platform rendering from the module-layer Dependencies type.
-type RequestResolver interface {
-	ResolveRequestViewer(r *http.Request) module.Viewer
-	ResolveRequestLanguage(r *http.Request) string
-}
 
 // ModulePage describes a module page response for both full-page and HTMX flows.
 type ModulePage struct {
@@ -41,7 +34,7 @@ func (emptyComponent) Render(context.Context, io.Writer) error {
 }
 
 // WriteModulePage writes a module page using shared app-shell rendering contracts.
-func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver RequestResolver, page ModulePage) error {
+func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver requestresolver.PageResolver, page ModulePage) error {
 	if w == nil {
 		return nil
 	}
@@ -54,16 +47,8 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver RequestRes
 		fragment = emptyComponent{}
 	}
 
-	var resolveLanguage module.ResolveLanguage
-	if resolver != nil {
-		resolveLanguage = resolver.ResolveRequestLanguage
-	}
-	loc, lang := webi18n.ResolveLocalizer(w, r, resolveLanguage)
+	pageState := requestresolver.ResolveLocalizedPage(w, r, resolver)
 	ctx := httpx.RequestContext(r)
-	viewer := module.Viewer{}
-	if resolver != nil {
-		viewer = resolver.ResolveRequestViewer(r)
-	}
 	var buf bytes.Buffer
 	if httpx.IsHTMXRequest(r) {
 		main := webtemplates.AppMainContentWithLayout(page.Header, page.Layout)
@@ -76,8 +61,16 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver RequestRes
 		return nil
 	}
 
-	toast := resolveFlashToast(w, r, loc, lang)
-	layout := webtemplates.AppLayoutWithMainHeaderAndLayout(page.Title, viewer, page.Header, page.Layout, toast, lang, loc)
+	toast := resolveFlashToast(w, r, pageState.Localizer, pageState.Language)
+	layout := webtemplates.AppLayoutWithMainHeaderAndLayout(
+		page.Title,
+		requestresolver.ResolveViewer(r, resolver),
+		page.Header,
+		page.Layout,
+		toast,
+		pageState.Language,
+		pageState.Localizer,
+	)
 	if err := layout.Render(templ.WithChildren(ctx, fragment), &buf); err != nil {
 		return err
 	}

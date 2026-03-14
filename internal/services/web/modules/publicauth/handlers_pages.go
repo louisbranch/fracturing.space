@@ -54,7 +54,7 @@ func (h handlers) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 
 // handleHealth handles this route in the module transport layer.
 func (h handlers) handleHealth(w http.ResponseWriter, r *http.Request) {
-	_ = httpx.WriteHTML(w, http.StatusOK, h.service.HealthBody())
+	_ = httpx.WriteHTML(w, http.StatusOK, h.pages.HealthBody())
 }
 
 // writeAuthPage centralizes this web behavior in one helper seam.

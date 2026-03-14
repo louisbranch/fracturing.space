@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -15,14 +14,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{}))
+	registerRoutes(nil, newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{}))
 }
 
 func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(publicauthapp.NewService(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), ""), requestmeta.SchemePolicy{}))
+	registerRoutes(mux, newHandlersFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "", requestmeta.SchemePolicy{}))
 
 	tests := []struct {
 		name       string

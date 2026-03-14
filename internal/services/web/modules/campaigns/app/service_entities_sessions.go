@@ -8,14 +8,24 @@ import (
 	"golang.org/x/text/language"
 )
 
+// CampaignSessions centralizes this web behavior in one helper seam.
+func (s sessionReadService) CampaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
+	return s.campaignSessions(ctx, campaignID)
+}
+
+// CampaignSessionReadiness centralizes this web behavior in one helper seam.
+func (s sessionReadService) CampaignSessionReadiness(ctx context.Context, campaignID string, locale language.Tag) (CampaignSessionReadiness, error) {
+	return s.campaignSessionReadiness(ctx, campaignID, locale)
+}
+
 // campaignSessions centralizes this web behavior in one helper seam.
-func (s service) campaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
+func (s sessionReadService) campaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return []CampaignSession{}, nil
 	}
 
-	sessions, err := s.readGateway.CampaignSessions(ctx, campaignID)
+	sessions, err := s.read.CampaignSessions(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +71,7 @@ func (s service) campaignSessions(ctx context.Context, campaignID string) ([]Cam
 }
 
 // campaignSessionReadiness centralizes this web behavior in one helper seam.
-func (s service) campaignSessionReadiness(ctx context.Context, campaignID string, locale language.Tag) (CampaignSessionReadiness, error) {
+func (s sessionReadService) campaignSessionReadiness(ctx context.Context, campaignID string, locale language.Tag) (CampaignSessionReadiness, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return CampaignSessionReadiness{
@@ -70,7 +80,7 @@ func (s service) campaignSessionReadiness(ctx context.Context, campaignID string
 		}, nil
 	}
 
-	readiness, err := s.readGateway.CampaignSessionReadiness(ctx, campaignID, locale)
+	readiness, err := s.read.CampaignSessionReadiness(ctx, campaignID, locale)
 	if err != nil {
 		return CampaignSessionReadiness{}, err
 	}
@@ -102,46 +112,5 @@ func (s service) campaignSessionReadiness(ctx context.Context, campaignID string
 	if normalized.Ready {
 		normalized.Blockers = []CampaignSessionReadinessBlocker{}
 	}
-	return normalized, nil
-}
-
-// campaignInvites centralizes this web behavior in one helper seam.
-func (s service) campaignInvites(ctx context.Context, campaignID string) ([]CampaignInvite, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return []CampaignInvite{}, nil
-	}
-
-	invites, err := s.readGateway.CampaignInvites(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if len(invites) == 0 {
-		return []CampaignInvite{}, nil
-	}
-
-	normalized := make([]CampaignInvite, 0, len(invites))
-	for _, invite := range invites {
-		status := strings.TrimSpace(invite.Status)
-		if status == "" {
-			status = "Unspecified"
-		}
-		normalized = append(normalized, CampaignInvite{
-			ID:                strings.TrimSpace(invite.ID),
-			ParticipantID:     strings.TrimSpace(invite.ParticipantID),
-			ParticipantName:   strings.TrimSpace(invite.ParticipantName),
-			RecipientUserID:   strings.TrimSpace(invite.RecipientUserID),
-			RecipientUsername: strings.TrimSpace(invite.RecipientUsername),
-			HasRecipient:      invite.HasRecipient || strings.TrimSpace(invite.RecipientUserID) != "",
-			Status:            status,
-		})
-	}
-
-	sort.SliceStable(normalized, func(i, j int) bool {
-		leftID := strings.TrimSpace(normalized[i].ID)
-		rightID := strings.TrimSpace(normalized[j].ID)
-		return leftID < rightID
-	})
-
 	return normalized, nil
 }

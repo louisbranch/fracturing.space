@@ -9,21 +9,21 @@ import (
 )
 
 // CanCampaignAction centralizes this web behavior in one helper seam.
-func (g GRPCGateway) CanCampaignAction(
+func (g authorizationGateway) CanCampaignAction(
 	ctx context.Context,
 	campaignID string,
 	action campaignapp.AuthorizationAction,
 	resource campaignapp.AuthorizationResource,
 	target *campaignapp.AuthorizationTarget,
 ) (campaignapp.AuthorizationDecision, error) {
-	if g.Authorization.Client == nil {
+	if g.authorization.Client == nil {
 		return campaignapp.AuthorizationDecision{}, nil
 	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return campaignapp.AuthorizationDecision{}, nil
 	}
-	resp, err := g.Authorization.Client.Can(ctx, &statev1.CanRequest{
+	resp, err := g.authorization.Client.Can(ctx, &statev1.CanRequest{
 		CampaignId: campaignID,
 		Action:     mapCampaignAuthorizationActionToProto(action),
 		Resource:   mapCampaignAuthorizationResourceToProto(resource),
@@ -45,12 +45,12 @@ func (g GRPCGateway) CanCampaignAction(
 }
 
 // BatchCanCampaignAction centralizes this web behavior in one helper seam.
-func (g GRPCGateway) BatchCanCampaignAction(
+func (g batchAuthorizationGateway) BatchCanCampaignAction(
 	ctx context.Context,
 	campaignID string,
 	checks []campaignapp.AuthorizationCheck,
 ) ([]campaignapp.AuthorizationDecision, error) {
-	if g.Authorization.Client == nil {
+	if g.authorization.Client == nil {
 		return nil, nil
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -70,7 +70,7 @@ func (g GRPCGateway) BatchCanCampaignAction(
 		})
 	}
 
-	resp, err := g.Authorization.Client.BatchCan(ctx, &statev1.BatchCanRequest{Checks: protoChecks})
+	resp, err := g.authorization.Client.BatchCan(ctx, &statev1.BatchCanRequest{Checks: protoChecks})
 	if err != nil {
 		return nil, err
 	}

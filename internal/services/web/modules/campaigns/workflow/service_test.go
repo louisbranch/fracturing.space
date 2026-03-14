@@ -15,18 +15,16 @@ import (
 func TestServiceLoadPageAssemblesCreationView(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&workflowAppStub{
-		data: campaignapp.CampaignCharacterCreationData{
-			Progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 2},
-			Catalog: campaignapp.CampaignCharacterCreationCatalog{
-				Classes: []campaignapp.CatalogClass{{ID: "warrior", Name: "Warrior"}},
-			},
-			Profile: campaignapp.CampaignCharacterCreationProfile{
-				CharacterName: "Nox",
-				ClassID:       "warrior",
-			},
+	svc := NewPageService(&workflowAppStub{
+		progress: Progress{NextStep: 2},
+		catalog: Catalog{
+			Classes: []Class{{ID: "warrior", Name: "Warrior"}},
 		},
-	}, Registry{campaignapp.GameSystemDaggerheart: testWorkflow{}})
+		profile: Profile{
+			CharacterName: "Nox",
+			ClassID:       "warrior",
+		},
+	}, Registry{GameSystemDaggerheart: testWorkflow{}})
 
 	page, err := svc.LoadPage(context.Background(), "c1", "char-1", language.AmericanEnglish, "Daggerheart")
 	if err != nil {
@@ -47,10 +45,10 @@ func TestServiceApplyStepParsesWorkflowInputAndDelegatesMutation(t *testing.T) {
 	t.Parallel()
 
 	app := &workflowAppStub{
-		progress: campaignapp.CampaignCharacterCreationProgress{NextStep: 3},
+		progress: Progress{NextStep: 3},
 	}
-	svc := NewService(app, Registry{campaignapp.GameSystemDaggerheart: testWorkflow{
-		parsed: &campaignapp.CampaignCharacterCreationStepInput{
+	svc := NewMutationService(app, Registry{GameSystemDaggerheart: testWorkflow{
+		parsed: &StepInput{
 			Details: &campaignapp.CampaignCharacterCreationStepDetails{Description: "done"},
 		},
 	}})
@@ -67,9 +65,9 @@ func TestServiceApplyStepParsesWorkflowInputAndDelegatesMutation(t *testing.T) {
 func TestServiceApplyStepRejectsReadyWorkflow(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&workflowAppStub{
-		progress: campaignapp.CampaignCharacterCreationProgress{Ready: true},
-	}, Registry{campaignapp.GameSystemDaggerheart: testWorkflow{}})
+	svc := NewMutationService(&workflowAppStub{
+		progress: Progress{Ready: true},
+	}, Registry{GameSystemDaggerheart: testWorkflow{}})
 
 	err := svc.ApplyStep(context.Background(), "c1", "char-1", "daggerheart", url.Values{})
 	if err == nil {
@@ -83,7 +81,7 @@ func TestServiceApplyStepRejectsReadyWorkflow(t *testing.T) {
 func TestServiceRejectsUnsupportedWorkflow(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&workflowAppStub{}, nil)
+	svc := NewPageService(&workflowAppStub{}, nil)
 	_, err := svc.LoadPage(context.Background(), "c1", "char-1", language.AmericanEnglish, "unknown")
 	if err == nil {
 		t.Fatalf("LoadPage() error = nil, want invalid input")
@@ -94,24 +92,30 @@ func TestServiceRejectsUnsupportedWorkflow(t *testing.T) {
 }
 
 type workflowAppStub struct {
-	data     campaignapp.CampaignCharacterCreationData
-	dataErr  error
-	progress campaignapp.CampaignCharacterCreationProgress
-	progErr  error
-	applyErr error
-	resetErr error
-	lastStep *campaignapp.CampaignCharacterCreationStepInput
+	progress   Progress
+	progErr    error
+	catalog    Catalog
+	catalogErr error
+	profile    Profile
+	profileErr error
+	applyErr   error
+	resetErr   error
+	lastStep   *StepInput
 }
 
-func (w workflowAppStub) CampaignCharacterCreationData(context.Context, string, string, language.Tag) (campaignapp.CampaignCharacterCreationData, error) {
-	return w.data, w.dataErr
-}
-
-func (w workflowAppStub) CampaignCharacterCreationProgress(context.Context, string, string) (campaignapp.CampaignCharacterCreationProgress, error) {
+func (w workflowAppStub) CampaignCharacterCreationProgress(context.Context, string, string) (Progress, error) {
 	return w.progress, w.progErr
 }
 
-func (w *workflowAppStub) ApplyCharacterCreationStep(_ context.Context, _ string, _ string, step *campaignapp.CampaignCharacterCreationStepInput) error {
+func (w workflowAppStub) CampaignCharacterCreationCatalog(context.Context, language.Tag) (Catalog, error) {
+	return w.catalog, w.catalogErr
+}
+
+func (w workflowAppStub) CampaignCharacterCreationProfile(context.Context, string, string) (Profile, error) {
+	return w.profile, w.profileErr
+}
+
+func (w *workflowAppStub) ApplyCharacterCreationStep(_ context.Context, _ string, _ string, step *StepInput) error {
 	w.lastStep = step
 	return w.applyErr
 }
@@ -121,34 +125,26 @@ func (w workflowAppStub) ResetCharacterCreationWorkflow(context.Context, string,
 }
 
 type testWorkflow struct {
-	parsed *campaignapp.CampaignCharacterCreationStepInput
+	parsed *StepInput
 }
 
-func (w testWorkflow) AssembleCatalog(
-	progress campaignapp.CampaignCharacterCreationProgress,
-	catalog campaignapp.CampaignCharacterCreationCatalog,
-	profile campaignapp.CampaignCharacterCreationProfile,
-) campaignapp.CampaignCharacterCreation {
-	return campaignapp.CampaignCharacterCreation{
-		Progress: progress,
-		Profile:  profile,
-		Classes:  append([]campaignapp.CatalogClass(nil), catalog.Classes...),
-	}
-}
-
-func (w testWorkflow) CreationView(creation campaignapp.CampaignCharacterCreation) campaignrender.CampaignCharacterCreationView {
+func (w testWorkflow) BuildView(
+	progress Progress,
+	catalog Catalog,
+	profile Profile,
+) campaignrender.CampaignCharacterCreationView {
 	return campaignrender.CampaignCharacterCreationView{
-		NextStep: creation.Progress.NextStep,
-		ClassID:  creation.Profile.ClassID,
+		NextStep: progress.NextStep,
+		ClassID:  profile.ClassID,
 		Classes: []campaignrender.CampaignCreationClassView{{
-			ID: creation.Classes[0].ID,
+			ID: catalog.Classes[0].ID,
 		}},
 	}
 }
 
-func (w testWorkflow) ParseStepInput(url.Values, int32) (*campaignapp.CampaignCharacterCreationStepInput, error) {
+func (w testWorkflow) ParseStepInput(url.Values, int32) (*StepInput, error) {
 	if w.parsed == nil {
-		return &campaignapp.CampaignCharacterCreationStepInput{
+		return &StepInput{
 			Details: &campaignapp.CampaignCharacterCreationStepDetails{Description: "parsed"},
 		}, nil
 	}

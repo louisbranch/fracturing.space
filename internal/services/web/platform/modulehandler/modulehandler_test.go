@@ -11,9 +11,18 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/language"
 )
+
+func testPrincipalResolver(
+	resolveUserID module.ResolveUserID,
+	resolveLanguage module.ResolveLanguage,
+	resolveViewer module.ResolveViewer,
+) requestresolver.Principal {
+	return requestresolver.NewPrincipal(nil, nil, resolveUserID, resolveLanguage, resolveViewer)
+}
 
 func TestNewBaseExtractsResolvers(t *testing.T) {
 	t.Parallel()
@@ -36,11 +45,66 @@ func TestNewBaseExtractsResolvers(t *testing.T) {
 	}
 }
 
+func TestNewBaseReturnsZeroValuesWhenResolversUnset(t *testing.T) {
+	t.Parallel()
+
+	base := NewBase(nil, nil, nil)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+
+	if got := base.RequestUserID(req); got != "" {
+		t.Fatalf("RequestUserID() = %q, want empty", got)
+	}
+	if got := base.ResolveRequestLanguage(req); got != "" {
+		t.Fatalf("ResolveRequestLanguage() = %q, want empty", got)
+	}
+	if got := base.ResolveRequestViewer(req); got != (module.Viewer{}) {
+		t.Fatalf("ResolveRequestViewer() = %+v, want zero Viewer", got)
+	}
+}
+
+func TestNewBaseFromPrincipalExtractsResolvers(t *testing.T) {
+	t.Parallel()
+
+	base := NewBaseFromPrincipal(testPrincipalResolver(
+		func(*http.Request) string { return "user-2" },
+		func(*http.Request) string { return "fr" },
+		func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Grace"} },
+	))
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+
+	if got := base.RequestUserID(r); got != "user-2" {
+		t.Fatalf("RequestUserID() = %q, want %q", got, "user-2")
+	}
+	if got := base.ResolveRequestLanguage(r); got != "fr" {
+		t.Fatalf("ResolveRequestLanguage() = %q, want %q", got, "fr")
+	}
+	if got := base.ResolveRequestViewer(r).DisplayName; got != "Grace" {
+		t.Fatalf("ResolveRequestViewer().DisplayName = %q, want %q", got, "Grace")
+	}
+}
+
+func TestNewBaseFromPrincipalReturnsZeroValuesWhenNil(t *testing.T) {
+	t.Parallel()
+
+	base := NewBaseFromPrincipal(nil)
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+
+	if got := base.RequestUserID(r); got != "" {
+		t.Fatalf("RequestUserID() = %q, want empty", got)
+	}
+	if got := base.ResolveRequestLanguage(r); got != "" {
+		t.Fatalf("ResolveRequestLanguage() = %q, want empty", got)
+	}
+	if got := base.ResolveRequestViewer(r); got != (module.Viewer{}) {
+		t.Fatalf("ResolveRequestViewer() = %+v, want zero Viewer", got)
+	}
+}
+
 func TestResolveRequestViewerDelegatesToResolver(t *testing.T) {
 	t.Parallel()
 
 	want := module.Viewer{DisplayName: "Test"}
-	base := NewBase(nil, nil, func(*http.Request) module.Viewer { return want })
+	base := NewBaseFromPrincipal(testPrincipalResolver(nil, nil, func(*http.Request) module.Viewer { return want }))
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	if got := base.ResolveRequestViewer(r); got != want {
@@ -51,7 +115,7 @@ func TestResolveRequestViewerDelegatesToResolver(t *testing.T) {
 func TestResolveRequestViewerReturnsZeroWhenNil(t *testing.T) {
 	t.Parallel()
 
-	base := NewBase(nil, nil, nil)
+	base := NewBaseFromPrincipal(testPrincipalResolver(nil, nil, nil))
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	if got := base.ResolveRequestViewer(r); got != (module.Viewer{}) {
 		t.Fatalf("ResolveRequestViewer() = %+v, want zero Viewer", got)
@@ -61,7 +125,7 @@ func TestResolveRequestViewerReturnsZeroWhenNil(t *testing.T) {
 func TestResolveRequestLanguageDelegatesToResolver(t *testing.T) {
 	t.Parallel()
 
-	base := NewBase(nil, func(*http.Request) string { return "en" }, nil)
+	base := NewBaseFromPrincipal(testPrincipalResolver(nil, func(*http.Request) string { return "en" }, nil))
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	if got := base.ResolveRequestLanguage(r); got != "en" {
@@ -72,7 +136,7 @@ func TestResolveRequestLanguageDelegatesToResolver(t *testing.T) {
 func TestResolveRequestLanguageReturnsEmptyWhenNil(t *testing.T) {
 	t.Parallel()
 
-	base := NewBase(nil, nil, nil)
+	base := NewBaseFromPrincipal(testPrincipalResolver(nil, nil, nil))
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	if got := base.ResolveRequestLanguage(r); got != "" {
 		t.Fatalf("ResolveRequestLanguage() = %q, want empty", got)
@@ -83,14 +147,14 @@ func TestRequestUserIDReturnsEmpty(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nil request", func(t *testing.T) {
-		base := NewBase(func(*http.Request) string { return "user-1" }, nil, nil)
+		base := NewBaseFromPrincipal(testPrincipalResolver(func(*http.Request) string { return "user-1" }, nil, nil))
 		if got := base.RequestUserID(nil); got != "" {
 			t.Fatalf("expected empty, got %q", got)
 		}
 	})
 
 	t.Run("nil resolver", func(t *testing.T) {
-		base := NewBase(nil, nil, nil)
+		base := NewBaseFromPrincipal(testPrincipalResolver(nil, nil, nil))
 		r := httptest.NewRequest(http.MethodGet, "/", nil)
 		if got := base.RequestUserID(r); got != "" {
 			t.Fatalf("expected empty, got %q", got)
@@ -101,7 +165,7 @@ func TestRequestUserIDReturnsEmpty(t *testing.T) {
 func TestRequestUserIDTrimsWhitespace(t *testing.T) {
 	t.Parallel()
 
-	base := NewBase(func(*http.Request) string { return "  user-1  " }, nil, nil)
+	base := NewBaseFromPrincipal(testPrincipalResolver(func(*http.Request) string { return "  user-1  " }, nil, nil))
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	if got := base.RequestUserID(r); got != "user-1" {
@@ -112,7 +176,7 @@ func TestRequestUserIDTrimsWhitespace(t *testing.T) {
 func TestRequestContextAndUserIDReturnsContext(t *testing.T) {
 	t.Parallel()
 
-	base := NewBase(func(*http.Request) string { return "user-1" }, nil, nil)
+	base := NewBaseFromPrincipal(testPrincipalResolver(func(*http.Request) string { return "user-1" }, nil, nil))
 
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	ctx, userID := base.RequestContextAndUserID(r)
@@ -144,7 +208,7 @@ func TestNewTestBaseResolversReturnZeroValues(t *testing.T) {
 func TestPageLocalizerUsesResolvedLanguage(t *testing.T) {
 	t.Parallel()
 
-	base := NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil)
+	base := NewBaseFromPrincipal(testPrincipalResolver(nil, func(*http.Request) string { return "pt-BR" }, nil))
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	rr := httptest.NewRecorder()
 
@@ -160,7 +224,7 @@ func TestPageLocalizerUsesResolvedLanguage(t *testing.T) {
 func TestRequestLocaleTagUsesResolvedLanguage(t *testing.T) {
 	t.Parallel()
 
-	base := NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil)
+	base := NewBaseFromPrincipal(testPrincipalResolver(nil, func(*http.Request) string { return "pt-BR" }, nil))
 	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
 	if got := base.RequestLocaleTag(req); got != language.BrazilianPortuguese {
 		t.Fatalf("RequestLocaleTag() = %s, want %s", got, language.BrazilianPortuguese)

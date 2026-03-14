@@ -1673,19 +1673,14 @@ func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 func TestMountCampaignParticipantsFailsClosedWhenParticipantClientMissing(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{})
-	deps := campaigngateway.GRPCGatewayDeps{Read: campaigngateway.GRPCGatewayReadDeps{Campaign: fakeCampaignClient{}}}
-	m = New(configWithGateway(campaigngateway.NewGRPCGateway(deps), modulehandler.NewTestBase(), nil))
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
+	deps := campaigngateway.GRPCGatewayDeps{CatalogRead: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}
+	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
+	_, err := m.Mount()
+	if err == nil {
+		t.Fatalf("expected Mount() validation error")
 	}
-
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipants("c1"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusServiceUnavailable {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusServiceUnavailable)
+	if !strings.Contains(err.Error(), "participant-reads") {
+		t.Fatalf("Mount() error = %v, want participant validation failure", err)
 	}
 }
 
@@ -2054,19 +2049,14 @@ func TestMountCampaignCharactersFailsWhenGatewayReturnsError(t *testing.T) {
 func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{})
-	deps := campaigngateway.GRPCGatewayDeps{Read: campaigngateway.GRPCGatewayReadDeps{Campaign: fakeCampaignClient{}}}
-	m = New(configWithGateway(campaigngateway.NewGRPCGateway(deps), modulehandler.NewTestBase(), nil))
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
+	deps := campaigngateway.GRPCGatewayDeps{CatalogRead: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}
+	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
+	_, err := m.Mount()
+	if err == nil {
+		t.Fatalf("expected Mount() validation error")
 	}
-
-	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusServiceUnavailable {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusServiceUnavailable)
+	if !strings.Contains(err.Error(), "character-reads") {
+		t.Fatalf("Mount() error = %v, want character validation failure", err)
 	}
 }
 

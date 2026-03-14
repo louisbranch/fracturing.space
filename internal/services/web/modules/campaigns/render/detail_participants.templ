@@ -1,0 +1,221 @@
+package render
+
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+)
+
+templ participantsFragment(view ParticipantsPageView, loc Localizer) {
+	<section id="campaign-participants" class="space-y-4">
+		<div class="space-y-4">
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participants-header="true">
+				<div class="card-body">
+					<div class="flex items-center justify-between gap-3">
+						<h2 class="card-title">{ T(loc, "game.participants.title") }</h2>
+						if view.CanManageParticipants {
+							if campaignActionsLocked(view.ActionsLocked) {
+								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+								</div>
+							} else {
+								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignParticipantCreate(view.CampaignID) } data-campaign-participants-add-link="true">{ T(loc, "game.participants.action_add") }</a>
+							}
+						}
+					</div>
+				</div>
+			</div>
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+				if len(view.Participants) == 0 {
+					<p>{ T(loc, "game.participants.empty") }</p>
+				}
+				for _, participant := range view.Participants {
+					<div class={ campaignParticipantCardClass(participant) } data-campaign-participant-card-id={ participant.ID } data-campaign-participant-current-user={ campaignParticipantViewerAttr(participant) }>
+						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0 overflow-hidden">
+							@AppImage(AppImageView{
+								Src:        participant.AvatarURL,
+								Alt:        participant.Name + " avatar",
+								WidthPX:    2,
+								HeightPX:   3,
+								FrameClass: "h-full w-full",
+								ImageClass: "h-full w-full object-cover",
+							})
+						</figure>
+						<div class="card-body gap-2 p-4">
+							<h2 class="card-title" data-campaign-participant-name={ participant.Name }>{ participant.Name }</h2>
+							<dl class="space-y-1 text-sm">
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.participants.field_role") }:</dt>
+									<dd data-campaign-participant-role={ campaignParticipantRoleLabel(loc, participant.Role) }>{ campaignParticipantRoleLabel(loc, participant.Role) }</dd>
+								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.participants.field_access") }:</dt>
+									<dd data-campaign-participant-access={ campaignParticipantAccessLabel(loc, participant.CampaignAccess) }>{ campaignParticipantAccessLabel(loc, participant.CampaignAccess) }</dd>
+								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }:</dt>
+									<dd data-campaign-participant-controller={ campaignParticipantControllerLabel(loc, participant.Controller) }>{ campaignParticipantControllerLabel(loc, participant.Controller) }</dd>
+								</div>
+								<div class="flex gap-2">
+									<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }:</dt>
+									<dd>{ participantPronounsLabel(loc, participant.Pronouns) }</dd>
+								</div>
+							</dl>
+							if participant.CanEdit && campaignParticipantEditURL(view.CampaignID, participant) != "" {
+								<div class="card-actions justify-end">
+									if campaignActionsLocked(view.ActionsLocked) {
+										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+											<button class="btn btn-outline btn-sm" type="button" disabled>{ T(loc, "game.participants.action_edit") }</button>
+										</div>
+									} else {
+										<a class="btn btn-outline btn-sm" href={ campaignParticipantEditURL(view.CampaignID, participant) } data-campaign-participant-edit-link="true">{ T(loc, "game.participants.action_edit") }</a>
+									}
+								</div>
+							}
+						</div>
+					</div>
+				}
+			</div>
+		</div>
+	</section>
+}
+
+templ participantCreateFragment(view ParticipantCreatePageView, loc Localizer) {
+	<section id="campaign-participant-create" class="space-y-4">
+		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-create-page="true">
+			<div class="card-body gap-4 p-4">
+				<h2 class="card-title">{ T(loc, "game.participants.action_add") }</h2>
+				<form method="post" action={ routepath.AppCampaignParticipantCreate(view.CampaignID) } class="space-y-4" data-campaign-participant-create-form="true">
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantCreator.Name }/>
+					</div>
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
+						</label>
+						<select class="select select-bordered w-full" name="role">
+							if view.ParticipantCreator.AllowGMRole {
+								<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantCreator.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+							}
+							<option value="player" selected?={ campaignParticipantRoleCanonical(view.ParticipantCreator.Role) == "player" }>{ campaignParticipantRoleLabel(loc, "player") }</option>
+						</select>
+					</div>
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
+						</label>
+						<select class="select select-bordered w-full" name="campaign_access">
+							for _, option := range view.ParticipantCreator.AccessOptions {
+								<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantCreator.CampaignAccess) == option.Value } disabled?={ !option.Allowed }>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+							}
+						</select>
+					</div>
+					<div class="card-actions justify-end">
+						<button class="btn btn-primary" type="submit" disabled?={ campaignActionsLocked(view.ActionsLocked) } data-campaign-participant-create-submit-disabled={ campaignActionsLocked(view.ActionsLocked) }>{ T(loc, "game.participants.action_add") }</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</section>
+}
+
+templ participantEditFragment(view ParticipantEditPageView, loc Localizer) {
+	<section id="campaign-participant-edit" class="space-y-4">
+		<div class={ "grid grid-cols-1 gap-4", templ.KV("md:grid-cols-2", view.AIBindingEditor.Visible) } data-campaign-participant-edit-layout={ campaignParticipantEditLayout(view.AIBindingEditor) } data-campaign-participant-edit-page="true">
+			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-edit-form="true">
+				<div class="card-body gap-4 p-4">
+					<h2 class="card-title">{ T(loc, "game.participants.action_edit") }</h2>
+					<form method="post" action={ routepath.AppCampaignParticipantEdit(view.CampaignID, view.ParticipantID) } class="space-y-4" data-campaign-participant-edit-submit="true">
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantEditor.Name }/>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
+							</label>
+							if view.ParticipantEditor.RoleReadOnly {
+								<input type="hidden" name="role" value={ campaignParticipantRoleFormValue(view.ParticipantEditor) }/>
+								<select class="select select-bordered w-full" disabled data-campaign-participant-role-readonly="true">
+									<option value="gm" selected>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+								</select>
+							} else {
+								<select class="select select-bordered w-full" name="role">
+									if view.ParticipantEditor.AllowGMRole {
+										<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+									}
+									<option value="player" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "player" }>{ campaignParticipantRoleLabel(loc, "player") }</option>
+								</select>
+							}
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "web.settings.user_profile.field_pronouns") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="pronouns" value={ view.ParticipantEditor.Pronouns } list="campaign-participant-pronouns-presets"/>
+							<datalist id="campaign-participant-pronouns-presets">
+								for _, preset := range campaignParticipantPronounPresets(loc, view.ParticipantEditor) {
+									<option value={ preset }></option>
+								}
+							</datalist>
+						</div>
+						<div class="form-control w-full">
+							<label class="label">
+								<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
+							</label>
+							if view.ParticipantEditor.AccessReadOnly {
+								<input type="hidden" name="campaign_access" value={ campaignParticipantAccessFormValue(view.ParticipantEditor) }/>
+								<select class="select select-bordered w-full" disabled data-campaign-participant-access-readonly="true">
+									for _, option := range view.ParticipantEditor.AccessOptions {
+										<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+									}
+								</select>
+							} else {
+								<select class="select select-bordered w-full" name="campaign_access">
+									for _, option := range view.ParticipantEditor.AccessOptions {
+										<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled?={ !option.Allowed }>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+									}
+								</select>
+							}
+						</div>
+						<div class="card-actions justify-end">
+							<button class="btn btn-primary" type="submit">{ T(loc, "game.participants.submit_save") }</button>
+						</div>
+					</form>
+				</div>
+			</div>
+			if view.AIBindingEditor.Visible {
+				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-ai-binding-form="true">
+					<div class="card-body gap-4 p-4">
+						<h2 class="card-title">{ T(loc, "game.participants.ai_binding.title") }</h2>
+						<form method="post" action={ routepath.AppCampaignAIBinding(view.CampaignID) } class="space-y-4" data-campaign-ai-binding-submit="true">
+							<input type="hidden" name="participant_id" value={ view.ParticipantID }/>
+							<div class="form-control w-full">
+								<label class="label">
+									<span class="label-text">{ T(loc, "game.participants.ai_binding.field_agent") }</span>
+								</label>
+								<select class="select select-bordered w-full" name="ai_agent_id" disabled?={ !view.AIBindingEditor.Enabled || view.AIBindingEditor.Unavailable }>
+									<option value="" selected?={ campaignAIBindingCurrentUnbound(view.AIBindingEditor) }>{ T(loc, "game.participants.ai_binding.placeholder_unbound") }</option>
+									for _, option := range view.AIBindingEditor.Options {
+										<option value={ option.ID } selected?={ option.Selected } disabled?={ !option.Enabled }>{ option.Name }</option>
+									}
+								</select>
+							</div>
+							if view.AIBindingEditor.Unavailable {
+								<p class="text-sm opacity-70" data-campaign-ai-binding-unavailable="true">{ T(loc, "game.participants.ai_binding.unavailable") }</p>
+							} else if !view.AIBindingEditor.Enabled {
+								<p class="text-sm opacity-70" data-campaign-ai-binding-owner-required="true">{ T(loc, "game.participants.ai_binding.owner_required") }</p>
+							}
+							<div class="card-actions justify-end">
+								<button class="btn btn-primary" type="submit" disabled?={ !view.AIBindingEditor.Enabled || view.AIBindingEditor.Unavailable }>{ T(loc, "game.participants.ai_binding.submit_save") }</button>
+							</div>
+						</form>
+					</div>
+				</div>
+			}
+		</div>
+	</section>
+}

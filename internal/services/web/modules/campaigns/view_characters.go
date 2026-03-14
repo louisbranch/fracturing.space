@@ -9,22 +9,27 @@ import (
 func mapCharactersView(items []campaignapp.CampaignCharacter) []campaignrender.CharacterView {
 	result := make([]campaignrender.CharacterView, 0, len(items))
 	for _, c := range items {
-		result = append(result, campaignrender.CharacterView{
-			ID:                      c.ID,
-			Name:                    c.Name,
-			Kind:                    c.Kind,
-			Controller:              c.Controller,
-			ControllerParticipantID: c.ControllerParticipantID,
-			Pronouns:                c.Pronouns,
-			Aliases:                 append([]string(nil), c.Aliases...),
-			AvatarURL:               c.AvatarURL,
-			OwnedByViewer:           c.OwnedByViewer,
-			CanEdit:                 c.CanEdit,
-			EditReasonCode:          c.EditReasonCode,
-			Daggerheart:             mapCharacterDaggerheartSummaryView(c.Daggerheart),
-		})
+		result = append(result, mapCharacterView(c))
 	}
 	return result
+}
+
+// mapCharacterView converts one domain character into its template view state.
+func mapCharacterView(c campaignapp.CampaignCharacter) campaignrender.CharacterView {
+	return campaignrender.CharacterView{
+		ID:                      c.ID,
+		Name:                    c.Name,
+		Kind:                    c.Kind,
+		Controller:              c.Controller,
+		ControllerParticipantID: c.ControllerParticipantID,
+		Pronouns:                c.Pronouns,
+		Aliases:                 append([]string(nil), c.Aliases...),
+		AvatarURL:               c.AvatarURL,
+		OwnedByViewer:           c.OwnedByViewer,
+		CanEdit:                 c.CanEdit,
+		EditReasonCode:          c.EditReasonCode,
+		Daggerheart:             mapCharacterDaggerheartSummaryView(c.Daggerheart),
+	}
 }
 
 // mapCharacterDaggerheartSummaryView copies the optional Daggerheart card

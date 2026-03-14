@@ -1,4 +1,4 @@
-package discovery
+package gateway
 
 import (
 	"context"
@@ -29,11 +29,6 @@ func NewGRPCGateway(client DiscoveryClient) discoveryapp.Gateway {
 		return discoveryapp.NewUnavailableGateway()
 	}
 	return GRPCGateway{client: client}
-}
-
-// IsGatewayHealthy reports whether a discovery gateway is configured and usable.
-func IsGatewayHealthy(gw discoveryapp.Gateway) bool {
-	return discoveryapp.IsGatewayHealthy(gw)
 }
 
 // ListStarterEntries fetches discovery entries and filters to starter intent.
