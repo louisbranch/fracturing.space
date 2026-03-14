@@ -8,6 +8,7 @@ import (
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"google.golang.org/grpc"
 )
 
@@ -17,7 +18,7 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	reg := NewRegistryBuilder()
 	built := reg.Build(RegistryInput{
 		Dependencies:     Dependencies{},
-		Resolvers:        ModuleResolvers{},
+		Principal:        requestresolver.Principal{},
 		PublicOptions:    PublicModuleOptions{},
 		ProtectedOptions: ProtectedModuleOptions{},
 	})
@@ -26,8 +27,8 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if len(public) != 6 {
 		t.Fatalf("public module count = %d, want %d", len(public), 6)
 	}
-	if len(protected) != 3 {
-		t.Fatalf("protected module count = %d, want %d", len(protected), 3)
+	if len(protected) != 2 {
+		t.Fatalf("protected module count = %d, want %d", len(protected), 2)
 	}
 
 	if got := public[0].ID(); got != "public" {
@@ -54,20 +55,17 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if got := protected[1].ID(); got != "settings" {
 		t.Fatalf("default protected module[1] id = %q, want %q", got, "settings")
 	}
-	if got := protected[2].ID(); got != "campaigns" {
-		t.Fatalf("default protected module[2] id = %q, want %q", got, "campaigns")
-	}
 }
 
 func TestDefaultProtectedModulesDelegatesToBuilder(t *testing.T) {
 	t.Parallel()
 
 	deps := Dependencies{}
-	resolvers := ModuleResolvers{}
+	principal := requestresolver.Principal{}
 	opts := ProtectedModuleOptions{}
 
-	modules := defaultProtectedModules(deps, resolvers, opts)
-	builtModules := buildProtectedModules(deps, resolvers, opts)
+	modules := defaultProtectedModules(deps, principal, opts)
+	builtModules := buildProtectedModules(deps, principal, opts)
 	if len(modules) != len(builtModules) {
 		t.Fatalf("defaultProtectedModules len = %d, want %d", len(modules), len(builtModules))
 	}
@@ -84,7 +82,7 @@ func TestModulesHaveUniquePrefixes(t *testing.T) {
 	reg := NewRegistryBuilder()
 	built := reg.Build(RegistryInput{
 		Dependencies:     Dependencies{},
-		Resolvers:        ModuleResolvers{},
+		Principal:        requestresolver.Principal{},
 		PublicOptions:    PublicModuleOptions{},
 		ProtectedOptions: ProtectedModuleOptions{},
 	})
@@ -110,15 +108,15 @@ func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 	reg := NewRegistryBuilder()
 	built := reg.Build(RegistryInput{
 		Dependencies:     Dependencies{},
-		Resolvers:        ModuleResolvers{},
+		Principal:        requestresolver.Principal{},
 		PublicOptions:    PublicModuleOptions{},
 		ProtectedOptions: ProtectedModuleOptions{},
 	})
 	if len(built.Public) != 6 {
 		t.Fatalf("public module count = %d, want 6", len(built.Public))
 	}
-	if len(built.Protected) != 3 {
-		t.Fatalf("protected module count = %d, want 3", len(built.Protected))
+	if len(built.Protected) != 2 {
+		t.Fatalf("protected module count = %d, want 2", len(built.Protected))
 	}
 }
 
@@ -132,15 +130,40 @@ func TestRegistryBuildIncludesNotificationsWhenClientConfigured(t *testing.T) {
 				NotificationClient: stubNotificationClient{},
 			},
 		},
-		Resolvers:        ModuleResolvers{},
+		Principal:        requestresolver.Principal{},
 		PublicOptions:    PublicModuleOptions{},
 		ProtectedOptions: ProtectedModuleOptions{},
 	})
-	if len(built.Protected) != 4 {
-		t.Fatalf("protected module count = %d, want 4", len(built.Protected))
+	if len(built.Protected) != 3 {
+		t.Fatalf("protected module count = %d, want 3", len(built.Protected))
 	}
 	if got := built.Protected[2].ID(); got != "notifications" {
 		t.Fatalf("protected module[2] id = %q, want %q", got, "notifications")
+	}
+}
+
+func TestRegistryBuildIncludesCampaignsWhenDependencySetIsComplete(t *testing.T) {
+	t.Parallel()
+
+	conn := &grpc.ClientConn{}
+	deps := NewDependencies("https://cdn.example.com/assets")
+	BindAuthDependency(&deps, conn)
+	BindSocialDependency(&deps, conn)
+	BindGameDependency(&deps, conn)
+	BindAIDependency(&deps, conn)
+
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
+		Dependencies:     deps,
+		Principal:        requestresolver.Principal{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
+	if len(built.Protected) != 3 {
+		t.Fatalf("protected module count = %d, want 3", len(built.Protected))
+	}
+	if got := built.Protected[2].ID(); got != "campaigns" {
+		t.Fatalf("protected module[2] id = %q, want %q", got, "campaigns")
 	}
 }
 

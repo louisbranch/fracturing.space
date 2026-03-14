@@ -6,12 +6,12 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/imagecdn"
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
 
 // CreationView maps the domain creation model to the template view type.
-func (w Workflow) CreationView(creation campaignapp.CampaignCharacterCreation) campaignrender.CampaignCharacterCreationView {
+func (w Workflow) CreationView(creation catalogCreation) campaignrender.CampaignCharacterCreationView {
 	view := newCreationView(creation)
 	view.Steps = mapCreationSteps(creation.Progress.Steps)
 
@@ -39,7 +39,7 @@ type domainView struct {
 }
 
 // domainLookupByID builds domain metadata lookup used across class/card mapping.
-func domainLookupByID(domains []campaignapp.CatalogDomain) map[string]domainView {
+func domainLookupByID(domains []campaignworkflow.Domain) map[string]domainView {
 	domainByID := make(map[string]domainView, len(domains))
 	for _, domain := range domains {
 		domainID := strings.TrimSpace(domain.ID)
@@ -59,7 +59,7 @@ func domainLookupByID(domains []campaignapp.CatalogDomain) map[string]domainView
 }
 
 // newCreationView initializes template view state from normalized creation data.
-func newCreationView(creation campaignapp.CampaignCharacterCreation) campaignrender.CampaignCharacterCreationView {
+func newCreationView(creation catalogCreation) campaignrender.CampaignCharacterCreationView {
 	return campaignrender.CampaignCharacterCreationView{
 		Ready:                creation.Progress.Ready,
 		NextStep:             creation.Progress.NextStep,
@@ -179,7 +179,7 @@ func dedupeNonEmptyURLs(urls []string) []string {
 }
 
 // mapCreationExperiences maps profile experiences to template view rows.
-func mapCreationExperiences(experiences []campaignapp.CampaignCharacterCreationExperience) []campaignrender.CampaignCreationExperienceView {
+func mapCreationExperiences(experiences []campaignworkflow.Experience) []campaignrender.CampaignCreationExperienceView {
 	mapped := make([]campaignrender.CampaignCreationExperienceView, 0, len(experiences))
 	for _, exp := range experiences {
 		mapped = append(mapped, campaignrender.CampaignCreationExperienceView{
@@ -191,7 +191,7 @@ func mapCreationExperiences(experiences []campaignapp.CampaignCharacterCreationE
 }
 
 // mapCreationSteps maps progress step state to template view rows.
-func mapCreationSteps(steps []campaignapp.CampaignCharacterCreationStep) []campaignrender.CampaignCharacterCreationStepView {
+func mapCreationSteps(steps []campaignworkflow.Step) []campaignrender.CampaignCharacterCreationStepView {
 	mapped := make([]campaignrender.CampaignCharacterCreationStepView, 0, len(steps))
 	for _, step := range steps {
 		mapped = append(mapped, campaignrender.CampaignCharacterCreationStepView{
@@ -212,7 +212,7 @@ func creationImageCDN(assetBaseURL string) imagecdn.ImageCDN {
 }
 
 // mapCreationClasses maps class catalog entries including derived domain metadata.
-func mapCreationClasses(classes []campaignapp.CatalogClass, domainByID map[string]domainView, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationClassView {
+func mapCreationClasses(classes []campaignworkflow.Class, domainByID map[string]domainView, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationClassView {
 	mapped := make([]campaignrender.CampaignCreationClassView, 0, len(classes))
 	for _, class := range classes {
 		domainNames, domainWatermarks := mapClassDomains(class.DomainIDs, domainByID)
@@ -257,7 +257,7 @@ func mapClassDomains(domainIDs []string, domainByID map[string]domainView) ([]st
 }
 
 // mapCreationSubclasses maps subclass catalog entries to template view rows.
-func mapCreationSubclasses(subclasses []campaignapp.CatalogSubclass, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationSubclassView {
+func mapCreationSubclasses(subclasses []campaignworkflow.Subclass, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationSubclassView {
 	mapped := make([]campaignrender.CampaignCreationSubclassView, 0, len(subclasses))
 	for _, subclass := range subclasses {
 		mapped = append(mapped, campaignrender.CampaignCreationSubclassView{
@@ -274,7 +274,7 @@ func mapCreationSubclasses(subclasses []campaignapp.CatalogSubclass, cdn imagecd
 
 // mapCreationHeritages maps ancestry/community catalogs with resolved image URLs.
 func mapCreationHeritages(
-	heritages []campaignapp.CatalogHeritage,
+	heritages []campaignworkflow.Heritage,
 	entityType string,
 	assetType string,
 	cdn imagecdn.ImageCDN,
@@ -292,7 +292,7 @@ func mapCreationHeritages(
 }
 
 // mapFeatures maps catalog features to template feature rows.
-func mapFeatures(features []campaignapp.CatalogFeature) []campaignrender.CampaignCreationClassFeatureView {
+func mapFeatures(features []campaignworkflow.Feature) []campaignrender.CampaignCreationClassFeatureView {
 	mapped := make([]campaignrender.CampaignCreationClassFeatureView, 0, len(features))
 	for _, feature := range features {
 		mapped = append(mapped, mapFeature(feature))
@@ -301,7 +301,7 @@ func mapFeatures(features []campaignapp.CatalogFeature) []campaignrender.Campaig
 }
 
 // mapFeature maps one catalog feature to a template feature row.
-func mapFeature(feature campaignapp.CatalogFeature) campaignrender.CampaignCreationClassFeatureView {
+func mapFeature(feature campaignworkflow.Feature) campaignrender.CampaignCreationClassFeatureView {
 	return campaignrender.CampaignCreationClassFeatureView{
 		Name:        feature.Name,
 		Description: feature.Description,
@@ -309,7 +309,7 @@ func mapFeature(feature campaignapp.CatalogFeature) campaignrender.CampaignCreat
 }
 
 // mapCreationWeapons maps weapon catalog entries to template rows.
-func mapCreationWeapons(weapons []campaignapp.CatalogWeapon, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationWeaponView {
+func mapCreationWeapons(weapons []campaignworkflow.Weapon, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationWeaponView {
 	mapped := make([]campaignrender.CampaignCreationWeaponView, 0, len(weapons))
 	for _, weapon := range weapons {
 		imageURL := strings.TrimSpace(weapon.Illustration.URL)
@@ -330,7 +330,7 @@ func mapCreationWeapons(weapons []campaignapp.CatalogWeapon, cdn imagecdn.ImageC
 }
 
 // mapCreationArmor maps armor catalog entries to template rows.
-func mapCreationArmor(items []campaignapp.CatalogArmor, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationArmorView {
+func mapCreationArmor(items []campaignworkflow.Armor, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationArmorView {
 	mapped := make([]campaignrender.CampaignCreationArmorView, 0, len(items))
 	for _, item := range items {
 		imageURL := strings.TrimSpace(item.Illustration.URL)
@@ -350,7 +350,7 @@ func mapCreationArmor(items []campaignapp.CatalogArmor, cdn imagecdn.ImageCDN) [
 }
 
 // mapCreationItems maps item catalog entries to template rows.
-func mapCreationItems(items []campaignapp.CatalogItem, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationItemView {
+func mapCreationItems(items []campaignworkflow.Item, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationItemView {
 	mapped := make([]campaignrender.CampaignCreationItemView, 0, len(items))
 	for _, item := range items {
 		imageURL := strings.TrimSpace(item.Illustration.URL)
@@ -368,7 +368,7 @@ func mapCreationItems(items []campaignapp.CatalogItem, cdn imagecdn.ImageCDN) []
 }
 
 // mapCreationDomainCards maps domain-card entries to template rows.
-func mapCreationDomainCards(cards []campaignapp.CatalogDomainCard, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationDomainCardView {
+func mapCreationDomainCards(cards []campaignworkflow.DomainCard, cdn imagecdn.ImageCDN) []campaignrender.CampaignCreationDomainCardView {
 	mapped := make([]campaignrender.CampaignCreationDomainCardView, 0, len(cards))
 	for _, card := range cards {
 		imageURL := strings.TrimSpace(card.Illustration.URL)

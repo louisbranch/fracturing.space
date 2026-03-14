@@ -7,9 +7,9 @@ import (
 
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -19,26 +19,25 @@ import (
 // handlers groups public invite HTTP actions around one service dependency set.
 type handlers struct {
 	publichandler.Base
-	service       inviteapp.Service
-	requestMeta   requestmeta.SchemePolicy
-	resolveUserID func(*http.Request) string
-	sync          DashboardSync
+	service     inviteapp.Service
+	requestMeta requestmeta.SchemePolicy
+	principal   requestresolver.PrincipalResolver
+	sync        DashboardSync
 }
 
 // newHandlers assembles the invite transport surface from explicit dependencies.
 func newHandlers(
 	s inviteapp.Service,
-	base publichandler.Base,
+	principal requestresolver.PrincipalResolver,
 	policy requestmeta.SchemePolicy,
-	resolveUserID func(*http.Request) string,
 	sync DashboardSync,
 ) handlers {
 	return handlers{
-		Base:          base,
-		service:       s,
-		requestMeta:   policy,
-		resolveUserID: resolveUserID,
-		sync:          sync,
+		Base:        publichandler.NewBaseFromPrincipal(principal),
+		service:     s,
+		requestMeta: policy,
+		principal:   principal,
+		sync:        sync,
 	}
 }
 
@@ -109,33 +108,30 @@ func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 
 // renderInvitePage applies the public shell layout around the invite landing view.
 func (h handlers) renderInvitePage(w http.ResponseWriter, r *http.Request, page inviteapp.InvitePage) {
-	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
+	requestPage := requestresolver.ResolveLocalizedPage(w, r, nil)
 	h.WritePublicPage(
 		w,
 		r,
 		page.Invite.CampaignName,
-		webtemplates.T(loc, "layout.meta_description"),
-		lang,
+		webtemplates.T(requestPage.Localizer, "layout.meta_description"),
+		requestPage.Language,
 		http.StatusOK,
-		PublicInvitePage(mapPublicInviteView(page), loc),
+		PublicInvitePage(mapPublicInviteView(page), requestPage.Localizer),
 	)
 }
 
 // userID resolves the signed-in viewer when the invite transport is mounted in web.
 func (h handlers) userID(r *http.Request) string {
-	if h.resolveUserID == nil {
+	if h.principal == nil {
 		return ""
 	}
-	return strings.TrimSpace(h.resolveUserID(r))
+	return strings.TrimSpace(h.principal.ResolveUserID(r))
 }
 
 // allowMutation applies the standard cookie-backed same-origin rule to the
 // public invite mutation endpoints without blocking anonymous auth redirects.
 func (h handlers) allowMutation(r *http.Request) bool {
-	if _, ok := sessioncookie.Read(r); !ok {
-		return true
-	}
-	return requestmeta.HasSameOriginProofWithPolicy(r, h.requestMeta)
+	return sessioncookie.AllowsMutationWithPolicy(r, h.requestMeta)
 }
 
 // loginRedirectForInvite keeps invite URLs sticky across anonymous auth entrypoints.

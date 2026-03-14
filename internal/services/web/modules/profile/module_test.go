@@ -9,6 +9,7 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -133,9 +134,15 @@ func mountProfileModule(
 	t.Helper()
 
 	mount, err := New(Config{
-		Gateway:         gateway,
-		AssetBaseURL:    assetBaseURL,
-		ResolveSignedIn: resolveSignedIn,
+		Gateway:      gateway,
+		AssetBaseURL: assetBaseURL,
+		Principal: requestresolver.NewPrincipal(
+			nil,
+			resolveSignedIn,
+			nil,
+			nil,
+			nil,
+		),
 	}).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

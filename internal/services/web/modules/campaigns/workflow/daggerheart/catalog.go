@@ -4,16 +4,26 @@ import (
 	"sort"
 	"strings"
 
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
 
-// AssembleCatalog builds the Daggerheart-specific catalog view from generic
+// BuildView maps explicit workflow inputs directly to the render view contract.
+func (w Workflow) BuildView(
+	progress campaignworkflow.Progress,
+	catalog campaignworkflow.Catalog,
+	profile campaignworkflow.Profile,
+) campaignrender.CampaignCharacterCreationView {
+	return w.CreationView(w.assembleCatalog(progress, catalog, profile))
+}
+
+// assembleCatalog builds the Daggerheart-specific catalog state from generic
 // gateway data (progress, catalog, profile).
-func (Workflow) AssembleCatalog(
-	progress campaignapp.CampaignCharacterCreationProgress,
-	catalog campaignapp.CampaignCharacterCreationCatalog,
-	profile campaignapp.CampaignCharacterCreationProfile,
-) campaignapp.CampaignCharacterCreation {
+func (Workflow) assembleCatalog(
+	progress campaignworkflow.Progress,
+	catalog campaignworkflow.Catalog,
+	profile campaignworkflow.Profile,
+) catalogCreation {
 	creation := buildCatalogCreation(progress, profile)
 	var domainNameByID map[string]string
 	creation.Domains, domainNameByID = buildDomains(catalog.Domains)

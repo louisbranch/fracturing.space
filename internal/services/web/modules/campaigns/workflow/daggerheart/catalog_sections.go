@@ -4,12 +4,12 @@ import (
 	"sort"
 	"strings"
 
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
 
 // buildDomains normalizes domain entries and returns lookup data for card labeling.
-func buildDomains(domains []campaignapp.CatalogDomain) ([]campaignapp.CatalogDomain, map[string]string) {
-	result := make([]campaignapp.CatalogDomain, 0, len(domains))
+func buildDomains(domains []campaignworkflow.Domain) ([]campaignworkflow.Domain, map[string]string) {
+	result := make([]campaignworkflow.Domain, 0, len(domains))
 	domainNameByID := make(map[string]string, len(domains))
 	for _, domain := range domains {
 		domainID := strings.TrimSpace(domain.ID)
@@ -21,20 +21,20 @@ func buildDomains(domains []campaignapp.CatalogDomain) ([]campaignapp.CatalogDom
 			domainName = domainID
 		}
 		domainNameByID[domainID] = domainName
-		result = append(result, campaignapp.CatalogDomain{
+		result = append(result, campaignworkflow.Domain{
 			ID:           domainID,
 			Name:         domainName,
 			Illustration: domain.Illustration,
 			Icon:         domain.Icon,
 		})
 	}
-	sortByName(result, func(d campaignapp.CatalogDomain) string { return d.Name }, func(d campaignapp.CatalogDomain) string { return d.ID })
+	sortByName(result, func(d campaignworkflow.Domain) string { return d.Name }, func(d campaignworkflow.Domain) string { return d.ID })
 	return result, domainNameByID
 }
 
 // buildClasses normalizes classes and returns allowed-domain sets keyed by class ID.
-func buildClasses(classes []campaignapp.CatalogClass) ([]campaignapp.CatalogClass, map[string]map[string]struct{}) {
-	result := make([]campaignapp.CatalogClass, 0, len(classes))
+func buildClasses(classes []campaignworkflow.Class) ([]campaignworkflow.Class, map[string]map[string]struct{}) {
+	result := make([]campaignworkflow.Class, 0, len(classes))
 	classDomainsByID := make(map[string]map[string]struct{}, len(classes))
 	for _, class := range classes {
 		classID := strings.TrimSpace(class.ID)
@@ -56,13 +56,13 @@ func buildClasses(classes []campaignapp.CatalogClass) ([]campaignapp.CatalogClas
 			domains[trimmedDomainID] = struct{}{}
 		}
 		classDomainsByID[classID] = domains
-		result = append(result, campaignapp.CatalogClass{
+		result = append(result, campaignworkflow.Class{
 			ID:              classID,
 			Name:            className,
 			DomainIDs:       domainIDs,
 			StartingHP:      class.StartingHP,
 			StartingEvasion: class.StartingEvasion,
-			HopeFeature: campaignapp.CatalogFeature{
+			HopeFeature: campaignworkflow.Feature{
 				Name:        strings.TrimSpace(class.HopeFeature.Name),
 				Description: strings.TrimSpace(class.HopeFeature.Description),
 			},
@@ -71,13 +71,13 @@ func buildClasses(classes []campaignapp.CatalogClass) ([]campaignapp.CatalogClas
 			Icon:         class.Icon,
 		})
 	}
-	sortByName(result, func(c campaignapp.CatalogClass) string { return c.Name }, func(c campaignapp.CatalogClass) string { return c.ID })
+	sortByName(result, func(c campaignworkflow.Class) string { return c.Name }, func(c campaignworkflow.Class) string { return c.ID })
 	return result, classDomainsByID
 }
 
 // buildSubclasses normalizes subclass entries for workflow rendering.
-func buildSubclasses(subclasses []campaignapp.CatalogSubclass) []campaignapp.CatalogSubclass {
-	result := make([]campaignapp.CatalogSubclass, 0, len(subclasses))
+func buildSubclasses(subclasses []campaignworkflow.Subclass) []campaignworkflow.Subclass {
+	result := make([]campaignworkflow.Subclass, 0, len(subclasses))
 	for _, subclass := range subclasses {
 		subclassID := strings.TrimSpace(subclass.ID)
 		if subclassID == "" {
@@ -87,7 +87,7 @@ func buildSubclasses(subclasses []campaignapp.CatalogSubclass) []campaignapp.Cat
 		if subclassName == "" {
 			subclassName = subclassID
 		}
-		result = append(result, campaignapp.CatalogSubclass{
+		result = append(result, campaignworkflow.Subclass{
 			ID:             subclassID,
 			Name:           subclassName,
 			ClassID:        strings.TrimSpace(subclass.ClassID),
@@ -96,14 +96,14 @@ func buildSubclasses(subclasses []campaignapp.CatalogSubclass) []campaignapp.Cat
 			Illustration:   subclass.Illustration,
 		})
 	}
-	sortByName(result, func(s campaignapp.CatalogSubclass) string { return s.Name }, func(s campaignapp.CatalogSubclass) string { return s.ID })
+	sortByName(result, func(s campaignworkflow.Subclass) string { return s.Name }, func(s campaignworkflow.Subclass) string { return s.ID })
 	return result
 }
 
 // buildHeritages splits heritage entries into ancestry and community buckets.
-func buildHeritages(heritages []campaignapp.CatalogHeritage) ([]campaignapp.CatalogHeritage, []campaignapp.CatalogHeritage) {
-	ancestries := make([]campaignapp.CatalogHeritage, 0, len(heritages))
-	communities := make([]campaignapp.CatalogHeritage, 0, len(heritages))
+func buildHeritages(heritages []campaignworkflow.Heritage) ([]campaignworkflow.Heritage, []campaignworkflow.Heritage) {
+	ancestries := make([]campaignworkflow.Heritage, 0, len(heritages))
+	communities := make([]campaignworkflow.Heritage, 0, len(heritages))
 	for _, heritage := range heritages {
 		heritageID := strings.TrimSpace(heritage.ID)
 		if heritageID == "" {
@@ -113,7 +113,7 @@ func buildHeritages(heritages []campaignapp.CatalogHeritage) ([]campaignapp.Cata
 		if heritageName == "" {
 			heritageName = heritageID
 		}
-		entry := campaignapp.CatalogHeritage{
+		entry := campaignworkflow.Heritage{
 			ID:           heritageID,
 			Name:         heritageName,
 			Kind:         strings.TrimSpace(heritage.Kind),
@@ -127,15 +127,15 @@ func buildHeritages(heritages []campaignapp.CatalogHeritage) ([]campaignapp.Cata
 			communities = append(communities, entry)
 		}
 	}
-	sortByName(ancestries, func(h campaignapp.CatalogHeritage) string { return h.Name }, func(h campaignapp.CatalogHeritage) string { return h.ID })
-	sortByName(communities, func(h campaignapp.CatalogHeritage) string { return h.Name }, func(h campaignapp.CatalogHeritage) string { return h.ID })
+	sortByName(ancestries, func(h campaignworkflow.Heritage) string { return h.Name }, func(h campaignworkflow.Heritage) string { return h.ID })
+	sortByName(communities, func(h campaignworkflow.Heritage) string { return h.Name }, func(h campaignworkflow.Heritage) string { return h.ID })
 	return ancestries, communities
 }
 
 // buildWeapons keeps only tier-1 weapons and separates primary from secondary.
-func buildWeapons(weapons []campaignapp.CatalogWeapon) ([]campaignapp.CatalogWeapon, []campaignapp.CatalogWeapon) {
-	primary := make([]campaignapp.CatalogWeapon, 0, len(weapons))
-	secondary := make([]campaignapp.CatalogWeapon, 0, len(weapons))
+func buildWeapons(weapons []campaignworkflow.Weapon) ([]campaignworkflow.Weapon, []campaignworkflow.Weapon) {
+	primary := make([]campaignworkflow.Weapon, 0, len(weapons))
+	secondary := make([]campaignworkflow.Weapon, 0, len(weapons))
 	for _, weapon := range weapons {
 		weaponID := strings.TrimSpace(weapon.ID)
 		if weaponID == "" || weapon.Tier != 1 {
@@ -145,7 +145,7 @@ func buildWeapons(weapons []campaignapp.CatalogWeapon) ([]campaignapp.CatalogWea
 		if weaponName == "" {
 			weaponName = weaponID
 		}
-		entry := campaignapp.CatalogWeapon{
+		entry := campaignworkflow.Weapon{
 			ID:           weaponID,
 			Name:         weaponName,
 			Category:     strings.TrimSpace(weapon.Category),
@@ -163,14 +163,14 @@ func buildWeapons(weapons []campaignapp.CatalogWeapon) ([]campaignapp.CatalogWea
 			secondary = append(secondary, entry)
 		}
 	}
-	sortByName(primary, func(w campaignapp.CatalogWeapon) string { return w.Name }, func(w campaignapp.CatalogWeapon) string { return w.ID })
-	sortByName(secondary, func(w campaignapp.CatalogWeapon) string { return w.Name }, func(w campaignapp.CatalogWeapon) string { return w.ID })
+	sortByName(primary, func(w campaignworkflow.Weapon) string { return w.Name }, func(w campaignworkflow.Weapon) string { return w.ID })
+	sortByName(secondary, func(w campaignworkflow.Weapon) string { return w.Name }, func(w campaignworkflow.Weapon) string { return w.ID })
 	return primary, secondary
 }
 
 // buildArmor keeps only tier-1 armor entries for creation-time selection.
-func buildArmor(armor []campaignapp.CatalogArmor) []campaignapp.CatalogArmor {
-	result := make([]campaignapp.CatalogArmor, 0, len(armor))
+func buildArmor(armor []campaignworkflow.Armor) []campaignworkflow.Armor {
+	result := make([]campaignworkflow.Armor, 0, len(armor))
 	for _, item := range armor {
 		armorID := strings.TrimSpace(item.ID)
 		if armorID == "" || item.Tier != 1 {
@@ -180,7 +180,7 @@ func buildArmor(armor []campaignapp.CatalogArmor) []campaignapp.CatalogArmor {
 		if armorName == "" {
 			armorName = armorID
 		}
-		result = append(result, campaignapp.CatalogArmor{
+		result = append(result, campaignworkflow.Armor{
 			ID:             armorID,
 			Name:           armorName,
 			Tier:           item.Tier,
@@ -190,13 +190,13 @@ func buildArmor(armor []campaignapp.CatalogArmor) []campaignapp.CatalogArmor {
 			Illustration:   item.Illustration,
 		})
 	}
-	sortByName(result, func(a campaignapp.CatalogArmor) string { return a.Name }, func(a campaignapp.CatalogArmor) string { return a.ID })
+	sortByName(result, func(a campaignworkflow.Armor) string { return a.Name }, func(a campaignworkflow.Armor) string { return a.ID })
 	return result
 }
 
 // buildPotionItems filters items by potion allowlist and normalizes display fields.
-func buildPotionItems(items []campaignapp.CatalogItem) []campaignapp.CatalogItem {
-	result := make([]campaignapp.CatalogItem, 0, len(items))
+func buildPotionItems(items []campaignworkflow.Item) []campaignworkflow.Item {
+	result := make([]campaignworkflow.Item, 0, len(items))
 	for _, item := range items {
 		itemID := strings.TrimSpace(item.ID)
 		if itemID == "" || !isAllowedPotionItemID(itemID) {
@@ -206,25 +206,25 @@ func buildPotionItems(items []campaignapp.CatalogItem) []campaignapp.CatalogItem
 		if itemName == "" {
 			itemName = itemID
 		}
-		result = append(result, campaignapp.CatalogItem{
+		result = append(result, campaignworkflow.Item{
 			ID:           itemID,
 			Name:         itemName,
 			Description:  strings.TrimSpace(item.Description),
 			Illustration: item.Illustration,
 		})
 	}
-	sortByName(result, func(i campaignapp.CatalogItem) string { return i.Name }, func(i campaignapp.CatalogItem) string { return i.ID })
+	sortByName(result, func(i campaignworkflow.Item) string { return i.Name }, func(i campaignworkflow.Item) string { return i.ID })
 	return result
 }
 
 // buildDomainCards filters and normalizes level-1 cards for the selected class context.
 func buildDomainCards(
-	domainCards []campaignapp.CatalogDomainCard,
+	domainCards []campaignworkflow.DomainCard,
 	selectedClassID string,
 	classDomainsByID map[string]map[string]struct{},
 	domainNameByID map[string]string,
-) []campaignapp.CatalogDomainCard {
-	result := make([]campaignapp.CatalogDomainCard, 0, len(domainCards))
+) []campaignworkflow.DomainCard {
+	result := make([]campaignworkflow.DomainCard, 0, len(domainCards))
 	selectedClassID = strings.TrimSpace(selectedClassID)
 	allowedDomains := classDomainsByID[selectedClassID]
 	for _, domainCard := range domainCards {
@@ -242,7 +242,7 @@ func buildDomainCards(
 		if domainCardName == "" {
 			domainCardName = domainCardID
 		}
-		result = append(result, campaignapp.CatalogDomainCard{
+		result = append(result, campaignworkflow.DomainCard{
 			ID:           domainCardID,
 			Name:         domainCardName,
 			DomainID:     domainID,
@@ -271,8 +271,8 @@ func buildDomainCards(
 }
 
 // copyCatalogFeatures isolates slice copying for catalog model normalization.
-func copyCatalogFeatures(features []campaignapp.CatalogFeature) []campaignapp.CatalogFeature {
-	copied := make([]campaignapp.CatalogFeature, len(features))
+func copyCatalogFeatures(features []campaignworkflow.Feature) []campaignworkflow.Feature {
+	copied := make([]campaignworkflow.Feature, len(features))
 	copy(copied, features)
 	return copied
 }

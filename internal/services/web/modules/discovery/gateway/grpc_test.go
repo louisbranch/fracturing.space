@@ -1,4 +1,4 @@
-package discovery
+package gateway
 
 import (
 	"context"
@@ -12,13 +12,6 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-// stubGateway implements discoveryapp.Gateway for tests that only need a healthy module.
-type stubGateway struct{}
-
-func (stubGateway) ListStarterEntries(context.Context) ([]discoveryapp.StarterEntry, error) {
-	return nil, nil
-}
 
 // discoveryClientStub records calls and returns canned responses.
 type discoveryClientStub struct {
@@ -34,7 +27,7 @@ func TestNewGRPCGatewayReturnsUnavailableWhenNil(t *testing.T) {
 	t.Parallel()
 
 	gw := NewGRPCGateway(nil)
-	if IsGatewayHealthy(gw) {
+	if discoveryapp.IsGatewayHealthy(gw) {
 		t.Fatal("expected unhealthy gateway for nil client")
 	}
 	_, err := gw.ListStarterEntries(context.Background())
@@ -139,14 +132,6 @@ func TestGRPCGatewayReturnsNilForEmptyResponse(t *testing.T) {
 	}
 	if results != nil {
 		t.Fatalf("got %v, want nil", results)
-	}
-}
-
-func TestIsGatewayHealthyNilGateway(t *testing.T) {
-	t.Parallel()
-
-	if IsGatewayHealthy(nil) {
-		t.Fatal("expected nil gateway to be unhealthy")
 	}
 }
 

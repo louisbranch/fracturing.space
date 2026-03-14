@@ -8,6 +8,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	invitegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
@@ -102,6 +103,38 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 		}
 		if moduleDeps.Campaigns.AuthorizationClient == nil {
 			moduleDeps.Campaigns.AuthorizationClient = defaultAuthorizationClient()
+		}
+	}
+	if moduleDeps.Invite.InviteClient == nil && moduleDeps.Campaigns.InviteClient != nil {
+		moduleDeps.Invite.InviteClient = moduleDeps.Campaigns.InviteClient
+	}
+	if moduleDeps.Invite.AuthClient == nil {
+		switch {
+		case moduleDeps.Campaigns.AuthClient != nil:
+			moduleDeps.Invite.AuthClient = moduleDeps.Campaigns.AuthClient
+		case moduleDeps.PublicAuth.AuthClient != nil:
+			authClient, ok := moduleDeps.PublicAuth.AuthClient.(invitegateway.AuthClient)
+			if ok {
+				moduleDeps.Invite.AuthClient = authClient
+			}
+		}
+	}
+	if moduleDeps.Invite.UserHubControlClient == nil && moduleDeps.DashboardSync.UserHubControlClient != nil {
+		moduleDeps.Invite.UserHubControlClient = moduleDeps.DashboardSync.UserHubControlClient
+	}
+	if moduleDeps.Invite.GameEventClient == nil && moduleDeps.DashboardSync.GameEventClient != nil {
+		moduleDeps.Invite.GameEventClient = moduleDeps.DashboardSync.GameEventClient
+	}
+	hasInviteDependency := moduleDeps.Invite.InviteClient != nil ||
+		moduleDeps.Invite.AuthClient != nil ||
+		moduleDeps.Invite.UserHubControlClient != nil ||
+		moduleDeps.Invite.GameEventClient != nil
+	if hasInviteDependency {
+		if moduleDeps.Invite.InviteClient == nil {
+			moduleDeps.Invite.InviteClient = defaultInviteClient()
+		}
+		if moduleDeps.Invite.AuthClient == nil {
+			moduleDeps.Invite.AuthClient = newFakeWebAuthClient()
 		}
 	}
 	return moduleDeps

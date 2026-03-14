@@ -7,6 +7,7 @@ import (
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -53,7 +54,7 @@ func campaignCreateHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeade
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
-	items, err := h.service.ListCampaigns(ctx)
+	items, err := h.catalog.ListCampaigns(ctx)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -93,9 +94,7 @@ func (h handlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 
 // handleCreateCampaignSubmit handles this route in the module transport layer.
 func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseForm(); err != nil {
-		flash.Write(w, r, flash.Notice{Kind: flash.KindError, Key: "error.web.message.failed_to_parse_campaign_create_form"})
-		httpx.WriteRedirect(w, r, routepath.AppCampaignsCreate)
+	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_create_form", routepath.AppCampaignsCreate) {
 		return
 	}
 	input, err := parseCreateCampaignInput(r.Form)
@@ -105,7 +104,7 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
 	input.Locale = h.RequestLocaleTag(r)
-	created, err := h.service.CreateCampaign(ctx, input)
+	created, err := h.catalog.CreateCampaign(ctx, input)
 	if err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return

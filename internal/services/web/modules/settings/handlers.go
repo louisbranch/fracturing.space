@@ -49,37 +49,36 @@ func (a settingsSurfaceAvailability) defaultPath() string {
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
-	profile      settingsapp.ProfileService
-	locale       settingsapp.LocaleService
-	security     settingsapp.SecurityService
-	aiKeys       settingsapp.AIKeyService
-	aiAgents     settingsapp.AIAgentService
+	account      settingsapp.AccountService
+	ai           settingsapp.AIService
 	availability settingsSurfaceAvailability
 	flashMeta    requestmeta.SchemePolicy
 	sync         DashboardSync
 }
 
+// handlerServices groups the settings app seams consumed by transport.
+type handlerServices struct {
+	Account settingsapp.AccountService
+	AI      settingsapp.AIService
+}
+
+// handlersConfig keeps root transport wiring explicit by owned service group.
+type handlersConfig struct {
+	Services     handlerServices
+	Availability settingsSurfaceAvailability
+	Base         modulehandler.Base
+	Policy       requestmeta.SchemePolicy
+	Sync         DashboardSync
+}
+
 // newHandlers builds package wiring for this web seam.
-func newHandlers(
-	profile settingsapp.ProfileService,
-	locale settingsapp.LocaleService,
-	security settingsapp.SecurityService,
-	aiKeys settingsapp.AIKeyService,
-	aiAgents settingsapp.AIAgentService,
-	availability settingsSurfaceAvailability,
-	base modulehandler.Base,
-	policy requestmeta.SchemePolicy,
-	sync DashboardSync,
-) handlers {
+func newHandlers(config handlersConfig) handlers {
 	return handlers{
-		Base:         base,
-		profile:      profile,
-		locale:       locale,
-		security:     security,
-		aiKeys:       aiKeys,
-		aiAgents:     aiAgents,
-		availability: availability,
-		flashMeta:    policy,
-		sync:         sync,
+		Base:         config.Base,
+		account:      config.Services.Account,
+		ai:           config.Services.AI,
+		availability: config.Availability,
+		flashMeta:    config.Policy,
+		sync:         config.Sync,
 	}
 }

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 
-	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/redirectpath"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -15,7 +14,7 @@ import (
 func TestHandleRecoveryCodeGetConsumesRevealCookie(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{})
+	h := newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{})
 
 	if got := redirectpath.ResolveSafe("/app/dashboard"); got != "/app/dashboard" {
 		t.Fatalf("ResolveSafe sanity check = %q, want %q", got, "/app/dashboard")

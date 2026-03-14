@@ -14,7 +14,6 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -316,32 +315,10 @@ func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
 	}
 	defer closeManagedConns(conns, nil)
 
-	gateway := campaigngateway.NewGRPCGateway(campaigngateway.GRPCGatewayDeps{
-		Read: campaigngateway.GRPCGatewayReadDeps{
-			Campaign:           bundle.Modules.Campaigns.CampaignClient,
-			Communication:      bundle.Modules.Campaigns.CommunicationClient,
-			Agent:              bundle.Modules.Campaigns.AgentClient,
-			Participant:        bundle.Modules.Campaigns.ParticipantClient,
-			Character:          bundle.Modules.Campaigns.CharacterClient,
-			DaggerheartContent: bundle.Modules.Campaigns.DaggerheartContentClient,
-			DaggerheartAsset:   bundle.Modules.Campaigns.DaggerheartAssetClient,
-			Session:            bundle.Modules.Campaigns.SessionClient,
-			Invite:             bundle.Modules.Campaigns.InviteClient,
-			Social:             bundle.Modules.Campaigns.SocialClient,
-		},
-		Mutation: campaigngateway.GRPCGatewayMutationDeps{
-			Campaign:    bundle.Modules.Campaigns.CampaignClient,
-			Participant: bundle.Modules.Campaigns.ParticipantClient,
-			Character:   bundle.Modules.Campaigns.CharacterClient,
-			Session:     bundle.Modules.Campaigns.SessionClient,
-			Invite:      bundle.Modules.Campaigns.InviteClient,
-			Auth:        bundle.Modules.Campaigns.AuthClient,
-		},
-		Authorization: campaigngateway.GRPCGatewayAuthorizationDeps{
-			Client: bundle.Modules.Campaigns.AuthorizationClient,
-		},
-	})
-	if !campaignapp.IsGatewayHealthy(gateway) {
+	gateway := campaigngateway.NewCatalogReadGateway(campaigngateway.CatalogReadDeps{
+		Campaign: bundle.Modules.Campaigns.CampaignClient,
+	}, bundle.Modules.AssetBaseURL)
+	if gateway == nil {
 		t.Fatal("expected bootstrapped campaigns gateway to be healthy")
 	}
 }

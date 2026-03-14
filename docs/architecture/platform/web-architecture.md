@@ -14,9 +14,7 @@ Concise architecture contract for the browser-facing web service.
 ## Purpose
 
 `web` is a modular BFF that composes route areas while keeping transport wiring
-separate from game/auth domain truth.
-
-Canonical path: `internal/services/web/`.
+separate from game/auth domain truth. Canonical path: `internal/services/web/`.
 
 ## Layering model
 
@@ -26,13 +24,9 @@ Canonical path: `internal/services/web/`.
 - `module/`: canonical module contract (`Module`, `Mount`, request-scoped resolver types).
 - `modules/`: module registry builder, dependency bundles, and area modules (`campaigns`, `dashboard`, `settings`, etc.).
 - `routepath/`: canonical route constants, split by owned surface.
-- `templates/`: shared layout and templ primitives; area-owned page sets should
-  move out once cross-area ownership becomes unclear. If a feature still uses
-  shared template internals, put a module-owned render seam in front first.
+- `templates/`: shared layout and templ primitives; area-owned page sets should move out once cross-area ownership becomes unclear. If a feature still uses shared template internals, put a module-owned render seam in front first.
 
-For module internals, areas may be either `transport-only` or
-`transport + app + gateway` (preferred when orchestration/adapter boundaries are
-needed).
+For module internals, areas may be either `transport-only` or `transport + app + gateway` (preferred when orchestration/adapter boundaries are needed).
 
 ## Module contract
 
@@ -46,8 +40,8 @@ Required properties:
 3. Gateway adapters encapsulate backend protocol mapping.
 4. Missing required dependencies fail closed.
 5. Composition dependencies are module-owned bundles (`modules.Dependencies.Campaigns`, `Settings`, `PublicAuth`, etc.), not one flat cross-area field bag.
-6. Production gateway wiring belongs to the owning area package. The registry may
-   assemble shared cross-cutting inputs and module order, but not feature-local graphs.
+6. Production gateway wiring belongs to the owning area package; the registry may assemble shared cross-cutting inputs and module order, but not feature-local graphs.
+7. Optional protected modules should be omitted until fully configured; once selected, module construction must fail fast on missing route-owned services instead of fabricating unavailable placeholders.
 
 ## Routing strategy
 
@@ -62,8 +56,7 @@ Required properties:
   orchestrate only request flow + app service calls.
 - Protected mutations require authenticated session context.
 - Public-auth flows are isolated under public module ownership.
-- Username-aware typeahead may be shared across modules, but ownership stays at
-  the service seam:
+- Username-aware typeahead may be shared across modules, but ownership stays at the service seam:
   - signup availability checks call auth-owned advisory validation endpoints,
   - authenticated invite/mention search calls social-owned ranked people search.
 - Legacy top-level invites scaffolding (`/app/invites`) remains intentionally
@@ -83,10 +76,14 @@ Required properties:
 - Campaign mutation routes require evaluated authorization decisions before
   mutation gateway calls.
 - Batch authorization should be used for per-row action visibility.
+- Detail/edit/control pages should use true entity reads when the area owns
+  them instead of loading a full collection and rediscovering one row in
+  transport or render code.
 - Transport layers must not approximate permissions from UI fallback logic.
 - Chat/game UI routes must consume game-owned communication context for stream
   visibility, persona selection, and scene/session awareness; browser code must
   not derive those rules from transcript bodies.
+- Participant-adjacent campaign automation controls should remain a dedicated automation capability seam even when they render inside participant pages.
 - Campaign detail pages should render through the area-owned
   `internal/services/web/modules/campaigns/render` seam, not new page-specific `templates` models.
 - Browser controls must treat persona selection as message presentation state;
@@ -99,13 +96,14 @@ Required properties:
 
 ## Principal identity seam
 
-- User-id normalization is centralized in `internal/services/web/platform/userid`
-  and reused by principal/session/viewer and dashboard/webctx seams.
-- Require-vs-optional semantics are explicit:
-  - `userid.Require` for authenticated required user-id boundaries,
-  - `userid.Normalize` for optional request-scoped propagation boundaries.
-- Viewer resolver construction is nil-safe for user-id resolver wiring to keep
-  package test harnesses deterministic and panic-free.
+- User-id normalization is centralized in `internal/services/web/platform/userid` and reused by principal/session/viewer and dashboard/webctx seams.
+- Shared viewer/language request plumbing is centralized in `internal/services/web/platform/requestresolver`
+  so handler bases, page rendering, error rendering, and direct public-page localization follow one request-scoped contract, including localized page-state resolution.
+- Root server/composition/module assembly also passes one grouped `requestresolver.PrincipalResolver` contract instead of duplicating flat callback bags at each layer.
+- Public modules (`publicauth`, `profile`, `invite`) now consume that same
+  grouped principal contract instead of separate signed-in and user-id callbacks.
+- Require-vs-optional semantics stay explicit: `userid.Require` for authenticated required boundaries and `userid.Normalize` for optional propagation boundaries.
+- Viewer resolver construction is nil-safe to keep package test harnesses deterministic and panic-free.
 
 ## Degraded operation model
 
@@ -127,9 +125,13 @@ placeholder mutation routes or static fake domain data in runtime composition.
   - `status`: dashboard service-health surface and reporter flush target
 - This policy is owned by `internal/cmd/web/dependency_graph.go`; when startup
   requirements change, update both the policy table and this architecture note.
-- Runtime dependency assembly is owned by `internal/cmd/web/runtime_dependencies.go`.
-  Assemble the full server dependency graph there before calling `web.NewServer`;
-  do not bootstrap a bundle and mutate it later in `Run`.
+- Runtime dependency assembly starts in `internal/cmd/web/runtime_dependencies.go`,
+  but `internal/services/web/dependencies.go` only coordinates bundle
+  construction while `internal/services/web/principal` and owner-local module
+  packages bind their own clients; only shared `DashboardSync` freshness
+  clients remain centralized there. Keep command-layer code focused on policy,
+  addresses, and connection lifecycle, and do not mutate partially-built
+  bundles later in `Run`.
 
 ## Verification contract
 
@@ -140,7 +142,6 @@ Minimum checks when changing web architecture, modules, or routes:
 - `make check`
 
 `make check` automatically runs `make web-architecture-check` when web paths changed. Use focused package tests when debugging a specific web slice.
-
 ## Deep references
 
 - [Web contributor map](web-contributor-map.md)

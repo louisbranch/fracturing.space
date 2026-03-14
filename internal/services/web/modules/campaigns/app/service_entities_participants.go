@@ -7,14 +7,29 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 )
 
+// CampaignParticipants centralizes this web behavior in one helper seam.
+func (s participantReadService) CampaignParticipants(ctx context.Context, campaignID string) ([]CampaignParticipant, error) {
+	return s.campaignParticipants(ctx, campaignID)
+}
+
+// CampaignParticipantCreator centralizes this web behavior in one helper seam.
+func (s participantReadService) CampaignParticipantCreator(ctx context.Context, campaignID string) (CampaignParticipantCreator, error) {
+	return s.campaignParticipantCreator(ctx, campaignID)
+}
+
+// CampaignParticipantEditor centralizes this web behavior in one helper seam.
+func (s participantReadService) CampaignParticipantEditor(ctx context.Context, campaignID string, participantID string) (CampaignParticipantEditor, error) {
+	return s.campaignParticipantEditor(ctx, campaignID, participantID)
+}
+
 // campaignParticipants centralizes this web behavior in one helper seam.
-func (s service) campaignParticipants(ctx context.Context, campaignID string) ([]CampaignParticipant, error) {
+func (s participantReadService) campaignParticipants(ctx context.Context, campaignID string) ([]CampaignParticipant, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return []CampaignParticipant{}, nil
 	}
 
-	participants, err := s.readGateway.CampaignParticipants(ctx, campaignID)
+	participants, err := s.read.CampaignParticipants(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -35,14 +50,14 @@ func (s service) campaignParticipants(ctx context.Context, campaignID string) ([
 }
 
 // campaignParticipant centralizes this web behavior in one helper seam.
-func (s service) campaignParticipant(ctx context.Context, campaignID string, participantID string) (CampaignParticipant, error) {
+func campaignParticipant(ctx context.Context, read CampaignParticipantReadGateway, campaignID string, participantID string) (CampaignParticipant, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	participantID = strings.TrimSpace(participantID)
 	if campaignID == "" || participantID == "" {
 		return CampaignParticipant{}, nil
 	}
 
-	participant, err := s.readGateway.CampaignParticipant(ctx, campaignID, participantID)
+	participant, err := read.CampaignParticipant(ctx, campaignID, participantID)
 	if err != nil {
 		return CampaignParticipant{}, err
 	}
@@ -57,16 +72,16 @@ func (s service) campaignParticipant(ctx context.Context, campaignID string, par
 }
 
 // campaignParticipantCreator centralizes this web behavior in one helper seam.
-func (s service) campaignParticipantCreator(ctx context.Context, campaignID string) (CampaignParticipantCreator, error) {
+func (s participantReadService) campaignParticipantCreator(ctx context.Context, campaignID string) (CampaignParticipantCreator, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return CampaignParticipantCreator{}, nil
 	}
-	if err := s.requireManageParticipants(ctx, campaignID); err != nil {
+	if err := s.auth.requireManageParticipants(ctx, campaignID); err != nil {
 		return CampaignParticipantCreator{}, err
 	}
 
-	workspace, err := s.campaignWorkspace(ctx, campaignID)
+	workspace, err := participantWorkspace(ctx, s.workspace, campaignID)
 	if err != nil {
 		return CampaignParticipantCreator{}, err
 	}
@@ -80,18 +95,18 @@ func (s service) campaignParticipantCreator(ctx context.Context, campaignID stri
 }
 
 // campaignParticipantEditor centralizes this web behavior in one helper seam.
-func (s service) campaignParticipantEditor(ctx context.Context, campaignID string, participantID string) (CampaignParticipantEditor, error) {
+func (s participantReadService) campaignParticipantEditor(ctx context.Context, campaignID string, participantID string) (CampaignParticipantEditor, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	participantID = strings.TrimSpace(participantID)
 	if campaignID == "" || participantID == "" {
 		return CampaignParticipantEditor{}, nil
 	}
 
-	participant, err := s.campaignParticipant(ctx, campaignID, participantID)
+	participant, err := campaignParticipant(ctx, s.read, campaignID, participantID)
 	if err != nil {
 		return CampaignParticipantEditor{}, err
 	}
-	workspace, err := s.campaignWorkspace(ctx, campaignID)
+	workspace, err := participantWorkspace(ctx, s.workspace, campaignID)
 	if err != nil {
 		return CampaignParticipantEditor{}, err
 	}
@@ -120,7 +135,7 @@ func (s service) campaignParticipantEditor(ctx context.Context, campaignID strin
 		TargetCampaignAccess: currentAccess,
 		ParticipantOperation: ParticipantGovernanceOperationMutate,
 	}
-	if err := s.requireCampaignActionAccess(
+	if err := s.auth.requireCampaignActionAccess(
 		ctx,
 		campaignID,
 		campaignAuthzActionManage,
@@ -195,7 +210,7 @@ func normalizeCampaignParticipant(participant CampaignParticipant) CampaignParti
 }
 
 // hydrateParticipantEditability centralizes this web behavior in one helper seam.
-func (s service) hydrateParticipantEditability(ctx context.Context, campaignID string, participants []CampaignParticipant) {
+func (s participantReadService) hydrateParticipantEditability(ctx context.Context, campaignID string, participants []CampaignParticipant) {
 	if len(participants) == 0 {
 		return
 	}
@@ -205,7 +220,7 @@ func (s service) hydrateParticipantEditability(ctx context.Context, campaignID s
 			participants[idx].EditReasonCode = "SELF_OWNED_PARTICIPANT"
 		}
 	}
-	if s.authzGateway == nil {
+	if s.batchAuthorization == nil {
 		return
 	}
 
@@ -230,7 +245,7 @@ func (s service) hydrateParticipantEditability(ctx context.Context, campaignID s
 		return
 	}
 
-	decisions, err := s.authzGateway.BatchCanCampaignAction(ctx, campaignID, checks)
+	decisions, err := s.batchAuthorization.BatchCanCampaignAction(ctx, campaignID, checks)
 	if err != nil {
 		return
 	}
@@ -254,12 +269,12 @@ func participantIsSelfOwned(ctx context.Context, participant CampaignParticipant
 }
 
 // participantAccessOptions centralizes this web behavior in one helper seam.
-func (s service) participantAccessOptions(ctx context.Context, campaignID string, participantID string, targetAccess string) []CampaignParticipantAccessOption {
+func (s participantReadService) participantAccessOptions(ctx context.Context, campaignID string, participantID string, targetAccess string) []CampaignParticipantAccessOption {
 	options := make([]CampaignParticipantAccessOption, 0, len(participantAccessValues))
 	for _, value := range participantAccessValues {
 		options = append(options, CampaignParticipantAccessOption{Value: value})
 	}
-	if s.authzGateway == nil {
+	if s.batchAuthorization == nil {
 		return options
 	}
 
@@ -279,7 +294,7 @@ func (s service) participantAccessOptions(ctx context.Context, campaignID string
 		})
 	}
 
-	decisions, err := s.authzGateway.BatchCanCampaignAction(ctx, campaignID, checks)
+	decisions, err := s.batchAuthorization.BatchCanCampaignAction(ctx, campaignID, checks)
 	if err != nil {
 		return options
 	}
@@ -288,4 +303,14 @@ func (s service) participantAccessOptions(ctx context.Context, campaignID string
 		options[idx].Allowed = allowedChecks[options[idx].Value]
 	}
 	return options
+}
+
+// participantWorkspace loads the participant-owned workspace policy inputs used
+// by participant editor and mutation flows.
+func participantWorkspace(ctx context.Context, workspaceGateway CampaignWorkspaceReadGateway, campaignID string) (CampaignWorkspace, error) {
+	workspace, err := loadCampaignWorkspace(ctx, workspaceGateway, campaignID)
+	if err != nil {
+		return CampaignWorkspace{}, err
+	}
+	return normalizeCampaignWorkspace(campaignID, workspace), nil
 }

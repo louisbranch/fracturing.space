@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -16,14 +16,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(inviteapp.NewService(&routeGatewayStub{}), publichandler.Base{}, requestmeta.SchemePolicy{}, nil, nil))
+	registerRoutes(nil, newHandlers(inviteapp.NewService(&routeGatewayStub{}), nil, requestmeta.SchemePolicy{}, nil))
 }
 
 func TestRegisterRoutesInviteMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(inviteapp.NewService(&routeGatewayStub{}), publichandler.Base{}, requestmeta.SchemePolicy{}, func(*http.Request) string { return "user-1" }, nil))
+	registerRoutes(mux, newHandlers(inviteapp.NewService(&routeGatewayStub{}), principalWithUserID("user-1"), requestmeta.SchemePolicy{}, nil))
 
 	tests := []struct {
 		name         string
@@ -70,7 +70,7 @@ func TestRegisterRoutesRejectsCookieMutationWithoutSameOriginProof(t *testing.T)
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(inviteapp.NewService(&routeGatewayStub{}), publichandler.Base{}, requestmeta.SchemePolicy{}, func(*http.Request) string { return "user-1" }, nil))
+	registerRoutes(mux, newHandlers(inviteapp.NewService(&routeGatewayStub{}), principalWithUserID("user-1"), requestmeta.SchemePolicy{}, nil))
 
 	req := httptest.NewRequest(http.MethodPost, routepath.PublicInviteAccept("inv-1"), nil)
 	req.AddCookie(&http.Cookie{Name: sessioncookie.Name, Value: "sess-1"})
@@ -87,7 +87,7 @@ func TestRegisterRoutesAllowsCookieMutationWithSameOriginProof(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(inviteapp.NewService(&routeGatewayStub{}), publichandler.Base{}, requestmeta.SchemePolicy{}, func(*http.Request) string { return "user-1" }, nil))
+	registerRoutes(mux, newHandlers(inviteapp.NewService(&routeGatewayStub{}), principalWithUserID("user-1"), requestmeta.SchemePolicy{}, nil))
 
 	req := httptest.NewRequest(http.MethodPost, "http://app.example.test"+routepath.PublicInviteAccept("inv-1"), nil)
 	req.Host = "app.example.test"
@@ -125,4 +125,14 @@ func (routeGatewayStub) AcceptInvite(context.Context, string, inviteapp.PublicIn
 
 func (routeGatewayStub) DeclineInvite(context.Context, string, string) error {
 	return nil
+}
+
+func principalWithUserID(userID string) requestresolver.Principal {
+	return requestresolver.NewPrincipal(
+		nil,
+		func(*http.Request) bool { return userID != "" },
+		func(*http.Request) string { return userID },
+		nil,
+		nil,
+	)
 }

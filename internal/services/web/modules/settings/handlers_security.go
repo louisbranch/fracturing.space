@@ -23,7 +23,7 @@ func (h handlers) handleSecurityPasskeyStart(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	start, err := h.security.BeginPasskeyRegistration(ctx, userID)
+	start, err := h.account.BeginPasskeyRegistration(ctx, userID)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -46,7 +46,7 @@ func (h handlers) handleSecurityPasskeyFinish(w http.ResponseWriter, r *http.Req
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.security.FinishPasskeyRegistration(ctx, input.SessionID, input.Credential); err != nil {
+	if err := h.account.FinishPasskeyRegistration(ctx, input.SessionID, input.Credential); err != nil {
 		h.writeJSONError(w, r, err)
 		return
 	}
@@ -75,7 +75,7 @@ func (h handlers) renderSecurityPage(w http.ResponseWriter, r *http.Request, ctx
 
 // loadPasskeyRows keeps the security page mapper separate from passkey gateway calls.
 func (h handlers) loadPasskeyRows(ctx context.Context, userID string) ([]SettingsPasskeyRow, error) {
-	passkeys, err := h.security.ListPasskeys(ctx, userID)
+	passkeys, err := h.account.ListPasskeys(ctx, userID)
 	if err != nil {
 		return nil, err
 	}

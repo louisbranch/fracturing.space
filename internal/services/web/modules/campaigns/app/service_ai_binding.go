@@ -9,10 +9,20 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// CampaignAIBindingEditor centralizes this web behavior in one helper seam.
+func (s automationReadService) CampaignAIBindingEditor(ctx context.Context, campaignID string, currentAIAgentID string) (CampaignAIBindingEditor, error) {
+	return s.campaignAIBindingEditor(ctx, campaignID, currentAIAgentID)
+}
+
+// UpdateCampaignAIBinding applies this package workflow transition.
+func (s automationMutationService) UpdateCampaignAIBinding(ctx context.Context, campaignID string, input UpdateCampaignAIBindingInput) error {
+	return s.updateCampaignAIBinding(ctx, campaignID, input)
+}
+
 // campaignAIBindingEditor centralizes owner-only AI binding state for the
 // AI participant edit page without making the page fail when the AI service is
 // unavailable.
-func (s service) campaignAIBindingEditor(ctx context.Context, campaignID string, currentAIAgentID string) (CampaignAIBindingEditor, error) {
+func (s automationReadService) campaignAIBindingEditor(ctx context.Context, campaignID string, currentAIAgentID string) (CampaignAIBindingEditor, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	currentAIAgentID = strings.TrimSpace(currentAIAgentID)
 	editor := CampaignAIBindingEditor{
@@ -24,13 +34,13 @@ func (s service) campaignAIBindingEditor(ctx context.Context, campaignID string,
 		return editor, nil
 	}
 
-	decision, err := s.campaignManageDecision(ctx, campaignID)
-	actorAccess, actorAccessErr := s.campaignActorAccess(ctx, campaignID, decision)
+	decision, err := automationCampaignManageDecision(ctx, s.auth, campaignID)
+	actorAccess, actorAccessErr := automationCampaignActorAccess(ctx, s.participants, campaignID, decision)
 	if actorAccessErr == nil && err == nil && decision.Evaluated && decision.Allowed && actorAccess == participantAccessOwner {
 		editor.Enabled = true
 	}
 
-	options, err := s.readGateway.CampaignAIAgents(ctx)
+	options, err := s.read.CampaignAIAgents(ctx)
 	if err != nil {
 		var appErr apperrors.Error
 		if stderrors.As(err, &appErr) && appErr.Kind == apperrors.KindUnavailable {
@@ -54,7 +64,7 @@ func (s service) campaignAIBindingEditor(ctx context.Context, campaignID string,
 }
 
 // updateCampaignAIBinding applies the owner-only binding mutation.
-func (s service) updateCampaignAIBinding(ctx context.Context, campaignID string, input UpdateCampaignAIBindingInput) error {
+func (s automationMutationService) updateCampaignAIBinding(ctx context.Context, campaignID string, input UpdateCampaignAIBindingInput) error {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
@@ -66,8 +76,8 @@ func (s service) updateCampaignAIBinding(ctx context.Context, campaignID string,
 	}
 	input.AIAgentID = strings.TrimSpace(input.AIAgentID)
 
-	decision, err := s.campaignManageDecision(ctx, campaignID)
-	actorAccess, actorAccessErr := s.campaignActorAccess(ctx, campaignID, decision)
+	decision, err := automationCampaignManageDecision(ctx, s.auth, campaignID)
+	actorAccess, actorAccessErr := automationCampaignActorAccess(ctx, s.participants, campaignID, decision)
 	if err != nil || actorAccessErr != nil || !decision.Evaluated || !decision.Allowed || actorAccess != participantAccessOwner {
 		return apperrors.EK(
 			apperrors.KindForbidden,
@@ -76,23 +86,23 @@ func (s service) updateCampaignAIBinding(ctx context.Context, campaignID string,
 		)
 	}
 
-	return s.mutationGateway.UpdateCampaignAIBinding(ctx, campaignID, input)
+	return s.mutation.UpdateCampaignAIBinding(ctx, campaignID, input)
 }
 
 // campaignManageDecision resolves the caller's campaign-manage authz decision,
 // including actor campaign access when available.
-func (s service) campaignManageDecision(ctx context.Context, campaignID string) (AuthorizationDecision, error) {
+func automationCampaignManageDecision(ctx context.Context, auth authorizationSupport, campaignID string) (AuthorizationDecision, error) {
 	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" || s.authzGateway == nil {
+	if campaignID == "" || auth.gateway == nil {
 		return AuthorizationDecision{}, nil
 	}
-	return s.authzGateway.CanCampaignAction(ctx, campaignID, campaignAuthzActionManage, campaignAuthzResourceCampaign, nil)
+	return auth.gateway.CanCampaignAction(ctx, campaignID, campaignAuthzActionManage, campaignAuthzResourceCampaign, nil)
 }
 
 // campaignActorAccess resolves the caller's campaign access. It prefers authz
 // response metadata and falls back to matching the current user against campaign
 // participants when the authz transport omits actor access.
-func (s service) campaignActorAccess(ctx context.Context, campaignID string, decision AuthorizationDecision) (string, error) {
+func automationCampaignActorAccess(ctx context.Context, participants CampaignParticipantReadGateway, campaignID string, decision AuthorizationDecision) (string, error) {
 	if access := participantAccessCanonical(decision.ActorCampaignAccess); access != "" {
 		return access, nil
 	}
@@ -102,11 +112,11 @@ func (s service) campaignActorAccess(ctx context.Context, campaignID string, dec
 		return "", nil
 	}
 
-	participants, err := s.readGateway.CampaignParticipants(ctx, campaignID)
+	items, err := participants.CampaignParticipants(ctx, campaignID)
 	if err != nil {
 		return "", err
 	}
-	for _, participant := range participants {
+	for _, participant := range items {
 		if strings.TrimSpace(participant.UserID) != userID {
 			continue
 		}

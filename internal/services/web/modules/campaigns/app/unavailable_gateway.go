@@ -10,8 +10,9 @@ import (
 // unavailableGateway defines an internal contract used at this web package boundary.
 type unavailableGateway struct{}
 
-// NewUnavailableGateway returns a gateway that fails closed with unavailable errors.
-func NewUnavailableGateway() CampaignGateway {
+// NewUnavailableGateway returns a gateway implementation that fails closed with
+// unavailable errors.
+func NewUnavailableGateway() unavailableGateway {
 	return unavailableGateway{}
 }
 
@@ -51,8 +52,13 @@ func (unavailableGateway) CampaignParticipant(context.Context, string, string) (
 }
 
 // CampaignCharacters centralizes this web behavior in one helper seam.
-func (unavailableGateway) CampaignCharacters(context.Context, string, CampaignCharactersReadOptions) ([]CampaignCharacter, error) {
+func (unavailableGateway) CampaignCharacters(context.Context, string, CharacterReadContext) ([]CampaignCharacter, error) {
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+// CampaignCharacter centralizes this web behavior in one helper seam.
+func (unavailableGateway) CampaignCharacter(context.Context, string, string, CharacterReadContext) (CampaignCharacter, error) {
+	return CampaignCharacter{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
 // CampaignSessions centralizes this web behavior in one helper seam.

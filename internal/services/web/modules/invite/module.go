@@ -6,8 +6,8 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -18,30 +18,27 @@ type DashboardSync interface {
 
 // Module provides public invite landing routes.
 type Module struct {
-	gateway       inviteapp.Gateway
-	base          publichandler.Base
-	requestMeta   requestmeta.SchemePolicy
-	resolveUserID module.ResolveUserID
-	sync          DashboardSync
+	gateway     inviteapp.Gateway
+	requestMeta requestmeta.SchemePolicy
+	principal   requestresolver.PrincipalResolver
+	sync        DashboardSync
 }
 
 // Config defines constructor dependencies for the invite module.
 type Config struct {
 	Gateway       inviteapp.Gateway
-	Base          publichandler.Base
 	RequestMeta   requestmeta.SchemePolicy
-	ResolveUserID module.ResolveUserID
+	Principal     requestresolver.PrincipalResolver
 	DashboardSync DashboardSync
 }
 
 // New returns an invite module with explicit dependencies.
 func New(config Config) Module {
 	return Module{
-		gateway:       config.Gateway,
-		base:          config.Base,
-		requestMeta:   config.RequestMeta,
-		resolveUserID: config.ResolveUserID,
-		sync:          config.DashboardSync,
+		gateway:     config.Gateway,
+		requestMeta: config.RequestMeta,
+		principal:   config.Principal,
+		sync:        config.DashboardSync,
 	}
 }
 
@@ -56,7 +53,7 @@ func (m Module) Healthy() bool {
 // Mount wires public invite route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	h := newHandlers(inviteapp.NewService(m.gateway), m.base, m.requestMeta, m.resolveUserID, m.sync)
+	h := newHandlers(inviteapp.NewService(m.gateway), m.principal, m.requestMeta, m.sync)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.InvitePrefix, Handler: mux}, nil
 }

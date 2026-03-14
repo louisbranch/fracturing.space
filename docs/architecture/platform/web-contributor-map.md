@@ -28,18 +28,30 @@ Canonical implementation path: `internal/services/web/`.
   Read that file before changing whether a backend outage should block startup
   or only degrade specific web surfaces.
 - Startup dependency assembly lives in `internal/cmd/web/runtime_dependencies.go`.
-  If a backend client needs to reach `web.NewServer`, wire it there instead of
-  patching a partially-built dependency bundle later in `Run`.
+  Command-layer code owns addresses, dependency policy, and connection
+  lifecycle there. Service-owned bundle construction and client binding live in
+  `internal/services/web/dependencies.go`; do not patch partially-built bundles
+  later in `Run`.
 
 ## Package Roles
 
 - `internal/services/web/principal`: request-scoped session validation, viewer chrome, locale resolution, and the middleware-owned principal snapshot.
   Request-time signed-in state belongs here; public modules should consume
   `ResolveSignedIn` instead of re-validating cookies through feature gateways.
+- `internal/services/web/platform/requestresolver`: shared request-scoped
+  viewer/language contract used by `modulehandler`, `publichandler`,
+  `pagerender`, and `weberror`, plus the grouped principal contract threaded
+  through `server`, `composition`, and `modules`. It also owns the shared
+  localized page-state helpers used by shell rendering, error responses, and
+  direct public-page localization.
+  Start here when changing app-shell request resolution flow.
 - `internal/services/web/module`: canonical module contract types only.
 - `internal/services/web/composition`: turns resolved principal callbacks and module dependencies into the app handler.
 - `internal/services/web/app`: root mux composition, auth wrapping, and same-origin protections.
-- `internal/services/web/modules`: registry builder plus module dependency bundles; it should not re-export the singular `module` contract.
+- `internal/services/web/modules`: registry builder plus module dependency bundles; it should not re-export the singular `module` contract, and registry files should call area-owned `Compose(...)` entrypoints instead of constructing feature gateways inline.
+  When one area owns multiple mounted surfaces, prefer an area-owned
+  `Compose...Set(...)` entrypoint there instead of repeating the surface list in
+  the registry.
 - `internal/services/web/modules/<area>`: route owner for one area.
 - `internal/services/web/modules/<area>/app`: area-local orchestration and input validation.
 - `internal/services/web/modules/<area>/gateway`: backend protocol mapping.
@@ -85,7 +97,9 @@ Canonical implementation path: `internal/services/web/`.
   path validation is shared via `publicauth/redirectpath` instead of being
   duplicated in handlers and the app service. Request-time signed-in detection
   now comes from `principal.ResolveSignedIn`; `publicauth` owns auth ceremonies
-  and logout/session revocation, not duplicate session-validation policy.
+  and logout/session revocation, not duplicate session-validation policy. Its
+  multi-surface public module set is composed inside `publicauth` rather than
+  listed inline in the central registry.
 - `templates`: now functions as a shared shell/layout primitive package. Keep
   area-owned pages out of it instead of re-growing a cross-area page bucket.
 

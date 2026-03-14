@@ -29,18 +29,31 @@ type Gateway interface {
 	RevokeWebSession(ctx context.Context, sessionID string) error
 }
 
-// Service exposes publicauth orchestration methods used by transport handlers.
-type Service interface {
+// PageService exposes shell and redirect behavior used by page handlers.
+type PageService interface {
 	HealthBody() string
+	ResolvePostAuthRedirect(pendingID string, nextPath string) string
+}
+
+// SessionService exposes session-backed redirect and logout behavior.
+type SessionService interface {
+	ResolvePostAuthRedirect(pendingID string, nextPath string) string
+	RevokeWebSession(ctx context.Context, sessionID string) error
+}
+
+// PasskeyService exposes username, login, and signup ceremonies.
+type PasskeyService interface {
 	CheckUsernameAvailability(ctx context.Context, username string) (UsernameAvailability, error)
 	PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error)
 	PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
 	PasskeyRegisterStart(ctx context.Context, username string) (PasskeyRegisterResult, error)
 	PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
+}
+
+// RecoveryService exposes account recovery ceremonies.
+type RecoveryService interface {
 	RecoveryStart(ctx context.Context, username string, recoveryCode string) (RecoveryChallenge, error)
 	RecoveryFinish(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
-	ResolvePostAuthRedirect(pendingID string, nextPath string) string
-	RevokeWebSession(ctx context.Context, sessionID string) error
 }
 
 // PasskeyChallenge holds the session and public key from a passkey begin operation.

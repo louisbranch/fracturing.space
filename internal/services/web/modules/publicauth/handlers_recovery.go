@@ -6,6 +6,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -16,7 +17,7 @@ func (h handlers) handleRecoveryStart(w http.ResponseWriter, r *http.Request) {
 		h.writeJSONError(w, r, err)
 		return
 	}
-	start, err := h.service.RecoveryStart(r.Context(), input.Username, input.RecoveryCode)
+	start, err := h.recovery.RecoveryStart(r.Context(), input.Username, input.RecoveryCode)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -31,7 +32,7 @@ func (h handlers) handleRecoveryFinish(w http.ResponseWriter, r *http.Request) {
 		h.writeJSONError(w, r, err)
 		return
 	}
-	finished, err := h.service.RecoveryFinish(r.Context(), input.RecoverySessionID, input.SessionID, input.Credential, input.PendingID)
+	finished, err := h.recovery.RecoveryFinish(r.Context(), input.RecoverySessionID, input.SessionID, input.Credential, input.PendingID)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -77,7 +78,7 @@ func (h handlers) handleRecoveryCodeGet(w http.ResponseWriter, r *http.Request) 
 
 // handleRecoveryCodeAcknowledge handles this route in the module transport layer.
 func (h handlers) handleRecoveryCodeAcknowledge(w http.ResponseWriter, r *http.Request) {
-	if !h.hasSameOriginProof(r) {
+	if !requestmeta.HasSameOriginProofWithPolicy(r, h.requestMeta) {
 		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
 		return
 	}
@@ -89,7 +90,7 @@ func (h handlers) handleRecoveryCodeAcknowledge(w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(strings.TrimSpace(r.FormValue("pending_id")), strings.TrimSpace(r.FormValue("next"))))
+	httpx.WriteRedirect(w, r, h.session.ResolvePostAuthRedirect(strings.TrimSpace(r.FormValue("pending_id")), strings.TrimSpace(r.FormValue("next"))))
 }
 
 // writeRecoveryRevealState stores one-time recovery-code display state.

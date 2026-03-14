@@ -4,54 +4,33 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/invite"
-	invitegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
-	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
-	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
 // defaultPublicModules returns stable public web modules.
-func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicModuleOptions) []module.Module {
-	authGateway := publicauthgateway.NewGRPCGateway(deps.PublicAuth.AuthClient)
-	discoveryGateway := discovery.NewGRPCGateway(deps.Discovery.DiscoveryClient)
-	dashboardSync := dashboardsync.New(deps.DashboardSync.UserHubControlClient, deps.DashboardSync.GameEventClient, nil)
-	return []module.Module{
-		publicauth.New(publicauth.Config{
-			Gateway:         authGateway,
-			ResolveSignedIn: res.ResolveSignedIn,
-			RequestMeta:     opts.RequestSchemePolicy,
-			AuthBaseURL:     deps.PublicAuth.AuthBaseURL,
-			Surface:         publicauth.SurfaceShell,
+func defaultPublicModules(deps Dependencies, principal requestresolver.PrincipalResolver, opts PublicModuleOptions) []module.Module {
+	publicModules := publicauth.ComposeSurfaceSet(publicauth.SurfaceSetConfig{
+		AuthClient:  deps.PublicAuth.AuthClient,
+		Principal:   principal,
+		RequestMeta: opts.RequestSchemePolicy,
+		AuthBaseURL: deps.PublicAuth.AuthBaseURL,
+	})
+	publicModules = append(publicModules,
+		discovery.Compose(discovery.CompositionConfig{
+			DiscoveryClient: deps.Discovery.DiscoveryClient,
 		}),
-		publicauth.New(publicauth.Config{
-			Gateway:         authGateway,
-			ResolveSignedIn: res.ResolveSignedIn,
-			RequestMeta:     opts.RequestSchemePolicy,
-			AuthBaseURL:     deps.PublicAuth.AuthBaseURL,
-			Surface:         publicauth.SurfacePasskeys,
+		profile.Compose(profile.CompositionConfig{
+			AuthClient:   deps.Profile.AuthClient,
+			SocialClient: deps.Profile.SocialClient,
+			AssetBaseURL: deps.AssetBaseURL,
+			Principal:    principal,
 		}),
-		publicauth.New(publicauth.Config{
-			Gateway:         authGateway,
-			ResolveSignedIn: res.ResolveSignedIn,
-			RequestMeta:     opts.RequestSchemePolicy,
-			AuthBaseURL:     deps.PublicAuth.AuthBaseURL,
-			Surface:         publicauth.SurfaceAuthRedirect,
-		}),
-		discovery.New(discovery.Config{Gateway: discoveryGateway}),
-		profile.New(profile.Config{
-			Gateway:         profilegateway.NewGRPCGateway(deps.Profile.AuthClient, deps.Profile.SocialClient),
-			AssetBaseURL:    deps.AssetBaseURL,
-			ResolveSignedIn: res.ResolveSignedIn,
-		}),
-		invite.New(invite.Config{
-			Gateway:       invitegateway.NewGRPCGateway(deps.Campaigns.InviteClient, deps.Campaigns.AuthClient),
-			Base:          publichandler.NewBase(publichandler.WithResolveViewerSignedIn(res.ResolveSignedIn)),
-			RequestMeta:   opts.RequestSchemePolicy,
-			ResolveUserID: res.ResolveUserID,
-			DashboardSync: dashboardSync,
-		}),
-	}
+		invite.ComposePublic(invite.PublicSurfaceOptions{
+			RequestMeta: opts.RequestSchemePolicy,
+			Principal:   principal,
+		}, deps.Invite),
+	)
+	return publicModules
 }

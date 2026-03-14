@@ -18,12 +18,12 @@ func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !h.creation.Enabled(page.workspace.System) {
+	if !h.creationPages.Enabled(page.workspace.System) {
 		h.WriteNotFound(w, r)
 		return
 	}
 
-	creationPage, err := h.creation.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
+	creationPage, err := h.creationPages.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

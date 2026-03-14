@@ -33,26 +33,42 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 	}
 
 	ready := NewGRPCGateway(GRPCGatewayDeps{
-		Read: GRPCGatewayReadDeps{
-			Campaign:           &contractCampaignClient{},
-			Communication:      &contractCommunicationClient{},
+		CatalogRead:       CatalogReadDeps{Campaign: &contractCampaignClient{}},
+		CatalogMutation:   CatalogMutationDeps{Campaign: &contractCampaignClient{}},
+		WorkspaceRead:     WorkspaceReadDeps{Campaign: &contractCampaignClient{}},
+		GameRead:          GameReadDeps{Communication: &contractCommunicationClient{}},
+		ParticipantRead:   ParticipantReadDeps{Participant: &contractParticipantClient{}},
+		ParticipantMutate: ParticipantMutationDeps{Participant: &contractParticipantClient{}},
+		CharacterRead: CharacterReadDeps{
+			Character:          &fakeCharacterWorkflowClient{},
 			Participant:        &contractParticipantClient{},
+			DaggerheartContent: &fakeDaggerheartContentClient{},
+		},
+		CharacterControl: CharacterControlMutationDeps{Character: &fakeCharacterWorkflowClient{}},
+		CharacterMutate:  CharacterMutationDeps{Character: &fakeCharacterWorkflowClient{}},
+		SessionRead:      SessionReadDeps{Campaign: &contractCampaignClient{}, Session: &contractSessionClient{}},
+		SessionMutate:    SessionMutationDeps{Session: &contractSessionClient{}},
+		InviteRead: InviteReadDeps{
+			Invite:      &contractInviteClient{},
+			Participant: &contractParticipantClient{},
+			Social:      &contractSocialClient{},
+			Auth:        &contractAuthClient{},
+		},
+		InviteMutate: InviteMutationDeps{Invite: &contractInviteClient{}, Auth: &contractAuthClient{}},
+		ConfigMutate: ConfigurationMutationDeps{Campaign: &contractCampaignClient{}},
+		AutomationRead: AutomationReadDeps{
+			Agent: &contractAgentClient{},
+		},
+		AutomationMutate: AutomationMutationDeps{Campaign: &contractCampaignClient{}},
+		CreationRead: CharacterCreationReadDeps{
 			Character:          &fakeCharacterWorkflowClient{},
 			DaggerheartContent: &fakeDaggerheartContentClient{},
 			DaggerheartAsset:   &fakeDaggerheartContentClient{},
-			Session:            &contractSessionClient{},
-			Invite:             &contractInviteClient{},
-			Social:             &contractSocialClient{},
 		},
-		Mutation: GRPCGatewayMutationDeps{
-			Campaign:    &contractCampaignClient{},
-			Participant: &contractParticipantClient{},
-			Character:   &fakeCharacterWorkflowClient{},
-			Session:     &contractSessionClient{},
-			Invite:      &contractInviteClient{},
-			Auth:        &contractAuthClient{},
+		CreationMutation: CharacterCreationMutationDeps{
+			Character: &fakeCharacterWorkflowClient{},
 		},
-		Authorization: GRPCGatewayAuthorizationDeps{
+		Authorization: AuthorizationDeps{
 			Client: contractAuthorizationClient{},
 		},
 	})
@@ -253,7 +269,7 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 		t.Fatalf("participants = %#v", participants)
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{})
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CharacterReadContext{})
 	if err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}
@@ -297,7 +313,7 @@ func TestCampaignCharactersMarksViewerOwnedCharactersFromControllerParticipant(t
 		},
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CharacterReadContext{
 		ViewerUserID: "user-1",
 	})
 	if err != nil {
@@ -354,7 +370,7 @@ func TestCampaignCharactersMapsDaggerheartSummaryWhenProfileAndCatalogResolve(t 
 		},
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CharacterReadContext{
 		System: "Daggerheart",
 		Locale: language.BrazilianPortuguese,
 	})
@@ -424,7 +440,7 @@ func TestCampaignCharactersSkipsDaggerheartSummaryWhenCatalogNamesDoNotResolve(t
 		},
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CharacterReadContext{
 		System: "Daggerheart",
 		Locale: language.AmericanEnglish,
 	})
@@ -453,7 +469,7 @@ func TestCampaignCharactersSkipsDaggerheartReadsForNonDaggerheartOptions(t *test
 		},
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CharacterReadContext{
 		System: "Pathfinder",
 		Locale: language.AmericanEnglish,
 	})
@@ -1616,7 +1632,7 @@ func TestParticipantAndCharacterClientRequired(t *testing.T) {
 	if _, err := gateway.CampaignParticipants(context.Background(), "c1"); err == nil {
 		t.Fatalf("expected missing participant client error")
 	}
-	if _, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{}); err == nil {
+	if _, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CharacterReadContext{}); err == nil {
 		t.Fatalf("expected missing character client error")
 	}
 }
@@ -1641,7 +1657,7 @@ func TestEmptyCampaignIDReturnsEmptyCollections(t *testing.T) {
 		t.Fatalf("len(participants) = %d, want 0", len(participants))
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), " ", campaignapp.CampaignCharactersReadOptions{})
+	characters, err := gateway.CampaignCharacters(context.Background(), " ", campaignapp.CharacterReadContext{})
 	if err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}

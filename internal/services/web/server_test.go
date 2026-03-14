@@ -68,11 +68,8 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
 	campaignsRR := httptest.NewRecorder()
 	h.ServeHTTP(campaignsRR, campaignsReq)
-	if campaignsRR.Code != http.StatusFound {
-		t.Fatalf("campaigns status = %d, want %d", campaignsRR.Code, http.StatusFound)
-	}
-	if got := campaignsRR.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F123" {
-		t.Fatalf("campaigns redirect = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F123")
+	if campaignsRR.Code != http.StatusNotFound {
+		t.Fatalf("campaigns status = %d, want %d", campaignsRR.Code, http.StatusNotFound)
 	}
 	if got := dashboardRR.Header().Get("Location"); got != "/login?next=%2Fapp%2Fdashboard%2F" {
 		t.Fatalf("dashboard redirect = %q, want %q", got, "/login?next=%2Fapp%2Fdashboard%2F")
@@ -195,12 +192,14 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
 					CommunicationClient:      defaultCommunicationClient(),
+					AgentClient:              fakeAgentClient{},
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),
 					DaggerheartContentClient: defaultDaggerheartContentClient(),
 					DaggerheartAssetClient:   defaultDaggerheartAssetClient(),
 					SessionClient:            defaultSessionClient(),
 					InviteClient:             defaultInviteClient(),
+					SocialClient:             defaultSocialClient(),
 					AuthClient:               auth,
 					AuthorizationClient:      defaultAuthorizationClient(),
 				},

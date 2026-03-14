@@ -27,6 +27,19 @@ func Read(r *http.Request) (string, bool) {
 	return value, true
 }
 
+// AllowsMutationWithPolicy reports whether a public mutation route may proceed
+// under the standard browser rule: anonymous requests are allowed, but
+// requests carrying a session cookie must prove same-origin.
+func AllowsMutationWithPolicy(r *http.Request, policy requestmeta.SchemePolicy) bool {
+	if r == nil {
+		return false
+	}
+	if _, ok := Read(r); !ok {
+		return true
+	}
+	return requestmeta.HasSameOriginProofWithPolicy(r, policy)
+}
+
 // Write sets the session cookie for the current request context.
 func Write(w http.ResponseWriter, r *http.Request, sessionID string) {
 	WriteWithPolicy(w, r, sessionID, requestmeta.SchemePolicy{})

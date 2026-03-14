@@ -6,6 +6,7 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -21,12 +22,12 @@ func (h handlers) handleAIKeysGet(w http.ResponseWriter, r *http.Request) {
 // handleAIKeysCreate handles this route in the module transport layer.
 func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := r.ParseForm(); err != nil {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_ai_key_form", "failed to parse ai key form"))
+	if err := forminput.ParseInvalidInput(r, "error.web.message.failed_to_parse_ai_key_form", "failed to parse ai key form"); err != nil {
+		h.WriteError(w, r, err)
 		return
 	}
 	label, secret := parseAIKeyCreateInput(r.PostForm)
-	if err := h.aiKeys.CreateAIKey(ctx, userID, label, secret); err != nil {
+	if err := h.ai.CreateAIKey(ctx, userID, label, secret); err != nil {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
 			loc, lang := h.PageLocalizer(w, r)
@@ -43,7 +44,7 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 // handleAIKeyRevoke handles this route in the module transport layer.
 func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, credentialID string) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.aiKeys.RevokeAIKey(ctx, userID, credentialID); err != nil {
+	if err := h.ai.RevokeAIKey(ctx, userID, credentialID); err != nil {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
 			h.writeFlashNotice(w, r, flashnotice.Notice{Kind: flashnotice.KindError, Key: apperrors.LocalizationKey(err)})

@@ -5,7 +5,7 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
-	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
 )
 
@@ -16,7 +16,7 @@ func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 		h.writeJSONError(w, r, err)
 		return
 	}
-	start, err := h.service.PasskeyLoginStart(r.Context(), input.Username)
+	start, err := h.passkeys.PasskeyLoginStart(r.Context(), input.Username)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -31,13 +31,13 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		h.writeJSONError(w, r, err)
 		return
 	}
-	finished, err := h.service.PasskeyLoginFinish(r.Context(), input.SessionID, input.Credential, input.PendingID)
+	finished, err := h.passkeys.PasskeyLoginFinish(r.Context(), input.SessionID, input.Credential, input.PendingID)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
 	}
 	h.writeSessionCookie(w, r, finished.SessionID)
-	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyLoginFinishResponse(h.service.ResolvePostAuthRedirect(input.PendingID, input.NextPath)))
+	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyLoginFinishResponse(h.session.ResolvePostAuthRedirect(input.PendingID, input.NextPath)))
 }
 
 // handlePasskeyRegisterStart handles this route in the module transport layer.
@@ -47,7 +47,7 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		h.writeJSONError(w, r, err)
 		return
 	}
-	start, err := h.service.PasskeyRegisterStart(r.Context(), input.Username)
+	start, err := h.passkeys.PasskeyRegisterStart(r.Context(), input.Username)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -62,7 +62,7 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		h.writeJSONError(w, r, err)
 		return
 	}
-	finished, err := h.service.PasskeyRegisterFinish(r.Context(), input.SessionID, input.Credential)
+	finished, err := h.passkeys.PasskeyRegisterFinish(r.Context(), input.SessionID, input.Credential)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -83,7 +83,7 @@ func (h handlers) handleUsernameCheck(w http.ResponseWriter, r *http.Request) {
 		h.writeJSONError(w, r, err)
 		return
 	}
-	result, err := h.service.CheckUsernameAvailability(r.Context(), input.Username)
+	result, err := h.passkeys.CheckUsernameAvailability(r.Context(), input.Username)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -93,6 +93,6 @@ func (h handlers) handleUsernameCheck(w http.ResponseWriter, r *http.Request) {
 
 // writeJSONError centralizes this web behavior in one helper seam.
 func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
-	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
-	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(loc, err, lang))
+	page := requestresolver.ResolveLocalizedPage(w, r, nil)
+	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(page.Localizer, err, page.Language))
 }

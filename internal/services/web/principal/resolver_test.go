@@ -37,7 +37,7 @@ func TestResolverAuthRequiredRejectsUnknownSession(t *testing.T) {
 	request := httptest.NewRequest(http.MethodGet, "/", nil)
 	request.AddCookie(&http.Cookie{Name: "web_session", Value: "unknown"})
 
-	if resolver.AuthRequired()(request) {
+	if resolver.AuthRequired(request) {
 		t.Fatalf("AuthRequired() = true, want false for unknown session")
 	}
 }

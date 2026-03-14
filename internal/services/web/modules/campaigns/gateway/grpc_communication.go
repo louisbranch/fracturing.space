@@ -10,11 +10,11 @@ import (
 )
 
 // CampaignGameSurface returns the game-owned communication context mapped for the web game surface.
-func (g GRPCGateway) CampaignGameSurface(ctx context.Context, campaignID string) (campaignapp.CampaignGameSurface, error) {
-	if g.Read.Communication == nil {
+func (g gameReadGateway) CampaignGameSurface(ctx context.Context, campaignID string) (campaignapp.CampaignGameSurface, error) {
+	if g.read.Communication == nil {
 		return campaignapp.CampaignGameSurface{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.campaign_service_client_is_not_configured", "communication service client is not configured")
 	}
-	resp, err := g.Read.Communication.GetCommunicationContext(ctx, &statev1.GetCommunicationContextRequest{
+	resp, err := g.read.Communication.GetCommunicationContext(ctx, &statev1.GetCommunicationContextRequest{
 		CampaignId: campaignID,
 	})
 	if err != nil {

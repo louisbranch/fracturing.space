@@ -53,13 +53,7 @@ func NewHandler(cfg Config) (http.Handler, error) {
 
 	principalResolver := principal.New(deps.Principal)
 	h, err := composition.ComposeAppHandler(composition.ComposeInput{
-		Principal: composition.PrincipalResolvers{
-			AuthRequired:    principalResolver.AuthRequired(),
-			ResolveViewer:   principalResolver.ResolveViewer,
-			ResolveSignedIn: principalResolver.ResolveSignedIn,
-			ResolveUserID:   principalResolver.ResolveUserID,
-			ResolveLanguage: principalResolver.ResolveLanguage,
-		},
+		Principal:           principalResolver,
 		ModuleDependencies:  deps.Modules,
 		ChatHTTPAddr:        cfg.ChatHTTPAddr,
 		RequestSchemePolicy: cfg.RequestSchemePolicy,

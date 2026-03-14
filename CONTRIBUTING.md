@@ -10,8 +10,9 @@ workflow, standards, and expectations used in this repo.
 1. Fork the repo and create a branch from `main`.
 2. Use a prefixed branch name: `feat/`, `fix/`, `chore/`, or `docs/`.
 3. Make focused changes with a single intent.
-4. Run tests: `make test`.
-5. Open a PR with a title using the same prefix style.
+4. Read the canonical architecture docs for the area you are changing before editing.
+5. Run verification for the slice you changed, then broaden to the repo-level targets before opening or updating a PR.
+6. Open a PR with a title using the same prefix style.
 
 ------------------------------------------------------------------------
 
@@ -33,6 +34,12 @@ Use the supported verification commands documented in
 - `make web-architecture-check` (required when changing `internal/services/web/` architecture, modules, routes, or templates)
 - `make game-architecture-check` (required when changing `internal/services/game/` domain boundaries or write-path architecture guards)
 
+For web changes, also read:
+
+- [Web architecture](docs/architecture/platform/web-architecture.md)
+- [Web contributor map](docs/architecture/platform/web-contributor-map.md)
+- [Web module playbook](docs/guides/web-module-playbook.md)
+
 ------------------------------------------------------------------------
 
 ## Code and Structure Guidelines
@@ -41,6 +48,7 @@ Use the supported verification commands documented in
   flag/env parsing and runtime orchestration).
 - Shared logic goes in `internal/` (preferred) or `pkg/`.
 - Keep files focused; split large files by responsibility.
+- Prefer architecture-first refactors over small edits that worsen boundaries.
 - Avoid reformatting unrelated code.
 - Prefer early returns to reduce nesting.
 - Wrap errors with `%w` and include context in error messages.
@@ -83,6 +91,7 @@ Use the canonical docs paths: [System extension onboarding](docs/guides/adding-c
 - Add or update doc comments for any modified identifiers.
 - Update `docs/` and `README.md` when user-facing behavior changes.
 - Keep [docs/index.md](docs/index.md) and README links current.
+- Promote durable web boundary decisions to the architecture docs instead of leaving them only in code or temporary notes.
 
 ------------------------------------------------------------------------
 

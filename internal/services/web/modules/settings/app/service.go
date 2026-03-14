@@ -13,8 +13,9 @@ type AIServiceConfig struct {
 	AIAgentGateway AIAgentGateway
 }
 
-// ServiceConfig keeps all settings gateway dependencies explicit.
-type ServiceConfig struct {
+// serviceConfig keeps all settings gateway dependencies explicit inside the
+// app package while transport callers stay on the owned account-vs-AI seams.
+type serviceConfig struct {
 	ProfileGateway  ProfileGateway
 	LocaleGateway   LocaleGateway
 	SecurityGateway SecurityGateway
@@ -31,14 +32,9 @@ type service struct {
 	aiAgentGateway  AIAgentGateway
 }
 
-// NewService constructs a settings service with fail-closed gateway defaults.
-func NewService(config ServiceConfig) Service {
-	return newServiceFromConfig(config)
-}
-
 // NewAccountService constructs an account-surface service with fail-closed defaults.
 func NewAccountService(config AccountServiceConfig) AccountService {
-	return newServiceFromConfig(ServiceConfig{
+	return newServiceFromConfig(serviceConfig{
 		ProfileGateway:  config.ProfileGateway,
 		LocaleGateway:   config.LocaleGateway,
 		SecurityGateway: config.SecurityGateway,
@@ -47,29 +43,14 @@ func NewAccountService(config AccountServiceConfig) AccountService {
 
 // NewAIService constructs an AI-surface service with fail-closed defaults.
 func NewAIService(config AIServiceConfig) AIService {
-	return newServiceFromConfig(ServiceConfig{
+	return newServiceFromConfig(serviceConfig{
 		AIKeyGateway:   config.AIKeyGateway,
 		AIAgentGateway: config.AIAgentGateway,
 	})
 }
 
-// newService keeps package-local tests on a combined-gateway seam while
-// production callers stay explicit by surface.
-func newService(gateway Gateway) service {
-	if gateway == nil {
-		return newServiceFromConfig(ServiceConfig{})
-	}
-	return newServiceFromConfig(ServiceConfig{
-		ProfileGateway:  gateway,
-		LocaleGateway:   gateway,
-		SecurityGateway: gateway,
-		AIKeyGateway:    gateway,
-		AIAgentGateway:  gateway,
-	})
-}
-
 // newServiceFromConfig builds package wiring with fail-closed defaults per surface.
-func newServiceFromConfig(config ServiceConfig) service {
+func newServiceFromConfig(config serviceConfig) service {
 	profileGateway := config.ProfileGateway
 	if profileGateway == nil {
 		profileGateway = unavailableGateway{}

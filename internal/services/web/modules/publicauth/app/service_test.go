@@ -10,7 +10,7 @@ import (
 )
 
 func TestPasskeyLoginStartRequiresUsername(t *testing.T) {
-	svc := NewService(&authGatewayStub{}, "")
+	svc := newService(&authGatewayStub{}, "")
 	_, err := svc.PasskeyLoginStart(context.Background(), "  ")
 	if err == nil {
 		t.Fatal("expected validation error")
@@ -26,7 +26,7 @@ func TestPasskeyRegisterStartAndFinish(t *testing.T) {
 			RecoveryCode: "ABCD-EFGH",
 		},
 	}
-	svc := NewService(stub, "")
+	svc := newService(stub, "")
 
 	start, err := svc.PasskeyRegisterStart(context.Background(), "louis")
 	if err != nil {
@@ -50,7 +50,7 @@ func TestPasskeyLoginFinishCreatesWebSession(t *testing.T) {
 		finishLoginUserID: "user-1",
 		webSessionID:      "web-1",
 	}
-	svc := NewService(stub, "")
+	svc := newService(stub, "")
 
 	finish, err := svc.PasskeyLoginFinish(context.Background(), "login-1", json.RawMessage(`{}`), "")
 	if err != nil {
@@ -62,7 +62,7 @@ func TestPasskeyLoginFinishCreatesWebSession(t *testing.T) {
 }
 
 func TestCheckUsernameAvailabilityTreatsBlankAsInvalid(t *testing.T) {
-	svc := NewService(&authGatewayStub{}, "")
+	svc := newService(&authGatewayStub{}, "")
 	availability, err := svc.CheckUsernameAvailability(context.Background(), "   ")
 	if err != nil {
 		t.Fatalf("CheckUsernameAvailability() error = %v", err)
@@ -74,7 +74,7 @@ func TestCheckUsernameAvailabilityTreatsBlankAsInvalid(t *testing.T) {
 
 func TestCheckUsernameAvailabilityDelegatesToGateway(t *testing.T) {
 	stub := &authGatewayStub{usernameAvailability: UsernameAvailability{CanonicalUsername: "louis", State: UsernameAvailabilityStateAvailable}}
-	svc := NewService(stub, "")
+	svc := newService(stub, "")
 	availability, err := svc.CheckUsernameAvailability(context.Background(), "Louis")
 	if err != nil {
 		t.Fatalf("CheckUsernameAvailability() error = %v", err)

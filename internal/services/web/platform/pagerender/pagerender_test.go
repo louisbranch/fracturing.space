@@ -189,6 +189,21 @@ func TestWriteModulePageAllowsNilWriter(t *testing.T) {
 	}
 }
 
+func TestWriteModulePageReturnsRenderError(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
+	rr := httptest.NewRecorder()
+
+	err := WriteModulePage(rr, req, nil, ModulePage{
+		Title:    "Dashboard",
+		Fragment: brokenComponent{},
+	})
+	if err == nil {
+		t.Fatal("WriteModulePage() error = nil, want non-nil")
+	}
+}
+
 func TestWritePublicPageHandlesNilRequest(t *testing.T) {
 	t.Parallel()
 
@@ -228,6 +243,21 @@ func TestWritePublicPageFallsBackToInternalServerErrorOnRenderFailure(t *testing
 	}
 	if body := rr.Body.String(); !strings.Contains(body, http.StatusText(http.StatusInternalServerError)) {
 		t.Fatalf("body missing generic internal-server-error message: %q", body)
+	}
+}
+
+func TestWritePublicPageAllowsNilWriter(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
+	WritePublicPage(nil, req, "Discover", "desc", "en", http.StatusCreated, textComponent(`<section>ok</section>`))
+}
+
+func TestResolveFlashToastReturnsNilWhenNoNoticeExists(t *testing.T) {
+	t.Parallel()
+
+	if toast := resolveFlashToast(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil), blankLocalizer{}, "en-US"); toast != nil {
+		t.Fatalf("resolveFlashToast() = %+v, want nil", toast)
 	}
 }
 

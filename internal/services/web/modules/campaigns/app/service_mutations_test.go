@@ -306,13 +306,13 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 
 	tests := []struct {
 		name         string
-		run          func(service) error
+		run          func(testServiceBundle) error
 		wantAction   AuthorizationAction
 		wantResource AuthorizationResource
 	}{
 		{
 			name: "update campaign",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				name := "Campaign Prime"
 				theme := "New theme"
 				locale := "pt-BR"
@@ -327,7 +327,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		},
 		{
 			name: "start session",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
 			},
 			wantAction:   campaignAuthzActionManage,
@@ -335,7 +335,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		},
 		{
 			name: "end session",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "sess-1"})
 			},
 			wantAction:   campaignAuthzActionManage,
@@ -343,7 +343,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		},
 		{
 			name: "create character",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				_, err := s.createCharacter(contextWithResolvedUserID("user-1"), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 				return err
 			},
@@ -352,7 +352,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		},
 		{
 			name: "create invite",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})
 			},
 			wantAction:   campaignAuthzActionManage,
@@ -360,7 +360,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		},
 		{
 			name: "revoke invite",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "inv-1"})
 			},
 			wantAction:   campaignAuthzActionManage,
@@ -368,7 +368,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		},
 		{
 			name: "update participant",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{
 					ParticipantID: "p-1",
 					Name:          "Player Prime",
@@ -1016,23 +1016,23 @@ func TestMutationMethodsDenyWhenAuthorizationNotEvaluated(t *testing.T) {
 
 	tests := []struct {
 		name string
-		run  func(service) error
+		run  func(testServiceBundle) error
 	}{
 		{
 			name: "start session",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
 			},
 		},
 		{
 			name: "end session",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "sess-1"})
 			},
 		},
 		{
 			name: "create invite",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
 					ParticipantID:     "p-1",
 					RecipientUsername: "alice",
@@ -1041,7 +1041,7 @@ func TestMutationMethodsDenyWhenAuthorizationNotEvaluated(t *testing.T) {
 		},
 		{
 			name: "revoke invite",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "inv-1"})
 			},
 		},
@@ -1072,23 +1072,23 @@ func TestMutationMethodsDenyWhenAuthorizationGatewayErrors(t *testing.T) {
 
 	tests := []struct {
 		name string
-		run  func(service) error
+		run  func(testServiceBundle) error
 	}{
 		{
 			name: "start session",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.startSession(contextWithResolvedUserID("user-1"), "c1", StartSessionInput{Name: "Session One"})
 			},
 		},
 		{
 			name: "end session",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.endSession(contextWithResolvedUserID("user-1"), "c1", EndSessionInput{SessionID: "sess-1"})
 			},
 		},
 		{
 			name: "create invite",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
 					ParticipantID:     "p-1",
 					RecipientUsername: "alice",
@@ -1097,7 +1097,7 @@ func TestMutationMethodsDenyWhenAuthorizationGatewayErrors(t *testing.T) {
 		},
 		{
 			name: "revoke invite",
-			run: func(s service) error {
+			run: func(s testServiceBundle) error {
 				return s.revokeInvite(contextWithResolvedUserID("user-1"), "c1", RevokeInviteInput{InviteID: "inv-1"})
 			},
 		},

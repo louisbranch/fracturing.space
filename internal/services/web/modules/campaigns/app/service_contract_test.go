@@ -10,15 +10,62 @@ import (
 	"golang.org/x/text/language"
 )
 
-func TestNewServiceAndWorkflowResolverContracts(t *testing.T) {
+func TestPackageServiceAndWorkflowResolverContracts(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(ServiceConfig{})
-	if IsGatewayHealthy(nil) {
-		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
+	if NewCatalogService(CatalogServiceConfig{}) != nil {
+		t.Fatalf("NewCatalogService() returned non-nil service for missing deps")
 	}
-	if _, err := svc.ListCampaigns(context.Background()); err == nil {
-		t.Fatalf("expected unavailable error for nil gateway")
+	if NewWorkspaceService(WorkspaceServiceConfig{}) != nil {
+		t.Fatalf("NewWorkspaceService() returned non-nil service for missing deps")
+	}
+	if NewGameService(GameServiceConfig{}) != nil {
+		t.Fatalf("NewGameService() returned non-nil service for missing deps")
+	}
+	if NewParticipantReadService(ParticipantReadServiceConfig{}, nil) != nil {
+		t.Fatalf("NewParticipantReadService() returned non-nil service for missing deps")
+	}
+	if NewParticipantMutationService(ParticipantMutationServiceConfig{}, nil) != nil {
+		t.Fatalf("NewParticipantMutationService() returned non-nil service for missing deps")
+	}
+	if NewAutomationReadService(AutomationReadServiceConfig{}, nil) != nil {
+		t.Fatalf("NewAutomationReadService() returned non-nil service for missing deps")
+	}
+	if NewAutomationMutationService(AutomationMutationServiceConfig{}, nil) != nil {
+		t.Fatalf("NewAutomationMutationService() returned non-nil service for missing deps")
+	}
+	if NewCharacterReadService(CharacterReadServiceConfig{}, nil) != nil {
+		t.Fatalf("NewCharacterReadService() returned non-nil service for missing deps")
+	}
+	if NewCharacterControlService(CharacterControlServiceConfig{}, nil) != nil {
+		t.Fatalf("NewCharacterControlService() returned non-nil service for missing deps")
+	}
+	if NewCharacterMutationService(CharacterMutationServiceConfig{}, nil) != nil {
+		t.Fatalf("NewCharacterMutationService() returned non-nil service for missing deps")
+	}
+	if NewSessionReadService(SessionReadServiceConfig{}) != nil {
+		t.Fatalf("NewSessionReadService() returned non-nil service for missing deps")
+	}
+	if NewSessionMutationService(SessionMutationServiceConfig{}, nil) != nil {
+		t.Fatalf("NewSessionMutationService() returned non-nil service for missing deps")
+	}
+	if NewInviteReadService(InviteReadServiceConfig{}, nil) != nil {
+		t.Fatalf("NewInviteReadService() returned non-nil service for missing deps")
+	}
+	if NewInviteMutationService(InviteMutationServiceConfig{}, nil) != nil {
+		t.Fatalf("NewInviteMutationService() returned non-nil service for missing deps")
+	}
+	if NewConfigurationService(ConfigurationServiceConfig{}, nil) != nil {
+		t.Fatalf("NewConfigurationService() returned non-nil service for missing deps")
+	}
+	if NewAuthorizationService(nil) != nil {
+		t.Fatalf("NewAuthorizationService() returned non-nil service for missing deps")
+	}
+	if NewCharacterCreationPageService(CharacterCreationServiceConfig{}) != nil {
+		t.Fatalf("NewCharacterCreationPageService() returned non-nil service for missing deps")
+	}
+	if NewCharacterCreationMutationService(CharacterCreationServiceConfig{}, nil) != nil {
+		t.Fatalf("NewCharacterCreationMutationService() returned non-nil service for missing deps")
 	}
 }
 
@@ -43,7 +90,7 @@ func TestParseGameSystemContracts(t *testing.T) {
 	}
 }
 
-func TestServiceExportedMethodContracts(t *testing.T) {
+func TestPackageServiceMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
@@ -61,11 +108,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 		characterCreationCatalog:  CampaignCharacterCreationCatalog{},
 		characterCreationProfile:  CampaignCharacterCreationProfile{},
 	}
-	svc := NewService(ServiceConfig{
-		ReadGateway:     gateway,
-		MutationGateway: gateway,
-		AuthzGateway:    gateway,
-	})
+	svc := newService(gateway)
 	ctx := contextWithResolvedUserID("user-1")
 
 	if _, err := svc.ListCampaigns(ctx); err != nil {
@@ -89,8 +132,11 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if _, err := svc.CampaignParticipantEditor(ctx, "c1", "p1"); err != nil {
 		t.Fatalf("CampaignParticipantEditor() error = %v", err)
 	}
-	if _, err := svc.CampaignCharacters(ctx, "c1", CampaignCharactersReadOptions{}); err != nil {
+	if _, err := svc.CampaignCharacters(ctx, "c1", CharacterReadContext{}); err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
+	}
+	if _, err := svc.CampaignCharacter(ctx, "c1", "char-1", CharacterReadContext{}); err != nil {
+		t.Fatalf("CampaignCharacter() error = %v", err)
 	}
 	if _, err := svc.CampaignSessions(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignSessions() error = %v", err)
@@ -138,16 +184,19 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if err := svc.RevokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}); err != nil {
 		t.Fatalf("RevokeInvite() error = %v", err)
 	}
-	if _, err := svc.CampaignCharacterCreationData(ctx, "c1", "char-1", language.AmericanEnglish); err != nil {
-		t.Fatalf("CampaignCharacterCreationData() error = %v", err)
-	}
-	if _, err := svc.CampaignCharacterCreationProgress(ctx, "c1", "char-1"); err != nil {
+	if _, err := svc.creationPageService.CampaignCharacterCreationProgress(ctx, "c1", "char-1"); err != nil {
 		t.Fatalf("CampaignCharacterCreationProgress() error = %v", err)
 	}
-	if err := svc.ApplyCharacterCreationStep(ctx, "c1", "char-1", &CampaignCharacterCreationStepInput{Details: &CampaignCharacterCreationStepDetails{}}); err != nil {
+	if _, err := svc.creationPageService.CampaignCharacterCreationCatalog(ctx, language.AmericanEnglish); err != nil {
+		t.Fatalf("CampaignCharacterCreationCatalog() error = %v", err)
+	}
+	if _, err := svc.creationPageService.CampaignCharacterCreationProfile(ctx, "c1", "char-1"); err != nil {
+		t.Fatalf("CampaignCharacterCreationProfile() error = %v", err)
+	}
+	if err := svc.creationMutationService.ApplyCharacterCreationStep(ctx, "c1", "char-1", &CampaignCharacterCreationStepInput{Details: &CampaignCharacterCreationStepDetails{}}); err != nil {
 		t.Fatalf("ApplyCharacterCreationStep() error = %v", err)
 	}
-	if err := svc.ResetCharacterCreationWorkflow(ctx, "c1", "char-1"); err != nil {
+	if err := svc.creationMutationService.ResetCharacterCreationWorkflow(ctx, "c1", "char-1"); err != nil {
 		t.Fatalf("ResetCharacterCreationWorkflow() error = %v", err)
 	}
 }
@@ -183,8 +232,11 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	if _, err := gw.CampaignParticipant(ctx, "c1", "p1"); err != nil {
 		assertUnavailable(t, err, "CampaignParticipant")
 	}
-	if _, err := gw.CampaignCharacters(ctx, "c1", CampaignCharactersReadOptions{}); err != nil {
+	if _, err := gw.CampaignCharacters(ctx, "c1", CharacterReadContext{}); err != nil {
 		assertUnavailable(t, err, "CampaignCharacters")
+	}
+	if _, err := gw.CampaignCharacter(ctx, "c1", "char-1", CharacterReadContext{}); err != nil {
+		assertUnavailable(t, err, "CampaignCharacter")
 	}
 	if _, err := gw.CampaignSessions(ctx, "c1"); err != nil {
 		assertUnavailable(t, err, "CampaignSessions")

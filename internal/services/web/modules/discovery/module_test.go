@@ -1,13 +1,21 @@
 package discovery
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
+
+type stubGateway struct{}
+
+func (stubGateway) ListStarterEntries(context.Context) ([]discoveryapp.StarterEntry, error) {
+	return nil, nil
+}
 
 func TestMountServesDiscoveryGet(t *testing.T) {
 	t.Parallel()

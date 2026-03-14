@@ -6,6 +6,7 @@ import (
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -15,7 +16,7 @@ import (
 // handleProfileGet handles this route in the module transport layer.
 func (h handlers) handleProfileGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	profile, err := h.profile.LoadProfile(ctx, userID)
+	profile, err := h.account.LoadProfile(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -26,17 +27,17 @@ func (h handlers) handleProfileGet(w http.ResponseWriter, r *http.Request) {
 // handleProfilePost handles this route in the module transport layer.
 func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := r.ParseForm(); err != nil {
-		h.WriteError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.failed_to_parse_profile_form", "failed to parse profile form"))
+	if err := forminput.ParseInvalidInput(r, "error.web.message.failed_to_parse_profile_form", "failed to parse profile form"); err != nil {
+		h.WriteError(w, r, err)
 		return
 	}
-	existingProfile, err := h.profile.LoadProfile(ctx, userID)
+	existingProfile, err := h.account.LoadProfile(ctx, userID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
 	profile := parseProfileInput(r.PostForm, existingProfile)
-	if err := h.profile.SaveProfile(ctx, userID, profile); err != nil {
+	if err := h.account.SaveProfile(ctx, userID, profile); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
 			loc, lang := h.PageLocalizer(w, r)
 			h.renderProfilePage(w, r, http.StatusBadRequest, profile, webi18n.LocalizeError(loc, err, lang))

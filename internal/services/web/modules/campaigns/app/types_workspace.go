@@ -112,8 +112,8 @@ type CampaignCharacterDaggerheartSummary struct {
 	CommunityName string `json:"communityName"`
 }
 
-// CampaignCharactersReadOptions keeps system-aware read dependencies explicit.
-type CampaignCharactersReadOptions struct {
+// CharacterReadContext keeps system-aware character read dependencies explicit.
+type CharacterReadContext struct {
 	System       string
 	Locale       language.Tag
 	ViewerUserID string

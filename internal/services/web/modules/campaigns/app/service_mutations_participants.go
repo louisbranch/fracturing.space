@@ -7,6 +7,16 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
+// CreateParticipant executes package-scoped creation behavior for this flow.
+func (s participantMutationService) CreateParticipant(ctx context.Context, campaignID string, input CreateParticipantInput) (CreateParticipantResult, error) {
+	return s.createParticipant(ctx, campaignID, input)
+}
+
+// UpdateParticipant applies this package workflow transition.
+func (s participantMutationService) UpdateParticipant(ctx context.Context, campaignID string, input UpdateParticipantInput) error {
+	return s.updateParticipant(ctx, campaignID, input)
+}
+
 // participantCreateRequest carries normalized participant creation values.
 type participantCreateRequest struct {
 	CampaignID     string
@@ -27,13 +37,13 @@ type participantUpdateRequest struct {
 }
 
 // createParticipant executes package-scoped creation behavior for this flow.
-func (s service) createParticipant(ctx context.Context, campaignID string, input CreateParticipantInput) (CreateParticipantResult, error) {
+func (s participantMutationService) createParticipant(ctx context.Context, campaignID string, input CreateParticipantInput) (CreateParticipantResult, error) {
 	request, err := normalizeParticipantCreateRequest(campaignID, input)
 	if err != nil {
 		return CreateParticipantResult{}, err
 	}
 
-	if err := s.requireCampaignActionAccess(
+	if err := s.auth.requireCampaignActionAccess(
 		ctx,
 		request.CampaignID,
 		campaignAuthzActionManage,
@@ -45,7 +55,7 @@ func (s service) createParticipant(ctx context.Context, campaignID string, input
 		return CreateParticipantResult{}, err
 	}
 
-	workspace, err := s.campaignWorkspace(ctx, request.CampaignID)
+	workspace, err := participantWorkspace(ctx, s.workspace, request.CampaignID)
 	if err != nil {
 		return CreateParticipantResult{}, err
 	}
@@ -53,7 +63,7 @@ func (s service) createParticipant(ctx context.Context, campaignID string, input
 		return CreateParticipantResult{}, err
 	}
 
-	created, err := s.mutationGateway.CreateParticipant(ctx, request.CampaignID, CreateParticipantInput{
+	created, err := s.mutation.CreateParticipant(ctx, request.CampaignID, CreateParticipantInput{
 		Name:           request.Name,
 		Role:           request.Role,
 		CampaignAccess: request.CampaignAccess,
@@ -68,18 +78,18 @@ func (s service) createParticipant(ctx context.Context, campaignID string, input
 }
 
 // updateParticipant applies this package workflow transition.
-func (s service) updateParticipant(ctx context.Context, campaignID string, input UpdateParticipantInput) error {
+func (s participantMutationService) updateParticipant(ctx context.Context, campaignID string, input UpdateParticipantInput) error {
 	request, err := normalizeParticipantUpdateRequest(campaignID, input)
 	if err != nil {
 		return err
 	}
 
-	current, err := s.campaignParticipant(ctx, request.CampaignID, request.ParticipantID)
+	current, err := campaignParticipant(ctx, s.read, request.CampaignID, request.ParticipantID)
 	if err != nil {
 		return err
 	}
 	if !participantIsSelfOwned(ctx, current) {
-		if err := s.requireCampaignActionAccess(
+		if err := s.auth.requireCampaignActionAccess(
 			ctx,
 			request.CampaignID,
 			campaignAuthzActionManage,
@@ -92,7 +102,7 @@ func (s service) updateParticipant(ctx context.Context, campaignID string, input
 		}
 	}
 	request.RequestedAccess = normalizeRequestedParticipantAccess(request.RequestedAccess, current)
-	workspace, err := s.campaignWorkspace(ctx, request.CampaignID)
+	workspace, err := participantWorkspace(ctx, s.workspace, request.CampaignID)
 	if err != nil {
 		return err
 	}
@@ -106,7 +116,7 @@ func (s service) updateParticipant(ctx context.Context, campaignID string, input
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.at_least_one_participant_field_is_required", "at least one participant field is required")
 	}
 
-	return s.mutationGateway.UpdateParticipant(ctx, request.CampaignID, UpdateParticipantInput{
+	return s.mutation.UpdateParticipant(ctx, request.CampaignID, UpdateParticipantInput{
 		ParticipantID:  request.ParticipantID,
 		Name:           request.Name,
 		Role:           request.Role,

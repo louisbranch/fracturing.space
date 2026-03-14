@@ -235,9 +235,20 @@ func (f fakeWebCharacterClient) ReleaseCharacterControl(context.Context, *statev
 	return &statev1.ReleaseCharacterControlResponse{}, nil
 }
 
-func (f fakeWebCharacterClient) GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
+func (f fakeWebCharacterClient) GetCharacterSheet(_ context.Context, req *statev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
 	if f.err != nil {
 		return nil, f.err
+	}
+	if f.response != nil {
+		characterID := strings.TrimSpace(req.GetCharacterId())
+		for _, character := range f.response.GetCharacters() {
+			if character == nil {
+				continue
+			}
+			if strings.TrimSpace(character.GetId()) == characterID {
+				return &statev1.GetCharacterSheetResponse{Character: character}, nil
+			}
+		}
 	}
 	return &statev1.GetCharacterSheetResponse{}, nil
 }

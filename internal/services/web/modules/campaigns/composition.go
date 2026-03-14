@@ -67,45 +67,72 @@ type CompositionConfig struct {
 	AuthorizationClient      campaigngateway.AuthorizationClient
 }
 
+// ProtectedSurfaceOptions carries the shared cross-cutting inputs the protected
+// registry is allowed to pass into campaign composition.
+type ProtectedSurfaceOptions struct {
+	Base             modulehandler.Base
+	ChatFallbackPort string
+	DashboardSync    DashboardSync
+	AssetBaseURL     string
+}
+
 // Compose builds the production campaigns module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
 	workflows := campaignworkflow.Registry{
 		campaignapp.GameSystemDaggerheart: daggerheart.New(config.AssetBaseURL),
 	}
-	gateway := campaigngateway.NewGRPCGateway(campaigngateway.GRPCGatewayDeps{
-		Read: campaigngateway.GRPCGatewayReadDeps{
-			Campaign:           config.CampaignClient,
-			Communication:      config.CommunicationClient,
-			Agent:              config.AgentClient,
-			Participant:        config.ParticipantClient,
-			Character:          config.CharacterClient,
-			DaggerheartContent: config.DaggerheartContentClient,
-			DaggerheartAsset:   config.DaggerheartAssetClient,
-			Session:            config.SessionClient,
-			Invite:             config.InviteClient,
-			Social:             config.SocialClient,
-		},
-		Mutation: campaigngateway.GRPCGatewayMutationDeps{
-			Campaign:    config.CampaignClient,
-			Participant: config.ParticipantClient,
-			Character:   config.CharacterClient,
-			Session:     config.SessionClient,
-			Invite:      config.InviteClient,
-			Auth:        config.AuthClient,
-		},
-		Authorization: campaigngateway.GRPCGatewayAuthorizationDeps{
-			Client: config.AuthorizationClient,
-		},
-		AssetBaseURL: config.AssetBaseURL,
-	})
+	serviceConfig := newServiceConfigFromGRPCDeps(newGatewayDeps(config), config.AssetBaseURL)
 	return New(Config{
-		ReadGateway:      gateway,
-		MutationGateway:  gateway,
-		AuthzGateway:     gateway,
+		Services:         newHandlerServices(serviceConfig),
 		Base:             config.Base,
 		ChatFallbackPort: config.ChatFallbackPort,
 		Workflows:        workflows,
 		DashboardSync:    config.DashboardSync,
 	})
+}
+
+// ComposeProtected composes the protected campaigns surface when the owning
+// dependency set is complete. The registry only provides shared options and
+// stable module ordering.
+func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (module.Module, bool) {
+	config := CompositionConfig{
+		Base:                     options.Base,
+		ChatFallbackPort:         options.ChatFallbackPort,
+		DashboardSync:            options.DashboardSync,
+		AssetBaseURL:             options.AssetBaseURL,
+		CampaignClient:           deps.CampaignClient,
+		CommunicationClient:      deps.CommunicationClient,
+		AgentClient:              deps.AgentClient,
+		ParticipantClient:        deps.ParticipantClient,
+		CharacterClient:          deps.CharacterClient,
+		DaggerheartContentClient: deps.DaggerheartContentClient,
+		DaggerheartAssetClient:   deps.DaggerheartAssetClient,
+		SessionClient:            deps.SessionClient,
+		InviteClient:             deps.InviteClient,
+		SocialClient:             deps.SocialClient,
+		AuthClient:               deps.AuthClient,
+		AuthorizationClient:      deps.AuthorizationClient,
+	}
+	if !config.configured() {
+		return nil, false
+	}
+	return Compose(config), true
+}
+
+// configured reports whether the campaigns surface has the full dependency set
+// required for production composition.
+func (config CompositionConfig) configured() bool {
+	return config.CampaignClient != nil &&
+		config.CommunicationClient != nil &&
+		config.AgentClient != nil &&
+		config.ParticipantClient != nil &&
+		config.CharacterClient != nil &&
+		config.DaggerheartContentClient != nil &&
+		config.DaggerheartAssetClient != nil &&
+		config.SessionClient != nil &&
+		config.InviteClient != nil &&
+		config.SocialClient != nil &&
+		config.AuthClient != nil &&
+		config.AuthorizationClient != nil
 }

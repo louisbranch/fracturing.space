@@ -5,20 +5,19 @@ import (
 	"strings"
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // Module provides unauthenticated root/auth routes.
 type Module struct {
-	gateway         publicauthapp.Gateway
-	resolveSignedIn module.ResolveSignedIn
-	authBaseURL     string
-	requestMeta     requestmeta.SchemePolicy
-	id              string
-	prefix          string
-	registerRoutes  func(*http.ServeMux, handlers)
+	services       handlerServices
+	principal      requestresolver.PrincipalResolver
+	requestMeta    requestmeta.SchemePolicy
+	id             string
+	prefix         string
+	registerRoutes func(*http.ServeMux, handlers)
 }
 
 // Surface classifies which route subset this module instance mounts.
@@ -35,24 +34,22 @@ const (
 
 // Config defines constructor dependencies for a publicauth module.
 type Config struct {
-	Gateway         publicauthapp.Gateway
-	ResolveSignedIn module.ResolveSignedIn
-	RequestMeta     requestmeta.SchemePolicy
-	AuthBaseURL     string
-	Surface         Surface
+	Services    handlerServices
+	Principal   requestresolver.PrincipalResolver
+	RequestMeta requestmeta.SchemePolicy
+	Surface     Surface
 }
 
 // New returns a publicauth module with explicit dependencies.
 func New(config Config) Module {
 	id, prefix, register := resolveSurface(config.Surface)
 	return Module{
-		gateway:         config.Gateway,
-		resolveSignedIn: config.ResolveSignedIn,
-		authBaseURL:     config.AuthBaseURL,
-		requestMeta:     config.RequestMeta,
-		id:              id,
-		prefix:          prefix,
-		registerRoutes:  register,
+		services:       normalizeHandlerServices(config.Services),
+		principal:      config.Principal,
+		requestMeta:    config.RequestMeta,
+		id:             id,
+		prefix:         prefix,
+		registerRoutes: register,
 	}
 }
 
@@ -84,8 +81,11 @@ func (m Module) ID() string {
 // Mount wires public routes under the auth/root prefix.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := publicauthapp.NewService(m.gateway, m.authBaseURL)
-	h := newHandlers(svc, m.requestMeta, m.resolveSignedIn)
+	h := newHandlers(handlersConfig{
+		Services:  m.services,
+		Policy:    m.requestMeta,
+		Principal: m.principal,
+	})
 	if m.registerRoutes != nil {
 		m.registerRoutes(mux, h)
 	} else {

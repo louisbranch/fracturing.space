@@ -3,34 +3,51 @@ package daggerheart
 import (
 	"strings"
 
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
+
+// catalogCreation keeps the assembled character-creation catalog local to the
+// Daggerheart workflow package so app contracts stay on explicit reads only.
+type catalogCreation struct {
+	Progress         campaignworkflow.Progress
+	Profile          campaignworkflow.Profile
+	Classes          []campaignworkflow.Class
+	Subclasses       []campaignworkflow.Subclass
+	Ancestries       []campaignworkflow.Heritage
+	Communities      []campaignworkflow.Heritage
+	PrimaryWeapons   []campaignworkflow.Weapon
+	SecondaryWeapons []campaignworkflow.Weapon
+	Armor            []campaignworkflow.Armor
+	PotionItems      []campaignworkflow.Item
+	DomainCards      []campaignworkflow.DomainCard
+	Domains          []campaignworkflow.Domain
+}
 
 // buildCatalogCreation initializes the creation aggregate with normalized inputs.
 func buildCatalogCreation(
-	progress campaignapp.CampaignCharacterCreationProgress,
-	profile campaignapp.CampaignCharacterCreationProfile,
-) campaignapp.CampaignCharacterCreation {
-	return campaignapp.CampaignCharacterCreation{
+	progress campaignworkflow.Progress,
+	profile campaignworkflow.Profile,
+) catalogCreation {
+	return catalogCreation{
 		Progress:         cloneProgress(progress),
 		Profile:          normalizeProfile(profile),
-		Classes:          []campaignapp.CatalogClass{},
-		Subclasses:       []campaignapp.CatalogSubclass{},
-		Ancestries:       []campaignapp.CatalogHeritage{},
-		Communities:      []campaignapp.CatalogHeritage{},
-		PrimaryWeapons:   []campaignapp.CatalogWeapon{},
-		SecondaryWeapons: []campaignapp.CatalogWeapon{},
-		Armor:            []campaignapp.CatalogArmor{},
-		PotionItems:      []campaignapp.CatalogItem{},
-		DomainCards:      []campaignapp.CatalogDomainCard{},
-		Domains:          []campaignapp.CatalogDomain{},
+		Classes:          []campaignworkflow.Class{},
+		Subclasses:       []campaignworkflow.Subclass{},
+		Ancestries:       []campaignworkflow.Heritage{},
+		Communities:      []campaignworkflow.Heritage{},
+		PrimaryWeapons:   []campaignworkflow.Weapon{},
+		SecondaryWeapons: []campaignworkflow.Weapon{},
+		Armor:            []campaignworkflow.Armor{},
+		PotionItems:      []campaignworkflow.Item{},
+		DomainCards:      []campaignworkflow.DomainCard{},
+		Domains:          []campaignworkflow.Domain{},
 	}
 }
 
 // cloneProgress copies progress slices so catalog assembly stays side-effect free.
-func cloneProgress(progress campaignapp.CampaignCharacterCreationProgress) campaignapp.CampaignCharacterCreationProgress {
-	return campaignapp.CampaignCharacterCreationProgress{
-		Steps:        append([]campaignapp.CampaignCharacterCreationStep(nil), progress.Steps...),
+func cloneProgress(progress campaignworkflow.Progress) campaignworkflow.Progress {
+	return campaignworkflow.Progress{
+		Steps:        append([]campaignworkflow.Step(nil), progress.Steps...),
 		NextStep:     progress.NextStep,
 		Ready:        progress.Ready,
 		UnmetReasons: append([]string(nil), progress.UnmetReasons...),
@@ -38,7 +55,7 @@ func cloneProgress(progress campaignapp.CampaignCharacterCreationProgress) campa
 }
 
 // normalizeProfile trims profile fields and drops empty domain-card selections.
-func normalizeProfile(profile campaignapp.CampaignCharacterCreationProfile) campaignapp.CampaignCharacterCreationProfile {
+func normalizeProfile(profile campaignworkflow.Profile) campaignworkflow.Profile {
 	selectedDomainCardIDs := make([]string, 0, len(profile.DomainCardIDs))
 	for _, domainCardID := range profile.DomainCardIDs {
 		trimmedDomainCardID := strings.TrimSpace(domainCardID)
@@ -48,7 +65,7 @@ func normalizeProfile(profile campaignapp.CampaignCharacterCreationProfile) camp
 		selectedDomainCardIDs = append(selectedDomainCardIDs, trimmedDomainCardID)
 	}
 
-	return campaignapp.CampaignCharacterCreationProfile{
+	return campaignworkflow.Profile{
 		CharacterName:     strings.TrimSpace(profile.CharacterName),
 		ClassID:           strings.TrimSpace(profile.ClassID),
 		SubclassID:        strings.TrimSpace(profile.SubclassID),
@@ -73,14 +90,14 @@ func normalizeProfile(profile campaignapp.CampaignCharacterCreationProfile) camp
 }
 
 // trimExperiences normalizes the experience slice from the profile.
-func trimExperiences(exps []campaignapp.CampaignCharacterCreationExperience) []campaignapp.CampaignCharacterCreationExperience {
-	result := make([]campaignapp.CampaignCharacterCreationExperience, 0, len(exps))
+func trimExperiences(exps []campaignworkflow.Experience) []campaignworkflow.Experience {
+	result := make([]campaignworkflow.Experience, 0, len(exps))
 	for _, exp := range exps {
 		name := strings.TrimSpace(exp.Name)
 		if name == "" {
 			continue
 		}
-		result = append(result, campaignapp.CampaignCharacterCreationExperience{
+		result = append(result, campaignworkflow.Experience{
 			Name:     name,
 			Modifier: strings.TrimSpace(exp.Modifier),
 		})

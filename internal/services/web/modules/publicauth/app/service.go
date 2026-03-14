@@ -19,12 +19,32 @@ type service struct {
 	authBaseURL string
 }
 
-// NewService wires auth-backed public auth flows behind input validation.
-func NewService(gateway Gateway, authBaseURL string) Service {
+// newServiceState wires auth-backed public auth flows behind input validation.
+func newServiceState(gateway Gateway, authBaseURL string) service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
 	return service{auth: gateway, authBaseURL: strings.TrimSpace(authBaseURL)}
+}
+
+// NewPageService wires page-only public auth flows behind input validation.
+func NewPageService(gateway Gateway, authBaseURL string) PageService {
+	return newServiceState(gateway, authBaseURL)
+}
+
+// NewSessionService wires session-only public auth flows behind input validation.
+func NewSessionService(gateway Gateway, authBaseURL string) SessionService {
+	return newServiceState(gateway, authBaseURL)
+}
+
+// NewPasskeyService wires passkey-only public auth flows behind input validation.
+func NewPasskeyService(gateway Gateway, authBaseURL string) PasskeyService {
+	return newServiceState(gateway, authBaseURL)
+}
+
+// NewRecoveryService wires recovery-only public auth flows behind input validation.
+func NewRecoveryService(gateway Gateway, authBaseURL string) RecoveryService {
+	return newServiceState(gateway, authBaseURL)
 }
 
 // HealthBody returns the plain-text health response expected by the endpoint.

@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -45,44 +45,43 @@ func PublicMessage(loc webi18n.Localizer, err error, locale ...string) string {
 }
 
 // WriteAppError writes a localized app-shell error response for full-page and HTMX requests.
-func WriteAppError(w http.ResponseWriter, r *http.Request, statusCode int, resolver pagerender.RequestResolver) {
+func WriteAppError(w http.ResponseWriter, r *http.Request, statusCode int, resolver requestresolver.PageResolver) {
 	writeAppError(w, r, statusCode, resolver, "")
 }
 
 // writeAppError renders app-shell error chrome with an optional explicit
 // user-safe message override for richer transport failures.
-func writeAppError(w http.ResponseWriter, r *http.Request, statusCode int, resolver pagerender.RequestResolver, publicMessage string) {
+func writeAppError(w http.ResponseWriter, r *http.Request, statusCode int, resolver requestresolver.PageResolver, publicMessage string) {
 	if w == nil {
 		return
 	}
 
-	var resolveLanguage module.ResolveLanguage
-	if resolver != nil {
-		resolveLanguage = resolver.ResolveRequestLanguage
-	}
-	loc, lang := webi18n.ResolveLocalizer(w, r, resolveLanguage)
-	fragment := webtemplates.AppErrorState(statusCode, publicMessage, loc)
+	pageState := requestresolver.ResolveLocalizedPage(w, r, resolver)
+	fragment := webtemplates.AppErrorState(statusCode, publicMessage, pageState.Localizer)
 
 	if httpx.IsHTMXRequest(r) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(statusCode)
 		content := webtemplates.AppMainContentWithLayout(nil, webtemplates.AppMainLayoutOptions{})
 		if err := content.Render(templ.WithChildren(httpx.RequestContext(r), fragment), w); err != nil {
-			http.Error(w, PublicMessage(loc, err, lang), statusCode)
+			http.Error(w, PublicMessage(pageState.Localizer, err, pageState.Language), statusCode)
 		}
 		return
 	}
 
-	viewer := module.Viewer{}
-	if resolver != nil {
-		viewer = resolver.ResolveRequestViewer(r)
-	}
-
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(statusCode)
-	title := webtemplates.AppErrorPageTitle(statusCode, loc)
-	if err := webtemplates.AppLayoutWithMainHeaderAndLayout(title, viewer, nil, webtemplates.AppMainLayoutOptions{}, nil, lang, loc).Render(templ.WithChildren(httpx.RequestContext(r), fragment), w); err != nil {
-		http.Error(w, PublicMessage(loc, err, lang), statusCode)
+	title := webtemplates.AppErrorPageTitle(statusCode, pageState.Localizer)
+	if err := webtemplates.AppLayoutWithMainHeaderAndLayout(
+		title,
+		requestresolver.ResolveViewer(r, resolver),
+		nil,
+		webtemplates.AppMainLayoutOptions{},
+		nil,
+		pageState.Language,
+		pageState.Localizer,
+	).Render(templ.WithChildren(httpx.RequestContext(r), fragment), w); err != nil {
+		http.Error(w, PublicMessage(pageState.Localizer, err, pageState.Language), statusCode)
 	}
 }
 
@@ -98,15 +97,15 @@ func writePublicAppError(w http.ResponseWriter, r *http.Request, statusCode int,
 	if w == nil {
 		return
 	}
-	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
+	pageState := requestresolver.ResolveLocalizedPage(w, r, nil)
 	pagerender.WritePublicPage(
 		w,
 		r,
-		webtemplates.AppErrorPageTitle(statusCode, loc),
-		webtemplates.T(loc, "layout.meta_description"),
-		lang,
+		webtemplates.AppErrorPageTitle(statusCode, pageState.Localizer),
+		webtemplates.T(pageState.Localizer, "layout.meta_description"),
+		pageState.Language,
 		statusCode,
-		webtemplates.AppErrorState(statusCode, publicMessage, loc),
+		webtemplates.AppErrorState(statusCode, publicMessage, pageState.Localizer),
 	)
 }
 
@@ -115,21 +114,17 @@ func WritePublicError(w http.ResponseWriter, r *http.Request, err error) {
 	if w == nil {
 		return
 	}
-	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
-	writePublicAppError(w, r, apperrors.HTTPStatus(err), PublicMessage(loc, err, lang))
+	pageState := requestresolver.ResolveLocalizedPage(w, r, nil)
+	writePublicAppError(w, r, apperrors.HTTPStatus(err), PublicMessage(pageState.Localizer, err, pageState.Language))
 }
 
 // WriteModuleError writes a module-safe localized error response.
-func WriteModuleError(w http.ResponseWriter, r *http.Request, err error, resolver pagerender.RequestResolver) {
+func WriteModuleError(w http.ResponseWriter, r *http.Request, err error, resolver requestresolver.PageResolver) {
 	if w == nil {
 		return
 	}
-	var resolveLanguage module.ResolveLanguage
-	if resolver != nil {
-		resolveLanguage = resolver.ResolveRequestLanguage
-	}
-	loc, lang := webi18n.ResolveLocalizer(w, r, resolveLanguage)
-	writeAppError(w, r, apperrors.HTTPStatus(err), resolver, PublicMessage(loc, err, lang))
+	pageState := requestresolver.ResolveLocalizedPage(w, r, resolver)
+	writeAppError(w, r, apperrors.HTTPStatus(err), resolver, PublicMessage(pageState.Localizer, err, pageState.Language))
 }
 
 // firstNonEmptyLocale keeps optional locale overrides easy to thread through

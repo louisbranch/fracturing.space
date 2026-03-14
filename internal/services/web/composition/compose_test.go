@@ -9,6 +9,7 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
 func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
@@ -42,13 +43,13 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 	}
 
 	h, err := ComposeAppHandler(ComposeInput{
-		Principal: PrincipalResolvers{
-			AuthRequired:    func(*http.Request) bool { return true },
-			ResolveViewer:   func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Ada"} },
-			ResolveSignedIn: func(*http.Request) bool { return true },
-			ResolveUserID:   func(*http.Request) string { return "user-1" },
-			ResolveLanguage: func(*http.Request) string { return "en" },
-		},
+		Principal: requestresolver.NewPrincipal(
+			func(*http.Request) bool { return true },
+			func(*http.Request) bool { return true },
+			func(*http.Request) string { return "user-1" },
+			func(*http.Request) string { return "en" },
+			func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Ada"} },
+		),
 		ChatHTTPAddr:        "127.0.0.1:9002",
 		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: true},
 		RegistryBuilder:     reg,
@@ -66,6 +67,21 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 
 	if !reg.input.ProtectedOptions.RequestSchemePolicy.TrustForwardedProto {
 		t.Fatalf("ProtectedOptions.RequestSchemePolicy.TrustForwardedProto = false, want true")
+	}
+	if !reg.input.Principal.AuthRequired(req) {
+		t.Fatalf("RegistryInput.Principal.AuthRequired() = false, want true")
+	}
+	if !reg.input.Principal.ResolveSignedIn(req) {
+		t.Fatalf("RegistryInput.Principal.ResolveSignedIn() = false, want true")
+	}
+	if got := reg.input.Principal.ResolveUserID(req); got != "user-1" {
+		t.Fatalf("RegistryInput.Principal.ResolveUserID() = %q, want %q", got, "user-1")
+	}
+	if got := reg.input.Principal.ResolveRequestLanguage(req); got != "en" {
+		t.Fatalf("RegistryInput.Principal.ResolveRequestLanguage() = %q, want %q", got, "en")
+	}
+	if got := reg.input.Principal.ResolveRequestViewer(req).DisplayName; got != "Ada" {
+		t.Fatalf("RegistryInput.Principal.ResolveRequestViewer().DisplayName = %q, want %q", got, "Ada")
 	}
 	wantPort := websupport.ResolveChatFallbackPort("127.0.0.1:9002")
 	if reg.input.ProtectedOptions.ChatFallbackPort != wantPort {
@@ -107,6 +123,41 @@ func TestComposeAppHandlerDefaultsAuthToFalseWhenNil(t *testing.T) {
 	}
 	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F1" {
 		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F1")
+	}
+}
+
+func TestComposeAppHandlerUsesDefaultRegistryBuilderWhenNil(t *testing.T) {
+	t.Parallel()
+
+	h, err := ComposeAppHandler(ComposeInput{})
+	if err != nil {
+		t.Fatalf("ComposeAppHandler() error = %v", err)
+	}
+	if h == nil {
+		t.Fatal("ComposeAppHandler() handler = nil, want non-nil")
+	}
+}
+
+func TestComposeAppHandlerReturnsComposeError(t *testing.T) {
+	t.Parallel()
+
+	_, err := ComposeAppHandler(ComposeInput{
+		RegistryBuilder: &stubRegistry{
+			output: modules.RegistryOutput{
+				Public: []module.Module{
+					stubModule{
+						id: "broken",
+						mount: module.Mount{
+							Prefix:  "/app/broken/",
+							Handler: http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}),
+						},
+					},
+				},
+			},
+		},
+	})
+	if err == nil {
+		t.Fatal("ComposeAppHandler() error = nil, want non-nil")
 	}
 }
 

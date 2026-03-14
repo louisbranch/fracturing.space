@@ -9,6 +9,7 @@ import (
 	"github.com/a-h/templ"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
 )
 
@@ -16,7 +17,7 @@ import (
 // modules. Embed this in handler structs to get WritePublicPage, WriteNotFound,
 // WriteError, and optional viewer resolution for free.
 type Base struct {
-	resolveViewer         module.ResolveViewer
+	requestresolver.Base
 	resolveViewerSignedIn module.ResolveSignedIn
 }
 
@@ -25,7 +26,7 @@ type Option func(*Base)
 
 // WithResolveViewer attaches a viewer resolver for app-chrome rendering.
 func WithResolveViewer(rv module.ResolveViewer) Option {
-	return func(b *Base) { b.resolveViewer = rv }
+	return func(b *Base) { b.Base = b.Base.WithViewer(rv) }
 }
 
 // WithResolveViewerSignedIn attaches a direct signed-in resolver to avoid coupling
@@ -36,20 +37,24 @@ func WithResolveViewerSignedIn(resolver module.ResolveSignedIn) Option {
 
 // NewBase builds a public handler base with the given options.
 func NewBase(opts ...Option) Base {
-	var b Base
+	b := Base{Base: requestresolver.New(nil, nil)}
 	for _, o := range opts {
 		o(&b)
 	}
 	return b
 }
 
-// ResolveRequestViewer resolves viewer state for the request.
-// Returns a zero Viewer when no resolver is configured.
-func (b Base) ResolveRequestViewer(r *http.Request) module.Viewer {
-	if b.resolveViewer == nil {
-		return module.Viewer{}
+// NewBaseFromPrincipal builds a public handler base from the shared principal
+// resolver seam used by root composition.
+func NewBaseFromPrincipal(resolver requestresolver.PrincipalResolver) Base {
+	var resolveSignedIn module.ResolveSignedIn
+	if resolver != nil {
+		resolveSignedIn = resolver.ResolveSignedIn
 	}
-	return b.resolveViewer(r)
+	return Base{
+		Base:                  requestresolver.NewFromPageResolver(resolver),
+		resolveViewerSignedIn: resolveSignedIn,
+	}
 }
 
 // IsViewerSignedIn reports whether the current request is authenticated.

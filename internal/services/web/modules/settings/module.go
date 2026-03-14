@@ -63,7 +63,16 @@ func (m Module) Mount() (module.Mount, error) {
 		aiKeys:   settingsapp.IsAIKeyGatewayHealthy(m.gateway),
 		aiAgents: settingsapp.IsAIAgentGatewayHealthy(m.gateway),
 	}
-	h := newHandlers(account, account, account, ai, ai, availability, m.base, m.flashMeta, m.sync)
+	h := newHandlers(handlersConfig{
+		Services: handlerServices{
+			Account: account,
+			AI:      ai,
+		},
+		Availability: availability,
+		Base:         m.base,
+		Policy:       m.flashMeta,
+		Sync:         m.sync,
+	})
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.SettingsPrefix, Handler: mux}, nil
 }

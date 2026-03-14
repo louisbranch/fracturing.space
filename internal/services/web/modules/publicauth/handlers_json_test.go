@@ -14,7 +14,7 @@ import (
 func TestPasskeyRegisterStartReturnsTypedJSONContract(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: publicauthgateway.NewGRPCGateway(fakeAuthClient{})})
+	m := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "")
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -46,7 +46,7 @@ func TestPasskeyRegisterStartReturnsTypedJSONContract(t *testing.T) {
 func TestPasskeyRegisterFinishReturnsTypedJSONContract(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: publicauthgateway.NewGRPCGateway(fakeAuthClient{})})
+	m := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "")
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -75,7 +75,7 @@ func TestPasskeyRegisterFinishReturnsTypedJSONContract(t *testing.T) {
 func TestPasskeyLoginFinishReturnsTypedJSONContract(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: publicauthgateway.NewGRPCGateway(fakeAuthClient{})})
+	m := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "")
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -101,7 +101,7 @@ func TestPasskeyLoginFinishReturnsTypedJSONContract(t *testing.T) {
 func TestUsernameCheckReturnsTypedJSONContract(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: publicauthgateway.NewGRPCGateway(fakeAuthClient{})})
+	m := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "")
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

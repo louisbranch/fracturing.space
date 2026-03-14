@@ -4,7 +4,7 @@ parent: "Guides"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-09"
+last_reviewed: "2026-03-10"
 ---
 
 # Web Module Playbook
@@ -50,6 +50,9 @@ in the root transport package too:
 - mirror the same ownership in route registration (for example
   `routes_account.go`, `routes_ai.go`) so route edits stay local to the
   transport surface they expose.
+- if one module owns multiple separately-mounted public surfaces, expose an
+  area-owned surface-set composition entrypoint so the central registry does
+  not need to know the module’s internal surface list or ordering.
 
 For layered modules, carry the same ownership split below transport when the
 app/gateway seam stops being cohesive:
@@ -57,6 +60,108 @@ app/gateway seam stops being cohesive:
 - split area-local service methods by owned surface (for example
   `app/service_account.go` and `app/service_ai.go`) instead of keeping one
   catch-all service file,
+- keep exported app service methods with the owned capability files too. Do
+  not route every public method through one `service_exports.go` bucket once
+  the package is already split by capability,
+- when one transport-owned page workflow assembles multiple reads, keep the
+  aggregation in the transport-owned page service and expose explicit app reads
+  for each input instead of introducing one bundled page-data contract,
+- when one workflow package must normalize or filter those reads before
+  rendering, keep any assembled intermediate state local to the workflow
+  package rather than exporting an app-owned aggregate type just to feed
+  templates,
+- if a workflow package still needs app-owned read DTOs, adapt them once at
+  the workflow boundary and keep the workflow contract on workflow-owned
+  types after that point instead of threading app-owned page data through
+  every system-specific workflow implementation,
+- keep app-layer constructor config explicit by owned capability too. When one
+  area still has one service package, prefer nested capability configs over one
+  flat read/mutation dependency bag so each constructor documents what it
+  actually consumes,
+- once that service package grows large, split contracts, capability configs,
+  and concrete service builders across focused files instead of keeping one
+  `service_contracts.go` megafile,
+- keep those focused config and builder files capability-owned too. After the
+  first split, do not replace one `service_contracts.go` sink with one
+  `service_config.go` or `service_builders.go` sink that mixes unrelated
+  catalog, participant, character, invite, and creation wiring again,
+- apply the same rule to production composition. Once one area needs helper
+  files under `composition`, split generated-client grouping and app-service
+  config assembly by capability instead of keeping one `composition_services.go`
+  sink with a second cross-capability wiring bag,
+- once one module has explicit capability configs, do not reintroduce broad
+  exported "read gateway"/"mutation gateway" bag interfaces or convenience
+  constructors on top of them just to shorten tests,
+- keep test config helpers aligned with production composition too. If
+  production wiring moved from one aggregate gateway constructor to explicit
+  capability constructors, update module tests to build the same explicit
+  capability config instead of preserving the deleted aggregate shape,
+- if package tests still need one aggregate seam for concise fixtures, keep it
+  in `_test.go` helpers only. Do not leave combined gateway bundles or
+  convenience constructors in production app packages once explicit capability
+  configs exist,
+- apply the same rule in adapter packages. If a `gateway` package keeps
+  explicit capability constructors for production wiring, move any remaining
+  aggregate constructor used only by package tests into `_test.go` instead of
+  keeping it exported from production files,
+- apply the same rule to partially-normalized modules too. If a module still
+  exposes a broad gateway at the module root for compatibility with older
+  wiring, keep any `newService(gateway)`-style test shortcut in `_test.go`
+  rather than leaving it in production app files,
+- once transport depends on split capability services (for example account vs
+  AI), remove any leftover exported aggregate app `Service` or `ServiceConfig`
+  surface and update callers/tests to build the owned capability services
+  directly,
+- apply the same rule to route-surface groupings too. If transport already
+  depends on separate page/session/passkey/recovery services, do not keep a
+  broad exported app `Service` constructor just to re-bundle them in module
+  roots or tests,
+- after that split, keep module roots on owned handler-service groups too.
+  Composition may still assemble those groups from a gateway, but `Module`
+  config and `Mount` should not keep raw gateway fields once the route surface
+  already depends on explicit app-service groups,
+- when an area offers both collection and entity reads, detail/edit/control
+  transport should use true entity reads instead of loading the full collection
+  and rediscovering one row in transport or render code,
+- when app-layer constructors expose one transport-facing capability service,
+  keep the constructor signature scoped to the exact capability config and any
+  explicit cross-cutting seams it consumes (for example unary authz) instead
+  of passing the whole module `ServiceConfig` back into every constructor,
+- once a capability config declares sibling reads it depends on (for example
+  participant-owned workspace policy reads or character-owned participant
+  roster reads), use those owned inputs inside the service implementation
+  instead of reaching back through broader package-level helper seams,
+- when one “workspace” or “page context” read seam starts carrying
+  session/game/workflow-specific data, split that into a dedicated capability
+  interface instead of widening the generic area-summary contract,
+- if one settings/configuration seam only needs participant reads as a fallback
+  for authorization or editor state, keep those reads on the participant seam
+  instead of widening the configuration seam with participant ownership,
+- if one editor or mutation surface stops fitting the surrounding ownership
+  seam, split it into a dedicated capability service instead of splitting the
+  read and write halves across unrelated services,
+- if one same-noun capability still mixes list/detail reads, control-state
+  decisions, and destructive writes after that first split, separate read,
+  control, and mutation services so transport and tests trace one interaction
+  mode at a time,
+- carry that same split through gateway contracts and dependency bundles. If
+  character CRUD and character-control routes are separate app services, do not
+  keep one shared character-mutation gateway or one shared mutation dep bundle
+  underneath them,
+- apply the same rule to participant-style governance seams too. If one
+  capability still mixes collection/detail editor reads with create/update
+  governance writes, split read/editor state from mutation ownership so
+  transport traces page loads separately from access-changing writes,
+- do the same for session and invite workflows. If one capability still mixes
+  detail/list readiness or typeahead reads with lifecycle or create/revoke
+  writes, split read surfaces from mutation ownership so GET and POST paths
+  stay independently traceable,
+- when participant-adjacent UI owns campaign automation controls, keep that as
+  a dedicated automation capability seam instead of widening participant or
+  campaign-configuration services with automation ownership,
+- apply the same split to gateway contracts. Do not keep dead or empty
+  sibling read/mutation gateway interfaces around once the owned capability
+  has moved to its own seam,
 - split fail-closed gateway behavior the same way so degraded-mode policy stays
   local to the owned surface,
 - split gateway adapters by dependency bundle (for example
@@ -66,6 +171,10 @@ app/gateway seam stops being cohesive:
   mutation-side dependencies in explicit bundles with narrow capability
   interfaces instead of one flat “everything client” struct. Keep authz checks
   in their own bundle when the module has fail-closed authorization behavior.
+- if one gateway package still needs one aggregate dependency entrypoint for
+  startup or tests, keep that aggregate made of capability-owned dep structs
+  (for example `CatalogReadDeps`, `InviteReadDeps`, `AuthorizationDeps`) and
+  do not reintroduce flat `Read`/`Mutation` mega-bags.
 
 ## Authoring Rules
 
@@ -76,9 +185,10 @@ app/gateway seam stops being cohesive:
 - Use one constructor shape per module: `New(Config) Module`.
   Avoid variant constructors (`NewWith...`, option builders, mixed positional
   constructors) because they fragment test and composition seams.
-- For campaigns/settings/profile-style modules, build production gateways in
-  composition (registry composition files under `modules/registry_*.go`) rather
-  than inside `Mount`.
+- For production modules, keep startup wiring in an area-owned
+  `composition.go` entrypoint that the registry calls. The registry should
+  select modules and pass dependency policy, not build feature-local gateways
+  inline or move gateway construction into `Mount`.
 - Runtime module selection is composition-owned: `composition.ComposeAppHandler`
   calls a `modules.RegistryBuilder` with `modules.RegistryInput` to assemble module sets.
   Keep module packages unaware of startup mode flags.
@@ -104,6 +214,10 @@ app/gateway seam stops being cohesive:
 - Keep root module packages transport-thin: handlers/routes own request/response
   flow while orchestration and gateway mapping live in area-local `app` and
   `gateway` subpackages when present.
+- For JSON endpoints, use `platform/jsoninput.DecodeStrictInvalidInput` instead
+  of module-local malformed-body wrappers so size limits, unknown-field
+  rejection, trailing-token handling, and stable invalid-input mapping stay
+  shared.
 - When a system-specific workflow includes form parsing or template/view
   mapping, keep workflow registration in the root transport area. `app`
   services may accept a workflow as input for orchestration, but they should
@@ -111,9 +225,22 @@ app/gateway seam stops being cohesive:
 - When those system-specific workflows become a contributor-owned seam of their
   own, move the contract into an area-local subpackage such as
   `<area>/workflow` instead of defining it in the root module package.
+- If that workflow subpackage starts handling both page assembly and mutation
+  orchestration, split those into separate services/interfaces so GET and POST
+  transport paths depend on the narrower workflow surface they actually use.
 - For page-heavy transport areas, prefer explicit per-surface load -> populate
   -> render flow over generic closure/spec scaffolds once contributors need to
   trace behavior route-by-route.
+- When one render package starts routing section-specific pages back through a
+  shared marker or switch-driven template, split those templates by owned
+  surface so changing participants, characters, sessions, or invites stays
+  local to one file set.
+- Do not reintroduce a broad internal adapter view just to feed those split
+  templates. Keep section templates typed to their owned page view or narrow
+  render contract, and pass only the specific helper inputs they need.
+- Apply the same ownership rule to render helpers. After section templates are
+  split, move overview/participants/characters/sessions/invites helpers into
+  owned files instead of keeping one cross-section helper bucket.
 - Keep presentation-specific asset formatting in transport/view seams. `app`
   services may return avatar or media identity fields, but final CDN/static URL
   construction belongs in view mappers or template-facing formatters.
@@ -153,8 +280,10 @@ app/gateway seam stops being cohesive:
 - Use `internal/services/web/platform/httpx.MethodNotAllowed` for `405` +
   `Allow` behavior instead of duplicating module-local helpers.
 - Keep handlers thin; call service methods for behavior.
-- For form-based mutations, keep form parsing/validation-message creation in
-  reusable helper seams instead of repeating inline `ParseForm` branches.
+- For form-based mutations and posted settings forms, use shared
+  `platform/forminput` helpers instead of repeating inline `ParseForm`
+  branches or module-local wrapper functions. Keep the call site explicit
+  about which policy it wants: invalid-input error mapping vs flash+redirect.
 - For public JSON endpoints, decode through strict parser helpers:
   body-size caps, unknown-field rejection, and single-payload enforcement.
 - Return typed errors and map them once at transport boundaries.
@@ -162,11 +291,20 @@ app/gateway seam stops being cohesive:
 - Protected module defaults must fail closed when a required backend dependency
   is absent; never return placeholder static domain data from runtime module
   wiring.
+- If composition selects a protected module for mounting, missing required
+  route-owned services should fail fast during `New`/`Mount` validation instead
+  of being silently backfilled with unavailable placeholders. If a module is
+  truly optional, make registry composition omit it until its full dependency
+  set is present.
 - For campaign mutation behavior, require evaluated game authorization decisions
   (`AuthorizationService.Can`) before calling mutation gateways.
 - For per-row action visibility (for example character editability), use
   `AuthorizationService.BatchCan` with one check per row and map decisions back
   by correlation id.
+- Keep unary mutation-gate authz and batch row-hydration authz as separate
+  constructor dependencies when a module owns both. Do not route list/detail
+  batch authorization back through the same broad service config field used for
+  mutation guards.
 - Campaign mutation gates must fail closed when authz is unavailable or returns
   an unevaluated decision; do not approximate mutation permissions from
   participant-list fallback logic.
@@ -202,6 +340,10 @@ app/gateway seam stops being cohesive:
 - Keep user-scoped service/gateway boundaries explicit: pass `userID`
   parameters instead of extracting identity from transport metadata inside
   gateways.
+- At composition/module boundaries, prefer one grouped
+  `platform/requestresolver` principal contract over separate
+  `ResolveSignedIn`, `ResolveUserID`, `ResolveLanguage`, or `ResolveViewer`
+  callback fields.
 - Prefer `internal/services/web/platform/weberror.WriteModuleError` for
   consistent localized error rendering across full-page and HTMX app flows.
 - Use `internal/services/web/platform/weberror.PublicMessage` for user-visible
@@ -211,8 +353,12 @@ app/gateway seam stops being cohesive:
 
 Public (unauthenticated) modules follow a lighter pattern than protected modules:
 
-- They do **not** embed `modulehandler.Base` — there is no authenticated user to
-  resolve, so viewer/user-id/language resolvers are not injected.
+- They do **not** embed `modulehandler.Base`.
+- Public modules that need shared page/localization/signed-in state should use
+  `publichandler.Base` built from `requestresolver.PrincipalResolver`.
+- Request-time signed-in detection and optional viewer/user-id/language
+  resolution come from that shared principal seam, not ad hoc gateway or
+  session-validation checks inside the module.
 - Public modules may start with collocated gateway code in `service.go` when
   the gateway surface is small.
   - Once complexity grows, split to explicit `app` + `gateway` packages (for

@@ -17,11 +17,11 @@ const creationIllustrationDeliveryWidthPX = 384
 const creationIconDeliveryWidthPX = 64
 
 // CharacterCreationCatalog centralizes this web behavior in one helper seam.
-func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag language.Tag) (campaignapp.CampaignCharacterCreationCatalog, error) {
-	if g.Read.DaggerheartContent == nil {
+func (g characterCreationReadGateway) CharacterCreationCatalog(ctx context.Context, localeTag language.Tag) (campaignapp.CampaignCharacterCreationCatalog, error) {
+	if g.read.DaggerheartContent == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart content client is not configured")
 	}
-	if g.Read.DaggerheartAsset == nil {
+	if g.read.DaggerheartAsset == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart asset client is not configured")
 	}
 	locale := platformi18n.LocaleForTag(localeTag)
@@ -30,7 +30,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		locale = commonv1.Locale_LOCALE_EN_US
 	}
 
-	resp, err := g.Read.DaggerheartContent.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
+	resp, err := g.read.DaggerheartContent.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
 	if err != nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, err
 	}
@@ -38,13 +38,13 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		return campaignapp.CampaignCharacterCreationCatalog{}, nil
 	}
 
-	assetMapResp, err := g.Read.DaggerheartAsset.GetAssetMap(ctx, &daggerheartv1.GetDaggerheartAssetMapRequest{Locale: locale})
+	assetMapResp, err := g.read.DaggerheartAsset.GetAssetMap(ctx, &daggerheartv1.GetDaggerheartAssetMapRequest{Locale: locale})
 	if err != nil {
 		assetMapResp = nil
 	}
 	assetLookup := daggerheartAssetLookupFromResponse(assetMapResp)
 
-	return campaignCharacterCreationCatalogFromProto(resp.GetCatalog(), g.AssetBaseURL, assetLookup, assetMapResp), nil
+	return campaignCharacterCreationCatalogFromProto(resp.GetCatalog(), g.assetBaseURL, assetLookup, assetMapResp), nil
 }
 
 // campaignCharacterCreationCatalogFromProto maps the proto content catalog to web-facing domain catalog models.
