@@ -36,7 +36,7 @@ func buildProtectedModules(
 	dashboardSync := dashboardsync.New(deps.DashboardSync.UserHubControlClient, deps.DashboardSync.GameEventClient, nil)
 	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, dashboardSync, defaultCampaignWorkflows(deps))
 	settingsMod := settings.New(settings.Config{
-		Gateway:       settingsgateway.NewGRPCGateway(deps.Settings.SocialClient, deps.Settings.AccountClient, deps.Settings.CredentialClient, deps.Settings.AgentClient),
+		Gateway:       settingsgateway.NewGRPCGateway(deps.Settings.SocialClient, deps.Settings.AccountClient, deps.Settings.PasskeyClient, deps.Settings.CredentialClient, deps.Settings.AgentClient),
 		Base:          base,
 		FlashMeta:     opts.RequestSchemePolicy,
 		DashboardSync: dashboardSync,

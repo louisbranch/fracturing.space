@@ -17,6 +17,9 @@ type AuthClient interface {
 	FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error)
 	BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error)
 	FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest, ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error)
+	BeginAccountRecovery(context.Context, *authv1.BeginAccountRecoveryRequest, ...grpc.CallOption) (*authv1.BeginAccountRecoveryResponse, error)
+	BeginRecoveryPasskeyRegistration(context.Context, *authv1.BeginRecoveryPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error)
+	FinishRecoveryPasskeyRegistration(context.Context, *authv1.FinishRecoveryPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error)
 	CreateWebSession(context.Context, *authv1.CreateWebSessionRequest, ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error)
 	GetWebSession(context.Context, *authv1.GetWebSessionRequest, ...grpc.CallOption) (*authv1.GetWebSessionResponse, error)
 	RevokeWebSession(context.Context, *authv1.RevokeWebSessionRequest, ...grpc.CallOption) (*authv1.RevokeWebSessionResponse, error)
@@ -105,10 +108,11 @@ func (g GRPCGateway) BeginPasskeyLogin(ctx context.Context, username string) (pu
 }
 
 // FinishPasskeyLogin centralizes this web behavior in one helper seam.
-func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage) (string, error) {
+func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (string, error) {
 	resp, err := g.Client.FinishPasskeyLogin(ctx, &authv1.FinishPasskeyLoginRequest{
 		SessionId:              sessionID,
 		CredentialResponseJson: credential,
+		PendingId:              strings.TrimSpace(pendingID),
 	})
 	if err != nil {
 		return "", mapGRPCError(err, apperrors.KindInvalidInput, "Failed to finish passkey login.")
@@ -118,6 +122,63 @@ func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, c
 		return "", apperrors.E(apperrors.KindUnknown, "Auth did not return a user ID.")
 	}
 	return userID, nil
+}
+
+// BeginAccountRecovery verifies a recovery code and returns a recovery session ID.
+func (g GRPCGateway) BeginAccountRecovery(ctx context.Context, username string, recoveryCode string) (string, error) {
+	resp, err := g.Client.BeginAccountRecovery(ctx, &authv1.BeginAccountRecoveryRequest{
+		Username:     username,
+		RecoveryCode: recoveryCode,
+	})
+	if err != nil {
+		return "", mapGRPCError(err, apperrors.KindInvalidInput, "Failed to start account recovery.")
+	}
+	recoverySessionID := strings.TrimSpace(resp.GetRecoverySessionId())
+	if recoverySessionID == "" {
+		return "", apperrors.E(apperrors.KindUnknown, "Auth did not return a recovery session ID.")
+	}
+	return recoverySessionID, nil
+}
+
+// BeginRecoveryPasskeyRegistration starts replacement passkey enrollment.
+func (g GRPCGateway) BeginRecoveryPasskeyRegistration(ctx context.Context, recoverySessionID string) (publicauthapp.PasskeyChallenge, error) {
+	resp, err := g.Client.BeginRecoveryPasskeyRegistration(ctx, &authv1.BeginRecoveryPasskeyRegistrationRequest{
+		RecoverySessionId: recoverySessionID,
+	})
+	if err != nil {
+		return publicauthapp.PasskeyChallenge{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to begin recovery passkey registration.")
+	}
+	sessionID := strings.TrimSpace(resp.GetSessionId())
+	if sessionID == "" {
+		return publicauthapp.PasskeyChallenge{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a recovery passkey session.")
+	}
+	return publicauthapp.PasskeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialCreationOptionsJson())}, nil
+}
+
+// FinishRecoveryPasskeyRegistration completes recovery and returns the signed-in session.
+func (g GRPCGateway) FinishRecoveryPasskeyRegistration(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (publicauthapp.PasskeyFinish, error) {
+	resp, err := g.Client.FinishRecoveryPasskeyRegistration(ctx, &authv1.FinishRecoveryPasskeyRegistrationRequest{
+		RecoverySessionId:      recoverySessionID,
+		SessionId:              sessionID,
+		CredentialResponseJson: credential,
+		PendingId:              strings.TrimSpace(pendingID),
+	})
+	if err != nil {
+		return publicauthapp.PasskeyFinish{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to finish account recovery.")
+	}
+	userID := strings.TrimSpace(resp.GetUser().GetId())
+	if userID == "" {
+		return publicauthapp.PasskeyFinish{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a user ID.")
+	}
+	webSessionID := strings.TrimSpace(resp.GetSession().GetId())
+	if webSessionID == "" {
+		return publicauthapp.PasskeyFinish{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a web session ID.")
+	}
+	return publicauthapp.PasskeyFinish{
+		SessionID:    webSessionID,
+		UserID:       userID,
+		RecoveryCode: strings.TrimSpace(resp.GetRecoveryCode()),
+	}, nil
 }
 
 // CreateWebSession executes package-scoped creation behavior for this flow.

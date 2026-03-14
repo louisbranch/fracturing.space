@@ -9,6 +9,9 @@ import (
 const (
 	Root                                     = "/"
 	Login                                    = "/login"
+	LoginRecovery                            = "/login/recovery"
+	LoginRecoveryCode                        = "/login/recovery-code"
+	LoginRecoveryCodeAcknowledge             = "/login/recovery-code/acknowledge"
 	Logout                                   = "/logout"
 	Health                                   = "/up"
 	AuthPrefix                               = "/auth/"
@@ -18,6 +21,8 @@ const (
 	PasskeyRegisterFinish                    = "/passkeys/register/finish"
 	PasskeyLoginStart                        = "/passkeys/login/start"
 	PasskeyLoginFinish                       = "/passkeys/login/finish"
+	PasskeyRecoveryStart                     = "/passkeys/recovery/start"
+	PasskeyRecoveryFinish                    = "/passkeys/recovery/finish"
 	DiscoverPrefix                           = "/discover/"
 	UserProfilePrefix                        = "/u/"
 	UserProfilePattern                       = UserProfilePrefix + "{username}"
@@ -58,6 +63,9 @@ const (
 	AppNotificationRestPattern               = Notifications + "{notificationID}/{rest...}"
 	AppSettings                              = "/app/settings"
 	SettingsPrefix                           = "/app/settings/"
+	AppSettingsSecurity                      = "/app/settings/security"
+	AppSettingsSecurityPasskeysStart         = "/app/settings/security/passkeys/start"
+	AppSettingsSecurityPasskeysFinish        = "/app/settings/security/passkeys/finish"
 	AppSettingsAIKeyRevokePattern            = SettingsPrefix + "ai-keys/{credentialID}/revoke"
 	AppSettingsRestPattern                   = SettingsPrefix + "{rest...}"
 )

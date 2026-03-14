@@ -2,7 +2,10 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
+	"sort"
 	"strings"
+	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -29,6 +32,13 @@ type AccountClient interface {
 	UpdateProfile(context.Context, *authv1.UpdateProfileRequest, ...grpc.CallOption) (*authv1.UpdateProfileResponse, error)
 }
 
+// PasskeyClient exposes authenticated passkey settings operations.
+type PasskeyClient interface {
+	ListPasskeys(context.Context, *authv1.ListPasskeysRequest, ...grpc.CallOption) (*authv1.ListPasskeysResponse, error)
+	BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error)
+	FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error)
+}
+
 // CredentialClient exposes AI credential listing and mutation operations.
 type CredentialClient interface {
 	ListCredentials(context.Context, *aiv1.ListCredentialsRequest, ...grpc.CallOption) (*aiv1.ListCredentialsResponse, error)
@@ -47,20 +57,22 @@ type AgentClient interface {
 type GRPCGateway struct {
 	SocialClient     SocialClient
 	AccountClient    AccountClient
+	PasskeyClient    PasskeyClient
 	CredentialClient CredentialClient
 	AgentClient      AgentClient
 }
 
 // NewGRPCGateway builds the production settings gateway from the required clients.
-// All four clients are required — a partial set would report healthy while
+// All five clients are required — a partial set would report healthy while
 // individual settings pages 503.
-func NewGRPCGateway(socialClient SocialClient, accountClient AccountClient, credentialClient CredentialClient, agentClient AgentClient) settingsapp.Gateway {
-	if socialClient == nil || accountClient == nil || credentialClient == nil || agentClient == nil {
+func NewGRPCGateway(socialClient SocialClient, accountClient AccountClient, passkeyClient PasskeyClient, credentialClient CredentialClient, agentClient AgentClient) settingsapp.Gateway {
+	if socialClient == nil || accountClient == nil || passkeyClient == nil || credentialClient == nil || agentClient == nil {
 		return settingsapp.NewUnavailableGateway()
 	}
 	return GRPCGateway{
 		SocialClient:     socialClient,
 		AccountClient:    accountClient,
+		PasskeyClient:    passkeyClient,
 		CredentialClient: credentialClient,
 		AgentClient:      agentClient,
 	}
@@ -138,6 +150,66 @@ func (g GRPCGateway) SaveLocale(ctx context.Context, userID string, locale strin
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.account_service_client_is_not_configured", "account service client is not configured")
 	}
 	_, err := g.AccountClient.UpdateProfile(ctx, &authv1.UpdateProfileRequest{UserId: userID, Locale: mapSettingsLocaleToProto(locale)})
+	return err
+}
+
+// ListPasskeys returns passkey summary rows for the security page.
+func (g GRPCGateway) ListPasskeys(ctx context.Context, userID string) ([]settingsapp.SettingsPasskey, error) {
+	if g.PasskeyClient == nil {
+		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.auth_service_is_not_configured", "auth service client is not configured")
+	}
+	resp, err := g.PasskeyClient.ListPasskeys(ctx, &authv1.ListPasskeysRequest{UserId: userID})
+	if err != nil {
+		return nil, err
+	}
+	passkeys := make([]*authv1.PasskeyCredentialSummary, 0, len(resp.GetPasskeys()))
+	passkeys = append(passkeys, resp.GetPasskeys()...)
+	sort.Slice(passkeys, func(i int, j int) bool {
+		leftLastUsed, leftCreated := passkeySortKey(passkeys[i])
+		rightLastUsed, rightCreated := passkeySortKey(passkeys[j])
+		if !leftLastUsed.Equal(rightLastUsed) {
+			return leftLastUsed.After(rightLastUsed)
+		}
+		return leftCreated.After(rightCreated)
+	})
+	rows := make([]settingsapp.SettingsPasskey, 0, len(passkeys))
+	for idx, passkey := range passkeys {
+		if passkey == nil {
+			continue
+		}
+		rows = append(rows, settingsapp.SettingsPasskey{
+			Number:     idx + 1,
+			CreatedAt:  formatProtoTimestamp(passkey.GetCreatedAt()),
+			LastUsedAt: formatProtoTimestamp(passkey.GetLastUsedAt()),
+		})
+	}
+	return rows, nil
+}
+
+// BeginPasskeyRegistration starts authenticated passkey enrollment for one user.
+func (g GRPCGateway) BeginPasskeyRegistration(ctx context.Context, userID string) (settingsapp.PasskeyChallenge, error) {
+	if g.PasskeyClient == nil {
+		return settingsapp.PasskeyChallenge{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.auth_service_is_not_configured", "auth service client is not configured")
+	}
+	resp, err := g.PasskeyClient.BeginPasskeyRegistration(ctx, &authv1.BeginPasskeyRegistrationRequest{UserId: userID})
+	if err != nil {
+		return settingsapp.PasskeyChallenge{}, err
+	}
+	return settingsapp.PasskeyChallenge{
+		SessionID: strings.TrimSpace(resp.GetSessionId()),
+		PublicKey: json.RawMessage(resp.GetCredentialCreationOptionsJson()),
+	}, nil
+}
+
+// FinishPasskeyRegistration completes authenticated passkey enrollment.
+func (g GRPCGateway) FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) error {
+	if g.PasskeyClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.auth_service_is_not_configured", "auth service client is not configured")
+	}
+	_, err := g.PasskeyClient.FinishPasskeyRegistration(ctx, &authv1.FinishPasskeyRegistrationRequest{
+		SessionId:              sessionID,
+		CredentialResponseJson: credential,
+	})
 	return err
 }
 
@@ -336,6 +408,23 @@ func formatProtoTimestamp(value *timestamppb.Timestamp) string {
 		return "-"
 	}
 	return value.AsTime().UTC().Format("2006-01-02 15:04 UTC")
+}
+
+// passkeySortKey returns the documented ordering keys for one passkey row.
+func passkeySortKey(value *authv1.PasskeyCredentialSummary) (lastUsed time.Time, created time.Time) {
+	if value == nil {
+		return time.Time{}, time.Time{}
+	}
+	if lastUsed := value.GetLastUsedAt(); lastUsed != nil && lastUsed.CheckValid() == nil {
+		if created := value.GetCreatedAt(); created != nil && created.CheckValid() == nil {
+			return lastUsed.AsTime(), created.AsTime()
+		}
+		return lastUsed.AsTime(), time.Time{}
+	}
+	if created := value.GetCreatedAt(); created != nil && created.CheckValid() == nil {
+		return time.Time{}, created.AsTime()
+	}
+	return time.Time{}, time.Time{}
 }
 
 // mapSettingsLocaleToProto maps values across transport and domain boundaries.

@@ -145,6 +145,7 @@ func setDependencyAuth(p *web.PrincipalDependencies, m *modules.Dependencies, co
 	m.PublicAuth.AuthClient = authClient
 	m.Profile.AuthClient = authClient
 	m.Settings.AccountClient = accountClient
+	m.Settings.PasskeyClient = authClient
 }
 
 // setDependencySocial wires social clients into principal and module bundles.

@@ -88,6 +88,18 @@ func (*recordingAuthClient) FinishPasskeyLogin(context.Context, *authv1.FinishPa
 	return &authv1.FinishPasskeyLoginResponse{}, nil
 }
 
+func (*recordingAuthClient) BeginAccountRecovery(context.Context, *authv1.BeginAccountRecoveryRequest, ...grpc.CallOption) (*authv1.BeginAccountRecoveryResponse, error) {
+	return &authv1.BeginAccountRecoveryResponse{}, nil
+}
+
+func (*recordingAuthClient) BeginRecoveryPasskeyRegistration(context.Context, *authv1.BeginRecoveryPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	return &authv1.BeginPasskeyRegistrationResponse{}, nil
+}
+
+func (*recordingAuthClient) FinishRecoveryPasskeyRegistration(context.Context, *authv1.FinishRecoveryPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
+	return &authv1.FinishAccountRegistrationResponse{}, nil
+}
+
 func (*recordingAuthClient) CreateWebSession(context.Context, *authv1.CreateWebSessionRequest, ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
 	return &authv1.CreateWebSessionResponse{}, nil
 }

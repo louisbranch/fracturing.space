@@ -235,7 +235,7 @@ func TestMountUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 		Bio:    "From dependencies",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -258,7 +258,7 @@ func TestMountSettingsProfileFailsClosedWhenSocialClientMissing(t *testing.T) {
 	t.Parallel()
 
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(nil, account, nil, nil), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(nil, account, nil, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -278,7 +278,7 @@ func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Name: "Remote Name"}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -298,7 +298,7 @@ func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T)
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Name: "Remote Name"}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -565,7 +565,7 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -617,7 +617,7 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
+	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

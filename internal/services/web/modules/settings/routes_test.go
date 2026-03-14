@@ -2,6 +2,7 @@ package settings
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -120,6 +121,18 @@ func (staticGateway) LoadLocale(context.Context, string) (string, error) {
 }
 
 func (staticGateway) SaveLocale(context.Context, string, string) error {
+	return nil
+}
+
+func (staticGateway) ListPasskeys(context.Context, string) ([]SettingsPasskey, error) {
+	return []SettingsPasskey{}, nil
+}
+
+func (staticGateway) BeginPasskeyRegistration(context.Context, string) (settingsapp.PasskeyChallenge, error) {
+	return settingsapp.PasskeyChallenge{SessionID: "passkey-session-1", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
+}
+
+func (staticGateway) FinishPasskeyRegistration(context.Context, string, json.RawMessage) error {
 	return nil
 }
 

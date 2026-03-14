@@ -21,6 +21,12 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsLocale, h.handleLocaleGet)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsLocale, h.handleLocalePost)
 
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsSecurity, h.handleSecurityGet)
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsSecurityPasskeysStart, h.handleSecurityPasskeyStart)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsSecurityPasskeysStart, httpx.MethodNotAllowed(http.MethodPost))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsSecurityPasskeysFinish, h.handleSecurityPasskeyFinish)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsSecurityPasskeysFinish, httpx.MethodNotAllowed(http.MethodPost))
+
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsAIKeys, h.handleAIKeysGet)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsAIKeys, h.handleAIKeysCreate)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsAIKeyRevokePattern, httpx.MethodNotAllowed(http.MethodPost))

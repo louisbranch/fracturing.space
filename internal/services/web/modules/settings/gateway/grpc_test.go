@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -13,6 +14,7 @@ import (
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type socialStub struct{}
@@ -34,6 +36,18 @@ func (accountStub) GetProfile(context.Context, *authv1.GetProfileRequest, ...grp
 func (a *accountStub) UpdateProfile(_ context.Context, req *authv1.UpdateProfileRequest, _ ...grpc.CallOption) (*authv1.UpdateProfileResponse, error) {
 	a.lastUpdateReq = req
 	return &authv1.UpdateProfileResponse{}, nil
+}
+
+type passkeyStub struct{}
+
+func (passkeyStub) ListPasskeys(context.Context, *authv1.ListPasskeysRequest, ...grpc.CallOption) (*authv1.ListPasskeysResponse, error) {
+	return &authv1.ListPasskeysResponse{Passkeys: []*authv1.PasskeyCredentialSummary{{}}}, nil
+}
+func (passkeyStub) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	return &authv1.BeginPasskeyRegistrationResponse{SessionId: "passkey-session-1", CredentialCreationOptionsJson: []byte(`{"publicKey":{}}`)}, nil
+}
+func (passkeyStub) FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
+	return &authv1.FinishPasskeyRegistrationResponse{}, nil
 }
 
 type credentialStub struct {
@@ -87,7 +101,7 @@ func (a *agentStub) CreateAgent(_ context.Context, req *aiv1.CreateAgentRequest,
 func TestNewGRPCGatewayWithoutRequiredClientsFailsClosed(t *testing.T) {
 	t.Parallel()
 
-	gateway := NewGRPCGateway(nil, nil, nil, nil)
+	gateway := NewGRPCGateway(nil, nil, nil, nil, nil)
 	_, err := gateway.LoadProfile(context.Background(), "user-1")
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -101,9 +115,10 @@ func TestGRPCGatewayMapsProfileAndLocale(t *testing.T) {
 	t.Parallel()
 
 	account := &accountStub{}
+	passkeys := passkeyStub{}
 	credentials := &credentialStub{}
 	agents := &agentStub{}
-	gateway := NewGRPCGateway(socialStub{}, account, credentials, agents)
+	gateway := NewGRPCGateway(socialStub{}, account, passkeys, credentials, agents)
 	profile, err := gateway.LoadProfile(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("LoadProfile() error = %v", err)
@@ -127,6 +142,52 @@ func TestGRPCGatewayMapsProfileAndLocale(t *testing.T) {
 	if rows, err := gateway.ListAIKeys(context.Background(), "user-1"); err != nil || len(rows) != 1 || rows[0].CanRevoke {
 		t.Fatalf("unexpected AI keys: rows=%+v err=%v", rows, err)
 	}
+}
+
+func TestGRPCGatewayListPasskeysSortsByLastUsedThenCreated(t *testing.T) {
+	t.Parallel()
+
+	base := time.Date(2026, time.March, 9, 12, 0, 0, 0, time.UTC)
+	gateway := GRPCGateway{
+		PasskeyClient: passkeyListStub{resp: &authv1.ListPasskeysResponse{Passkeys: []*authv1.PasskeyCredentialSummary{
+			{CreatedAt: timestamppb.New(base.Add(-3 * time.Hour))},
+			{CreatedAt: timestamppb.New(base.Add(-2 * time.Hour)), LastUsedAt: timestamppb.New(base.Add(-1 * time.Hour))},
+			{CreatedAt: timestamppb.New(base.Add(-90 * time.Minute)), LastUsedAt: timestamppb.New(base.Add(-1 * time.Hour))},
+		}}},
+	}
+
+	rows, err := gateway.ListPasskeys(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("ListPasskeys() error = %v", err)
+	}
+	if len(rows) != 3 {
+		t.Fatalf("len(rows) = %d, want %d", len(rows), 3)
+	}
+	if rows[0].CreatedAt != "2026-03-09 10:30 UTC" {
+		t.Fatalf("rows[0].CreatedAt = %q, want %q", rows[0].CreatedAt, "2026-03-09 10:30 UTC")
+	}
+	if rows[1].CreatedAt != "2026-03-09 10:00 UTC" {
+		t.Fatalf("rows[1].CreatedAt = %q, want %q", rows[1].CreatedAt, "2026-03-09 10:00 UTC")
+	}
+	if rows[2].CreatedAt != "2026-03-09 09:00 UTC" {
+		t.Fatalf("rows[2].CreatedAt = %q, want %q", rows[2].CreatedAt, "2026-03-09 09:00 UTC")
+	}
+}
+
+type passkeyListStub struct {
+	resp *authv1.ListPasskeysResponse
+}
+
+func (s passkeyListStub) ListPasskeys(context.Context, *authv1.ListPasskeysRequest, ...grpc.CallOption) (*authv1.ListPasskeysResponse, error) {
+	return s.resp, nil
+}
+
+func (passkeyListStub) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	return &authv1.BeginPasskeyRegistrationResponse{}, nil
+}
+
+func (passkeyListStub) FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
+	return &authv1.FinishPasskeyRegistrationResponse{}, nil
 }
 
 func TestGRPCGatewayMissingClientBehavior(t *testing.T) {

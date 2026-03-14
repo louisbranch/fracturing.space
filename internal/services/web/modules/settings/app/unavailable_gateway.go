@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
@@ -40,6 +41,21 @@ func (unavailableGateway) LoadLocale(context.Context, string) (string, error) {
 
 // SaveLocale centralizes this web behavior in one helper seam.
 func (unavailableGateway) SaveLocale(context.Context, string, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+}
+
+// ListPasskeys returns unavailable while settings is degraded.
+func (unavailableGateway) ListPasskeys(context.Context, string) ([]SettingsPasskey, error) {
+	return nil, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+}
+
+// BeginPasskeyRegistration returns unavailable while settings is degraded.
+func (unavailableGateway) BeginPasskeyRegistration(context.Context, string) (PasskeyChallenge, error) {
+	return PasskeyChallenge{}, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+}
+
+// FinishPasskeyRegistration returns unavailable while settings is degraded.
+func (unavailableGateway) FinishPasskeyRegistration(context.Context, string, json.RawMessage) error {
 	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
 }
 

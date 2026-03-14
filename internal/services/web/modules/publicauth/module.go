@@ -13,6 +13,7 @@ import (
 // Module provides unauthenticated root/auth routes.
 type Module struct {
 	gateway        publicauthapp.Gateway
+	authBaseURL    string
 	requestMeta    requestmeta.SchemePolicy
 	id             string
 	prefix         string
@@ -33,6 +34,7 @@ const (
 type Config struct {
 	Gateway     publicauthapp.Gateway
 	RequestMeta requestmeta.SchemePolicy
+	AuthBaseURL string
 	Surface     Surface
 }
 
@@ -41,6 +43,7 @@ func New(config Config) Module {
 	id, prefix, register := resolveSurface(config.Surface)
 	return Module{
 		gateway:        config.Gateway,
+		authBaseURL:    config.AuthBaseURL,
 		requestMeta:    config.RequestMeta,
 		id:             id,
 		prefix:         prefix,
@@ -76,7 +79,7 @@ func (m Module) ID() string {
 // Mount wires public routes under the auth/root prefix.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := publicauthapp.NewService(m.gateway)
+	svc := publicauthapp.NewService(m.gateway, m.authBaseURL)
 	h := newHandlers(svc, m.requestMeta)
 	if m.registerRoutes != nil {
 		m.registerRoutes(mux, h)

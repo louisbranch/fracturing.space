@@ -24,8 +24,12 @@ func registerShellRoutes(mux *http.ServeMux, h handlers) {
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.Root+"{$}", h.handleRoot)
 	mux.HandleFunc(http.MethodGet+" "+routepath.Login, h.handleLogin)
+	mux.HandleFunc(http.MethodGet+" "+routepath.LoginRecovery, h.handleRecoveryGet)
+	mux.HandleFunc(http.MethodGet+" "+routepath.LoginRecoveryCode, h.handleRecoveryCodeGet)
 	mux.HandleFunc(http.MethodGet+" "+routepath.Health, h.handleHealth)
 
+	mux.HandleFunc(http.MethodPost+" "+routepath.LoginRecoveryCodeAcknowledge, h.handleRecoveryCodeAcknowledge)
+	mux.HandleFunc(http.MethodGet+" "+routepath.LoginRecoveryCodeAcknowledge, httpx.MethodNotAllowed(http.MethodPost))
 	mux.HandleFunc(http.MethodPost+" "+routepath.Logout, h.handleLogout)
 	mux.HandleFunc(http.MethodGet+" "+routepath.Logout, httpx.MethodNotAllowed(http.MethodPost))
 	mux.HandleFunc(http.MethodGet+" "+routepath.Root+"{rest...}", h.handleNotFound)
@@ -47,6 +51,12 @@ func registerPasskeyRoutes(mux *http.ServeMux, h handlers) {
 
 	mux.HandleFunc(http.MethodPost+" "+routepath.PasskeyRegisterFinish, h.handlePasskeyRegisterFinish)
 	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeyRegisterFinish, httpx.MethodNotAllowed(http.MethodPost))
+
+	mux.HandleFunc(http.MethodPost+" "+routepath.PasskeyRecoveryStart, h.handleRecoveryStart)
+	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeyRecoveryStart, httpx.MethodNotAllowed(http.MethodPost))
+
+	mux.HandleFunc(http.MethodPost+" "+routepath.PasskeyRecoveryFinish, h.handleRecoveryFinish)
+	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeyRecoveryFinish, httpx.MethodNotAllowed(http.MethodPost))
 	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeysPrefix+"{rest...}", h.handleNotFound)
 }
 

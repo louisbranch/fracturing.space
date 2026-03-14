@@ -18,6 +18,7 @@ import (
 type Config struct {
 	HTTPAddr            string `env:"FRACTURING_SPACE_WEB_HTTP_ADDR" envDefault:"localhost:8080"`
 	ChatHTTPAddr        string `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR" envDefault:"localhost:8086"`
+	AuthBaseURL         string `env:"FRACTURING_SPACE_WEB_AUTH_BASE_URL" envDefault:"http://localhost:8084"`
 	TrustForwardedProto bool   `env:"FRACTURING_SPACE_WEB_TRUST_FORWARDED_PROTO" envDefault:"false"`
 	AuthAddr            string `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	SocialAddr          string `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
@@ -47,6 +48,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.ChatHTTPAddr, "chat-http-addr", cfg.ChatHTTPAddr, "Chat HTTP listen address")
+	fs.StringVar(&cfg.AuthBaseURL, "auth-base-url", cfg.AuthBaseURL, "Auth service external base URL")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "Auth service gRPC address")
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "Social service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
@@ -78,6 +80,7 @@ func Run(ctx context.Context, cfg Config) error {
 			return fmt.Errorf("init web dependency graph: %w", bootstrapErr)
 		}
 		defer closeManagedConns(conns)
+		dependencies.Modules.PublicAuth.AuthBaseURL = cfg.AuthBaseURL
 
 		statusMc, statusClient := startStatusService(ctx, cfg.StatusAddr, reporter)
 		defer closeManagedConn(statusMc, "status")

@@ -120,6 +120,50 @@ func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.AppSettingsLocale)
 }
 
+// handleSecurityGet handles this route in the module transport layer.
+func (h handlers) handleSecurityGet(w http.ResponseWriter, r *http.Request) {
+	ctx, userID := h.RequestContextAndUserID(r)
+	h.renderSecurityPage(w, r, ctx, userID, http.StatusOK)
+}
+
+// handleSecurityPasskeyStart handles this route in the module transport layer.
+func (h handlers) handleSecurityPasskeyStart(w http.ResponseWriter, r *http.Request) {
+	if !h.hasSameOriginProof(r) {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
+	ctx, userID := h.RequestContextAndUserID(r)
+	start, err := h.service.BeginPasskeyRegistration(ctx, userID)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{
+		"session_id": start.SessionID,
+		"public_key": start.PublicKey,
+	})
+}
+
+// handleSecurityPasskeyFinish handles this route in the module transport layer.
+func (h handlers) handleSecurityPasskeyFinish(w http.ResponseWriter, r *http.Request) {
+	if !h.hasSameOriginProof(r) {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
+	input, err := parsePasskeyCredentialInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	ctx, _ := h.RequestContextAndUserID(r)
+	if err := h.service.FinishPasskeyRegistration(ctx, input.SessionID, input.Credential); err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	h.writeFlashNotice(w, r, flashnotice.NoticeSuccess("web.settings.security.notice_added"))
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.AppSettingsSecurity})
+}
+
 // handleAIKeysGet handles this route in the module transport layer.
 func (h handlers) handleAIKeysGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
@@ -220,6 +264,17 @@ func (h handlers) writeFlashNotice(w http.ResponseWriter, r *http.Request, notic
 	flashnotice.WriteWithPolicy(w, r, notice, h.flashMeta)
 }
 
+// writeJSONError writes a localized JSON error payload for settings endpoints.
+func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
+	loc, _ := h.PageLocalizer(w, r)
+	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), webi18n.LocalizeError(loc, err))
+}
+
+// hasSameOriginProof reports whether this package condition is satisfied.
+func (h handlers) hasSameOriginProof(r *http.Request) bool {
+	return requestmeta.HasSameOriginProofWithPolicy(r, h.flashMeta)
+}
+
 // routeCredentialID extracts the canonical settings credential route parameter.
 func (h handlers) routeCredentialID(r *http.Request) (string, bool) {
 	credentialID := strings.TrimSpace(r.PathValue("credentialID"))
@@ -278,6 +333,25 @@ func (h handlers) renderLocalePage(w http.ResponseWriter, r *http.Request, statu
 			SelectedLocale: selectedLocale,
 			ErrorMessage:   errorMessage,
 		}, loc),
+	)
+}
+
+// renderSecurityPage centralizes this web behavior in one helper seam.
+func (h handlers) renderSecurityPage(w http.ResponseWriter, r *http.Request, ctx context.Context, userID string, statusCode int) {
+	loc, _ := h.PageLocalizer(w, r)
+	passkeys, err := h.loadPasskeyRows(ctx, userID)
+	if err != nil {
+		h.WriteError(w, r, err)
+		return
+	}
+	h.writeSettingsPage(
+		w,
+		r,
+		loc,
+		statusCode,
+		routepath.AppSettingsSecurity,
+		webtemplates.T(loc, "web.settings.page_security_title"),
+		webtemplates.SettingsSecurityFragment(passkeys, loc),
 	)
 }
 
@@ -359,6 +433,15 @@ func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]webtempla
 		return nil, err
 	}
 	return mapAIKeyTemplateRows(keys), nil
+}
+
+// loadPasskeyRows resolves settings passkey rows for template rendering.
+func (h handlers) loadPasskeyRows(ctx context.Context, userID string) ([]webtemplates.SettingsPasskeyRow, error) {
+	passkeys, err := h.service.ListPasskeys(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	return mapPasskeyTemplateRows(passkeys), nil
 }
 
 // loadAIAgentCredentialOptions resolves active credential options for template rendering.

@@ -3,6 +3,13 @@ package templates
 import "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 import webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 
+type RecoveryCodePageParams struct {
+	Copy       webi18n.AuthCopy
+	Code       string
+	PendingID  string
+	IsRecovery bool
+}
+
 templ PublicRootFragment(copy webi18n.AuthCopy) {
 	<section id="public-root" class="landing-hero">
 		<h1>Fracturing.Space</h1>
@@ -15,7 +22,7 @@ templ PublicRootFragment(copy webi18n.AuthCopy) {
 	</section>
 }
 
-templ PasskeyLoginPage(copy webi18n.AuthCopy) {
+templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID string) {
 	<section id="passkey-page" class="mx-auto grid w-full max-w-5xl gap-8">
 		<header class="grid gap-2">
 			<h1 class="text-3xl font-bold">{ copy.LoginHeading }</h1>
@@ -51,6 +58,9 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy) {
 						</label>
 						<button id="passkey-login" type="button" class="btn btn-outline">{ copy.LoginSignInPasskey }</button>
 					</form>
+					<div class="mt-4">
+						<a class="link link-hover text-sm" href={ recoveryURL }>{ copy.LoginRecoverAccount }</a>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -62,6 +72,7 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy) {
 		data-login-finish-path={ routepath.PasskeyLoginFinish }
 		data-register-start-path={ routepath.PasskeyRegisterStart }
 		data-register-finish-path={ routepath.PasskeyRegisterFinish }
+		data-pending-id={ pendingID }
 		data-login-start-error={ copy.JSLoginStartError }
 		data-login-finish-error={ copy.JSLoginFinishError }
 		data-register-start-error={ copy.JSRegisterStartErr }
@@ -71,6 +82,88 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy) {
 		data-register-username-required={ copy.JSRegisterUserReq }
 		data-passkey-created={ copy.JSPasskeyCreated }
 		data-register-failed={ copy.JSRegisterFailed }
+	></div>
+	<script defer src="/static/passkey-auth.js"></script>
+}
+
+templ PasskeyRecoveryPage(copy webi18n.AuthCopy, pendingID string) {
+	<section id="recovery-page" class="mx-auto grid w-full max-w-3xl gap-8">
+		<header class="grid gap-2">
+			<h1 class="text-3xl font-bold">{ copy.RecoveryHeading }</h1>
+			<p class="opacity-80">{ copy.RecoveryIntro }</p>
+		</header>
+		<div class="card border border-base-300 bg-base-200 shadow-xl">
+			<div class="card-body">
+				<div id="recovery-error" role="alert" class="alert alert-error mt-2" hidden></div>
+				<form class="grid gap-4 mt-2" id="recovery-form">
+					<label for="recovery-username" class="form-control w-full">
+						<span class="label">
+							<span class="label-text">{ copy.LoginUsername }</span>
+						</span>
+						<input id="recovery-username" name="username" type="text" autocomplete="username" class="input input-bordered w-full"/>
+					</label>
+					<label for="recovery-code" class="form-control w-full">
+						<span class="label">
+							<span class="label-text">{ copy.RecoveryCodeLabel }</span>
+						</span>
+						<input id="recovery-code" name="recovery_code" type="text" autocomplete="one-time-code" class="input input-bordered w-full"/>
+					</label>
+					<button id="recovery-submit" type="button" class="btn btn-primary">{ copy.RecoveryButton }</button>
+				</form>
+			</div>
+		</div>
+	</section>
+	<div
+		id="recovery-i18n-strings"
+		hidden
+		data-recovery-start-path={ routepath.PasskeyRecoveryStart }
+		data-recovery-finish-path={ routepath.PasskeyRecoveryFinish }
+		data-pending-id={ pendingID }
+		data-recovery-start-error={ copy.JSRecoveryStartError }
+		data-recovery-finish-error={ copy.JSRecoveryFinishError }
+		data-recovery-username-required={ copy.JSRecoveryUsernameReq }
+		data-recovery-code-required={ copy.JSRecoveryCodeReq }
+		data-recovery-failed={ copy.JSRecoveryFailed }
+	></div>
+	<script defer src="/static/passkey-auth.js"></script>
+}
+
+templ RecoveryCodePage(params RecoveryCodePageParams) {
+	<section id="recovery-code-page" class="mx-auto grid w-full max-w-3xl gap-8">
+		<header class="grid gap-2">
+			<h1 class="text-3xl font-bold">{ params.Copy.RecoveryCodeHeading }</h1>
+			if params.IsRecovery {
+				<p class="opacity-80">{ params.Copy.RecoveryCodeRecoveryBody }</p>
+			} else {
+				<p class="opacity-80">{ params.Copy.RecoveryCodeSignupBody }</p>
+			}
+		</header>
+		<div class="card border border-base-300 bg-base-200 shadow-xl">
+			<div class="card-body gap-4">
+				<div class="alert alert-warning">{ params.Copy.RecoveryCodeWarning }</div>
+				<div class="mockup-code text-lg">
+					<pre data-recovery-code={ params.Code }><code>{ params.Code }</code></pre>
+				</div>
+				<div class="flex flex-wrap gap-3">
+					<button id="recovery-code-download" type="button" class="btn btn-outline">{ params.Copy.RecoveryCodeDownload }</button>
+				</div>
+				<form method="post" action={ routepath.LoginRecoveryCodeAcknowledge } class="grid gap-4">
+					<input type="hidden" name="pending_id" value={ params.PendingID }/>
+					<label class="label cursor-pointer justify-start gap-3">
+						<input id="recovery-code-ack" name="acknowledged" value="true" type="checkbox" class="checkbox"/>
+						<span class="label-text">{ params.Copy.RecoveryCodeAcknowledge }</span>
+					</label>
+					<div class="card-actions justify-end">
+						<button id="recovery-code-continue" class="btn btn-primary" type="submit" disabled>{ params.Copy.RecoveryCodeContinue }</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</section>
+	<div
+		id="recovery-code-i18n"
+		hidden
+		data-download-filename={ params.Copy.RecoveryCodeDownloadFilename }
 	></div>
 	<script defer src="/static/passkey-auth.js"></script>
 }
