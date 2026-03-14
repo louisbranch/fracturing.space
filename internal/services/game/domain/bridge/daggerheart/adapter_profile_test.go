@@ -58,6 +58,7 @@ func TestApplyProfile_PersistsValidatedProfile(t *testing.T) {
 		"starting_armor_id":"a-1",
 		"starting_potion_item_id":"p-1",
 		"background":"bg",
+		"description":"Tall, patient, and heavily armored.",
 		"domain_card_ids":["d-1"],
 		"connections":"conn"
 	}`)
@@ -75,6 +76,9 @@ func TestApplyProfile_PersistsValidatedProfile(t *testing.T) {
 	}
 	if len(profile.Experiences) != 1 || profile.Experiences[0].Name != "Scout" {
 		t.Fatalf("unexpected experiences: %+v", profile.Experiences)
+	}
+	if profile.Description != "Tall, patient, and heavily armored." {
+		t.Fatalf("description = %q, want %q", profile.Description, "Tall, patient, and heavily armored.")
 	}
 
 	state, err := store.GetDaggerheartCharacterState(context.Background(), "camp-1", "char-1")

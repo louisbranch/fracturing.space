@@ -66,6 +66,21 @@ func TestApplyDaggerheartProfilePatch_RejectsCreationWorkflowFields(t *testing.T
 	}
 }
 
+func TestApplyDaggerheartProfilePatch_RejectsDescriptionAsCreationWorkflowField(t *testing.T) {
+	_, err := applyDaggerheartProfilePatch(validPatchProfile(), &daggerheartv1.DaggerheartProfile{
+		Description: "Reserved for the creation workflow.",
+	})
+	if err == nil {
+		t.Fatal("expected rejection for description patch")
+	}
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("status code = %s, want %s", status.Code(err), codes.InvalidArgument)
+	}
+	if !strings.Contains(err.Error(), "ApplyCharacterCreationStep") {
+		t.Fatalf("error = %v, want creation workflow guidance", err)
+	}
+}
+
 func validPatchProfile() storage.DaggerheartCharacterProfile {
 	defaults := daggerheartprofile.GetDefaults("PC")
 	return storage.DaggerheartCharacterProfile{

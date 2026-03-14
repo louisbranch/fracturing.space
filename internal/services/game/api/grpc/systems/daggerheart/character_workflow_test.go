@@ -235,4 +235,28 @@ func TestSystemProfileMap_Empty(t *testing.T) {
 	}
 }
 
+func TestSystemProfileMap_IncludesDescription(t *testing.T) {
+	m := SystemProfileMap(storage.DaggerheartCharacterProfile{
+		Description: "Tall, patient, and heavily armored.",
+	})
+
+	rawProfile, ok := m["daggerheart"].(map[string]any)
+	if !ok {
+		t.Fatalf("daggerheart profile type = %T, want map[string]any", m["daggerheart"])
+	}
+	if got := rawProfile["description"]; got != "Tall, patient, and heavily armored." {
+		t.Fatalf("description = %#v, want %q", got, "Tall, patient, and heavily armored.")
+	}
+}
+
+func TestCreationProfileFromStorage_PreservesDescription(t *testing.T) {
+	profile := creationProfileFromStorage(storage.DaggerheartCharacterProfile{
+		Description: "A calm veteran with a scarred shield.",
+	})
+
+	if profile.Description != "A calm veteran with a scarred shield." {
+		t.Fatalf("Description = %q, want %q", profile.Description, "A calm veteran with a scarred shield.")
+	}
+}
+
 var _ workflow.Provider = (*CreationWorkflowProvider)(nil)
