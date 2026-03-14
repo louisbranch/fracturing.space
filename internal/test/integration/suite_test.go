@@ -8,7 +8,7 @@ import "testing"
 func TestMCPStdioEndToEnd(t *testing.T) {
 	fixture := newSuiteFixture(t)
 	clientSession := fixture.newMCPClientSession(t)
-	userID := fixture.newUserID(t, "test-creator")
+	userID := fixture.newUserID(t, uniqueTestUsername(t, "test-creator"))
 	suite := &integrationSuite{client: clientSession, userID: userID}
 
 	t.Run("duality tools", func(t *testing.T) {

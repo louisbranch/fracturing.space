@@ -12,26 +12,29 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/tools/seed"
 )
 
-// TestMCPStdioBlackbox validates the stdio MCP surface using the shared fixture.
+// TestMCPStdioBlackbox validates the stdio MCP surface with per-fixture session isolation.
 func TestMCPStdioBlackbox(t *testing.T) {
 	fixture := newSuiteFixture(t)
-	userID := fixture.newUserID(t, "blackbox-creator")
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	client, err := seed.StartMCPClient(ctx, repoRoot(t), fixture.grpcAddr)
-	if err != nil {
-		t.Fatalf("start MCP stdio server: %v", err)
-	}
-	defer client.Close()
+	binaryPath := mcpBinaryForTests(t)
 
 	fixtures := loadBlackboxFixtures(t, filepath.Join(repoRoot(t), blackboxFixtureGlob))
-	for _, fixture := range fixtures {
-		captures := make(map[string]string)
-		for _, step := range fixture.Steps {
-			executeStdioBlackboxStep(t, ctx, client, step, captures, userID)
-		}
+	for _, blackboxFixture := range fixtures {
+		func(blackboxFixture seed.BlackboxFixture) {
+			userID := fixture.newUserID(t, uniqueTestUsername(t, "blackbox-creator", blackboxFixture.Name))
+			ctx, cancel := context.WithCancel(context.Background())
+			client, err := seed.StartMCPClientBinary(ctx, binaryPath, fixture.grpcAddr)
+			if err != nil {
+				cancel()
+				t.Fatalf("start MCP stdio server: %v", err)
+			}
+			defer cancel()
+			defer client.Close()
+
+			captures := make(map[string]string)
+			for _, step := range blackboxFixture.Steps {
+				executeStdioBlackboxStep(t, ctx, client, step, captures, userID)
+			}
+		}(blackboxFixture)
 	}
 }
 

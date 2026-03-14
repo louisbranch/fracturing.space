@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"os"
 	"os/exec"
@@ -86,6 +87,10 @@ var (
 
 	sharedFixtureOnce sync.Once
 	sharedFixtureData suiteFixture
+
+	mcpBinaryOnce sync.Once
+	mcpBinaryPath string
+	mcpBinaryErr  error
 )
 
 const (
@@ -379,9 +384,8 @@ func startMCPClientInMemory(t *testing.T, grpcAddr string) (*mcp.ClientSession, 
 func startMCPClientStdio(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
 	t.Helper()
 
-	cmd := exec.Command("go", "run", "./cmd/mcp")
+	cmd := exec.Command(mcpBinaryForTests(t), "-addr="+grpcAddr)
 	cmd.Dir = repoRoot(t)
-	cmd.Env = append(os.Environ(), fmt.Sprintf("FRACTURING_SPACE_GAME_ADDR=%s", grpcAddr))
 	cmd.Stderr = os.Stderr
 
 	transport := &mcp.CommandTransport{Command: cmd}
@@ -452,6 +456,105 @@ func createAuthUser(t *testing.T, authAddr, username string) string {
 		}
 	}
 	return created.ID
+}
+
+func uniqueTestUsername(t *testing.T, parts ...string) string {
+	t.Helper()
+
+	base := ""
+	for _, part := range parts {
+		if token := sanitizeTestToken(part); token != "" {
+			base = token
+			break
+		}
+	}
+	if base == "" {
+		base = "integration"
+	}
+	if first := base[0]; first < 'a' || first > 'z' {
+		base = "u" + base
+	}
+
+	inputs := append(append([]string{}, parts...), t.Name())
+	hasher := fnv.New32a()
+	for _, input := range inputs {
+		_, _ = hasher.Write([]byte(input))
+		_, _ = hasher.Write([]byte{0})
+	}
+	suffix := fmt.Sprintf("%08x", hasher.Sum32())
+
+	const maxUsernameLen = 32
+	maxBaseLen := maxUsernameLen - len(suffix) - 1
+	if maxBaseLen < 3 {
+		maxBaseLen = 3
+	}
+	if len(base) > maxBaseLen {
+		base = strings.Trim(base[:maxBaseLen], "-")
+	}
+	if len(base) < 3 {
+		base = "usr"
+	}
+	return base + "-" + suffix
+}
+
+func sanitizeTestToken(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value == "" {
+		return ""
+	}
+
+	var builder strings.Builder
+	lastDash := false
+	for _, r := range value {
+		switch {
+		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
+			builder.WriteRune(r)
+			lastDash = false
+		default:
+			if !lastDash {
+				builder.WriteByte('-')
+				lastDash = true
+			}
+		}
+	}
+
+	sanitized := strings.Trim(builder.String(), "-")
+	return sanitized
+}
+
+// mcpBinaryForTests builds the MCP binary once so integration tests control the
+// actual child process instead of the `go run` wrapper.
+func mcpBinaryForTests(t *testing.T) string {
+	t.Helper()
+
+	mcpBinaryOnce.Do(func() {
+		dir, err := os.MkdirTemp("", "mcp-integration-bin-*")
+		if err != nil {
+			mcpBinaryErr = fmt.Errorf("create temp dir: %w", err)
+			return
+		}
+
+		binaryName := "mcp-integration"
+		if runtime.GOOS == "windows" {
+			binaryName += ".exe"
+		}
+		mcpBinaryPath = filepath.Join(dir, binaryName)
+
+		cmd := exec.Command("go", "build", "-o", mcpBinaryPath, "./cmd/mcp")
+		cmd.Dir = repoRoot(t)
+		output, err := cmd.CombinedOutput()
+		if err != nil {
+			mcpBinaryErr = fmt.Errorf("build mcp binary: %w: %s", err, strings.TrimSpace(string(output)))
+		}
+	})
+
+	if mcpBinaryErr != nil {
+		t.Fatalf("prepare MCP binary: %v", mcpBinaryErr)
+	}
+	if strings.TrimSpace(mcpBinaryPath) == "" {
+		t.Fatal("prepare MCP binary: path is empty")
+	}
+	return mcpBinaryPath
 }
 
 func withUserID(ctx context.Context, userID string) context.Context {
