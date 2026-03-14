@@ -21,6 +21,18 @@ type Domain interface {
 	Execute(ctx context.Context, cmd command.Command) (engine.Result, error)
 }
 
+// GameplayStore is the Daggerheart-owned projection contract consumed by the
+// gameplay service.
+type GameplayStore interface {
+	storage.DaggerheartStore
+}
+
+// ContentStore is the Daggerheart-owned content-read contract consumed by the
+// content and workflow surfaces.
+type ContentStore interface {
+	storage.DaggerheartContentReadStore
+}
+
 // Stores groups storage interfaces used by the Daggerheart service.
 type Stores struct {
 	Campaign           storage.CampaignStore
@@ -28,8 +40,8 @@ type Stores struct {
 	Session            storage.SessionStore
 	SessionGate        storage.SessionGateStore
 	SessionSpotlight   storage.SessionSpotlightStore
-	Daggerheart        storage.DaggerheartStore
-	DaggerheartContent storage.DaggerheartContentReadStore
+	Daggerheart        GameplayStore
+	DaggerheartContent ContentStore
 	Event              storage.EventStore
 	Watermarks         storage.ProjectionWatermarkStore
 	Events             *event.Registry
@@ -51,7 +63,7 @@ type ProjectionStoreBundle interface {
 	storage.SessionStore
 	storage.SessionGateStore
 	storage.SessionSpotlightStore
-	storage.DaggerheartStore
+	GameplayStore
 	storage.ProjectionWatermarkStore
 }
 
@@ -59,7 +71,7 @@ type ProjectionStoreBundle interface {
 type StoresFromProjectionConfig struct {
 	ProjectionStore ProjectionStoreBundle
 	EventStore      storage.EventStore
-	ContentStore    storage.DaggerheartContentReadStore
+	ContentStore    ContentStore
 	Domain          Domain
 	WriteRuntime    *domainwrite.Runtime
 	Events          *event.Registry

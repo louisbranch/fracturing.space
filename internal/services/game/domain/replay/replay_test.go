@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
@@ -28,6 +29,7 @@ func (s *fakeEventStore) ListEvents(_ context.Context, _ string, afterSeq uint64
 type fakeCheckpointStore struct {
 	seq       uint64
 	saveCalls int
+	lastSaved Checkpoint
 }
 
 func (s *fakeCheckpointStore) Get(_ context.Context, _ string) (Checkpoint, error) {
@@ -43,6 +45,7 @@ func (s *fakeCheckpointStore) Save(_ context.Context, checkpoint Checkpoint) err
 	}
 	s.saveCalls++
 	s.seq = checkpoint.LastSeq
+	s.lastSaved = checkpoint
 	return nil
 }
 
@@ -142,5 +145,25 @@ func TestReplay_UsesCheckpoint(t *testing.T) {
 	}
 	if checkpoints.seq != 3 {
 		t.Fatalf("checkpoint seq = %d, want %d", checkpoints.seq, 3)
+	}
+}
+
+func TestReplay_UsesInjectedClockForCheckpointTimestamps(t *testing.T) {
+	now := time.Date(2026, 3, 9, 21, 0, 0, 0, time.UTC)
+	store := &fakeEventStore{events: []event.Event{{CampaignID: "camp-1", Seq: 1}}}
+	checkpoints := &fakeCheckpointStore{}
+	applier := &recordingApplier{}
+
+	_, err := Replay(context.Background(), store, checkpoints, applier, "camp-1", "state", Options{
+		Clock: func() time.Time { return now },
+	})
+	if err != nil {
+		t.Fatalf("replay: %v", err)
+	}
+	if checkpoints.saveCalls != 1 {
+		t.Fatalf("checkpoint save calls = %d, want 1", checkpoints.saveCalls)
+	}
+	if !checkpoints.lastSaved.UpdatedAt.Equal(now) {
+		t.Fatalf("checkpoint updated_at = %v, want %v", checkpoints.lastSaved.UpdatedAt, now)
 	}
 }

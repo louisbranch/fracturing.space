@@ -27,7 +27,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
@@ -62,8 +62,8 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignUpdate,
@@ -93,7 +93,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.stores, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
@@ -114,8 +114,8 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignUpdate,

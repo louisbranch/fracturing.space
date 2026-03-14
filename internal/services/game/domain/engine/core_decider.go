@@ -11,12 +11,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
@@ -26,8 +24,9 @@ import (
 // It keeps command routing explicit: each command type maps to exactly one
 // aggregate route, while system commands are dispatched by system id/version.
 type CoreDecider struct {
-	Systems *module.Registry
-	routes  map[command.Type]coreCommandRoute
+	Systems          *module.Registry
+	SessionLifecycle SessionLifecycle
+	routes           map[command.Type]coreCommandRoute
 }
 
 // coreCommandRoute maps a normalized aggregate state + command into one decision path.
@@ -40,7 +39,11 @@ func NewCoreDecider(systems *module.Registry, definitions []command.Definition) 
 	if err != nil {
 		return CoreDecider{}, err
 	}
-	return CoreDecider{Systems: systems, routes: routes}, nil
+	return CoreDecider{
+		Systems:          systems,
+		SessionLifecycle: NewSessionLifecycle(systems),
+		routes:           routes,
+	}, nil
 }
 
 func (d CoreDecider) Decide(state any, cmd command.Command, now func() time.Time) command.Decision {
@@ -120,55 +123,11 @@ func sceneRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now
 // acceptable because campaign activation is a one-time lifecycle transition
 // that is tightly coupled to the first session start.
 func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
-	if now == nil {
-		now = time.Now
+	lifecycle := d.SessionLifecycle
+	if lifecycle == nil {
+		lifecycle = NewSessionLifecycle(d.Systems)
 	}
-	decisionTime := now().UTC()
-	fixedNow := func() time.Time { return decisionTime }
-
-	var systemReadiness readiness.CharacterSystemReadiness
-	if d.Systems != nil {
-		systemID := strings.TrimSpace(string(current.Campaign.GameSystem))
-		if mod := d.Systems.Get(systemID, ""); mod != nil {
-			if checker, ok := mod.(module.CharacterReadinessChecker); ok {
-				systemReadiness = checker.CharacterReady
-			}
-		}
-	}
-
-	report := readiness.EvaluateSessionStartReport(current, readiness.ReportOptions{
-		SystemReadiness:        systemReadiness,
-		IncludeSessionBoundary: true,
-		HasActiveSession:       current.Session.Started,
-	})
-	if !report.Ready() {
-		first := report.Blockers[0]
-		return command.Reject(command.Rejection{Code: first.Code, Message: first.Message})
-	}
-
-	startDecision := session.Decide(current.Session, cmd, fixedNow)
-	if len(startDecision.Rejections) > 0 {
-		return startDecision
-	}
-
-	if current.Campaign.Status != campaign.StatusDraft {
-		return startDecision
-	}
-
-	campaignPayloadJSON, _ := json.Marshal(campaign.UpdatePayload{Fields: map[string]string{"status": string(campaign.StatusActive)}})
-	campaignActivated := command.NewEvent(
-		cmd,
-		campaign.EventTypeUpdated,
-		"campaign",
-		string(cmd.CampaignID),
-		campaignPayloadJSON,
-		decisionTime,
-	)
-
-	events := make([]event.Event, 0, len(startDecision.Events)+1)
-	events = append(events, campaignActivated)
-	events = append(events, startDecision.Events...)
-	return command.Accept(events...)
+	return lifecycle.Start(current, cmd, now)
 }
 
 // participantRoute resolves the target participant snapshot and routes accordingly.

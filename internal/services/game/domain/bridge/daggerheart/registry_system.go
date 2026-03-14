@@ -39,12 +39,14 @@ func (r *RegistrySystem) RegistryMetadata() bridge.RegistryMetadata {
 	}
 }
 
-// StateHandlerFactory returns nil until SystemService metadata is backed by state APIs.
+// StateHandlerFactory intentionally returns nil until the registry metadata is
+// backed by typed state APIs instead of placeholder wiring.
 func (r *RegistrySystem) StateHandlerFactory() bridge.StateHandlerFactory {
 	return nil
 }
 
-// OutcomeApplier returns nil until metadata wiring includes outcome application.
+// OutcomeApplier intentionally returns nil until the registry metadata exposes
+// a real outcome-application surface.
 func (r *RegistrySystem) OutcomeApplier() bridge.OutcomeApplier {
 	return nil
 }

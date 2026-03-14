@@ -32,7 +32,7 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 
@@ -50,8 +50,8 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneSpotlightSet,
@@ -79,7 +79,7 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 
@@ -96,8 +96,8 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSceneSpotlightClear,

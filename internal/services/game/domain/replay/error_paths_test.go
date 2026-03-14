@@ -179,6 +179,7 @@ func TestReplay_DetectsSequenceGap(t *testing.T) {
 
 func TestReplay_UntilSeqStopsAndFlushesCheckpoint(t *testing.T) {
 	checkpoints := &replayCheckpointStub{}
+	now := time.Date(2026, 3, 9, 21, 15, 0, 0, time.UTC)
 	result, err := Replay(
 		context.Background(),
 		&replayStoreStub{events: []event.Event{
@@ -190,7 +191,7 @@ func TestReplay_UntilSeqStopsAndFlushesCheckpoint(t *testing.T) {
 		&replayFolderStub{},
 		"camp-1",
 		"state",
-		Options{UntilSeq: 1, CheckpointInterval: 10},
+		Options{UntilSeq: 1, CheckpointInterval: 10, Clock: func() time.Time { return now }},
 	)
 	if err != nil {
 		t.Fatalf("Replay() unexpected error: %v", err)
@@ -203,6 +204,9 @@ func TestReplay_UntilSeqStopsAndFlushesCheckpoint(t *testing.T) {
 	}
 	if checkpoints.lastSaved.LastSeq != 1 {
 		t.Fatalf("checkpoint last seq = %d, want 1", checkpoints.lastSaved.LastSeq)
+	}
+	if !checkpoints.lastSaved.UpdatedAt.Equal(now) {
+		t.Fatalf("checkpoint updated_at = %v, want %v", checkpoints.lastSaved.UpdatedAt, now)
 	}
 }
 

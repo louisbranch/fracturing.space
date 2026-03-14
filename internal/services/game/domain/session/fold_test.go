@@ -50,7 +50,7 @@ func TestFoldSessionGateOpenedSetsGateState(t *testing.T) {
 	state := State{}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.gate_opened"),
-		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"gm_consequence"}`),
+		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"vote","metadata":{"eligible_participant_ids":["p2","p1"],"options":["south","north"]}}`),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -61,10 +61,21 @@ func TestFoldSessionGateOpenedSetsGateState(t *testing.T) {
 	if updated.GateID != "gate-1" {
 		t.Fatalf("gate id = %s, want %s", updated.GateID, "gate-1")
 	}
+	if updated.GateType != "vote" {
+		t.Fatalf("gate type = %s, want vote", updated.GateType)
+	}
+	if string(updated.GateMetadataJSON) != `{"eligible_participant_ids":["p2","p1"],"options":["south","north"]}` {
+		t.Fatalf("gate metadata = %s", string(updated.GateMetadataJSON))
+	}
 }
 
 func TestFoldSessionGateResponseRecordedLeavesGateLifecycleStateUnchanged(t *testing.T) {
-	state := State{GateOpen: true, GateID: "gate-1"}
+	state := State{
+		GateOpen:         true,
+		GateID:           "gate-1",
+		GateType:         GateTypeReadyCheck,
+		GateMetadataJSON: []byte(`{"eligible_participant_ids":["part-1","part-2"]}`),
+	}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.gate_response_recorded"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":"part-1","decision":"ready"}`),
@@ -72,13 +83,16 @@ func TestFoldSessionGateResponseRecordedLeavesGateLifecycleStateUnchanged(t *tes
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if updated != state {
-		t.Fatalf("updated state = %#v, want %#v", updated, state)
+	if !updated.GateOpen || updated.GateID != state.GateID || updated.GateType != state.GateType {
+		t.Fatalf("updated gate lifecycle = %#v, want %#v", updated, state)
+	}
+	if string(updated.GateMetadataJSON) != string(state.GateMetadataJSON) {
+		t.Fatalf("gate metadata = %s, want %s", updated.GateMetadataJSON, state.GateMetadataJSON)
 	}
 }
 
 func TestFoldSessionGateResolvedClearsGateState(t *testing.T) {
-	state := State{GateOpen: true, GateID: "gate-1"}
+	state := State{GateOpen: true, GateID: "gate-1", GateType: "vote", GateMetadataJSON: []byte(`{"options":["north","south"]}`)}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.gate_resolved"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","decision":"approve"}`),
@@ -92,10 +106,13 @@ func TestFoldSessionGateResolvedClearsGateState(t *testing.T) {
 	if updated.GateID != "" {
 		t.Fatalf("gate id = %s, want empty", updated.GateID)
 	}
+	if updated.GateType != "" || len(updated.GateMetadataJSON) != 0 {
+		t.Fatalf("expected gate workflow state to be cleared, got %#v", updated)
+	}
 }
 
 func TestFoldSessionGateAbandonedClearsGateState(t *testing.T) {
-	state := State{GateOpen: true, GateID: "gate-1"}
+	state := State{GateOpen: true, GateID: "gate-1", GateType: "vote", GateMetadataJSON: []byte(`{"options":["north","south"]}`)}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("session.gate_abandoned"),
 		PayloadJSON: []byte(`{"gate_id":"gate-1","reason":"timeout"}`),
@@ -108,6 +125,9 @@ func TestFoldSessionGateAbandonedClearsGateState(t *testing.T) {
 	}
 	if updated.GateID != "" {
 		t.Fatalf("gate id = %s, want empty", updated.GateID)
+	}
+	if updated.GateType != "" || len(updated.GateMetadataJSON) != 0 {
+		t.Fatalf("expected gate workflow state to be cleared, got %#v", updated)
 	}
 }
 

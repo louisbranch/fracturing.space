@@ -29,6 +29,9 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update web module routes/handlers | `internal/services/web/modules/<area>/` |
 | Add/update web module composition | `internal/services/web/modules/registry_*.go`, `internal/services/web/composition/compose.go` |
 | Add/update game transport handlers | `internal/services/game/api/grpc/game/`, `internal/services/game/api/grpc/systems/` |
+| Add/update communication context/control flows | `internal/services/game/api/grpc/game/communication_service.go`, `internal/services/game/api/grpc/game/communication_service_control.go`, `internal/services/game/api/grpc/game/session_gate_command_execution.go` |
+| Add/update session-gate authority or workflow validation | `internal/services/game/domain/session/`, `internal/services/game/projection/apply_session.go`, `internal/services/game/storage/sqlite/store_projection_session.go` |
+| Add/update game bootstrap/service registration | `internal/services/game/app/`, `internal/services/game/app/bootstrap_service_registration.go` |
 | Add/update projection/storage behavior | `internal/services/game/storage/sqlite/store_*.go`, `internal/services/game/projection/` |
 | Add/update command startup/config wiring | `internal/platform/cmd`, `internal/cmd/*` |
 
@@ -36,7 +39,7 @@ Use this map to find the best first edit point for common contribution types.
 
 Run targeted tests first, then full checks:
 
-- `go test ./...`
+- `go test ./internal/services/game/...`
 - `make integration`
 - `make game-architecture-check` (when changing `internal/services/game/**`)
 - `make docs-check`

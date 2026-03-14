@@ -28,7 +28,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.DaggerheartSnapshot{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.DaggerheartSnapshot{}, err
 	}
 
@@ -38,7 +38,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		if gmFear < daggerheart.GMFearMin || gmFear > daggerheart.GMFearMax {
 			return storage.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheart.GMFearMin, daggerheart.GMFearMax)
 		}
-		existingSnap, err := a.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+		existingSnap, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
 			return storage.DaggerheartSnapshot{}, grpcerror.Internal("load existing daggerheart snapshot", err)
 		}
@@ -54,7 +54,6 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		}
 
 		actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
-		applier := a.stores.Applier()
 		requestID := grpcmeta.RequestIDFromContext(ctx)
 		invocationID := grpcmeta.InvocationIDFromContext(ctx)
 		after := gmFear
@@ -69,8 +68,8 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		}
 		_, err = executeAndApplyDomainCommand(
 			ctx,
-			a.stores.Write,
-			applier,
+			a.write,
+			a.applier,
 			commandbuild.System(commandbuild.SystemInput{
 				CoreInput: commandbuild.CoreInput{
 					CampaignID:   campaignID,
@@ -97,7 +96,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			return storage.DaggerheartSnapshot{}, err
 		}
 
-		dhSnapshot, err := a.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
+		dhSnapshot, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil {
 			return storage.DaggerheartSnapshot{}, grpcerror.Internal("load daggerheart snapshot", err)
 		}

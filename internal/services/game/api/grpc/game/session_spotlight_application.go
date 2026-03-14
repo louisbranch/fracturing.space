@@ -38,7 +38,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -64,8 +64,8 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionSpotlightSet,
@@ -106,7 +106,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -127,8 +127,8 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionSpotlightClear,

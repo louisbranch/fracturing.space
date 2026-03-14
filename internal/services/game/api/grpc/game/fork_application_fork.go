@@ -18,7 +18,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,7 +33,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	if err != nil {
 		return storage.CampaignRecord{}, nil, 0, grpcerror.EnsureStatus(err)
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
 		return storage.CampaignRecord{}, nil, 0, err
 	}
 	// Stores.Validate guarantees Session in production wiring; keep a nil guard so
@@ -102,12 +101,11 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	if err != nil {
 		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("encode payload", err)
 	}
-	applier := a.stores.Applier()
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		applier,
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
 			Type:         commandTypeCampaignCreate,
@@ -143,8 +141,8 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		applier,
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
 			Type:         commandTypeCampaignFork,
@@ -164,7 +162,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		return storage.CampaignRecord{}, nil, 0, err
 	}
 
-	if _, err := a.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants(), applier); err != nil {
+	if _, err := a.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants()); err != nil {
 		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("copy events", err)
 	}
 
@@ -187,13 +185,13 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	return newCampaign, lineage, forkEventSeq, nil
 }
 
-func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, forkCampaignID string, forkEventSeq uint64, copyParticipants bool, applier projection.Applier) (time.Time, error) {
+func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, forkCampaignID string, forkEventSeq uint64, copyParticipants bool) (time.Time, error) {
 	if forkEventSeq == 0 {
 		return time.Time{}, nil
 	}
 
-	inlineApplyEnabled := a.stores.Write.Runtime.InlineApplyEnabled()
-	shouldApply := a.stores.Write.Runtime.ShouldApply()
+	inlineApplyEnabled := a.write.Runtime.InlineApplyEnabled()
+	shouldApply := a.write.Runtime.ShouldApply()
 
 	afterSeq := uint64(0)
 	var lastEventAt time.Time
@@ -226,7 +224,7 @@ func (a forkApplication) copyForkEvents(ctx context.Context, sourceCampaignID, f
 				return lastEventAt, fmt.Errorf("append forked event: %w", err)
 			}
 			if inlineApplyEnabled && shouldApply(stored) {
-				if err := applier.Apply(ctx, stored); err != nil {
+				if err := a.applier.Apply(ctx, stored); err != nil {
 					return lastEventAt, fmt.Errorf("apply forked event: %w", err)
 				}
 			}

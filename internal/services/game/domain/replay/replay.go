@@ -57,6 +57,8 @@ type Options struct {
 	AfterSeq uint64
 	UntilSeq uint64
 	PageSize int
+	// Clock controls checkpoint timestamps. When nil, Replay uses time.Now.
+	Clock func() time.Time
 	// CheckpointInterval controls how often checkpoints are saved during replay.
 	// When 0 (default), a checkpoint is saved after every event. When positive,
 	// checkpoints are saved every N events plus once at the end.
@@ -110,11 +112,15 @@ func Replay(ctx context.Context, store EventStore, checkpoints CheckpointStore, 
 
 	result := Result{State: state, LastSeq: lastSeq}
 	sinceCheckpoint := 0
+	clock := options.Clock
+	if clock == nil {
+		clock = time.Now
+	}
 	saveCheckpoint := func() error {
 		if sinceCheckpoint == 0 {
 			return nil
 		}
-		if err := checkpoints.Save(ctx, Checkpoint{CampaignID: campaignID, LastSeq: result.LastSeq, UpdatedAt: time.Now().UTC()}); err != nil {
+		if err := checkpoints.Save(ctx, Checkpoint{CampaignID: campaignID, LastSeq: result.LastSeq, UpdatedAt: clock().UTC()}); err != nil {
 			return err
 		}
 		sinceCheckpoint = 0

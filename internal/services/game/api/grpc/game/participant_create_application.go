@@ -30,7 +30,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := requirePolicyActor(ctx, c.stores, domainauthz.CapabilityManageParticipants, campaignRecord)
+	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
@@ -108,7 +108,6 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		pronouns = defaultUnknownParticipantPronouns()
 	}
 
-	applier := c.stores.Applier()
 	payload := participant.JoinPayload{
 		ParticipantID:  ids.ParticipantID(participantID),
 		UserID:         ids.UserID(userID),
@@ -128,8 +127,8 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		applier,
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantJoin,

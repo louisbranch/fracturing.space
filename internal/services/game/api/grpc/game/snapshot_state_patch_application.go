@@ -29,18 +29,18 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 	if err != nil {
 		return "", storage.DaggerheartCharacterState{}, err
 	}
-	if _, err := requireCharacterMutationPolicy(ctx, a.stores, c, characterID); err != nil {
+	if _, err := requireCharacterMutationPolicy(ctx, a.auth, c, characterID); err != nil {
 		return "", storage.DaggerheartCharacterState{}, err
 	}
 
 	// Get existing Daggerheart state
-	dhState, err := a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	dhState, err := a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return "", storage.DaggerheartCharacterState{}, err
 	}
 
 	// Get Daggerheart profile for validation
-	dhProfile, err := a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+	dhProfile, err := a.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
 		return "", storage.DaggerheartCharacterState{}, grpcerror.Internal("get daggerheart profile", err)
 	}
@@ -64,7 +64,8 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 
 		if err := applyDaggerheartCharacterStatePatchCommand(
 			ctx,
-			a.stores,
+			a.write,
+			a.applier,
 			campaignID,
 			characterID,
 			actorType,
@@ -76,7 +77,9 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 		if !patch.conditionPatch {
 			if err := applyStressVulnerableCondition(
 				ctx,
-				a.stores,
+				a.stores.Daggerheart,
+				a.write,
+				a.applier,
 				campaignID,
 				grpcmeta.SessionIDFromContext(ctx),
 				characterID,
@@ -142,7 +145,8 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 	}
 	if err := executeDaggerheartConditionChangeCommand(
 		ctx,
-		a.stores,
+		a.write,
+		a.applier,
 		campaignID,
 		characterID,
 		actorType,
@@ -158,7 +162,7 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 }
 
 func (a snapshotApplication) loadDaggerheartCharacterState(ctx context.Context, campaignID string, characterID string) (storage.DaggerheartCharacterState, error) {
-	dhState, err := a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+	dhState, err := a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		return storage.DaggerheartCharacterState{}, grpcerror.Internal("load daggerheart character state", err)
 	}

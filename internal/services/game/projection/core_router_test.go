@@ -16,7 +16,7 @@ func TestCoreRouter_HandleProjection_AutoUnmarshals(t *testing.T) {
 	router := NewCoreRouter()
 
 	var got testPayload
-	HandleProjection(router, "test.created", 0, 0,
+	HandleProjection(router, "test.created", requirements(),
 		func(a Applier, ctx context.Context, evt event.Event, p testPayload) error {
 			got = p
 			return nil
@@ -47,7 +47,7 @@ func TestCoreRouter_Route_RejectsUnknownType(t *testing.T) {
 func TestCoreRouter_Route_ChecksStorePreconditions(t *testing.T) {
 	router := NewCoreRouter()
 
-	HandleProjection(router, "test.created", needCampaign, 0,
+	HandleProjection(router, "test.created", requirements(needsStores(storeCampaign)),
 		func(a Applier, ctx context.Context, evt event.Event, p testPayload) error {
 			return nil
 		})
@@ -66,7 +66,7 @@ func TestCoreRouter_Route_ChecksStorePreconditions(t *testing.T) {
 func TestCoreRouter_Route_ChecksIDPreconditions(t *testing.T) {
 	router := NewCoreRouter()
 
-	HandleProjection(router, "test.created", 0, requireCampaignID,
+	HandleProjection(router, "test.created", requirements(needsEnvelope(fieldCampaignID)),
 		func(a Applier, ctx context.Context, evt event.Event, p testPayload) error {
 			return nil
 		})
@@ -85,9 +85,9 @@ func TestCoreRouter_Route_ChecksIDPreconditions(t *testing.T) {
 func TestCoreRouter_HandledTypes_ReturnsRegistrationOrder(t *testing.T) {
 	router := NewCoreRouter()
 
-	HandleProjection(router, "b.event", 0, 0,
+	HandleProjection(router, "b.event", requirements(),
 		func(a Applier, ctx context.Context, evt event.Event, p testPayload) error { return nil })
-	HandleProjection(router, "a.event", 0, 0,
+	HandleProjection(router, "a.event", requirements(),
 		func(a Applier, ctx context.Context, evt event.Event, p testPayload) error { return nil })
 
 	types := router.HandledTypes()
@@ -103,7 +103,7 @@ func TestCoreRouter_HandleProjectionRaw_NoPayloadUnmarshal(t *testing.T) {
 	router := NewCoreRouter()
 
 	called := false
-	HandleProjectionRaw(router, "test.cleared", 0, 0,
+	HandleProjectionRaw(router, "test.cleared", requirements(),
 		func(a Applier, ctx context.Context, evt event.Event) error {
 			called = true
 			return nil
@@ -121,7 +121,7 @@ func TestCoreRouter_HandleProjectionRaw_NoPayloadUnmarshal(t *testing.T) {
 func TestCoreRouter_Route_RejectsInvalidPayload(t *testing.T) {
 	router := NewCoreRouter()
 
-	HandleProjection(router, "test.created", 0, 0,
+	HandleProjection(router, "test.created", requirements(),
 		func(a Applier, ctx context.Context, evt event.Event, p testPayload) error {
 			return nil
 		})

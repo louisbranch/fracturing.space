@@ -25,8 +25,15 @@ type timelineProjectionResolver struct {
 	sessionCache     map[string]storage.SessionRecord
 }
 
+type timelineProjectionStores struct {
+	Campaign    storage.CampaignStore
+	Participant storage.ParticipantStore
+	Character   storage.CharacterStore
+	Session     storage.SessionStore
+}
+
 // newTimelineProjectionResolver prepares a resolver for projection lookups.
-func newTimelineProjectionResolver(stores Stores) *timelineProjectionResolver {
+func newTimelineProjectionResolver(stores timelineProjectionStores) *timelineProjectionResolver {
 	return &timelineProjectionResolver{
 		campaignStore:    stores.Campaign,
 		participantStore: stores.Participant,

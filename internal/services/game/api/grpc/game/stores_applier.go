@@ -31,7 +31,7 @@ func (s Stores) TryApplier() (projection.Applier, error) {
 	adapters := s.adapters
 	if adapters == nil {
 		var err error
-		adapters, err = TryAdapterRegistryForStores(s)
+		adapters, err = TryAdapterRegistryForProjectionStores(s.SystemStores)
 		if err != nil {
 			return projection.Applier{}, fmt.Errorf("build adapter registry: %w", err)
 		}

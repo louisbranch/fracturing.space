@@ -31,7 +31,7 @@ func TestTimelineProjectionResolverResolve_UsesEventTypeAndCampaignIDFallback(t 
 		Status: campaign.StatusDraft,
 	}
 
-	resolver := newTimelineProjectionResolver(Stores{
+	resolver := newTimelineProjectionResolver(timelineProjectionStores{
 		Campaign: campaignStore,
 	})
 
@@ -71,7 +71,7 @@ func TestTimelineProjectionResolverResolve_UsesSessionIDFallback(t *testing.T) {
 		},
 	}
 
-	resolver := newTimelineProjectionResolver(Stores{
+	resolver := newTimelineProjectionResolver(timelineProjectionStores{
 		Session: sessionStore,
 	})
 	evt := event.Event{
@@ -94,7 +94,7 @@ func TestTimelineProjectionResolverResolve_UsesSessionIDFallback(t *testing.T) {
 }
 
 func TestTimelineProjectionResolverResolve_MissingStoreFailsFast(t *testing.T) {
-	resolver := newTimelineProjectionResolver(Stores{})
+	resolver := newTimelineProjectionResolver(timelineProjectionStores{})
 	_, _, err := resolver.resolve(context.Background(), event.Event{
 		Type:       event.Type("participant.joined"),
 		EntityType: "participant",
@@ -110,7 +110,7 @@ func TestTimelineProjectionResolverResolve_MissingStoreFailsFast(t *testing.T) {
 }
 
 func TestTimelineProjectionResolverResolve_UnknownDomainReturnsGeneric(t *testing.T) {
-	resolver := newTimelineProjectionResolver(Stores{})
+	resolver := newTimelineProjectionResolver(timelineProjectionStores{})
 	iconID, projection, err := resolver.resolve(context.Background(), event.Event{
 		Type:       event.Type("custom.event"),
 		EntityType: "custom",

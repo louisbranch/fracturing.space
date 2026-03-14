@@ -111,14 +111,14 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 
 	var policyActor storage.ParticipantRecord
 	if transferOwnershipRequested {
-		policyActor, err = requirePolicyActor(ctx, c.stores, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
+		policyActor, err = requirePolicyActor(ctx, c.auth, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
 		if err != nil {
 			return storage.CharacterRecord{}, err
 		}
 	} else {
 		policyActor, err = requireCharacterMutationPolicy(
 			ctx,
-			c.stores,
+			c.auth,
 			campaignRecord,
 			characterID,
 		)
@@ -131,7 +131,6 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	if actorID == "" {
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
-	applier := c.stores.Applier()
 	payloadFields := make(map[string]string, len(fields))
 	for key, value := range fields {
 		stringValue, ok := value.(string)
@@ -155,8 +154,8 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		applier,
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCharacterUpdate,

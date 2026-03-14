@@ -106,7 +106,7 @@ func TestTimelineEntryFromEventAddsChangeProjectionWithoutResolverDisplay(t *tes
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	resolver := newTimelineProjectionResolver(Stores{})
+	resolver := newTimelineProjectionResolver(timelineProjectionStores{})
 	entry, err := timelineEntryFromEvent(context.Background(), resolver, event.Event{
 		Seq:         1,
 		Type:        eventTypeDaggerheartCharacterStatePatched,

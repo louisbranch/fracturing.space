@@ -29,7 +29,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 		return storage.CampaignRecord{}, err
 	}
 
-	ownerActor, err := requireCampaignOwner(ctx, c.stores, campaignRecord)
+	ownerActor, err := requireCampaignOwner(ctx, c.auth, campaignRecord)
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
@@ -44,8 +44,8 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		c.stores.Write,
-		c.stores.Applier(),
+		c.write,
+		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignAIBind,
@@ -62,7 +62,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := rotateCampaignAIAuthEpoch(ctx, c.stores, campaignID, aiAuthRotateReasonCampaignAIBound, actorID, actorType); err != nil {
+	if err := rotateCampaignAIAuthEpoch(ctx, c.commandExecution(), campaignID, aiAuthRotateReasonCampaignAIBound, actorID, actorType); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -81,7 +81,7 @@ func (c campaignApplication) ClearCampaignAIBinding(ctx context.Context, campaig
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if _, err := requireCampaignOwner(ctx, c.stores, campaignRecord); err != nil {
+	if _, err := requireCampaignOwner(ctx, c.auth, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if strings.TrimSpace(campaignRecord.AIAgentID) == "" {
@@ -91,7 +91,7 @@ func (c campaignApplication) ClearCampaignAIBinding(ctx context.Context, campaig
 	actorID, actorType := resolveCommandActor(ctx)
 	return clearCampaignAIBindingByCommand(
 		ctx,
-		c.stores,
+		c.commandExecution(),
 		campaignID,
 		actorID,
 		actorType,
@@ -132,7 +132,7 @@ func requireCampaignOwner(ctx context.Context, stores Stores, campaignRecord sto
 
 func clearCampaignAIBindingByCommand(
 	ctx context.Context,
-	stores Stores,
+	deps campaignCommandExecution,
 	campaignID string,
 	actorID string,
 	actorType command.ActorType,
@@ -145,8 +145,8 @@ func clearCampaignAIBindingByCommand(
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		stores.Write,
-		stores.Applier(),
+		deps.Write,
+		deps.Applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeCampaignAIUnbind,
@@ -163,11 +163,11 @@ func clearCampaignAIBindingByCommand(
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := rotateCampaignAIAuthEpoch(ctx, stores, campaignID, aiAuthRotateReasonCampaignAIUnbound, actorID, actorType); err != nil {
+	if err := rotateCampaignAIAuthEpoch(ctx, deps, campaignID, aiAuthRotateReasonCampaignAIUnbound, actorID, actorType); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
-	updated, err := stores.Campaign.Get(ctx, campaignID)
+	updated, err := deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}

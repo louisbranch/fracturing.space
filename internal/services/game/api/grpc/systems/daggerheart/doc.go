@@ -10,6 +10,9 @@
 //
 // The package includes both read-only mechanics endpoints and write-path
 // endpoints that emit domain commands/events for campaign state mutation.
+// Package-local store contracts in stores.go define the intended gameplay and
+// content dependencies instead of teaching core storage bundles as the default
+// extension pattern.
 //
 // This package implements systems.daggerheart.v1.DaggerheartService from
 // api/proto/systems/daggerheart/v1/service.proto.

@@ -14,6 +14,10 @@ import (
 )
 
 func authorizePolicyActor(ctx context.Context, stores Stores, capability domainauthz.Capability, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, string, error) {
+	return authorizePolicyActorWithParticipantStore(ctx, stores.Participant, capability, campaignRecord)
+}
+
+func authorizePolicyActorWithParticipantStore(ctx context.Context, participants storage.ParticipantStore, capability domainauthz.Capability, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, string, error) {
 	if overrideReason, overrideRequested := adminOverrideFromContext(ctx); overrideRequested {
 		overrideUserID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
 		if overrideUserID == "" {
@@ -28,10 +32,10 @@ func authorizePolicyActor(ctx context.Context, stores Stores, capability domaina
 		}, authzReasonAllowAdminOverride, nil
 	}
 
-	if stores.Participant == nil {
+	if participants == nil {
 		return storage.ParticipantRecord{}, authzReasonErrorDependencyUnavailable, status.Error(codes.Internal, "participant store is not configured")
 	}
-	actor, reasonCode, err := resolvePolicyActor(ctx, stores.Participant, campaignRecord.ID)
+	actor, reasonCode, err := resolvePolicyActor(ctx, participants, campaignRecord.ID)
 	if err != nil {
 		return storage.ParticipantRecord{}, reasonCode, err
 	}
@@ -115,15 +119,24 @@ func resolveCharacterMutationOwnerParticipantID(
 	campaignID string,
 	characterID string,
 ) (string, error) {
+	return resolveCharacterMutationOwnerParticipantIDFromStore(ctx, stores.Character, campaignID, characterID)
+}
+
+func resolveCharacterMutationOwnerParticipantIDFromStore(
+	ctx context.Context,
+	characters storage.CharacterStore,
+	campaignID string,
+	characterID string,
+) (string, error) {
 	characterID = strings.TrimSpace(characterID)
 	if characterID == "" {
 		return "", nil
 	}
 
-	if stores.Character == nil {
+	if characters == nil {
 		return "", status.Error(codes.Internal, "character owner store is not configured")
 	}
-	characterRecord, err := stores.Character.GetCharacter(ctx, campaignID, characterID)
+	characterRecord, err := characters.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return "", nil

@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -25,12 +26,14 @@ const (
 )
 
 type eventApplication struct {
-	stores Stores
+	write domainwriteexec.WritePath
+	clock func() time.Time
 }
 
 func newEventApplication(service *EventService) eventApplication {
 	return eventApplication{
-		stores: service.stores,
+		write: service.stores.Write,
+		clock: time.Now,
 	}
 }
 
@@ -40,7 +43,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 	}
 	input := event.Event{
 		CampaignID:   ids.CampaignID(in.GetCampaignId()),
-		Timestamp:    time.Now().UTC(),
+		Timestamp:    a.clock().UTC(),
 		Type:         event.Type(strings.TrimSpace(in.GetType())),
 		SessionID:    ids.SessionID(strings.TrimSpace(in.GetSessionId())),
 		SceneID:      ids.SceneID(strings.TrimSpace(in.GetSceneId())),
@@ -52,7 +55,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		EntityID:     strings.TrimSpace(in.GetEntityId()),
 		PayloadJSON:  in.GetPayloadJson(),
 	}
-	if a.stores.Write.Executor == nil {
+	if a.write.Executor == nil {
 		return event.Event{}, status.Error(codes.FailedPrecondition, "append event requires domain engine")
 	}
 	cmdType, ok := domainCommandTypeForEvent(input.Type)
@@ -72,7 +75,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		EntityID:     input.EntityID,
 		PayloadJSON:  input.PayloadJSON,
 	})
-	result, err := executeDomainCommandWithoutInlineApply(ctx, a.stores.Write, cmd, domainwrite.Options{
+	result, err := executeDomainCommandWithoutInlineApply(ctx, a.write, cmd, domainwrite.Options{
 		RequireEvents:   true,
 		MissingEventMsg: "append event did not emit an event",
 		ExecuteErr: func(err error) error {

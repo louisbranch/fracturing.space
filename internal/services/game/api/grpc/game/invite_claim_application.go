@@ -126,7 +126,6 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	applier := a.stores.Applier()
 	payload := participant.BindPayload{
 		ParticipantID: ids.ParticipantID(seat.ID),
 		UserID:        ids.UserID(userID),
@@ -139,8 +138,8 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		applier,
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeParticipantBind,
@@ -176,8 +175,8 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		applier,
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeInviteClaim,

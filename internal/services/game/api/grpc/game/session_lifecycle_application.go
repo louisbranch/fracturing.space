@@ -22,7 +22,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -36,7 +36,6 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	}
 	sessionName := strings.TrimSpace(in.GetName())
 
-	applier := a.stores.Applier()
 	actorID, actorType := resolveCommandActor(ctx)
 
 	payload := session.StartPayload{
@@ -49,8 +48,8 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		applier,
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionStart,
@@ -86,7 +85,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -107,8 +106,8 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		a.stores.Applier(),
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeSessionEnd,

@@ -19,6 +19,11 @@ type State struct {
 	GateOpen bool
 	// GateID identifies the active gate when GateOpen is true.
 	GateID ids.GateID
+	// GateType captures the active gate workflow type while a gate is open.
+	GateType string
+	// GateMetadataJSON preserves normalized workflow metadata for replay-owned
+	// gate response validation.
+	GateMetadataJSON []byte
 	// SpotlightType tracks which entity type currently holds initiative context.
 	SpotlightType string
 	// SpotlightCharacterID tracks the focused character in spotlight workflows.

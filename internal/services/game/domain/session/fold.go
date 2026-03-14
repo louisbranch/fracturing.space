@@ -3,6 +3,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -55,11 +56,23 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
 		state.GateID = ids.GateID(payload.GateID)
+		state.GateType = strings.TrimSpace(payload.GateType)
+		if len(payload.Metadata) == 0 {
+			state.GateMetadataJSON = nil
+		} else {
+			metadataJSON, err := json.Marshal(payload.Metadata)
+			if err != nil {
+				return state, fmt.Errorf("session fold %s metadata: %w", evt.Type, err)
+			}
+			state.GateMetadataJSON = metadataJSON
+		}
 	case EventTypeGateResponseRecorded:
 		// Gate response events do not change the gate-open lifecycle state.
 	case EventTypeGateResolved, EventTypeGateAbandoned:
 		state.GateOpen = false
 		state.GateID = ""
+		state.GateType = ""
+		state.GateMetadataJSON = nil
 	case EventTypeSpotlightSet:
 		var payload SpotlightSetPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {

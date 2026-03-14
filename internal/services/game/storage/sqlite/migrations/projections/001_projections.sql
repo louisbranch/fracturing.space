@@ -238,7 +238,9 @@ CREATE TABLE IF NOT EXISTS session_gates (
     PRIMARY KEY (campaign_id, session_id, gate_id)
 );
 
-CREATE INDEX IF NOT EXISTS idx_session_gates_open ON session_gates(campaign_id, session_id, status);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_session_gates_open
+    ON session_gates(campaign_id, session_id)
+    WHERE status = 'open';
 
 CREATE TABLE IF NOT EXISTS session_spotlight (
     campaign_id TEXT NOT NULL,

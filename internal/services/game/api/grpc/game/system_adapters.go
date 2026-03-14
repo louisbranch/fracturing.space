@@ -5,8 +5,8 @@ import (
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 )
 
-// TryAdapterRegistryForStores builds the adapter registry without panicking.
-// Use this at startup or tests that validate registration health.
-func TryAdapterRegistryForStores(stores Stores) (*bridge.AdapterRegistry, error) {
-	return systemmanifest.AdapterRegistry(stores.SystemStores)
+// TryAdapterRegistryForProjectionStores builds the adapter registry without
+// panicking from the system projection-store bundle.
+func TryAdapterRegistryForProjectionStores(stores systemmanifest.ProjectionStores) (*bridge.AdapterRegistry, error) {
+	return systemmanifest.AdapterRegistry(stores)
 }

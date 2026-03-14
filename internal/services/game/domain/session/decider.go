@@ -36,6 +36,11 @@ const (
 	rejectionCodeSessionGateIDRequired          = "SESSION_GATE_ID_REQUIRED"
 	rejectionCodeSessionGateTypeRequired        = "SESSION_GATE_TYPE_REQUIRED"
 	rejectionCodeSessionGateParticipantRequired = "SESSION_GATE_PARTICIPANT_REQUIRED"
+	rejectionCodeSessionGateAlreadyOpen         = "SESSION_GATE_ALREADY_OPEN"
+	rejectionCodeSessionGateMetadataInvalid     = "SESSION_GATE_METADATA_INVALID"
+	rejectionCodeSessionGateNotOpen             = "SESSION_GATE_NOT_OPEN"
+	rejectionCodeSessionGateMismatch            = "SESSION_GATE_MISMATCH"
+	rejectionCodeSessionGateResponseInvalid     = "SESSION_GATE_RESPONSE_INVALID"
 	rejectionCodeSessionSpotlightTypeRequired   = "SESSION_SPOTLIGHT_TYPE_REQUIRED"
 )
 
@@ -107,7 +112,13 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
 		gateID := strings.TrimSpace(payload.GateID.String())
-		gateType := strings.TrimSpace(payload.GateType)
+		gateType, err := NormalizeGateType(payload.GateType)
+		if err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeSessionGateTypeRequired,
+				Message: err.Error(),
+			})
+		}
 		reason := strings.TrimSpace(payload.Reason)
 		if gateID == "" {
 			return command.Reject(command.Rejection{
@@ -115,14 +126,21 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Message: "gate id is required",
 			})
 		}
-		if gateType == "" {
+		if state.GateOpen {
 			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionGateTypeRequired,
-				Message: "gate type is required",
+				Code:    rejectionCodeSessionGateAlreadyOpen,
+				Message: "session gate is already open",
+			})
+		}
+		metadata, err := NormalizeGateWorkflowMetadata(gateType, payload.Metadata)
+		if err != nil {
+			return command.Reject(command.Rejection{
+				Code:    rejectionCodeSessionGateMetadataInvalid,
+				Message: err.Error(),
 			})
 		}
 
-		normalizedPayload := GateOpenedPayload{GateID: ids.GateID(gateID), GateType: gateType, Reason: reason, Metadata: payload.Metadata}
+		normalizedPayload := GateOpenedPayload{GateID: ids.GateID(gateID), GateType: gateType, Reason: reason, Metadata: metadata}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeGateOpened, "session_gate", gateID, payloadJSON, now().UTC())
 
@@ -139,10 +157,22 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			func(payload *GateResolvedPayload, _ func() time.Time) *command.Rejection {
 				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
 				payload.Decision = strings.TrimSpace(payload.Decision)
+				if !state.GateOpen {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateNotOpen,
+						Message: "session gate is not open",
+					}
+				}
 				if payload.GateID == "" {
 					return &command.Rejection{
 						Code:    rejectionCodeSessionGateIDRequired,
 						Message: "gate id is required",
+					}
+				}
+				if state.GateID != "" && payload.GateID != state.GateID {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateMismatch,
+						Message: "gate id does not match the active session gate",
 					}
 				}
 				return nil
@@ -161,11 +191,22 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			func(payload *GateResponseRecordedPayload, _ func() time.Time) *command.Rejection {
 				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
 				payload.ParticipantID = ids.ParticipantID(strings.TrimSpace(payload.ParticipantID.String()))
-				payload.Decision = strings.TrimSpace(payload.Decision)
+				if !state.GateOpen {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateNotOpen,
+						Message: "session gate is not open",
+					}
+				}
 				if payload.GateID == "" {
 					return &command.Rejection{
 						Code:    rejectionCodeSessionGateIDRequired,
 						Message: "gate id is required",
+					}
+				}
+				if state.GateID != "" && payload.GateID != state.GateID {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateMismatch,
+						Message: "gate id does not match the active session gate",
 					}
 				}
 				if payload.ParticipantID == "" {
@@ -174,6 +215,21 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 						Message: "participant id is required",
 					}
 				}
+				decision, response, err := ValidateGateResponse(
+					state.GateType,
+					state.GateMetadataJSON,
+					payload.ParticipantID.String(),
+					payload.Decision,
+					payload.Response,
+				)
+				if err != nil {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateResponseInvalid,
+						Message: err.Error(),
+					}
+				}
+				payload.Decision = decision
+				payload.Response = response
 				return nil
 			},
 			now,
@@ -190,10 +246,22 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			func(payload *GateAbandonedPayload, _ func() time.Time) *command.Rejection {
 				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
 				payload.Reason = strings.TrimSpace(payload.Reason)
+				if !state.GateOpen {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateNotOpen,
+						Message: "session gate is not open",
+					}
+				}
 				if payload.GateID == "" {
 					return &command.Rejection{
 						Code:    rejectionCodeSessionGateIDRequired,
 						Message: "gate id is required",
+					}
+				}
+				if state.GateID != "" && payload.GateID != state.GateID {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateMismatch,
+						Message: "gate id does not match the active session gate",
 					}
 				}
 				return nil

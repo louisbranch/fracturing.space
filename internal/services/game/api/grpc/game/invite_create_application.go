@@ -36,7 +36,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.InviteRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
+	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
 		return storage.InviteRecord{}, err
 	}
 	if _, err := a.stores.Participant.GetParticipant(ctx, campaignID, participantID); err != nil {
@@ -71,7 +71,6 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	applier := a.stores.Applier()
 	payload := invite.CreatePayload{
 		InviteID:               ids.InviteID(inviteID),
 		ParticipantID:          ids.ParticipantID(participantID),
@@ -85,8 +84,8 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		a.stores.Write,
-		applier,
+		a.write,
+		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandTypeInviteCreate,

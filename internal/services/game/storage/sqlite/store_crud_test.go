@@ -287,6 +287,7 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 		CreatedByActorType: "system",
 		CreatedByActorID:   "",
 		MetadataJSON:       []byte("{\"flag\":true}"),
+		ProgressJSON:       []byte("{\"responded_count\":1}"),
 		ResolutionJSON:     []byte("{}"),
 	}
 
@@ -303,6 +304,9 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 	}
 	if string(gotGate.MetadataJSON) != string(gate.MetadataJSON) {
 		t.Fatalf("expected session gate metadata to match")
+	}
+	if string(gotGate.ProgressJSON) != string(gate.ProgressJSON) {
+		t.Fatalf("expected session gate progress to match")
 	}
 
 	openGate, err := store.GetOpenSessionGate(context.Background(), gate.CampaignID, gate.SessionID)
@@ -340,6 +344,20 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 	_, err = store.GetSessionSpotlight(context.Background(), spotlight.CampaignID, spotlight.SessionID)
 	if err == nil || !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected no session spotlight after clear")
+	}
+
+	duplicateOpenGate := storage.SessionGate{
+		CampaignID:         "camp-gates",
+		SessionID:          "sess-1",
+		GateID:             "gate-2",
+		GateType:           "prompt",
+		Status:             session.GateStatusOpen,
+		Reason:             "Need another consent",
+		CreatedAt:          now.Add(time.Minute),
+		CreatedByActorType: "system",
+	}
+	if err := store.PutSessionGate(context.Background(), duplicateOpenGate); err == nil {
+		t.Fatal("expected duplicate open session gate to fail")
 	}
 }
 

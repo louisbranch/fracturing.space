@@ -7,7 +7,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"google.golang.org/grpc/codes"
@@ -15,37 +14,32 @@ import (
 )
 
 func TestRotateCampaignAIAuthEpochValidation(t *testing.T) {
-	err := rotateCampaignAIAuthEpoch(context.Background(), Stores{}, "camp-1", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
+	err := rotateCampaignAIAuthEpoch(context.Background(), campaignCommandExecution{}, "camp-1", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
 	assertStatusCode(t, err, codes.Internal)
 
-	stores := Stores{
+	deps := campaignCommandExecution{
 		Write: domainwriteexec.WritePath{Executor: &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}}},
-		SystemStores: systemmanifest.ProjectionStores{
-			Daggerheart: newFakeDaggerheartStore(),
-		},
 	}
 
-	err = rotateCampaignAIAuthEpoch(context.Background(), stores, "", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
+	err = rotateCampaignAIAuthEpoch(context.Background(), deps, "", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
 	assertStatusCode(t, err, codes.InvalidArgument)
 
-	err = rotateCampaignAIAuthEpoch(context.Background(), stores, "camp-1", "", "actor-1", command.ActorTypeParticipant)
+	err = rotateCampaignAIAuthEpoch(context.Background(), deps, "camp-1", "", "actor-1", command.ActorTypeParticipant)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestRotateCampaignAIAuthEpochSuccess(t *testing.T) {
 	domain := &fakeDomainEngine{result: engine.Result{Decision: command.Accept()}}
-	stores := Stores{
-		Write: domainwriteexec.WritePath{Executor: domain},
-		SystemStores: systemmanifest.ProjectionStores{
-			Daggerheart: newFakeDaggerheartStore(),
-		},
+	deps := campaignCommandExecution{
+		Campaign: newFakeCampaignStore(),
+		Write:    domainwriteexec.WritePath{Executor: domain},
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.RequestIDHeader, "req-1",
 		grpcmeta.InvocationIDHeader, "inv-1",
 	))
 
-	err := rotateCampaignAIAuthEpoch(ctx, stores, "camp-1", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
+	err := rotateCampaignAIAuthEpoch(ctx, deps, "camp-1", aiAuthRotateReasonCampaignAIBound, "actor-1", command.ActorTypeParticipant)
 	if err != nil {
 		t.Fatalf("rotate campaign ai auth epoch: %v", err)
 	}

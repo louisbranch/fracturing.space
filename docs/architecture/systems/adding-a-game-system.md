@@ -10,19 +10,22 @@ last_reviewed: "2026-03-07"
 # Adding a Game System
 
 Step-by-step guide for registering a new game system in the game service.
-Use Daggerheart as the reference implementation
-(`internal/services/game/domain/bridge/daggerheart/`).
+Use Daggerheart as the reference implementation for manifest/module/adapter
+shape (`internal/services/game/domain/bridge/daggerheart/`), but do not copy
+its intentionally-nil metadata hooks unless your system truly lacks those
+surfaces too.
 
 ## Overview
 
-A game system requires four implementations registered through a single
+A game system requires three required implementations plus optional metadata
+hooks registered through a single
 `SystemDescriptor` entry in the manifest. Startup parity validation catches
-any mismatches between the four registrations automatically.
+any mismatches between the registered pieces automatically.
 
 | Component | Interface | Purpose |
 |-----------|-----------|---------|
 | Module | `module.Module` | Commands, events, decider, folder, state factory |
-| Metadata System | `bridge.GameSystem` | Registry metadata, name, version, state handler factory |
+| Metadata System | `bridge.GameSystem` | Registry metadata, name, version, optional state/outcome hooks |
 | Adapter | `bridge.Adapter` | Projection event handlers, snapshot, profile adapter |
 | Manifest Entry | `manifest.SystemDescriptor` | Unifying builder that wires the three above |
 
@@ -78,6 +81,9 @@ func (r *RegistrySystem) RegistryMetadata() bridge.RegistryMetadata { ... }
 func (r *RegistrySystem) StateHandlerFactory() bridge.StateHandlerFactory { ... }
 func (r *RegistrySystem) OutcomeApplier() bridge.OutcomeApplier           { ... }
 ```
+`StateHandlerFactory` and `OutcomeApplier` are optional. Return `nil` only when
+the system does not expose those surfaces yet, and document that decision in
+the package comment and registry-system comments.
 
 ## Step 4: Implement the Adapter
 
