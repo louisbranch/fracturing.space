@@ -62,6 +62,8 @@ func (g GRPCGateway) LoadDashboard(ctx context.Context, userID string, localeTag
 		NeedsProfileCompletion:   resp.GetUser().GetNeedsProfileCompletion(),
 		HasDraftOrActiveCampaign: HasDraftOrActiveCampaign(resp.GetCampaigns().GetCampaigns()),
 		CampaignsHasMore:         resp.GetCampaigns().GetHasMore(),
+		ActiveSessionsAvailable:  resp.GetActiveSessions().GetAvailable(),
+		ActiveSessions:           mapActiveSessions(resp.GetActiveSessions().GetSessions()),
 		DegradedDependencies:     normalizedDependencies(resp.GetMetadata().GetDegradedDependencies()),
 		Freshness:                mapFreshness(resp.GetMetadata().GetFreshness()),
 		CacheHit:                 resp.GetMetadata().GetCacheHit(),
@@ -103,6 +105,30 @@ func normalizedDependencies(values []string) []string {
 	return result
 }
 
+// mapActiveSessions converts transport rows into app-layer dashboard items.
+func mapActiveSessions(sessions []*userhubv1.ActiveSessionPreview) []dashboardapp.ActiveSessionItem {
+	if len(sessions) == 0 {
+		return nil
+	}
+	items := make([]dashboardapp.ActiveSessionItem, 0, len(sessions))
+	for _, session := range sessions {
+		if session == nil {
+			continue
+		}
+		items = append(items, dashboardapp.ActiveSessionItem{
+			CampaignID:   session.GetCampaignId(),
+			CampaignName: session.GetCampaignName(),
+			SessionID:    session.GetSessionId(),
+			SessionName:  session.GetSessionName(),
+		})
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return items
+}
+
+// mapFreshness preserves userhub cache metadata for dashboard logging seams.
 func mapFreshness(value userhubv1.DashboardFreshness) dashboardapp.DashboardFreshness {
 	switch value {
 	case userhubv1.DashboardFreshness_DASHBOARD_FRESHNESS_FRESH:
@@ -114,6 +140,7 @@ func mapFreshness(value userhubv1.DashboardFreshness) dashboardapp.DashboardFres
 	}
 }
 
+// protoTime normalizes optional timestamps into zero-safe Go values.
 func protoTime(value *timestamppb.Timestamp) time.Time {
 	if value == nil {
 		return time.Time{}

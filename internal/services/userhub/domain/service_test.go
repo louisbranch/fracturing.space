@@ -37,6 +37,15 @@ func TestGetDashboardBuildsAggregateAndActions(t *testing.T) {
 				},
 			},
 		},
+		activeSessionPage: ActiveSessionPage{
+			Sessions: []ActiveSessionPreview{{
+				CampaignID:   "camp-1",
+				CampaignName: "Sunfall",
+				SessionID:    "session-1",
+				SessionName:  "The Crossing",
+				StartedAt:    now.Add(-15 * time.Minute),
+			}},
+		},
 		invitePage: InvitePage{
 			Invites: []PendingInvite{{
 				InviteID:      "inv-1",
@@ -75,6 +84,12 @@ func TestGetDashboardBuildsAggregateAndActions(t *testing.T) {
 	if dashboard.Campaigns.ActiveCount != 1 {
 		t.Fatalf("active_count = %d, want 1", dashboard.Campaigns.ActiveCount)
 	}
+	if !dashboard.ActiveSessions.Available {
+		t.Fatal("active_sessions.available = false, want true")
+	}
+	if dashboard.ActiveSessions.ListedCount != 1 {
+		t.Fatalf("active_sessions.listed_count = %d, want 1", dashboard.ActiveSessions.ListedCount)
+	}
 	if dashboard.Notifications.UnreadCount != 2 {
 		t.Fatalf("unread_count = %d, want 2", dashboard.Notifications.UnreadCount)
 	}
@@ -99,7 +114,11 @@ func TestGetDashboardUsesFreshCache(t *testing.T) {
 	now := time.Date(2026, 2, 26, 4, 10, 0, 0, time.UTC)
 	clockNow := now
 	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
-	game := &fakeGameGateway{campaignPage: CampaignPage{Campaigns: []CampaignPreview{{CampaignID: "camp-1", Status: CampaignStatusActive}}}, invitePage: InvitePage{}}
+	game := &fakeGameGateway{
+		campaignPage:      CampaignPage{Campaigns: []CampaignPreview{{CampaignID: "camp-1", Status: CampaignStatusActive}}},
+		activeSessionPage: ActiveSessionPage{Sessions: []ActiveSessionPreview{{CampaignID: "camp-1", SessionID: "session-1"}}},
+		invitePage:        InvitePage{},
+	}
 	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
 	notifications := &fakeNotificationsGateway{status: UnreadStatus{HasUnread: false, UnreadCount: 0}}
 	svc := NewService(auth, game, social, notifications, Config{
@@ -128,6 +147,9 @@ func TestGetDashboardUsesFreshCache(t *testing.T) {
 	if notifications.calls != 1 {
 		t.Fatalf("notification calls = %d, want 1", notifications.calls)
 	}
+	if game.activeSessionCalls != 1 {
+		t.Fatalf("active session calls = %d, want 1", game.activeSessionCalls)
+	}
 }
 
 func TestGetDashboardFallsBackToStaleOnDependencyError(t *testing.T) {
@@ -136,7 +158,11 @@ func TestGetDashboardFallsBackToStaleOnDependencyError(t *testing.T) {
 	now := time.Date(2026, 2, 26, 4, 20, 0, 0, time.UTC)
 	clockNow := now
 	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
-	game := &fakeGameGateway{campaignPage: CampaignPage{Campaigns: []CampaignPreview{{CampaignID: "camp-1", Status: CampaignStatusActive}}}, invitePage: InvitePage{}}
+	game := &fakeGameGateway{
+		campaignPage:      CampaignPage{Campaigns: []CampaignPreview{{CampaignID: "camp-1", Status: CampaignStatusActive}}},
+		activeSessionPage: ActiveSessionPage{Sessions: []ActiveSessionPreview{{CampaignID: "camp-1", SessionID: "session-1"}}},
+		invitePage:        InvitePage{},
+	}
 	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
 	notifications := &fakeNotificationsGateway{status: UnreadStatus{HasUnread: false, UnreadCount: 0}}
 	svc := NewService(auth, game, social, notifications, Config{
@@ -239,10 +265,77 @@ func TestGetDashboardNeedsProfileCompletionWhenSocialNameBlank(t *testing.T) {
 	}
 }
 
+func TestGetDashboardDegradesActiveSessionsWithoutFailingWholeDashboard(t *testing.T) {
+	t.Parallel()
+
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
+	game := &fakeGameGateway{
+		campaignPage: CampaignPage{
+			Campaigns: []CampaignPreview{{CampaignID: "camp-1", Status: CampaignStatusActive}},
+		},
+		activeSessionErr: errors.New("sessions unavailable"),
+		invitePage:       InvitePage{},
+	}
+	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
+	notifications := &fakeNotificationsGateway{}
+	svc := NewService(auth, game, social, notifications, Config{})
+
+	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1"})
+	if err != nil {
+		t.Fatalf("GetDashboard error: %v", err)
+	}
+	if dashboard.ActiveSessions.Available {
+		t.Fatal("active_sessions.available = true, want false")
+	}
+	if !dashboard.Metadata.Degraded {
+		t.Fatal("degraded = false, want true")
+	}
+	if !contains(dashboard.Metadata.DegradedDependencies, dependencyGameSessions) {
+		t.Fatalf("degraded_dependencies = %v, want %q", dashboard.Metadata.DegradedDependencies, dependencyGameSessions)
+	}
+}
+
+func TestGetDashboardIncludesContinueActionWhenActiveSessionFallsOutsidePreviewPage(t *testing.T) {
+	t.Parallel()
+
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
+	game := &fakeGameGateway{
+		campaignPage: CampaignPage{
+			Campaigns: []CampaignPreview{{
+				CampaignID: "camp-completed",
+				Status:     CampaignStatusCompleted,
+			}},
+		},
+		activeSessionPage: ActiveSessionPage{
+			Sessions: []ActiveSessionPreview{{
+				CampaignID:   "camp-active",
+				CampaignName: "Sunfall",
+				SessionID:    "session-1",
+			}},
+		},
+		invitePage: InvitePage{},
+	}
+	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
+	notifications := &fakeNotificationsGateway{}
+	svc := NewService(auth, game, social, notifications, Config{})
+
+	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1", CampaignPreviewLimit: 1})
+	if err != nil {
+		t.Fatalf("GetDashboard error: %v", err)
+	}
+	if !containsAction(dashboard.NextActions, DashboardActionContinueActiveCampaign) {
+		t.Fatalf("actions = %+v, want continue active campaign action", dashboard.NextActions)
+	}
+}
+
 type fakeGameGateway struct {
 	campaignPage  CampaignPage
 	campaignErr   error
 	campaignCalls int
+
+	activeSessionPage  ActiveSessionPage
+	activeSessionErr   error
+	activeSessionCalls int
 
 	invitePage  InvitePage
 	inviteErr   error
@@ -263,6 +356,14 @@ func (f *fakeGameGateway) ListPendingInvitePreviews(_ context.Context, _ string,
 		return InvitePage{}, f.inviteErr
 	}
 	return f.invitePage, nil
+}
+
+func (f *fakeGameGateway) ListActiveSessionPreviews(_ context.Context, _ string, _ int) (ActiveSessionPage, error) {
+	f.activeSessionCalls++
+	if f.activeSessionErr != nil {
+		return ActiveSessionPage{}, f.activeSessionErr
+	}
+	return f.activeSessionPage, nil
 }
 
 type fakeAuthGateway struct {
@@ -310,6 +411,15 @@ func (f *fakeNotificationsGateway) GetUnreadStatus(_ context.Context, _ string) 
 func contains(values []string, want string) bool {
 	for _, value := range values {
 		if value == want {
+			return true
+		}
+	}
+	return false
+}
+
+func containsAction(actions []DashboardAction, want DashboardActionID) bool {
+	for _, action := range actions {
+		if action.ID == want {
 			return true
 		}
 	}

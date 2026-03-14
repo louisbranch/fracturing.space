@@ -39,6 +39,7 @@ message GetDashboardResponse {
   NotificationSummary notifications = 4;
   CampaignSummary campaigns = 5;
   repeated DashboardAction next_actions = 6;
+  ActiveSessionSummary active_sessions = 7;
 }
 
 message InvalidateDashboardsRequest {
@@ -129,6 +130,21 @@ enum CampaignStatus {
 message DashboardAction {
   DashboardActionID id = 1;
   int32 priority = 2;
+}
+
+message ActiveSessionSummary {
+  bool available = 1;
+  int32 listed_count = 2;
+  bool has_more = 3;
+  repeated ActiveSessionPreview sessions = 4;
+}
+
+message ActiveSessionPreview {
+  string campaign_id = 1;
+  string campaign_name = 2;
+  string session_id = 3;
+  string session_name = 4;
+  google.protobuf.Timestamp started_at = 5;
 }
 
 enum DashboardActionID {

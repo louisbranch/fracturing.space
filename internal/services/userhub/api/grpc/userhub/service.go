@@ -55,12 +55,13 @@ func (s *Service) GetDashboard(ctx context.Context, in *userhubv1.GetDashboardRe
 	}
 
 	return &userhubv1.GetDashboardResponse{
-		Metadata:      dashboardMetadataToProto(dashboard.Metadata),
-		User:          userSummaryToProto(dashboard.User),
-		Invites:       inviteSummaryToProto(dashboard.Invites),
-		Notifications: notificationSummaryToProto(dashboard.Notifications),
-		Campaigns:     campaignSummaryToProto(dashboard.Campaigns),
-		NextActions:   dashboardActionsToProto(dashboard.NextActions),
+		Metadata:       dashboardMetadataToProto(dashboard.Metadata),
+		User:           userSummaryToProto(dashboard.User),
+		Invites:        inviteSummaryToProto(dashboard.Invites),
+		Notifications:  notificationSummaryToProto(dashboard.Notifications),
+		Campaigns:      campaignSummaryToProto(dashboard.Campaigns),
+		ActiveSessions: activeSessionSummaryToProto(dashboard.ActiveSessions),
+		NextActions:    dashboardActionsToProto(dashboard.NextActions),
 	}, nil
 }
 
@@ -167,6 +168,26 @@ func campaignSummaryToProto(summary domain.CampaignSummary) *userhubv1.CampaignS
 			ParticipantCount: int32(campaign.ParticipantCount),
 			CharacterCount:   int32(campaign.CharacterCount),
 			UpdatedAt:        timestamppb.New(campaign.UpdatedAt),
+		})
+	}
+	return result
+}
+
+// activeSessionSummaryToProto maps active-session summary values to proto.
+func activeSessionSummaryToProto(summary domain.ActiveSessionSummary) *userhubv1.ActiveSessionSummary {
+	result := &userhubv1.ActiveSessionSummary{
+		Available:   summary.Available,
+		ListedCount: int32(summary.ListedCount),
+		HasMore:     summary.HasMore,
+		Sessions:    make([]*userhubv1.ActiveSessionPreview, 0, len(summary.Sessions)),
+	}
+	for _, session := range summary.Sessions {
+		result.Sessions = append(result.Sessions, &userhubv1.ActiveSessionPreview{
+			CampaignId:   session.CampaignID,
+			CampaignName: session.CampaignName,
+			SessionId:    session.SessionID,
+			SessionName:  session.SessionName,
+			StartedAt:    timestamppb.New(session.StartedAt),
 		})
 	}
 	return result

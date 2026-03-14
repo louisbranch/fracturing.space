@@ -7,6 +7,7 @@ import (
 
 const degradedDependencySocialProfile = dashboardapp.DegradedDependencySocialProfile
 const degradedDependencyGameCampaigns = dashboardapp.DegradedDependencyGameCampaigns
+const degradedDependencyGameSessions = dashboardapp.DegradedDependencyGameSessions
 
 // ServiceHealthEntry is the transport-facing alias for dashboard app health entries.
 type ServiceHealthEntry = dashboardapp.ServiceHealthEntry
@@ -16,6 +17,9 @@ type DashboardView = dashboardapp.DashboardView
 
 // DashboardSnapshot is the transport-facing alias for dashboard app snapshot model.
 type DashboardSnapshot = dashboardapp.DashboardSnapshot
+
+// ActiveSessionItem is the transport-facing alias for dashboard active-session rows.
+type ActiveSessionItem = dashboardapp.ActiveSessionItem
 
 // DashboardGateway is the transport-facing alias for dashboard app gateway contract.
 type DashboardGateway = dashboardapp.Gateway

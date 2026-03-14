@@ -18,6 +18,7 @@ const (
 	dependencyAuthUser          = "auth.user"
 	dependencyGameCampaigns     = "game.campaigns"
 	dependencyGameInvites       = "game.invites"
+	dependencyGameSessions      = "game.sessions"
 	dependencySocialProfile     = "social.profile"
 	dependencyNotificationsRead = "notifications.unread"
 )
@@ -108,12 +109,13 @@ type InvalidateDashboardsResult struct {
 
 // Dashboard is the userhub at-a-glance aggregate view model.
 type Dashboard struct {
-	Metadata      DashboardMetadata
-	User          UserSummary
-	Invites       InviteSummary
-	Notifications NotificationSummary
-	Campaigns     CampaignSummary
-	NextActions   []DashboardAction
+	Metadata       DashboardMetadata
+	User           UserSummary
+	Invites        InviteSummary
+	Notifications  NotificationSummary
+	Campaigns      CampaignSummary
+	ActiveSessions ActiveSessionSummary
+	NextActions    []DashboardAction
 }
 
 // DashboardMetadata carries freshness and degradation status for one response.
@@ -190,6 +192,23 @@ type CampaignPreview struct {
 	UpdatedAt        time.Time
 }
 
+// ActiveSessionSummary captures active-session join previews for one user.
+type ActiveSessionSummary struct {
+	Available   bool
+	ListedCount int
+	HasMore     bool
+	Sessions    []ActiveSessionPreview
+}
+
+// ActiveSessionPreview captures one campaign/session row for join nudges.
+type ActiveSessionPreview struct {
+	CampaignID   string
+	CampaignName string
+	SessionID    string
+	SessionName  string
+	StartedAt    time.Time
+}
+
 // CampaignStatus identifies lifecycle state for one campaign preview.
 type CampaignStatus int
 
@@ -258,6 +277,12 @@ type InvitePage struct {
 	HasMore bool
 }
 
+// ActiveSessionPage contains active-session previews plus pagination state.
+type ActiveSessionPage struct {
+	Sessions []ActiveSessionPreview
+	HasMore  bool
+}
+
 // AuthGateway resolves auth-owned account identity summaries.
 type AuthGateway interface {
 	GetUserIdentity(ctx context.Context, userID string) (UserIdentity, error)
@@ -267,6 +292,7 @@ type AuthGateway interface {
 type GameGateway interface {
 	ListCampaignPreviews(ctx context.Context, userID string, limit int) (CampaignPage, error)
 	ListPendingInvitePreviews(ctx context.Context, userID string, limit int) (InvitePage, error)
+	ListActiveSessionPreviews(ctx context.Context, userID string, limit int) (ActiveSessionPage, error)
 }
 
 // SocialGateway resolves user social profile summaries.
@@ -369,6 +395,9 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 			HasMore:     campaignPage.HasMore,
 			Campaigns:   cloneCampaignPreviews(campaignPage.Campaigns),
 		},
+		ActiveSessions: ActiveSessionSummary{
+			Available: true,
+		},
 	}
 	for _, campaign := range campaignPage.Campaigns {
 		if campaign.Status == CampaignStatusActive {
@@ -399,6 +428,19 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 		result.Invites.ListedCount = len(invitePage.Invites)
 		result.Invites.HasMore = invitePage.HasMore
 		result.Invites.Pending = clonePendingInvites(invitePage.Invites)
+	}
+
+	activeSessionPage, err := s.game.ListActiveSessionPreviews(ctx, userID, campaignLimit)
+	if err != nil {
+		if staleOK {
+			return staleFallback(staleDashboard, []string{dependencyGameSessions}), nil
+		}
+		result.ActiveSessions.Available = false
+		degradedDependencies = append(degradedDependencies, dependencyGameSessions)
+	} else {
+		result.ActiveSessions.ListedCount = len(activeSessionPage.Sessions)
+		result.ActiveSessions.HasMore = activeSessionPage.HasMore
+		result.ActiveSessions.Sessions = cloneActiveSessionPreviews(activeSessionPage.Sessions)
 	}
 
 	profile, err := s.social.GetUserProfile(ctx, userID)
@@ -483,7 +525,7 @@ func buildDashboardActions(dashboard Dashboard) []DashboardAction {
 			Priority: 80,
 		})
 	}
-	if dashboard.Campaigns.Available && dashboard.Campaigns.ActiveCount > 0 {
+	if dashboardHasContinueActiveCampaignAction(dashboard) {
 		actions = append(actions, DashboardAction{
 			ID:       DashboardActionContinueActiveCampaign,
 			Priority: 70,
@@ -500,6 +542,13 @@ func buildDashboardActions(dashboard Dashboard) []DashboardAction {
 		return actions[i].Priority > actions[j].Priority
 	})
 	return actions
+}
+
+func dashboardHasContinueActiveCampaignAction(dashboard Dashboard) bool {
+	if dashboard.ActiveSessions.Available && dashboard.ActiveSessions.ListedCount > 0 {
+		return true
+	}
+	return dashboard.Campaigns.Available && dashboard.Campaigns.ActiveCount > 0
 }
 
 // clampPreviewLimit normalizes preview limit request values.
@@ -579,6 +628,7 @@ func cloneDashboard(input Dashboard) Dashboard {
 	result.Metadata.DegradedDependencies = append([]string{}, input.Metadata.DegradedDependencies...)
 	result.Invites.Pending = clonePendingInvites(input.Invites.Pending)
 	result.Campaigns.Campaigns = cloneCampaignPreviews(input.Campaigns.Campaigns)
+	result.ActiveSessions.Sessions = cloneActiveSessionPreviews(input.ActiveSessions.Sessions)
 	result.NextActions = append([]DashboardAction{}, input.NextActions...)
 	return result
 }
@@ -599,6 +649,16 @@ func cloneCampaignPreviews(input []CampaignPreview) []CampaignPreview {
 		return nil
 	}
 	result := make([]CampaignPreview, len(input))
+	copy(result, input)
+	return result
+}
+
+// cloneActiveSessionPreviews copies active-session preview slices.
+func cloneActiveSessionPreviews(input []ActiveSessionPreview) []ActiveSessionPreview {
+	if len(input) == 0 {
+		return nil
+	}
+	result := make([]ActiveSessionPreview, len(input))
 	copy(result, input)
 	return result
 }

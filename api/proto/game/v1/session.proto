@@ -84,6 +84,9 @@ service SessionService {
   // List sessions for a campaign.
   rpc ListSessions(ListSessionsRequest) returns (ListSessionsResponse);
 
+  // List active sessions for the current authenticated user.
+  rpc ListActiveSessionsForUser(ListActiveSessionsForUserRequest) returns (ListActiveSessionsForUserResponse);
+
   // Get a session by campaign ID and session ID.
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
 
@@ -137,6 +140,25 @@ message ListSessionsRequest {
 message ListSessionsResponse {
   repeated Session sessions = 1;
   string next_page_token = 2;
+}
+
+message ListActiveSessionsForUserRequest {
+  // The maximum number of active sessions to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 1;
+}
+
+message ListActiveSessionsForUserResponse {
+  repeated ActiveUserSession sessions = 1;
+  bool has_more = 2;
+}
+
+message ActiveUserSession {
+  string campaign_id = 1;
+  string campaign_name = 2;
+  string session_id = 3;
+  string session_name = 4;
+  google.protobuf.Timestamp started_at = 5;
 }
 
 message GetSessionRequest {

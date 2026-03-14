@@ -1003,6 +1003,13 @@ func (f fakeSessionClient) StartSession(_ context.Context, req *statev1.StartSes
 	}}, nil
 }
 
+func (f fakeSessionClient) ListActiveSessionsForUser(context.Context, *statev1.ListActiveSessionsForUserRequest, ...grpc.CallOption) (*statev1.ListActiveSessionsForUserResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.ListActiveSessionsForUserResponse{}, nil
+}
+
 func (f fakeSessionClient) EndSession(_ context.Context, req *statev1.EndSessionRequest, _ ...grpc.CallOption) (*statev1.EndSessionResponse, error) {
 	if f.err != nil {
 		return nil, f.err
