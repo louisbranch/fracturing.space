@@ -30,34 +30,6 @@ func TestStaticThemeServedByWeb(t *testing.T) {
 	}
 }
 
-func TestStaticThemeIncludesCampaignChatDrawerToggleRules(t *testing.T) {
-	t.Parallel()
-
-	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
-	})
-	if err != nil {
-		t.Fatalf("NewHandler() error = %v", err)
-	}
-	req := httptest.NewRequest(http.MethodGet, "/static/theme.css", nil)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	body := rr.Body.String()
-	for _, marker := range []string{
-		"campaign-chat-drawer",
-		"chat-drawer-shell",
-		"chat-drawer-icon-close",
-		"chat-drawer-link-label",
-	} {
-		if !strings.Contains(body, marker) {
-			t.Fatalf("theme.css missing campaign chat drawer marker %q", marker)
-		}
-	}
-}
-
 func TestStaticCampaignChatScriptServedByWeb(t *testing.T) {
 	t.Parallel()
 
