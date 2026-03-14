@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-14T13:37:51Z",
+  "updated_at": "2026-03-14T14:39:15Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -50,7 +50,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest",
-      "floor": 95.2,
+      "floor": 96.2,
       "description": "Built-in system descriptor and adapter wiring contracts."
     },
     {
@@ -75,7 +75,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/engine",
-      "floor": 93.3,
+      "floor": 93.5,
       "description": "Core domain engine orchestration and routing."
     },
     {
@@ -155,7 +155,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender",
-      "floor": 93.5,
+      "floor": 93.9,
       "description": "App-shell/public-page rendering contracts, including HTMX and flash-notice fallback behavior."
     },
     {
