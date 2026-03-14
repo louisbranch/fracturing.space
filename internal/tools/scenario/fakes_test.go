@@ -125,6 +125,10 @@ func (f *fakeCharacterClient) ListCharacters(context.Context, *gamev1.ListCharac
 	return nil, unimplemented("ListCharacters")
 }
 
+func (f *fakeCharacterClient) ListCharacterProfiles(context.Context, *gamev1.ListCharacterProfilesRequest, ...grpc.CallOption) (*gamev1.ListCharacterProfilesResponse, error) {
+	return nil, unimplemented("ListCharacterProfiles")
+}
+
 func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, in *gamev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
 	if f.setDefaultControl != nil {
 		return f.setDefaultControl(ctx, in, opts...)

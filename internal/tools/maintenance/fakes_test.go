@@ -218,6 +218,10 @@ func (f *fakeProjectionStore) GetDaggerheartCharacterProfile(context.Context, st
 	return storage.DaggerheartCharacterProfile{}, fmt.Errorf("not implemented")
 }
 
+func (f *fakeProjectionStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (storage.DaggerheartCharacterProfilePage, error) {
+	return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("not implemented")
+}
+
 func (f *fakeProjectionStore) DeleteDaggerheartCharacterProfile(context.Context, string, string) error {
 	return fmt.Errorf("not implemented")
 }

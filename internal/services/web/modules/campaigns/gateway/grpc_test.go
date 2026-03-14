@@ -649,19 +649,22 @@ func (f *fakeDaggerheartContentClient) GetAssetMap(_ context.Context, req *dagge
 }
 
 type fakeCharacterWorkflowClient struct {
-	listResp     *statev1.ListCharactersResponse
-	listErr      error
-	createReq    *statev1.CreateCharacterRequest
-	createResp   *statev1.CreateCharacterResponse
-	createErr    error
-	sheetResp    *statev1.GetCharacterSheetResponse
-	sheetErr     error
-	progressResp *statev1.GetCharacterCreationProgressResponse
-	progressErr  error
-	applyReq     *statev1.ApplyCharacterCreationStepRequest
-	applyErr     error
-	resetReq     *statev1.ResetCharacterCreationWorkflowRequest
-	resetErr     error
+	listResp        *statev1.ListCharactersResponse
+	listErr         error
+	profilesResp    *statev1.ListCharacterProfilesResponse
+	profilesErr     error
+	lastProfilesReq *statev1.ListCharacterProfilesRequest
+	createReq       *statev1.CreateCharacterRequest
+	createResp      *statev1.CreateCharacterResponse
+	createErr       error
+	sheetResp       *statev1.GetCharacterSheetResponse
+	sheetErr        error
+	progressResp    *statev1.GetCharacterCreationProgressResponse
+	progressErr     error
+	applyReq        *statev1.ApplyCharacterCreationStepRequest
+	applyErr        error
+	resetReq        *statev1.ResetCharacterCreationWorkflowRequest
+	resetErr        error
 }
 
 func (f *fakeCharacterWorkflowClient) ListCharacters(context.Context, *statev1.ListCharactersRequest, ...grpc.CallOption) (*statev1.ListCharactersResponse, error) {
@@ -672,6 +675,17 @@ func (f *fakeCharacterWorkflowClient) ListCharacters(context.Context, *statev1.L
 		return f.listResp, nil
 	}
 	return &statev1.ListCharactersResponse{}, nil
+}
+
+func (f *fakeCharacterWorkflowClient) ListCharacterProfiles(_ context.Context, req *statev1.ListCharacterProfilesRequest, _ ...grpc.CallOption) (*statev1.ListCharacterProfilesResponse, error) {
+	f.lastProfilesReq = req
+	if f.profilesErr != nil {
+		return nil, f.profilesErr
+	}
+	if f.profilesResp != nil {
+		return f.profilesResp, nil
+	}
+	return &statev1.ListCharacterProfilesResponse{}, nil
 }
 
 func (f *fakeCharacterWorkflowClient) CreateCharacter(_ context.Context, req *statev1.CreateCharacterRequest, _ ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
@@ -745,6 +759,7 @@ var _ moduleCharacterClientContract = (*fakeCharacterWorkflowClient)(nil)
 
 type moduleCharacterClientContract interface {
 	ListCharacters(context.Context, *statev1.ListCharactersRequest, ...grpc.CallOption) (*statev1.ListCharactersResponse, error)
+	ListCharacterProfiles(context.Context, *statev1.ListCharacterProfilesRequest, ...grpc.CallOption) (*statev1.ListCharacterProfilesResponse, error)
 	CreateCharacter(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
 	UpdateCharacter(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error)
 	DeleteCharacter(context.Context, *statev1.DeleteCharacterRequest, ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error)

@@ -253,7 +253,7 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 		t.Fatalf("participants = %#v", participants)
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), "c1")
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{})
 	if err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}
@@ -275,6 +275,166 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}
 	if len(invites) != 1 || invites[0].Status != "Pending" {
 		t.Fatalf("invites = %#v", invites)
+	}
+}
+
+func TestCampaignCharactersMapsDaggerheartSummaryWhenProfileAndCatalogResolve(t *testing.T) {
+	t.Parallel()
+
+	characterClient := &fakeCharacterWorkflowClient{
+		listResp: &statev1.ListCharactersResponse{Characters: []*statev1.Character{{
+			Id:            "char-1",
+			Name:          "Aria",
+			Kind:          statev1.CharacterKind_PC,
+			ParticipantId: wrapperspb.String("p1"),
+		}}},
+		profilesResp: &statev1.ListCharacterProfilesResponse{Profiles: []*statev1.CharacterProfile{{
+			CampaignId:  "c1",
+			CharacterId: "char-1",
+			SystemProfile: &statev1.CharacterProfile_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
+				Level:       2,
+				ClassId:     "warrior",
+				SubclassId:  "guardian",
+				AncestryId:  "drakona",
+				CommunityId: "wanderborne",
+			}},
+		}}},
+	}
+	contentClient := &fakeDaggerheartContentClient{
+		resp: &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{
+			Classes:    []*daggerheartv1.DaggerheartClass{{Id: "warrior", Name: "Warrior"}},
+			Subclasses: []*daggerheartv1.DaggerheartSubclass{{Id: "guardian", Name: "Guardian"}},
+			Heritages: []*daggerheartv1.DaggerheartHeritage{
+				{Id: "drakona", Name: "Drakona", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY},
+				{Id: "wanderborne", Name: "Wanderborne", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_COMMUNITY},
+			},
+		}},
+	}
+	gateway := GRPCGateway{
+		Read: GRPCGatewayReadDeps{
+			Participant:        &contractParticipantClient{listResp: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{{Id: "p1", Name: "Lead"}}}},
+			Character:          characterClient,
+			DaggerheartContent: contentClient,
+		},
+	}
+
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+		System: "Daggerheart",
+		Locale: language.BrazilianPortuguese,
+	})
+	if err != nil {
+		t.Fatalf("CampaignCharacters() error = %v", err)
+	}
+	if len(characters) != 1 {
+		t.Fatalf("len(characters) = %d, want 1", len(characters))
+	}
+	if characters[0].Daggerheart == nil {
+		t.Fatalf("Daggerheart summary = nil, want populated summary")
+	}
+	if got := characters[0].Daggerheart.Level; got != 2 {
+		t.Fatalf("Level = %d, want 2", got)
+	}
+	if got := characters[0].Daggerheart.ClassName; got != "Warrior" {
+		t.Fatalf("ClassName = %q, want %q", got, "Warrior")
+	}
+	if got := characters[0].Daggerheart.SubclassName; got != "Guardian" {
+		t.Fatalf("SubclassName = %q, want %q", got, "Guardian")
+	}
+	if got := characters[0].Daggerheart.AncestryName; got != "Drakona" {
+		t.Fatalf("AncestryName = %q, want %q", got, "Drakona")
+	}
+	if got := characters[0].Daggerheart.CommunityName; got != "Wanderborne" {
+		t.Fatalf("CommunityName = %q, want %q", got, "Wanderborne")
+	}
+	if characterClient.lastProfilesReq == nil {
+		t.Fatalf("expected profile listing request")
+	}
+	if contentClient.lastReq == nil || contentClient.lastReq.GetLocale() != commonv1.Locale_LOCALE_PT_BR {
+		t.Fatalf("catalog locale request = %#v, want pt-BR request", contentClient.lastReq)
+	}
+	if contentClient.lastAssetMapReq != nil {
+		t.Fatalf("characters page should not fetch asset map: %#v", contentClient.lastAssetMapReq)
+	}
+}
+
+func TestCampaignCharactersSkipsDaggerheartSummaryWhenCatalogNamesDoNotResolve(t *testing.T) {
+	t.Parallel()
+
+	characterClient := &fakeCharacterWorkflowClient{
+		listResp: &statev1.ListCharactersResponse{Characters: []*statev1.Character{{Id: "char-1", Name: "Aria", Kind: statev1.CharacterKind_PC}}},
+		profilesResp: &statev1.ListCharacterProfilesResponse{Profiles: []*statev1.CharacterProfile{{
+			CampaignId:  "c1",
+			CharacterId: "char-1",
+			SystemProfile: &statev1.CharacterProfile_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
+				Level:       2,
+				ClassId:     "warrior",
+				SubclassId:  "guardian",
+				AncestryId:  "drakona",
+				CommunityId: "missing-community",
+			}},
+		}}},
+	}
+	contentClient := &fakeDaggerheartContentClient{
+		resp: &daggerheartv1.GetDaggerheartContentCatalogResponse{Catalog: &daggerheartv1.DaggerheartContentCatalog{
+			Classes:    []*daggerheartv1.DaggerheartClass{{Id: "warrior", Name: "Warrior"}},
+			Subclasses: []*daggerheartv1.DaggerheartSubclass{{Id: "guardian", Name: "Guardian"}},
+			Heritages:  []*daggerheartv1.DaggerheartHeritage{{Id: "drakona", Name: "Drakona", Kind: daggerheartv1.DaggerheartHeritageKind_DAGGERHEART_HERITAGE_KIND_ANCESTRY}},
+		}},
+	}
+	gateway := GRPCGateway{
+		Read: GRPCGatewayReadDeps{
+			Character:          characterClient,
+			DaggerheartContent: contentClient,
+		},
+	}
+
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+		System: "Daggerheart",
+		Locale: language.AmericanEnglish,
+	})
+	if err != nil {
+		t.Fatalf("CampaignCharacters() error = %v", err)
+	}
+	if len(characters) != 1 {
+		t.Fatalf("len(characters) = %d, want 1", len(characters))
+	}
+	if characters[0].Daggerheart != nil {
+		t.Fatalf("Daggerheart summary = %#v, want nil when names are incomplete", characters[0].Daggerheart)
+	}
+}
+
+func TestCampaignCharactersSkipsDaggerheartReadsForNonDaggerheartOptions(t *testing.T) {
+	t.Parallel()
+
+	characterClient := &fakeCharacterWorkflowClient{
+		listResp: &statev1.ListCharactersResponse{Characters: []*statev1.Character{{Id: "char-1", Name: "Aria", Kind: statev1.CharacterKind_PC}}},
+	}
+	contentClient := &fakeDaggerheartContentClient{}
+	gateway := GRPCGateway{
+		Read: GRPCGatewayReadDeps{
+			Character:          characterClient,
+			DaggerheartContent: contentClient,
+		},
+	}
+
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+		System: "Pathfinder",
+		Locale: language.AmericanEnglish,
+	})
+	if err != nil {
+		t.Fatalf("CampaignCharacters() error = %v", err)
+	}
+	if len(characters) != 1 {
+		t.Fatalf("len(characters) = %d, want 1", len(characters))
+	}
+	if characters[0].Daggerheart != nil {
+		t.Fatalf("Daggerheart summary = %#v, want nil", characters[0].Daggerheart)
+	}
+	if characterClient.lastProfilesReq != nil {
+		t.Fatalf("non-daggerheart character read should not request profiles: %#v", characterClient.lastProfilesReq)
+	}
+	if contentClient.lastReq != nil {
+		t.Fatalf("non-daggerheart character read should not request content catalog: %#v", contentClient.lastReq)
 	}
 }
 
@@ -1389,7 +1549,7 @@ func TestParticipantAndCharacterClientRequired(t *testing.T) {
 	if _, err := gateway.CampaignParticipants(context.Background(), "c1"); err == nil {
 		t.Fatalf("expected missing participant client error")
 	}
-	if _, err := gateway.CampaignCharacters(context.Background(), "c1"); err == nil {
+	if _, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{}); err == nil {
 		t.Fatalf("expected missing character client error")
 	}
 }
@@ -1414,7 +1574,7 @@ func TestEmptyCampaignIDReturnsEmptyCollections(t *testing.T) {
 		t.Fatalf("len(participants) = %d, want 0", len(participants))
 	}
 
-	characters, err := gateway.CampaignCharacters(context.Background(), " ")
+	characters, err := gateway.CampaignCharacters(context.Background(), " ", campaignapp.CampaignCharactersReadOptions{})
 	if err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}

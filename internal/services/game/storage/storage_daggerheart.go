@@ -52,6 +52,13 @@ type DaggerheartExperience struct {
 	Modifier int
 }
 
+// DaggerheartCharacterProfilePage describes a page of Daggerheart character
+// profiles ordered by stable character ID.
+type DaggerheartCharacterProfilePage struct {
+	Profiles      []DaggerheartCharacterProfile
+	NextPageToken string
+}
+
 // DaggerheartCharacterState stores Daggerheart combat state needed by outcome workflows.
 type DaggerheartCharacterState struct {
 	CampaignID     string
@@ -388,6 +395,7 @@ type DaggerheartStore interface {
 	// Character Profile Extensions
 	PutDaggerheartCharacterProfile(ctx context.Context, profile DaggerheartCharacterProfile) error
 	GetDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) (DaggerheartCharacterProfile, error)
+	ListDaggerheartCharacterProfiles(ctx context.Context, campaignID string, pageSize int, pageToken string) (DaggerheartCharacterProfilePage, error)
 	DeleteDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) error
 
 	// Character State Extensions

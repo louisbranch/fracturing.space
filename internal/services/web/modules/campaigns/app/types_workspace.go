@@ -1,5 +1,7 @@
 package app
 
+import "golang.org/x/text/language"
+
 // CampaignSummary is a transport-safe summary for discovery entrys.
 type CampaignSummary struct {
 	ID                string `json:"id"`
@@ -87,16 +89,32 @@ type CampaignAIBindingEditor struct {
 
 // CampaignCharacter stores character details used by campaign characters pages.
 type CampaignCharacter struct {
-	ID                      string   `json:"id"`
-	Name                    string   `json:"name"`
-	Kind                    string   `json:"kind"`
-	Controller              string   `json:"controller"`
-	ControllerParticipantID string   `json:"controllerParticipantId"`
-	Pronouns                string   `json:"pronouns"`
-	Aliases                 []string `json:"aliases"`
-	AvatarURL               string   `json:"avatarUrl"`
-	CanEdit                 bool     `json:"canEdit"`
-	EditReasonCode          string   `json:"editReasonCode"`
+	ID                      string                               `json:"id"`
+	Name                    string                               `json:"name"`
+	Kind                    string                               `json:"kind"`
+	Controller              string                               `json:"controller"`
+	ControllerParticipantID string                               `json:"controllerParticipantId"`
+	Pronouns                string                               `json:"pronouns"`
+	Aliases                 []string                             `json:"aliases"`
+	AvatarURL               string                               `json:"avatarUrl"`
+	CanEdit                 bool                                 `json:"canEdit"`
+	EditReasonCode          string                               `json:"editReasonCode"`
+	Daggerheart             *CampaignCharacterDaggerheartSummary `json:"daggerheart,omitempty"`
+}
+
+// CampaignCharacterDaggerheartSummary stores Daggerheart-specific card summary fields.
+type CampaignCharacterDaggerheartSummary struct {
+	Level         int32  `json:"level"`
+	ClassName     string `json:"className"`
+	SubclassName  string `json:"subclassName"`
+	AncestryName  string `json:"ancestryName"`
+	CommunityName string `json:"communityName"`
+}
+
+// CampaignCharactersReadOptions keeps system-aware read dependencies explicit.
+type CampaignCharactersReadOptions struct {
+	System string
+	Locale language.Tag
 }
 
 // CampaignCharacterEditor stores character edit page data.

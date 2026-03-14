@@ -1213,6 +1213,114 @@ func TestListCharacters_WithCharacters(t *testing.T) {
 	}
 }
 
+func TestListCharacterProfiles_NilRequest(t *testing.T) {
+	svc := NewCharacterService(Stores{})
+	_, err := svc.ListCharacterProfiles(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListCharacterProfiles_MissingCampaignID(t *testing.T) {
+	svc := NewCharacterService(newTestStores().withCharacter().build())
+	_, err := svc.ListCharacterProfiles(context.Background(), &statev1.ListCharacterProfilesRequest{})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListCharacterProfiles_DeniesMissingIdentity(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = daggerheartCampaignRecord("c1", "Campaign", campaign.StatusActive, campaign.GmModeHuman)
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
+	}
+
+	svc := NewCharacterService(ts.build())
+	_, err := svc.ListCharacterProfiles(context.Background(), &statev1.ListCharacterProfilesRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestListCharacterProfiles_EmptyForNonDaggerheartCampaigns(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
+	}
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch1": {CampaignID: "c1", CharacterID: "ch1", Level: 2, ClassID: "warrior"},
+	}
+
+	svc := NewCharacterService(ts.build())
+	resp, err := svc.ListCharacterProfiles(contextWithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("ListCharacterProfiles returned error: %v", err)
+	}
+	if len(resp.GetProfiles()) != 0 {
+		t.Fatalf("ListCharacterProfiles returned %d profiles, want 0", len(resp.GetProfiles()))
+	}
+}
+
+func TestListCharacterProfiles_WithProfiles(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	ts.Campaign.campaigns["c1"] = daggerheartCampaignRecord("c1", "Campaign", campaign.StatusActive, campaign.GmModeHuman)
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
+	}
+	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		"ch-b": {
+			CampaignID:  "c1",
+			CharacterID: "ch-b",
+			Level:       3,
+			ClassID:     "warrior",
+			SubclassID:  "guardian",
+			AncestryID:  "clank",
+			CommunityID: "ridgeborne",
+		},
+		"ch-a": {
+			CampaignID:  "c1",
+			CharacterID: "ch-a",
+			Level:       2,
+			ClassID:     "seraph",
+			SubclassID:  "wingguard",
+			AncestryID:  "drakona",
+			CommunityID: "wanderborne",
+		},
+	}
+
+	svc := NewCharacterService(ts.build())
+	resp, err := svc.ListCharacterProfiles(contextWithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{CampaignId: "c1", PageSize: 1})
+	if err != nil {
+		t.Fatalf("ListCharacterProfiles returned error: %v", err)
+	}
+	if len(resp.GetProfiles()) != 1 {
+		t.Fatalf("ListCharacterProfiles returned %d profiles, want 1", len(resp.GetProfiles()))
+	}
+	if got := resp.GetProfiles()[0].GetCharacterId(); got != "ch-a" {
+		t.Fatalf("first profile character id = %q, want %q", got, "ch-a")
+	}
+	if got := resp.GetProfiles()[0].GetDaggerheart().GetLevel(); got != 2 {
+		t.Fatalf("first profile level = %d, want 2", got)
+	}
+	if got := resp.GetNextPageToken(); got != "ch-a" {
+		t.Fatalf("next page token = %q, want %q", got, "ch-a")
+	}
+
+	resp, err = svc.ListCharacterProfiles(contextWithParticipantID("p1"), &statev1.ListCharacterProfilesRequest{
+		CampaignId: "c1",
+		PageSize:   1,
+		PageToken:  resp.GetNextPageToken(),
+	})
+	if err != nil {
+		t.Fatalf("ListCharacterProfiles second page returned error: %v", err)
+	}
+	if len(resp.GetProfiles()) != 1 {
+		t.Fatalf("second page returned %d profiles, want 1", len(resp.GetProfiles()))
+	}
+	if got := resp.GetProfiles()[0].GetCharacterId(); got != "ch-b" {
+		t.Fatalf("second page character id = %q, want %q", got, "ch-b")
+	}
+	if got := resp.GetNextPageToken(); got != "" {
+		t.Fatalf("second page next page token = %q, want empty", got)
+	}
+}
+
 func TestSetDefaultControl_NilRequest(t *testing.T) {
 	svc := NewCharacterService(Stores{})
 	_, err := svc.SetDefaultControl(context.Background(), nil)

@@ -52,8 +52,8 @@ func (s service) CampaignAIBindingEditor(ctx context.Context, campaignID string,
 }
 
 // CampaignCharacters centralizes this web behavior in one helper seam.
-func (s service) CampaignCharacters(ctx context.Context, campaignID string) ([]CampaignCharacter, error) {
-	return s.campaignCharacters(ctx, campaignID)
+func (s service) CampaignCharacters(ctx context.Context, campaignID string, options CampaignCharactersReadOptions) ([]CampaignCharacter, error) {
+	return s.campaignCharacters(ctx, campaignID, options)
 }
 
 // CampaignCharacterEditor centralizes this web behavior in one helper seam.

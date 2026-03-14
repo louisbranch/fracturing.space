@@ -133,6 +133,19 @@ func (s *projectionDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Co
 	return profile, nil
 }
 
+func (s *projectionDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (storage.DaggerheartCharacterProfilePage, error) {
+	page := storage.DaggerheartCharacterProfilePage{
+		Profiles: make([]storage.DaggerheartCharacterProfile, 0),
+	}
+	prefix := campaignID + ":"
+	for key, profile := range s.profiles {
+		if len(key) > len(prefix) && key[:len(prefix)] == prefix {
+			page.Profiles = append(page.Profiles, profile)
+		}
+	}
+	return page, nil
+}
+
 func (s *projectionDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
 	key := campaignID + ":" + characterID
 	delete(s.profiles, key)

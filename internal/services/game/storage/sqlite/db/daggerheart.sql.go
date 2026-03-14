@@ -1068,6 +1068,141 @@ func (q *Queries) ListDaggerheartBeastforms(ctx context.Context) ([]DaggerheartB
 	return items, nil
 }
 
+const listDaggerheartCharacterProfilesPaged = `-- name: ListDaggerheartCharacterProfilesPaged :many
+SELECT campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max, experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id, background, domain_card_ids_json, connections, description FROM daggerheart_character_profiles
+WHERE campaign_id = ? AND character_id > ?
+ORDER BY character_id
+LIMIT ?
+`
+
+type ListDaggerheartCharacterProfilesPagedParams struct {
+	CampaignID  string `json:"campaign_id"`
+	CharacterID string `json:"character_id"`
+	Limit       int64  `json:"limit"`
+}
+
+func (q *Queries) ListDaggerheartCharacterProfilesPaged(ctx context.Context, arg ListDaggerheartCharacterProfilesPagedParams) ([]DaggerheartCharacterProfile, error) {
+	rows, err := q.db.QueryContext(ctx, listDaggerheartCharacterProfilesPaged, arg.CampaignID, arg.CharacterID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DaggerheartCharacterProfile{}
+	for rows.Next() {
+		var i DaggerheartCharacterProfile
+		if err := rows.Scan(
+			&i.CampaignID,
+			&i.CharacterID,
+			&i.Level,
+			&i.HpMax,
+			&i.StressMax,
+			&i.Evasion,
+			&i.MajorThreshold,
+			&i.SevereThreshold,
+			&i.Agility,
+			&i.Strength,
+			&i.Finesse,
+			&i.Instinct,
+			&i.Presence,
+			&i.Knowledge,
+			&i.Proficiency,
+			&i.ArmorScore,
+			&i.ArmorMax,
+			&i.ExperiencesJson,
+			&i.ClassID,
+			&i.SubclassID,
+			&i.AncestryID,
+			&i.CommunityID,
+			&i.TraitsAssigned,
+			&i.DetailsRecorded,
+			&i.StartingWeaponIdsJson,
+			&i.StartingArmorID,
+			&i.StartingPotionItemID,
+			&i.Background,
+			&i.DomainCardIdsJson,
+			&i.Connections,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDaggerheartCharacterProfilesPagedFirst = `-- name: ListDaggerheartCharacterProfilesPagedFirst :many
+SELECT campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold, agility, strength, finesse, instinct, presence, knowledge, proficiency, armor_score, armor_max, experiences_json, class_id, subclass_id, ancestry_id, community_id, traits_assigned, details_recorded, starting_weapon_ids_json, starting_armor_id, starting_potion_item_id, background, domain_card_ids_json, connections, description FROM daggerheart_character_profiles
+WHERE campaign_id = ?
+ORDER BY character_id
+LIMIT ?
+`
+
+type ListDaggerheartCharacterProfilesPagedFirstParams struct {
+	CampaignID string `json:"campaign_id"`
+	Limit      int64  `json:"limit"`
+}
+
+func (q *Queries) ListDaggerheartCharacterProfilesPagedFirst(ctx context.Context, arg ListDaggerheartCharacterProfilesPagedFirstParams) ([]DaggerheartCharacterProfile, error) {
+	rows, err := q.db.QueryContext(ctx, listDaggerheartCharacterProfilesPagedFirst, arg.CampaignID, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DaggerheartCharacterProfile{}
+	for rows.Next() {
+		var i DaggerheartCharacterProfile
+		if err := rows.Scan(
+			&i.CampaignID,
+			&i.CharacterID,
+			&i.Level,
+			&i.HpMax,
+			&i.StressMax,
+			&i.Evasion,
+			&i.MajorThreshold,
+			&i.SevereThreshold,
+			&i.Agility,
+			&i.Strength,
+			&i.Finesse,
+			&i.Instinct,
+			&i.Presence,
+			&i.Knowledge,
+			&i.Proficiency,
+			&i.ArmorScore,
+			&i.ArmorMax,
+			&i.ExperiencesJson,
+			&i.ClassID,
+			&i.SubclassID,
+			&i.AncestryID,
+			&i.CommunityID,
+			&i.TraitsAssigned,
+			&i.DetailsRecorded,
+			&i.StartingWeaponIdsJson,
+			&i.StartingArmorID,
+			&i.StartingPotionItemID,
+			&i.Background,
+			&i.DomainCardIdsJson,
+			&i.Connections,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listDaggerheartCharacterStates = `-- name: ListDaggerheartCharacterStates :many
 SELECT
     campaign_id,

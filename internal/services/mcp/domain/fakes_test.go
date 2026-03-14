@@ -179,6 +179,10 @@ func (f *fakeCharacterClient) ListCharacters(_ context.Context, _ *statev1.ListC
 	return f.listResp, f.listErr
 }
 
+func (f *fakeCharacterClient) ListCharacterProfiles(_ context.Context, _ *statev1.ListCharacterProfilesRequest, _ ...grpc.CallOption) (*statev1.ListCharacterProfilesResponse, error) {
+	return &statev1.ListCharacterProfilesResponse{}, nil
+}
+
 func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, _ *statev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
 	f.controlCtx = ctx
 	return f.controlResp, f.controlErr

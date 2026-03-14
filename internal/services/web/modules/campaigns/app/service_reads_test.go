@@ -584,7 +584,7 @@ func TestCampaignCharactersSortByName(t *testing.T) {
 		},
 	}})
 
-	characters, err := svc.campaignCharacters(context.Background(), "c-1")
+	characters, err := svc.campaignCharacters(context.Background(), "c-1", CampaignCharactersReadOptions{})
 	if err != nil {
 		t.Fatalf("campaignCharacters() error = %v", err)
 	}
@@ -614,7 +614,7 @@ func TestCampaignCharactersHydratesEditabilityFromBatchAuthorization(t *testing.
 	}
 	svc := newService(gateway)
 
-	characters, err := svc.campaignCharacters(context.Background(), "c-1")
+	characters, err := svc.campaignCharacters(context.Background(), "c-1", CampaignCharactersReadOptions{})
 	if err != nil {
 		t.Fatalf("campaignCharacters() error = %v", err)
 	}
@@ -666,7 +666,7 @@ func TestCampaignCharactersHydratesEditabilityForDuplicateCharacterIDs(t *testin
 	}
 	svc := newService(gateway)
 
-	characters, err := svc.campaignCharacters(context.Background(), "c-1")
+	characters, err := svc.campaignCharacters(context.Background(), "c-1", CampaignCharactersReadOptions{})
 	if err != nil {
 		t.Fatalf("campaignCharacters() error = %v", err)
 	}
@@ -700,7 +700,7 @@ func TestCampaignCharactersFailClosedWhenBatchAuthorizationErrors(t *testing.T) 
 		),
 	})
 
-	characters, err := svc.campaignCharacters(context.Background(), "c-1")
+	characters, err := svc.campaignCharacters(context.Background(), "c-1", CampaignCharactersReadOptions{})
 	if err != nil {
 		t.Fatalf("campaignCharacters() error = %v", err)
 	}
@@ -732,7 +732,7 @@ func TestCampaignCharactersReturnsGatewayError(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{campaignCharactersErr: apperrors.E(apperrors.KindUnavailable, "characters unavailable")})
-	_, err := svc.campaignCharacters(context.Background(), "c-1")
+	_, err := svc.campaignCharacters(context.Background(), "c-1", CampaignCharactersReadOptions{})
 	if err == nil {
 		t.Fatalf("expected campaignCharacters() error")
 	}

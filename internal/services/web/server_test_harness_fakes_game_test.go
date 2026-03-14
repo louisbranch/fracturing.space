@@ -186,6 +186,13 @@ func (f fakeWebCharacterClient) ListCharacters(context.Context, *statev1.ListCha
 	return &statev1.ListCharactersResponse{}, nil
 }
 
+func (f fakeWebCharacterClient) ListCharacterProfiles(context.Context, *statev1.ListCharacterProfilesRequest, ...grpc.CallOption) (*statev1.ListCharacterProfilesResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.ListCharacterProfilesResponse{}, nil
+}
+
 func (f fakeWebCharacterClient) CreateCharacter(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
 	if f.err != nil {
 		return nil, f.err
