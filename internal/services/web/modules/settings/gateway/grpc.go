@@ -41,6 +41,7 @@ type AgentClient interface {
 	ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error)
 	ListProviderModels(context.Context, *aiv1.ListProviderModelsRequest, ...grpc.CallOption) (*aiv1.ListProviderModelsResponse, error)
 	CreateAgent(context.Context, *aiv1.CreateAgentRequest, ...grpc.CallOption) (*aiv1.CreateAgentResponse, error)
+	DeleteAgent(context.Context, *aiv1.DeleteAgentRequest, ...grpc.CallOption) (*aiv1.DeleteAgentResponse, error)
 }
 
 // GRPCGateway maps gRPC settings dependencies into the app-layer gateway contract.

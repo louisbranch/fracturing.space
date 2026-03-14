@@ -55,6 +55,7 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 		{name: "passkey start get rejected", method: http.MethodGet, path: routepath.AppSettingsSecurityPasskeysStart, wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
 		{name: "passkey finish get rejected", method: http.MethodGet, path: routepath.AppSettingsSecurityPasskeysFinish, wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
 		{name: "ai key revoke get rejected", method: http.MethodGet, path: routepath.AppSettingsAIKeyRevoke("cred-1"), wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
+		{name: "ai agent delete get rejected", method: http.MethodGet, path: routepath.AppSettingsAIAgentDelete("agent-1"), wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
 		{name: "unknown subpath", method: http.MethodGet, path: routepath.SettingsPrefix + "unknown", wantStatus: http.StatusNotFound},
 	}
 
@@ -136,6 +137,37 @@ func TestWithCredentialIDDelegatesResolvedID(t *testing.T) {
 	}
 }
 
+func TestWithAgentIDDelegatesResolvedID(t *testing.T) {
+	t.Parallel()
+
+	svc := settingsapp.NewService(staticGateway{})
+	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
+		profile:  true,
+		locale:   true,
+		security: true,
+		aiKeys:   true,
+		aiAgents: true,
+	}, settingsTestBase(), requestmeta.SchemePolicy{}, nil)
+	called := false
+	var gotID string
+	handler := h.withAgentID(func(_ http.ResponseWriter, _ *http.Request, agentID string) {
+		called = true
+		gotID = agentID
+	})
+
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	req.SetPathValue("agentID", " agent-1 ")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if !called {
+		t.Fatalf("expected delegate to be called")
+	}
+	if gotID != "agent-1" {
+		t.Fatalf("agentID = %q, want %q", gotID, "agent-1")
+	}
+}
+
 // staticGateway returns canned settings data for route-level tests.
 type staticGateway struct{}
 
@@ -180,7 +212,7 @@ func (staticGateway) ListAIAgentCredentials(context.Context, string) ([]settings
 }
 
 func (staticGateway) ListAIAgents(context.Context, string) ([]settingsapp.SettingsAIAgent, error) {
-	return []settingsapp.SettingsAIAgent{{ID: "agent-1", Label: "narrator", Provider: "OpenAI", Model: "gpt-4o-mini", Status: "Active", CreatedAt: "2026-01-01 00:00 UTC"}}, nil
+	return []settingsapp.SettingsAIAgent{{ID: "agent-1", Label: "narrator", Provider: "OpenAI", Model: "gpt-4o-mini", AuthState: "Ready", CanDelete: true, CreatedAt: "2026-01-01 00:00 UTC"}}, nil
 }
 
 func (staticGateway) ListAIProviderModels(context.Context, string, string) ([]settingsapp.SettingsAIModelOption, error) {
@@ -188,6 +220,10 @@ func (staticGateway) ListAIProviderModels(context.Context, string, string) ([]se
 }
 
 func (staticGateway) CreateAIAgent(context.Context, string, settingsapp.CreateAIAgentInput) error {
+	return nil
+}
+
+func (staticGateway) DeleteAIAgent(context.Context, string, string) error {
 	return nil
 }
 

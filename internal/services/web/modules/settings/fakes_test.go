@@ -26,6 +26,7 @@ type fakeGateway struct {
 	saveLocaleErr    error
 	createAIKeyErr   error
 	createAIAgentErr error
+	deleteAIAgentErr error
 	revokeAIKeyErr   error
 
 	lastSavedProfile         settingsapp.SettingsProfile
@@ -33,6 +34,7 @@ type fakeGateway struct {
 	lastCreatedLabel         string
 	lastCreatedSecret        string
 	lastCreatedAgent         settingsapp.CreateAIAgentInput
+	lastDeletedAgentID       string
 	lastSelectedCredentialID string
 	lastRevokedCredentialID  string
 	lastRequestedUserID      string
@@ -76,13 +78,15 @@ func newPopulatedFakeGateway() *fakeGateway {
 			OwnedBy: "openai",
 		}},
 		agents: []settingsapp.SettingsAIAgent{{
-			ID:           "agent-1",
-			Label:        "narrator",
-			Provider:     "OpenAI",
-			Model:        "gpt-4o-mini",
-			Status:       "Active",
-			CreatedAt:    "2026-01-01 00:00 UTC",
-			Instructions: "Keep the session moving.",
+			ID:                  "agent-1",
+			Label:               "narrator",
+			Provider:            "OpenAI",
+			Model:               "gpt-4o-mini",
+			AuthState:           "Ready",
+			CanDelete:           true,
+			ActiveCampaignCount: 0,
+			CreatedAt:           "2026-01-01 00:00 UTC",
+			Instructions:        "Keep the session moving.",
 		}},
 	}
 }
@@ -199,6 +203,12 @@ func (f *fakeGateway) CreateAIAgent(_ context.Context, userID string, input sett
 	f.lastRequestedUserID = userID
 	f.lastCreatedAgent = input
 	return f.createAIAgentErr
+}
+
+func (f *fakeGateway) DeleteAIAgent(_ context.Context, userID string, agentID string) error {
+	f.lastRequestedUserID = userID
+	f.lastDeletedAgentID = agentID
+	return f.deleteAIAgentErr
 }
 
 func (f *fakeGateway) RevokeAIKey(_ context.Context, userID string, credentialID string) error {

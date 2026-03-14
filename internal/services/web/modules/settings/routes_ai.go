@@ -15,4 +15,6 @@ func registerAIRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsAIKeyRevokePattern, h.withCredentialID(h.handleAIKeyRevoke))
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsAIAgents, h.handleAIAgentsGet)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsAIAgents, h.handleAIAgentsCreate)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsAIAgentDeletePattern, httpx.MethodNotAllowed(http.MethodPost))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsAIAgentDeletePattern, h.withAgentID(h.handleAIAgentDelete))
 }

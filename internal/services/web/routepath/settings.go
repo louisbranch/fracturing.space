@@ -11,10 +11,16 @@ const (
 	AppSettingsAIKeys                 = "/app/settings/ai-keys"
 	AppSettingsAIAgents               = "/app/settings/ai-agents"
 	AppSettingsAIKeyRevokePattern     = SettingsPrefix + "ai-keys/{credentialID}/revoke"
+	AppSettingsAIAgentDeletePattern   = SettingsPrefix + "ai-agents/{agentID}/delete"
 	AppSettingsRestPattern            = SettingsPrefix + "{rest...}"
 )
 
 // AppSettingsAIKeyRevoke returns the AI key revoke route.
 func AppSettingsAIKeyRevoke(credentialID string) string {
 	return AppSettingsAIKeys + "/" + escapeSegment(credentialID) + "/revoke"
+}
+
+// AppSettingsAIAgentDelete returns the AI agent delete route.
+func AppSettingsAIAgentDelete(agentID string) string {
+	return AppSettingsAIAgents + "/" + escapeSegment(agentID) + "/delete"
 }

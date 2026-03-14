@@ -39,9 +39,10 @@ func (g GRPCGateway) CampaignAIAgents(ctx context.Context) ([]campaignapp.Campai
 			continue
 		}
 		options = append(options, campaignapp.CampaignAIAgentOption{
-			ID:      agentID,
-			Label:   campaignAIAgentDisplayName(agent),
-			Enabled: agent.GetStatus() == aiv1.AgentStatus_AGENT_STATUS_ACTIVE,
+			ID:    agentID,
+			Label: campaignAIAgentDisplayName(agent),
+			Enabled: agent.GetStatus() == aiv1.AgentStatus_AGENT_STATUS_ACTIVE &&
+				agent.GetAuthState() == aiv1.AgentAuthState_AGENT_AUTH_STATE_READY,
 		})
 	}
 	return options, nil

@@ -710,3 +710,7 @@ func (fakeAgentClient) ListProviderModels(context.Context, *aiv1.ListProviderMod
 func (fakeAgentClient) CreateAgent(context.Context, *aiv1.CreateAgentRequest, ...grpc.CallOption) (*aiv1.CreateAgentResponse, error) {
 	return &aiv1.CreateAgentResponse{}, nil
 }
+
+func (fakeAgentClient) DeleteAgent(context.Context, *aiv1.DeleteAgentRequest, ...grpc.CallOption) (*aiv1.DeleteAgentResponse, error) {
+	return &aiv1.DeleteAgentResponse{}, nil
+}

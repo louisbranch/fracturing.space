@@ -513,7 +513,7 @@ func TestCampaignAIAgentsAndBindingMutations(t *testing.T) {
 
 	agentClient := &contractAgentClient{listResp: &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{
 		nil,
-		{Id: "agent-active", Label: "alpha", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE},
+		{Id: "agent-active", Label: "alpha", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, AuthState: aiv1.AgentAuthState_AGENT_AUTH_STATE_READY},
 		{Id: "agent-inactive", Label: "beta", Status: aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED},
 	}}}
 	campaignClient := &contractCampaignClient{}

@@ -69,6 +69,23 @@ func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteRedirect(w, r, routepath.AppSettingsAIAgents)
 }
 
+// handleAIAgentDelete deletes one AI agent from the settings surface.
+func (h handlers) handleAIAgentDelete(w http.ResponseWriter, r *http.Request, agentID string) {
+	ctx, userID := h.RequestContextAndUserID(r)
+	if err := h.aiAgents.DeleteAIAgent(ctx, userID, agentID); err != nil {
+		statusCode := apperrors.HTTPStatus(err)
+		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
+			h.writeFlashNotice(w, r, flashnotice.Notice{Kind: flashnotice.KindError, Key: apperrors.LocalizationKey(err)})
+			httpx.WriteRedirect(w, r, routepath.AppSettingsAIAgents)
+			return
+		}
+		h.WriteError(w, r, err)
+		return
+	}
+	h.writeFlashNotice(w, r, flashnotice.NoticeSuccess("web.settings.ai_agents.notice_deleted"))
+	httpx.WriteRedirect(w, r, routepath.AppSettingsAIAgents)
+}
+
 // renderAIAgentsPage centralizes this web behavior in one helper seam.
 func (h handlers) renderAIAgentsPage(
 	w http.ResponseWriter,

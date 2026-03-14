@@ -15,18 +15,30 @@ import (
 )
 
 type fakeCampaignAIAuthStateClient struct {
-	states  []*gamev1.GetCampaignAIAuthStateResponse
-	errs    []error
-	calls   int
-	lastReq *gamev1.GetCampaignAIAuthStateRequest
+	states       []*gamev1.GetCampaignAIAuthStateResponse
+	errs         []error
+	calls        int
+	lastReq      *gamev1.GetCampaignAIAuthStateRequest
+	usageByAgent map[string]int32
+	usageErr     error
+	lastUsageReq *gamev1.GetCampaignAIBindingUsageRequest
 }
 
 func (f *fakeCampaignAIAuthStateClient) IssueCampaignAISessionGrant(context.Context, *gamev1.IssueCampaignAISessionGrantRequest, ...grpc.CallOption) (*gamev1.IssueCampaignAISessionGrantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (f *fakeCampaignAIAuthStateClient) GetCampaignAIBindingUsage(context.Context, *gamev1.GetCampaignAIBindingUsageRequest, ...grpc.CallOption) (*gamev1.GetCampaignAIBindingUsageResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
+func (f *fakeCampaignAIAuthStateClient) GetCampaignAIBindingUsage(_ context.Context, req *gamev1.GetCampaignAIBindingUsageRequest, _ ...grpc.CallOption) (*gamev1.GetCampaignAIBindingUsageResponse, error) {
+	f.lastUsageReq = req
+	if f.usageErr != nil {
+		return nil, f.usageErr
+	}
+	if f.usageByAgent == nil {
+		return &gamev1.GetCampaignAIBindingUsageResponse{}, nil
+	}
+	return &gamev1.GetCampaignAIBindingUsageResponse{
+		ActiveCampaignCount: f.usageByAgent[req.GetAiAgentId()],
+	}, nil
 }
 
 func (f *fakeCampaignAIAuthStateClient) GetCampaignAIAuthState(_ context.Context, req *gamev1.GetCampaignAIAuthStateRequest, _ ...grpc.CallOption) (*gamev1.GetCampaignAIAuthStateResponse, error) {

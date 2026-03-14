@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -78,7 +77,7 @@ func (s *Service) CreateAgent(ctx context.Context, in *aiv1.CreateAgentRequest) 
 		return nil, status.Errorf(codes.Internal, "put agent: %v", err)
 	}
 
-	return &aiv1.CreateAgentResponse{Agent: agentToProto(record)}, nil
+	return &aiv1.CreateAgentResponse{Agent: s.agentProtoWithAuthState(ctx, record)}, nil
 }
 
 // ListAgents returns a page of agents owned by the caller.
@@ -105,7 +104,11 @@ func (s *Service) ListAgents(ctx context.Context, in *aiv1.ListAgentsRequest) (*
 		Agents:        make([]*aiv1.Agent, 0, len(page.Agents)),
 	}
 	for _, rec := range page.Agents {
-		resp.Agents = append(resp.Agents, agentToProto(rec))
+		proto, err := s.agentProtoWithUsage(ctx, rec)
+		if err != nil {
+			return nil, err
+		}
+		resp.Agents = append(resp.Agents, proto)
 	}
 	return resp, nil
 }
@@ -205,7 +208,7 @@ func (s *Service) ListAccessibleAgents(ctx context.Context, in *aiv1.ListAccessi
 		Agents:        make([]*aiv1.Agent, 0, end-start),
 	}
 	for _, rec := range records[start:end] {
-		resp.Agents = append(resp.Agents, agentToProto(rec))
+		resp.Agents = append(resp.Agents, s.agentProtoWithAuthState(ctx, rec))
 	}
 	return resp, nil
 }
@@ -246,7 +249,7 @@ func (s *Service) GetAccessibleAgent(ctx context.Context, in *aiv1.GetAccessible
 		// Mask inaccessible resources as not found to avoid tenant probing.
 		return nil, status.Error(codes.NotFound, "agent not found")
 	}
-	return &aiv1.GetAccessibleAgentResponse{Agent: agentToProto(agentRecord)}, nil
+	return &aiv1.GetAccessibleAgentResponse{Agent: s.agentProtoWithAuthState(ctx, agentRecord)}, nil
 }
 
 // ValidateCampaignAgentBinding verifies owner-scoped bind eligibility for one agent.
@@ -280,7 +283,16 @@ func (s *Service) ValidateCampaignAgentBinding(ctx context.Context, in *aiv1.Val
 	if agentStatusToProto(agentRecord.Status) != aiv1.AgentStatus_AGENT_STATUS_ACTIVE {
 		return nil, status.Error(codes.FailedPrecondition, "agent is not active")
 	}
-	return &aiv1.ValidateCampaignAgentBindingResponse{Agent: agentToProto(agentRecord)}, nil
+	if err := s.validateAgentAuthReferenceForProvider(
+		ctx,
+		userID,
+		agentRecord.Provider,
+		agentRecord.CredentialID,
+		agentRecord.ProviderGrantID,
+	); err != nil {
+		return nil, err
+	}
+	return &aiv1.ValidateCampaignAgentBindingResponse{Agent: s.agentProtoWithAuthState(ctx, agentRecord)}, nil
 }
 
 // UpdateAgent updates mutable fields on one user-owned agent.
@@ -364,7 +376,7 @@ func (s *Service) UpdateAgent(ctx context.Context, in *aiv1.UpdateAgentRequest) 
 		return nil, status.Errorf(codes.Internal, "put agent: %v", err)
 	}
 
-	return &aiv1.UpdateAgentResponse{Agent: agentToProto(record)}, nil
+	return &aiv1.UpdateAgentResponse{Agent: s.agentProtoWithAuthState(ctx, record)}, nil
 }
 
 // DeleteAgent deletes one user-owned agent profile.
@@ -515,21 +527,16 @@ func mapValues(values map[string]storage.AgentRecord) []storage.AgentRecord {
 }
 
 func (s *Service) ensureAgentNotBoundToActiveCampaigns(ctx context.Context, agentID string) error {
-	if s == nil || s.gameCampaignAIClient == nil {
-		return nil
-	}
 	agentID = strings.TrimSpace(agentID)
 	if agentID == "" {
 		return status.Error(codes.InvalidArgument, "agent_id is required")
 	}
 
-	usage, err := s.gameCampaignAIClient.GetCampaignAIBindingUsage(ctx, &gamev1.GetCampaignAIBindingUsageRequest{
-		AiAgentId: agentID,
-	})
+	activeCampaignCount, err := s.activeCampaignCount(ctx, agentID)
 	if err != nil {
-		return status.Errorf(codes.Internal, "get campaign ai binding usage: %v", err)
+		return err
 	}
-	if usage.GetActiveCampaignCount() > 0 {
+	if activeCampaignCount > 0 {
 		return status.Error(codes.FailedPrecondition, "agent is bound to active campaigns")
 	}
 	return nil

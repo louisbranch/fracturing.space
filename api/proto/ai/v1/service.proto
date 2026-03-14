@@ -22,6 +22,13 @@ enum AgentStatus {
   AGENT_STATUS_ACTIVE = 1;
 }
 
+enum AgentAuthState {
+  AGENT_AUTH_STATE_UNSPECIFIED = 0;
+  AGENT_AUTH_STATE_READY = 1;
+  AGENT_AUTH_STATE_AUTH_REFERENCE_REVOKED = 2;
+  AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE = 3;
+}
+
 enum ProviderGrantStatus {
   PROVIDER_GRANT_STATUS_UNSPECIFIED = 0;
   PROVIDER_GRANT_STATUS_ACTIVE = 1;
@@ -79,7 +86,9 @@ message Agent {
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
   string provider_grant_id = 10;
+  AgentAuthState auth_state = 11;
   string instructions = 12;
+  int32 active_campaign_count = 13;
 }
 
 message ProviderGrant {
