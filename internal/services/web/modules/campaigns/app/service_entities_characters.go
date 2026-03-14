@@ -48,6 +48,7 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string, opti
 			Pronouns:                strings.TrimSpace(character.Pronouns),
 			Aliases:                 append([]string(nil), character.Aliases...),
 			AvatarURL:               strings.TrimSpace(character.AvatarURL),
+			OwnedByViewer:           character.OwnedByViewer,
 			Daggerheart:             normalizeCampaignCharacterDaggerheartSummary(character.Daggerheart),
 		})
 	}

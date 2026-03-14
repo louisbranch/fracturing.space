@@ -1323,6 +1323,37 @@ func TestMountCampaignParticipantsShowsEditLinkForSelfOwnedParticipant(t *testin
 	}
 }
 
+func TestMountCampaignParticipantsHighlightsViewerParticipantCard(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []campaignapp.CampaignParticipant{
+			{ID: "p-a", UserID: "user-1", Name: "Aria", Role: "Player", CampaignAccess: "Member", Controller: "Human", AvatarURL: "/static/avatars/aria.png"},
+			{ID: "p-b", UserID: "user-2", Name: "Bram", Role: "Player", CampaignAccess: "Member", Controller: "Human", AvatarURL: "/static/avatars/bram.png"},
+		},
+	}, modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignParticipants("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `class="card bg-base-100 border border-primary shadow-sm md:card-side" data-campaign-participant-card-id="p-a" data-campaign-participant-current-user="true"`) {
+		t.Fatalf("expected viewer participant card to use primary border: %q", body)
+	}
+	if !strings.Contains(body, `class="card bg-base-100 border border-base-300 shadow-sm md:card-side" data-campaign-participant-card-id="p-b" data-campaign-participant-current-user="false"`) {
+		t.Fatalf("expected non-viewer participant card to keep base border: %q", body)
+	}
+}
+
 func TestMountCampaignParticipantsShowsCreateLinkWhenManageAllowed(t *testing.T) {
 	t.Parallel()
 
@@ -1893,6 +1924,37 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForEditableCharacters(t *tes
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing view-character marker %q: %q", marker, body)
 		}
+	}
+}
+
+func TestMountCampaignCharactersHighlightsViewerOwnedCharacterCard(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		characters: []campaignapp.CampaignCharacter{
+			{ID: "ch-a", Name: "Aria", Kind: "PC", Controller: "Ariadne", OwnedByViewer: true},
+			{ID: "ch-b", Name: "Bramble", Kind: "PC", Controller: "Scout", OwnedByViewer: false},
+		},
+	}, modulehandler.NewTestBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `class="card bg-base-100 border border-primary shadow-sm md:card-side" data-campaign-character-card-id="ch-a" data-campaign-character-owned-by-viewer="true"`) {
+		t.Fatalf("expected viewer-owned character card to use primary border: %q", body)
+	}
+	if !strings.Contains(body, `class="card bg-base-100 border border-base-300 shadow-sm md:card-side" data-campaign-character-card-id="ch-b" data-campaign-character-owned-by-viewer="false"`) {
+		t.Fatalf("expected other character card to keep base border: %q", body)
 	}
 }
 

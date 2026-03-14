@@ -97,6 +97,7 @@ type CampaignCharacter struct {
 	Pronouns                string                               `json:"pronouns"`
 	Aliases                 []string                             `json:"aliases"`
 	AvatarURL               string                               `json:"avatarUrl"`
+	OwnedByViewer           bool                                 `json:"ownedByViewer"`
 	CanEdit                 bool                                 `json:"canEdit"`
 	EditReasonCode          string                               `json:"editReasonCode"`
 	Daggerheart             *CampaignCharacterDaggerheartSummary `json:"daggerheart,omitempty"`
@@ -113,8 +114,9 @@ type CampaignCharacterDaggerheartSummary struct {
 
 // CampaignCharactersReadOptions keeps system-aware read dependencies explicit.
 type CampaignCharactersReadOptions struct {
-	System string
-	Locale language.Tag
+	System       string
+	Locale       language.Tag
+	ViewerUserID string
 }
 
 // CampaignCharacterEditor stores character edit page data.

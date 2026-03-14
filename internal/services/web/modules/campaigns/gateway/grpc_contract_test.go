@@ -278,6 +278,42 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}
 }
 
+func TestCampaignCharactersMarksViewerOwnedCharactersFromControllerParticipant(t *testing.T) {
+	t.Parallel()
+
+	participantClient := &contractParticipantClient{listResp: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{
+		{Id: "p1", UserId: "user-1", Name: "Lead", Role: statev1.ParticipantRole_PLAYER, Controller: statev1.Controller_CONTROLLER_HUMAN},
+		{Id: "p2", UserId: "user-2", Name: "Scout", Role: statev1.ParticipantRole_PLAYER, Controller: statev1.Controller_CONTROLLER_HUMAN},
+	}}}
+	characterClient := &fakeCharacterWorkflowClient{listResp: &statev1.ListCharactersResponse{Characters: []*statev1.Character{
+		{Id: "char-1", Name: "Aria", Kind: statev1.CharacterKind_PC, ParticipantId: wrapperspb.String("p1")},
+		{Id: "char-2", Name: "Bramble", Kind: statev1.CharacterKind_PC, ParticipantId: wrapperspb.String("p2")},
+	}}}
+
+	gateway := GRPCGateway{
+		Read: GRPCGatewayReadDeps{
+			Participant: participantClient,
+			Character:   characterClient,
+		},
+	}
+
+	characters, err := gateway.CampaignCharacters(context.Background(), "c1", campaignapp.CampaignCharactersReadOptions{
+		ViewerUserID: "user-1",
+	})
+	if err != nil {
+		t.Fatalf("CampaignCharacters() error = %v", err)
+	}
+	if len(characters) != 2 {
+		t.Fatalf("len(characters) = %d, want 2", len(characters))
+	}
+	if !characters[0].OwnedByViewer {
+		t.Fatalf("expected first character to be viewer-owned: %#v", characters[0])
+	}
+	if characters[1].OwnedByViewer {
+		t.Fatalf("expected second character not to be viewer-owned: %#v", characters[1])
+	}
+}
+
 func TestCampaignCharactersMapsDaggerheartSummaryWhenProfileAndCatalogResolve(t *testing.T) {
 	t.Parallel()
 

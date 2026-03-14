@@ -18,6 +18,7 @@ func mapCharactersView(items []campaignapp.CampaignCharacter) []campaignrender.C
 			Pronouns:                c.Pronouns,
 			Aliases:                 append([]string(nil), c.Aliases...),
 			AvatarURL:               c.AvatarURL,
+			OwnedByViewer:           c.OwnedByViewer,
 			CanEdit:                 c.CanEdit,
 			EditReasonCode:          c.EditReasonCode,
 			Daggerheart:             mapCharacterDaggerheartSummaryView(c.Daggerheart),

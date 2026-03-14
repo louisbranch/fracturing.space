@@ -9,7 +9,8 @@ import (
 )
 
 // mapParticipantsView converts domain participants to template view items.
-func mapParticipantsView(items []campaignapp.CampaignParticipant) []campaignrender.ParticipantView {
+func mapParticipantsView(items []campaignapp.CampaignParticipant, viewerUserID string) []campaignrender.ParticipantView {
+	viewerUserID = strings.TrimSpace(viewerUserID)
 	result := make([]campaignrender.ParticipantView, 0, len(items))
 	for _, p := range items {
 		result = append(result, campaignrender.ParticipantView{
@@ -20,6 +21,7 @@ func mapParticipantsView(items []campaignapp.CampaignParticipant) []campaignrend
 			Controller:     p.Controller,
 			Pronouns:       p.Pronouns,
 			AvatarURL:      p.AvatarURL,
+			IsViewer:       viewerUserID != "" && strings.EqualFold(strings.TrimSpace(p.UserID), viewerUserID),
 			CanEdit:        p.CanEdit,
 			EditReasonCode: p.EditReasonCode,
 		})
