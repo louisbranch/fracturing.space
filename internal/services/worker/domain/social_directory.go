@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -26,7 +25,7 @@ func NewSignupSocialDirectoryHandler(social socialDirectoryClient) *SignupSocial
 }
 
 // Handle idempotently syncs auth username identity into the social directory.
-func (h *SignupSocialDirectoryHandler) Handle(ctx context.Context, event *authv1.IntegrationOutboxEvent) error {
+func (h *SignupSocialDirectoryHandler) Handle(ctx context.Context, event OutboxEvent) error {
 	if h == nil || h.social == nil {
 		return Permanent(fmt.Errorf("social directory client is not configured"))
 	}

@@ -21,7 +21,6 @@ type Server struct {
 	health                                   *health.Server
 	stores                                   *storageBundle
 	authMc                                   *platformgrpc.ManagedConn
-	notificationsMc                          *platformgrpc.ManagedConn
 	socialMc                                 *platformgrpc.ManagedConn
 	aiMc                                     *platformgrpc.ManagedConn
 	statusMc                                 *platformgrpc.ManagedConn

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -28,7 +27,7 @@ func NewSignupSocialProfileHandler(social socialProfileClient) *SignupSocialProf
 }
 
 // Handle idempotently creates a social profile record for signup events.
-func (h *SignupSocialProfileHandler) Handle(ctx context.Context, event *authv1.IntegrationOutboxEvent) error {
+func (h *SignupSocialProfileHandler) Handle(ctx context.Context, event OutboxEvent) error {
 	if h == nil || h.social == nil {
 		return Permanent(fmt.Errorf("social profile client is not configured"))
 	}

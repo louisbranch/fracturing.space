@@ -9,6 +9,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
 	workersqlite "github.com/louisbranch/fracturing.space/internal/services/worker/storage/sqlite"
 	"google.golang.org/grpc"
 )
@@ -23,7 +24,7 @@ func TestAttemptStoreRecorder_EmptyConsumerUsesDefault(t *testing.T) {
 	err := recorder.RecordAttempt(context.Background(), Attempt{
 		EventID:      "evt-1",
 		EventType:    "auth.signup_completed",
-		Outcome:      authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED,
+		Outcome:      workerdomain.AckOutcomeSucceeded,
 		AttemptCount: 1,
 		CreatedAt:    time.Date(2026, 2, 22, 0, 20, 0, 0, time.UTC),
 	})
@@ -53,24 +54,12 @@ func TestAttemptStoreRecorder_StoresCanonicalOutcomeValues(t *testing.T) {
 
 	cases := []struct {
 		name    string
-		outcome authv1.IntegrationOutboxAckOutcome
+		outcome workerdomain.AckOutcome
 		want    string
 	}{
-		{
-			name:    "succeeded",
-			outcome: authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED,
-			want:    "succeeded",
-		},
-		{
-			name:    "retry",
-			outcome: authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY,
-			want:    "retry",
-		},
-		{
-			name:    "dead",
-			outcome: authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD,
-			want:    "dead",
-		},
+		{name: "succeeded", outcome: workerdomain.AckOutcomeSucceeded, want: "succeeded"},
+		{name: "retry", outcome: workerdomain.AckOutcomeRetry, want: "retry"},
+		{name: "dead", outcome: workerdomain.AckOutcomeDead, want: "dead"},
 	}
 
 	for i, tc := range cases {
@@ -122,11 +111,11 @@ func openTempWorkerStore(t *testing.T) *workersqlite.Store {
 func TestFanoutEventHandlers_RunsHandlersInOrder(t *testing.T) {
 	called := make([]string, 0, 2)
 	handler := fanoutEventHandlers(
-		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+		EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 			called = append(called, "first")
 			return nil
 		}),
-		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+		EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 			called = append(called, "second")
 			return nil
 		}),
@@ -146,11 +135,11 @@ func TestFanoutEventHandlers_RunsHandlersInOrder(t *testing.T) {
 func TestFanoutEventHandlers_StopsAtFirstError(t *testing.T) {
 	called := make([]string, 0, 2)
 	handler := fanoutEventHandlers(
-		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+		EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 			called = append(called, "first")
 			return errors.New("boom")
 		}),
-		EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+		EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 			called = append(called, "second")
 			return nil
 		}),
@@ -200,9 +189,7 @@ func TestSyncSocialUserDirectory_PropagatesSyncErrors(t *testing.T) {
 			{Users: []*authv1.User{{Id: "user-1", Username: "alpha"}}},
 		},
 	}
-	socialClient := &socialDirectoryBootstrapClientStub{
-		err: errors.New("boom"),
-	}
+	socialClient := &socialDirectoryBootstrapClientStub{err: errors.New("boom")}
 
 	if err := syncSocialUserDirectory(context.Background(), authClient, socialClient); err == nil {
 		t.Fatal("expected sync error")

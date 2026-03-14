@@ -260,6 +260,7 @@ messages:
   "game.campaign_invites.submit_revoke": "Revogar"
   "game.campaign_invites.title": "Convites"
   "game.campaign_invites.value_claimed": "Reivindicado"
+  "game.campaign_invites.value_declined": "Recusado"
   "game.campaign_invites.value_pending": "Pendente"
   "game.campaign_invites.value_revoked": "Revogado"
   "game.campaign_invites.value_unspecified": "Não especificado"

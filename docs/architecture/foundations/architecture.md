@@ -37,7 +37,7 @@ auth/social domain services.
 - **Notifications** (`internal/services/notifications/`): user inbox intent and channel-delivery orchestration.
 - **Status** (`internal/services/status/`): capability health and override state authority.
 - **Userhub** (`internal/services/userhub/`): experience read-model aggregation.
-- **Worker** (`internal/services/worker/`): asynchronous outbox and scheduled processing runtime.
+- **Worker** (`internal/services/worker/`): asynchronous outbox and scheduled processing runtime, including worker-owned delivery of game invite notification intents.
 - **Chat** (`internal/services/chat/`): real-time transcript delivery, stream fanout, websocket lifecycle, and AI turn relay. It is not the authority for gameplay routing or rules-affecting communication state.
 
 Each service owns transport, orchestration, domain logic, and storage adapters

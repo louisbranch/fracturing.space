@@ -11,7 +11,6 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -118,6 +117,7 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 				MethodPrefixes: []string{
 					"/game.v1.CampaignAIService/",
 					campaignv1.EventService_AppendEvent_FullMethodName,
+					"/game.v1.IntegrationService/",
 				},
 				AllowedServiceIDs: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
 			}
@@ -210,11 +210,10 @@ func (b *serverBootstrap) configureStoresAndApplier(
 
 // dependencyConns holds all outbound ManagedConns created during bootstrap.
 type dependencyConns struct {
-	auth          *platformgrpc.ManagedConn
-	notifications *platformgrpc.ManagedConn
-	social        *platformgrpc.ManagedConn
-	ai            *platformgrpc.ManagedConn
-	status        *platformgrpc.ManagedConn
+	auth   *platformgrpc.ManagedConn
+	social *platformgrpc.ManagedConn
+	ai     *platformgrpc.ManagedConn
+	status *platformgrpc.ManagedConn
 
 	// statusBindDone is closed when the background goroutine that late-binds
 	// the status reporter client exits. Callers should wait on this channel
@@ -243,19 +242,6 @@ func (b *serverBootstrap) dialDependencies(
 		return dependencyConns{}, fmt.Errorf("auth: %w", err)
 	}
 
-	notificationsMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
-		Name:             "notifications",
-		Addr:             srvEnv.NotificationsAddr,
-		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
-		StatusReporter:   reporter,
-		StatusCapability: "game.notifications.integration",
-	})
-	if err != nil {
-		authMc.Close()
-		return dependencyConns{}, fmt.Errorf("notifications: %w", err)
-	}
-
 	socialMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "social",
 		Addr:             srvEnv.SocialAddr,
@@ -266,7 +252,6 @@ func (b *serverBootstrap) dialDependencies(
 	})
 	if err != nil {
 		authMc.Close()
-		notificationsMc.Close()
 		return dependencyConns{}, fmt.Errorf("social: %w", err)
 	}
 
@@ -280,7 +265,6 @@ func (b *serverBootstrap) dialDependencies(
 	})
 	if err != nil {
 		authMc.Close()
-		notificationsMc.Close()
 		socialMc.Close()
 		return dependencyConns{}, fmt.Errorf("ai: %w", err)
 	}
@@ -298,7 +282,6 @@ func (b *serverBootstrap) dialDependencies(
 	})
 	if err != nil {
 		authMc.Close()
-		notificationsMc.Close()
 		socialMc.Close()
 		aiMc.Close()
 		return dependencyConns{}, fmt.Errorf("status: %w", err)
@@ -320,7 +303,6 @@ func (b *serverBootstrap) dialDependencies(
 
 	return dependencyConns{
 		auth:             authMc,
-		notifications:    notificationsMc,
 		social:           socialMc,
 		ai:               aiMc,
 		status:           statusMc,
@@ -438,7 +420,6 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		closeManagedConn(deps.status, "status")
 		closeManagedConn(deps.ai, "ai")
 		closeManagedConn(deps.social, "social")
-		closeManagedConn(deps.notifications, "notifications")
 		closeManagedConn(deps.auth, "auth")
 	})
 
@@ -457,7 +438,6 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		stores,
 		bundle,
 		authv1.NewAuthServiceClient(deps.auth.Conn()),
-		notificationsv1.NewNotificationServiceClient(deps.notifications.Conn()),
 		aiv1.NewAgentServiceClient(deps.ai.Conn()),
 		systemRegistry,
 		sessionGrantConfig,
@@ -482,7 +462,6 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		health:                                   healthServer,
 		stores:                                   bundle,
 		authMc:                                   deps.auth,
-		notificationsMc:                          deps.notifications,
 		socialMc:                                 deps.social,
 		aiMc:                                     deps.ai,
 		statusMc:                                 deps.status,

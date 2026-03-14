@@ -235,6 +235,65 @@ func TestCreateInvite_Success(t *testing.T) {
 	}
 }
 
+func TestCreateInvite_UsesResolvedActorParticipantIDWhenOnlyUserIdentityIsPresent(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeBatchEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1": {
+			ID:             "owner-1",
+			CampaignID:     "campaign-1",
+			UserID:         "user-1",
+			CampaignAccess: participant.CampaignAccessOwner,
+		},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "invite",
+			EntityID:    "invite-123",
+			PayloadJSON: []byte(`{"invite_id":"invite-123","participant_id":"participant-1","status":"pending","created_by_participant_id":"owner-1"}`),
+		}),
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("invite-123"),
+	}
+
+	ctx := contextWithUserID("user-1")
+	if _, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
+		CampaignId:    "campaign-1",
+		ParticipantId: "participant-1",
+	}); err != nil {
+		t.Fatalf("CreateInvite returned error: %v", err)
+	}
+
+	var payload invite.CreatePayload
+	if err := json.Unmarshal(domain.lastCommand.PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal domain command payload: %v", err)
+	}
+	if payload.CreatedByParticipantID != ids.ParticipantID("owner-1") {
+		t.Fatalf("created_by_participant_id = %q, want %q", payload.CreatedByParticipantID, "owner-1")
+	}
+}
+
 func TestCreateInvite_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
@@ -301,6 +360,66 @@ func TestCreateInvite_UsesDomainEngine(t *testing.T) {
 	}
 	if eventStore.events["campaign-1"][0].Type != event.Type("invite.created") {
 		t.Fatalf("event type = %s, want %s", eventStore.events["campaign-1"][0].Type, event.Type("invite.created"))
+	}
+}
+
+func TestCreateInvite_PersistsCreatorFromResolvedUserActor(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeBatchEventStore()
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", UserID: "user-1", CampaignAccess: participant.CampaignAccessOwner},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeSystem,
+			EntityType:  "invite",
+			EntityID:    "invite-123",
+			PayloadJSON: []byte(`{"invite_id":"invite-123","participant_id":"participant-1","status":"pending","created_by_participant_id":"owner-1"}`),
+		}),
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("invite-123"),
+	}
+
+	resp, err := svc.CreateInvite(contextWithUserID("user-1"), &statev1.CreateInviteRequest{
+		CampaignId:    "campaign-1",
+		ParticipantId: "participant-1",
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("CreateInvite response has nil invite")
+	}
+	if got := resp.Invite.GetCreatedByParticipantId(); got != "owner-1" {
+		t.Fatalf("created by participant id = %q, want %q", got, "owner-1")
+	}
+
+	var payload invite.CreatePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal command payload: %v", err)
+	}
+	if got := payload.CreatedByParticipantID.String(); got != "owner-1" {
+		t.Fatalf("command payload created_by_participant_id = %q, want %q", got, "owner-1")
 	}
 }
 

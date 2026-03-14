@@ -229,6 +229,8 @@ func campaignInviteStatusLabel(loc Localizer, value string) string {
 		return T(loc, "game.campaign_invites.value_pending")
 	case "claimed":
 		return T(loc, "game.campaign_invites.value_claimed")
+	case "declined":
+		return T(loc, "game.campaign_invites.value_declined")
 	case "revoked":
 		return T(loc, "game.campaign_invites.value_revoked")
 	default:

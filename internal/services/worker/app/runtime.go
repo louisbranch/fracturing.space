@@ -13,8 +13,11 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
 	workerstorage "github.com/louisbranch/fracturing.space/internal/services/worker/storage"
 	workersqlite "github.com/louisbranch/fracturing.space/internal/services/worker/storage/sqlite"
@@ -26,16 +29,18 @@ import (
 
 // RuntimeConfig controls worker startup, dependencies, and loop behavior.
 type RuntimeConfig struct {
-	Port          int
-	AuthAddr      string
-	SocialAddr    string
-	DBPath        string
-	Consumer      string
-	PollInterval  time.Duration
-	LeaseTTL      time.Duration
-	MaxAttempts   int
-	RetryBackoff  time.Duration
-	RetryMaxDelay time.Duration
+	Port              int
+	AuthAddr          string
+	GameAddr          string
+	NotificationsAddr string
+	SocialAddr        string
+	DBPath            string
+	Consumer          string
+	PollInterval      time.Duration
+	LeaseTTL          time.Duration
+	MaxAttempts       int
+	RetryBackoff      time.Duration
+	RetryMaxDelay     time.Duration
 }
 
 const (
@@ -71,9 +76,11 @@ type Runtime struct {
 
 	loop workerLoop
 
-	store    *workersqlite.Store
-	authMc   *platformgrpc.ManagedConn
-	socialMc *platformgrpc.ManagedConn
+	store           *workersqlite.Store
+	authMc          *platformgrpc.ManagedConn
+	gameMc          *platformgrpc.ManagedConn
+	notificationsMc *platformgrpc.ManagedConn
+	socialMc        *platformgrpc.ManagedConn
 
 	closeOnce sync.Once
 }
@@ -122,10 +129,33 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		Logf: logf,
 	})
 	if err != nil {
-		if closeErr := workerStore.Close(); closeErr != nil {
-			log.Printf("close worker sqlite store: %v", closeErr)
-		}
+		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("worker: managed conn auth: %w", err)
+	}
+
+	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "game",
+		Addr: normalized.GameAddr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: logf,
+	})
+	if err != nil {
+		closeManagedConn(authMc, "auth")
+		closeWorkerStore(workerStore)
+		return nil, fmt.Errorf("worker: managed conn game: %w", err)
+	}
+
+	notificationsMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "notifications",
+		Addr: normalized.NotificationsAddr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: logf,
+	})
+	if err != nil {
+		closeManagedConn(gameMc, "game")
+		closeManagedConn(authMc, "auth")
+		closeWorkerStore(workerStore)
+		return nil, fmt.Errorf("worker: managed conn notifications: %w", err)
 	}
 
 	socialMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
@@ -135,10 +165,10 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		Logf: logf,
 	})
 	if err != nil {
+		closeManagedConn(notificationsMc, "notifications")
+		closeManagedConn(gameMc, "game")
 		closeManagedConn(authMc, "auth")
-		if closeErr := workerStore.Close(); closeErr != nil {
-			log.Printf("close worker sqlite store: %v", closeErr)
-		}
+		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("worker: managed conn social: %w", err)
 	}
 
@@ -146,15 +176,25 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	socialClient := socialv1.NewSocialServiceClient(socialMc.Conn())
 	if err := syncSocialUserDirectory(ctx, authClient, socialClient); err != nil {
 		closeManagedConn(socialMc, "social")
+		closeManagedConn(notificationsMc, "notifications")
+		closeManagedConn(gameMc, "game")
 		closeManagedConn(authMc, "auth")
-		if closeErr := workerStore.Close(); closeErr != nil {
-			log.Printf("close worker sqlite store: %v", closeErr)
-		}
+		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("backfill social user directory: %w", err)
 	}
-	profileHandler := workerdomain.NewSignupSocialProfileHandler(socialClient)
-	directoryHandler := workerdomain.NewSignupSocialDirectoryHandler(socialClient)
-	handler := fanoutEventHandlers(directoryHandler, profileHandler)
+
+	gameInviteClient := gamev1.NewInviteServiceClient(gameMc.Conn())
+	gameCampaignClient := gamev1.NewCampaignServiceClient(gameMc.Conn())
+	gameParticipantClient := gamev1.NewParticipantServiceClient(gameMc.Conn())
+	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsMc.Conn())
+
+	signupProfileHandler := workerdomain.NewSignupSocialProfileHandler(socialClient)
+	signupDirectoryHandler := workerdomain.NewSignupSocialDirectoryHandler(socialClient)
+	signupHandler := fanoutEventHandlers(signupDirectoryHandler, signupProfileHandler)
+	inviteCreatedHandler := workerdomain.NewInviteCreatedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
+	inviteAcceptedHandler := workerdomain.NewInviteAcceptedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
+	inviteDeclinedHandler := workerdomain.NewInviteDeclinedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
+
 	loopConfig := Config{
 		Consumer:      normalized.Consumer,
 		PollInterval:  normalized.PollInterval,
@@ -164,12 +204,26 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		RetryMaxDelay: normalized.RetryMaxDelay,
 	}
 	normalizedLoopConfig := loopConfig.normalized()
+	recorder := newAttemptStoreRecorder(workerStore, normalizedLoopConfig.Consumer)
 
-	workerLoop := New(
-		authClient,
-		newAttemptStoreRecorder(workerStore, normalizedLoopConfig.Consumer),
+	authLoop := New(
+		"auth",
+		newAuthOutboxClientAdapter(authClient),
+		recorder,
 		map[string]EventHandler{
-			"auth.signup_completed": handler,
+			"auth.signup_completed": signupHandler,
+		},
+		normalizedLoopConfig,
+		nil,
+	)
+	gameLoop := New(
+		"game",
+		newGameOutboxClientAdapter(gamev1.NewIntegrationServiceClient(gameMc.Conn())),
+		recorder,
+		map[string]EventHandler{
+			gameintegration.InviteNotificationCreatedOutboxEventType:  inviteCreatedHandler,
+			gameintegration.InviteNotificationClaimedOutboxEventType:  inviteAcceptedHandler,
+			gameintegration.InviteNotificationDeclinedOutboxEventType: inviteDeclinedHandler,
 		},
 		normalizedLoopConfig,
 		nil,
@@ -178,10 +232,10 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
 		closeManagedConn(socialMc, "social")
+		closeManagedConn(notificationsMc, "notifications")
+		closeManagedConn(gameMc, "game")
 		closeManagedConn(authMc, "auth")
-		if closeErr := workerStore.Close(); closeErr != nil {
-			log.Printf("close worker sqlite store: %v", closeErr)
-		}
+		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("listen on worker port %d: %w", normalized.Port, err)
 	}
 
@@ -192,13 +246,15 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	healthServer.SetServingStatus("worker.runtime", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Runtime{
-		listener:   listener,
-		grpcServer: grpcServer,
-		health:     healthServer,
-		loop:       workerLoop,
-		store:      workerStore,
-		authMc:     authMc,
-		socialMc:   socialMc,
+		listener:        listener,
+		grpcServer:      grpcServer,
+		health:          healthServer,
+		loop:            parallelLoop{loops: []workerLoop{authLoop, gameLoop}},
+		store:           workerStore,
+		authMc:          authMc,
+		gameMc:          gameMc,
+		notificationsMc: notificationsMc,
+		socialMc:        socialMc,
 	}, nil
 }
 
@@ -287,10 +343,7 @@ func (r *Runtime) Serve(ctx context.Context) error {
 		r.shutdownGRPC()
 		loopRunErr := <-loopErr
 		grpcRunErr := <-serveErr
-		return firstNonNilErr(
-			normalizeWorkerLoopErr(loopRunErr),
-			normalizeWorkerServeErr(grpcRunErr),
-		)
+		return firstNonNilErr(normalizeWorkerLoopErr(loopRunErr), normalizeWorkerServeErr(grpcRunErr))
 	case err := <-loopErr:
 		cancel()
 		r.shutdownGRPC()
@@ -331,20 +384,26 @@ func (r *Runtime) Close() {
 			}
 		}
 		closeManagedConn(r.socialMc, "social")
+		closeManagedConn(r.notificationsMc, "notifications")
+		closeManagedConn(r.gameMc, "game")
 		closeManagedConn(r.authMc, "auth")
-		if r.store != nil {
-			if err := r.store.Close(); err != nil {
-				log.Printf("close worker sqlite store: %v", err)
-			}
-		}
+		closeWorkerStore(r.store)
 	})
 }
 
 func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
 	cfg.AuthAddr = strings.TrimSpace(cfg.AuthAddr)
+	cfg.GameAddr = strings.TrimSpace(cfg.GameAddr)
+	cfg.NotificationsAddr = strings.TrimSpace(cfg.NotificationsAddr)
 	cfg.SocialAddr = strings.TrimSpace(cfg.SocialAddr)
 	if cfg.AuthAddr == "" {
 		return RuntimeConfig{}, fmt.Errorf("auth address is required")
+	}
+	if cfg.GameAddr == "" {
+		return RuntimeConfig{}, fmt.Errorf("game address is required")
+	}
+	if cfg.NotificationsAddr == "" {
+		return RuntimeConfig{}, fmt.Errorf("notifications address is required")
 	}
 	if cfg.SocialAddr == "" {
 		return RuntimeConfig{}, fmt.Errorf("social address is required")
@@ -394,6 +453,15 @@ func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
 	}
 }
 
+func closeWorkerStore(store *workersqlite.Store) {
+	if store == nil {
+		return
+	}
+	if err := store.Close(); err != nil {
+		log.Printf("close worker sqlite store: %v", err)
+	}
+}
+
 func firstNonNilErr(errs ...error) error {
 	for _, err := range errs {
 		if err != nil {
@@ -417,7 +485,7 @@ func fanoutEventHandlers(handlers ...EventHandler) EventHandler {
 	if len(filtered) == 1 {
 		return filtered[0]
 	}
-	return EventHandlerFunc(func(ctx context.Context, event *authv1.IntegrationOutboxEvent) error {
+	return EventHandlerFunc(func(ctx context.Context, event workerdomain.OutboxEvent) error {
 		for _, handler := range filtered {
 			if err := handler.Handle(ctx, event); err != nil {
 				return err
@@ -459,15 +527,6 @@ func (r *attemptStoreRecorder) RecordAttempt(ctx context.Context, attempt Attemp
 	})
 }
 
-func canonicalOutcomeValue(outcome authv1.IntegrationOutboxAckOutcome) string {
-	switch outcome {
-	case authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED:
-		return "succeeded"
-	case authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY:
-		return "retry"
-	case authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD:
-		return "dead"
-	default:
-		return "unknown"
-	}
+func canonicalOutcomeValue(outcome workerdomain.AckOutcome) string {
+	return outcome.String()
 }

@@ -1081,6 +1081,9 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 	if got := inviteStatusLabel(statev1.InviteStatus_CLAIMED); got != "Claimed" {
 		t.Fatalf("inviteStatusLabel() = %q", got)
 	}
+	if got := inviteStatusLabel(statev1.InviteStatus_DECLINED); got != "Declined" {
+		t.Fatalf("inviteStatusLabel(declined) = %q", got)
+	}
 	if got := inviteStatusLabel(statev1.InviteStatus_PENDING); got != "Pending" {
 		t.Fatalf("inviteStatusLabel(pending) = %q", got)
 	}
