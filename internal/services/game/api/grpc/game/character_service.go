@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	defaultListCharactersPageSize = 10
-	maxListCharactersPageSize     = 10
+	defaultListCharactersPageSize = pageSmall
+	maxListCharactersPageSize     = pageSmall
 )
 
 // CharacterService implements the game.v1.CharacterService gRPC API.

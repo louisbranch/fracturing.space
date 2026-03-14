@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -38,7 +39,7 @@ func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.C
 	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
-			return workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
+			return workflow.Progress{}, grpcerror.Internal("get daggerheart profile", err)
 		}
 		profile = storage.DaggerheartCharacterProfile{CampaignID: campaignContext.ID, CharacterID: characterID}
 	}
@@ -73,7 +74,7 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Cre
 	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
-			return nil, workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
+			return nil, workflow.Progress{}, grpcerror.Internal("get daggerheart profile", err)
 		}
 		profile = defaultProfileForCharacter(campaignContext.ID, characterRecord.Kind)
 	} else {
@@ -131,7 +132,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 	profile, err := deps.GetCharacterSystemProfile(ctx, campaignContext.ID, characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
-			return nil, workflow.Progress{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
+			return nil, workflow.Progress{}, grpcerror.Internal("get daggerheart profile", err)
 		}
 		profile = defaultProfileForCharacter(campaignContext.ID, characterRecord.Kind)
 	} else {
@@ -320,14 +321,14 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "class_id %q is not found", classID)
 			}
-			return status.Errorf(codes.Internal, "get class: %v", err)
+			return grpcerror.Internal("get class", err)
 		}
 		subclass, err := content.GetDaggerheartSubclass(ctx, subclassID)
 		if err != nil {
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "subclass_id %q is not found", subclassID)
 			}
-			return status.Errorf(codes.Internal, "get subclass: %v", err)
+			return grpcerror.Internal("get subclass", err)
 		}
 		if strings.TrimSpace(subclass.ClassID) != classID {
 			return status.Errorf(codes.InvalidArgument, "subclass_id %q does not belong to class_id %q", subclassID, classID)
@@ -351,7 +352,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "ancestry_id %q is not found", ancestryID)
 			}
-			return status.Errorf(codes.Internal, "get ancestry heritage: %v", err)
+			return grpcerror.Internal("get ancestry heritage", err)
 		}
 		if !strings.EqualFold(strings.TrimSpace(ancestry.Kind), "ancestry") {
 			return status.Errorf(codes.InvalidArgument, "ancestry_id %q is not an ancestry heritage", ancestryID)
@@ -362,7 +363,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "community_id %q is not found", communityID)
 			}
-			return status.Errorf(codes.Internal, "get community heritage: %v", err)
+			return grpcerror.Internal("get community heritage", err)
 		}
 		if !strings.EqualFold(strings.TrimSpace(community.Kind), "community") {
 			return status.Errorf(codes.InvalidArgument, "community_id %q is not a community heritage", communityID)
@@ -420,7 +421,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "class_id %q is not found", profile.ClassID)
 			}
-			return status.Errorf(codes.Internal, "get class: %v", err)
+			return grpcerror.Internal("get class", err)
 		}
 		if class.StartingHP <= 0 {
 			return status.Errorf(codes.InvalidArgument, "class_id %q has invalid starting hp", profile.ClassID)
@@ -472,7 +473,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 				if errors.Is(err, storage.ErrNotFound) {
 					return status.Errorf(codes.InvalidArgument, "weapon_id %q is not found", trimmedWeaponID)
 				}
-				return status.Errorf(codes.Internal, "get weapon: %v", err)
+				return grpcerror.Internal("get weapon", err)
 			}
 			if weapon.Tier != 1 {
 				return status.Errorf(codes.InvalidArgument, "weapon_id %q must be tier 1", trimmedWeaponID)
@@ -506,7 +507,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "armor_id %q is not found", armorID)
 			}
-			return status.Errorf(codes.Internal, "get armor: %v", err)
+			return grpcerror.Internal("get armor", err)
 		}
 		if armor.Tier != 1 {
 			return status.Errorf(codes.InvalidArgument, "armor_id %q must be tier 1", armorID)
@@ -525,7 +526,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "potion_item_id %q is not found", potionItemID)
 			}
-			return status.Errorf(codes.Internal, "get potion item: %v", err)
+			return grpcerror.Internal("get potion item", err)
 		}
 
 		profile.StartingWeaponIDs = normalizedWeaponIDs
@@ -580,7 +581,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 			if errors.Is(err, storage.ErrNotFound) {
 				return status.Errorf(codes.InvalidArgument, "class_id %q is not found", profile.ClassID)
 			}
-			return status.Errorf(codes.Internal, "get class: %v", err)
+			return grpcerror.Internal("get class", err)
 		}
 		allowedDomains := make(map[string]struct{}, len(class.DomainIDs))
 		for _, domainID := range class.DomainIDs {
@@ -609,7 +610,7 @@ func applyCreationStepInput(ctx context.Context, content storage.DaggerheartCont
 				if errors.Is(err, storage.ErrNotFound) {
 					return status.Errorf(codes.InvalidArgument, "domain_card_id %q is not found", trimmed)
 				}
-				return status.Errorf(codes.Internal, "get domain card: %v", err)
+				return grpcerror.Internal("get domain card", err)
 			}
 			if card.Level != 1 {
 				return status.Errorf(codes.InvalidArgument, "domain_card_id %q is level %d, only level 1 cards are allowed at creation", trimmed, card.Level)

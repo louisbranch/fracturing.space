@@ -2,6 +2,7 @@ package checkpoint
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -138,23 +139,21 @@ func TestMemoryCheckpoint_SaveAndGetStatePointerInput(t *testing.T) {
 	}
 }
 
-func TestMemoryCheckpoint_SaveAndGetStateNonAggregate(t *testing.T) {
+func TestMemoryCheckpoint_SaveStateNonAggregatePanics(t *testing.T) {
 	store := NewMemory()
-	if err := store.SaveState(context.Background(), "camp-1", 2, "plain-state"); err != nil {
-		t.Fatalf("save state: %v", err)
-	}
-	state, seq, err := store.GetState(context.Background(), "camp-1")
-	if err != nil {
-		t.Fatalf("get state: %v", err)
-	}
-	if seq != 2 {
-		t.Fatalf("seq = %d, want %d", seq, 2)
-	}
-	value, ok := state.(string)
-	if !ok {
-		t.Fatalf("state type = %T, want string", state)
-	}
-	if value != "plain-state" {
-		t.Fatalf("state = %q, want %q", value, "plain-state")
-	}
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("expected panic for unhandled state type")
+		}
+		msg, ok := r.(string)
+		if !ok {
+			t.Fatalf("panic value type = %T, want string", r)
+		}
+		if !strings.Contains(msg, "unhandled state type") {
+			t.Fatalf("panic message = %q, want substring %q", msg, "unhandled state type")
+		}
+	}()
+	// SaveState clones on write, so the panic fires here.
+	_ = store.SaveState(context.Background(), "camp-1", 2, "plain-state")
 }

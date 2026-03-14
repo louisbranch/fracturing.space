@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -38,7 +39,7 @@ func rotateCampaignAIAuthEpoch(
 
 	payloadJSON, err := json.Marshal(campaign.AIAuthRotatePayload{Reason: reason})
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,

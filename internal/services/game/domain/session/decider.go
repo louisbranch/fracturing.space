@@ -42,6 +42,8 @@ const (
 // events, and leaves status checks to replayable state transitions rather than
 // imperative side effects.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	switch cmd.Type {
 	case CommandTypeStart:
 		if state.Started {
@@ -52,7 +54,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		var payload StartPayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
 		sessionID := strings.TrimSpace(payload.SessionID.String())
 		if sessionID == "" {
@@ -62,9 +64,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		sessionName := strings.TrimSpace(payload.SessionName)
-		if now == nil {
-			now = time.Now
-		}
 
 		normalizedPayload := StartPayload{SessionID: ids.SessionID(sessionID), SessionName: sessionName}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
@@ -82,7 +81,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		}
 		var payload EndPayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
 		sessionID := strings.TrimSpace(payload.SessionID.String())
 		if sessionID == "" {
@@ -90,9 +89,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Code:    rejectionCodeSessionIDRequired,
 				Message: "session id is required",
 			})
-		}
-		if now == nil {
-			now = time.Now
 		}
 
 		normalizedPayload := EndPayload{SessionID: ids.SessionID(sessionID)}
@@ -105,7 +101,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	case CommandTypeGateOpen:
 		var payload GateOpenedPayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
 		gateID := strings.TrimSpace(payload.GateID.String())
 		gateType := strings.TrimSpace(payload.GateType)
@@ -121,9 +117,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Code:    rejectionCodeSessionGateTypeRequired,
 				Message: "gate type is required",
 			})
-		}
-		if now == nil {
-			now = time.Now
 		}
 
 		normalizedPayload := GateOpenedPayload{GateID: ids.GateID(gateID), GateType: gateType, Reason: reason, Metadata: payload.Metadata}
@@ -179,7 +172,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	case CommandTypeSpotlightSet:
 		var payload SpotlightSetPayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: "PAYLOAD_DECODE_FAILED", Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
+			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 		}
 		spotlightType := strings.TrimSpace(payload.SpotlightType)
 		characterID := strings.TrimSpace(payload.CharacterID.String())
@@ -188,9 +181,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Code:    rejectionCodeSessionSpotlightTypeRequired,
 				Message: "spotlight type is required",
 			})
-		}
-		if now == nil {
-			now = time.Now
 		}
 
 		normalizedPayload := SpotlightSetPayload{SpotlightType: spotlightType, CharacterID: ids.CharacterID(characterID)}
@@ -215,6 +205,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		)
 
 	default:
-		return command.Reject(command.Rejection{Code: "COMMAND_TYPE_UNSUPPORTED", Message: fmt.Sprintf("command type %s is not supported by session decider", cmd.Type)})
+		return command.Reject(command.Rejection{Code: command.RejectionCodeCommandTypeUnsupported, Message: fmt.Sprintf("command type %s is not supported by session decider", cmd.Type)})
 	}
 }

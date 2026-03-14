@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -92,7 +93,7 @@ func (s *DaggerheartService) runApplyLevelUp(ctx context.Context, in *pb.Daggerh
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -117,7 +118,7 @@ func (s *DaggerheartService) runApplyLevelUp(ctx context.Context, in *pb.Daggerh
 
 	updatedProfile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart profile: %v", err)
+		return nil, grpcerror.Internal("load daggerheart profile", err)
 	}
 
 	return &pb.DaggerheartApplyLevelUpResponse{

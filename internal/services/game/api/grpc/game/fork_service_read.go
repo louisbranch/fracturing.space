@@ -2,9 +2,12 @@ package game
 
 import (
 	"context"
+	"errors"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,18 +26,15 @@ func (s *ForkService) GetLineage(ctx context.Context, in *campaignv1.GetLineageR
 	// Verify campaign exists
 	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		if isNotFound(err) {
-			return nil, status.Error(codes.NotFound, "campaign not found")
-		}
-		return nil, status.Errorf(codes.Internal, "get campaign: %v", err)
+		return nil, grpcerror.EnsureStatus(err)
 	}
 	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
 		return nil, err
 	}
 
 	metadata, err := s.stores.CampaignFork.GetCampaignForkMetadata(ctx, campaignID)
-	if err != nil && !isNotFound(err) {
-		return nil, status.Errorf(codes.Internal, "get fork metadata: %v", err)
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return nil, grpcerror.Internal("get fork metadata", err)
 	}
 
 	// Calculate depth by walking up the chain

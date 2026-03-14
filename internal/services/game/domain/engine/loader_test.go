@@ -269,6 +269,18 @@ func TestReplayStateLoader_ReturnsSnapshotLoadError(t *testing.T) {
 	}
 }
 
+func TestReplayStateLoader_RequiresStateFactory(t *testing.T) {
+	loader := ReplayStateLoader{
+		Events:      &trackingReplayEventStore{},
+		Checkpoints: checkpoint.NewMemory(),
+		Folder:      &aggregate.Folder{},
+	}
+	_, err := loader.Load(context.Background(), command.Command{CampaignID: "camp-1"})
+	if !errors.Is(err, ErrStateFactoryRequired) {
+		t.Fatalf("expected ErrStateFactoryRequired, got %v", err)
+	}
+}
+
 func TestReplayGateStateLoader_LoadSessionErrorBranches(t *testing.T) {
 	t.Run("nil reconstructed state", func(t *testing.T) {
 		loader := ReplayGateStateLoader{
@@ -276,6 +288,9 @@ func TestReplayGateStateLoader_LoadSessionErrorBranches(t *testing.T) {
 				Events:      &trackingReplayEventStore{},
 				Checkpoints: checkpoint.NewMemory(),
 				Folder:      &aggregate.Folder{},
+				StateFactory: func() any {
+					return nil
+				},
 			},
 		}
 		_, err := loader.LoadSession(context.Background(), "camp-1", "sess-1")
@@ -453,6 +468,9 @@ func TestReplayGateStateLoader_LoadScene(t *testing.T) {
 				Events:      &trackingReplayEventStore{},
 				Checkpoints: checkpoint.NewMemory(),
 				Folder:      &aggregate.Folder{},
+				StateFactory: func() any {
+					return nil
+				},
 			},
 		}
 		_, err := loader.LoadScene(context.Background(), "camp-1", "scene-1")

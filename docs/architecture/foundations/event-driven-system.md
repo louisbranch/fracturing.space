@@ -82,6 +82,20 @@ Minimum guarantees:
 - audit-only events do not accumulate dead fold handlers
 - unknown system module/adapter routing is treated as a startup or replay error
 
+## Event namespacing convention
+
+Core events and system events occupy distinct namespaces:
+
+- **Core events** use flat `<aggregate>.<action>` names (e.g. `campaign.created`, `session.started`).
+- **System events** are prefixed with `sys.<system_id>.*` (e.g. `sys.daggerheart.character.created`).
+
+System commands must carry `system_id` and `system_version` in the command envelope.
+The command registry validates that the `system_id` matches the `sys.<system_id>` prefix
+of the command type at registration time (`ErrSystemTypeNamespaceMismatch`).
+Core commands must not carry system metadata, and system commands must not emit
+core-owned event types. This namespace boundary is enforced at both registration
+and execution time.
+
 ## System extension rules
 
 When adding mechanics or systems:
@@ -91,6 +105,19 @@ When adding mechanics or systems:
 3. Route all mutating paths through shared execute-and-apply orchestration.
 4. Add fold and adapter coverage for new projection/replay intents.
 5. Update generated catalogs in `docs/events/`.
+
+## Consistency model
+
+Projection state is **eventually consistent** with the event journal, even in the inline-apply path.
+
+The inline-apply write sequence is:
+
+1. Domain engine appends events to the journal (SQLite transaction commits).
+2. Handler loops over emitted events and calls `Apply` for each one (separate SQLite transactions).
+
+Between steps 1 and 2, concurrent readers see durable events but stale projection state. This window is typically sub-millisecond under normal load. It is intentional: the event journal is authoritative and projections are derived state that can always be rebuilt.
+
+The outbox-only apply mode has a wider consistency window (seconds, governed by the outbox worker poll interval) but identical semantics — events are always durable before projections update.
 
 ## Deep references
 

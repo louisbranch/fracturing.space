@@ -2,11 +2,11 @@ package invite
 
 import "strings"
 
-// normalizeStatusLabel canonicalizes invite status labels for stable payload hashes.
+// NormalizeStatusLabel canonicalizes invite status labels for stable payload hashes.
 //
 // Invite lifecycle is shared across API, projections, and storage, so status
 // normalization prevents spelling/casing drift from creating separate replay paths.
-func normalizeStatusLabel(value string) (string, bool) {
+func NormalizeStatusLabel(value string) (string, bool) {
 	trimmed := strings.TrimSpace(value)
 	if trimmed == "" {
 		return "", false

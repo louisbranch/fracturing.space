@@ -9,6 +9,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -51,14 +52,14 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if _, err := a.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
 		return storage.SessionGate{}, status.Error(codes.FailedPrecondition, "session gate already open")
 	} else if !errors.Is(err, storage.ErrNotFound) {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "check session gate: %v", err)
+		return storage.SessionGate{}, grpcerror.Internal("check session gate", err)
 	}
 
 	gateID := strings.TrimSpace(in.GetGateId())
 	if gateID == "" {
 		gateID, err = a.idGenerator()
 		if err != nil {
-			return storage.SessionGate{}, status.Errorf(codes.Internal, "generate gate id: %v", err)
+			return storage.SessionGate{}, grpcerror.Internal("generate gate id", err)
 		}
 	}
 	reason := session.NormalizeGateReason(in.GetReason())
@@ -74,7 +75,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionGate{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -102,7 +103,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	}
 	gate, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "load session gate: %v", err)
+		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
 	}
 
 	return gate, nil
@@ -148,7 +149,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionGate{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -176,7 +177,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	}
 	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "load session gate: %v", err)
+		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
 	}
 
 	return updated, nil
@@ -216,7 +217,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionGate{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -244,7 +245,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	}
 	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
 	if err != nil {
-		return storage.SessionGate{}, status.Errorf(codes.Internal, "load session gate: %v", err)
+		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
 	}
 
 	return updated, nil

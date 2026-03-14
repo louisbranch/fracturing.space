@@ -1312,15 +1312,6 @@ func TestForkPointFromProto(t *testing.T) {
 	}
 }
 
-func TestIsNotFound(t *testing.T) {
-	if !isNotFound(storage.ErrNotFound) {
-		t.Fatal("expected true for ErrNotFound")
-	}
-	if isNotFound(nil) {
-		t.Fatal("expected false for nil")
-	}
-}
-
 func appendEvent(t *testing.T, store *fakeEventStore, evt event.Event) event.Event {
 	t.Helper()
 	stored, err := store.AppendEvent(context.Background(), evt)

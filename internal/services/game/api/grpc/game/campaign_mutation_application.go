@@ -9,12 +9,11 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type campaignUpdateInput struct {
@@ -58,7 +57,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 	actorID, actorType := resolveCommandActor(ctx)
 	payloadJSON, err := json.Marshal(campaign.UpdatePayload{Fields: fields})
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
 	_, err = executeAndApplyDomainCommand(
@@ -84,7 +83,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 
 	updated, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}
 	return updated, nil
 }
@@ -110,7 +109,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 	payload := campaign.UpdatePayload{Fields: fields}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
 	_, err = executeAndApplyDomainCommand(
@@ -136,7 +135,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 
 	updated, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}
 	return updated, nil
 }

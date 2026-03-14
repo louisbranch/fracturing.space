@@ -10,6 +10,8 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -44,6 +46,12 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if name == "" {
 		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterEmptyName, "character name is required")
 	}
+	if err := validate.MaxLength(name, "name", validate.MaxNameLen); err != nil {
+		return storage.CharacterRecord{}, err
+	}
+	if err := validate.MaxLength(in.GetNotes(), "notes", validate.MaxNotesLen); err != nil {
+		return storage.CharacterRecord{}, err
+	}
 	kind := characterKindFromProto(in.GetKind())
 	if kind == character.KindUnspecified {
 		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterInvalidKind, "character kind is required")
@@ -56,7 +64,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 
 	characterID, err := c.idGenerator()
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "generate character id: %v", err)
+		return storage.CharacterRecord{}, grpcerror.Internal("generate character id", err)
 	}
 
 	actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
@@ -118,7 +126,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	}
 	workflowPayloadJSON, err := json.Marshal(workflowPayload)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode create workflow payload: %v", err)
+		return storage.CharacterRecord{}, grpcerror.Internal("encode create workflow payload", err)
 	}
 
 	actorType := command.ActorTypeSystem
@@ -148,7 +156,7 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 
 	created, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "load character: %v", err)
+		return storage.CharacterRecord{}, grpcerror.Internal("load character", err)
 	}
 	return created, nil
 }

@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -15,8 +16,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (c participantApplication) DeleteParticipant(ctx context.Context, campaignID string, in *campaignv1.DeleteParticipantRequest) (storage.ParticipantRecord, error) {
@@ -57,21 +56,20 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	)
 	if !decision.Allowed {
 		authErr := participantPolicyDecisionError(decision.ReasonCode)
-		emitAuthzDecisionTelemetry(
-			ctx,
-			c.stores.Audit,
-			campaignID,
-			domainauthz.CapabilityManageParticipants,
-			authzDecisionDeny,
-			decision.ReasonCode,
-			policyActor,
-			authErr,
-			map[string]any{
+		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+			Store:      c.stores.Audit,
+			CampaignID: campaignID,
+			Capability: domainauthz.CapabilityManageParticipants,
+			Decision:   authzDecisionDeny,
+			ReasonCode: decision.ReasonCode,
+			Actor:      policyActor,
+			Err:        authErr,
+			ExtraAttributes: map[string]any{
 				"target_participant_id":         participantID,
 				"target_campaign_access":        strings.TrimSpace(string(current.CampaignAccess)),
 				"target_owns_active_characters": targetOwnsActiveCharacters,
 			},
-		)
+		})
 		return storage.ParticipantRecord{}, authErr
 	}
 
@@ -83,7 +81,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.ParticipantRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)

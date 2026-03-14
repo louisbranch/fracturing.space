@@ -7,6 +7,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -34,18 +35,35 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 	if overrideRequested {
 		if userID == "" {
 			err := status.Error(codes.PermissionDenied, "admin override requires authenticated principal")
-			emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionDeny, authzReasonDenyMissingIdentity, storage.ParticipantRecord{}, err, nil)
+			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+				Store:      s.stores.Audit,
+				Capability: domainauthz.CapabilityReadCampaign,
+				Decision:   authzDecisionDeny,
+				ReasonCode: authzReasonDenyMissingIdentity,
+				Err:        err,
+			})
 			return nil, err
 		}
 		if overrideReason == "" {
 			err := status.Error(codes.PermissionDenied, "admin override reason is required")
-			emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionDeny, authzReasonDenyOverrideReasonRequired, storage.ParticipantRecord{}, err, nil)
+			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+				Store:      s.stores.Audit,
+				Capability: domainauthz.CapabilityReadCampaign,
+				Decision:   authzDecisionDeny,
+				ReasonCode: authzReasonDenyOverrideReasonRequired,
+				Err:        err,
+			})
 			return nil, err
 		}
-		emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionAllow, authzReasonAllowAdminOverride, storage.ParticipantRecord{}, nil, nil)
+		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+			Store:      s.stores.Audit,
+			Capability: domainauthz.CapabilityReadCampaign,
+			Decision:   authzDecisionAllow,
+			ReasonCode: authzReasonAllowAdminOverride,
+		})
 		page, err := s.stores.Campaign.List(ctx, pageSize, in.GetPageToken())
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "list campaigns: %v", err)
+			return nil, grpcerror.Internal("list campaigns", err)
 		}
 		response := &campaignv1.ListCampaignsResponse{NextPageToken: page.NextPageToken}
 		if len(page.Campaigns) == 0 {
@@ -60,7 +78,13 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 
 	if participantID == "" && userID == "" {
 		err := status.Error(codes.PermissionDenied, "missing participant identity")
-		emitAuthzDecisionTelemetry(ctx, s.stores.Audit, "", domainauthz.CapabilityReadCampaign, authzDecisionDeny, authzReasonDenyMissingIdentity, storage.ParticipantRecord{}, err, nil)
+		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+			Store:      s.stores.Audit,
+			Capability: domainauthz.CapabilityReadCampaign,
+			Decision:   authzDecisionDeny,
+			ReasonCode: authzReasonDenyMissingIdentity,
+			Err:        err,
+		})
 		return nil, err
 	}
 	if s.stores.Participant == nil {
@@ -98,7 +122,7 @@ func (s *CampaignService) listCampaignsForUser(ctx context.Context, userID strin
 	userID = strings.TrimSpace(userID)
 	campaignIDs, err := s.stores.Participant.ListCampaignIDsByUser(ctx, userID)
 	if err != nil {
-		return nil, "", status.Errorf(codes.Internal, "list campaign IDs by user: %v", err)
+		return nil, "", grpcerror.Internal("list campaign IDs by user", err)
 	}
 	return s.listCampaignsByIDs(ctx, campaignIDs, pageSize, pageToken)
 }
@@ -107,7 +131,7 @@ func (s *CampaignService) listCampaignsForParticipant(ctx context.Context, parti
 	participantID = strings.TrimSpace(participantID)
 	campaignIDs, err := s.stores.Participant.ListCampaignIDsByParticipant(ctx, participantID)
 	if err != nil {
-		return nil, "", status.Errorf(codes.Internal, "list campaign IDs by participant: %v", err)
+		return nil, "", grpcerror.Internal("list campaign IDs by participant", err)
 	}
 	return s.listCampaignsByIDs(ctx, campaignIDs, pageSize, pageToken)
 }
@@ -148,7 +172,7 @@ func (s *CampaignService) listCampaignsByIDs(ctx context.Context, campaignIDs []
 			if errors.Is(err, storage.ErrNotFound) {
 				continue
 			}
-			return nil, "", status.Errorf(codes.Internal, "get campaign: %v", err)
+			return nil, "", grpcerror.Internal("get campaign", err)
 		}
 		campaignRecords = append(campaignRecords, record)
 	}

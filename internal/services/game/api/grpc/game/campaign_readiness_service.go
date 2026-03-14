@@ -4,6 +4,7 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
@@ -35,7 +36,7 @@ func (s *CampaignService) GetCampaignSessionReadiness(ctx context.Context, in *c
 
 	participantsByCampaign, err := s.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list participants by campaign: %v", err)
+		return nil, grpcerror.Internal("list participants by campaign", err)
 	}
 
 	charactersByCampaign, err := listAllCharactersByCampaign(ctx, s.stores.Character, campaignID)

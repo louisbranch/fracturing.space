@@ -3,6 +3,8 @@
 package grpcerror
 
 import (
+	"log/slog"
+
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	errori18n "github.com/louisbranch/fracturing.space/internal/platform/errors/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -10,6 +12,13 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// Internal logs the full error server-side and returns a sanitized gRPC
+// Internal status that does not expose implementation details to clients.
+func Internal(msg string, err error) error {
+	slog.Error(msg, "error", err)
+	return status.Error(codes.Internal, msg)
+}
 
 // NormalizeDomainWriteOptionsConfig controls default gRPC mapping behavior for
 // domain write helper options.
@@ -51,7 +60,7 @@ func NormalizeDomainWriteOptions(options *domainwrite.Options, config NormalizeD
 			if engine.IsNonRetryable(err) {
 				return status.Errorf(codes.FailedPrecondition, "%s: %v", message, err)
 			}
-			return status.Errorf(codes.Internal, "%s: %v", message, err)
+			return Internal(message, err)
 		}
 	}
 	if options.ApplyErr == nil {
@@ -63,7 +72,7 @@ func NormalizeDomainWriteOptions(options *domainwrite.Options, config NormalizeD
 			options.ApplyErr = ApplyErrorWithDomainCodePreserve(message)
 		} else {
 			options.ApplyErr = func(err error) error {
-				return status.Errorf(codes.Internal, "%s: %v", message, err)
+				return Internal(message, err)
 			}
 		}
 	}
@@ -85,6 +94,6 @@ func ApplyErrorWithDomainCodePreserve(message string) func(error) error {
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return err
 		}
-		return status.Errorf(codes.Internal, "%s: %v", message, err)
+		return Internal(message, err)
 	}
 }

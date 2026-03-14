@@ -3,6 +3,7 @@ package checkpoint
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -151,7 +152,7 @@ func cloneSnapshotState(state any) any {
 		}
 		return cloneAggregateState(*typed)
 	default:
-		return state
+		panic(fmt.Sprintf("checkpoint: unhandled state type %T — add a clone case", state))
 	}
 }
 

@@ -5,6 +5,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -14,8 +15,10 @@ import (
 )
 
 const (
+	// Scenes use a slightly larger default than pageSmall because scene lists
+	// are typically displayed in a timeline view where more items improve UX.
 	defaultListScenesPageSize = 20
-	maxListScenesPageSize     = 50
+	maxListScenesPageSize     = pageMedium
 )
 
 // GetScene returns a scene by campaign ID and scene ID.
@@ -50,7 +53,7 @@ func (s *SceneService) GetScene(ctx context.Context, in *campaignv1.GetSceneRequ
 
 	characters, err := s.stores.SceneCharacter.ListSceneCharacters(ctx, campaignID, sceneID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list scene characters: %v", err)
+		return nil, grpcerror.Internal("list scene characters", err)
 	}
 
 	return &campaignv1.GetSceneResponse{
@@ -90,7 +93,7 @@ func (s *SceneService) ListScenes(ctx context.Context, in *campaignv1.ListScenes
 
 	page, err := s.stores.Scene.ListScenes(ctx, campaignID, sessionID, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list scenes: %v", err)
+		return nil, grpcerror.Internal("list scenes", err)
 	}
 
 	response := &campaignv1.ListScenesResponse{

@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -39,7 +40,7 @@ func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, 
 	if gateID == "" {
 		gateID, err = a.idGenerator()
 		if err != nil {
-			return status.Errorf(codes.Internal, "generate gate id: %v", err)
+			return grpcerror.Internal("generate gate id", err)
 		}
 	}
 
@@ -51,7 +52,7 @@ func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, 
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -102,7 +103,7 @@ func (a sceneApplication) ResolveSceneGate(ctx context.Context, campaignID strin
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -153,7 +154,7 @@ func (a sceneApplication) AbandonSceneGate(ctx context.Context, campaignID strin
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)

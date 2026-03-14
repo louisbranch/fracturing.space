@@ -62,9 +62,7 @@ const (
 // Commands that operate on a single scene look up the target scene by ID.
 // Cross-scene commands (transfer, transition) look up multiple scenes.
 func Decide(scenes map[ids.SceneID]State, cmd command.Command, now func() time.Time) command.Decision {
-	if now == nil {
-		now = time.Now
-	}
+	now = command.NowFunc(now)
 	switch cmd.Type {
 	case CommandTypeCreate:
 		return decideCreate(cmd, now)

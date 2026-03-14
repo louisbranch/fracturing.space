@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -83,7 +84,7 @@ func (s *DaggerheartService) validateSessionOutcome(
 
 	var rollPayload action.RollResolvePayload
 	if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
-		return sessionOutcomePrelude{}, status.Errorf(codes.Internal, "decode roll payload: %v", err)
+		return sessionOutcomePrelude{}, grpcerror.Internal("decode roll payload", err)
 	}
 	rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
 	if err != nil {

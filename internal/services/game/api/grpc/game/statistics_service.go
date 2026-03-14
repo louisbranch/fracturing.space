@@ -5,6 +5,7 @@ import (
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,7 +35,7 @@ func (s *StatisticsService) GetGameStatistics(ctx context.Context, in *gamev1.Ge
 
 	stats, err := s.statistics.GetGameStatistics(ctx, since)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "get game statistics: %v", err)
+		return nil, grpcerror.Internal("get game statistics", err)
 	}
 
 	return &gamev1.GetGameStatisticsResponse{

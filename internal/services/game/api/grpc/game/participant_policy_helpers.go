@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -18,7 +19,7 @@ func countCampaignOwners(ctx context.Context, participants storage.ParticipantSt
 	}
 	records, err := participants.ListParticipantsByCampaign(ctx, campaignID)
 	if err != nil {
-		return 0, status.Errorf(codes.Internal, "list participants: %v", err)
+		return 0, grpcerror.Internal("list participants", err)
 	}
 	ownerCount := 0
 	for _, record := range records {

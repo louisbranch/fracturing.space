@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -76,7 +77,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 	if lifeStateProvided {
 		beforeValue, err := daggerheart.NormalizeLifeState(lifeStateBefore)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "invalid stored life_state: %v", err)
+			return nil, grpcerror.Internal("invalid stored life_state", err)
 		}
 		afterValue, err := daggerheart.NormalizeLifeState(lifeStateAfter)
 		if err != nil {
@@ -130,7 +131,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 	if len(normalizedAdd) > 0 || len(normalizedRemove) > 0 {
 		before, err = daggerheart.NormalizeConditions(state.Conditions)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+			return nil, grpcerror.Internal("invalid stored conditions", err)
 		}
 
 		afterSet := make(map[string]struct{}, len(before)+len(normalizedAdd))
@@ -150,7 +151,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 		}
 		after, err = daggerheart.NormalizeConditions(afterList)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "invalid condition set: %v", err)
+			return nil, grpcerror.Internal("invalid condition set", err)
 		}
 
 		added, removed = daggerheart.DiffConditions(before, after)
@@ -191,7 +192,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 		}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
+			return nil, grpcerror.Internal("encode condition payload", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    ids.CampaignID(campaignID),
@@ -220,7 +221,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 		}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
+			return nil, grpcerror.Internal("encode character state payload", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    ids.CampaignID(campaignID),
@@ -243,7 +244,7 @@ func (s *DaggerheartService) runApplyConditions(ctx context.Context, in *pb.Dagg
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+		return nil, grpcerror.Internal("load daggerheart state", err)
 	}
 
 	return &pb.DaggerheartApplyConditionsResponse{
@@ -334,7 +335,7 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 	}
 	before, err := daggerheart.NormalizeConditions(adversary.Conditions)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+		return nil, grpcerror.Internal("invalid stored conditions", err)
 	}
 
 	afterSet := make(map[string]struct{}, len(before)+len(normalizedAdd))
@@ -354,7 +355,7 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 	}
 	after, err := daggerheart.NormalizeConditions(afterList)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "invalid condition set: %v", err)
+		return nil, grpcerror.Internal("invalid condition set", err)
 	}
 
 	added, removed := daggerheart.DiffConditions(before, after)
@@ -387,7 +388,7 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
+		return nil, grpcerror.Internal("encode condition payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -413,7 +414,7 @@ func (s *DaggerheartService) runApplyAdversaryConditions(ctx context.Context, in
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart adversary: %v", err)
+		return nil, grpcerror.Internal("load daggerheart adversary", err)
 	}
 
 	return &pb.DaggerheartApplyAdversaryConditionsResponse{
@@ -492,7 +493,7 @@ func (s *DaggerheartService) runApplyGmMove(ctx context.Context, in *pb.Daggerhe
 		payload := daggerheart.GMFearSetPayload{After: &gmFearAfter, Reason: "gm_move"}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "encode gm fear payload: %v", err)
+			return nil, grpcerror.Internal("encode gm fear payload", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    ids.CampaignID(campaignID),

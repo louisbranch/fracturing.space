@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
@@ -102,7 +103,7 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 		}
 		var rollPayload action.RollResolvePayload
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
-			return nil, status.Errorf(codes.Internal, "decode damage roll payload: %v", err)
+			return nil, grpcerror.Internal("decode damage roll payload", err)
 		}
 		rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
 		if err != nil {
@@ -139,7 +140,7 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
@@ -164,7 +165,7 @@ func (s *DaggerheartService) runApplyDamage(ctx context.Context, in *pb.Daggerhe
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+		return nil, grpcerror.Internal("load daggerheart state", err)
 	}
 	return &pb.DaggerheartApplyDamageResponse{
 		CharacterId: characterID,
@@ -252,7 +253,7 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 		}
 		var rollPayload action.RollResolvePayload
 		if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
-			return nil, status.Errorf(codes.Internal, "decode damage roll payload: %v", err)
+			return nil, grpcerror.Internal("decode damage roll payload", err)
 		}
 		rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
 		if err != nil {
@@ -292,7 +293,7 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 	requestID := grpcmeta.RequestIDFromContext(ctx)
@@ -317,7 +318,7 @@ func (s *DaggerheartService) runApplyAdversaryDamage(ctx context.Context, in *pb
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart adversary: %v", err)
+		return nil, grpcerror.Internal("load daggerheart adversary", err)
 	}
 
 	return &pb.DaggerheartApplyAdversaryDamageResponse{

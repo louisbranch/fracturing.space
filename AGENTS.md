@@ -49,6 +49,7 @@ Rules:
 - Return rich errors with context; reserve sentinel errors for real branching needs.
 - Keep functions small and intention-revealing; optimize readability before cleverness.
 - Inject time/IO/randomness dependencies for deterministic tests.
+- `_ = json.Marshal(v)` (or `payloadJSON, _ := json.Marshal(v)`) is intentional for struct types where marshal cannot fail. This is a project convention, not a bug. A `MustMarshalJSON` helper in `domain/command/` exists for callers that prefer an explicit panic over a silent discard.
 
 ## Testing Policy (Meaningful Over Ritual)
 

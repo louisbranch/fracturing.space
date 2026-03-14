@@ -47,3 +47,41 @@ func TestRequiredID(t *testing.T) {
 		})
 	}
 }
+
+func TestMaxLength(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   string
+		field   string
+		maxLen  int
+		wantErr bool
+	}{
+		{name: "within limit", value: "hello", field: "name", maxLen: 10},
+		{name: "exact limit", value: "hello", field: "name", maxLen: 5},
+		{name: "exceeds limit", value: "hello!", field: "name", maxLen: 5, wantErr: true},
+		{name: "empty passes", value: "", field: "name", maxLen: 5},
+		{name: "zero limit blocks non-empty", value: "a", field: "name", maxLen: 0, wantErr: true},
+		{name: "zero limit allows empty", value: "", field: "name", maxLen: 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validate.MaxLength(tt.value, tt.field, tt.maxLen)
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				st, ok := status.FromError(err)
+				if !ok {
+					t.Fatalf("expected gRPC status error, got %T", err)
+				}
+				if st.Code() != codes.InvalidArgument {
+					t.Fatalf("code = %v, want InvalidArgument", st.Code())
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}

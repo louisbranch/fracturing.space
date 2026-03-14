@@ -185,7 +185,7 @@ func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
 			return Command{}, ErrSystemMetadataRequired
 		}
 		if err := naming.ValidateSystemNamespace(string(cmd.Type), cmd.SystemID); err != nil {
-			return Command{}, fmt.Errorf("%w: %v", ErrSystemTypeNamespaceMismatch, err)
+			return Command{}, fmt.Errorf("%w: %w", ErrSystemTypeNamespaceMismatch, err)
 		}
 	case OwnerCore:
 		if cmd.SystemID != "" || cmd.SystemVersion != "" {

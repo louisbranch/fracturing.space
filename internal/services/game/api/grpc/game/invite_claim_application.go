@@ -11,6 +11,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -63,17 +64,17 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	})
 	if err != nil {
 		if errors.Is(err, joingrant.ErrVerifierNotConfigured) {
-			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "join grant validation is not configured: %v", err)
+			return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("join grant validation is not configured", err)
 		}
 		if apperrors.GetCode(err) != apperrors.CodeUnknown {
 			return storage.InviteRecord{}, storage.ParticipantRecord{}, err
 		}
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "validate join grant: %v", err)
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("validate join grant", err)
 	}
 	if a.stores.ClaimIndex != nil {
 		claim, err := a.stores.ClaimIndex.GetParticipantClaim(ctx, campaignID, userID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load participant claim: %v", err)
+			return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load participant claim", err)
 		}
 		if err == nil && claim.ParticipantID != inv.ParticipantID {
 			return storage.InviteRecord{}, storage.ParticipantRecord{}, apperrors.WithMetadata(
@@ -88,23 +89,23 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 	claimEvent, err := findInviteClaimByJTI(ctx, a.stores.Event, campaignID, claims.JWTID)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "lookup join grant: %v", err)
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("lookup join grant", err)
 	}
 	if claimEvent != nil {
 		var payload invite.ClaimPayload
 		if err := json.Unmarshal(claimEvent.PayloadJSON, &payload); err != nil {
-			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "decode prior claim: %v", err)
+			return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("decode prior claim", err)
 		}
 		if payload.InviteID != ids.InviteID(inv.ID) || payload.UserID != ids.UserID(userID) {
 			return storage.InviteRecord{}, storage.ParticipantRecord{}, apperrors.New(apperrors.CodeInviteJoinGrantUsed, "join grant already used")
 		}
 		updatedInvite, err := a.stores.Invite.GetInvite(ctx, inv.ID)
 		if err != nil {
-			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load invite: %v", err)
+			return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load invite", err)
 		}
 		updatedParticipant, err := a.stores.Participant.GetParticipant(ctx, campaignID, inv.ParticipantID)
 		if err != nil {
-			return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load participant: %v", err)
+			return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load participant", err)
 		}
 		return updatedInvite, updatedParticipant, nil
 	}
@@ -132,7 +133,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode participant payload: %v", err)
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode participant payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -167,7 +168,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 	claimJSON, err := json.Marshal(claimPayload)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode invite payload: %v", err)
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode invite payload", err)
 	}
 	actorType = command.ActorTypeSystem
 	if actorID != "" {
@@ -198,11 +199,11 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 
 	updatedInvite, err := a.stores.Invite.GetInvite(ctx, inv.ID)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load invite: %v", err)
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load invite", err)
 	}
 	updatedParticipant, err := a.stores.Participant.GetParticipant(ctx, campaignID, seat.ID)
 	if err != nil {
-		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load participant: %v", err)
+		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load participant", err)
 	}
 
 	return updatedInvite, updatedParticipant, nil

@@ -11,6 +11,8 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -26,6 +28,13 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	case campaignv1.GmMode_GM_MODE_UNSPECIFIED, campaignv1.GmMode_AI, campaignv1.GmMode_HUMAN, campaignv1.GmMode_HYBRID:
 	default:
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "campaign gm mode is invalid")
+	}
+
+	if err := validate.MaxLength(in.GetName(), "name", validate.MaxNameLen); err != nil {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
+	}
+	if err := validate.MaxLength(in.GetThemePrompt(), "theme prompt", validate.MaxPromptLen); err != nil {
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
 	}
 
 	input := campaign.CreateInput{
@@ -56,12 +65,12 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 
 	campaignID, err := c.idGenerator()
 	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate campaign id: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("generate campaign id", err)
 	}
 
 	creatorID, err := c.idGenerator()
 	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("generate participant id", err)
 	}
 
 	campaignPayload := campaign.CreatePayload{
@@ -118,7 +127,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	if normalized.GmMode == campaign.GmModeAI || normalized.GmMode == campaign.GmModeHybrid {
 		aiParticipantID, err := c.idGenerator()
 		if err != nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate ai participant id: %v", err)
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("generate ai participant id", err)
 		}
 		participantPayloads = append(participantPayloads, participant.JoinPayload{
 			ParticipantID:  ids.ParticipantID(aiParticipantID),
@@ -136,7 +145,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		Participants: participantPayloads,
 	})
 	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode create workflow payload: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode create workflow payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -163,12 +172,12 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 
 	ownerParticipant, err := c.stores.Participant.GetParticipant(ctx, campaignID, creatorID)
 	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load owner participant: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load owner participant", err)
 	}
 
 	created, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load campaign", err)
 	}
 
 	return created, ownerParticipant, nil

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -182,7 +183,7 @@ func mapContentErr(action string, err error) error {
 	if errors.Is(err, storage.ErrNotFound) {
 		return status.Error(codes.NotFound, "content not found")
 	}
-	return status.Errorf(codes.Internal, "%s: %v", action, err)
+	return grpcerror.Internal(action, err)
 }
 
 func toProtoDaggerheartClass(class storage.DaggerheartClass) *pb.DaggerheartClass {

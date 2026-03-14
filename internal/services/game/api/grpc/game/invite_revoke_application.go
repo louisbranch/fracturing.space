@@ -7,6 +7,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -47,7 +48,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	payload := invite.RevokePayload{InviteID: ids.InviteID(inv.ID)}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.InviteRecord{}, status.Errorf(codes.Internal, "encode invite payload: %v", err)
+		return storage.InviteRecord{}, grpcerror.Internal("encode invite payload", err)
 	}
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
@@ -75,7 +76,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 
 	updated, err := a.stores.Invite.GetInvite(ctx, inv.ID)
 	if err != nil {
-		return storage.InviteRecord{}, status.Errorf(codes.Internal, "load invite: %v", err)
+		return storage.InviteRecord{}, grpcerror.Internal("load invite", err)
 	}
 
 	return updated, nil

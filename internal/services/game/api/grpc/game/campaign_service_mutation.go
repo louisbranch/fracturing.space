@@ -25,10 +25,16 @@ func (s *CampaignService) UpdateCampaign(ctx context.Context, in *campaignv1.Upd
 	var update campaignUpdateInput
 	if name := in.GetName(); name != nil {
 		value := name.GetValue()
+		if err := validate.MaxLength(value, "name", validate.MaxNameLen); err != nil {
+			return nil, err
+		}
 		update.Name = &value
 	}
 	if themePrompt := in.GetThemePrompt(); themePrompt != nil {
 		value := themePrompt.GetValue()
+		if err := validate.MaxLength(value, "theme prompt", validate.MaxPromptLen); err != nil {
+			return nil, err
+		}
 		update.ThemePrompt = &value
 	}
 	switch locale := in.GetLocale(); locale {

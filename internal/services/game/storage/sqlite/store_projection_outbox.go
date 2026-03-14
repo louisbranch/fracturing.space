@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -12,6 +13,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+// enqueueProjectionApplyOutbox inserts a pending outbox row for the given event
+// inside the caller's transaction. This must be called within the same tx that
+// appends the event so the journal entry and its outbox work item are committed
+// atomically — see AppendEvent and BatchAppendEvents.
 func (s *Store) enqueueProjectionApplyOutbox(ctx context.Context, tx *sql.Tx, evt event.Event) error {
 	if !s.projectionApplyOutboxEnabled {
 		return nil
@@ -90,6 +95,11 @@ func (s *Store) ApplyProjectionEventExactlyOnce(
 				}
 				continue
 			}
+			slog.Warn("projection apply BUSY retries exhausted",
+				"campaign_id", evt.CampaignID,
+				"seq", evt.Seq,
+				"retries", attempt,
+			)
 			if lastBusyErr != nil {
 				return false, fmt.Errorf("projection apply checkpoint %s/%d remained busy: %w", evt.CampaignID, evt.Seq, lastBusyErr)
 			}
@@ -173,7 +183,7 @@ func (s *Store) tryApplyProjectionEventExactlyOnce(
 		return false, false, nil, nil
 	}
 
-	if err := apply(ctx, evt, s.withTx(tx)); err != nil {
+	if err := apply(ctx, evt, s.txStore(tx)); err != nil {
 		return false, false, nil, err
 	}
 

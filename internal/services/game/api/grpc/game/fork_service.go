@@ -8,10 +8,10 @@ import (
 )
 
 const (
-	defaultListForksPageSize = 10
-	maxListForksPageSize     = 50
-	forkEventPageSize        = 200
-	forkSnapshotPageSize     = 200
+	defaultListForksPageSize = pageSmall
+	maxListForksPageSize     = pageMedium
+	forkEventPageSize        = pageLarge
+	forkSnapshotPageSize     = pageLarge
 )
 
 // ForkService implements the game.v1.ForkService gRPC API.

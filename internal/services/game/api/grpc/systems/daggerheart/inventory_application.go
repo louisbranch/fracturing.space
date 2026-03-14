@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -89,7 +90,7 @@ func (s *DaggerheartService) runUpdateGold(ctx context.Context, in *pb.Daggerhea
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	if err := s.executeDomainCommand(ctx, campaignID, characterID,
@@ -100,7 +101,7 @@ func (s *DaggerheartService) runUpdateGold(ctx context.Context, in *pb.Daggerhea
 
 	updatedProfile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart profile: %v", err)
+		return nil, grpcerror.Internal("load daggerheart profile", err)
 	}
 	return &pb.DaggerheartUpdateGoldResponse{
 		CharacterId: characterID,
@@ -141,7 +142,7 @@ func (s *DaggerheartService) runAcquireDomainCard(ctx context.Context, in *pb.Da
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	if err := s.executeDomainCommand(ctx, campaignID, characterID,
@@ -185,7 +186,7 @@ func (s *DaggerheartService) runSwapEquipment(ctx context.Context, in *pb.Dagger
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	if err := s.executeDomainCommand(ctx, campaignID, characterID,
@@ -227,7 +228,7 @@ func (s *DaggerheartService) runUseConsumable(ctx context.Context, in *pb.Dagger
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	if err := s.executeDomainCommand(ctx, campaignID, characterID,
@@ -269,7 +270,7 @@ func (s *DaggerheartService) runAcquireConsumable(ctx context.Context, in *pb.Da
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	if err := s.executeDomainCommand(ctx, campaignID, characterID,

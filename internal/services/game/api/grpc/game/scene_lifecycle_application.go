@@ -8,13 +8,13 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in *campaignv1.CreateSceneRequest) (string, error) {
@@ -30,10 +30,20 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
 		return "", err
 	}
+	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
+		return "", err
+	}
+
+	if err := validate.MaxLength(in.GetName(), "name", validate.MaxNameLen); err != nil {
+		return "", err
+	}
+	if err := validate.MaxLength(in.GetDescription(), "description", validate.MaxDescriptionLen); err != nil {
+		return "", err
+	}
 
 	sceneID, err := a.idGenerator()
 	if err != nil {
-		return "", status.Errorf(codes.Internal, "generate scene id: %v", err)
+		return "", grpcerror.Internal("generate scene id", err)
 	}
 
 	charIDs := make([]ids.CharacterID, 0, len(in.GetCharacterIds()))
@@ -51,7 +61,7 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return "", status.Errorf(codes.Internal, "encode payload: %v", err)
+		return "", grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -94,6 +104,15 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
+	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
+		return err
+	}
+	if err := validate.MaxLength(in.GetName(), "name", validate.MaxNameLen); err != nil {
+		return err
+	}
+	if err := validate.MaxLength(in.GetDescription(), "description", validate.MaxDescriptionLen); err != nil {
+		return err
+	}
 
 	payload := scene.UpdatePayload{
 		SceneID:     ids.SceneID(sceneID),
@@ -102,7 +121,7 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -141,6 +160,9 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
+	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
+		return err
+	}
 
 	payload := scene.EndPayload{
 		SceneID: ids.SceneID(sceneID),
@@ -148,7 +170,7 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -187,10 +209,19 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageSessions, c); err != nil {
 		return "", err
 	}
+	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
+		return "", err
+	}
+	if err := validate.MaxLength(in.GetName(), "name", validate.MaxNameLen); err != nil {
+		return "", err
+	}
+	if err := validate.MaxLength(in.GetDescription(), "description", validate.MaxDescriptionLen); err != nil {
+		return "", err
+	}
 
 	newSceneID, err := a.idGenerator()
 	if err != nil {
-		return "", status.Errorf(codes.Internal, "generate scene id: %v", err)
+		return "", grpcerror.Internal("generate scene id", err)
 	}
 
 	payload := scene.TransitionPayload{
@@ -201,7 +232,7 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return "", status.Errorf(codes.Internal, "encode payload: %v", err)
+		return "", grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)

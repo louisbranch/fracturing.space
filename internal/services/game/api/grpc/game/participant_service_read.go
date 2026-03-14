@@ -5,6 +5,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
@@ -39,7 +40,7 @@ func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv
 
 	page, err := s.stores.Participant.ListParticipants(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list participants: %v", err)
+		return nil, grpcerror.Internal("list participants", err)
 	}
 
 	response := &campaignv1.ListParticipantsResponse{

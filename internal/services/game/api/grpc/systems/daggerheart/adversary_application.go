@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -85,7 +86,7 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 
 	adversaryID, err := id.NewID()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "generate adversary id: %v", err)
+		return nil, grpcerror.Internal("generate adversary id", err)
 	}
 
 	payload := daggerheart.AdversaryCreatePayload{
@@ -105,7 +106,7 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
+		return nil, grpcerror.Internal("encode adversary payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -131,7 +132,7 @@ func (s *DaggerheartService) runCreateAdversary(ctx context.Context, in *pb.Dagg
 
 	created, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load adversary: %v", err)
+		return nil, grpcerror.Internal("load adversary", err)
 	}
 
 	return &pb.DaggerheartCreateAdversaryResponse{
@@ -250,7 +251,7 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
+		return nil, grpcerror.Internal("encode adversary payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -276,7 +277,7 @@ func (s *DaggerheartService) runUpdateAdversary(ctx context.Context, in *pb.Dagg
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load adversary: %v", err)
+		return nil, grpcerror.Internal("load adversary", err)
 	}
 
 	return &pb.DaggerheartUpdateAdversaryResponse{
@@ -331,7 +332,7 @@ func (s *DaggerheartService) runDeleteAdversary(ctx context.Context, in *pb.Dagg
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode adversary payload: %v", err)
+		return nil, grpcerror.Internal("encode adversary payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -474,7 +475,7 @@ func (s *DaggerheartService) loadAdversaryForSession(ctx context.Context, campai
 		if errors.Is(err, storage.ErrNotFound) {
 			return storage.DaggerheartAdversary{}, status.Error(codes.NotFound, "adversary not found")
 		}
-		return storage.DaggerheartAdversary{}, status.Errorf(codes.Internal, "load adversary: %v", err)
+		return storage.DaggerheartAdversary{}, grpcerror.Internal("load adversary", err)
 	}
 	if adversary.SessionID != "" && adversary.SessionID != sessionID {
 		return storage.DaggerheartAdversary{}, status.Error(codes.FailedPrecondition, "adversary is not in session")

@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
@@ -83,7 +84,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 
 	var rollPayload action.RollResolvePayload
 	if err := json.Unmarshal(rollEvent.PayloadJSON, &rollPayload); err != nil {
-		return nil, status.Errorf(codes.Internal, "decode roll payload: %v", err)
+		return nil, grpcerror.Internal("decode roll payload", err)
 	}
 	rollMetadata, err := decodeRollSystemMetadata(rollPayload.SystemData)
 	if err != nil {
@@ -132,7 +133,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 
 	alreadyApplied, err := s.outcomeAlreadyAppliedForSessionRequest(ctx, campaignID, sessionID, in.GetRollSeq(), rollRequestID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "check outcome applied: %v", err)
+		return nil, grpcerror.Internal("check outcome applied", err)
 	}
 	if alreadyApplied {
 		if requiresComplication {
@@ -162,14 +163,14 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 			campaignID,
 		)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "check gm fear applied: %v", err)
+			return nil, grpcerror.Internal("check gm fear applied", err)
 		}
 	}
 
 	if gmFearDelta > 0 && !gmFearAlreadyApplied {
 		currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Errorf(codes.Internal, "load gm fear: %v", err)
+			return nil, grpcerror.Internal("load gm fear", err)
 		}
 		beforeFear := currentSnap.GMFear
 		before, after, err := daggerheart.ApplyGMFearGain(beforeFear, gmFearDelta)
@@ -180,7 +181,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 		payload := daggerheart.GMFearSetPayload{After: &after}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "encode gm fear payload: %v", err)
+			return nil, grpcerror.Internal("encode gm fear payload", err)
 		}
 
 		if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
@@ -239,7 +240,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 				target,
 			)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "check character state patch applied: %v", err)
+				return nil, grpcerror.Internal("check character state patch applied", err)
 			}
 			if !characterPatchAlreadyApplied {
 				payload := daggerheart.CharacterStatePatchPayload{
@@ -251,7 +252,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 				}
 				payloadJSON, err := json.Marshal(payload)
 				if err != nil {
-					return nil, status.Errorf(codes.Internal, "encode character state payload: %v", err)
+					return nil, grpcerror.Internal("encode character state payload", err)
 				}
 				if err := s.executeAndApplyDaggerheartSystemCommand(ctx, daggerheartSystemCommandInput{
 					campaignID:      campaignID,
@@ -319,7 +320,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode outcome payload: %v", err)
+		return nil, grpcerror.Internal("encode outcome payload", err)
 	}
 
 	cmd := commandbuild.CoreSystem(commandbuild.CoreSystemInput{
@@ -353,7 +354,7 @@ func (s *DaggerheartService) runApplyRollOutcome(ctx context.Context, in *pb.App
 	if gmFearDelta > 0 {
 		currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "load gm fear snapshot: %v", err)
+			return nil, grpcerror.Internal("load gm fear snapshot", err)
 		}
 		value := int32(currentSnap.GMFear)
 		response.Updated.GmFear = &value

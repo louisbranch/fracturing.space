@@ -3,8 +3,10 @@ package game
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
@@ -19,7 +21,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const readinessCharacterPageSize = 200
+const readinessCharacterPageSize = pageLarge
 
 func listAllCharactersByCampaign(ctx context.Context, store storage.CharacterStore, campaignID string) ([]storage.CharacterRecord, error) {
 	if store == nil {
@@ -32,7 +34,7 @@ func listAllCharactersByCampaign(ctx context.Context, store storage.CharacterSto
 	for {
 		page, err := store.ListCharacters(ctx, campaignID, readinessCharacterPageSize, pageToken)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "list characters: %v", err)
+			return nil, grpcerror.Internal("list characters", err)
 		}
 		characters = append(characters, page.Characters...)
 
@@ -59,7 +61,7 @@ func campaignHasActiveSession(ctx context.Context, store storage.SessionStore, c
 	if errors.Is(err, storage.ErrNotFound) {
 		return false, nil
 	}
-	return false, status.Errorf(codes.Internal, "check active session: %v", err)
+	return false, grpcerror.Internal("check active session", err)
 }
 
 func campaignReadinessAggregateState(
@@ -119,7 +121,7 @@ func campaignReadinessAggregateState(
 				if errors.Is(err, storage.ErrNotFound) {
 					continue
 				}
-				return aggregate.State{}, status.Errorf(codes.Internal, "get daggerheart character profile %s: %v", characterID, err)
+				return aggregate.State{}, grpcerror.Internal(fmt.Sprintf("get daggerheart character profile %s", characterID), err)
 			}
 			characterState.SystemProfile = daggerheartgrpc.SystemProfileMap(profile)
 			state.Characters[characterID] = characterState

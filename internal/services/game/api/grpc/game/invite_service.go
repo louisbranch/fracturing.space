@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	defaultListInvitesPageSize = 10
-	maxListInvitesPageSize     = 10
+	defaultListInvitesPageSize = pageSmall
+	maxListInvitesPageSize     = pageSmall
 )
 
 // InviteService implements the game.v1.InviteService gRPC API.

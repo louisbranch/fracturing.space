@@ -90,6 +90,12 @@ func (a *Adapter) buildRouter() *module.AdapterRouter {
 	return r
 }
 
+// Convention: handlers that store entity IDs directly (adversary CRUD, profile
+// updates) apply strings.TrimSpace to guard against whitespace from upstream
+// serialization. Handlers that delegate to applyStatePatch pass IDs as-is
+// because the underlying store layer normalizes them. If a new handler stores
+// an ID directly, follow the trim convention.
+
 func (a *Adapter) handleDamageApplied(ctx context.Context, evt event.Event, payload DamageAppliedPayload) error {
 	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), payload.Hp, nil, nil, nil, payload.Armor, nil)
 }

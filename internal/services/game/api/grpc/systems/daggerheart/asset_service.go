@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -36,7 +37,7 @@ func (s *DaggerheartAssetService) GetAssetMap(ctx context.Context, in *pb.GetDag
 
 	assetMap, err := buildDaggerheartAssetMap(ctx, store, in.GetLocale())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "asset map pipeline: %v", err)
+		return nil, grpcerror.Internal("asset map pipeline", err)
 	}
 	return &pb.GetDaggerheartAssetMapResponse{AssetMap: assetMap}, nil
 }

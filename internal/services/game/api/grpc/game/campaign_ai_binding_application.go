@@ -8,6 +8,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -38,7 +39,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 
 	payloadJSON, err := json.Marshal(campaign.AIBindPayload{AIAgentID: strings.TrimSpace(aiAgentID)})
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
@@ -67,7 +68,7 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 
 	updated, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}
 	return updated, nil
 }
@@ -140,7 +141,7 @@ func clearCampaignAIBindingByCommand(
 ) (storage.CampaignRecord, error) {
 	payloadJSON, err := json.Marshal(campaign.AIUnbindPayload{})
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -168,7 +169,7 @@ func clearCampaignAIBindingByCommand(
 
 	updated, err := stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}
 	return updated, nil
 }

@@ -9,6 +9,8 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -54,6 +56,9 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if name == "" {
 		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantEmptyDisplayName, "name is required")
 	}
+	if err := validate.MaxLength(name, "name", validate.MaxNameLen); err != nil {
+		return storage.ParticipantRecord{}, err
+	}
 	role := participantRoleFromProto(in.GetRole())
 	if role == participant.RoleUnspecified {
 		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantInvalidRole, "participant role is required")
@@ -66,7 +71,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 
 	participantID, err := c.idGenerator()
 	if err != nil {
-		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "generate participant id: %v", err)
+		return storage.ParticipantRecord{}, grpcerror.Internal("generate participant id", err)
 	}
 	avatarSetID := strings.TrimSpace(in.GetAvatarSetId())
 	avatarAssetID := strings.TrimSpace(in.GetAvatarAssetId())
@@ -96,7 +101,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.ParticipantRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -125,7 +130,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 
 	created, err := c.stores.Participant.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
-		return storage.ParticipantRecord{}, status.Errorf(codes.Internal, "load participant: %v", err)
+		return storage.ParticipantRecord{}, grpcerror.Internal("load participant", err)
 	}
 
 	return created, nil

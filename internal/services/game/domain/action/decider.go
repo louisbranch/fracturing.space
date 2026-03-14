@@ -2,6 +2,7 @@ package action
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -58,7 +59,12 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 func decideRollResolve(cmd command.Command, now func() time.Time) command.Decision {
 	var payload RollResolvePayload
-	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    command.RejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
 	requestID := strings.TrimSpace(payload.RequestID)
 	if requestID == "" {
 		return command.Reject(command.Rejection{
@@ -77,7 +83,12 @@ func decideRollResolve(cmd command.Command, now func() time.Time) command.Decisi
 
 func decideOutcomeApply(state State, cmd command.Command, now func() time.Time) command.Decision {
 	var payload OutcomeApplyPayload
-	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    command.RejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
 	requestID := strings.TrimSpace(payload.RequestID)
 	if requestID == "" {
 		return command.Reject(command.Rejection{
@@ -128,7 +139,12 @@ func decideOutcomeApply(state State, cmd command.Command, now func() time.Time) 
 
 func decideOutcomeReject(cmd command.Command, now func() time.Time) command.Decision {
 	var payload OutcomeRejectPayload
-	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    command.RejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
 	requestID := strings.TrimSpace(payload.RequestID)
 	if requestID == "" {
 		return command.Reject(command.Rejection{
@@ -147,7 +163,12 @@ func decideOutcomeReject(cmd command.Command, now func() time.Time) command.Deci
 
 func decideNoteAdd(cmd command.Command, now func() time.Time) command.Decision {
 	var payload NoteAddPayload
-	_ = json.Unmarshal(cmd.PayloadJSON, &payload)
+	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    command.RejectionCodePayloadDecodeFailed,
+			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
+		})
+	}
 	return acceptActionEvent(cmd, now, EventTypeNoteAdded, "note", cmd.EntityID, payload)
 }
 

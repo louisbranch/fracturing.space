@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -13,8 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID string, in *campaignv1.PatchCharacterStateRequest) (string, storage.DaggerheartCharacterState, error) {
@@ -43,7 +42,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 	// Get Daggerheart profile for validation
 	dhProfile, err := a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return "", storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
+		return "", storage.DaggerheartCharacterState{}, grpcerror.Internal("get daggerheart profile", err)
 	}
 
 	// Apply Daggerheart-specific patches (including HP)
@@ -127,7 +126,7 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 ) (storage.DaggerheartCharacterState, error) {
 	normalizedBefore, err := daggerheart.NormalizeConditions(current.Conditions)
 	if err != nil {
-		return storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+		return storage.DaggerheartCharacterState{}, grpcerror.Internal("invalid stored conditions", err)
 	}
 	if daggerheart.ConditionsEqual(normalizedBefore, normalizedAfter) {
 		return current, nil
@@ -161,7 +160,7 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 func (a snapshotApplication) loadDaggerheartCharacterState(ctx context.Context, campaignID string, characterID string) (storage.DaggerheartCharacterState, error) {
 	dhState, err := a.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return storage.DaggerheartCharacterState{}, status.Errorf(codes.Internal, "load daggerheart character state: %v", err)
+		return storage.DaggerheartCharacterState{}, grpcerror.Internal("load daggerheart character state", err)
 	}
 	return dhState, nil
 }

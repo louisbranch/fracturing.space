@@ -8,8 +8,8 @@ import (
 )
 
 const (
-	defaultListSessionsPageSize = 10
-	maxListSessionsPageSize     = 10
+	defaultListSessionsPageSize = pageSmall
+	maxListSessionsPageSize     = pageSmall
 )
 
 // SessionService implements the game.v1.SessionService gRPC API.

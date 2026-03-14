@@ -6,12 +6,11 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, campaignID, characterID, reason string) error {
@@ -24,7 +23,7 @@ func (s *DaggerheartService) appendCharacterDeletedEvent(ctx context.Context, ca
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 	applier := s.stores.Applier()
 	_, err = s.executeAndApplyDomainCommand(ctx, command.Command{

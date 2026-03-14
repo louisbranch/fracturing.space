@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -21,5 +22,5 @@ func ensureNoActiveSession(ctx context.Context, store storage.SessionStore, camp
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil
 	}
-	return status.Errorf(codes.Internal, "check active session: %v", err)
+	return grpcerror.Internal("check active session", err)
 }

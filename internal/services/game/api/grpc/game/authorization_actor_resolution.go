@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -49,7 +50,7 @@ func resolvePolicyActor(ctx context.Context, participants storage.ParticipantSto
 			if errors.Is(err, storage.ErrNotFound) {
 				return storage.ParticipantRecord{}, authzReasonDenyActorNotFound, status.Error(codes.PermissionDenied, "participant lacks permission")
 			}
-			return storage.ParticipantRecord{}, authzReasonErrorActorLoad, status.Errorf(codes.Internal, "load participant: %v", err)
+			return storage.ParticipantRecord{}, authzReasonErrorActorLoad, grpcerror.Internal("load participant", err)
 		}
 		return actor, authzReasonAllowAccessLevel, nil
 	}
@@ -61,7 +62,7 @@ func resolvePolicyActor(ctx context.Context, participants storage.ParticipantSto
 
 	campaignParticipants, err := participants.ListParticipantsByCampaign(ctx, campaignID)
 	if err != nil {
-		return storage.ParticipantRecord{}, authzReasonErrorActorLoad, status.Errorf(codes.Internal, "load participants: %v", err)
+		return storage.ParticipantRecord{}, authzReasonErrorActorLoad, grpcerror.Internal("load participants", err)
 	}
 	for _, participantRecord := range campaignParticipants {
 		if strings.TrimSpace(participantRecord.UserID) == userID {
@@ -87,7 +88,7 @@ func participantOwnsActiveCharacters(ctx context.Context, characters storage.Cha
 	for {
 		page, err := characters.ListCharacters(ctx, campaignID, pageSize, pageToken)
 		if err != nil {
-			return false, status.Errorf(codes.Internal, "list characters: %v", err)
+			return false, grpcerror.Internal("list characters", err)
 		}
 		for _, characterRecord := range page.Characters {
 			if strings.TrimSpace(characterRecord.OwnerParticipantID) == participantID {
@@ -127,7 +128,7 @@ func resolveCharacterMutationOwnerParticipantID(
 		if errors.Is(err, storage.ErrNotFound) {
 			return "", nil
 		}
-		return "", status.Errorf(codes.Internal, "load character owner: %v", err)
+		return "", grpcerror.Internal("load character owner", err)
 	}
 	return strings.TrimSpace(characterRecord.OwnerParticipantID), nil
 }

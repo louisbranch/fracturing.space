@@ -9,8 +9,8 @@ import (
 )
 
 const (
-	defaultListParticipantsPageSize = 10
-	maxListParticipantsPageSize     = 10
+	defaultListParticipantsPageSize = pageSmall
+	maxListParticipantsPageSize     = pageSmall
 )
 
 // ParticipantService implements the game.v1.ParticipantService gRPC API.

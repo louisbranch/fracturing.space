@@ -10,13 +10,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-type fakeDaggerheartStore struct {
-	storage.DaggerheartStore
-}
-
 func TestValidateSystemConformance_Daggerheart(t *testing.T) {
 	mod := daggerheart.NewModule()
-	adapter := daggerheart.NewAdapter(fakeDaggerheartStore{})
+	adapter := daggerheart.NewAdapter(newMemDaggerheartStore())
 	ValidateSystemConformance(t, mod, adapter)
 }
 

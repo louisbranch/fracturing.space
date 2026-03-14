@@ -10,6 +10,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
@@ -111,7 +112,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 
 	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load latest event seq: %v", err)
+		return nil, grpcerror.Internal("load latest event seq", err)
 	}
 	preEvents := spendEventCount
 	rollSeq := latestSeq + uint64(preEvents) + 1
@@ -125,7 +126,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 		if errors.Is(err, random.ErrSeedOutOfRange()) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to resolve seed: %v", err)
+		return nil, grpcerror.Internal("failed to resolve seed", err)
 	}
 
 	if rollKind == pb.RollKind_ROLL_KIND_ACTION && spendEventCount > 0 {
@@ -151,7 +152,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 			}
 			payloadJSON, err := json.Marshal(payload)
 			if err != nil {
-				return nil, status.Errorf(codes.Internal, "encode hope spend payload: %v", err)
+				return nil, grpcerror.Internal("encode hope spend payload", err)
 			}
 			requestID := grpcmeta.RequestIDFromContext(ctx)
 			invocationID := grpcmeta.InvocationIDFromContext(ctx)
@@ -196,7 +197,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 		if errors.Is(err, daggerheartdomain.ErrInvalidDifficulty) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to roll action: %v", err)
+		return nil, grpcerror.Internal("failed to roll action", err)
 	}
 
 	rollModeLabel := rollMode.String()
@@ -259,7 +260,7 @@ func (s *DaggerheartService) runSessionActionRoll(ctx context.Context, in *pb.Se
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	var rollSeqValue uint64

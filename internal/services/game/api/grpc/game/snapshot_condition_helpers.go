@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -40,7 +41,7 @@ func applyStressVulnerableCondition(
 
 	normalized, err := daggerheart.NormalizeConditions(conditions)
 	if err != nil {
-		return status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+		return grpcerror.Internal("invalid stored conditions", err)
 	}
 	hasVulnerable := false
 	for _, value := range normalized {
@@ -72,7 +73,7 @@ func applyStressVulnerableCondition(
 	}
 	after, err := daggerheart.NormalizeConditions(afterList)
 	if err != nil {
-		return status.Errorf(codes.Internal, "invalid condition set: %v", err)
+		return grpcerror.Internal("invalid condition set", err)
 	}
 	added, removed := daggerheart.DiffConditions(normalized, after)
 	if len(added) == 0 && len(removed) == 0 {
