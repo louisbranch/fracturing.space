@@ -75,6 +75,17 @@ func TestGetDashboardMapsDomainResponse(t *testing.T) {
 					UpdatedAt:        now.Add(-1 * time.Hour),
 				}},
 			},
+			ActiveSessions: domain.ActiveSessionSummary{
+				Available:   true,
+				ListedCount: 1,
+				Sessions: []domain.ActiveSessionPreview{{
+					CampaignID:   "camp-1",
+					CampaignName: "Sunfall",
+					SessionID:    "session-1",
+					SessionName:  "The Crossing",
+					StartedAt:    now.Add(-10 * time.Minute),
+				}},
+			},
 			NextActions: []domain.DashboardAction{{
 				ID:       domain.DashboardActionReviewPendingInvites,
 				Priority: 100,
@@ -106,6 +117,9 @@ func TestGetDashboardMapsDomainResponse(t *testing.T) {
 	}
 	if got := resp.GetNextActions()[0].GetId(); got != userhubv1.DashboardActionID_DASHBOARD_ACTION_ID_REVIEW_PENDING_INVITES {
 		t.Fatalf("action id = %v, want %v", got, userhubv1.DashboardActionID_DASHBOARD_ACTION_ID_REVIEW_PENDING_INVITES)
+	}
+	if got := resp.GetActiveSessions().GetSessions(); len(got) != 1 || got[0].GetSessionId() != "session-1" {
+		t.Fatalf("active sessions = %+v, want one session-1 entry", got)
 	}
 }
 

@@ -256,6 +256,10 @@ func (f *fakeSessionClient) GetSession(context.Context, *gamev1.GetSessionReques
 	return nil, unimplemented("GetSession")
 }
 
+func (f *fakeSessionClient) ListActiveSessionsForUser(context.Context, *gamev1.ListActiveSessionsForUserRequest, ...grpc.CallOption) (*gamev1.ListActiveSessionsForUserResponse, error) {
+	return nil, unimplemented("ListActiveSessionsForUser")
+}
+
 func (f *fakeSessionClient) EndSession(ctx context.Context, in *gamev1.EndSessionRequest, opts ...grpc.CallOption) (*gamev1.EndSessionResponse, error) {
 	if f.endSession != nil {
 		return f.endSession(ctx, in, opts...)

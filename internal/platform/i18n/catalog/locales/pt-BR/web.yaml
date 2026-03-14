@@ -556,6 +556,8 @@ messages:
   "web.dashboard.campaign_adventure.body": "Embarque em uma nova aventura no Fracturing.Space criando uma campanha."
   "web.dashboard.campaign_adventure.cta": "Começar aventura"
   "web.dashboard.campaign_adventure.title": "Comece uma nova aventura"
+  "web.dashboard.active_sessions.body": "Volte direto para qualquer campanha com um jogo ativo em andamento."
+  "web.dashboard.active_sessions.title": "Sessões ativas"
   "web.dashboard.profile_pending.body": "Adicione um nome de exibição e detalhes opcionais do perfil para que outras pessoas reconheçam você em campanhas e convites."
   "web.dashboard.profile_pending.cta": "Atualizar perfil"
   "web.dashboard.profile_pending.title": "Atualize seu perfil"

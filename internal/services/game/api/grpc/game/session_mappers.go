@@ -37,6 +37,16 @@ func sessionStatusToProto(status session.Status) campaignv1.SessionStatus {
 	}
 }
 
+func activeUserSessionToProto(campaign storage.CampaignRecord, sess storage.SessionRecord) *campaignv1.ActiveUserSession {
+	return &campaignv1.ActiveUserSession{
+		CampaignId:   campaign.ID,
+		CampaignName: campaign.Name,
+		SessionId:    sess.ID,
+		SessionName:  sess.Name,
+		StartedAt:    timestamppb.New(sess.StartedAt),
+	}
+}
+
 func sessionGateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, error) {
 	metadata, err := structFromJSON(gate.MetadataJSON)
 	if err != nil {

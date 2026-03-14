@@ -230,7 +230,7 @@ func (c *dashboardCache) notifyRelease(campaignIDs []string) {
 }
 
 func dashboardCampaignDependencies(dashboard Dashboard) []string {
-	set := make(map[string]struct{}, len(dashboard.Campaigns.Campaigns)+len(dashboard.Invites.Pending))
+	set := make(map[string]struct{}, len(dashboard.Campaigns.Campaigns)+len(dashboard.Invites.Pending)+len(dashboard.ActiveSessions.Sessions))
 	for _, campaign := range dashboard.Campaigns.Campaigns {
 		campaignID := strings.TrimSpace(campaign.CampaignID)
 		if campaignID == "" {
@@ -240,6 +240,13 @@ func dashboardCampaignDependencies(dashboard Dashboard) []string {
 	}
 	for _, invite := range dashboard.Invites.Pending {
 		campaignID := strings.TrimSpace(invite.CampaignID)
+		if campaignID == "" {
+			continue
+		}
+		set[campaignID] = struct{}{}
+	}
+	for _, activeSession := range dashboard.ActiveSessions.Sessions {
+		campaignID := strings.TrimSpace(activeSession.CampaignID)
 		if campaignID == "" {
 			continue
 		}

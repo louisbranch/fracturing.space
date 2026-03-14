@@ -174,6 +174,9 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 	if strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
 		t.Fatalf("body = %q, want no campaign-adventure block when social profile is degraded", rr.Body.String())
 	}
+	if strings.Contains(rr.Body.String(), `data-dashboard-block="active-sessions"`) {
+		t.Fatalf("body = %q, want no active-sessions block when social profile is degraded", rr.Body.String())
+	}
 }
 
 func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *testing.T) {
@@ -279,6 +282,53 @@ func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.
 	// Invariant: degraded campaign dependency must suppress campaign-adventure block.
 	if strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
 		t.Fatalf("body = %q, want no campaign-adventure block when campaign state is degraded", rr.Body.String())
+	}
+}
+
+func TestMountRendersActiveSessionsBlockWithMultipleJoinLinks(t *testing.T) {
+	t.Parallel()
+
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		ActiveSessions: &userhubv1.ActiveSessionSummary{
+			Available: true,
+			Sessions: []*userhubv1.ActiveSessionPreview{
+				{CampaignId: "camp-1", CampaignName: "Sunfall", SessionId: "session-1", SessionName: "The Crossing"},
+				{CampaignId: "camp-2", CampaignName: "Gloam Tide", SessionId: "session-2"},
+			},
+		},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-dashboard-block="active-sessions"`) {
+		t.Fatalf("body = %q, want active-sessions block", body)
+	}
+	if strings.Contains(body, `data-dashboard-block="campaign-adventure"`) {
+		t.Fatalf("body = %q, want no campaign-adventure block when active sessions exist", body)
+	}
+	if strings.Count(body, `>Join Game</a>`) != 2 {
+		t.Fatalf("body = %q, want two Join Game CTAs", body)
+	}
+	if !strings.Contains(body, routepath.AppCampaignGame("camp-1")) || !strings.Contains(body, routepath.AppCampaignGame("camp-2")) {
+		t.Fatalf("body = %q, want join links for both campaigns", body)
+	}
+	if !strings.Contains(body, "Unnamed session") {
+		t.Fatalf("body = %q, want unnamed-session fallback", body)
 	}
 }
 

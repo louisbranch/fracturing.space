@@ -56,6 +56,10 @@ func (*fakeSessionClient) GetSession(context.Context, *statev1.GetSessionRequest
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+func (*fakeSessionClient) ListActiveSessionsForUser(context.Context, *statev1.ListActiveSessionsForUserRequest, ...grpc.CallOption) (*statev1.ListActiveSessionsForUserResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
 func (*fakeSessionClient) EndSession(context.Context, *statev1.EndSessionRequest, ...grpc.CallOption) (*statev1.EndSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }

@@ -44,13 +44,19 @@ func (g *grpcAuthGateway) GetUserIdentity(ctx context.Context, userID string) (d
 type grpcGameGateway struct {
 	campaigns gamev1.CampaignServiceClient
 	invites   gamev1.InviteServiceClient
+	sessions  gamev1.SessionServiceClient
 }
 
 // newGRPCGameGateway constructs a game gateway from gRPC clients.
-func newGRPCGameGateway(campaigns gamev1.CampaignServiceClient, invites gamev1.InviteServiceClient) *grpcGameGateway {
+func newGRPCGameGateway(
+	campaigns gamev1.CampaignServiceClient,
+	invites gamev1.InviteServiceClient,
+	sessions gamev1.SessionServiceClient,
+) *grpcGameGateway {
 	return &grpcGameGateway{
 		campaigns: campaigns,
 		invites:   invites,
+		sessions:  sessions,
 	}
 }
 
@@ -109,6 +115,35 @@ func (g *grpcGameGateway) ListPendingInvitePreviews(ctx context.Context, userID 
 			CampaignName:  pending.GetCampaign().GetName(),
 			ParticipantID: invite.GetParticipantId(),
 			CreatedAt:     invite.GetCreatedAt().AsTime(),
+		})
+	}
+	return page, nil
+}
+
+// ListActiveSessionPreviews resolves one page of user-scoped active-session previews.
+func (g *grpcGameGateway) ListActiveSessionPreviews(ctx context.Context, userID string, limit int) (domain.ActiveSessionPage, error) {
+	if g == nil || g.sessions == nil {
+		return domain.ActiveSessionPage{}, errors.New("game session client is not configured")
+	}
+	callCtx := grpcauthctx.WithUserID(ctx, userID)
+	resp, err := g.sessions.ListActiveSessionsForUser(callCtx, &gamev1.ListActiveSessionsForUserRequest{PageSize: int32(limit)})
+	if err != nil {
+		return domain.ActiveSessionPage{}, err
+	}
+	page := domain.ActiveSessionPage{
+		Sessions: make([]domain.ActiveSessionPreview, 0, len(resp.GetSessions())),
+		HasMore:  resp.GetHasMore(),
+	}
+	for _, session := range resp.GetSessions() {
+		if session == nil {
+			continue
+		}
+		page.Sessions = append(page.Sessions, domain.ActiveSessionPreview{
+			CampaignID:   session.GetCampaignId(),
+			CampaignName: session.GetCampaignName(),
+			SessionID:    session.GetSessionId(),
+			SessionName:  session.GetSessionName(),
+			StartedAt:    session.GetStartedAt().AsTime(),
 		})
 	}
 	return page, nil

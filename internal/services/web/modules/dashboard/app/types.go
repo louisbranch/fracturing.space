@@ -9,6 +9,7 @@ import (
 
 const DegradedDependencySocialProfile = "social.profile"
 const DegradedDependencyGameCampaigns = "game.campaigns"
+const DegradedDependencyGameSessions = "game.sessions"
 
 // ServiceHealthEntry represents the availability status of a backend service group.
 type ServiceHealthEntry struct {
@@ -24,7 +25,16 @@ type HealthProvider func(ctx context.Context) []ServiceHealthEntry
 type DashboardView struct {
 	ShowPendingProfileBlock bool
 	ShowAdventureBlock      bool
+	ActiveSessions          []ActiveSessionItem
 	ServiceHealth           []ServiceHealthEntry
+}
+
+// ActiveSessionItem represents one dashboard join row for an active campaign session.
+type ActiveSessionItem struct {
+	CampaignID   string
+	CampaignName string
+	SessionID    string
+	SessionName  string
 }
 
 // DashboardSnapshot contains userhub dashboard fields used by web rendering logic.
@@ -32,6 +42,8 @@ type DashboardSnapshot struct {
 	NeedsProfileCompletion   bool
 	HasDraftOrActiveCampaign bool
 	CampaignsHasMore         bool
+	ActiveSessionsAvailable  bool
+	ActiveSessions           []ActiveSessionItem
 	DegradedDependencies     []string
 	Freshness                DashboardFreshness
 	CacheHit                 bool

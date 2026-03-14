@@ -52,8 +52,12 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 			userID,
 		)
 	}
+	activeSessions := []ActiveSessionItem(nil)
+	if snapshot.ActiveSessionsAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameSessions) {
+		activeSessions = append(activeSessions, snapshot.ActiveSessions...)
+	}
 	showAdventureBlock := false
-	if !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameCampaigns) {
+	if len(activeSessions) == 0 && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameCampaigns) {
 		showAdventureBlock = !snapshot.HasDraftOrActiveCampaign && !snapshot.CampaignsHasMore
 	}
 	var health []ServiceHealthEntry
@@ -63,6 +67,7 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	return DashboardView{
 		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion,
 		ShowAdventureBlock:      showAdventureBlock,
+		ActiveSessions:          activeSessions,
 		ServiceHealth:           health,
 	}, nil
 }

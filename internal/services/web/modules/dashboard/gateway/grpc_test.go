@@ -50,9 +50,10 @@ func TestGRPCGatewayMapsSnapshotAndMetadata(t *testing.T) {
 	t.Parallel()
 
 	client := &userHubClientStub{resp: &userhubv1.GetDashboardResponse{
-		User:      &userhubv1.UserSummary{NeedsProfileCompletion: true},
-		Campaigns: &userhubv1.CampaignSummary{Campaigns: []*userhubv1.CampaignPreview{{Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_ACTIVE}}},
-		Metadata:  &userhubv1.DashboardMetadata{DegradedDependencies: []string{" social.profile "}},
+		User:           &userhubv1.UserSummary{NeedsProfileCompletion: true},
+		Campaigns:      &userhubv1.CampaignSummary{Campaigns: []*userhubv1.CampaignPreview{{Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_ACTIVE}}},
+		ActiveSessions: &userhubv1.ActiveSessionSummary{Available: true, Sessions: []*userhubv1.ActiveSessionPreview{{CampaignId: "camp-1", CampaignName: "Sunfall", SessionId: "session-1", SessionName: "The Crossing"}}},
+		Metadata:       &userhubv1.DashboardMetadata{DegradedDependencies: []string{" social.profile "}},
 	}}
 	gateway := GRPCGateway{Client: client}
 	snapshot, err := gateway.LoadDashboard(context.Background(), "user-1", language.Und)
@@ -61,6 +62,12 @@ func TestGRPCGatewayMapsSnapshotAndMetadata(t *testing.T) {
 	}
 	if !snapshot.NeedsProfileCompletion || !snapshot.HasDraftOrActiveCampaign {
 		t.Fatalf("snapshot = %+v", snapshot)
+	}
+	if !snapshot.ActiveSessionsAvailable || len(snapshot.ActiveSessions) != 1 || snapshot.ActiveSessions[0].CampaignID != "camp-1" {
+		t.Fatalf("ActiveSessions = %+v", snapshot.ActiveSessions)
+	}
+	if snapshot.ActiveSessions[0].SessionID != "session-1" {
+		t.Fatalf("ActiveSessions[0].SessionID = %q, want %q", snapshot.ActiveSessions[0].SessionID, "session-1")
 	}
 	if len(snapshot.DegradedDependencies) != 1 || snapshot.DegradedDependencies[0] != "social.profile" {
 		t.Fatalf("DegradedDependencies = %v", snapshot.DegradedDependencies)
@@ -96,7 +103,7 @@ func TestLoadDashboardSkipsBlankUserID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)
 	}
-	if snapshot.NeedsProfileCompletion || snapshot.HasDraftOrActiveCampaign || snapshot.CampaignsHasMore || len(snapshot.DegradedDependencies) > 0 {
+	if snapshot.NeedsProfileCompletion || snapshot.HasDraftOrActiveCampaign || snapshot.CampaignsHasMore || snapshot.ActiveSessionsAvailable || len(snapshot.ActiveSessions) > 0 || len(snapshot.DegradedDependencies) > 0 {
 		t.Fatalf("snapshot = %+v, want zero value", snapshot)
 	}
 	if client.calls != 0 {

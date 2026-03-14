@@ -20,16 +20,17 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SessionService_StartSession_FullMethodName          = "/game.v1.SessionService/StartSession"
-	SessionService_ListSessions_FullMethodName          = "/game.v1.SessionService/ListSessions"
-	SessionService_GetSession_FullMethodName            = "/game.v1.SessionService/GetSession"
-	SessionService_EndSession_FullMethodName            = "/game.v1.SessionService/EndSession"
-	SessionService_OpenSessionGate_FullMethodName       = "/game.v1.SessionService/OpenSessionGate"
-	SessionService_ResolveSessionGate_FullMethodName    = "/game.v1.SessionService/ResolveSessionGate"
-	SessionService_AbandonSessionGate_FullMethodName    = "/game.v1.SessionService/AbandonSessionGate"
-	SessionService_GetSessionSpotlight_FullMethodName   = "/game.v1.SessionService/GetSessionSpotlight"
-	SessionService_SetSessionSpotlight_FullMethodName   = "/game.v1.SessionService/SetSessionSpotlight"
-	SessionService_ClearSessionSpotlight_FullMethodName = "/game.v1.SessionService/ClearSessionSpotlight"
+	SessionService_StartSession_FullMethodName              = "/game.v1.SessionService/StartSession"
+	SessionService_ListSessions_FullMethodName              = "/game.v1.SessionService/ListSessions"
+	SessionService_ListActiveSessionsForUser_FullMethodName = "/game.v1.SessionService/ListActiveSessionsForUser"
+	SessionService_GetSession_FullMethodName                = "/game.v1.SessionService/GetSession"
+	SessionService_EndSession_FullMethodName                = "/game.v1.SessionService/EndSession"
+	SessionService_OpenSessionGate_FullMethodName           = "/game.v1.SessionService/OpenSessionGate"
+	SessionService_ResolveSessionGate_FullMethodName        = "/game.v1.SessionService/ResolveSessionGate"
+	SessionService_AbandonSessionGate_FullMethodName        = "/game.v1.SessionService/AbandonSessionGate"
+	SessionService_GetSessionSpotlight_FullMethodName       = "/game.v1.SessionService/GetSessionSpotlight"
+	SessionService_SetSessionSpotlight_FullMethodName       = "/game.v1.SessionService/SetSessionSpotlight"
+	SessionService_ClearSessionSpotlight_FullMethodName     = "/game.v1.SessionService/ClearSessionSpotlight"
 )
 
 // SessionServiceClient is the client API for SessionService service.
@@ -43,6 +44,8 @@ type SessionServiceClient interface {
 	StartSession(ctx context.Context, in *StartSessionRequest, opts ...grpc.CallOption) (*StartSessionResponse, error)
 	// List sessions for a campaign.
 	ListSessions(ctx context.Context, in *ListSessionsRequest, opts ...grpc.CallOption) (*ListSessionsResponse, error)
+	// List active sessions for the current authenticated user.
+	ListActiveSessionsForUser(ctx context.Context, in *ListActiveSessionsForUserRequest, opts ...grpc.CallOption) (*ListActiveSessionsForUserResponse, error)
 	// Get a session by campaign ID and session ID.
 	GetSession(ctx context.Context, in *GetSessionRequest, opts ...grpc.CallOption) (*GetSessionResponse, error)
 	// End a session by campaign ID and session ID.
@@ -83,6 +86,16 @@ func (c *sessionServiceClient) ListSessions(ctx context.Context, in *ListSession
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(ListSessionsResponse)
 	err := c.cc.Invoke(ctx, SessionService_ListSessions_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sessionServiceClient) ListActiveSessionsForUser(ctx context.Context, in *ListActiveSessionsForUserRequest, opts ...grpc.CallOption) (*ListActiveSessionsForUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListActiveSessionsForUserResponse)
+	err := c.cc.Invoke(ctx, SessionService_ListActiveSessionsForUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -180,6 +193,8 @@ type SessionServiceServer interface {
 	StartSession(context.Context, *StartSessionRequest) (*StartSessionResponse, error)
 	// List sessions for a campaign.
 	ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error)
+	// List active sessions for the current authenticated user.
+	ListActiveSessionsForUser(context.Context, *ListActiveSessionsForUserRequest) (*ListActiveSessionsForUserResponse, error)
 	// Get a session by campaign ID and session ID.
 	GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error)
 	// End a session by campaign ID and session ID.
@@ -211,6 +226,9 @@ func (UnimplementedSessionServiceServer) StartSession(context.Context, *StartSes
 }
 func (UnimplementedSessionServiceServer) ListSessions(context.Context, *ListSessionsRequest) (*ListSessionsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListSessions not implemented")
+}
+func (UnimplementedSessionServiceServer) ListActiveSessionsForUser(context.Context, *ListActiveSessionsForUserRequest) (*ListActiveSessionsForUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListActiveSessionsForUser not implemented")
 }
 func (UnimplementedSessionServiceServer) GetSession(context.Context, *GetSessionRequest) (*GetSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetSession not implemented")
@@ -289,6 +307,24 @@ func _SessionService_ListSessions_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SessionServiceServer).ListSessions(ctx, req.(*ListSessionsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionService_ListActiveSessionsForUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListActiveSessionsForUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SessionServiceServer).ListActiveSessionsForUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SessionService_ListActiveSessionsForUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SessionServiceServer).ListActiveSessionsForUser(ctx, req.(*ListActiveSessionsForUserRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -451,6 +487,10 @@ var SessionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListSessions",
 			Handler:    _SessionService_ListSessions_Handler,
+		},
+		{
+			MethodName: "ListActiveSessionsForUser",
+			Handler:    _SessionService_ListActiveSessionsForUser_Handler,
 		},
 		{
 			MethodName: "GetSession",

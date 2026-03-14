@@ -52,6 +52,28 @@ func TestDashboardCacheInvalidateCampaignRemovesPreviewAndInviteDependencies(t *
 	}
 }
 
+func TestDashboardCacheInvalidateCampaignRemovesActiveSessionDependencies(t *testing.T) {
+	t.Parallel()
+
+	observer := &recordingCampaignDependencyObserver{}
+	cache := newDashboardCache(15*time.Second, time.Minute, observer)
+	now := time.Date(2026, 3, 7, 12, 7, 0, 0, time.UTC)
+
+	cache.set(dashboardCacheKey{UserID: "user-3", Locale: "en-US"}, Dashboard{
+		ActiveSessions: ActiveSessionSummary{
+			Sessions: []ActiveSessionPreview{{CampaignID: "camp-7"}},
+		},
+	}, now)
+
+	invalidated := cache.invalidate(nil, []string{"camp-7"})
+	if invalidated != 1 {
+		t.Fatalf("invalidate() = %d, want 1", invalidated)
+	}
+	if got := observer.released; len(got) != 1 || got[0] != "camp-7" {
+		t.Fatalf("released = %v, want [camp-7]", got)
+	}
+}
+
 func TestDashboardCacheGetStaleExpiresEntryAndReleasesCampaignDependency(t *testing.T) {
 	t.Parallel()
 

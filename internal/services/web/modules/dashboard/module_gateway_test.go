@@ -33,8 +33,9 @@ func TestGRPCGatewayMapsDashboardResponseAuthMetadataAndCampaignState(t *testing
 	t.Parallel()
 
 	client := &dashboardUserHubClientRecorder{resp: &userhubv1.GetDashboardResponse{
-		User:     &userhubv1.UserSummary{NeedsProfileCompletion: true},
-		Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{" social.profile ", ""}},
+		User:           &userhubv1.UserSummary{NeedsProfileCompletion: true},
+		Metadata:       &userhubv1.DashboardMetadata{DegradedDependencies: []string{" social.profile ", ""}},
+		ActiveSessions: &userhubv1.ActiveSessionSummary{Available: true, Sessions: []*userhubv1.ActiveSessionPreview{{CampaignId: "camp-active", CampaignName: "Sunfall", SessionId: "session-1", SessionName: "The Crossing"}}},
 		Campaigns: &userhubv1.CampaignSummary{
 			HasMore: true,
 			Campaigns: []*userhubv1.CampaignPreview{
@@ -60,6 +61,12 @@ func TestGRPCGatewayMapsDashboardResponseAuthMetadataAndCampaignState(t *testing
 	}
 	if !snapshot.CampaignsHasMore {
 		t.Fatalf("CampaignsHasMore = false, want true")
+	}
+	if !snapshot.ActiveSessionsAvailable || len(snapshot.ActiveSessions) != 1 || snapshot.ActiveSessions[0].CampaignID != "camp-active" {
+		t.Fatalf("ActiveSessions = %+v, want one camp-active item", snapshot.ActiveSessions)
+	}
+	if snapshot.ActiveSessions[0].SessionID != "session-1" {
+		t.Fatalf("ActiveSessions[0].SessionID = %q, want %q", snapshot.ActiveSessions[0].SessionID, "session-1")
 	}
 	if client.lastReq == nil {
 		t.Fatalf("expected dashboard request")
