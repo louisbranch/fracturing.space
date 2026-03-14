@@ -55,7 +55,14 @@ func TestFragmentRendersCharacterDetailState(t *testing.T) {
 		},
 		Sessions:         []SessionView{{ID: "s-1", Name: "Session One", Status: "active", UpdatedAt: "2026-03-09T10:00:00Z"}},
 		SessionReadiness: SessionReadinessView{Ready: true, Blockers: []SessionReadinessBlockerView{{Code: "ok", Message: "ready"}}},
-		Invites:          []InviteView{{ID: "i-1", ParticipantID: "p-2", RecipientUserID: "u-2", Status: "pending"}},
+		Invites: []InviteView{{
+			ID:              "i-1",
+			ParticipantID:   "p-2",
+			ParticipantName: "Scout",
+			HasRecipient:    true,
+			PublicURL:       "/invite/i-1",
+			Status:          "pending",
+		}},
 		InviteSeatOptions: []InviteSeatOptionView{{
 			ParticipantID: "p-2",
 			Label:         "Scout",

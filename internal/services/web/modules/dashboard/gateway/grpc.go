@@ -62,6 +62,8 @@ func (g GRPCGateway) LoadDashboard(ctx context.Context, userID string, localeTag
 		NeedsProfileCompletion:       resp.GetUser().GetNeedsProfileCompletion(),
 		HasDraftOrActiveCampaign:     HasDraftOrActiveCampaign(resp.GetCampaigns().GetCampaigns()),
 		CampaignsHasMore:             resp.GetCampaigns().GetHasMore(),
+		InvitesAvailable:             resp.GetInvites().GetAvailable(),
+		PendingInvites:               mapPendingInvites(resp.GetInvites().GetPending()),
 		CampaignStartNudgesAvailable: resp.GetCampaignStartNudges().GetAvailable(),
 		CampaignStartNudges:          mapCampaignStartNudges(resp.GetCampaignStartNudges().GetNudges()),
 		CampaignStartNudgesHasMore:   resp.GetCampaignStartNudges().GetHasMore(),
@@ -72,6 +74,29 @@ func (g GRPCGateway) LoadDashboard(ctx context.Context, userID string, localeTag
 		CacheHit:                     resp.GetMetadata().GetCacheHit(),
 		GeneratedAt:                  protoTime(resp.GetMetadata().GetGeneratedAt()),
 	}, nil
+}
+
+// mapPendingInvites keeps invite-preview shaping local to the transport seam so
+// the dashboard app layer stays free of protobuf details.
+func mapPendingInvites(invites []*userhubv1.PendingInvite) []dashboardapp.PendingInviteItem {
+	if len(invites) == 0 {
+		return nil
+	}
+	items := make([]dashboardapp.PendingInviteItem, 0, len(invites))
+	for _, invite := range invites {
+		if invite == nil {
+			continue
+		}
+		items = append(items, dashboardapp.PendingInviteItem{
+			InviteID:        invite.GetInviteId(),
+			CampaignName:    invite.GetCampaignName(),
+			ParticipantName: invite.GetParticipantName(),
+		})
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return items
 }
 
 // HasDraftOrActiveCampaign reports whether previews include a draft or active campaign.

@@ -121,6 +121,7 @@
 
     var i18n = i18nEl.dataset || {};
     var pendingID = i18n.pendingId || "";
+    var nextPath = i18n.next || "";
     var loginStartPath = i18n.loginStartPath || "";
     var loginFinishPath = i18n.loginFinishPath || "";
     var registerStartPath = i18n.registerStartPath || "";
@@ -151,6 +152,7 @@
       return postJSON(loginFinishPath, {
         session_id: sessionID,
         pending_id: pendingID,
+        next: nextPath,
         credential: credential
       }, jsLoginFinishError);
     }
@@ -162,6 +164,7 @@
     async function finishPasskeyRegister(sessionID, credential) {
       return postJSON(registerFinishPath, {
         session_id: sessionID,
+        next: nextPath,
         credential: credential
       }, jsRegisterFinishError);
     }
@@ -225,6 +228,7 @@
 
     var i18n = i18nEl.dataset || {};
     var pendingID = i18n.pendingId || "";
+    var nextPath = i18n.next || "";
     var recoveryStartPath = i18n.recoveryStartPath || "";
     var recoveryFinishPath = i18n.recoveryFinishPath || "";
     var jsRecoveryStartError = i18n.recoveryStartError || "Unable to start account recovery.";
@@ -251,6 +255,7 @@
         recovery_session_id: recoverySessionID,
         session_id: sessionID,
         pending_id: pendingID,
+        next: nextPath,
         credential: credential
       }, jsRecoveryFinishError);
     }

@@ -8,6 +8,7 @@ const (
 	StatusPending     Status = statusPending
 	StatusClaimed     Status = statusClaimed
 	StatusRevoked     Status = statusRevoked
+	StatusDeclined    Status = statusDeclined
 )
 
 // NormalizeStatus parses a status label into a canonical value.

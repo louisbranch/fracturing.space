@@ -91,8 +91,8 @@ func TestLogoutCookieRelocksProtectedRoute(t *testing.T) {
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login" {
-		t.Fatalf("Location = %q, want %q", got, "/login")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F")
 	}
 }
 
@@ -110,8 +110,8 @@ func TestProtectedRouteRejectsUnknownSessionCookie(t *testing.T) {
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login" {
-		t.Fatalf("Location = %q, want %q", got, "/login")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F")
 	}
 }
 
@@ -149,7 +149,7 @@ func TestLogoutRevokesPreviouslyIssuedSessionCookie(t *testing.T) {
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login" {
-		t.Fatalf("Location = %q, want %q", got, "/login")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F")
 	}
 }

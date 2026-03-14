@@ -78,6 +78,7 @@ type campaignDashboardSyncStub struct {
 	created []string
 	started []string
 	ended   []string
+	invites []string
 }
 
 func (s *campaignDashboardSyncStub) CampaignCreated(_ context.Context, userID, campaignID string) {
@@ -90,4 +91,8 @@ func (s *campaignDashboardSyncStub) SessionStarted(_ context.Context, userID, ca
 
 func (s *campaignDashboardSyncStub) SessionEnded(_ context.Context, userID, campaignID string) {
 	s.ended = append(s.ended, userID+"/"+campaignID)
+}
+
+func (s *campaignDashboardSyncStub) InviteChanged(_ context.Context, userIDs []string, campaignID string) {
+	s.invites = append(s.invites, strings.Join(userIDs, ",")+"/"+campaignID)
 }

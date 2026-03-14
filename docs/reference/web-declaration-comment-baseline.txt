@@ -1,11 +1,3 @@
 # Web declaration comment baseline for staged rollout.
 # To ratchet this file after adding comments, run:
 #   make web-doc-baseline-update
-internal/services/web/modules/dashboard/gateway/grpc.go:106 func mapFreshness
-internal/services/web/modules/dashboard/gateway/grpc.go:117 func protoTime
-internal/services/web/platform/dashboardsync/sync.go:148 method invalidate
-internal/services/web/platform/dashboardsync/sync.go:175 method projectionWaitTimeout
-internal/services/web/platform/dashboardsync/sync.go:182 func latestCampaignSeq
-internal/services/web/platform/dashboardsync/sync.go:198 func normalizedIDs
-internal/services/web/platform/dashboardsync/sync.go:80 method syncProjectionAndInvalidate
-internal/services/web/platform/dashboardsync/sync.go:96 method waitForProjectionApplied

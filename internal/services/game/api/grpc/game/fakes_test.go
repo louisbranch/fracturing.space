@@ -932,6 +932,29 @@ func (s *fakeEventStore) AppendEvent(_ context.Context, evt event.Event) (event.
 	return evt, nil
 }
 
+type fakeBatchEventStore struct {
+	*fakeEventStore
+}
+
+func newFakeBatchEventStore() *fakeBatchEventStore {
+	return &fakeBatchEventStore{fakeEventStore: newFakeEventStore()}
+}
+
+func (s *fakeBatchEventStore) BatchAppendEvents(ctx context.Context, events []event.Event) ([]event.Event, error) {
+	if s.appendErr != nil {
+		return nil, s.appendErr
+	}
+	stored := make([]event.Event, 0, len(events))
+	for _, evt := range events {
+		storedEvent, err := s.AppendEvent(ctx, evt)
+		if err != nil {
+			return nil, err
+		}
+		stored = append(stored, storedEvent)
+	}
+	return stored, nil
+}
+
 func (s *fakeEventStore) GetEventByHash(_ context.Context, hash string) (event.Event, error) {
 	if s.getErr != nil {
 		return event.Event{}, s.getErr
@@ -1038,6 +1061,15 @@ func (s *fakeEventStore) ListEventsPage(_ context.Context, req storage.ListEvent
 	base := make([]event.Event, 0, len(sorted))
 	for _, e := range sorted {
 		if req.AfterSeq > 0 && e.Seq <= req.AfterSeq {
+			continue
+		}
+		if filter := req.Filter; filter.EventType != "" && string(e.Type) != filter.EventType {
+			continue
+		}
+		if filter := req.Filter; filter.EntityType != "" && e.EntityType != filter.EntityType {
+			continue
+		}
+		if filter := req.Filter; filter.EntityID != "" && e.EntityID != filter.EntityID {
 			continue
 		}
 		base = append(base, e)

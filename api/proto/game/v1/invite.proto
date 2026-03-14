@@ -26,6 +26,7 @@ enum InviteStatus {
   PENDING = 1;
   CLAIMED = 2;
   REVOKED = 3;
+  DECLINED = 4;
 }
 
 // InviteService provides operations for participant invites.
@@ -36,8 +37,14 @@ service InviteService {
   // Claim a seat-targeted invite.
   rpc ClaimInvite(ClaimInviteRequest) returns (ClaimInviteResponse);
 
+  // Decline a seat-targeted invite.
+  rpc DeclineInvite(DeclineInviteRequest) returns (DeclineInviteResponse);
+
   // Get an invite by ID.
   rpc GetInvite(GetInviteRequest) returns (GetInviteResponse);
+
+  // Get the public landing data for an invite by ID.
+  rpc GetPublicInvite(GetPublicInviteRequest) returns (GetPublicInviteResponse);
 
   // List invites for a campaign.
   rpc ListInvites(ListInvitesRequest) returns (ListInvitesResponse);
@@ -83,12 +90,38 @@ message ClaimInviteResponse {
   Participant participant = 2;
 }
 
+message DeclineInviteRequest {
+  // The invite ID to decline.
+  string invite_id = 1;
+}
+
+message DeclineInviteResponse {
+  Invite invite = 1;
+}
+
 message GetInviteRequest {
   string invite_id = 1;
 }
 
 message GetInviteResponse {
   Invite invite = 1;
+}
+
+message GetPublicInviteRequest {
+  string invite_id = 1;
+}
+
+message GetPublicInviteResponse {
+  Invite invite = 1;
+  PublicInviteCampaign campaign = 2;
+  Participant participant = 3;
+  auth.v1.User created_by_user = 4;
+}
+
+message PublicInviteCampaign {
+  string id = 1;
+  string name = 2;
+  CampaignStatus status = 3;
 }
 
 message ListInvitesRequest {

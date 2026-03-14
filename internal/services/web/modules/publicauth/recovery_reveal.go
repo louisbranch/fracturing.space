@@ -24,6 +24,7 @@ const (
 type recoveryRevealState struct {
 	Code      string             `json:"code"`
 	PendingID string             `json:"pending_id,omitempty"`
+	Next      string             `json:"next,omitempty"`
 	Mode      recoveryRevealMode `json:"mode"`
 }
 
@@ -94,6 +95,7 @@ func clearRecoveryRevealState(w http.ResponseWriter, r *http.Request, policy req
 func normalizeRecoveryRevealState(state recoveryRevealState) (recoveryRevealState, bool) {
 	state.Code = strings.TrimSpace(state.Code)
 	state.PendingID = strings.TrimSpace(state.PendingID)
+	state.Next = strings.TrimSpace(state.Next)
 	switch state.Mode {
 	case recoveryRevealModeSignup, recoveryRevealModeRecovery:
 	default:

@@ -9,6 +9,7 @@ import (
 
 const DegradedDependencySocialProfile = "social.profile"
 const DegradedDependencyGameCampaigns = "game.campaigns"
+const DegradedDependencyGameInvites = "game.invites"
 const DegradedDependencyGameSessions = "game.sessions"
 const DegradedDependencyGameReadiness = "game.readiness"
 
@@ -47,11 +48,19 @@ type DashboardView struct {
 	DataStatus              DashboardDataStatus
 	DegradedDependencies    []string
 	ShowPendingProfileBlock bool
+	PendingInvites          []PendingInviteItem
 	ShowAdventureBlock      bool
 	CampaignStartNudges     []CampaignStartNudgeItem
 	CampaignStartNudgesMore bool
 	ActiveSessions          []ActiveSessionItem
 	ServiceHealth           []ServiceHealthEntry
+}
+
+// PendingInviteItem represents one dashboard link to a pending invite.
+type PendingInviteItem struct {
+	InviteID        string
+	CampaignName    string
+	ParticipantName string
 }
 
 // ActiveSessionItem represents one dashboard join row for an active campaign session.
@@ -96,6 +105,8 @@ type DashboardSnapshot struct {
 	NeedsProfileCompletion       bool
 	HasDraftOrActiveCampaign     bool
 	CampaignsHasMore             bool
+	InvitesAvailable             bool
+	PendingInvites               []PendingInviteItem
 	CampaignStartNudgesAvailable bool
 	CampaignStartNudges          []CampaignStartNudgeItem
 	CampaignStartNudgesHasMore   bool

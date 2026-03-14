@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 func TestPasskeyLoginStartRequiresUsername(t *testing.T) {
@@ -78,6 +80,51 @@ func TestCheckUsernameAvailabilityDelegatesToGateway(t *testing.T) {
 	}
 	if availability.CanonicalUsername != "louis" || availability.State != UsernameAvailabilityStateAvailable {
 		t.Fatalf("availability = %+v", availability)
+	}
+}
+
+func TestResolvePostAuthRedirectPathAllowsSafeInviteAndAppPaths(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{name: "dashboard path", raw: "/app/dashboard/", want: routepath.AppDashboard},
+		{name: "invite path", raw: "/invite/inv-1", want: "/invite/inv-1"},
+		{name: "invite path with query", raw: "/invite/inv-1?from=mail", want: "/invite/inv-1?from=mail"},
+		{name: "slash normalized", raw: "invite/inv-1", want: "/invite/inv-1"},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := resolvePostAuthRedirectPath(tc.raw); got != tc.want {
+				t.Fatalf("resolvePostAuthRedirectPath(%q) = %q, want %q", tc.raw, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestResolvePostAuthRedirectPathRejectsUnsafeTargets(t *testing.T) {
+	t.Parallel()
+
+	tests := []string{
+		"",
+		"https://example.com/app/dashboard",
+		"/invite",
+		"/app",
+		"/discover/campaigns",
+		"/invite/%2fetc",
+		"/invite/../admin",
+	}
+
+	for _, raw := range tests {
+		if got := resolvePostAuthRedirectPath(raw); got != "" {
+			t.Fatalf("resolvePostAuthRedirectPath(%q) = %q, want empty", raw, got)
+		}
 	}
 }
 

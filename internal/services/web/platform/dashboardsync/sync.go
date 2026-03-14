@@ -77,6 +77,24 @@ func (s *Syncer) SessionEnded(ctx context.Context, userID, campaignID string) {
 	s.syncProjectionAndInvalidate(ctx, userID, campaignID, projectionScopeSessions, "web.session_ended")
 }
 
+// InviteChanged waits for invite projection visibility, then invalidates dashboards.
+func (s *Syncer) InviteChanged(ctx context.Context, userIDs []string, campaignID string) {
+	syncUserID := ""
+	for _, userID := range userIDs {
+		userID = strings.TrimSpace(userID)
+		if userID != "" {
+			syncUserID = userID
+			break
+		}
+	}
+	s.syncProjectionAndInvalidate(ctx, syncUserID, campaignID, projectionScopeCampaigns, "web.invite_changed")
+	if len(normalizedIDs(userIDs)) > 1 {
+		s.invalidate(ctx, userIDs, []string{campaignID}, "web.invite_changed")
+	}
+}
+
+// syncProjectionAndInvalidate coordinates projection waiting with downstream
+// dashboard invalidation so readers do not immediately observe stale campaign data.
 func (s *Syncer) syncProjectionAndInvalidate(ctx context.Context, userID, campaignID, scope, reason string) {
 	userID = strings.TrimSpace(userID)
 	campaignID = strings.TrimSpace(campaignID)
@@ -93,6 +111,8 @@ func (s *Syncer) syncProjectionAndInvalidate(ctx context.Context, userID, campai
 	s.invalidate(ctx, []string{userID}, []string{campaignID}, reason)
 }
 
+// waitForProjectionApplied blocks until the requested campaign projection scope
+// has caught up to the latest event sequence visible when the mutation completed.
 func (s *Syncer) waitForProjectionApplied(ctx context.Context, userID, campaignID, scope string) error {
 	if s == nil || s.game == nil {
 		return errors.New("game event client is not configured")
@@ -145,6 +165,7 @@ func (s *Syncer) waitForProjectionApplied(ctx context.Context, userID, campaignI
 	}
 }
 
+// invalidate forwards the normalized refresh request to userhub when available.
 func (s *Syncer) invalidate(ctx context.Context, userIDs []string, campaignIDs []string, reason string) {
 	if s == nil || s.userhub == nil {
 		if s != nil && s.logger != nil {
@@ -172,6 +193,7 @@ func (s *Syncer) invalidate(ctx context.Context, userIDs []string, campaignIDs [
 	}
 }
 
+// projectionWaitTimeout supplies a safe default when tests or callers do not override it.
 func (s *Syncer) projectionWaitTimeout() time.Duration {
 	if s == nil || s.waitTimeout <= 0 {
 		return defaultProjectionWaitTimeout
@@ -179,6 +201,8 @@ func (s *Syncer) projectionWaitTimeout() time.Duration {
 	return s.waitTimeout
 }
 
+// latestCampaignSeq reads the newest event sequence so projection waiting can
+// subscribe from a stable point-in-time boundary.
 func latestCampaignSeq(ctx context.Context, client GameEventClient, campaignID string) (uint64, error) {
 	resp, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
 		CampaignId: campaignID,
@@ -195,6 +219,7 @@ func latestCampaignSeq(ctx context.Context, client GameEventClient, campaignID s
 	return events[0].GetSeq(), nil
 }
 
+// normalizedIDs removes blanks before invalidation requests cross service boundaries.
 func normalizedIDs(values []string) []string {
 	if len(values) == 0 {
 		return nil

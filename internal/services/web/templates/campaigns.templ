@@ -286,10 +286,13 @@ type CampaignSessionReadinessView struct {
 }
 
 type CampaignInviteView struct {
-	ID              string
-	ParticipantID   string
-	RecipientUserID string
-	Status          string
+	ID                string
+	ParticipantID     string
+	ParticipantName   string
+	RecipientUsername string
+	HasRecipient      bool
+	PublicURL         string
+	Status            string
 }
 
 type CampaignInviteSeatOptionView struct {

@@ -74,21 +74,22 @@ func (s service) updateParticipant(ctx context.Context, campaignID string, input
 		return err
 	}
 
-	if err := s.requireCampaignActionAccess(
-		ctx,
-		request.CampaignID,
-		campaignAuthzActionManage,
-		campaignAuthzResourceParticipant,
-		participantAuthorizationTarget(request),
-		policyManageParticipant.denyKey,
-		policyManageParticipant.denyMsg,
-	); err != nil {
-		return err
-	}
-
 	current, err := s.campaignParticipant(ctx, request.CampaignID, request.ParticipantID)
 	if err != nil {
 		return err
+	}
+	if !participantIsSelfOwned(ctx, current) {
+		if err := s.requireCampaignActionAccess(
+			ctx,
+			request.CampaignID,
+			campaignAuthzActionManage,
+			campaignAuthzResourceParticipant,
+			participantAuthorizationTarget(request),
+			policyManageParticipant.denyKey,
+			policyManageParticipant.denyMsg,
+		); err != nil {
+			return err
+		}
 	}
 	request.RequestedAccess = normalizeRequestedParticipantAccess(request.RequestedAccess, current)
 	workspace, err := s.campaignWorkspace(ctx, request.CampaignID)

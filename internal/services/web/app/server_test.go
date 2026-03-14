@@ -39,8 +39,8 @@ func TestComposeAppliesAuthToProtectedModules(t *testing.T) {
 	if blockedRR.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", blockedRR.Code, http.StatusFound)
 	}
-	if got := blockedRR.Header().Get("Location"); got != "/login" {
-		t.Fatalf("Location = %q, want %q", got, "/login")
+	if got := blockedRR.Header().Get("Location"); got != "/login?next=%2Fapp%2Fprotected%2Fa" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fprotected%2Fa")
 	}
 
 	allowedReq := httptest.NewRequest(http.MethodGet, "/app/protected/a", nil)

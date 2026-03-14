@@ -19,6 +19,8 @@ func NormalizeStatusLabel(value string) (string, bool) {
 		return statusClaimed, true
 	case "REVOKED", "INVITE_STATUS_REVOKED":
 		return statusRevoked, true
+	case "DECLINED", "INVITE_STATUS_DECLINED":
+		return statusDeclined, true
 	default:
 		return "", false
 	}

@@ -35,6 +35,13 @@ var inviteCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
+			Type:            CommandTypeDecline,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateDeclinePayload,
+		},
+	},
+	{
+		definition: command.Definition{
 			Type:            CommandTypeRevoke,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateRevokePayload,
@@ -66,6 +73,16 @@ var inviteEventContracts = []eventProjectionContract{
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateClaimPayload,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeDeclined,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateDeclinePayload,
 		},
 		emittable:  true,
 		projection: true,
@@ -159,6 +176,11 @@ func validateCreatePayload(raw json.RawMessage) error {
 
 func validateClaimPayload(raw json.RawMessage) error {
 	var payload ClaimPayload
+	return json.Unmarshal(raw, &payload)
+}
+
+func validateDeclinePayload(raw json.RawMessage) error {
+	var payload DeclinePayload
 	return json.Unmarshal(raw, &payload)
 }
 

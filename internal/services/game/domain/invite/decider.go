@@ -12,18 +12,21 @@ import (
 )
 
 const (
-	CommandTypeCreate command.Type = "invite.create"
-	CommandTypeClaim  command.Type = "invite.claim"
-	CommandTypeRevoke command.Type = "invite.revoke"
-	CommandTypeUpdate command.Type = "invite.update"
-	EventTypeCreated  event.Type   = "invite.created"
-	EventTypeClaimed  event.Type   = "invite.claimed"
-	EventTypeRevoked  event.Type   = "invite.revoked"
-	EventTypeUpdated  event.Type   = "invite.updated"
+	CommandTypeCreate  command.Type = "invite.create"
+	CommandTypeClaim   command.Type = "invite.claim"
+	CommandTypeDecline command.Type = "invite.decline"
+	CommandTypeRevoke  command.Type = "invite.revoke"
+	CommandTypeUpdate  command.Type = "invite.update"
+	EventTypeCreated   event.Type   = "invite.created"
+	EventTypeClaimed   event.Type   = "invite.claimed"
+	EventTypeDeclined  event.Type   = "invite.declined"
+	EventTypeRevoked   event.Type   = "invite.revoked"
+	EventTypeUpdated   event.Type   = "invite.updated"
 
-	statusPending = "pending"
-	statusClaimed = "claimed"
-	statusRevoked = "revoked"
+	statusPending  = "pending"
+	statusClaimed  = "claimed"
+	statusDeclined = "declined"
+	statusRevoked  = "revoked"
 
 	rejectionCodeInviteAlreadyExists     = "INVITE_ALREADY_EXISTS"
 	rejectionCodeInviteIDRequired        = "INVITE_ID_REQUIRED"
@@ -45,6 +48,8 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		return decideCreate(state, cmd, now)
 	case CommandTypeClaim:
 		return decideClaim(state, cmd, now)
+	case CommandTypeDecline:
+		return decideDecline(state, cmd, now)
 	case CommandTypeRevoke:
 		return decideRevoke(state, cmd, now)
 	case CommandTypeUpdate:
@@ -126,11 +131,40 @@ func decideClaim(state State, cmd command.Command, now func() time.Time) command
 	)
 }
 
+func decideDecline(state State, cmd command.Command, now func() time.Time) command.Decision {
+	if !state.Created {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
+	}
+	if state.Status != "" && state.Status != statusPending {
+		return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
+	}
+	return module.DecideFunc(
+		cmd,
+		EventTypeDeclined,
+		"invite",
+		func(payload *DeclinePayload) string {
+			return payload.InviteID.String()
+		},
+		func(payload *DeclinePayload, _ func() time.Time) *command.Rejection {
+			payload.InviteID = ids.InviteID(strings.TrimSpace(payload.InviteID.String()))
+			if payload.InviteID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
+			}
+			payload.UserID = ids.UserID(strings.TrimSpace(payload.UserID.String()))
+			if payload.UserID == "" {
+				return &command.Rejection{Code: rejectionCodeInviteUserIDRequired, Message: "user id is required"}
+			}
+			return nil
+		},
+		now,
+	)
+}
+
 func decideRevoke(state State, cmd command.Command, now func() time.Time) command.Decision {
 	if !state.Created {
 		return command.Reject(command.Rejection{Code: rejectionCodeInviteNotCreated, Message: "invite not created"})
 	}
-	if state.Status == statusClaimed || state.Status == statusRevoked {
+	if state.Status == statusClaimed || state.Status == statusDeclined || state.Status == statusRevoked {
 		return command.Reject(command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"})
 	}
 	return module.DecideFunc(

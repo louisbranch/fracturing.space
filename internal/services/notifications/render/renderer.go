@@ -13,7 +13,10 @@ const (
 	// MessageTypeOnboardingWelcome aliases the canonical onboarding welcome template id.
 	MessageTypeOnboardingWelcome = notificationsdomain.MessageTypeOnboardingWelcome
 	// MessageTypeOnboardingWelcomeV1 is the versioned onboarding welcome template id.
-	MessageTypeOnboardingWelcomeV1 = notificationsdomain.MessageTypeOnboardingWelcomeV1
+	MessageTypeOnboardingWelcomeV1    = notificationsdomain.MessageTypeOnboardingWelcomeV1
+	MessageTypeCampaignInviteCreated  = "campaign.invite.created.v1"
+	MessageTypeCampaignInviteAccepted = "campaign.invite.accepted.v1"
+	MessageTypeCampaignInviteDeclined = "campaign.invite.declined.v1"
 
 	defaultGenericTitle        = "Notification"
 	defaultGenericBody         = "You have a new notification."
@@ -54,11 +57,24 @@ type onboardingPayload struct {
 	SignupMethod string `json:"signup_method"`
 }
 
+type invitePayload struct {
+	CampaignName      string `json:"campaign_name"`
+	ParticipantName   string `json:"participant_name"`
+	InviterUsername   string `json:"inviter_username"`
+	RecipientUsername string `json:"recipient_username"`
+}
+
 // Render returns localized copy for one notification artifact.
 func Render(loc Localizer, input Input) Output {
 	switch normalizeToken(input.MessageType) {
 	case MessageTypeOnboardingWelcome, MessageTypeOnboardingWelcomeV1:
 		return renderOnboardingWelcome(loc, input)
+	case MessageTypeCampaignInviteCreated:
+		return renderCampaignInviteCreated(loc, input)
+	case MessageTypeCampaignInviteAccepted:
+		return renderCampaignInviteAccepted(loc, input)
+	case MessageTypeCampaignInviteDeclined:
+		return renderCampaignInviteDeclined(loc, input)
 	default:
 		return genericOutput(loc)
 	}
@@ -109,6 +125,74 @@ func genericOutput(loc Localizer) Output {
 		BodyText:     body,
 		EmailSubject: subject,
 	}
+}
+
+func renderCampaignInviteCreated(loc Localizer, input Input) Output {
+	payload, ok := parseInvitePayload(input.PayloadJSON)
+	if !ok {
+		return genericOutput(loc)
+	}
+	body := "You have a campaign invitation."
+	if payload.CampaignName != "" && payload.ParticipantName != "" {
+		body = "You were invited to " + payload.CampaignName + " as " + payload.ParticipantName + "."
+	} else if payload.CampaignName != "" {
+		body = "You were invited to " + payload.CampaignName + "."
+	}
+	if payload.InviterUsername != "" {
+		body += " Invited by @" + payload.InviterUsername + "."
+	}
+	return Output{
+		Title:        "Campaign invitation",
+		BodyText:     body,
+		EmailSubject: "Campaign invitation",
+	}
+}
+
+func renderCampaignInviteAccepted(loc Localizer, input Input) Output {
+	payload, ok := parseInvitePayload(input.PayloadJSON)
+	if !ok {
+		return genericOutput(loc)
+	}
+	body := "A campaign invitation was accepted."
+	if payload.RecipientUsername != "" && payload.ParticipantName != "" && payload.CampaignName != "" {
+		body = "@" + payload.RecipientUsername + " accepted " + payload.ParticipantName + " in " + payload.CampaignName + "."
+	}
+	return Output{
+		Title:        "Invitation accepted",
+		BodyText:     body,
+		EmailSubject: "Invitation accepted",
+	}
+}
+
+func renderCampaignInviteDeclined(loc Localizer, input Input) Output {
+	payload, ok := parseInvitePayload(input.PayloadJSON)
+	if !ok {
+		return genericOutput(loc)
+	}
+	body := "A campaign invitation was declined."
+	if payload.RecipientUsername != "" && payload.ParticipantName != "" && payload.CampaignName != "" {
+		body = "@" + payload.RecipientUsername + " declined " + payload.ParticipantName + " in " + payload.CampaignName + "."
+	}
+	return Output{
+		Title:        "Invitation declined",
+		BodyText:     body,
+		EmailSubject: "Invitation declined",
+	}
+}
+
+func parseInvitePayload(raw string) (invitePayload, bool) {
+	payload := invitePayload{}
+	if strings.TrimSpace(raw) == "" {
+		return invitePayload{}, false
+	}
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		return invitePayload{}, false
+	}
+	payload.CampaignName = strings.TrimSpace(payload.CampaignName)
+	payload.ParticipantName = strings.TrimSpace(payload.ParticipantName)
+	payload.InviterUsername = strings.TrimSpace(payload.InviterUsername)
+	payload.RecipientUsername = strings.TrimSpace(payload.RecipientUsername)
+	return payload, payload.CampaignName != "" || payload.ParticipantName != "" || payload.InviterUsername != "" || payload.RecipientUsername != ""
 }
 
 func localizedSignupMethod(loc Localizer, raw string) string {

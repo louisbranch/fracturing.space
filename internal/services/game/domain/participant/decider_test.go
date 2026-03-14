@@ -662,6 +662,26 @@ func TestDecideParticipantBind_MissingUserIDRejected(t *testing.T) {
 	}
 }
 
+func TestDecideParticipantBind_AlreadyClaimedRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("participant.bind"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
+	}
+
+	decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeParticipantAlreadyClaimed {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeParticipantAlreadyClaimed)
+	}
+}
+
 func TestDecideParticipantBind_WhenNotJoinedRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",

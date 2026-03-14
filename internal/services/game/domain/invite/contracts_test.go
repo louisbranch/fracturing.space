@@ -21,25 +21,25 @@ func TestRegisterRequiresRegistry(t *testing.T) {
 
 func TestInviteContractTypeLists(t *testing.T) {
 	emittable := EmittableEventTypes()
-	if len(emittable) != 4 {
-		t.Fatalf("EmittableEventTypes len = %d, want 4", len(emittable))
+	if len(emittable) != 5 {
+		t.Fatalf("EmittableEventTypes len = %d, want 5", len(emittable))
 	}
-	if emittable[0] != EventTypeCreated || emittable[1] != EventTypeClaimed || emittable[2] != EventTypeRevoked || emittable[3] != EventTypeUpdated {
+	if emittable[0] != EventTypeCreated || emittable[1] != EventTypeClaimed || emittable[2] != EventTypeDeclined || emittable[3] != EventTypeRevoked || emittable[4] != EventTypeUpdated {
 		t.Fatalf("unexpected emittable events: %v", emittable)
 	}
 
 	commands := DeciderHandledCommands()
-	if len(commands) != 4 {
-		t.Fatalf("DeciderHandledCommands len = %d, want 4", len(commands))
+	if len(commands) != 5 {
+		t.Fatalf("DeciderHandledCommands len = %d, want 5", len(commands))
 	}
-	if commands[0] != CommandTypeCreate || commands[1] != CommandTypeClaim || commands[2] != CommandTypeRevoke || commands[3] != CommandTypeUpdate {
+	if commands[0] != CommandTypeCreate || commands[1] != CommandTypeClaim || commands[2] != CommandTypeDecline || commands[3] != CommandTypeRevoke || commands[4] != CommandTypeUpdate {
 		t.Fatalf("unexpected command list: %v", commands)
 	}
 
 	projectionTypes := ProjectionHandledTypes()
 	foldTypes := FoldHandledTypes()
-	if len(projectionTypes) != 4 || len(foldTypes) != 4 {
-		t.Fatalf("projection/fold lengths = %d/%d, want 4/4", len(projectionTypes), len(foldTypes))
+	if len(projectionTypes) != 5 || len(foldTypes) != 5 {
+		t.Fatalf("projection/fold lengths = %d/%d, want 5/5", len(projectionTypes), len(foldTypes))
 	}
 	for i := range projectionTypes {
 		if projectionTypes[i] != foldTypes[i] {
@@ -104,6 +104,7 @@ func TestFoldRecognizedEventsRejectCorruptPayload(t *testing.T) {
 	tests := []event.Type{
 		EventTypeCreated,
 		EventTypeClaimed,
+		EventTypeDeclined,
 		EventTypeRevoked,
 		EventTypeUpdated,
 	}
@@ -130,6 +131,7 @@ func TestNormalizeStatus(t *testing.T) {
 	}{
 		{name: "pending canonical", value: "pending", want: StatusPending, wantOK: true, wantRaw: statusPending},
 		{name: "claimed enum", value: "INVITE_STATUS_CLAIMED", want: StatusClaimed, wantOK: true, wantRaw: statusClaimed},
+		{name: "declined canonical", value: "declined", want: StatusDeclined, wantOK: true, wantRaw: statusDeclined},
 		{name: "revoked uppercase", value: "REVOKED", want: StatusRevoked, wantOK: true, wantRaw: statusRevoked},
 		{name: "invalid", value: "draft", want: StatusUnspecified, wantOK: false, wantRaw: ""},
 		{name: "blank", value: " ", want: StatusUnspecified, wantOK: false, wantRaw: ""},

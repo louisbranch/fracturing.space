@@ -31,7 +31,7 @@ func (h handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	langTag := h.resolveAuthTag(w, r)
 	copy := webi18n.Auth(langTag)
-	h.writeAuthPage(w, r, copy.LoginTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyLoginPage(copy, h.recoveryPageURL(r), h.pendingID(r)))
+	h.writeAuthPage(w, r, copy.LoginTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyLoginPage(copy, h.recoveryPageURL(r), h.pendingID(r), h.nextPath(r)))
 }
 
 // handleRecoveryGet handles this route in the module transport layer.
@@ -41,7 +41,7 @@ func (h handlers) handleRecoveryGet(w http.ResponseWriter, r *http.Request) {
 	}
 	langTag := h.resolveAuthTag(w, r)
 	copy := webi18n.Auth(langTag)
-	h.writeAuthPage(w, r, copy.RecoveryTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyRecoveryPage(copy, h.pendingID(r)))
+	h.writeAuthPage(w, r, copy.RecoveryTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyRecoveryPage(copy, h.pendingID(r), h.nextPath(r)))
 }
 
 // handleAuthLogin handles this route in the module transport layer.
@@ -49,7 +49,7 @@ func (h handlers) handleAuthLogin(w http.ResponseWriter, r *http.Request) {
 	if h.redirectAuthenticatedToApp(w, r) {
 		return
 	}
-	httpx.WriteRedirect(w, r, routepath.Login)
+	httpx.WriteRedirect(w, r, h.loginPageURL(r))
 }
 
 // handleHealth handles this route in the module transport layer.
@@ -84,13 +84,46 @@ func (h handlers) pendingID(r *http.Request) string {
 	return strings.TrimSpace(r.URL.Query().Get("pending_id"))
 }
 
-// recoveryPageURL builds the login-to-recovery link, preserving pending auth state.
+// nextPath extracts an optional validated post-auth continuation path from the query.
+func (h handlers) nextPath(r *http.Request) string {
+	if r == nil || r.URL == nil {
+		return ""
+	}
+	return resolveSafeRedirectPath(r.URL.Query().Get("next"))
+}
+
+// recoveryPageURL builds the login-to-recovery link, preserving post-auth state.
 func (h handlers) recoveryPageURL(r *http.Request) string {
-	pendingID := h.pendingID(r)
-	if pendingID == "" {
+	if r == nil {
 		return routepath.LoginRecovery
 	}
 	values := url.Values{}
-	values.Set("pending_id", pendingID)
+	if pendingID := h.pendingID(r); pendingID != "" {
+		values.Set("pending_id", pendingID)
+	}
+	if nextPath := h.nextPath(r); nextPath != "" {
+		values.Set("next", nextPath)
+	}
+	if len(values) == 0 {
+		return routepath.LoginRecovery
+	}
 	return routepath.LoginRecovery + "?" + values.Encode()
+}
+
+// loginPageURL builds the auth-login redirect target, preserving post-auth state.
+func (h handlers) loginPageURL(r *http.Request) string {
+	if r == nil {
+		return routepath.Login
+	}
+	values := url.Values{}
+	if pendingID := h.pendingID(r); pendingID != "" {
+		values.Set("pending_id", pendingID)
+	}
+	if nextPath := h.nextPath(r); nextPath != "" {
+		values.Set("next", nextPath)
+	}
+	if len(values) == 0 {
+		return routepath.Login
+	}
+	return routepath.Login + "?" + values.Encode()
 }

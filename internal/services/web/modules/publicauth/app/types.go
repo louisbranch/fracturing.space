@@ -41,7 +41,7 @@ type Service interface {
 	PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
 	RecoveryStart(ctx context.Context, username string, recoveryCode string) (RecoveryChallenge, error)
 	RecoveryFinish(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
-	ResolvePostAuthRedirect(pendingID string) string
+	ResolvePostAuthRedirect(pendingID string, nextPath string) string
 	HasValidWebSession(ctx context.Context, sessionID string) bool
 	RevokeWebSession(ctx context.Context, sessionID string) error
 }

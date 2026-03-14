@@ -37,7 +37,7 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	h.writeSessionCookie(w, r, finished.SessionID)
-	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyLoginFinishResponse(h.service.ResolvePostAuthRedirect(input.PendingID)))
+	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyLoginFinishResponse(h.service.ResolvePostAuthRedirect(input.PendingID, input.NextPath)))
 }
 
 // handlePasskeyRegisterStart handles this route in the module transport layer.
@@ -70,6 +70,7 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 	h.writeSessionCookie(w, r, finished.SessionID)
 	h.writeRecoveryRevealState(w, r, recoveryRevealState{
 		Code: finished.RecoveryCode,
+		Next: input.NextPath,
 		Mode: recoveryRevealModeSignup,
 	})
 	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyRegisterFinishResponse(finished))

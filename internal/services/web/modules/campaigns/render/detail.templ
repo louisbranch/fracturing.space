@@ -777,8 +777,18 @@ templ Fragment(view DetailView, loc Localizer) {
 					for _, invite := range view.Invites {
 						<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-invite-card-id={ invite.ID }>
 							<div class="card-body gap-2 p-4">
-								<p data-campaign-invite-participant={ invite.ParticipantID }>{ invite.ParticipantID }</p>
-								<p data-campaign-invite-recipient={ invite.RecipientUserID }>{ invite.RecipientUserID }</p>
+								<p data-campaign-invite-participant={ invite.ParticipantID }>{ invite.ParticipantName }</p>
+								if invite.RecipientUsername != "" {
+									<p data-campaign-invite-recipient={ invite.RecipientUsername }>{ "@" + invite.RecipientUsername }</p>
+								} else if invite.HasRecipient {
+									<p data-campaign-invite-recipient="specific-user">{ T(loc, "game.campaign_invites.recipient_specific_user") }</p>
+								}
+								<label class="form-control">
+									<span class="label">
+										<span class="label-text">{ T(loc, "game.campaign_invites.field_public_url") }</span>
+									</span>
+									<input class="input input-bordered input-sm w-full" type="text" readonly value={ invite.PublicURL } data-campaign-invite-public-url="true"/>
+								</label>
 								<p data-campaign-invite-status={ campaignInviteStatusLabel(loc, invite.Status) }>{ campaignInviteStatusLabel(loc, invite.Status) }</p>
 								if view.CanManageInvites && campaignInviteCanRevoke(invite.Status) {
 									<div class="card-actions justify-end">

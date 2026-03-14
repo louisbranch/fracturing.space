@@ -7,6 +7,7 @@ type RecoveryCodePageParams struct {
 	Copy       webi18n.AuthCopy
 	Code       string
 	PendingID  string
+	Next       string
 	IsRecovery bool
 }
 
@@ -22,7 +23,7 @@ templ PublicRootFragment(copy webi18n.AuthCopy) {
 	</section>
 }
 
-templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID string) {
+templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID string, next string) {
 	<section id="passkey-page" class="mx-auto grid w-full max-w-5xl gap-8">
 		<header class="grid gap-2">
 			<h1 class="text-3xl font-bold">{ copy.LoginHeading }</h1>
@@ -74,6 +75,7 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID stri
 		data-register-start-path={ routepath.PasskeyRegisterStart }
 		data-register-finish-path={ routepath.PasskeyRegisterFinish }
 		data-pending-id={ pendingID }
+		data-next={ next }
 		data-login-start-error={ copy.JSLoginStartError }
 		data-login-finish-error={ copy.JSLoginFinishError }
 		data-register-start-error={ copy.JSRegisterStartErr }
@@ -92,7 +94,7 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID stri
 	<script defer src="/static/passkey-auth.js"></script>
 }
 
-templ PasskeyRecoveryPage(copy webi18n.AuthCopy, pendingID string) {
+templ PasskeyRecoveryPage(copy webi18n.AuthCopy, pendingID string, next string) {
 	<section id="recovery-page" class="mx-auto grid w-full max-w-3xl gap-8">
 		<header class="grid gap-2">
 			<h1 class="text-3xl font-bold">{ copy.RecoveryHeading }</h1>
@@ -125,6 +127,7 @@ templ PasskeyRecoveryPage(copy webi18n.AuthCopy, pendingID string) {
 		data-recovery-start-path={ routepath.PasskeyRecoveryStart }
 		data-recovery-finish-path={ routepath.PasskeyRecoveryFinish }
 		data-pending-id={ pendingID }
+		data-next={ next }
 		data-recovery-start-error={ copy.JSRecoveryStartError }
 		data-recovery-finish-error={ copy.JSRecoveryFinishError }
 		data-recovery-username-required={ copy.JSRecoveryUsernameReq }
@@ -155,6 +158,7 @@ templ RecoveryCodePage(params RecoveryCodePageParams) {
 				</div>
 				<form method="post" action={ routepath.LoginRecoveryCodeAcknowledge } class="grid gap-4">
 					<input type="hidden" name="pending_id" value={ params.PendingID }/>
+					<input type="hidden" name="next" value={ params.Next }/>
 					<label class="label cursor-pointer justify-start gap-3">
 						<input id="recovery-code-ack" name="acknowledged" value="true" type="checkbox" class="checkbox"/>
 						<span class="label-text">{ params.Copy.RecoveryCodeAcknowledge }</span>

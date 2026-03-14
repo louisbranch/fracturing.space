@@ -14,6 +14,7 @@ type DashboardSync interface {
 	CampaignCreated(context.Context, string, string)
 	SessionStarted(context.Context, string, string)
 	SessionEnded(context.Context, string, string)
+	InviteChanged(context.Context, []string, string)
 }
 
 // handlers defines an internal contract used at this web package boundary.

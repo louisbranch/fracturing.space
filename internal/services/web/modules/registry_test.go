@@ -23,8 +23,8 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	})
 	public := built.Public
 	protected := built.Protected
-	if len(public) != 5 {
-		t.Fatalf("public module count = %d, want %d", len(public), 5)
+	if len(public) != 6 {
+		t.Fatalf("public module count = %d, want %d", len(public), 6)
 	}
 	if len(protected) != 3 {
 		t.Fatalf("protected module count = %d, want %d", len(protected), 3)
@@ -44,6 +44,9 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	}
 	if got := public[4].ID(); got != "profile" {
 		t.Fatalf("default public module[4] id = %q, want %q", got, "profile")
+	}
+	if got := public[5].ID(); got != "invite" {
+		t.Fatalf("default public module[5] id = %q, want %q", got, "invite")
 	}
 	if got := protected[0].ID(); got != "dashboard" {
 		t.Fatalf("default protected module[0] id = %q, want %q", got, "dashboard")
@@ -111,8 +114,8 @@ func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 		PublicOptions:    PublicModuleOptions{},
 		ProtectedOptions: ProtectedModuleOptions{},
 	})
-	if len(built.Public) != 5 {
-		t.Fatalf("public module count = %d, want 5", len(built.Public))
+	if len(built.Public) != 6 {
+		t.Fatalf("public module count = %d, want 6", len(built.Public))
 	}
 	if len(built.Protected) != 3 {
 		t.Fatalf("protected module count = %d, want 3", len(built.Protected))

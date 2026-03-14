@@ -492,13 +492,21 @@ func TestGRPCGatewayCampaignSessionsMapsSessionRows(t *testing.T) {
 func TestGRPCGatewayCampaignInvitesMapsInviteRows(t *testing.T) {
 	t.Parallel()
 
-	g := campaigngateway.GRPCGateway{Read: campaigngateway.GRPCGatewayReadDeps{Invite: fakeInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
-		Id:              "inv-1",
-		CampaignId:      "c1",
-		ParticipantId:   "p1",
-		RecipientUserId: "user-2",
-		Status:          statev1.InviteStatus_PENDING,
-	}}}}}}
+	g := campaigngateway.GRPCGateway{
+		Read: campaigngateway.GRPCGatewayReadDeps{
+			Invite: fakeInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
+				Id:              "inv-1",
+				CampaignId:      "c1",
+				ParticipantId:   "p1",
+				RecipientUserId: "user-2",
+				Status:          statev1.InviteStatus_PENDING,
+			}}}},
+			Participant: fakeParticipantClient{},
+		},
+		Mutation: campaigngateway.GRPCGatewayMutationDeps{
+			Auth: fakeAuthClient{},
+		},
+	}
 
 	invites, err := g.CampaignInvites(context.Background(), "c1")
 	if err != nil {
@@ -507,7 +515,7 @@ func TestGRPCGatewayCampaignInvitesMapsInviteRows(t *testing.T) {
 	if len(invites) != 1 {
 		t.Fatalf("len(invites) = %d, want 1", len(invites))
 	}
-	if invites[0].ID != "inv-1" || invites[0].ParticipantID != "p1" || invites[0].RecipientUserID != "user-2" || invites[0].Status != "Pending" {
+	if invites[0].ID != "inv-1" || invites[0].ParticipantID != "p1" || invites[0].ParticipantName != "Pending Seat" || invites[0].RecipientUserID != "user-2" || invites[0].RecipientUsername != "user" || invites[0].Status != "Pending" {
 		t.Fatalf("invites[0] = %+v, want mapped invite fields", invites[0])
 	}
 }
@@ -1134,6 +1142,13 @@ func (f fakeInviteClient) ListInvites(context.Context, *statev1.ListInvitesReque
 	return &statev1.ListInvitesResponse{}, nil
 }
 
+func (f fakeInviteClient) GetPublicInvite(context.Context, *statev1.GetPublicInviteRequest, ...grpc.CallOption) (*statev1.GetPublicInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.GetPublicInviteResponse{Invite: &statev1.Invite{}}, nil
+}
+
 func (f fakeInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -1145,6 +1160,20 @@ func (f fakeInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInv
 		RecipientUserId: strings.TrimSpace(req.GetRecipientUserId()),
 		Status:          statev1.InviteStatus_PENDING,
 	}}, nil
+}
+
+func (f fakeInviteClient) ClaimInvite(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.ClaimInviteResponse{}, nil
+}
+
+func (f fakeInviteClient) DeclineInvite(context.Context, *statev1.DeclineInviteRequest, ...grpc.CallOption) (*statev1.DeclineInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.DeclineInviteResponse{}, nil
 }
 
 func (f fakeInviteClient) RevokeInvite(_ context.Context, req *statev1.RevokeInviteRequest, _ ...grpc.CallOption) (*statev1.RevokeInviteResponse, error) {
@@ -1371,6 +1400,8 @@ type stubAuthorizationClient struct {
 
 type fakeAuthClient struct{}
 
+type fakeParticipantClient struct{}
+
 type fakeSocialClient struct{}
 
 func (fakeAuthClient) LookupUserByUsername(_ context.Context, req *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
@@ -1381,6 +1412,32 @@ func (fakeAuthClient) LookupUserByUsername(_ context.Context, req *authv1.Lookup
 	return &authv1.LookupUserByUsernameResponse{
 		User: &authv1.User{Id: "user-lookup-" + username, Username: username},
 	}, nil
+}
+
+func (fakeAuthClient) GetUser(_ context.Context, req *authv1.GetUserRequest, _ ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+	return &authv1.GetUserResponse{User: &authv1.User{Id: strings.TrimSpace(req.GetUserId()), Username: "user"}}, nil
+}
+
+func (fakeAuthClient) IssueJoinGrant(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
+	return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
+}
+
+func (fakeParticipantClient) ListParticipants(context.Context, *statev1.ListParticipantsRequest, ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
+	return &statev1.ListParticipantsResponse{
+		Participants: []*statev1.Participant{{Id: "p1", Name: "Pending Seat"}},
+	}, nil
+}
+
+func (fakeParticipantClient) GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error) {
+	return &statev1.GetParticipantResponse{Participant: &statev1.Participant{Id: "p1", Name: "Pending Seat"}}, nil
+}
+
+func (fakeParticipantClient) CreateParticipant(context.Context, *statev1.CreateParticipantRequest, ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
+	return &statev1.CreateParticipantResponse{}, nil
+}
+
+func (fakeParticipantClient) UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+	return &statev1.UpdateParticipantResponse{}, nil
 }
 
 func (fakeSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {

@@ -316,6 +316,13 @@ func (f fakeWebInviteClient) ListInvites(context.Context, *statev1.ListInvitesRe
 	return &statev1.ListInvitesResponse{}, nil
 }
 
+func (f fakeWebInviteClient) GetPublicInvite(context.Context, *statev1.GetPublicInviteRequest, ...grpc.CallOption) (*statev1.GetPublicInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.GetPublicInviteResponse{Invite: &statev1.Invite{}}, nil
+}
+
 func (f fakeWebInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
 	if f.err != nil {
 		return nil, f.err
@@ -327,6 +334,20 @@ func (f fakeWebInviteClient) CreateInvite(_ context.Context, req *statev1.Create
 		RecipientUserId: strings.TrimSpace(req.GetRecipientUserId()),
 		Status:          statev1.InviteStatus_PENDING,
 	}}, nil
+}
+
+func (f fakeWebInviteClient) ClaimInvite(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.ClaimInviteResponse{}, nil
+}
+
+func (f fakeWebInviteClient) DeclineInvite(context.Context, *statev1.DeclineInviteRequest, ...grpc.CallOption) (*statev1.DeclineInviteResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return &statev1.DeclineInviteResponse{}, nil
 }
 
 func (f fakeWebInviteClient) RevokeInvite(_ context.Context, req *statev1.RevokeInviteRequest, _ ...grpc.CallOption) (*statev1.RevokeInviteResponse, error) {

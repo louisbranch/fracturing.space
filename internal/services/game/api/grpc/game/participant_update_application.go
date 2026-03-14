@@ -29,10 +29,6 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
-	if err != nil {
-		return storage.ParticipantRecord{}, err
-	}
 
 	participantID, err := validate.RequiredID(in.GetParticipantId(), "participant id")
 	if err != nil {
@@ -43,8 +39,12 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
+	policyActor, selfProfileOnly, err := resolveParticipantUpdateActor(ctx, c.auth, campaignRecord, current)
+	if err != nil {
+		return storage.ParticipantRecord{}, err
+	}
 	targetAccessBefore := current.CampaignAccess
-	if in.GetCampaignAccess() == campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
+	if !selfProfileOnly && in.GetCampaignAccess() == campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
 		decision := domainauthz.CanParticipantMutation(policyActor.CampaignAccess, targetAccessBefore)
 		if !decision.Allowed {
 			authErr := participantPolicyDecisionError(decision.ReasonCode)
@@ -76,6 +76,9 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	}
 	if userID := in.GetUserId(); userID != nil {
 		trimmed := strings.TrimSpace(userID.GetValue())
+		if selfProfileOnly && trimmed != strings.TrimSpace(current.UserID) {
+			return storage.ParticipantRecord{}, status.Error(codes.PermissionDenied, "participants may only edit their own profile fields")
+		}
 		current.UserID = trimmed
 		fields["user_id"] = trimmed
 	}
@@ -83,6 +86,9 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		role := participantRoleFromProto(in.GetRole())
 		if role == participant.RoleUnspecified {
 			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "role is invalid")
+		}
+		if selfProfileOnly && role != current.Role {
+			return storage.ParticipantRecord{}, status.Error(codes.PermissionDenied, "participants may only edit their own profile fields")
 		}
 		current.Role = role
 		fields["role"] = in.GetRole().String()
@@ -92,6 +98,9 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		if controller == participant.ControllerUnspecified {
 			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "controller is invalid")
 		}
+		if selfProfileOnly && controller != current.Controller {
+			return storage.ParticipantRecord{}, status.Error(codes.PermissionDenied, "participants may only edit their own profile fields")
+		}
 		current.Controller = controller
 		fields["controller"] = in.GetController().String()
 	}
@@ -100,28 +109,34 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		if access == participant.CampaignAccessUnspecified {
 			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "campaign_access is invalid")
 		}
-		ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
-		if err != nil {
-			return storage.ParticipantRecord{}, err
-		}
-		decision := domainauthz.CanParticipantAccessChange(policyActor.CampaignAccess, targetAccessBefore, access, ownerCount)
-		if !decision.Allowed {
-			authErr := participantPolicyDecisionError(decision.ReasonCode)
-			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
-				Store:      c.auth.Audit,
-				CampaignID: campaignID,
-				Capability: domainauthz.CapabilityManageParticipants,
-				Decision:   authzDecisionDeny,
-				ReasonCode: decision.ReasonCode,
-				Actor:      policyActor,
-				Err:        authErr,
-				ExtraAttributes: map[string]any{
-					"target_participant_id":     participantID,
-					"target_campaign_access":    strings.TrimSpace(string(targetAccessBefore)),
-					"requested_campaign_access": strings.TrimSpace(string(access)),
-				},
-			})
-			return storage.ParticipantRecord{}, authErr
+		if selfProfileOnly {
+			if access != targetAccessBefore {
+				return storage.ParticipantRecord{}, status.Error(codes.PermissionDenied, "participants may only edit their own profile fields")
+			}
+		} else {
+			ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
+			if err != nil {
+				return storage.ParticipantRecord{}, err
+			}
+			decision := domainauthz.CanParticipantAccessChange(policyActor.CampaignAccess, targetAccessBefore, access, ownerCount)
+			if !decision.Allowed {
+				authErr := participantPolicyDecisionError(decision.ReasonCode)
+				emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+					Store:      c.auth.Audit,
+					CampaignID: campaignID,
+					Capability: domainauthz.CapabilityManageParticipants,
+					Decision:   authzDecisionDeny,
+					ReasonCode: decision.ReasonCode,
+					Actor:      policyActor,
+					Err:        authErr,
+					ExtraAttributes: map[string]any{
+						"target_participant_id":     participantID,
+						"target_campaign_access":    strings.TrimSpace(string(targetAccessBefore)),
+						"requested_campaign_access": strings.TrimSpace(string(access)),
+					},
+				})
+				return storage.ParticipantRecord{}, authErr
+			}
 		}
 		current.CampaignAccess = access
 		fields["campaign_access"] = in.GetCampaignAccess().String()
@@ -218,4 +233,23 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 	}
 
 	return updated, nil
+}
+
+func resolveParticipantUpdateActor(
+	ctx context.Context,
+	stores Stores,
+	campaignRecord storage.CampaignRecord,
+	current storage.ParticipantRecord,
+) (storage.ParticipantRecord, bool, error) {
+	actor, _, err := authorizePolicyActorWithParticipantStore(ctx, stores.Participant, domainauthz.CapabilityReadCampaign, campaignRecord)
+	if err != nil {
+		return storage.ParticipantRecord{}, false, err
+	}
+	if domainauthz.CanCampaignAccess(actor.CampaignAccess, domainauthz.CapabilityManageParticipants).Allowed {
+		return actor, false, nil
+	}
+	if strings.EqualFold(strings.TrimSpace(actor.ID), strings.TrimSpace(current.ID)) {
+		return actor, true, nil
+	}
+	return storage.ParticipantRecord{}, false, status.Error(codes.PermissionDenied, "participant lacks permission")
 }

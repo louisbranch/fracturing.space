@@ -12,7 +12,10 @@ const (
 	// MessageTypeOnboardingWelcome is the canonical onboarding welcome copy id.
 	MessageTypeOnboardingWelcome = "auth.onboarding.welcome"
 	// MessageTypeOnboardingWelcomeV1 is the versioned onboarding welcome copy id.
-	MessageTypeOnboardingWelcomeV1 = "auth.onboarding.welcome.v1"
+	MessageTypeOnboardingWelcomeV1    = "auth.onboarding.welcome.v1"
+	MessageTypeCampaignInviteCreated  = "campaign.invite.created.v1"
+	MessageTypeCampaignInviteAccepted = "campaign.invite.accepted.v1"
+	MessageTypeCampaignInviteDeclined = "campaign.invite.declined.v1"
 
 	defaultGenericTitle        = "Notification"
 	defaultGenericBody         = "You have a new notification."
@@ -42,11 +45,25 @@ type onboardingPayload struct {
 	SignupMethod string `json:"signup_method"`
 }
 
+// invitePayload mirrors the structured invite-notification fields used in web copy.
+type invitePayload struct {
+	CampaignName      string `json:"campaign_name"`
+	ParticipantName   string `json:"participant_name"`
+	InviterUsername   string `json:"inviter_username"`
+	RecipientUsername string `json:"recipient_username"`
+}
+
 // RenderInApp returns localized title/body copy for one in-app notification.
 func RenderInApp(loc Localizer, input Input) Output {
 	switch normalizeToken(input.MessageType) {
 	case MessageTypeOnboardingWelcome, MessageTypeOnboardingWelcomeV1:
 		return renderOnboardingWelcome(loc, input)
+	case MessageTypeCampaignInviteCreated:
+		return renderCampaignInviteCreated(loc, input)
+	case MessageTypeCampaignInviteAccepted:
+		return renderCampaignInviteAccepted(loc, input)
+	case MessageTypeCampaignInviteDeclined:
+		return renderCampaignInviteDeclined(loc, input)
 	default:
 		return genericOutput(loc)
 	}
@@ -82,6 +99,75 @@ func genericOutput(loc Localizer) Output {
 		Title:    localizeWithFallback(loc, "notification.generic.title", defaultGenericTitle),
 		BodyText: localizeWithFallback(loc, "notification.generic.body", defaultGenericBody),
 	}
+}
+
+// renderCampaignInviteCreated formats recipient-facing invite creation copy.
+func renderCampaignInviteCreated(loc Localizer, input Input) Output {
+	payload, ok := parseInvitePayload(input.PayloadJSON)
+	if !ok {
+		return genericOutput(loc)
+	}
+	body := "You were invited"
+	if payload.CampaignName != "" && payload.ParticipantName != "" {
+		body = "You were invited to " + payload.CampaignName + " as " + payload.ParticipantName + "."
+	} else if payload.CampaignName != "" {
+		body = "You were invited to " + payload.CampaignName + "."
+	}
+	if payload.InviterUsername != "" {
+		body += " Invited by @" + payload.InviterUsername + "."
+	}
+	return Output{
+		Title:    "Campaign invitation",
+		BodyText: body,
+	}
+}
+
+// renderCampaignInviteAccepted formats creator-facing acceptance copy.
+func renderCampaignInviteAccepted(loc Localizer, input Input) Output {
+	payload, ok := parseInvitePayload(input.PayloadJSON)
+	if !ok {
+		return genericOutput(loc)
+	}
+	body := "An invitation was accepted."
+	if payload.RecipientUsername != "" && payload.ParticipantName != "" && payload.CampaignName != "" {
+		body = "@" + payload.RecipientUsername + " accepted " + payload.ParticipantName + " in " + payload.CampaignName + "."
+	}
+	return Output{
+		Title:    "Invitation accepted",
+		BodyText: body,
+	}
+}
+
+// renderCampaignInviteDeclined formats creator-facing decline copy.
+func renderCampaignInviteDeclined(loc Localizer, input Input) Output {
+	payload, ok := parseInvitePayload(input.PayloadJSON)
+	if !ok {
+		return genericOutput(loc)
+	}
+	body := "An invitation was declined."
+	if payload.RecipientUsername != "" && payload.ParticipantName != "" && payload.CampaignName != "" {
+		body = "@" + payload.RecipientUsername + " declined " + payload.ParticipantName + " in " + payload.CampaignName + "."
+	}
+	return Output{
+		Title:    "Invitation declined",
+		BodyText: body,
+	}
+}
+
+// parseInvitePayload trims and validates invite notification payloads before rendering.
+func parseInvitePayload(raw string) (invitePayload, bool) {
+	payload := invitePayload{}
+	if raw == "" {
+		return invitePayload{}, false
+	}
+	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
+		return invitePayload{}, false
+	}
+	payload.CampaignName = strings.TrimSpace(payload.CampaignName)
+	payload.ParticipantName = strings.TrimSpace(payload.ParticipantName)
+	payload.InviterUsername = strings.TrimSpace(payload.InviterUsername)
+	payload.RecipientUsername = strings.TrimSpace(payload.RecipientUsername)
+	return payload, payload.CampaignName != "" || payload.ParticipantName != "" || payload.InviterUsername != "" || payload.RecipientUsername != ""
 }
 
 // localizedSignupMethod translates producer signup-method tokens into

@@ -15,30 +15,31 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 	svc := newService(nil)
 	ctx := contextWithResolvedUserID("user-1")
 	tests := []struct {
-		name string
-		run  func() error
+		name       string
+		run        func() error
+		wantStatus int
 	}{
-		{name: "update campaign", run: func() error { return svc.updateCampaign(ctx, "c1", UpdateCampaignInput{}) }},
+		{name: "update campaign", run: func() error { return svc.updateCampaign(ctx, "c1", UpdateCampaignInput{}) }, wantStatus: http.StatusForbidden},
 		{name: "update campaign ai binding", run: func() error {
 			return svc.updateCampaignAIBinding(ctx, "c1", UpdateCampaignAIBindingInput{ParticipantID: "p-1", AIAgentID: "agent-1"})
-		}},
-		{name: "start session", run: func() error { return svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}) }},
-		{name: "end session", run: func() error { return svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}) }},
+		}, wantStatus: http.StatusForbidden},
+		{name: "start session", run: func() error { return svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}) }, wantStatus: http.StatusForbidden},
+		{name: "end session", run: func() error { return svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}) }, wantStatus: http.StatusForbidden},
 		{name: "create character", run: func() error {
 			_, err := svc.createCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 			return err
-		}},
+		}, wantStatus: http.StatusForbidden},
 		{name: "create participant", run: func() error {
 			_, err := svc.createParticipant(ctx, "c1", CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"})
 			return err
-		}},
+		}, wantStatus: http.StatusForbidden},
 		{name: "update participant", run: func() error {
 			return svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "player"})
-		}},
+		}, wantStatus: http.StatusServiceUnavailable},
 		{name: "create invite", run: func() error {
 			return svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})
-		}},
-		{name: "revoke invite", run: func() error { return svc.revokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}) }},
+		}, wantStatus: http.StatusForbidden},
+		{name: "revoke invite", run: func() error { return svc.revokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}) }, wantStatus: http.StatusForbidden},
 	}
 
 	for _, tc := range tests {
@@ -49,8 +50,8 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 			if err == nil {
 				t.Fatalf("expected forbidden error")
 			}
-			if got := apperrors.HTTPStatus(err); got != http.StatusForbidden {
-				t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusForbidden)
+			if got := apperrors.HTTPStatus(err); got != tc.wantStatus {
+				t.Fatalf("HTTPStatus(err) = %d, want %d", got, tc.wantStatus)
 			}
 		})
 	}
@@ -631,6 +632,45 @@ func TestUpdateParticipantDelegatesToGateway(t *testing.T) {
 	}
 	if gateway.lastUpdateParticipantInput.CampaignAccess != "manager" {
 		t.Fatalf("updated access = %q, want %q", gateway.lastUpdateParticipantInput.CampaignAccess, "manager")
+	}
+}
+
+func TestUpdateParticipantAllowsSelfOwnedProfileChanges(t *testing.T) {
+	t.Parallel()
+
+	gateway := &campaignGatewayStub{
+		campaignParticipant: CampaignParticipant{
+			ID:             "p-1",
+			UserID:         "user-1",
+			Name:           "Player One",
+			Role:           "Player",
+			CampaignAccess: "Member",
+			Pronouns:       "she/her",
+		},
+		campaignWorkspace: CampaignWorkspace{ID: "c1", Name: "Campaign", GMMode: "Human"},
+		authorizationDecision: AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    false,
+			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+		},
+	}
+	svc := newService(gateway)
+
+	err := svc.updateParticipant(contextWithResolvedUserID("user-1"), "c1", UpdateParticipantInput{
+		ParticipantID:  "p-1",
+		Name:           "Player Prime",
+		Role:           "player",
+		Pronouns:       "they/them",
+		CampaignAccess: "member",
+	})
+	if err != nil {
+		t.Fatalf("updateParticipant() error = %v", err)
+	}
+	if gateway.lastUpdateParticipantInput.Name != "Player Prime" {
+		t.Fatalf("updated name = %q, want %q", gateway.lastUpdateParticipantInput.Name, "Player Prime")
+	}
+	if gateway.lastUpdateParticipantInput.Pronouns != "they/them" {
+		t.Fatalf("updated pronouns = %q, want %q", gateway.lastUpdateParticipantInput.Pronouns, "they/them")
 	}
 }
 

@@ -63,6 +63,10 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	if snapshot.ActiveSessionsAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameSessions) {
 		activeSessions = append(activeSessions, snapshot.ActiveSessions...)
 	}
+	pendingInvites := []PendingInviteItem(nil)
+	if snapshot.InvitesAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameInvites) {
+		pendingInvites = append(pendingInvites, snapshot.PendingInvites...)
+	}
 	campaignStartNudges := []CampaignStartNudgeItem(nil)
 	campaignStartNudgesMore := false
 	if snapshot.CampaignStartNudgesAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameReadiness) {
@@ -85,6 +89,7 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 		DataStatus:              status,
 		DegradedDependencies:    snapshot.DegradedDependencies,
 		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile),
+		PendingInvites:          pendingInvites,
 		ShowAdventureBlock:      showAdventureBlock,
 		CampaignStartNudges:     campaignStartNudges,
 		CampaignStartNudgesMore: campaignStartNudgesMore,

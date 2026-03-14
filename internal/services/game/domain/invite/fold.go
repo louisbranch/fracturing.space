@@ -13,6 +13,7 @@ func FoldHandledTypes() []event.Type {
 	return []event.Type{
 		EventTypeCreated,
 		EventTypeClaimed,
+		EventTypeDeclined,
 		EventTypeRevoked,
 		EventTypeUpdated,
 	}
@@ -49,6 +50,15 @@ func Fold(state State, evt event.Event) (State, error) {
 			state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 		}
 		state.Status = statusClaimed
+	case EventTypeDeclined:
+		var payload DeclinePayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("invite fold %s: %w", evt.Type, err)
+		}
+		if payload.InviteID != "" {
+			state.InviteID = ids.InviteID(payload.InviteID)
+		}
+		state.Status = statusDeclined
 	case EventTypeRevoked:
 		var payload RevokePayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {

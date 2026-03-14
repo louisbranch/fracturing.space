@@ -16,6 +16,7 @@ func TestGoSourcesDoNotHardcodeInternalRoutes(t *testing.T) {
 	forbiddenFragments := []string{
 		`"/app/`,
 		`"/discover/`,
+		`"/invite/`,
 		`"/auth/`,
 		`"/passkeys/`,
 		`"/u/`,
@@ -73,6 +74,7 @@ func TestRoutepathPackageStaysSplitByOwnedSurface(t *testing.T) {
 		"routepath/core.go",
 		"routepath/publicauth.go",
 		"routepath/discovery.go",
+		"routepath/invite.go",
 		"routepath/profile.go",
 		"routepath/dashboard.go",
 		"routepath/campaigns.go",
@@ -110,6 +112,7 @@ func TestRoutepathPackageStaysSplitByOwnedSurface(t *testing.T) {
 		"discovery.go",
 		"doc.go",
 		"helpers.go",
+		"invite.go",
 		"notifications.go",
 		"profile.go",
 		"publicauth.go",

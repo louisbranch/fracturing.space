@@ -25,6 +25,7 @@ const (
 	commandTypeCharacterUpdate                command.Type = commandids.CharacterUpdate
 	commandTypeInviteClaim                    command.Type = commandids.InviteClaim
 	commandTypeInviteCreate                   command.Type = commandids.InviteCreate
+	commandTypeInviteDecline                  command.Type = commandids.InviteDecline
 	commandTypeInviteRevoke                   command.Type = commandids.InviteRevoke
 	commandTypeParticipantBind                command.Type = commandids.ParticipantBind
 	commandTypeParticipantJoin                command.Type = commandids.ParticipantJoin
@@ -72,6 +73,7 @@ const (
 	eventTypeCharacterDeleted                 event.Type = "character.deleted"
 	eventTypeCharacterUpdated                 event.Type = "character.updated"
 	eventTypeInviteClaimed                    event.Type = "invite.claimed"
+	eventTypeInviteDeclined                   event.Type = "invite.declined"
 	eventTypeParticipantJoined                event.Type = "participant.joined"
 	eventTypeParticipantLeft                  event.Type = "participant.left"
 	eventTypeParticipantUpdated               event.Type = "participant.updated"

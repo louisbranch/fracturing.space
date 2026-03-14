@@ -187,10 +187,13 @@ func (s service) RecoveryFinish(ctx context.Context, recoverySessionID string, s
 	return finished, nil
 }
 
-// ResolvePostAuthRedirect returns the app dashboard or auth consent URL.
-func (s service) ResolvePostAuthRedirect(pendingID string) string {
+// ResolvePostAuthRedirect returns the auth consent URL, validated continuation, or dashboard.
+func (s service) ResolvePostAuthRedirect(pendingID string, nextPath string) string {
 	pendingID = strings.TrimSpace(pendingID)
 	if pendingID == "" {
+		if resolved := resolvePostAuthRedirectPath(nextPath); resolved != "" {
+			return resolved
+		}
 		return routepath.AppDashboard
 	}
 	base := strings.TrimRight(strings.TrimSpace(s.authBaseURL), "/")
@@ -209,6 +212,73 @@ func (s service) ResolvePostAuthRedirect(pendingID string) string {
 	query.Set("pending_id", pendingID)
 	parsed.RawQuery = query.Encode()
 	return parsed.String()
+}
+
+// resolvePostAuthRedirectPath only allows safe first-party app and invite URLs
+// to survive login, signup, and recovery flows.
+func resolvePostAuthRedirectPath(raw string) string {
+	next := strings.TrimSpace(raw)
+	if next == "" {
+		return ""
+	}
+	parsed, err := url.Parse(next)
+	if err != nil || parsed.Scheme != "" || parsed.Host != "" || parsed.Opaque != "" {
+		return ""
+	}
+	rawPath := strings.TrimSpace(parsed.EscapedPath())
+	if hasEncodedSlash(rawPath) {
+		return ""
+	}
+	decodedPath, err := url.PathUnescape(strings.TrimSpace(parsed.Path))
+	if err != nil {
+		return ""
+	}
+	if hasDotSegment(decodedPath) {
+		return ""
+	}
+	canonicalPath := path.Clean(decodedPath)
+	if strings.TrimSpace(canonicalPath) == "." {
+		canonicalPath = "/"
+	}
+	canonicalPath = ensureLeadingSlash(canonicalPath)
+	if canonicalPath == routepath.AppPrefix || canonicalPath == strings.TrimRight(routepath.InvitePrefix, "/") {
+		return ""
+	}
+	if !strings.HasPrefix(canonicalPath, routepath.AppPrefix) && !strings.HasPrefix(canonicalPath, routepath.InvitePrefix) {
+		return ""
+	}
+	if parsed.RawQuery != "" {
+		return canonicalPath + "?" + parsed.RawQuery
+	}
+	return canonicalPath
+}
+
+// hasDotSegment rejects traversal-style paths before redirect canonicalization.
+func hasDotSegment(rawPath string) bool {
+	for _, part := range strings.Split(rawPath, "/") {
+		if part == "." || part == ".." {
+			return true
+		}
+	}
+	return false
+}
+
+// hasEncodedSlash blocks encoded path separators that could bypass prefix checks.
+func hasEncodedSlash(rawPath string) bool {
+	lower := strings.ToLower(rawPath)
+	return strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c")
+}
+
+// ensureLeadingSlash keeps accepted redirect targets path-absolute.
+func ensureLeadingSlash(pathValue string) string {
+	pathValue = strings.TrimSpace(pathValue)
+	if pathValue == "" {
+		return "/"
+	}
+	if strings.HasPrefix(pathValue, "/") {
+		return pathValue
+	}
+	return "/" + pathValue
 }
 
 // HasValidWebSession trims cookie input before delegating to auth session checks.

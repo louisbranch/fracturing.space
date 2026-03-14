@@ -1155,6 +1155,88 @@ func TestUpdateParticipant_DeniesManagerMutatingOwnerWithoutAccessChange(t *test
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
+func TestUpdateParticipant_AllowsSelfOwnedProfileChanges(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+			Pronouns:       "she/her",
+		},
+	}
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Prime","pronouns":"they/them"}}`),
+			}),
+		},
+	}}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}})
+	resp, err := svc.UpdateParticipant(contextWithUserID("user-1"), &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "p1",
+		Name:           wrapperspb.String("Player Prime"),
+		Pronouns:       sharedpronouns.ToProto("they/them"),
+		Role:           statev1.ParticipantRole_PLAYER,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant returned error: %v", err)
+	}
+	if resp.Participant.GetName() != "Player Prime" {
+		t.Fatalf("participant name = %q, want %q", resp.Participant.GetName(), "Player Prime")
+	}
+	if got := sharedpronouns.FromProto(resp.Participant.GetPronouns()); got != "they/them" {
+		t.Fatalf("participant pronouns = %q, want %q", got, "they/them")
+	}
+}
+
+func TestUpdateParticipant_DeniesSelfOwnedGovernanceChange(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	eventStore := newFakeEventStore()
+
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewParticipantService(Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore})
+	_, err := svc.UpdateParticipant(contextWithUserID("user-1"), &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "p1",
+		Name:           wrapperspb.String("Player Prime"),
+		Role:           statev1.ParticipantRole_GM,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
 func TestUpdateParticipant_DeniesDemotingFinalOwner(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()

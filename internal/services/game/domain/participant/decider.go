@@ -36,6 +36,7 @@ const (
 	rejectionCodeParticipantAvatarAssetInvalid = "PARTICIPANT_INVALID_AVATAR_ASSET"
 	rejectionCodeParticipantUpdateEmpty        = "PARTICIPANT_UPDATE_EMPTY"
 	rejectionCodeParticipantUpdateFieldInvalid = "PARTICIPANT_UPDATE_FIELD_INVALID"
+	rejectionCodeParticipantAlreadyClaimed     = "PARTICIPANT_ALREADY_CLAIMED"
 	rejectionCodeParticipantUserIDRequired     = "PARTICIPANT_USER_ID_REQUIRED"
 	rejectionCodeParticipantUserIDMismatch     = "PARTICIPANT_USER_ID_MISMATCH"
 	rejectionCodeParticipantAIRoleRequired     = "PARTICIPANT_AI_ROLE_REQUIRED"
@@ -386,6 +387,12 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantUserIDRequired,
 			Message: "user id is required",
+		})
+	}
+	if strings.TrimSpace(state.UserID.String()) != "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeParticipantAlreadyClaimed,
+			Message: "participant already claimed",
 		})
 	}
 

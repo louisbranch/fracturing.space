@@ -14,6 +14,17 @@ type DashboardAdventureBlock struct {
 	Visible bool
 }
 
+type DashboardPendingInviteEntry struct {
+	InviteID        string
+	CampaignName    string
+	ParticipantName string
+}
+
+type DashboardPendingInvitesBlock struct {
+	Visible bool
+	Invites []DashboardPendingInviteEntry
+}
+
 type DashboardCampaignStartNudgeEntry struct {
 	CampaignID          string
 	CampaignName        string
@@ -53,12 +64,13 @@ type DashboardServiceHealthEntry struct {
 }
 
 type DashboardPageView struct {
-	StatusNotice         DashboardStatusNotice
-	ProfilePending       DashboardProfilePendingBlock
-	CampaignStartNudges  DashboardCampaignStartNudgesBlock
-	Adventure            DashboardAdventureBlock
-	ActiveSessions       DashboardActiveSessionsBlock
-	ServiceHealth        []DashboardServiceHealthEntry
+	StatusNotice        DashboardStatusNotice
+	ProfilePending      DashboardProfilePendingBlock
+	PendingInvites      DashboardPendingInvitesBlock
+	CampaignStartNudges DashboardCampaignStartNudgesBlock
+	Adventure           DashboardAdventureBlock
+	ActiveSessions      DashboardActiveSessionsBlock
+	ServiceHealth       []DashboardServiceHealthEntry
 }
 
 func dashboardStatusNoticeVisible(view DashboardPageView) bool {
@@ -82,6 +94,10 @@ func dashboardProfilePendingVisible(view DashboardPageView) bool {
 
 func dashboardAdventureVisible(view DashboardPageView) bool {
 	return view.Adventure.Visible
+}
+
+func dashboardPendingInvitesVisible(view DashboardPageView) bool {
+	return view.PendingInvites.Visible && len(view.PendingInvites.Invites) > 0
 }
 
 func dashboardCampaignStartNudgesVisible(view DashboardPageView) bool {
@@ -191,6 +207,25 @@ templ DashboardFragment(view DashboardPageView, loc Localizer) {
 					<div class="card-actions justify-end">
 						<a href={ routepath.AppSettingsProfile } hx-get={ routepath.AppSettingsProfile } hx-target="#main" hx-swap="innerHTML" hx-push-url="true" class="btn btn-primary">{ T(loc, "web.dashboard.profile_pending.cta") }</a>
 					</div>
+				</div>
+			</section>
+		}
+		if dashboardPendingInvitesVisible(view) {
+			<section id="dashboard-pending-invites" data-dashboard-block="pending-invites" class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-2">
+				<div class="card-body gap-4">
+					<h2 class="card-title">Pending invitations</h2>
+					<p class="text-sm opacity-80">Review invitations waiting on your response.</p>
+					<ul class="list-none space-y-3">
+						for _, entry := range view.PendingInvites.Invites {
+							<li class="flex items-center justify-between gap-3 rounded-box bg-base-100 px-4 py-3">
+								<div class="min-w-0">
+									<p class="truncate font-medium">{ entry.CampaignName }</p>
+									<p class="truncate text-sm opacity-70">{ entry.ParticipantName }</p>
+								</div>
+								<a href={ routepath.PublicInvite(entry.InviteID) } class="btn btn-primary btn-sm shrink-0">View invitation</a>
+							</li>
+						}
+					</ul>
 				</div>
 			</section>
 		}
