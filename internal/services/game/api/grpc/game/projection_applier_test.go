@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -1126,35 +1127,33 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 	}
 }
 
-func TestStoresApplier_ApplyCharacterProfileUpdated(t *testing.T) {
+func TestStoresApplier_ApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
 		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
 	}
 	applier := stores.Applier()
 
-	profilePayload := character.ProfileUpdatePayload{
+	profilePayload := daggerheart.CharacterProfileReplacedPayload{
 		CharacterID: "char-1",
-		SystemProfile: map[string]any{
-			"daggerheart": map[string]any{
-				"level":            1,
-				"hp_max":           6,
-				"stress_max":       6,
-				"evasion":          10,
-				"major_threshold":  5,
-				"severe_threshold": 10,
-				"proficiency":      1,
-				"armor_score":      1,
-				"armor_max":        2,
-				"agility":          1,
-				"strength":         0,
-				"finesse":          1,
-				"instinct":         0,
-				"presence":         0,
-				"knowledge":        1,
-				"experiences": []map[string]any{
-					{"name": "Scout", "modifier": 2},
-				},
+		Profile: daggerheart.CharacterProfile{
+			Level:           1,
+			HpMax:           6,
+			StressMax:       6,
+			Evasion:         10,
+			MajorThreshold:  5,
+			SevereThreshold: 10,
+			Proficiency:     1,
+			ArmorScore:      1,
+			ArmorMax:        2,
+			Agility:         1,
+			Strength:        0,
+			Finesse:         1,
+			Instinct:        0,
+			Presence:        0,
+			Knowledge:       1,
+			Experiences: []daggerheart.CharacterProfileExperience{
+				{Name: "Scout", Modifier: 2},
 			},
 		},
 	}
@@ -1163,15 +1162,17 @@ func TestStoresApplier_ApplyCharacterProfileUpdated(t *testing.T) {
 		t.Fatalf("encode profile payload: %v", err)
 	}
 	if err := applier.Apply(ctx, event.Event{
-		CampaignID:  "camp-1",
-		Type:        event.Type("character.profile_updated"),
-		Timestamp:   time.Date(2026, 2, 14, 7, 0, 0, 0, time.UTC),
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "character",
-		EntityID:    "char-1",
-		PayloadJSON: profileJSON,
+		CampaignID:    "camp-1",
+		Type:          daggerheart.EventTypeCharacterProfileReplaced,
+		Timestamp:     time.Date(2026, 2, 14, 7, 0, 0, 0, time.UTC),
+		ActorType:     event.ActorTypeSystem,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON:   profileJSON,
 	}); err != nil {
-		t.Fatalf("apply character.profile_updated: %v", err)
+		t.Fatalf("apply sys.daggerheart.character_profile.replaced: %v", err)
 	}
 
 	stored, err := stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, "camp-1", "char-1")

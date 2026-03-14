@@ -102,17 +102,18 @@ Apply requests are strictly ordered.
 - Starting equipment is validated against tier-1 weapon/armor catalog entries
   and allowed starting potion ids.
 
-All successful applies write through core command execution using
-`character.profile_update` (no direct projection mutation in request handlers).
+All successful applies write through system-owned command execution using
+`sys.daggerheart.character_profile.replace` (no direct projection mutation in
+request handlers).
 
 ## Reset semantics
 
 Reset is workflow-destructive by design.
 
-- `ResetCharacterCreationWorkflow` emits a `character.profile_update` with
-  `{"daggerheart":{"reset":true}}`.
-- The Daggerheart profile adapter interprets this as a delete operation and
-  removes the projected Daggerheart profile row for the character.
+- `ResetCharacterCreationWorkflow` emits
+  `sys.daggerheart.character_profile.delete`.
+- The Daggerheart adapter handles that event directly and removes the projected
+  Daggerheart profile row for the character.
 - Post-reset progress returns to step 1 with `ready = false`.
 
 ## Readiness enforcement

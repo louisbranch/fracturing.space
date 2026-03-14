@@ -28,13 +28,6 @@ var characterCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
-			Type:            CommandTypeCreateWithProfile,
-			Owner:           command.OwnerCore,
-			ValidatePayload: validateCreateWithProfilePayload,
-		},
-	},
-	{
-		definition: command.Definition{
 			Type:            CommandTypeUpdate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUpdatePayload,
@@ -45,13 +38,6 @@ var characterCommandContracts = []commandContract{
 			Type:            CommandTypeDelete,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateDeletePayload,
-		},
-	},
-	{
-		definition: command.Definition{
-			Type:            CommandTypeProfileUpdate,
-			Owner:           command.OwnerCore,
-			ValidatePayload: validateProfileUpdatePayload,
 		},
 	},
 }
@@ -83,16 +69,6 @@ var characterEventContracts = []eventProjectionContract{
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateDeletePayload,
-		},
-		emittable:  true,
-		projection: true,
-	},
-	{
-		definition: event.Definition{
-			Type:            EventTypeProfileUpdated,
-			Owner:           event.OwnerCore,
-			Addressing:      event.AddressingPolicyEntityTarget,
-			ValidatePayload: validateProfileUpdatePayload,
 		},
 		emittable:  true,
 		projection: true,
@@ -168,15 +144,6 @@ func validateCreatePayload(raw json.RawMessage) error {
 	return nil
 }
 
-// validateCreateWithProfilePayload ensures workflow payload shape for create bootstrap.
-func validateCreateWithProfilePayload(raw json.RawMessage) error {
-	var payload CreateWithProfilePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	return nil
-}
-
 // validateUpdatePayload ensures update payloads match the character update shape.
 func validateUpdatePayload(raw json.RawMessage) error {
 	var payload UpdatePayload
@@ -189,15 +156,6 @@ func validateUpdatePayload(raw json.RawMessage) error {
 // validateDeletePayload ensures delete payloads match the character delete shape.
 func validateDeletePayload(raw json.RawMessage) error {
 	var payload DeletePayload
-	if err := json.Unmarshal(raw, &payload); err != nil {
-		return err
-	}
-	return nil
-}
-
-// validateProfileUpdatePayload ensures profile update payloads match the profile update shape.
-func validateProfileUpdatePayload(raw json.RawMessage) error {
-	var payload ProfileUpdatePayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}

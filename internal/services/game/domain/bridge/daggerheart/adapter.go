@@ -65,6 +65,8 @@ func (a *Adapter) Snapshot(ctx context.Context, campaignID string) (any, error) 
 // buildRouter creates and populates the adapter router with all handlers.
 func (a *Adapter) buildRouter() *module.AdapterRouter {
 	r := module.NewAdapterRouter()
+	module.HandleAdapter(r, EventTypeCharacterProfileReplaced, a.handleCharacterProfileReplaced)
+	module.HandleAdapter(r, EventTypeCharacterProfileDeleted, a.handleCharacterProfileDeleted)
 	module.HandleAdapter(r, EventTypeDamageApplied, a.handleDamageApplied)
 	module.HandleAdapter(r, EventTypeRestTaken, a.handleRestTaken)
 	module.HandleAdapter(r, EventTypeCharacterTemporaryArmorApplied, a.handleCharacterTemporaryArmorApplied)
@@ -336,7 +338,7 @@ func (a *Adapter) handleAdversaryDeleted(ctx context.Context, evt event.Event, p
 
 func (a *Adapter) handleLevelUpApplied(ctx context.Context, evt event.Event, payload LevelUpAppliedPayload) error {
 	characterID := strings.TrimSpace(payload.CharacterID.String())
-	profile, err := a.store.GetDaggerheartCharacterProfile(ctx, string(evt.CampaignID), characterID)
+	storedProfile, err := a.store.GetDaggerheartCharacterProfile(ctx, string(evt.CampaignID), characterID)
 	if err != nil {
 		if !errors.Is(err, storage.ErrNotFound) {
 			return fmt.Errorf("get daggerheart character profile for level-up: %w", err)
@@ -345,58 +347,9 @@ func (a *Adapter) handleLevelUpApplied(ctx context.Context, evt event.Event, pay
 		return nil
 	}
 
-	profile.Level = payload.Level
-	profile.MajorThreshold += payload.ThresholdDelta
-	profile.SevereThreshold += payload.ThresholdDelta * 2
-
-	for _, adv := range payload.Advancements {
-		switch adv.Type {
-		case "trait_increase":
-			applyProfileTraitIncrease(&profile, adv.Trait)
-		case "add_hp_slots":
-			profile.HpMax++
-		case "add_stress_slots":
-			profile.StressMax++
-		case "increase_evasion":
-			profile.Evasion++
-		case "increase_proficiency":
-			profile.Proficiency++
-		case "increase_experience":
-			// Experience additions are content-level; no profile field change needed.
-		case "domain_card":
-			if adv.DomainCardID != "" {
-				profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, adv.DomainCardID)
-			}
-		case "upgraded_subclass":
-			if adv.SubclassCardID != "" {
-				profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, adv.SubclassCardID)
-			}
-		}
-	}
-
-	// Step 4 domain card acquisition.
-	if payload.NewDomainCardID != "" {
-		profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, payload.NewDomainCardID)
-	}
-
-	return a.store.PutDaggerheartCharacterProfile(ctx, profile)
-}
-
-func applyProfileTraitIncrease(profile *storage.DaggerheartCharacterProfile, trait string) {
-	switch trait {
-	case "agility":
-		profile.Agility++
-	case "strength":
-		profile.Strength++
-	case "finesse":
-		profile.Finesse++
-	case "instinct":
-		profile.Instinct++
-	case "presence":
-		profile.Presence++
-	case "knowledge":
-		profile.Knowledge++
-	}
+	profile := CharacterProfileFromStorage(storedProfile)
+	applyLevelUpToCharacterProfile(&profile, payload)
+	return a.store.PutDaggerheartCharacterProfile(ctx, profile.ToStorage(string(evt.CampaignID), characterID))
 }
 
 func (a *Adapter) handleGoldUpdated(ctx context.Context, evt event.Event, payload GoldUpdatedPayload) error {

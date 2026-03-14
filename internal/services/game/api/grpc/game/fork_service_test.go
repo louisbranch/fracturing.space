@@ -84,28 +84,28 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
-		CampaignID: "source",
-		Timestamp:  now.Add(-7 * time.Hour),
-		Type:       event.Type("character.profile_updated"),
-		EntityType: "character",
-		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, character.ProfileUpdatePayload{
+		CampaignID:    "source",
+		Timestamp:     now.Add(-7 * time.Hour),
+		Type:          daggerheart.EventTypeCharacterProfileReplaced,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON: mustJSON(t, daggerheart.CharacterProfileReplacedPayload{
 			CharacterID: "char-1",
-			SystemProfile: map[string]any{
-				"daggerheart": map[string]any{
-					"hp_max":           6,
-					"stress_max":       6,
-					"evasion":          11,
-					"agility":          1,
-					"strength":         1,
-					"finesse":          1,
-					"instinct":         1,
-					"presence":         1,
-					"knowledge":        1,
-					"major_threshold":  3,
-					"severe_threshold": 5,
-				},
-			},
+			Profile: testDaggerheartProfile(func(profile *daggerheart.CharacterProfile) {
+				profile.HpMax = 6
+				profile.StressMax = 6
+				profile.Evasion = 11
+				profile.Agility = 1
+				profile.Strength = 1
+				profile.Finesse = 1
+				profile.Instinct = 1
+				profile.Presence = 1
+				profile.Knowledge = 1
+				profile.MajorThreshold = 3
+				profile.SevereThreshold = 5
+			}),
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
@@ -248,8 +248,8 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	if forkedEvents[2].Type != event.Type("character.created") {
 		t.Fatalf("event[2] type = %s, want %s", forkedEvents[2].Type, event.Type("character.created"))
 	}
-	if forkedEvents[3].Type != event.Type("character.profile_updated") {
-		t.Fatalf("event[3] type = %s, want %s", forkedEvents[3].Type, event.Type("character.profile_updated"))
+	if forkedEvents[3].Type != daggerheart.EventTypeCharacterProfileReplaced {
+		t.Fatalf("event[3] type = %s, want %s", forkedEvents[3].Type, daggerheart.EventTypeCharacterProfileReplaced)
 	}
 	if forkedEvents[4].Type != event.Type("sys.daggerheart.character_state_patched") {
 		t.Fatalf("event[4] type = %s, want %s", forkedEvents[4].Type, event.Type("sys.daggerheart.character_state_patched"))
@@ -634,28 +634,28 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{
-		CampaignID: "source",
-		Timestamp:  now.Add(-7 * time.Hour),
-		Type:       event.Type("character.profile_updated"),
-		EntityType: "character",
-		EntityID:   "char-1",
-		PayloadJSON: mustJSON(t, character.ProfileUpdatePayload{
+		CampaignID:    "source",
+		Timestamp:     now.Add(-7 * time.Hour),
+		Type:          daggerheart.EventTypeCharacterProfileReplaced,
+		EntityType:    "character",
+		EntityID:      "char-1",
+		SystemID:      daggerheart.SystemID,
+		SystemVersion: daggerheart.SystemVersion,
+		PayloadJSON: mustJSON(t, daggerheart.CharacterProfileReplacedPayload{
 			CharacterID: "char-1",
-			SystemProfile: map[string]any{
-				"daggerheart": map[string]any{
-					"hp_max":           6,
-					"stress_max":       6,
-					"evasion":          11,
-					"agility":          1,
-					"strength":         1,
-					"finesse":          1,
-					"instinct":         1,
-					"presence":         1,
-					"knowledge":        1,
-					"major_threshold":  3,
-					"severe_threshold": 5,
-				},
-			},
+			Profile: testDaggerheartProfile(func(profile *daggerheart.CharacterProfile) {
+				profile.HpMax = 6
+				profile.StressMax = 6
+				profile.Evasion = 11
+				profile.Agility = 1
+				profile.Strength = 1
+				profile.Finesse = 1
+				profile.Instinct = 1
+				profile.Presence = 1
+				profile.Knowledge = 1
+				profile.MajorThreshold = 3
+				profile.SevereThreshold = 5
+			}),
 		}),
 	})
 	appendEvent(t, eventStore, event.Event{

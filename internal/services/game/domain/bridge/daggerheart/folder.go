@@ -49,6 +49,8 @@ func (f *Folder) Fold(state any, evt event.Event) (any, error) {
 // registerFoldHandlers registers all Daggerheart fold handlers on the router.
 func registerFoldHandlers(r *module.FoldRouter[*SnapshotState]) {
 	module.HandleFold(r, EventTypeGMFearChanged, foldGMFearChanged)
+	module.HandleFold(r, EventTypeCharacterProfileReplaced, foldCharacterProfileReplaced)
+	module.HandleFold(r, EventTypeCharacterProfileDeleted, foldCharacterProfileDeleted)
 	module.HandleFold(r, EventTypeCharacterStatePatched, foldCharacterStatePatched)
 	module.HandleFold(r, EventTypeConditionChanged, foldConditionChanged)
 	module.HandleFold(r, EventTypeLoadoutSwapped, foldLoadoutSwapped)
@@ -103,6 +105,37 @@ func foldGMFearChanged(state *SnapshotState, payload GMFearChangedPayload) error
 		return fmt.Errorf("gm fear value must be in range %d..%d", GMFearMin, GMFearMax)
 	}
 	state.GMFear = payload.Value
+	return nil
+}
+
+func foldCharacterProfileReplaced(state *SnapshotState, payload CharacterProfileReplacedPayload) error {
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
+	if characterID == "" {
+		return nil
+	}
+	profile := payload.Profile.Normalized()
+	state.CharacterProfiles[characterID] = profile
+	if _, exists := state.CharacterStates[characterID]; !exists {
+		state.CharacterStates[characterID] = CharacterState{
+			CampaignID:  strings.TrimSpace(string(state.CampaignID)),
+			CharacterID: strings.TrimSpace(string(characterID)),
+			HP:          profile.HpMax,
+			Hope:        HopeDefault,
+			HopeMax:     HopeMaxDefault,
+			Stress:      StressDefault,
+			Armor:       ArmorDefault,
+			LifeState:   LifeStateAlive,
+		}
+	}
+	return nil
+}
+
+func foldCharacterProfileDeleted(state *SnapshotState, payload CharacterProfileDeletedPayload) error {
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
+	if characterID == "" {
+		return nil
+	}
+	delete(state.CharacterProfiles, characterID)
 	return nil
 }
 
@@ -209,16 +242,30 @@ func foldAdversaryDeleted(state *SnapshotState, payload AdversaryDeletedPayload)
 
 func foldLevelUpApplied(state *SnapshotState, payload LevelUpAppliedPayload) error {
 	touchCharacter(state, payload.CharacterID)
+	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))]; ok {
+		applyLevelUpToCharacterProfile(&profile, payload)
+		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))] = profile
+	}
 	return nil
 }
 
 func foldGoldUpdated(state *SnapshotState, payload GoldUpdatedPayload) error {
 	touchCharacter(state, payload.CharacterID)
+	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))]; ok {
+		profile.GoldHandfuls = payload.Handfuls
+		profile.GoldBags = payload.Bags
+		profile.GoldChests = payload.Chests
+		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))] = profile
+	}
 	return nil
 }
 
 func foldDomainCardAcquired(state *SnapshotState, payload DomainCardAcquiredPayload) error {
 	touchCharacter(state, payload.CharacterID)
+	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))]; ok {
+		profile.DomainCardIDs = append(profile.DomainCardIDs, payload.CardID)
+		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))] = profile
+	}
 	return nil
 }
 

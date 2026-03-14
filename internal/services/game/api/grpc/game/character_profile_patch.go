@@ -2,14 +2,16 @@ package game
 
 import (
 	"context"
+	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
-	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -31,7 +33,14 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 
 	dhProfile, err := c.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return "", storage.DaggerheartCharacterProfile{}, err
+		if !errors.Is(err, storage.ErrNotFound) {
+			return "", storage.DaggerheartCharacterProfile{}, err
+		}
+		record, recordErr := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
+		if recordErr != nil {
+			return "", storage.DaggerheartCharacterProfile{}, recordErr
+		}
+		dhProfile = defaultDaggerheartStorageProfile(campaignID, characterID, record.Kind)
 	}
 
 	dhProfile, err = applyDaggerheartProfilePatch(dhProfile, in.GetDaggerheart())
@@ -39,15 +48,46 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 		return "", storage.DaggerheartCharacterProfile{}, err
 	}
 
-	if err := c.executeCharacterProfileUpdate(ctx, workflow.CampaignContext{
+	if err := c.executeDaggerheartProfileReplace(ctx, workflow.CampaignContext{
 		ID:     campaignRecord.ID,
 		System: systemIDFromCampaignRecord(campaignRecord),
 		Status: campaignRecord.Status,
-	}, characterID, daggerheartgrpc.SystemProfileMap(dhProfile)); err != nil {
+	}, characterID, daggerheart.CharacterProfileFromStorage(dhProfile)); err != nil {
 		return "", storage.DaggerheartCharacterProfile{}, err
 	}
 
 	return characterID, dhProfile, nil
+}
+
+func defaultDaggerheartStorageProfile(campaignID, characterID string, kind character.Kind) storage.DaggerheartCharacterProfile {
+	kindLabel := "PC"
+	if kind == character.KindNPC {
+		kindLabel = "NPC"
+	}
+	defaults := daggerheartprofile.GetDefaults(kindLabel)
+
+	return storage.DaggerheartCharacterProfile{
+		CampaignID:        campaignID,
+		CharacterID:       characterID,
+		Level:             defaults.Level,
+		HpMax:             defaults.HpMax,
+		StressMax:         defaults.StressMax,
+		Evasion:           defaults.Evasion,
+		MajorThreshold:    defaults.MajorThreshold,
+		SevereThreshold:   defaults.SevereThreshold,
+		Proficiency:       defaults.Proficiency,
+		ArmorScore:        defaults.ArmorScore,
+		ArmorMax:          defaults.ArmorMax,
+		Agility:           defaults.Traits.Agility,
+		Strength:          defaults.Traits.Strength,
+		Finesse:           defaults.Traits.Finesse,
+		Instinct:          defaults.Traits.Instinct,
+		Presence:          defaults.Traits.Presence,
+		Knowledge:         defaults.Traits.Knowledge,
+		Experiences:       []storage.DaggerheartExperience{},
+		StartingWeaponIDs: []string{},
+		DomainCardIDs:     []string{},
+	}
 }
 
 // applyDaggerheartProfilePatch validates mutable Daggerheart profile fields and

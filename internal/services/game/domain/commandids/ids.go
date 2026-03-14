@@ -37,10 +37,8 @@ const (
 	InviteRevoke                   command.Type = "invite.revoke"
 	InviteUpdate                   command.Type = "invite.update"
 	CharacterCreate                command.Type = "character.create"
-	CharacterCreateWithProfile     command.Type = "character.create_with_profile"
 	CharacterUpdate                command.Type = "character.update"
 	CharacterDelete                command.Type = "character.delete"
-	CharacterProfileUpdate         command.Type = "character.profile_update"
 
 	// Scene commands.
 	SceneCreate            command.Type = "scene.create"
@@ -58,6 +56,8 @@ const (
 
 	// Daggerheart system commands.
 	DaggerheartGMFearSet                    command.Type = "sys.daggerheart.gm_fear.set"
+	DaggerheartCharacterProfileReplace      command.Type = "sys.daggerheart.character_profile.replace"
+	DaggerheartCharacterProfileDelete       command.Type = "sys.daggerheart.character_profile.delete"
 	DaggerheartCharacterStatePatch          command.Type = "sys.daggerheart.character_state.patch"
 	DaggerheartConditionChange              command.Type = "sys.daggerheart.condition.change"
 	DaggerheartHopeSpend                    command.Type = "sys.daggerheart.hope.spend"

@@ -81,7 +81,7 @@ func TestEvaluateSessionStartReport_CollectsCharacterAndPlayerBlockers(t *testin
 			},
 		},
 		ReportOptions{
-			SystemReadiness: func(map[string]any) (bool, string) {
+			SystemReadiness: func(string) (bool, string) {
 				return false, "system profile is incomplete"
 			},
 		},

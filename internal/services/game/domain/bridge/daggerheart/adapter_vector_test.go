@@ -32,6 +32,8 @@ func TestAdapterAndFolder_EventVectorParity(t *testing.T) {
 
 	sequence := []event.Type{
 		EventTypeGMFearChanged,
+		EventTypeCharacterProfileReplaced,
+		EventTypeCharacterProfileDeleted,
 		EventTypeCharacterStatePatched,
 		EventTypeConditionChanged,
 		EventTypeLoadoutSwapped,
@@ -115,6 +117,25 @@ func daggerheartEventVectorsForParity() map[event.Type]any {
 	return map[event.Type]any{
 		EventTypeGMFearChanged: GMFearChangedPayload{
 			Value: 2,
+		},
+		EventTypeCharacterProfileReplaced: CharacterProfileReplacedPayload{
+			CharacterID: "char-1",
+			Profile: CharacterProfile{
+				Level:           1,
+				HpMax:           6,
+				StressMax:       6,
+				Evasion:         10,
+				MajorThreshold:  1,
+				SevereThreshold: 2,
+				Proficiency:     1,
+				ArmorScore:      0,
+				ArmorMax:        0,
+				ClassID:         "class.guardian",
+				SubclassID:      "subclass.stalwart",
+			},
+		},
+		EventTypeCharacterProfileDeleted: CharacterProfileDeletedPayload{
+			CharacterID: "char-1",
 		},
 		EventTypeCharacterStatePatched: CharacterStatePatchedPayload{
 			CharacterID: "char-1",
@@ -430,17 +451,24 @@ func (m *parityDaggerheartStore) snapshotState(campaignID string) SnapshotState 
 	defer m.mu.Unlock()
 
 	state := SnapshotState{
-		CampaignID:      ids.CampaignID(campaignID),
-		GMFear:          GMFearDefault,
-		CharacterStates: make(map[ids.CharacterID]CharacterState),
-		AdversaryStates: make(map[ids.AdversaryID]AdversaryState),
-		CountdownStates: make(map[ids.CountdownID]CountdownState),
+		CampaignID:        ids.CampaignID(campaignID),
+		GMFear:            GMFearDefault,
+		CharacterProfiles: make(map[ids.CharacterID]CharacterProfile),
+		CharacterStates:   make(map[ids.CharacterID]CharacterState),
+		AdversaryStates:   make(map[ids.AdversaryID]AdversaryState),
+		CountdownStates:   make(map[ids.CountdownID]CountdownState),
 	}
 	if snap, ok := m.snapshots[campaignID]; ok {
 		state.GMFear = snap.GMFear
 	}
 
 	prefix := campaignID + "/"
+	for key, stored := range m.profiles {
+		if !strings.HasPrefix(key, prefix) {
+			continue
+		}
+		state.CharacterProfiles[ids.CharacterID(stored.CharacterID)] = CharacterProfileFromStorage(stored)
+	}
 	for key, stored := range m.states {
 		if !strings.HasPrefix(key, prefix) {
 			continue
@@ -543,6 +571,18 @@ func canonicalizeSnapshotForParity(state SnapshotState) SnapshotState {
 			character.Conditions = nil
 		}
 		state.CharacterStates[id] = character
+	}
+	for id, profile := range state.CharacterProfiles {
+		if len(profile.Experiences) == 0 {
+			profile.Experiences = nil
+		}
+		if len(profile.StartingWeaponIDs) == 0 {
+			profile.StartingWeaponIDs = nil
+		}
+		if len(profile.DomainCardIDs) == 0 {
+			profile.DomainCardIDs = nil
+		}
+		state.CharacterProfiles[id] = profile
 	}
 	for id, adversary := range state.AdversaryStates {
 		if len(adversary.Conditions) == 0 {

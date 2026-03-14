@@ -32,6 +32,44 @@ func validateGMFearChangedPayload(raw json.RawMessage) error {
 	return nil
 }
 
+func validateCharacterProfileReplacePayload(raw json.RawMessage) error {
+	var payload CharacterProfileReplacePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.CharacterID.String(), "character_id"); err != nil {
+		return err
+	}
+	return payload.Profile.Validate()
+}
+
+func validateCharacterProfileReplacedPayload(raw json.RawMessage) error {
+	var payload CharacterProfileReplacedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.CharacterID.String(), "character_id"); err != nil {
+		return err
+	}
+	return payload.Profile.Validate()
+}
+
+func validateCharacterProfileDeletePayload(raw json.RawMessage) error {
+	var payload CharacterProfileDeletePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return requireTrimmedValue(payload.CharacterID.String(), "character_id")
+}
+
+func validateCharacterProfileDeletedPayload(raw json.RawMessage) error {
+	var payload CharacterProfileDeletedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return requireTrimmedValue(payload.CharacterID.String(), "character_id")
+}
+
 func validateCharacterStatePatchPayload(raw json.RawMessage) error {
 	var payload CharacterStatePatchPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {

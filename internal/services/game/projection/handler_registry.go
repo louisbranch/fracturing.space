@@ -177,7 +177,6 @@ func buildCoreRouter() *CoreRouter {
 	HandleProjection(r, character.EventTypeCreated, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterCreated)
 	HandleProjection(r, character.EventTypeUpdated, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterUpdated)
 	HandleProjection(r, character.EventTypeDeleted, requirements(needsStores(storeCharacter, storeCampaign), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterDeleted)
-	HandleProjection(r, character.EventTypeProfileUpdated, requirements(needsStores(storeAdapters), needsEnvelope(fieldCampaignID, fieldEntityID)), Applier.applyCharacterProfileUpdated)
 
 	// invite — InviteID comes from payload with EntityID fallback for created/updated.
 	HandleProjection(r, invite.EventTypeCreated, requirements(needsStores(storeInvite, storeCampaign), needsEnvelope(fieldCampaignID)), Applier.applyInviteCreated)

@@ -116,12 +116,11 @@ func TestEvaluateSessionStart_SystemReadinessMessageFormatting(t *testing.T) {
 				CharacterID:   "char-1",
 				Created:       true,
 				ParticipantID: "player-1",
-				SystemProfile: map[string]any{"ready": false},
 			},
 		},
 	}
 
-	withReason := EvaluateSessionStart(base, func(map[string]any) (bool, string) {
+	withReason := EvaluateSessionStart(base, func(string) (bool, string) {
 		return false, "profile missing class"
 	})
 	if withReason == nil {
@@ -134,7 +133,7 @@ func TestEvaluateSessionStart_SystemReadinessMessageFormatting(t *testing.T) {
 		t.Fatalf("message = %q, want reason-suffixed message", withReason.Message)
 	}
 
-	withoutReason := EvaluateSessionStart(base, func(map[string]any) (bool, string) {
+	withoutReason := EvaluateSessionStart(base, func(string) (bool, string) {
 		return false, "   "
 	})
 	if withoutReason == nil {

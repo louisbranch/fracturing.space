@@ -138,12 +138,9 @@ func TestEvaluateSessionStart_SystemReadinessRejected(t *testing.T) {
 				Created:       true,
 				Name:          "Aria",
 				ParticipantID: "player-1",
-				SystemProfile: map[string]any{
-					"daggerheart": map[string]any{"class": "warrior"},
-				},
 			},
 		},
-	}, func(map[string]any) (bool, string) {
+	}, func(string) (bool, string) {
 		return false, "class is required"
 	})
 

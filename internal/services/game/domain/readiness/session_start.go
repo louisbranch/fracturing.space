@@ -63,11 +63,11 @@ type ReportOptions struct {
 }
 
 // CharacterSystemReadiness checks optional system-specific readiness for a
-// character's system profile payload.
+// character ID within the active game system.
 //
 // Returning false blocks session start. The reason should be concise and
 // operator-readable because it is surfaced directly in domain rejection messages.
-type CharacterSystemReadiness func(systemProfile map[string]any) (ready bool, reason string)
+type CharacterSystemReadiness func(characterID string) (ready bool, reason string)
 
 // EvaluateSessionStart evaluates campaign readiness invariants required before
 // accepting session.start.
@@ -177,7 +177,7 @@ func evaluateCoreSessionStartBlockers(state aggregate.State, systemReadiness Cha
 		if systemReadiness == nil {
 			continue
 		}
-		ready, reason := systemReadiness(characterState.SystemProfile)
+		ready, reason := systemReadiness(characterID)
 		if ready {
 			continue
 		}
@@ -333,7 +333,6 @@ type characterIndex struct {
 type aggregateCharacterState struct {
 	ParticipantID string
 	Name          string
-	SystemProfile map[string]any
 }
 
 func activeCharactersByID(state aggregate.State) characterIndex {
@@ -356,7 +355,6 @@ func activeCharactersByID(state aggregate.State) characterIndex {
 		indexed.byID[characterID] = aggregateCharacterState{
 			ParticipantID: string(characterState.ParticipantID),
 			Name:          characterState.Name,
-			SystemProfile: characterState.SystemProfile,
 		}
 		indexed.ids = append(indexed.ids, characterID)
 	}

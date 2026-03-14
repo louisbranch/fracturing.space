@@ -111,7 +111,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 			t.Fatalf("character_create failed: %+v", characterResult)
 		}
 		characterOutput := decodeStructuredContent[domain.CharacterCreateResult](t, characterResult.StructuredContent)
-		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, lastSeq, "character.created", "character.profile_updated")
+		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, lastSeq, "character.created")
 
 		controlResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "character_control_set",
@@ -130,7 +130,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, lastSeq, "character.updated")
 
 		ensureMCPCharacterCreationReadiness(t, ctx, suite.client, characterOutput.ID)
-		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, lastSeq, "character.profile_updated")
+		lastSeq = requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, lastSeq, "sys.daggerheart.character_profile_replaced")
 
 		sessionResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "session_start",

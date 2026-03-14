@@ -8,6 +8,8 @@ const (
 	EventTypeRestTaken                      event.Type = "sys.daggerheart.rest_taken"
 	EventTypeDowntimeMoveApplied            event.Type = "sys.daggerheart.downtime_move_applied"
 	EventTypeLoadoutSwapped                 event.Type = "sys.daggerheart.loadout_swapped"
+	EventTypeCharacterProfileReplaced       event.Type = "sys.daggerheart.character_profile_replaced"
+	EventTypeCharacterProfileDeleted        event.Type = "sys.daggerheart.character_profile_deleted"
 	EventTypeCharacterStatePatched          event.Type = "sys.daggerheart.character_state_patched"
 	EventTypeConditionChanged               event.Type = "sys.daggerheart.condition_changed"
 	EventTypeGMFearChanged                  event.Type = "sys.daggerheart.gm_fear_changed"

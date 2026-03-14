@@ -18,6 +18,8 @@ func TestActiveSessionPolicyForCommandType(t *testing.T) {
 		{name: "participant blocked", cmdType: command.Type("participant.join"), want: ActiveSessionCommandPolicyBlocked, ok: true},
 		{name: "invite blocked", cmdType: command.Type("invite.claim"), want: ActiveSessionCommandPolicyBlocked, ok: true},
 		{name: "character blocked", cmdType: command.Type("character.update"), want: ActiveSessionCommandPolicyBlocked, ok: true},
+		{name: "daggerheart profile replace blocked", cmdType: command.Type("sys.daggerheart.character_profile.replace"), want: ActiveSessionCommandPolicyBlocked, ok: true},
+		{name: "daggerheart profile delete blocked", cmdType: command.Type("sys.daggerheart.character_profile.delete"), want: ActiveSessionCommandPolicyBlocked, ok: true},
 		{name: "session allowed", cmdType: command.Type("session.end"), want: ActiveSessionCommandPolicyAllowed, ok: true},
 		{name: "action allowed", cmdType: command.Type("action.outcome.apply"), want: ActiveSessionCommandPolicyAllowed, ok: true},
 		{name: "story allowed", cmdType: command.Type("story.note.add"), want: ActiveSessionCommandPolicyAllowed, ok: true},
@@ -67,6 +69,22 @@ func TestRejectActiveSessionBlockedCommand_AllowsWhenInactiveOrAllowed(t *testin
 	}
 }
 
+func TestRejectActiveSessionBlockedCommand_WithoutSessionIDUsesGenericMessage(t *testing.T) {
+	decision, blocked := RejectActiveSessionBlockedCommand(
+		session.State{Started: true},
+		command.Command{Type: command.Type("campaign.update")},
+	)
+	if !blocked {
+		t.Fatal("expected command to be blocked")
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Message != "campaign has an active session" {
+		t.Fatalf("rejection message = %q, want generic active-session message", decision.Rejections[0].Message)
+	}
+}
+
 func TestActiveSessionPolicyForCommand_AllowsOnlyInGameCharacterMutations(t *testing.T) {
 	tests := []struct {
 		name string
@@ -109,6 +127,26 @@ func TestActiveSessionPolicyForCommand_AllowsOnlyInGameCharacterMutations(t *tes
 			}
 			if got != tc.want {
 				t.Fatalf("policy = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCommandNamespace(t *testing.T) {
+	tests := []struct {
+		name    string
+		cmdType command.Type
+		want    string
+	}{
+		{name: "blank", cmdType: command.Type("   "), want: ""},
+		{name: "no dot", cmdType: command.Type("character"), want: "character"},
+		{name: "with dot", cmdType: command.Type("character.update"), want: "character"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := commandNamespace(tc.cmdType); got != tc.want {
+				t.Fatalf("commandNamespace(%q) = %q, want %q", tc.cmdType, got, tc.want)
 			}
 		})
 	}

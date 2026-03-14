@@ -44,10 +44,11 @@ func (f *StateFactory) NewCharacterState(campaignID ids.CampaignID, characterID 
 // NewSnapshotState creates initial snapshot state for the given campaign.
 func (f *StateFactory) NewSnapshotState(campaignID ids.CampaignID) (any, error) {
 	return SnapshotState{
-		CampaignID:      ids.CampaignID(strings.TrimSpace(string(campaignID))),
-		GMFear:          GMFearDefault,
-		CharacterStates: make(map[ids.CharacterID]CharacterState),
-		AdversaryStates: make(map[ids.AdversaryID]AdversaryState),
-		CountdownStates: make(map[ids.CountdownID]CountdownState),
+		CampaignID:        ids.CampaignID(strings.TrimSpace(string(campaignID))),
+		GMFear:            GMFearDefault,
+		CharacterProfiles: make(map[ids.CharacterID]CharacterProfile),
+		CharacterStates:   make(map[ids.CharacterID]CharacterState),
+		AdversaryStates:   make(map[ids.AdversaryID]AdversaryState),
+		CountdownStates:   make(map[ids.CountdownID]CountdownState),
 	}, nil
 }

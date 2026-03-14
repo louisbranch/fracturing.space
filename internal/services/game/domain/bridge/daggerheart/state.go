@@ -31,6 +31,7 @@ type SnapshotState struct {
 	CampaignID             ids.CampaignID
 	GMFear                 int
 	DowntimeMovesSinceRest int
+	CharacterProfiles      map[ids.CharacterID]CharacterProfile
 	CharacterStates        map[ids.CharacterID]CharacterState
 	AdversaryStates        map[ids.AdversaryID]AdversaryState
 	CountdownStates        map[ids.CountdownID]CountdownState
@@ -63,6 +64,9 @@ type AdversaryState struct {
 // storage). NewSnapshotState already returns initialized maps, so this is only
 // needed for states not created through the factory.
 func (s *SnapshotState) EnsureMaps() {
+	if s.CharacterProfiles == nil {
+		s.CharacterProfiles = make(map[ids.CharacterID]CharacterProfile)
+	}
 	if s.CharacterStates == nil {
 		s.CharacterStates = make(map[ids.CharacterID]CharacterState)
 	}

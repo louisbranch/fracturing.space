@@ -73,10 +73,6 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 		}
 	}
 
-	if err := systemmanifest.ValidateProfileAdapterCoverage(adapters); err != nil {
-		return fmt.Errorf("%w: %w", errSystemModuleRegistryMismatch, err)
-	}
-
 	for _, gameSystem := range metadata.List() {
 		if gameSystem == nil {
 			continue

@@ -5,40 +5,60 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
-func TestApplyProfile_ResetDeleteError(t *testing.T) {
+func TestApplyCharacterProfileDeleted_DeleteError(t *testing.T) {
 	store := newFaultDaggerheartStore()
 	store.deleteCharacterProfileErr = errText("delete profile failed")
 	adapter := NewAdapter(store)
 
-	err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", json.RawMessage(`{"reset":true}`))
+	err := adapter.Apply(context.Background(), event.Event{
+		CampaignID:    ids.CampaignID("camp-1"),
+		EntityID:      "char-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		Type:          EventTypeCharacterProfileDeleted,
+		PayloadJSON:   []byte(`{"character_id":"char-1"}`),
+	})
 	if err == nil || !strings.Contains(err.Error(), "delete daggerheart profile: delete profile failed") {
-		t.Fatalf("ApplyProfile(reset) error = %v, want wrapped delete error", err)
+		t.Fatalf("Apply(delete) error = %v, want wrapped delete error", err)
 	}
 }
 
-func TestApplyProfile_InvalidProfileValidationError(t *testing.T) {
+func TestApplyCharacterProfileReplaced_InvalidProfileValidationError(t *testing.T) {
 	store := newFaultDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	// level/hp_max values violate profile.Validate invariants.
-	err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", json.RawMessage(`{
-		"level": 0,
-		"hp_max": -1,
-		"stress_max": 0,
-		"evasion": 0,
-		"major_threshold": 0,
-		"severe_threshold": 0,
-		"proficiency": 0,
-		"armor_score": 0,
-		"armor_max": 0
-	}`))
+	payload, _ := json.Marshal(CharacterProfileReplacedPayload{
+		CharacterID: ids.CharacterID("char-1"),
+		Profile: CharacterProfile{
+			Level:           0,
+			HpMax:           -1,
+			StressMax:       0,
+			Evasion:         0,
+			MajorThreshold:  0,
+			SevereThreshold: 0,
+			Proficiency:     0,
+			ArmorScore:      0,
+			ArmorMax:        0,
+		},
+	})
+	err := adapter.Apply(context.Background(), event.Event{
+		CampaignID:    ids.CampaignID("camp-1"),
+		EntityID:      "char-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		Type:          EventTypeCharacterProfileReplaced,
+		PayloadJSON:   payload,
+	})
 	if err == nil {
 		t.Fatal("expected validation error")
 	}
-	if !strings.Contains(err.Error(), "validate daggerheart profile payload") {
-		t.Fatalf("ApplyProfile() error = %v, want validation prefix", err)
+	if !strings.Contains(err.Error(), "validate daggerheart character profile") {
+		t.Fatalf("Apply() error = %v, want validation prefix", err)
 	}
 }
 

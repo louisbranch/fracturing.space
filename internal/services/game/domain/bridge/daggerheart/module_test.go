@@ -5,8 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	domainmodule "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
@@ -21,6 +23,8 @@ type commandValidationCase struct {
 func commandValidationCases() []commandValidationCase {
 	return []commandValidationCase{
 		{typ: commandTypeGMFearSet, validPayload: `{"after":2}`, invalidPayload: `{"after":"nope"}`, actorType: command.ActorTypeGM, actorID: "gm-1"},
+		{typ: commandTypeCharacterProfileReplace, validPayload: `{"character_id":"char-1","profile":{"class_id":"class.guardian","level":1,"hp_max":6,"stress_max":6,"evasion":10,"major_threshold":1,"severe_threshold":2,"proficiency":1,"armor_score":0,"armor_max":0}}`, invalidPayload: `{"character_id":1}`},
+		{typ: commandTypeCharacterProfileDelete, validPayload: `{"character_id":"char-1"}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeHopeSpend, validPayload: `{"character_id":"char-1","amount":1,"before":2,"after":1}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeStressSpend, validPayload: `{"character_id":"char-1","amount":1,"before":3,"after":2}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeCharacterStatePatch, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
@@ -59,6 +63,8 @@ type eventValidationCase struct {
 func eventValidationCases() []eventValidationCase {
 	return []eventValidationCase{
 		{typ: EventTypeGMFearChanged, validPayload: `{"after":2}`, invalidPayload: `{"after":"nope"}`, actorType: event.ActorTypeGM, actorID: "gm-1"},
+		{typ: EventTypeCharacterProfileReplaced, validPayload: `{"character_id":"char-1","profile":{"class_id":"class.guardian","level":1,"hp_max":6,"stress_max":6,"evasion":10,"major_threshold":1,"severe_threshold":2,"proficiency":1,"armor_score":0,"armor_max":0}}`, invalidPayload: `{"character_id":1}`},
+		{typ: EventTypeCharacterProfileDeleted, validPayload: `{"character_id":"char-1"}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeCharacterStatePatched, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeConditionChanged, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeLoadoutSwapped, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
@@ -180,41 +186,53 @@ func TestModule_ImplementsCharacterReadinessChecker(t *testing.T) {
 		t.Fatal("expected daggerheart module to implement CharacterReadinessChecker")
 	}
 
-	ready, _ := checker.CharacterReady(map[string]any{"daggerheart": map[string]any{"class_id": "class.guardian"}})
+	ready, _ := checker.CharacterReady(
+		SnapshotState{
+			CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+				"char-1": {ClassID: "class.guardian"},
+			},
+		},
+		character.State{CharacterID: "char-1"},
+	)
 	if ready {
 		t.Fatal("character readiness = true, want false for incomplete workflow")
 	}
 
-	ready, reason := checker.CharacterReady(map[string]any{
-		"daggerheart": map[string]any{
-			"class_id":                "class.guardian",
-			"subclass_id":             "subclass.stalwart",
-			"ancestry_id":             "heritage.clank",
-			"community_id":            "heritage.farmer",
-			"traits_assigned":         true,
-			"agility":                 2,
-			"strength":                1,
-			"finesse":                 1,
-			"instinct":                0,
-			"presence":                0,
-			"knowledge":               -1,
-			"details_recorded":        true,
-			"level":                   1,
-			"hp_max":                  6,
-			"stress_max":              6,
-			"evasion":                 10,
-			"starting_weapon_ids":     []string{"weapon.longsword"},
-			"starting_armor_id":       "armor.gambeson-armor",
-			"starting_potion_item_id": StartingPotionMinorHealthID,
-			"background":              "Former watch captain",
-			"experiences": []map[string]any{
-				{"name": "Shield tactics", "modifier": 2},
-				{"name": "Patrol routes", "modifier": 2},
+	ready, reason := checker.CharacterReady(
+		SnapshotState{
+			CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+				"char-1": {
+					ClassID:              "class.guardian",
+					SubclassID:           "subclass.stalwart",
+					AncestryID:           "heritage.clank",
+					CommunityID:          "heritage.farmer",
+					TraitsAssigned:       true,
+					Agility:              2,
+					Strength:             1,
+					Finesse:              1,
+					Instinct:             0,
+					Presence:             0,
+					Knowledge:            -1,
+					DetailsRecorded:      true,
+					Level:                1,
+					HpMax:                6,
+					StressMax:            6,
+					Evasion:              10,
+					StartingWeaponIDs:    []string{"weapon.longsword"},
+					StartingArmorID:      "armor.gambeson-armor",
+					StartingPotionItemID: StartingPotionMinorHealthID,
+					Background:           "Former watch captain",
+					Experiences: []CharacterProfileExperience{
+						{Name: "Shield tactics", Modifier: 2},
+						{Name: "Patrol routes", Modifier: 2},
+					},
+					DomainCardIDs: []string{"domain-card.ward", "domain-card.blade-strike"},
+					Connections:   "Trusted by the town guard",
+				},
 			},
-			"domain_card_ids": []string{"domain-card.ward", "domain-card.blade-strike"},
-			"connections":     "Trusted by the town guard",
 		},
-	})
+		character.State{CharacterID: "char-1"},
+	)
 	if !ready {
 		t.Fatal("character readiness = false, want true")
 	}

@@ -72,22 +72,11 @@ down: ## Stop watcher-based local services and devcontainer
 
 cover:
 	rm -f coverage.raw coverage.out coverage.html coverage-treemap.svg coverage.log
-	@bash -euo pipefail -c '\
-	  mkdir -p .tmp/coverage; \
-	  rm -f .tmp/coverage/*.out; \
-	  : > coverage.log; \
-	  printf "mode: set\n" > coverage.raw; \
-	  i=0; total=$$(go list ./... | wc -l); \
-	  for pkg in $$(go list ./...); do \
-	    i=$$((i + 1)); \
-	    if [ $$((i % 25)) -eq 0 ]; then \
-	      printf "[cover %d/%d] %s\n" "$$i" "$$total" "$$pkg"; \
-	    fi; \
-	    profile=$$(printf "%s" "$$pkg" | tr "/" "_" | tr "." "_").out; \
-	    go test -tags=integration -covermode=set -coverprofile=.tmp/coverage/"$$profile" "$$pkg" >> coverage.log 2>&1; \
-	    awk "FNR > 1 { print }" .tmp/coverage/"$$profile" >> coverage.raw; \
-	  done'
-	awk -v exclude='$(COVER_EXCLUDE_REGEX)' 'NR==1 || $$1 !~ exclude' coverage.raw > coverage.out
+	go test -count=1 -tags=integration -covermode=set -coverprofile=coverage.raw ./... > coverage.log 2>&1
+	{ \
+	  head -n 1 coverage.raw; \
+	  tail -n +2 coverage.raw | grep -E '^[^[:space:]]+:[0-9]+\.[0-9]+,[0-9]+\.[0-9]+ [0-9]+ [0-9]+$$' | grep -Ev '$(COVER_EXCLUDE_REGEX)'; \
+	} > coverage.out
 	go tool cover -func coverage.out > coverage.func
 	@awk '/^total:/{print}' coverage.func
 	go tool cover -html=coverage.out -o coverage.html

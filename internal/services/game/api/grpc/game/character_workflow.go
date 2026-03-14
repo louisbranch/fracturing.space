@@ -13,7 +13,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -106,8 +106,12 @@ func (d *characterWorkflowDeps) SystemContent() storage.DaggerheartContentReadSt
 	return d.app.stores.DaggerheartContent
 }
 
-func (d *characterWorkflowDeps) ExecuteProfileUpdate(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, systemProfile map[string]any) error {
-	return d.app.executeCharacterProfileUpdate(ctx, campaignContext, characterID, systemProfile)
+func (d *characterWorkflowDeps) ExecuteProfileReplace(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {
+	return d.app.executeDaggerheartProfileReplace(ctx, campaignContext, characterID, profile)
+}
+
+func (d *characterWorkflowDeps) ExecuteProfileDelete(ctx context.Context, campaignContext workflow.CampaignContext, characterID string) error {
+	return d.app.executeDaggerheartProfileDelete(ctx, campaignContext, characterID)
 }
 
 func (d *characterWorkflowDeps) RequireReadPolicy(ctx context.Context, campaignContext workflow.CampaignContext) error {
@@ -118,9 +122,7 @@ func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, p
 	return daggerheartProfileToProto(campaignID, characterID, profile)
 }
 
-// executeCharacterProfileUpdate builds and executes a character profile update
-// command through the domain engine.
-func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, systemProfile map[string]any) error {
+func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {
 	policyActor, err := requireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
@@ -130,9 +132,9 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 	if actorID == "" {
 		actorID = strings.TrimSpace(policyActor.ID)
 	}
-	commandPayload := character.ProfileUpdatePayload{
-		CharacterID:   ids.CharacterID(characterID),
-		SystemProfile: systemProfile,
+	commandPayload := daggerheart.CharacterProfileReplacePayload{
+		CharacterID: ids.CharacterID(characterID),
+		Profile:     profile,
 	}
 	commandPayloadJSON, err := json.Marshal(commandPayload)
 	if err != nil {
@@ -148,16 +150,66 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 		ctx,
 		c.write,
 		c.applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignContext.ID,
-			Type:         commandTypeCharacterProfileUpdate,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "character",
-			EntityID:     characterID,
-			PayloadJSON:  commandPayloadJSON,
+		commandbuild.System(commandbuild.SystemInput{
+			CoreInput: commandbuild.CoreInput{
+				CampaignID:   campaignContext.ID,
+				Type:         commandTypeDaggerheartCharacterProfileReplace,
+				ActorType:    actorType,
+				ActorID:      actorID,
+				RequestID:    grpcmeta.RequestIDFromContext(ctx),
+				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:   "character",
+				EntityID:     characterID,
+				PayloadJSON:  commandPayloadJSON,
+			},
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
+		}),
+		domainwrite.Options{},
+	)
+	return err
+}
+
+func (c characterApplication) executeDaggerheartProfileDelete(ctx context.Context, campaignContext workflow.CampaignContext, characterID string) error {
+	policyActor, err := requireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
+	if err != nil {
+		return err
+	}
+
+	actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
+	if actorID == "" {
+		actorID = strings.TrimSpace(policyActor.ID)
+	}
+
+	commandPayload := daggerheart.CharacterProfileDeletePayload{CharacterID: ids.CharacterID(characterID)}
+	commandPayloadJSON, err := json.Marshal(commandPayload)
+	if err != nil {
+		return grpcerror.Internal("encode payload", err)
+	}
+
+	actorType := command.ActorTypeSystem
+	if actorID != "" {
+		actorType = command.ActorTypeParticipant
+	}
+
+	_, err = executeAndApplyDomainCommand(
+		ctx,
+		c.write,
+		c.applier,
+		commandbuild.System(commandbuild.SystemInput{
+			CoreInput: commandbuild.CoreInput{
+				CampaignID:   campaignContext.ID,
+				Type:         commandTypeDaggerheartCharacterProfileDelete,
+				ActorType:    actorType,
+				ActorID:      actorID,
+				RequestID:    grpcmeta.RequestIDFromContext(ctx),
+				InvocationID: grpcmeta.InvocationIDFromContext(ctx),
+				EntityType:   "character",
+				EntityID:     characterID,
+				PayloadJSON:  commandPayloadJSON,
+			},
+			SystemID:      daggerheart.SystemID,
+			SystemVersion: daggerheart.SystemVersion,
 		}),
 		domainwrite.Options{},
 	)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -167,38 +166,6 @@ func (a Applier) applyCharacterDeleted(ctx context.Context, evt event.Event, pay
 	campaignRecord.UpdatedAt = updatedAt
 
 	return a.Campaign.Put(ctx, campaignRecord)
-}
-
-func (a Applier) applyCharacterProfileUpdated(ctx context.Context, evt event.Event, payload character.ProfileUpdatePayload) error {
-	characterID := strings.TrimSpace(evt.EntityID)
-
-	if payload.CharacterID != "" && strings.TrimSpace(payload.CharacterID.String()) != characterID {
-		return fmt.Errorf("character_id mismatch")
-	}
-	if payload.SystemProfile == nil {
-		return nil
-	}
-
-	for systemName, profileData := range payload.SystemProfile {
-		adapter, ok := a.Adapters.GetOptional(systemName, "")
-		if !ok {
-			// Skip systems without a registered adapter; a future replay
-			// will pick them up once the adapter is configured.
-			continue
-		}
-		profileAdapter, ok := adapter.(bridge.ProfileAdapter)
-		if !ok {
-			continue
-		}
-		rawProfile, err := json.Marshal(profileData)
-		if err != nil {
-			return fmt.Errorf("marshal %s profile payload: %w", systemName, err)
-		}
-		if err := profileAdapter.ApplyProfile(ctx, string(evt.CampaignID), characterID, rawProfile); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func normalizeProjectionAliases(values []string) []string {

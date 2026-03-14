@@ -7,13 +7,13 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
-	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -79,6 +79,7 @@ func campaignReadinessAggregateState(
 		},
 		Participants: make(map[ids.ParticipantID]participant.State, len(participantRecords)),
 		Characters:   make(map[ids.CharacterID]character.State, len(characterRecords)),
+		Systems:      make(map[module.Key]any),
 	}
 
 	for _, participantRecord := range participantRecords {
@@ -107,13 +108,20 @@ func campaignReadinessAggregateState(
 			CharacterID:   ids.CharacterID(characterID),
 			Name:          strings.TrimSpace(characterRecord.Name),
 			ParticipantID: ids.ParticipantID(strings.TrimSpace(characterRecord.ParticipantID)),
-			SystemProfile: map[string]any{},
 		}
 	}
 
 	if systemIDFromCampaignRecord(campaignRecord) == bridge.SystemIDDaggerheart {
 		if stores.SystemStores.Daggerheart == nil {
 			return aggregate.State{}, status.Error(codes.Internal, "daggerheart projection store is not configured")
+		}
+		snapshot := daggerheartdomain.SnapshotState{
+			CampaignID:        ids.CampaignID(campaignRecord.ID),
+			GMFear:            daggerheartdomain.GMFearDefault,
+			CharacterProfiles: make(map[ids.CharacterID]daggerheartdomain.CharacterProfile),
+			CharacterStates:   make(map[ids.CharacterID]daggerheartdomain.CharacterState),
+			AdversaryStates:   make(map[ids.AdversaryID]daggerheartdomain.AdversaryState),
+			CountdownStates:   make(map[ids.CountdownID]daggerheartdomain.CountdownState),
 		}
 		for characterID, characterState := range state.Characters {
 			profile, err := stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, string(characterID))
@@ -123,18 +131,28 @@ func campaignReadinessAggregateState(
 				}
 				return aggregate.State{}, grpcerror.Internal(fmt.Sprintf("get daggerheart character profile %s", characterID), err)
 			}
-			characterState.SystemProfile = daggerheartgrpc.SystemProfileMap(profile)
+			snapshot.CharacterProfiles[characterID] = daggerheartdomain.CharacterProfileFromStorage(profile)
 			state.Characters[characterID] = characterState
 		}
+		state.Systems[module.Key{ID: daggerheartdomain.SystemID, Version: daggerheartdomain.SystemVersion}] = snapshot
 	}
 
 	return state, nil
 }
 
-func systemReadinessChecker(system bridge.SystemID) readiness.CharacterSystemReadiness {
+func systemReadinessChecker(system bridge.SystemID, state aggregate.State) readiness.CharacterSystemReadiness {
 	switch system {
 	case bridge.SystemIDDaggerheart:
-		return daggerheartdomain.EvaluateCreationReadinessFromSystemProfile
+		systemKey := module.Key{ID: daggerheartdomain.SystemID, Version: daggerheartdomain.SystemVersion}
+		return func(characterID string) (bool, string) {
+			snapshotAny := state.Systems[systemKey]
+			ch, ok := state.Characters[ids.CharacterID(characterID)]
+			if !ok {
+				return false, "character is missing"
+			}
+			mod := daggerheartdomain.NewModule()
+			return mod.CharacterReady(snapshotAny, ch)
+		}
 	default:
 		return nil
 	}

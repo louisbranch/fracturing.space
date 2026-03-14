@@ -55,7 +55,7 @@ func (s *CampaignService) GetCampaignSessionReadiness(ctx context.Context, in *c
 	}
 
 	report := readiness.EvaluateSessionStartReport(state, readiness.ReportOptions{
-		SystemReadiness:        systemReadinessChecker(systemIDFromCampaignRecord(record)),
+		SystemReadiness:        systemReadinessChecker(systemIDFromCampaignRecord(record), state),
 		IncludeSessionBoundary: true,
 		HasActiveSession:       hasActiveSession,
 	})

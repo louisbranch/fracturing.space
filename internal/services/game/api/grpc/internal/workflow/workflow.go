@@ -9,6 +9,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -50,7 +51,8 @@ type CreationDeps interface {
 	GetCharacterRecord(ctx context.Context, campaignID, characterID string) (CharacterContext, error)
 	GetCharacterSystemProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error)
 	SystemContent() storage.DaggerheartContentReadStore
-	ExecuteProfileUpdate(ctx context.Context, campaignContext CampaignContext, characterID string, systemProfile map[string]any) error
+	ExecuteProfileReplace(ctx context.Context, campaignContext CampaignContext, characterID string, profile daggerheart.CharacterProfile) error
+	ExecuteProfileDelete(ctx context.Context, campaignContext CampaignContext, characterID string) error
 	RequireReadPolicy(ctx context.Context, campaignContext CampaignContext) error
 	ProfileToProto(campaignID, characterID string, profile storage.DaggerheartCharacterProfile) *campaignv1.CharacterProfile
 }
