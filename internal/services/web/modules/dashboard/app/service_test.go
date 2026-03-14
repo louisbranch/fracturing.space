@@ -35,6 +35,9 @@ func TestLoadDashboardSkipsBlankUserID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)
 	}
+	if view.DataStatus != DashboardDataStatusAnonymous {
+		t.Fatalf("DataStatus = %q, want %q", view.DataStatus, DashboardDataStatusAnonymous)
+	}
 	if view.ShowPendingProfileBlock || view.ShowAdventureBlock || len(view.ActiveSessions) > 0 {
 		t.Fatalf("unexpected visible blocks: %+v", view)
 	}
@@ -93,6 +96,9 @@ func TestLoadDashboardHandlesErrorsAndDegradedDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)
 	}
+	if view.DataStatus != DashboardDataStatusUnavailable {
+		t.Fatalf("DataStatus = %q, want %q", view.DataStatus, DashboardDataStatusUnavailable)
+	}
 	if view.ShowPendingProfileBlock || view.ShowAdventureBlock || len(view.ActiveSessions) > 0 {
 		t.Fatalf("unexpected visible blocks: %+v", view)
 	}
@@ -102,8 +108,17 @@ func TestLoadDashboardHandlesErrorsAndDegradedDependencies(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)
 	}
+	if view.DataStatus != DashboardDataStatusDegraded {
+		t.Fatalf("DataStatus = %q, want %q", view.DataStatus, DashboardDataStatusDegraded)
+	}
 	if view.ShowPendingProfileBlock {
 		t.Fatalf("ShowPendingProfileBlock = true, want false")
+	}
+	if !view.ShowAdventureBlock {
+		t.Fatalf("ShowAdventureBlock = false, want true when campaigns are still available")
+	}
+	if len(view.DegradedDependencies) != 1 || view.DegradedDependencies[0] != DegradedDependencySocialProfile {
+		t.Fatalf("DegradedDependencies = %v, want [%s]", view.DegradedDependencies, DegradedDependencySocialProfile)
 	}
 }
 
@@ -117,6 +132,9 @@ func TestLoadDashboardAdventureVisibility(t *testing.T) {
 	view, err := svc.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)
+	}
+	if view.DataStatus != DashboardDataStatusReady {
+		t.Fatalf("DataStatus = %q, want %q", view.DataStatus, DashboardDataStatusReady)
 	}
 	if !view.ShowAdventureBlock {
 		t.Fatalf("ShowAdventureBlock = false, want true")
@@ -138,7 +156,6 @@ func TestLoadDashboardRendersActiveSessionsAndSuppressesAdventure(t *testing.T) 
 			SessionName:  "The Crossing",
 		}},
 	}}, nil, nil)
-
 	view, err := svc.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
 	if err != nil {
 		t.Fatalf("LoadDashboard() error = %v", err)
@@ -166,6 +183,25 @@ func TestLoadDashboardHidesActiveSessionsWhenSessionStateIsDegraded(t *testing.T
 	}
 	if len(view.ActiveSessions) != 0 {
 		t.Fatalf("ActiveSessions = %+v, want none", view.ActiveSessions)
+	}
+}
+
+func TestLoadDashboardKeepsServiceHealthWhenDashboardDataUnavailable(t *testing.T) {
+	t.Parallel()
+
+	healthProvider := func(ctx context.Context) []ServiceHealthEntry {
+		return []ServiceHealthEntry{{Label: "Status", Available: false}}
+	}
+	svc := NewService(&gatewayStub{err: errors.New("boom")}, nil, healthProvider)
+	view, err := svc.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("LoadDashboard() error = %v", err)
+	}
+	if view.DataStatus != DashboardDataStatusUnavailable {
+		t.Fatalf("DataStatus = %q, want %q", view.DataStatus, DashboardDataStatusUnavailable)
+	}
+	if len(view.ServiceHealth) != 1 || view.ServiceHealth[0].Label != "Status" || view.ServiceHealth[0].Available {
+		t.Fatalf("ServiceHealth = %+v", view.ServiceHealth)
 	}
 }
 

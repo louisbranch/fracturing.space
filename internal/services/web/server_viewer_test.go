@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"google.golang.org/grpc"
 )
 
@@ -84,6 +85,39 @@ func TestPrimaryNavigationOmitsUnavailableLinks(t *testing.T) {
 	}
 	if strings.Contains(body, `href="/app/profile"`) {
 		t.Fatalf("body unexpectedly includes unavailable profile link: %q", body)
+	}
+}
+
+func TestPrimaryNavigationOmitsNotificationsLinkWhenNotificationsModuleUnavailable(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	cfg := defaultProtectedConfig(auth)
+	cfg.Dependencies.Principal.NotificationClient = nil
+	cfg.Dependencies.Modules.Notifications.NotificationClient = nil
+	h, err := NewHandler(cfg)
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Contains(body, `href="/app/notifications"`) {
+		t.Fatalf("body unexpectedly includes notifications link: %q", body)
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/app/notifications", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr = httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("notifications route status = %d, want %d", rr.Code, http.StatusNotFound)
 	}
 }
 
@@ -257,7 +291,7 @@ func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{},
+			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})
@@ -290,7 +324,7 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{},
+			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})
@@ -437,7 +471,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{
+			principal.Dependencies{
 				SessionClient: auth,
 				AccountClient: account,
 				SocialClient:  social,
@@ -498,7 +532,7 @@ func TestAppPageUserDropdownProfileUsesAuthUsernameWhenSocialProfileHasNoUsernam
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{
+			principal.Dependencies{
 				SessionClient: auth,
 				AccountClient: account,
 				SocialClient:  social,
@@ -543,7 +577,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{
+			principal.Dependencies{
 				SessionClient: auth,
 				SocialClient:  social,
 				AssetBaseURL:  assetBaseURL,
@@ -594,6 +628,7 @@ type fakeAccountClient struct {
 	getProfileResp   *authv1.GetProfileResponse
 	getProfileErr    error
 	getProfileCalled bool
+	getProfileCalls  int
 	lastUpdateReq    *authv1.UpdateProfileRequest
 	updateErr        error
 }
@@ -603,6 +638,7 @@ type fakeAgentClient struct{}
 
 func (f *fakeAccountClient) GetProfile(context.Context, *authv1.GetProfileRequest, ...grpc.CallOption) (*authv1.GetProfileResponse, error) {
 	f.getProfileCalled = true
+	f.getProfileCalls++
 	if f.getProfileErr != nil {
 		return nil, f.getProfileErr
 	}

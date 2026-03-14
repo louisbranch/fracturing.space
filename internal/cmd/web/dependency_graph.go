@@ -18,8 +18,18 @@ import (
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	grpc "google.golang.org/grpc"
 )
+
+// closableManagedConn is the shutdown contract used by web startup wiring.
+type closableManagedConn interface {
+	Close() error
+}
+
+// managedConns captures the connection slice contract used during dependency
+// bootstrap so runtime assembly can own shutdown in one place.
+type managedConns []*platformgrpc.ManagedConn
 
 const (
 	dependencyNameAuth          = "auth"
@@ -31,18 +41,37 @@ const (
 	dependencyNameNotifications = "notifications"
 )
 
+// startupDependencyPolicy defines whether missing connectivity blocks web
+// startup or only degrades specific mounted surfaces.
+type startupDependencyPolicy string
+
+const (
+	startupDependencyRequired startupDependencyPolicy = "required"
+	startupDependencyOptional startupDependencyPolicy = "optional"
+)
+
+// managedConnMode maps the web startup policy to the underlying managed-conn
+// behavior used during bootstrap.
+func (p startupDependencyPolicy) managedConnMode() platformgrpc.ManagedConnMode {
+	if p == startupDependencyRequired {
+		return platformgrpc.ModeRequired
+	}
+	return platformgrpc.ModeOptional
+}
+
 // newManagedConn wraps platformgrpc.NewManagedConn for testability.
 var newManagedConn = platformgrpc.NewManagedConn
 
 // dependencyInputSetter maps one connected dependency into principal/module bundles.
-type dependencyInputSetter func(*web.PrincipalDependencies, *modules.Dependencies, *grpc.ClientConn)
+type dependencyInputSetter func(*principal.Dependencies, *modules.Dependencies, *grpc.ClientConn)
 
 // dependencyRequirement describes one startup dependency and its wiring step.
 type dependencyRequirement struct {
 	name       string
 	address    string
-	mode       platformgrpc.ManagedConnMode
+	policy     startupDependencyPolicy
 	capability string
+	surfaces   []string
 	setInput   dependencyInputSetter
 }
 
@@ -64,8 +93,9 @@ func dependencyRequirementAuth(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameAuth,
 		address:    address,
-		mode:       platformgrpc.ModeRequired,
+		policy:     startupDependencyRequired,
 		capability: "web.auth.integration",
+		surfaces:   []string{"principal", "publicauth", "profile", "settings"},
 		setInput:   setDependencyAuth,
 	}
 }
@@ -75,8 +105,9 @@ func dependencyRequirementSocial(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameSocial,
 		address:    address,
-		mode:       platformgrpc.ModeRequired,
+		policy:     startupDependencyRequired,
 		capability: "web.social.integration",
+		surfaces:   []string{"principal", "profile", "settings"},
 		setInput:   setDependencySocial,
 	}
 }
@@ -86,8 +117,9 @@ func dependencyRequirementGame(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameGame,
 		address:    address,
-		mode:       platformgrpc.ModeRequired,
+		policy:     startupDependencyRequired,
 		capability: "web.game.integration",
+		surfaces:   []string{"campaigns", "dashboard-sync"},
 		setInput:   setDependencyGame,
 	}
 }
@@ -97,8 +129,9 @@ func dependencyRequirementAI(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameAI,
 		address:    address,
-		mode:       platformgrpc.ModeOptional,
+		policy:     startupDependencyOptional,
 		capability: "web.ai.integration",
+		surfaces:   []string{"settings.ai", "campaigns.ai"},
 		setInput:   setDependencyAI,
 	}
 }
@@ -108,8 +141,9 @@ func dependencyRequirementDiscovery(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameDiscovery,
 		address:    address,
-		mode:       platformgrpc.ModeOptional,
+		policy:     startupDependencyOptional,
 		capability: "web.discovery.integration",
+		surfaces:   []string{"discovery"},
 		setInput:   setDependencyDiscovery,
 	}
 }
@@ -119,8 +153,9 @@ func dependencyRequirementUserHub(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameUserHub,
 		address:    address,
-		mode:       platformgrpc.ModeOptional,
+		policy:     startupDependencyOptional,
 		capability: "web.userhub.integration",
+		surfaces:   []string{"dashboard", "dashboard-sync"},
 		setInput:   setDependencyUserHub,
 	}
 }
@@ -130,14 +165,15 @@ func dependencyRequirementNotifications(address string) dependencyRequirement {
 	return dependencyRequirement{
 		name:       dependencyNameNotifications,
 		address:    address,
-		mode:       platformgrpc.ModeOptional,
+		policy:     startupDependencyOptional,
 		capability: "web.notifications.integration",
+		surfaces:   []string{"principal", "notifications"},
 		setInput:   setDependencyNotifications,
 	}
 }
 
 // setDependencyAuth wires auth clients into principal and module bundles.
-func setDependencyAuth(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+func setDependencyAuth(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	authClient := authv1.NewAuthServiceClient(conn)
 	accountClient := authv1.NewAccountServiceClient(conn)
 	p.SessionClient = authClient
@@ -150,7 +186,7 @@ func setDependencyAuth(p *web.PrincipalDependencies, m *modules.Dependencies, co
 }
 
 // setDependencySocial wires social clients into principal and module bundles.
-func setDependencySocial(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+func setDependencySocial(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	socialClient := socialv1.NewSocialServiceClient(conn)
 	p.SocialClient = socialClient
 	m.Profile.SocialClient = socialClient
@@ -158,7 +194,7 @@ func setDependencySocial(p *web.PrincipalDependencies, m *modules.Dependencies, 
 }
 
 // setDependencyGame wires game clients into module bundles.
-func setDependencyGame(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+func setDependencyGame(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	m.Campaigns.CampaignClient = statev1.NewCampaignServiceClient(conn)
 	m.Campaigns.ParticipantClient = statev1.NewParticipantServiceClient(conn)
 	m.Campaigns.CharacterClient = statev1.NewCharacterServiceClient(conn)
@@ -171,25 +207,25 @@ func setDependencyGame(_ *web.PrincipalDependencies, m *modules.Dependencies, co
 }
 
 // setDependencyAI wires AI clients into module bundles.
-func setDependencyAI(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+func setDependencyAI(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	m.Settings.CredentialClient = aiv1.NewCredentialServiceClient(conn)
 	m.Settings.AgentClient = aiv1.NewAgentServiceClient(conn)
 	m.Campaigns.AgentClient = aiv1.NewAgentServiceClient(conn)
 }
 
 // setDependencyDiscovery wires discovery clients into module bundles.
-func setDependencyDiscovery(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+func setDependencyDiscovery(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	m.Discovery.DiscoveryClient = discoveryv1.NewDiscoveryServiceClient(conn)
 }
 
 // setDependencyUserHub wires userhub clients into module bundles.
-func setDependencyUserHub(_ *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+func setDependencyUserHub(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	m.Dashboard.UserHubClient = userhubv1.NewUserHubServiceClient(conn)
 	m.DashboardSync.UserHubControlClient = userhubv1.NewUserHubControlServiceClient(conn)
 }
 
 // setDependencyNotifications wires notifications clients into principal and module bundles.
-func setDependencyNotifications(p *web.PrincipalDependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
+func setDependencyNotifications(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	notificationClient := notificationsv1.NewNotificationServiceClient(conn)
 	p.NotificationClient = notificationClient
 	m.Notifications.NotificationClient = notificationClient
@@ -203,10 +239,10 @@ func bootstrapDependencies(
 	requirements []dependencyRequirement,
 	assetBaseURL string,
 	reporter *platformstatus.Reporter,
-) (web.DependencyBundle, []*platformgrpc.ManagedConn, error) {
-	principal := web.PrincipalDependencies{AssetBaseURL: assetBaseURL}
+) (web.DependencyBundle, managedConns, error) {
+	principalDeps := principal.Dependencies{AssetBaseURL: assetBaseURL}
 	modDeps := modules.Dependencies{AssetBaseURL: assetBaseURL}
-	var conns []*platformgrpc.ManagedConn
+	var conns managedConns
 
 	logf := func(format string, args ...any) {
 		log.Printf(format, args...)
@@ -219,7 +255,7 @@ func bootstrapDependencies(
 		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 			Name:             dep.name,
 			Addr:             dep.address,
-			Mode:             dep.mode,
+			Mode:             dep.policy.managedConnMode(),
 			Logf:             logf,
 			StatusReporter:   reporter,
 			StatusCapability: dep.capability,
@@ -229,21 +265,21 @@ func bootstrapDependencies(
 			return web.DependencyBundle{}, nil, fmt.Errorf("dependency %s: %w", dep.name, err)
 		}
 		conns = append(conns, mc)
-		dep.setInput(&principal, &modDeps, mc.Conn())
+		dep.setInput(&principalDeps, &modDeps, mc.Conn())
 	}
 
-	return web.DependencyBundle{Principal: principal, Modules: modDeps}, conns, nil
+	return web.DependencyBundle{Principal: principalDeps, Modules: modDeps}, conns, nil
 }
 
 // closeManagedConns closes all ManagedConn instances.
-func closeManagedConns(conns []*platformgrpc.ManagedConn) {
+func closeManagedConns(conns managedConns) {
 	for _, mc := range conns {
 		closeManagedConn(mc, "dependency")
 	}
 }
 
 // closeManagedConn nil-safely closes a ManagedConn with error logging.
-func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
+func closeManagedConn(mc closableManagedConn, name string) {
 	if mc == nil {
 		return
 	}

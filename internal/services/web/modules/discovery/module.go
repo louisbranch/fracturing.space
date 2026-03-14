@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -35,7 +36,7 @@ func (m Module) Healthy() bool {
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	base := publichandler.NewBase()
-	h := newHandlers(base, m.gateway)
+	h := newHandlers(base, discoveryapp.NewService(m.gateway))
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.DiscoverPrefix, Handler: mux}, nil
 }

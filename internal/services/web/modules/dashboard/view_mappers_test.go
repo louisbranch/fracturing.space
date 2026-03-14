@@ -1,17 +1,23 @@
 package dashboard
 
-import "testing"
+import (
+	"testing"
+
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
+)
 
 func TestMapDashboardTemplateView(t *testing.T) {
 	t.Parallel()
 
-	view := mapDashboardTemplateView(DashboardView{
+	view := mapDashboardTemplateView(dashboardapp.DashboardView{
+		DataStatus:              dashboardapp.DashboardDataStatusDegraded,
+		DegradedDependencies:    []string{dashboardapp.DegradedDependencySocialProfile},
 		ShowPendingProfileBlock: true,
 		ShowAdventureBlock:      false,
-		ActiveSessions: []ActiveSessionItem{
+		ActiveSessions: []dashboardapp.ActiveSessionItem{
 			{CampaignID: "camp-1", CampaignName: "Sunfall", SessionID: "session-1", SessionName: "The Crossing"},
 		},
-		ServiceHealth: []ServiceHealthEntry{
+		ServiceHealth: []dashboardapp.ServiceHealthEntry{
 			{Label: "game", Available: true},
 			{Label: "status", Available: false},
 		},
@@ -19,6 +25,9 @@ func TestMapDashboardTemplateView(t *testing.T) {
 
 	if !view.ProfilePending.Visible {
 		t.Fatalf("ProfilePending.Visible = false, want true")
+	}
+	if !view.StatusNotice.Visible || !view.StatusNotice.Degraded {
+		t.Fatalf("StatusNotice = %+v, want visible degraded notice", view.StatusNotice)
 	}
 	if view.Adventure.Visible {
 		t.Fatalf("Adventure.Visible = true, want false")

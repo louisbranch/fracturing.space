@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/composition"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/observability"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	webstatic "github.com/louisbranch/fracturing.space/internal/services/web/static"
 )
 
@@ -43,16 +44,14 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		deps = *cfg.Dependencies
 	}
 
-	session := newSessionResolver(deps.Principal.SessionClient)
-	viewer := newViewerResolver(deps.Principal.AccountClient, deps.Principal.SocialClient, deps.Principal.NotificationClient, deps.Principal.AssetBaseURL, session.resolveRequestUserID)
-	lang := newLanguageResolver(deps.Principal.AccountClient, session.resolveRequestUserID)
+	principalResolver := principal.New(deps.Principal)
 	h, err := composition.ComposeAppHandler(composition.ComposeInput{
 		Principal: composition.PrincipalResolvers{
-			AuthRequired:    session.authRequired(),
-			ResolveViewer:   viewer.resolveViewer,
-			ResolveSignedIn: session.resolveRequestSignedIn,
-			ResolveUserID:   session.resolveRequestUserID,
-			ResolveLanguage: lang.resolveRequestLanguage,
+			AuthRequired:    principalResolver.AuthRequired(),
+			ResolveViewer:   principalResolver.ResolveViewer,
+			ResolveSignedIn: principalResolver.ResolveSignedIn,
+			ResolveUserID:   principalResolver.ResolveUserID,
+			ResolveLanguage: principalResolver.ResolveLanguage,
 		},
 		ModuleDependencies:  deps.Modules,
 		ChatHTTPAddr:        cfg.ChatHTTPAddr,
@@ -67,44 +66,9 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	return sharedhttpx.Chain(rootMux,
 		sharedhttpx.RecoverPanic(),
 		sharedhttpx.RequestID("web"),
-		withRequestPrincipalState(),
+		principalResolver.Middleware(),
 		observability.RequestLogger(log.Default()),
 	), nil
-}
-
-// withRequestPrincipalState centralizes this web behavior in one helper seam.
-func withRequestPrincipalState() sharedhttpx.Middleware {
-	return func(next http.Handler) http.Handler {
-		if next == nil {
-			next = http.NotFoundHandler()
-		}
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r == nil {
-				next.ServeHTTP(w, r)
-				return
-			}
-			state := &requestPrincipalState{}
-			ctx := context.WithValue(r.Context(), requestPrincipalStateKey{}, state)
-			next.ServeHTTP(w, r.WithContext(ctx))
-		})
-	}
-}
-
-// requestPrincipalStateFromRequest centralizes this web behavior in one helper seam.
-func requestPrincipalStateFromRequest(r *http.Request) *requestPrincipalState {
-	if r == nil {
-		return nil
-	}
-	return requestPrincipalStateFromContext(r.Context())
-}
-
-// requestPrincipalStateFromContext centralizes this web behavior in one helper seam.
-func requestPrincipalStateFromContext(ctx context.Context) *requestPrincipalState {
-	if ctx == nil {
-		return nil
-	}
-	state, _ := ctx.Value(requestPrincipalStateKey{}).(*requestPrincipalState)
-	return state
 }
 
 // NewServer validates config and constructs a web server.

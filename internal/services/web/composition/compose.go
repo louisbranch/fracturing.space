@@ -20,11 +20,6 @@ type PrincipalResolvers struct {
 	ResolveLanguage module.ResolveLanguage
 }
 
-// ModuleRegistry builds web module sets from composition input.
-type ModuleRegistry interface {
-	Build(modules.BuildInput) modules.BuildOutput
-}
-
 // ComposeInput describes the contracts needed to compose the application mux.
 type ComposeInput struct {
 	Principal PrincipalResolvers
@@ -34,7 +29,7 @@ type ComposeInput struct {
 	ChatHTTPAddr        string
 	RequestSchemePolicy requestmeta.SchemePolicy
 
-	Registry ModuleRegistry
+	RegistryBuilder modules.RegistryBuilder
 }
 
 // ComposeAppHandler builds the web app handler with selected module sets.
@@ -44,13 +39,12 @@ func ComposeAppHandler(input ComposeInput) (http.Handler, error) {
 		authRequired = func(*http.Request) bool { return false }
 	}
 
-	registry := input.Registry
-	if registry == nil {
-		defaultRegistry := modules.NewRegistry()
-		registry = defaultRegistry
+	registryBuilder := input.RegistryBuilder
+	if registryBuilder == nil {
+		registryBuilder = modules.NewRegistryBuilder()
 	}
 
-	built := registry.Build(modules.BuildInput{
+	built := registryBuilder.Build(modules.RegistryInput{
 		Dependencies: input.ModuleDependencies,
 		Resolvers: modules.ModuleResolvers{
 			ResolveViewer:   input.Principal.ResolveViewer,

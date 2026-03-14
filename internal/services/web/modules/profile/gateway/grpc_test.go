@@ -59,6 +59,9 @@ func TestGRPCGatewayLookupMapsFields(t *testing.T) {
 	if resp.UserID != "user-1" || resp.Username != "louis" || resp.Name != "Louis Branch" || resp.Pronouns != "they/them" || resp.Bio != "Explorer" {
 		t.Fatalf("unexpected response: %+v", resp)
 	}
+	if resp.SocialProfileStatus != profileapp.SocialProfileStatusLoaded {
+		t.Fatalf("SocialProfileStatus = %q, want %q", resp.SocialProfileStatus, profileapp.SocialProfileStatusLoaded)
+	}
 }
 
 func TestGRPCGatewayLookupReturnsBaselineWhenSocialProfileMissing(t *testing.T) {
@@ -76,6 +79,45 @@ func TestGRPCGatewayLookupReturnsBaselineWhenSocialProfileMissing(t *testing.T) 
 	}
 	if resp.UserID != "user-1" || resp.Username != "louis" {
 		t.Fatalf("unexpected baseline response: %+v", resp)
+	}
+	if resp.SocialProfileStatus != profileapp.SocialProfileStatusMissing {
+		t.Fatalf("SocialProfileStatus = %q, want %q", resp.SocialProfileStatus, profileapp.SocialProfileStatusMissing)
+	}
+}
+
+func TestGRPCGatewayLookupReturnsBaselineWhenSocialServiceUnavailable(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{
+		AuthClient: &authClientStub{resp: &authv1.LookupUserByUsernameResponse{
+			User: &authv1.User{Id: "user-1", Username: "louis"},
+		}},
+		SocialClient: &socialClientStub{err: status.Error(codes.Unavailable, "social unavailable")},
+	}
+	resp, err := gateway.LookupUserProfile(context.Background(), profileapp.LookupUserProfileRequest{Username: "louis"})
+	if err != nil {
+		t.Fatalf("LookupUserProfile() error = %v", err)
+	}
+	if resp.UserID != "user-1" || resp.Username != "louis" {
+		t.Fatalf("unexpected baseline response: %+v", resp)
+	}
+	if resp.SocialProfileStatus != profileapp.SocialProfileStatusUnavailable {
+		t.Fatalf("SocialProfileStatus = %q, want %q", resp.SocialProfileStatus, profileapp.SocialProfileStatusUnavailable)
+	}
+}
+
+func TestGRPCGatewayLookupReturnsBaselineWhenSocialClientUnconfigured(t *testing.T) {
+	t.Parallel()
+
+	gateway := NewGRPCGateway(&authClientStub{resp: &authv1.LookupUserByUsernameResponse{
+		User: &authv1.User{Id: "user-1", Username: "louis"},
+	}}, nil)
+	resp, err := gateway.LookupUserProfile(context.Background(), profileapp.LookupUserProfileRequest{Username: "louis"})
+	if err != nil {
+		t.Fatalf("LookupUserProfile() error = %v", err)
+	}
+	if resp.SocialProfileStatus != profileapp.SocialProfileStatusUnconfigured {
+		t.Fatalf("SocialProfileStatus = %q, want %q", resp.SocialProfileStatus, profileapp.SocialProfileStatusUnconfigured)
 	}
 }
 

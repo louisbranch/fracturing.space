@@ -10,6 +10,8 @@ import (
 	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // AuthClient resolves usernames to auth-owned account records.
@@ -55,19 +57,35 @@ func (g GRPCGateway) LookupUserProfile(ctx context.Context, req profileapp.Looku
 
 	account := authResp.GetUser()
 	response := profileapp.LookupUserProfileResponse{
-		UserID:   strings.TrimSpace(account.GetId()),
-		Username: strings.TrimSpace(account.GetUsername()),
+		UserID:              strings.TrimSpace(account.GetId()),
+		Username:            strings.TrimSpace(account.GetUsername()),
+		SocialProfileStatus: profileapp.SocialProfileStatusUnspecified,
 	}
 
-	if g.SocialClient == nil || response.UserID == "" {
+	if g.SocialClient == nil {
+		response.SocialProfileStatus = profileapp.SocialProfileStatusUnconfigured
+		return response, nil
+	}
+	if response.UserID == "" {
+		response.SocialProfileStatus = profileapp.SocialProfileStatusUnavailable
 		return response, nil
 	}
 	socialResp, err := g.SocialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: response.UserID})
-	if err != nil || socialResp == nil || socialResp.GetUserProfile() == nil {
+	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			response.SocialProfileStatus = profileapp.SocialProfileStatusMissing
+			return response, nil
+		}
+		response.SocialProfileStatus = profileapp.SocialProfileStatusUnavailable
+		return response, nil
+	}
+	if socialResp == nil || socialResp.GetUserProfile() == nil {
+		response.SocialProfileStatus = profileapp.SocialProfileStatusMissing
 		return response, nil
 	}
 
 	profile := socialResp.GetUserProfile()
+	response.SocialProfileStatus = profileapp.SocialProfileStatusLoaded
 	response.Name = strings.TrimSpace(profile.GetName())
 	response.Pronouns = pronouns.FromProto(profile.GetPronouns())
 	response.Bio = strings.TrimSpace(profile.GetBio())

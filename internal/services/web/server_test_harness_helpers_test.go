@@ -8,8 +8,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
-	campaignsmodule "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
-	settingsmodule "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func assertPrimaryNavLinks(t *testing.T, body string) {
@@ -46,23 +45,13 @@ func attachSessionCookie(t *testing.T, req *http.Request, auth *fakeWebAuthClien
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: sessionID})
 }
 
-func newDependencyBundle(principal PrincipalDependencies, moduleDeps modules.Dependencies) *DependencyBundle {
-	if moduleDeps.Settings.PasskeyClient == nil && moduleDeps.PublicAuth.AuthClient != nil {
-		if passkeyClient, ok := any(moduleDeps.PublicAuth.AuthClient).(settingsmodule.PasskeyClient); ok {
-			moduleDeps.Settings.PasskeyClient = passkeyClient
-		}
-	}
-	if moduleDeps.Campaigns.AuthClient == nil && moduleDeps.PublicAuth.AuthClient != nil {
-		if authClient, ok := any(moduleDeps.PublicAuth.AuthClient).(campaignsmodule.AuthClient); ok {
-			moduleDeps.Campaigns.AuthClient = authClient
-		}
-	}
+func newDependencyBundle(principalDeps principal.Dependencies, moduleDeps modules.Dependencies) *DependencyBundle {
 	return &DependencyBundle{
-		Principal: principal,
+		Principal: principalDeps,
 		Modules:   moduleDeps,
 	}
 }
 
 func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBundle {
-	return newDependencyBundle(PrincipalDependencies{}, moduleDeps)
+	return newDependencyBundle(principal.Dependencies{}, moduleDeps)
 }

@@ -15,6 +15,8 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
@@ -47,25 +49,25 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	}
 }
 
-func TestMapCampaignCharacterCreationStepToProtoWrapper(t *testing.T) {
+func TestMapCampaignCharacterCreationStepToProtoGatewayExport(t *testing.T) {
 	t.Parallel()
 
 	step := &campaignapp.CampaignCharacterCreationStepInput{
 		Details: &campaignapp.CampaignCharacterCreationStepDetails{},
 	}
-	mapped, err := mapCampaignCharacterCreationStepToProto(step)
+	mapped, err := campaigngateway.MapCampaignCharacterCreationStepToProto(step)
 	if err != nil {
-		t.Fatalf("mapCampaignCharacterCreationStepToProto() error = %v", err)
+		t.Fatalf("MapCampaignCharacterCreationStepToProto() error = %v", err)
 	}
 	if mapped == nil {
-		t.Fatalf("mapCampaignCharacterCreationStepToProto() = nil, want non-nil")
+		t.Fatalf("MapCampaignCharacterCreationStepToProto() = nil, want non-nil")
 	}
 }
 
 func TestMountServesCampaignsGet(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}, {ID: "c2", Name: "Second"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}, {ID: "c2", Name: "Second"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -212,7 +214,7 @@ func TestMountCampaignsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 func TestMountCampaignDetailMissingCampaignReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -236,7 +238,7 @@ func TestMountCampaignDetailMissingCampaignReturnsNotFound(t *testing.T) {
 func TestMountCampaignsUnknownSubpathRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -260,7 +262,7 @@ func TestMountCampaignsUnknownSubpathRendersNotFoundPage(t *testing.T) {
 func TestMountCampaignsLegacyChatSubpathRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -280,12 +282,14 @@ func TestMountCampaignsLegacyChatSubpathRendersNotFoundPage(t *testing.T) {
 func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T) {
 	t.Parallel()
 
-	deps := completeGRPCDeps(GRPCGatewayDeps{
-		CampaignClient: fakeCampaignClient{
-			response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "remote-1", Name: "Remote Campaign"}}},
+	deps := completeGRPCDeps(campaigngateway.GRPCGatewayDeps{
+		Read: campaigngateway.GRPCGatewayReadDeps{
+			Campaign: fakeCampaignClient{
+				response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "remote-1", Name: "Remote Campaign"}}},
+			},
 		},
 	})
-	m := New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: campaigngateway.NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -304,7 +308,7 @@ func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T)
 func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -340,7 +344,7 @@ func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 func TestMountCampaignsGetWithEmptyListUsesHXRedirect(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -375,7 +379,7 @@ func TestCampaignBreadcrumbsFallbackToCampaignID(t *testing.T) {
 func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(newService(fakeGateway{}), modulehandler.NewTestBase(), "", nil)
+	h := newHandlers(campaignapp.NewService(fakeGateway{}), modulehandler.NewTestBase(), "", nil)
 	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
 	rr := httptest.NewRecorder()
 
@@ -398,7 +402,7 @@ func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 func TestGRPCGatewayCampaignNameReturnsEmptyWhenCampaignMissing(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{Client: fakeCampaignClient{getResp: &statev1.GetCampaignResponse{Campaign: nil}}}
+	g := campaigngateway.GRPCGateway{Read: campaigngateway.GRPCGatewayReadDeps{Campaign: fakeCampaignClient{getResp: &statev1.GetCampaignResponse{Campaign: nil}}}}
 	name, err := g.CampaignName(context.Background(), "camp-1")
 	if err != nil {
 		t.Fatalf("CampaignName() error = %v", err)
@@ -411,8 +415,8 @@ func TestGRPCGatewayCampaignNameReturnsEmptyWhenCampaignMissing(t *testing.T) {
 func TestGRPCGatewayCreateCampaignRejectsEmptyCampaignID(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{Client: fakeCampaignClient{createResp: &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{}}}}
-	_, err := g.CreateCampaign(context.Background(), CreateCampaignInput{Name: "New", System: GameSystemDaggerheart, GMMode: GmModeHuman})
+	g := campaigngateway.GRPCGateway{Mutation: campaigngateway.GRPCGatewayMutationDeps{Campaign: fakeCampaignClient{createResp: &statev1.CreateCampaignResponse{Campaign: &statev1.Campaign{}}}}}
+	_, err := g.CreateCampaign(context.Background(), campaignapp.CreateCampaignInput{Name: "New", System: campaignapp.GameSystemDaggerheart, GMMode: campaignapp.GmModeHuman})
 	if err == nil {
 		t.Fatalf("expected empty campaign id error")
 	}
@@ -424,25 +428,25 @@ func TestGRPCGatewayCreateCampaignRejectsEmptyCampaignID(t *testing.T) {
 func TestGRPCGatewayMutationMethodsReturnUnavailable(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{}
+	g := campaigngateway.GRPCGateway{}
 	tests := []struct {
 		name string
 		err  error
 	}{
-		{name: "start session", err: g.StartSession(context.Background(), "c1", StartSessionInput{Name: "Session One"})},
-		{name: "end session", err: g.EndSession(context.Background(), "c1", EndSessionInput{SessionID: "sess-1"})},
+		{name: "start session", err: g.StartSession(context.Background(), "c1", campaignapp.StartSessionInput{Name: "Session One"})},
+		{name: "end session", err: g.EndSession(context.Background(), "c1", campaignapp.EndSessionInput{SessionID: "sess-1"})},
 		{name: "create character", err: func() error {
-			_, err := g.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
+			_, err := g.CreateCharacter(context.Background(), "c1", campaignapp.CreateCharacterInput{Name: "Hero", Kind: campaignapp.CharacterKindPC})
 			return err
 		}()},
 		{name: "create participant", err: func() error {
-			_, err := g.CreateParticipant(context.Background(), "c1", CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"})
+			_, err := g.CreateParticipant(context.Background(), "c1", campaignapp.CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"})
 			return err
 		}()},
-		{name: "apply character creation step", err: g.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", &CampaignCharacterCreationStepInput{Details: &CampaignCharacterCreationStepDetails{}})},
+		{name: "apply character creation step", err: g.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", &campaignapp.CampaignCharacterCreationStepInput{Details: &campaignapp.CampaignCharacterCreationStepDetails{}})},
 		{name: "reset character creation workflow", err: g.ResetCharacterCreationWorkflow(context.Background(), "c1", "char-1")},
-		{name: "create invite", err: g.CreateInvite(context.Background(), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})},
-		{name: "revoke invite", err: g.RevokeInvite(context.Background(), "c1", RevokeInviteInput{InviteID: "inv-1"})},
+		{name: "create invite", err: g.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})},
+		{name: "revoke invite", err: g.RevokeInvite(context.Background(), "c1", campaignapp.RevokeInviteInput{InviteID: "inv-1"})},
 	}
 	for _, tc := range tests {
 		tc := tc
@@ -461,13 +465,13 @@ func TestGRPCGatewayMutationMethodsReturnUnavailable(t *testing.T) {
 func TestGRPCGatewayCampaignSessionsMapsSessionRows(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{SessionClient: fakeSessionClient{response: &statev1.ListSessionsResponse{Sessions: []*statev1.Session{{
+	g := campaigngateway.GRPCGateway{Read: campaigngateway.GRPCGatewayReadDeps{Session: fakeSessionClient{response: &statev1.ListSessionsResponse{Sessions: []*statev1.Session{{
 		Id:         "s1",
 		CampaignId: "c1",
 		Name:       "First Light",
 		Status:     statev1.SessionStatus_SESSION_ACTIVE,
 		UpdatedAt:  timestamppb.New(time.Date(2026, 2, 24, 18, 0, 0, 0, time.UTC)),
-	}}}}}
+	}}}}}}
 
 	sessions, err := g.CampaignSessions(context.Background(), "c1")
 	if err != nil {
@@ -487,13 +491,13 @@ func TestGRPCGatewayCampaignSessionsMapsSessionRows(t *testing.T) {
 func TestGRPCGatewayCampaignInvitesMapsInviteRows(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{InviteClient: fakeInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
+	g := campaigngateway.GRPCGateway{Read: campaigngateway.GRPCGatewayReadDeps{Invite: fakeInviteClient{response: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{{
 		Id:              "inv-1",
 		CampaignId:      "c1",
 		ParticipantId:   "p1",
 		RecipientUserId: "user-2",
 		Status:          statev1.InviteStatus_PENDING,
-	}}}}}
+	}}}}}}
 
 	invites, err := g.CampaignInvites(context.Background(), "c1")
 	if err != nil {
@@ -510,7 +514,7 @@ func TestGRPCGatewayCampaignInvitesMapsInviteRows(t *testing.T) {
 func TestGRPCGatewayCampaignSessionsFailsClosedWhenSessionClientMissing(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{}
+	g := campaigngateway.GRPCGateway{}
 	_, err := g.CampaignSessions(context.Background(), "c1")
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -523,7 +527,7 @@ func TestGRPCGatewayCampaignSessionsFailsClosedWhenSessionClientMissing(t *testi
 func TestGRPCGatewayCampaignInvitesFailsClosedWhenInviteClientMissing(t *testing.T) {
 	t.Parallel()
 
-	g := grpcGateway{}
+	g := campaigngateway.GRPCGateway{}
 	_, err := g.CampaignInvites(context.Background(), "c1")
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -533,17 +537,17 @@ func TestGRPCGatewayCampaignInvitesFailsClosedWhenInviteClientMissing(t *testing
 	}
 }
 
-// testCreationWorkflow implements CharacterCreationWorkflow for tests.
+// testCreationWorkflow implements campaignworkflow.CharacterCreation for tests.
 // It passes through catalog data without Daggerheart-specific filtering,
 // so test data should only include entries expected in output.
 type testCreationWorkflow struct{}
 
 func (testCreationWorkflow) AssembleCatalog(
-	progress CampaignCharacterCreationProgress,
-	catalog CampaignCharacterCreationCatalog,
-	profile CampaignCharacterCreationProfile,
-) CampaignCharacterCreation {
-	creation := CampaignCharacterCreation{
+	progress campaignapp.CampaignCharacterCreationProgress,
+	catalog campaignapp.CampaignCharacterCreationCatalog,
+	profile campaignapp.CampaignCharacterCreationProfile,
+) campaignapp.CampaignCharacterCreation {
+	creation := campaignapp.CampaignCharacterCreation{
 		Progress: progress,
 		Profile:  profile,
 	}
@@ -554,7 +558,7 @@ func (testCreationWorkflow) AssembleCatalog(
 		creation.Subclasses = append(creation.Subclasses, s)
 	}
 	for _, h := range catalog.Heritages {
-		entry := CatalogHeritage{ID: h.ID, Name: h.Name, Kind: h.Kind}
+		entry := campaignapp.CatalogHeritage{ID: h.ID, Name: h.Name, Kind: h.Kind}
 		switch h.Kind {
 		case "ancestry":
 			creation.Ancestries = append(creation.Ancestries, entry)
@@ -563,7 +567,7 @@ func (testCreationWorkflow) AssembleCatalog(
 		}
 	}
 	for _, w := range catalog.Weapons {
-		entry := CatalogWeapon{ID: w.ID, Name: w.Name, Category: w.Category, Tier: w.Tier}
+		entry := campaignapp.CatalogWeapon{ID: w.ID, Name: w.Name, Category: w.Category, Tier: w.Tier}
 		switch w.Category {
 		case "primary":
 			creation.PrimaryWeapons = append(creation.PrimaryWeapons, entry)
@@ -583,7 +587,7 @@ func (testCreationWorkflow) AssembleCatalog(
 	return creation
 }
 
-func (testCreationWorkflow) CreationView(creation CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
+func (testCreationWorkflow) CreationView(creation campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
 	view := webtemplates.CampaignCharacterCreationView{
 		Ready:             creation.Progress.Ready,
 		NextStep:          creation.Progress.NextStep,
@@ -649,7 +653,7 @@ func (testCreationWorkflow) CreationView(creation CampaignCharacterCreation) web
 	return view
 }
 
-func (testCreationWorkflow) ParseStepInput(form url.Values, nextStep int32) (*CampaignCharacterCreationStepInput, error) {
+func (testCreationWorkflow) ParseStepInput(form url.Values, nextStep int32) (*campaignapp.CampaignCharacterCreationStepInput, error) {
 	switch nextStep {
 	case 1:
 		classID := strings.TrimSpace(form.Get("class_id"))
@@ -657,8 +661,8 @@ func (testCreationWorkflow) ParseStepInput(form url.Values, nextStep int32) (*Ca
 		if classID == "" || subclassID == "" {
 			return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_class_and_subclass_are_required", "class and subclass are required")
 		}
-		return &CampaignCharacterCreationStepInput{
-			ClassSubclass: &CampaignCharacterCreationStepClassSubclass{ClassID: classID, SubclassID: subclassID},
+		return &campaignapp.CampaignCharacterCreationStepInput{
+			ClassSubclass: &campaignapp.CampaignCharacterCreationStepClassSubclass{ClassID: classID, SubclassID: subclassID},
 		}, nil
 	default:
 		return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_step_is_not_available", "character creation step is not available")
@@ -667,12 +671,12 @@ func (testCreationWorkflow) ParseStepInput(form url.Values, nextStep int32) (*Ca
 
 // defaultTestWorkflows returns a workflow map suitable for tests that need
 // character creation enabled for Daggerheart campaigns.
-func defaultTestWorkflows() map[GameSystem]CharacterCreationWorkflow {
-	return map[GameSystem]CharacterCreationWorkflow{GameSystemDaggerheart: testCreationWorkflow{}}
+func defaultTestWorkflows() map[campaignapp.GameSystem]campaignworkflow.CharacterCreation {
+	return map[campaignapp.GameSystem]campaignworkflow.CharacterCreation{campaignapp.GameSystemDaggerheart: testCreationWorkflow{}}
 }
 
 type fakeGateway struct {
-	items                             []CampaignSummary
+	items                             []campaignapp.CampaignSummary
 	workspaceSystem                   string
 	workspaceGMMode                   string
 	workspaceStatus                   string
@@ -682,25 +686,25 @@ type fakeGateway struct {
 	workspaceAIAgentID                string
 	gameSurface                       campaignapp.CampaignGameSurface
 	gameSurfaceErr                    error
-	campaignAIAgents                  []CampaignAIAgentOption
+	campaignAIAgents                  []campaignapp.CampaignAIAgentOption
 	campaignAIAgentsErr               error
-	participants                      []CampaignParticipant
+	participants                      []campaignapp.CampaignParticipant
 	participantsErr                   error
-	participant                       CampaignParticipant
+	participant                       campaignapp.CampaignParticipant
 	participantErr                    error
-	characters                        []CampaignCharacter
+	characters                        []campaignapp.CampaignCharacter
 	charactersErr                     error
-	sessions                          []CampaignSession
+	sessions                          []campaignapp.CampaignSession
 	sessionsErr                       error
-	sessionReadiness                  CampaignSessionReadiness
+	sessionReadiness                  campaignapp.CampaignSessionReadiness
 	sessionReadinessErr               error
-	invites                           []CampaignInvite
+	invites                           []campaignapp.CampaignInvite
 	invitesErr                        error
-	characterCreationProgress         CampaignCharacterCreationProgress
+	characterCreationProgress         campaignapp.CampaignCharacterCreationProgress
 	characterCreationProgressErr      error
-	characterCreationCatalog          CampaignCharacterCreationCatalog
+	characterCreationCatalog          campaignapp.CampaignCharacterCreationCatalog
 	characterCreationCatalogErr       error
-	characterCreationProfile          CampaignCharacterCreationProfile
+	characterCreationProfile          campaignapp.CampaignCharacterCreationProfile
 	characterCreationProfileErr       error
 	authorizationDecision             campaignapp.AuthorizationDecision
 	authorizationErr                  error
@@ -718,7 +722,7 @@ type fakeGateway struct {
 	updateCampaignAIBindingErr        error
 	createParticipantErr              error
 	createdParticipantID              string
-	lastCreateParticipantInput        CreateParticipantInput
+	lastCreateParticipantInput        campaignapp.CreateParticipantInput
 	updateParticipantErr              error
 	err                               error
 	createErr                         error
@@ -730,7 +734,7 @@ type mutationContextGateway struct {
 	startSessionUserID string
 }
 
-func (g *mutationContextGateway) StartSession(ctx context.Context, _ string, _ StartSessionInput) error {
+func (g *mutationContextGateway) StartSession(ctx context.Context, _ string, _ campaignapp.StartSessionInput) error {
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {
 		g.startSessionUserID = ""
@@ -745,7 +749,7 @@ func (g *mutationContextGateway) StartSession(ctx context.Context, _ string, _ S
 	return nil
 }
 
-func (f fakeGateway) ListCampaigns(context.Context) ([]CampaignSummary, error) {
+func (f fakeGateway) ListCampaigns(context.Context) ([]campaignapp.CampaignSummary, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -763,7 +767,7 @@ func (f fakeGateway) CampaignName(_ context.Context, campaignID string) (string,
 	return "", nil
 }
 
-func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (CampaignWorkspace, error) {
+func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (campaignapp.CampaignWorkspace, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	for _, item := range f.items {
 		if strings.TrimSpace(item.ID) != campaignID {
@@ -797,7 +801,7 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 		if accessPolicy == "" {
 			accessPolicy = "Public"
 		}
-		return CampaignWorkspace{
+		return campaignapp.CampaignWorkspace{
 			ID:               campaignID,
 			Name:             name,
 			Theme:            strings.TrimSpace(item.Theme),
@@ -813,7 +817,7 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 			CoverImageURL:    strings.TrimSpace(item.CoverImageURL),
 		}, nil
 	}
-	return CampaignWorkspace{}, apperrors.E(apperrors.KindNotFound, "campaign not found")
+	return campaignapp.CampaignWorkspace{}, apperrors.E(apperrors.KindNotFound, "campaign not found")
 }
 
 func (f fakeGateway) CampaignGameSurface(_ context.Context, campaignID string) (campaignapp.CampaignGameSurface, error) {
@@ -856,23 +860,23 @@ func (f fakeGateway) CampaignGameSurface(_ context.Context, campaignID string) (
 	return surface, nil
 }
 
-func (f fakeGateway) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {
+func (f fakeGateway) CampaignAIAgents(context.Context) ([]campaignapp.CampaignAIAgentOption, error) {
 	if f.campaignAIAgentsErr != nil {
 		return nil, f.campaignAIAgentsErr
 	}
 	return f.campaignAIAgents, nil
 }
 
-func (f fakeGateway) CampaignParticipants(context.Context, string) ([]CampaignParticipant, error) {
+func (f fakeGateway) CampaignParticipants(context.Context, string) ([]campaignapp.CampaignParticipant, error) {
 	if f.participantsErr != nil {
 		return nil, f.participantsErr
 	}
 	return f.participants, nil
 }
 
-func (f fakeGateway) CampaignParticipant(context.Context, string, string) (CampaignParticipant, error) {
+func (f fakeGateway) CampaignParticipant(context.Context, string, string) (campaignapp.CampaignParticipant, error) {
 	if f.participantErr != nil {
-		return CampaignParticipant{}, f.participantErr
+		return campaignapp.CampaignParticipant{}, f.participantErr
 	}
 	if strings.TrimSpace(f.participant.ID) != "" {
 		return f.participant, nil
@@ -880,104 +884,106 @@ func (f fakeGateway) CampaignParticipant(context.Context, string, string) (Campa
 	if len(f.participants) > 0 {
 		return f.participants[0], nil
 	}
-	return CampaignParticipant{}, nil
+	return campaignapp.CampaignParticipant{}, nil
 }
 
-func (f fakeGateway) CampaignCharacters(context.Context, string) ([]CampaignCharacter, error) {
+func (f fakeGateway) CampaignCharacters(context.Context, string) ([]campaignapp.CampaignCharacter, error) {
 	if f.charactersErr != nil {
 		return nil, f.charactersErr
 	}
 	return f.characters, nil
 }
 
-func (f fakeGateway) CampaignSessions(context.Context, string) ([]CampaignSession, error) {
+func (f fakeGateway) CampaignSessions(context.Context, string) ([]campaignapp.CampaignSession, error) {
 	if f.sessionsErr != nil {
 		return nil, f.sessionsErr
 	}
 	return f.sessions, nil
 }
 
-func (f fakeGateway) CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error) {
+func (f fakeGateway) CampaignSessionReadiness(context.Context, string, language.Tag) (campaignapp.CampaignSessionReadiness, error) {
 	if f.sessionReadinessErr != nil {
-		return CampaignSessionReadiness{}, f.sessionReadinessErr
+		return campaignapp.CampaignSessionReadiness{}, f.sessionReadinessErr
 	}
 	if !f.sessionReadiness.Ready && len(f.sessionReadiness.Blockers) == 0 {
-		return CampaignSessionReadiness{Ready: true, Blockers: []CampaignSessionReadinessBlocker{}}, nil
+		return campaignapp.CampaignSessionReadiness{Ready: true, Blockers: []campaignapp.CampaignSessionReadinessBlocker{}}, nil
 	}
 	return f.sessionReadiness, nil
 }
 
-func (f fakeGateway) CampaignInvites(context.Context, string) ([]CampaignInvite, error) {
+func (f fakeGateway) CampaignInvites(context.Context, string) ([]campaignapp.CampaignInvite, error) {
 	if f.invitesErr != nil {
 		return nil, f.invitesErr
 	}
 	return f.invites, nil
 }
 
-func (f fakeGateway) CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error) {
+func (f fakeGateway) CharacterCreationProgress(context.Context, string, string) (campaignapp.CampaignCharacterCreationProgress, error) {
 	if f.characterCreationProgressErr != nil {
-		return CampaignCharacterCreationProgress{}, f.characterCreationProgressErr
+		return campaignapp.CampaignCharacterCreationProgress{}, f.characterCreationProgressErr
 	}
 	return f.characterCreationProgress, nil
 }
 
-func (f fakeGateway) CharacterCreationCatalog(context.Context, language.Tag) (CampaignCharacterCreationCatalog, error) {
+func (f fakeGateway) CharacterCreationCatalog(context.Context, language.Tag) (campaignapp.CampaignCharacterCreationCatalog, error) {
 	if f.characterCreationCatalogErr != nil {
-		return CampaignCharacterCreationCatalog{}, f.characterCreationCatalogErr
+		return campaignapp.CampaignCharacterCreationCatalog{}, f.characterCreationCatalogErr
 	}
 	return f.characterCreationCatalog, nil
 }
 
-func (f fakeGateway) CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error) {
+func (f fakeGateway) CharacterCreationProfile(context.Context, string, string) (campaignapp.CampaignCharacterCreationProfile, error) {
 	if f.characterCreationProfileErr != nil {
-		return CampaignCharacterCreationProfile{}, f.characterCreationProfileErr
+		return campaignapp.CampaignCharacterCreationProfile{}, f.characterCreationProfileErr
 	}
 	return f.characterCreationProfile, nil
 }
 
-func (f fakeGateway) CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error) {
+func (f fakeGateway) CreateCampaign(context.Context, campaignapp.CreateCampaignInput) (campaignapp.CreateCampaignResult, error) {
 	if f.createErr != nil {
-		return CreateCampaignResult{}, f.createErr
+		return campaignapp.CreateCampaignResult{}, f.createErr
 	}
 	createdID := strings.TrimSpace(f.createdCampaignID)
 	if createdID == "" {
 		createdID = "created"
 	}
-	return CreateCampaignResult{CampaignID: createdID}, nil
+	return campaignapp.CreateCampaignResult{CampaignID: createdID}, nil
 }
 
-func (f fakeGateway) UpdateCampaign(context.Context, string, UpdateCampaignInput) error {
+func (f fakeGateway) UpdateCampaign(context.Context, string, campaignapp.UpdateCampaignInput) error {
 	return f.updateCampaignErr
 }
 
-func (f fakeGateway) UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error {
+func (f fakeGateway) UpdateCampaignAIBinding(context.Context, string, campaignapp.UpdateCampaignAIBindingInput) error {
 	return f.updateCampaignAIBindingErr
 }
 
-func (fakeGateway) StartSession(context.Context, string, StartSessionInput) error { return nil }
-func (fakeGateway) EndSession(context.Context, string, EndSessionInput) error     { return nil }
-func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error) {
+func (fakeGateway) StartSession(context.Context, string, campaignapp.StartSessionInput) error {
+	return nil
+}
+func (fakeGateway) EndSession(context.Context, string, campaignapp.EndSessionInput) error { return nil }
+func (f fakeGateway) CreateCharacter(context.Context, string, campaignapp.CreateCharacterInput) (campaignapp.CreateCharacterResult, error) {
 	if f.createCharacterErr != nil {
-		return CreateCharacterResult{}, f.createCharacterErr
+		return campaignapp.CreateCharacterResult{}, f.createCharacterErr
 	}
 	createdCharacterID := strings.TrimSpace(f.createdCharacterID)
 	if createdCharacterID == "" {
 		createdCharacterID = "char-created"
 	}
-	return CreateCharacterResult{CharacterID: createdCharacterID}, nil
+	return campaignapp.CreateCharacterResult{CharacterID: createdCharacterID}, nil
 }
-func (f fakeGateway) CreateParticipant(_ context.Context, _ string, input CreateParticipantInput) (CreateParticipantResult, error) {
+func (f fakeGateway) CreateParticipant(_ context.Context, _ string, input campaignapp.CreateParticipantInput) (campaignapp.CreateParticipantResult, error) {
 	if f.createParticipantErr != nil {
-		return CreateParticipantResult{}, f.createParticipantErr
+		return campaignapp.CreateParticipantResult{}, f.createParticipantErr
 	}
 	f.lastCreateParticipantInput = input
 	createdParticipantID := strings.TrimSpace(f.createdParticipantID)
 	if createdParticipantID == "" {
 		createdParticipantID = "participant-created"
 	}
-	return CreateParticipantResult{ParticipantID: createdParticipantID}, nil
+	return campaignapp.CreateParticipantResult{ParticipantID: createdParticipantID}, nil
 }
-func (fakeGateway) UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error {
+func (fakeGateway) UpdateCharacter(context.Context, string, string, campaignapp.UpdateCharacterInput) error {
 	return nil
 }
 func (f fakeGateway) DeleteCharacter(context.Context, string, string) error {
@@ -992,12 +998,16 @@ func (f fakeGateway) ClaimCharacterControl(context.Context, string, string) erro
 func (f fakeGateway) ReleaseCharacterControl(context.Context, string, string) error {
 	return f.releaseCharacterControlErr
 }
-func (f fakeGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
+func (f fakeGateway) UpdateParticipant(context.Context, string, campaignapp.UpdateParticipantInput) error {
 	return f.updateParticipantErr
 }
-func (fakeGateway) CreateInvite(context.Context, string, CreateInviteInput) error { return nil }
-func (fakeGateway) RevokeInvite(context.Context, string, RevokeInviteInput) error { return nil }
-func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error {
+func (fakeGateway) CreateInvite(context.Context, string, campaignapp.CreateInviteInput) error {
+	return nil
+}
+func (fakeGateway) RevokeInvite(context.Context, string, campaignapp.RevokeInviteInput) error {
+	return nil
+}
+func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string, *campaignapp.CampaignCharacterCreationStepInput) error {
 	return f.applyCharacterCreationStepErr
 }
 func (f fakeGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
@@ -1257,49 +1267,82 @@ func responseCookieByName(rr *httptest.ResponseRecorder, name string) *http.Cook
 }
 
 // completeGRPCDeps fills in stub clients for any nil required fields so that
-// NewGRPCGateway returns a grpcGateway instead of unavailableGateway.
+// campaigngateway.NewGRPCGateway returns a grpcGateway instead of unavailableGateway.
 // Tests only need to set the clients they exercise.
-func completeGRPCDeps(deps GRPCGatewayDeps) GRPCGatewayDeps {
-	if deps.CampaignClient == nil {
-		deps.CampaignClient = fakeCampaignClient{}
+func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPCGatewayDeps {
+	if deps.Read.Campaign == nil {
+		deps.Read.Campaign = fakeCampaignClient{}
 	}
-	if deps.CommunicationClient == nil {
-		deps.CommunicationClient = stubCommunicationClient{}
+	if deps.Mutation.Campaign == nil {
+		deps.Mutation.Campaign = fakeCampaignClient{}
 	}
-	if deps.ParticipantClient == nil {
-		deps.ParticipantClient = stubParticipantClient{}
+	if deps.Read.Communication == nil {
+		deps.Read.Communication = stubCommunicationClient{}
 	}
-	if deps.CharacterClient == nil {
-		deps.CharacterClient = stubCharacterClient{}
+	if deps.Read.Participant == nil {
+		deps.Read.Participant = stubParticipantReadClient{}
 	}
-	if deps.DaggerheartContentClient == nil {
-		deps.DaggerheartContentClient = stubDaggerheartContentClient{}
+	if deps.Mutation.Participant == nil {
+		deps.Mutation.Participant = stubParticipantMutationClient{}
 	}
-	if deps.DaggerheartAssetClient == nil {
-		deps.DaggerheartAssetClient = stubDaggerheartAssetClient{}
+	if deps.Read.Character == nil {
+		deps.Read.Character = stubCharacterReadClient{}
 	}
-	if deps.SessionClient == nil {
-		deps.SessionClient = fakeSessionClient{}
+	if deps.Mutation.Character == nil {
+		deps.Mutation.Character = stubCharacterMutationClient{}
 	}
-	if deps.InviteClient == nil {
-		deps.InviteClient = fakeInviteClient{}
+	if deps.Read.DaggerheartContent == nil {
+		deps.Read.DaggerheartContent = stubDaggerheartContentClient{}
 	}
-	if deps.AuthClient == nil {
-		deps.AuthClient = fakeAuthClient{}
+	if deps.Read.DaggerheartAsset == nil {
+		deps.Read.DaggerheartAsset = stubDaggerheartAssetClient{}
 	}
-	if deps.AuthorizationClient == nil {
-		deps.AuthorizationClient = stubAuthorizationClient{}
+	if deps.Read.Session == nil {
+		deps.Read.Session = fakeSessionClient{}
+	}
+	if deps.Mutation.Session == nil {
+		deps.Mutation.Session = fakeSessionClient{}
+	}
+	if deps.Read.Invite == nil {
+		deps.Read.Invite = fakeInviteClient{}
+	}
+	if deps.Mutation.Invite == nil {
+		deps.Mutation.Invite = fakeInviteClient{}
+	}
+	if deps.Mutation.Auth == nil {
+		deps.Mutation.Auth = fakeAuthClient{}
+	}
+	if deps.Authorization.Client == nil {
+		deps.Authorization.Client = stubAuthorizationClient{}
 	}
 	return deps
 }
 
 // Stubs satisfy client interfaces without being called — only non-nil checks matter.
-type stubParticipantClient struct{ ParticipantClient }
-type stubCommunicationClient struct{ CommunicationClient }
-type stubCharacterClient struct{ CharacterClient }
-type stubDaggerheartContentClient struct{ DaggerheartContentClient }
-type stubDaggerheartAssetClient struct{ DaggerheartAssetClient }
-type stubAuthorizationClient struct{ AuthorizationClient }
+type stubParticipantReadClient struct {
+	campaigngateway.ParticipantReadClient
+}
+type stubParticipantMutationClient struct {
+	campaigngateway.ParticipantMutationClient
+}
+type stubCommunicationClient struct {
+	campaigngateway.CommunicationClient
+}
+type stubCharacterReadClient struct {
+	campaigngateway.CharacterReadClient
+}
+type stubCharacterMutationClient struct {
+	campaigngateway.CharacterMutationClient
+}
+type stubDaggerheartContentClient struct {
+	campaigngateway.DaggerheartContentClient
+}
+type stubDaggerheartAssetClient struct {
+	campaigngateway.DaggerheartAssetClient
+}
+type stubAuthorizationClient struct {
+	campaigngateway.AuthorizationClient
+}
 
 type fakeAuthClient struct{}
 

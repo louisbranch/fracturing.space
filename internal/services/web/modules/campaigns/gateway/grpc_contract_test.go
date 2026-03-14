@@ -32,16 +32,27 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 	}
 
 	ready := NewGRPCGateway(GRPCGatewayDeps{
-		CampaignClient:           &contractCampaignClient{},
-		CommunicationClient:      &contractCommunicationClient{},
-		ParticipantClient:        &contractParticipantClient{},
-		CharacterClient:          &fakeCharacterWorkflowClient{},
-		DaggerheartContentClient: &fakeDaggerheartContentClient{},
-		DaggerheartAssetClient:   &fakeDaggerheartContentClient{},
-		SessionClient:            &contractSessionClient{},
-		InviteClient:             &contractInviteClient{},
-		AuthClient:               &contractAuthClient{},
-		AuthorizationClient:      contractAuthorizationClient{},
+		Read: GRPCGatewayReadDeps{
+			Campaign:           &contractCampaignClient{},
+			Communication:      &contractCommunicationClient{},
+			Participant:        &contractParticipantClient{},
+			Character:          &fakeCharacterWorkflowClient{},
+			DaggerheartContent: &fakeDaggerheartContentClient{},
+			DaggerheartAsset:   &fakeDaggerheartContentClient{},
+			Session:            &contractSessionClient{},
+			Invite:             &contractInviteClient{},
+		},
+		Mutation: GRPCGatewayMutationDeps{
+			Campaign:    &contractCampaignClient{},
+			Participant: &contractParticipantClient{},
+			Character:   &fakeCharacterWorkflowClient{},
+			Session:     &contractSessionClient{},
+			Invite:      &contractInviteClient{},
+			Auth:        &contractAuthClient{},
+		},
+		Authorization: GRPCGatewayAuthorizationDeps{
+			Client: contractAuthorizationClient{},
+		},
 	})
 	if _, ok := ready.(GRPCGateway); !ok {
 		t.Fatalf("expected complete dependency set to return grpc gateway")
@@ -52,7 +63,7 @@ func TestCampaignGameSurfaceMapsCommunicationContext(t *testing.T) {
 	t.Parallel()
 
 	gateway := GRPCGateway{
-		CommunicationClient: &contractCommunicationClient{
+		Read: GRPCGatewayReadDeps{Communication: &contractCommunicationClient{
 			getResp: &statev1.GetCommunicationContextResponse{
 				Context: &statev1.CommunicationContext{
 					Participant:      &statev1.CommunicationParticipant{ParticipantId: "p1", Name: "Rhea", Role: statev1.ParticipantRole_PLAYER},
@@ -77,7 +88,7 @@ func TestCampaignGameSurfaceMapsCommunicationContext(t *testing.T) {
 					},
 				},
 			},
-		},
+		}},
 	}
 
 	surface, err := gateway.CampaignGameSurface(context.Background(), "c1")
@@ -138,7 +149,7 @@ func TestListCampaignsAndWorkspaceMapping(t *testing.T) {
 			CharacterCount:   5,
 		}},
 	}
-	gateway := GRPCGateway{Client: client, AssetBaseURL: "https://cdn.example.com"}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Campaign: client}, AssetBaseURL: "https://cdn.example.com"}
 
 	list, err := gateway.ListCampaigns(context.Background())
 	if err != nil {
@@ -223,11 +234,13 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}}}}
 
 	gateway := GRPCGateway{
-		ParticipantClient: participantClient,
-		CharacterClient:   characterClient,
-		SessionClient:     sessionClient,
-		InviteClient:      inviteClient,
-		AssetBaseURL:      "https://cdn.example.com",
+		Read: GRPCGatewayReadDeps{
+			Participant: participantClient,
+			Character:   characterClient,
+			Session:     sessionClient,
+			Invite:      inviteClient,
+		},
+		AssetBaseURL: "https://cdn.example.com",
 	}
 
 	participants, err := gateway.CampaignParticipants(context.Background(), "c1")
@@ -282,7 +295,7 @@ func TestCampaignSessionReadinessMapsResponse(t *testing.T) {
 			},
 		},
 	}
-	gateway := GRPCGateway{Client: client}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Campaign: client}}
 
 	readiness, err := gateway.CampaignSessionReadiness(context.Background(), "c1", language.BrazilianPortuguese)
 	if err != nil {
@@ -314,14 +327,14 @@ func TestCampaignSessionReadinessMapsResponse(t *testing.T) {
 func TestCampaignSessionReadinessMapsErrors(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{Client: &contractCampaignClient{readinessErr: status.Error(codes.FailedPrecondition, "blocked")}}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Campaign: &contractCampaignClient{readinessErr: status.Error(codes.FailedPrecondition, "blocked")}}}
 	if _, err := gateway.CampaignSessionReadiness(context.Background(), "c1", language.AmericanEnglish); err == nil {
 		t.Fatalf("expected CampaignSessionReadiness() error")
 	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_load_session_readiness" {
 		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_load_session_readiness")
 	}
 
-	gateway = GRPCGateway{Client: &contractCampaignClient{readinessResp: &statev1.GetCampaignSessionReadinessResponse{}}}
+	gateway = GRPCGateway{Read: GRPCGatewayReadDeps{Campaign: &contractCampaignClient{readinessResp: &statev1.GetCampaignSessionReadinessResponse{}}}}
 	if _, err := gateway.CampaignSessionReadiness(context.Background(), "c1", language.AmericanEnglish); err == nil {
 		t.Fatalf("expected nil-readiness response to fail closed")
 	}
@@ -331,7 +344,7 @@ func TestCampaignSessionReadinessEmptyCampaignIDReturnsReady(t *testing.T) {
 	t.Parallel()
 
 	client := &contractCampaignClient{readinessErr: status.Error(codes.Internal, "should not be called")}
-	gateway := GRPCGateway{Client: client}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Campaign: client}}
 
 	readiness, err := gateway.CampaignSessionReadiness(context.Background(), "   ", language.AmericanEnglish)
 	if err != nil {
@@ -361,7 +374,7 @@ func TestCampaignParticipantMapsSingleResponse(t *testing.T) {
 			Controller:     statev1.Controller_CONTROLLER_HUMAN,
 		}},
 	}
-	gateway := GRPCGateway{ParticipantClient: participantClient, AssetBaseURL: "https://cdn.example.com"}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Participant: participantClient}, AssetBaseURL: "https://cdn.example.com"}
 
 	participant, err := gateway.CampaignParticipant(context.Background(), "c1", "p1")
 	if err != nil {
@@ -376,7 +389,7 @@ func TestCreateParticipantMapsInputAndErrors(t *testing.T) {
 	t.Parallel()
 
 	participantClient := &contractParticipantClient{}
-	gateway := GRPCGateway{ParticipantClient: participantClient}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Participant: participantClient}}
 
 	created, err := gateway.CreateParticipant(context.Background(), "c1", campaignapp.CreateParticipantInput{
 		Name:           "Pending Seat",
@@ -421,7 +434,7 @@ func TestUpdateParticipantMapsInputAndErrors(t *testing.T) {
 	t.Parallel()
 
 	participantClient := &contractParticipantClient{}
-	gateway := GRPCGateway{ParticipantClient: participantClient}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Participant: participantClient}}
 
 	err := gateway.UpdateParticipant(context.Background(), "c1", campaignapp.UpdateParticipantInput{
 		ParticipantID:  "p1",
@@ -473,7 +486,10 @@ func TestCampaignAIAgentsAndBindingMutations(t *testing.T) {
 		{Id: "agent-inactive", Handle: "beta", Status: aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED},
 	}}}
 	campaignClient := &contractCampaignClient{}
-	gateway := GRPCGateway{AgentClient: agentClient, Client: campaignClient}
+	gateway := GRPCGateway{
+		Read:     GRPCGatewayReadDeps{Agent: agentClient},
+		Mutation: GRPCGatewayMutationDeps{Campaign: campaignClient},
+	}
 
 	options, err := gateway.CampaignAIAgents(context.Background())
 	if err != nil {
@@ -518,7 +534,7 @@ func TestCreateCampaignMapsInputAndValidatesResponse(t *testing.T) {
 	t.Parallel()
 
 	client := &contractCampaignClient{}
-	gateway := GRPCGateway{Client: client}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Campaign: client}}
 
 	created, err := gateway.CreateCampaign(context.Background(), campaignapp.CreateCampaignInput{
 		Name:        "Smoke Campaign",
@@ -566,7 +582,7 @@ func TestUpdateCampaignMapsInputAndErrors(t *testing.T) {
 	t.Parallel()
 
 	client := &contractCampaignClient{}
-	gateway := GRPCGateway{Client: client}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Campaign: client}}
 
 	name := "Campaign Prime"
 	theme := "Updated theme"
@@ -628,11 +644,13 @@ func TestMutationReadersValidateAndMapTransportErrors(t *testing.T) {
 	sessionClient := &contractSessionClient{startErr: status.Error(codes.InvalidArgument, "bad session"), endErr: status.Error(codes.InvalidArgument, "bad session")}
 	inviteClient := &contractInviteClient{createErr: status.Error(codes.InvalidArgument, "bad invite"), revokeErr: status.Error(codes.InvalidArgument, "bad invite")}
 	gateway = GRPCGateway{
-		SessionClient: sessionClient,
-		InviteClient:  inviteClient,
-		AuthClient: &contractAuthClient{
-			lookupResp: &authv1.LookupUserByUsernameResponse{
-				User: &authv1.User{Id: "user-2", Username: "alice"},
+		Mutation: GRPCGatewayMutationDeps{
+			Session: sessionClient,
+			Invite:  inviteClient,
+			Auth: &contractAuthClient{
+				lookupResp: &authv1.LookupUserByUsernameResponse{
+					User: &authv1.User{Id: "user-2", Username: "alice"},
+				},
 			},
 		},
 	}
@@ -724,11 +742,11 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 		t.Fatalf("expected unevaluated decision with nil auth client")
 	}
 
-	gateway.AuthorizationClient = contractAuthorizationClient{canResp: &statev1.CanResponse{
+	gateway.Authorization = GRPCGatewayAuthorizationDeps{Client: contractAuthorizationClient{canResp: &statev1.CanResponse{
 		Allowed:             true,
 		ReasonCode:          "AUTHZ_ALLOW_RESOURCE_OWNER",
 		ActorCampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
-	}}
+	}}}
 	decision, err = gateway.CanCampaignAction(context.Background(), "c1", campaignapp.AuthorizationActionMutate, campaignapp.AuthorizationResourceCharacter, &campaignapp.AuthorizationTarget{ResourceID: "char-1"})
 	if err != nil {
 		t.Fatalf("CanCampaignAction() error = %v", err)
@@ -961,7 +979,7 @@ func TestCreateInviteResolvesPlainUsernameBeforeGameRPC(t *testing.T) {
 			User: &authv1.User{Id: "user-2", Username: "alice"},
 		},
 	}
-	gateway := GRPCGateway{InviteClient: inviteClient, AuthClient: authClient}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Invite: inviteClient, Auth: authClient}}
 
 	if err := gateway.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{
 		ParticipantID:     "p1",
@@ -984,8 +1002,10 @@ func TestCreateInviteMapsUnknownRecipientUsernameToValidationError(t *testing.T)
 	t.Parallel()
 
 	gateway := GRPCGateway{
-		InviteClient: &contractInviteClient{},
-		AuthClient:   &contractAuthClient{lookupErr: status.Error(codes.NotFound, "user not found")},
+		Mutation: GRPCGatewayMutationDeps{
+			Invite: &contractInviteClient{},
+			Auth:   &contractAuthClient{lookupErr: status.Error(codes.NotFound, "user not found")},
+		},
 	}
 
 	err := gateway.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{
@@ -1301,7 +1321,7 @@ func (c contractAuthorizationClient) BatchCan(context.Context, *statev1.BatchCan
 func TestListCampaignsForwardsClientErrors(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{Client: &contractCampaignClient{listErr: errors.New("boom")}}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Campaign: &contractCampaignClient{listErr: errors.New("boom")}}}
 	if _, err := gateway.ListCampaigns(context.Background()); err == nil {
 		t.Fatalf("expected ListCampaigns() client error")
 	}
@@ -1310,7 +1330,7 @@ func TestListCampaignsForwardsClientErrors(t *testing.T) {
 func TestCampaignWorkspaceForwardsClientErrors(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{Client: &contractCampaignClient{getErr: errors.New("boom")}}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Campaign: &contractCampaignClient{getErr: errors.New("boom")}}}
 	if _, err := gateway.CampaignWorkspace(context.Background(), "c1"); err == nil {
 		t.Fatalf("expected CampaignWorkspace() client error")
 	}
@@ -1332,10 +1352,12 @@ func TestEmptyCampaignIDReturnsEmptyCollections(t *testing.T) {
 	t.Parallel()
 
 	gateway := GRPCGateway{
-		ParticipantClient: &contractParticipantClient{},
-		CharacterClient:   &fakeCharacterWorkflowClient{},
-		SessionClient:     &contractSessionClient{},
-		InviteClient:      &contractInviteClient{},
+		Read: GRPCGatewayReadDeps{
+			Participant: &contractParticipantClient{},
+			Character:   &fakeCharacterWorkflowClient{},
+			Session:     &contractSessionClient{},
+			Invite:      &contractInviteClient{},
+		},
 	}
 
 	participants, err := gateway.CampaignParticipants(context.Background(), " ")
@@ -1374,7 +1396,7 @@ func TestEmptyCampaignIDReturnsEmptyCollections(t *testing.T) {
 func TestMutationValidationForCampaignID(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{SessionClient: &contractSessionClient{}, InviteClient: &contractInviteClient{}}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Session: &contractSessionClient{}, Invite: &contractInviteClient{}}}
 
 	if err := gateway.StartSession(context.Background(), " ", campaignapp.StartSessionInput{Name: "Session"}); err == nil {
 		t.Fatalf("expected campaign id validation error")
@@ -1393,7 +1415,7 @@ func TestMutationValidationForCampaignID(t *testing.T) {
 func TestCanCampaignActionEdgeCases(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{AuthorizationClient: contractAuthorizationClient{}}
+	gateway := GRPCGateway{Authorization: GRPCGatewayAuthorizationDeps{Client: contractAuthorizationClient{}}}
 	decision, err := gateway.CanCampaignAction(context.Background(), "   ", campaignapp.AuthorizationActionMutate, campaignapp.AuthorizationResourceCharacter, nil)
 	if err != nil {
 		t.Fatalf("CanCampaignAction() error = %v", err)
@@ -1402,7 +1424,7 @@ func TestCanCampaignActionEdgeCases(t *testing.T) {
 		t.Fatalf("expected unevaluated decision when campaign id is empty")
 	}
 
-	gateway.AuthorizationClient = contractAuthorizationClient{nilCan: true}
+	gateway.Authorization = GRPCGatewayAuthorizationDeps{Client: contractAuthorizationClient{nilCan: true}}
 	decision, err = gateway.CanCampaignAction(context.Background(), "c1", campaignapp.AuthorizationActionMutate, campaignapp.AuthorizationResourceCharacter, nil)
 	if err != nil {
 		t.Fatalf("CanCampaignAction() error = %v", err)
@@ -1411,7 +1433,7 @@ func TestCanCampaignActionEdgeCases(t *testing.T) {
 		t.Fatalf("expected unevaluated decision when response is nil")
 	}
 
-	gateway.AuthorizationClient = contractAuthorizationClient{canErr: errors.New("boom")}
+	gateway.Authorization = GRPCGatewayAuthorizationDeps{Client: contractAuthorizationClient{canErr: errors.New("boom")}}
 	if _, err := gateway.CanCampaignAction(context.Background(), "c1", campaignapp.AuthorizationActionMutate, campaignapp.AuthorizationResourceCharacter, nil); err == nil {
 		t.Fatalf("expected CanCampaignAction() transport error")
 	}

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -16,7 +17,7 @@ import (
 func TestMountServesNotificationsGet(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, Base: notificationsTestBase()})
+	m := New(Config{Gateway: fakeGateway{listItems: []notificationsapp.NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -42,7 +43,7 @@ func TestMountServesNotificationsGet(t *testing.T) {
 func TestMountServesNotificationsHead(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, Base: notificationsTestBase()})
+	m := New(Config{Gateway: fakeGateway{listItems: []notificationsapp.NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -114,7 +115,7 @@ func TestMountRejectsNotificationsNonGet(t *testing.T) {
 func TestMountServesNotificationDetailRoute(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{getItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, Base: notificationsTestBase()})
+	m := New(Config{Gateway: fakeGateway{getItem: notificationsapp.NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -137,7 +138,7 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, Base: notificationsTestBase()})
+	m := New(Config{Gateway: fakeGateway{openItem: notificationsapp.NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -156,7 +157,7 @@ func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
 func TestMountNotificationOpenRouteHTMXRedirects(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{openItem: NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, Base: notificationsTestBase()})
+	m := New(Config{Gateway: fakeGateway{openItem: notificationsapp.NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -216,7 +217,7 @@ func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listItems: []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, Base: notificationsTestBase()})
+	m := New(Config{Gateway: fakeGateway{listItems: []notificationsapp.NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

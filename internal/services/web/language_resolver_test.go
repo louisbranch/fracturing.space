@@ -7,17 +7,18 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestLanguageResolverNilClientReturnsFallback(t *testing.T) {
 	t.Parallel()
 
-	r := newLanguageResolver(nil, func(*http.Request) string { return "user-1" })
+	r := principal.New(principal.Dependencies{})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	lang := r.resolveRequestLanguage(req)
+	lang := r.ResolveLanguage(req)
 
 	if lang != "en-US" {
-		t.Fatalf("resolveRequestLanguage = %q, want %q", lang, "en-US")
+		t.Fatalf("ResolveLanguage = %q, want %q", lang, "en-US")
 	}
 }
 
@@ -29,12 +30,12 @@ func TestLanguageResolverAnonymousReturnsFallback(t *testing.T) {
 			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR},
 		},
 	}
-	r := newLanguageResolver(account, func(*http.Request) string { return "" })
+	r := principal.New(principal.Dependencies{AccountClient: account})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	lang := r.resolveRequestLanguage(req)
+	lang := r.ResolveLanguage(req)
 
 	if lang != "en-US" {
-		t.Fatalf("resolveRequestLanguage = %q, want %q for anonymous user", lang, "en-US")
+		t.Fatalf("ResolveLanguage = %q, want %q for anonymous user", lang, "en-US")
 	}
 }
 
@@ -46,12 +47,14 @@ func TestLanguageResolverUsesAccountLocale(t *testing.T) {
 			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR},
 		},
 	}
-	r := newLanguageResolver(account, func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{SessionClient: auth, AccountClient: account})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	lang := r.resolveRequestLanguage(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	lang := r.ResolveLanguage(req)
 
 	if lang != "pt-BR" {
-		t.Fatalf("resolveRequestLanguage = %q, want %q", lang, "pt-BR")
+		t.Fatalf("ResolveLanguage = %q, want %q", lang, "pt-BR")
 	}
 }
 
@@ -63,11 +66,13 @@ func TestLanguageResolverUnspecifiedLocaleReturnsFallback(t *testing.T) {
 			Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_UNSPECIFIED},
 		},
 	}
-	r := newLanguageResolver(account, func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{SessionClient: auth, AccountClient: account})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	lang := r.resolveRequestLanguage(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	lang := r.ResolveLanguage(req)
 
 	if lang != "en-US" {
-		t.Fatalf("resolveRequestLanguage = %q, want %q", lang, "en-US")
+		t.Fatalf("ResolveLanguage = %q, want %q", lang, "en-US")
 	}
 }

@@ -21,6 +21,8 @@ type Module struct {
 }
 
 // Surface classifies which route subset this module instance mounts.
+// Composition selects the surface directly so route ownership stays in the root
+// publicauth package instead of wrapper packages.
 type Surface string
 
 const (

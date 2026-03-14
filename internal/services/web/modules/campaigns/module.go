@@ -5,25 +5,26 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // Module provides authenticated campaign workspace routes.
 type Module struct {
-	gateway          CampaignGateway
+	gateway          campaignapp.CampaignGateway
 	base             modulehandler.Base
 	chatFallbackPort string
-	workflows        map[GameSystem]CharacterCreationWorkflow
+	workflows        campaignworkflow.Registry
 	sync             DashboardSync
 }
 
 // Config defines constructor dependencies for a campaigns module.
 type Config struct {
-	Gateway          CampaignGateway
+	Gateway          campaignapp.CampaignGateway
 	Base             modulehandler.Base
 	ChatFallbackPort string
-	Workflows        map[GameSystem]CharacterCreationWorkflow
+	Workflows        campaignworkflow.Registry
 	DashboardSync    DashboardSync
 }
 
@@ -49,7 +50,7 @@ func (m Module) Healthy() bool {
 // Mount wires campaign route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := newServiceWithWorkflows(m.gateway, m.workflows)
+	svc := campaignapp.NewService(m.gateway)
 	h := newHandlers(svc, m.base, m.chatFallbackPort, m.sync, m.workflows)
 	registerStableRoutes(mux, h)
 	return module.Mount{Prefix: routepath.CampaignsPrefix, Handler: mux}, nil

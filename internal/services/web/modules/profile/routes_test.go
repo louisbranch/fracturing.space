@@ -14,7 +14,7 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(profileapp.NewService(&routeGatewayStub{}, ""), publichandler.Base{}))
+	registerRoutes(nil, newHandlers(profileapp.NewService(&routeGatewayStub{}), "", publichandler.Base{}))
 }
 
 func TestRegisterRoutesProfileMethodContract(t *testing.T) {
@@ -22,8 +22,8 @@ func TestRegisterRoutesProfileMethodContract(t *testing.T) {
 
 	mux := http.NewServeMux()
 	registerRoutes(mux, newHandlers(profileapp.NewService(&routeGatewayStub{
-		lookupResp: LookupUserProfileResponse{Username: "adventurer"},
-	}, ""), publichandler.Base{}))
+		lookupResp: profileapp.LookupUserProfileResponse{Username: "adventurer"},
+	}), "", publichandler.Base{}))
 
 	getReq := httptest.NewRequest(http.MethodGet, routepath.UserProfile("adventurer"), nil)
 	getRR := httptest.NewRecorder()
@@ -57,13 +57,58 @@ func TestRegisterRoutesProfileMethodContract(t *testing.T) {
 	}
 }
 
-type routeGatewayStub struct {
-	lookupResp LookupUserProfileResponse
+func TestWithUsernameReturnsNotFoundForMissingPathValue(t *testing.T) {
+	t.Parallel()
+
+	h := newHandlers(profileapp.NewService(&routeGatewayStub{}), "", publichandler.Base{})
+	called := false
+	handler := h.withUsername(func(http.ResponseWriter, *http.Request, string) {
+		called = true
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if called {
+		t.Fatal("expected delegate not to be called")
+	}
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
+	}
 }
 
-func (s *routeGatewayStub) LookupUserProfile(_ context.Context, _ LookupUserProfileRequest) (LookupUserProfileResponse, error) {
+func TestWithUsernameDelegatesResolvedValue(t *testing.T) {
+	t.Parallel()
+
+	h := newHandlers(profileapp.NewService(&routeGatewayStub{}), "", publichandler.Base{})
+	called := false
+	var got string
+	handler := h.withUsername(func(_ http.ResponseWriter, _ *http.Request, username string) {
+		called = true
+		got = username
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.SetPathValue("username", " adventurer ")
+	rr := httptest.NewRecorder()
+	handler.ServeHTTP(rr, req)
+
+	if !called {
+		t.Fatal("expected delegate to be called")
+	}
+	if got != "adventurer" {
+		t.Fatalf("username = %q, want %q", got, "adventurer")
+	}
+}
+
+type routeGatewayStub struct {
+	lookupResp profileapp.LookupUserProfileResponse
+}
+
+func (s *routeGatewayStub) LookupUserProfile(_ context.Context, _ profileapp.LookupUserProfileRequest) (profileapp.LookupUserProfileResponse, error) {
 	if s.lookupResp.Username == "" {
-		return LookupUserProfileResponse{Username: "adventurer"}, nil
+		return profileapp.LookupUserProfileResponse{Username: "adventurer"}, nil
 	}
 	return s.lookupResp, nil
 }

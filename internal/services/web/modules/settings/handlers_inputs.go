@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"strings"
 
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/jsoninput"
 )
@@ -19,8 +20,8 @@ type passkeyCredentialInput struct {
 }
 
 // parseProfileInput maps profile form values and preserves avatar catalog IDs.
-func parseProfileInput(form url.Values, existingProfile SettingsProfile) SettingsProfile {
-	return SettingsProfile{
+func parseProfileInput(form url.Values, existingProfile settingsapp.SettingsProfile) settingsapp.SettingsProfile {
+	return settingsapp.SettingsProfile{
 		Username:      strings.TrimSpace(existingProfile.Username),
 		Name:          strings.TrimSpace(form.Get("name")),
 		AvatarSetID:   existingProfile.AvatarSetID,
@@ -46,8 +47,8 @@ func parseAIAgentCredentialSelectionInput(values url.Values) string {
 }
 
 // parseAIAgentCreateInput maps create-agent form values.
-func parseAIAgentCreateInput(form url.Values) CreateAIAgentInput {
-	return CreateAIAgentInput{
+func parseAIAgentCreateInput(form url.Values) settingsapp.CreateAIAgentInput {
+	return settingsapp.CreateAIAgentInput{
 		Name:         strings.TrimSpace(form.Get("name")),
 		CredentialID: strings.TrimSpace(form.Get("credential_id")),
 		Model:        strings.TrimSpace(form.Get("model")),

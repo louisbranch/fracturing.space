@@ -4,18 +4,20 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestSessionResolverNilClientReturnsEmpty(t *testing.T) {
 	t.Parallel()
 
-	r := newSessionResolver(nil)
+	r := principal.New(principal.Dependencies{})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	if got := r.resolveRequestUserID(req); got != "" {
-		t.Fatalf("resolveRequestUserID = %q, want empty", got)
+	if got := r.ResolveUserID(req); got != "" {
+		t.Fatalf("ResolveUserID = %q, want empty", got)
 	}
-	if r.resolveRequestSignedIn(req) {
-		t.Fatalf("resolveRequestSignedIn = true, want false")
+	if r.ResolveSignedIn(req) {
+		t.Fatalf("ResolveSignedIn = true, want false")
 	}
 }
 
@@ -23,16 +25,16 @@ func TestSessionResolverResolvesValidSession(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	r := newSessionResolver(auth)
+	r := principal.New(principal.Dependencies{SessionClient: auth})
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	attachSessionCookie(t, req, auth, "user-42")
 
-	if got := r.resolveRequestUserID(req); got != "user-42" {
-		t.Fatalf("resolveRequestUserID = %q, want %q", got, "user-42")
+	if got := r.ResolveUserID(req); got != "user-42" {
+		t.Fatalf("ResolveUserID = %q, want %q", got, "user-42")
 	}
-	if !r.resolveRequestSignedIn(req) {
-		t.Fatalf("resolveRequestSignedIn = false, want true")
+	if !r.ResolveSignedIn(req) {
+		t.Fatalf("ResolveSignedIn = false, want true")
 	}
 }
 
@@ -40,11 +42,11 @@ func TestSessionResolverMissingCookieNotSignedIn(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	r := newSessionResolver(auth)
+	r := principal.New(principal.Dependencies{SessionClient: auth})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
-	if r.resolveRequestSignedIn(req) {
-		t.Fatalf("resolveRequestSignedIn = true, want false without cookie")
+	if r.ResolveSignedIn(req) {
+		t.Fatalf("ResolveSignedIn = true, want false without cookie")
 	}
 }
 
@@ -52,12 +54,12 @@ func TestSessionResolverUnknownSessionNotSignedIn(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	r := newSessionResolver(auth)
+	r := principal.New(principal.Dependencies{SessionClient: auth})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "unknown-session"})
 
-	if r.resolveRequestSignedIn(req) {
-		t.Fatalf("resolveRequestSignedIn = true, want false with unknown session")
+	if r.ResolveSignedIn(req) {
+		t.Fatalf("ResolveSignedIn = true, want false with unknown session")
 	}
 }
 
@@ -65,12 +67,12 @@ func TestSessionResolverAuthRequiredRejectsNoSession(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	r := newSessionResolver(auth)
-	check := r.authRequired()
+	r := principal.New(principal.Dependencies{SessionClient: auth})
+	check := r.AuthRequired()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 
 	if check(req) {
-		t.Fatalf("authRequired = true, want false without session")
+		t.Fatalf("AuthRequired = true, want false without session")
 	}
 }
 
@@ -78,13 +80,13 @@ func TestSessionResolverAuthRequiredAcceptsValidSession(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	r := newSessionResolver(auth)
-	check := r.authRequired()
+	r := principal.New(principal.Dependencies{SessionClient: auth})
+	check := r.AuthRequired()
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 
 	if !check(req) {
-		t.Fatalf("authRequired = false, want true with valid session")
+		t.Fatalf("AuthRequired = false, want true with valid session")
 	}
 }

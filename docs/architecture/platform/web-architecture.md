@@ -23,8 +23,11 @@ Canonical path: `internal/services/web/`.
 - `composition/`: startup composition and module-set assembly.
 - `app/`: transport composition primitives.
 - `platform/`: cross-cutting HTTP/session/error helpers.
-- `modules/`: area modules (`campaigns`, `dashboard`, `settings`, etc.).
-- `routepath/`: canonical route constants.
+- `module/`: canonical module contract (`Module`, `Mount`, request-scoped resolver types).
+- `modules/`: module registry builder, dependency bundles, and area modules (`campaigns`, `dashboard`, `settings`, etc.).
+- `routepath/`: canonical route constants, split by owned surface.
+- `templates/`: shared layout and templ primitives; area-owned page sets should
+  move out once cross-area ownership becomes unclear.
 
 For module internals, areas may be either:
 
@@ -48,6 +51,8 @@ Required properties:
 
 - Route declarations are module-owned and explicit.
 - Canonical browser endpoints come from `routepath` constants/builders.
+- `routepath/` stays split by owned surface (`campaigns.go`, `settings.go`,
+  `notifications.go`, etc.) instead of one cross-area route constant file.
 - Route-param guards are centralized in reusable helpers (for example
   `withCampaignID`, `withCampaignAndCharacterID`) instead of repeated inline
   path extraction in handlers.
@@ -101,6 +106,23 @@ Fail closed when authz/session/dependency checks are unavailable.
 Do not keep placeholder mutation routes or static fake domain data in runtime
 composition.
 
+## Startup dependency policy
+
+- Startup-blocking integrations are explicit and limited to:
+  - `auth`: principal resolution plus auth-owned public/profile/settings flows
+  - `social`: principal/profile/settings social metadata
+  - `game`: campaigns and dashboard-sync mutation freshness
+- Optional integrations must degrade only the surfaces they own:
+  - `ai`: settings AI surfaces and campaign AI affordances
+  - `discovery`: discovery public surface
+  - `userhub`: dashboard and dashboard-sync freshness
+  - `notifications`: principal unread badge and notifications module
+- This policy is owned by `internal/cmd/web/dependency_graph.go`; when startup
+  requirements change, update both the policy table and this architecture note.
+- Runtime dependency assembly is owned by `internal/cmd/web/runtime_dependencies.go`.
+  Assemble the full server dependency graph there before calling `web.NewServer`;
+  do not bootstrap a bundle and mutate it later in `Run`.
+
 ## Verification contract
 
 Minimum checks when changing web architecture, modules, or routes:
@@ -111,6 +133,7 @@ Minimum checks when changing web architecture, modules, or routes:
 
 ## Deep references
 
+- [Web contributor map](web-contributor-map.md)
 - [Web module playbook](../../guides/web-module-playbook.md)
 - [Campaign authorization model](campaign-authorization-model.md)
 - [Campaign authorization audit and telemetry](../../reference/campaign-authorization-audit.md)

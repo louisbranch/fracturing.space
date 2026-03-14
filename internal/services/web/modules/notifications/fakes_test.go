@@ -1,49 +1,54 @@
 package notifications
 
-import "context"
+import (
+	"context"
 
-// fakeGateway implements NotificationGateway for tests with configurable return
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
+)
+
+// fakeGateway implements notificationsapp.Gateway for tests with configurable
+// return values and error injection.
 // values and error injection.
 type fakeGateway struct {
-	listItems []NotificationSummary
+	listItems []notificationsapp.NotificationSummary
 	listErr   error
-	getItem   NotificationSummary
+	getItem   notificationsapp.NotificationSummary
 	getErr    error
-	openItem  NotificationSummary
+	openItem  notificationsapp.NotificationSummary
 	openErr   error
 }
 
-var _ NotificationGateway = fakeGateway{}
+var _ notificationsapp.Gateway = fakeGateway{}
 
-func (f fakeGateway) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
+func (f fakeGateway) ListNotifications(context.Context, string) ([]notificationsapp.NotificationSummary, error) {
 	if f.listErr != nil {
 		return nil, f.listErr
 	}
 	if f.listItems == nil {
-		return []NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}, nil
+		return []notificationsapp.NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}, nil
 	}
 	return f.listItems, nil
 }
 
-func (f fakeGateway) GetNotification(context.Context, string, string) (NotificationSummary, error) {
+func (f fakeGateway) GetNotification(context.Context, string, string) (notificationsapp.NotificationSummary, error) {
 	if f.getErr != nil {
-		return NotificationSummary{}, f.getErr
+		return notificationsapp.NotificationSummary{}, f.getErr
 	}
-	if f.getItem != (NotificationSummary{}) {
+	if f.getItem != (notificationsapp.NotificationSummary{}) {
 		return f.getItem, nil
 	}
 	if len(f.listItems) > 0 {
 		return f.listItems[0], nil
 	}
-	return NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}, nil
+	return notificationsapp.NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}, nil
 }
 
-func (f fakeGateway) OpenNotification(context.Context, string, string) (NotificationSummary, error) {
+func (f fakeGateway) OpenNotification(context.Context, string, string) (notificationsapp.NotificationSummary, error) {
 	if f.openErr != nil {
-		return NotificationSummary{}, f.openErr
+		return notificationsapp.NotificationSummary{}, f.openErr
 	}
-	if f.openItem != (NotificationSummary{}) {
+	if f.openItem != (notificationsapp.NotificationSummary{}) {
 		return f.openItem, nil
 	}
-	return NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}, nil
+	return notificationsapp.NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}, nil
 }

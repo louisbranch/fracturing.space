@@ -10,6 +10,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
@@ -43,7 +44,7 @@ func TestGRPCGatewayLoadAndSaveProfile(t *testing.T) {
 		t.Fatalf("unexpected profile: %+v", profile)
 	}
 
-	err = gateway.SaveProfile(context.Background(), "user-1", SettingsProfile{
+	err = gateway.SaveProfile(context.Background(), "user-1", settingsapp.SettingsProfile{
 		Username:      "rhea",
 		Name:          "Rhea Vale",
 		AvatarSetID:   "set-a",
@@ -126,7 +127,9 @@ func TestGRPCGatewayMissingClientBehavior(t *testing.T) {
 		run  func() error
 	}{
 		{name: "load profile", run: func() error { _, err := gateway.LoadProfile(context.Background(), "user-1"); return err }},
-		{name: "save profile", run: func() error { return gateway.SaveProfile(context.Background(), "user-1", SettingsProfile{}) }},
+		{name: "save profile", run: func() error {
+			return gateway.SaveProfile(context.Background(), "user-1", settingsapp.SettingsProfile{})
+		}},
 		{name: "load locale", run: func() error { _, err := gateway.LoadLocale(context.Background(), "user-1"); return err }},
 		{name: "save locale", run: func() error { return gateway.SaveLocale(context.Background(), "user-1", "en-US") }},
 		{name: "list ai keys", run: func() error { _, err := gateway.ListAIKeys(context.Background(), "user-1"); return err }},

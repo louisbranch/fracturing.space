@@ -16,7 +16,7 @@ import (
 
 // CampaignCharacters centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) ([]campaignapp.CampaignCharacter, error) {
-	if g.CharacterClient == nil {
+	if g.Read.Character == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -30,11 +30,11 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 		Name string
 	}
 	participantNamesByID := map[string]string{}
-	if g.ParticipantClient != nil {
+	if g.Read.Participant != nil {
 		entries, err := grpcpaging.CollectPages[participantEntry, *statev1.Participant](
 			ctx, 10,
 			func(ctx context.Context, pageToken string) ([]*statev1.Participant, string, error) {
-				resp, err := g.ParticipantClient.ListParticipants(ctx, &statev1.ListParticipantsRequest{
+				resp, err := g.Read.Participant.ListParticipants(ctx, &statev1.ListParticipantsRequest{
 					CampaignId: campaignID,
 					PageSize:   10,
 					PageToken:  pageToken,
@@ -69,7 +69,7 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 	return grpcpaging.CollectPages[campaignapp.CampaignCharacter, *statev1.Character](
 		ctx, 10,
 		func(ctx context.Context, pageToken string) ([]*statev1.Character, string, error) {
-			resp, err := g.CharacterClient.ListCharacters(ctx, &statev1.ListCharactersRequest{
+			resp, err := g.Read.Character.ListCharacters(ctx, &statev1.ListCharactersRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 				PageToken:  pageToken,
@@ -122,7 +122,7 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 
 // UpdateCharacter applies a character update via gRPC.
 func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, characterID string, input campaignapp.UpdateCharacterInput) error {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -145,7 +145,7 @@ func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, cha
 		req.Pronouns = pronouns.ToProto(pronounsValue)
 	}
 
-	_, err := g.CharacterClient.UpdateCharacter(ctx, req)
+	_, err := g.Mutation.Character.UpdateCharacter(ctx, req)
 	if err != nil {
 		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,
@@ -158,7 +158,7 @@ func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, cha
 
 // DeleteCharacter applies a character deletion via gRPC.
 func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, characterID string) error {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -167,7 +167,7 @@ func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, cha
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
 
-	_, err := g.CharacterClient.DeleteCharacter(ctx, &statev1.DeleteCharacterRequest{
+	_, err := g.Mutation.Character.DeleteCharacter(ctx, &statev1.DeleteCharacterRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})
@@ -183,7 +183,7 @@ func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, cha
 
 // SetCharacterController applies an explicit controller update via gRPC.
 func (g GRPCGateway) SetCharacterController(ctx context.Context, campaignID string, characterID string, participantID string) error {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -192,7 +192,7 @@ func (g GRPCGateway) SetCharacterController(ctx context.Context, campaignID stri
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
 
-	_, err := g.CharacterClient.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
+	_, err := g.Mutation.Character.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
 		CampaignId:    campaignID,
 		CharacterId:   characterID,
 		ParticipantId: wrapperspb.String(strings.TrimSpace(participantID)),
@@ -209,7 +209,7 @@ func (g GRPCGateway) SetCharacterController(ctx context.Context, campaignID stri
 
 // ClaimCharacterControl claims character control via gRPC.
 func (g GRPCGateway) ClaimCharacterControl(ctx context.Context, campaignID string, characterID string) error {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -218,7 +218,7 @@ func (g GRPCGateway) ClaimCharacterControl(ctx context.Context, campaignID strin
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
 
-	_, err := g.CharacterClient.ClaimCharacterControl(ctx, &statev1.ClaimCharacterControlRequest{
+	_, err := g.Mutation.Character.ClaimCharacterControl(ctx, &statev1.ClaimCharacterControlRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})
@@ -234,7 +234,7 @@ func (g GRPCGateway) ClaimCharacterControl(ctx context.Context, campaignID strin
 
 // ReleaseCharacterControl releases character control via gRPC.
 func (g GRPCGateway) ReleaseCharacterControl(ctx context.Context, campaignID string, characterID string) error {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -243,7 +243,7 @@ func (g GRPCGateway) ReleaseCharacterControl(ctx context.Context, campaignID str
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
 
-	_, err := g.CharacterClient.ReleaseCharacterControl(ctx, &statev1.ReleaseCharacterControlRequest{
+	_, err := g.Mutation.Character.ReleaseCharacterControl(ctx, &statev1.ReleaseCharacterControlRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})
@@ -259,7 +259,7 @@ func (g GRPCGateway) ReleaseCharacterControl(ctx context.Context, campaignID str
 
 // CreateCharacter executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateCharacter(ctx context.Context, campaignID string, input campaignapp.CreateCharacterInput) (campaignapp.CreateCharacterResult, error) {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return campaignapp.CreateCharacterResult{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -275,7 +275,7 @@ func (g GRPCGateway) CreateCharacter(ctx context.Context, campaignID string, inp
 		return campaignapp.CreateCharacterResult{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_kind_value_is_invalid", "character kind value is invalid")
 	}
 
-	resp, err := g.CharacterClient.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
+	resp, err := g.Mutation.Character.CreateCharacter(ctx, &statev1.CreateCharacterRequest{
 		CampaignId: campaignID,
 		Name:       name,
 		Kind:       kind,

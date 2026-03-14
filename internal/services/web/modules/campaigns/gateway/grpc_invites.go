@@ -15,7 +15,7 @@ import (
 
 // CampaignInvites centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignInvites(ctx context.Context, campaignID string) ([]campaignapp.CampaignInvite, error) {
-	if g.InviteClient == nil {
+	if g.Read.Invite == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.invite_service_client_is_not_configured", "invite service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -26,7 +26,7 @@ func (g GRPCGateway) CampaignInvites(ctx context.Context, campaignID string) ([]
 	return grpcpaging.CollectPages[campaignapp.CampaignInvite, *statev1.Invite](
 		ctx, 10,
 		func(ctx context.Context, pageToken string) ([]*statev1.Invite, string, error) {
-			resp, err := g.InviteClient.ListInvites(ctx, &statev1.ListInvitesRequest{
+			resp, err := g.Read.Invite.ListInvites(ctx, &statev1.ListInvitesRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 				PageToken:  pageToken,
@@ -55,7 +55,7 @@ func (g GRPCGateway) CampaignInvites(ctx context.Context, campaignID string) ([]
 
 // CreateInvite executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateInvite(ctx context.Context, campaignID string, input campaignapp.CreateInviteInput) error {
-	if g.InviteClient == nil {
+	if g.Mutation.Invite == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.invite_service_client_is_not_configured", "invite service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -71,7 +71,7 @@ func (g GRPCGateway) CreateInvite(ctx context.Context, campaignID string, input 
 		return err
 	}
 
-	_, err = g.InviteClient.CreateInvite(ctx, &statev1.CreateInviteRequest{
+	_, err = g.Mutation.Invite.CreateInvite(ctx, &statev1.CreateInviteRequest{
 		CampaignId:      campaignID,
 		ParticipantId:   participantID,
 		RecipientUserId: recipientUserID,
@@ -94,11 +94,11 @@ func (g GRPCGateway) resolveInviteRecipientUserID(ctx context.Context, username 
 	if username == "" {
 		return "", nil
 	}
-	if g.AuthClient == nil {
+	if g.Mutation.Auth == nil {
 		return "", apperrors.EK(apperrors.KindUnavailable, "error.web.message.auth_service_is_not_configured", "auth service client is not configured")
 	}
 
-	resp, err := g.AuthClient.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: username})
+	resp, err := g.Mutation.Auth.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: username})
 	if err != nil {
 		if statusErr, ok := status.FromError(err); ok {
 			switch statusErr.Code() {
@@ -122,7 +122,7 @@ func (g GRPCGateway) resolveInviteRecipientUserID(ctx context.Context, username 
 
 // RevokeInvite applies this package workflow transition.
 func (g GRPCGateway) RevokeInvite(ctx context.Context, campaignID string, input campaignapp.RevokeInviteInput) error {
-	if g.InviteClient == nil {
+	if g.Mutation.Invite == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.invite_service_client_is_not_configured", "invite service client is not configured")
 	}
 	if strings.TrimSpace(campaignID) == "" {
@@ -133,7 +133,7 @@ func (g GRPCGateway) RevokeInvite(ctx context.Context, campaignID string, input 
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.invite_id_is_required", "invite id is required")
 	}
 
-	_, err := g.InviteClient.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: inviteID})
+	_, err := g.Mutation.Invite.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: inviteID})
 	if err != nil {
 		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,

@@ -18,11 +18,13 @@ func TestBatchCanCampaignActionMapsResults(t *testing.T) {
 	t.Parallel()
 
 	gateway := GRPCGateway{
-		AuthorizationClient: fakeAuthorizationClient{
-			batchCanResponse: &statev1.BatchCanResponse{Results: []*statev1.BatchCanResult{
-				{CheckId: "char-a", Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
-				{CheckId: "char-b", Allowed: false, ReasonCode: "AUTHZ_DENY_NOT_RESOURCE_OWNER"},
-			}},
+		Authorization: GRPCGatewayAuthorizationDeps{
+			Client: fakeAuthorizationClient{
+				batchCanResponse: &statev1.BatchCanResponse{Results: []*statev1.BatchCanResult{
+					{CheckId: "char-a", Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"},
+					{CheckId: "char-b", Allowed: false, ReasonCode: "AUTHZ_DENY_NOT_RESOURCE_OWNER"},
+				}},
+			},
 		},
 	}
 
@@ -58,8 +60,10 @@ func TestBatchCanCampaignActionFallsBackToRequestCheckID(t *testing.T) {
 	t.Parallel()
 
 	gateway := GRPCGateway{
-		AuthorizationClient: fakeAuthorizationClient{
-			batchCanResponse: &statev1.BatchCanResponse{Results: []*statev1.BatchCanResult{{Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"}}},
+		Authorization: GRPCGatewayAuthorizationDeps{
+			Client: fakeAuthorizationClient{
+				batchCanResponse: &statev1.BatchCanResponse{Results: []*statev1.BatchCanResult{{Allowed: true, ReasonCode: "AUTHZ_ALLOW_RESOURCE_OWNER"}}},
+			},
 		},
 	}
 
@@ -85,7 +89,7 @@ func TestBatchCanCampaignActionFallsBackToRequestCheckID(t *testing.T) {
 func TestBatchCanCampaignActionFailsWithClientError(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{AuthorizationClient: fakeAuthorizationClient{batchCanErr: errors.New("auth unavailable")}}
+	gateway := GRPCGateway{Authorization: GRPCGatewayAuthorizationDeps{Client: fakeAuthorizationClient{batchCanErr: errors.New("auth unavailable")}}}
 	_, err := gateway.BatchCanCampaignAction(context.Background(), "c1", []campaignapp.AuthorizationCheck{{CheckID: "char-a"}})
 	if err == nil {
 		t.Fatal("expected BatchCanCampaignAction() error")
@@ -105,7 +109,7 @@ func TestCharacterCreationProgressMapsResponse(t *testing.T) {
 			UnmetReasons: []string{"ancestry and community selection are required"},
 		}},
 	}
-	gateway := GRPCGateway{CharacterClient: characterClient}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Character: characterClient}}
 
 	progress, err := gateway.CharacterCreationProgress(context.Background(), "c1", "char-1")
 	if err != nil {
@@ -257,9 +261,11 @@ func TestCharacterCreationCatalogMapsContentCatalog(t *testing.T) {
 		},
 	}
 	gateway := GRPCGateway{
-		DaggerheartContent: contentClient,
-		DaggerheartAsset:   contentClient,
-		AssetBaseURL:       "https://res.cloudinary.com/fracturing-space/image/upload",
+		Read: GRPCGatewayReadDeps{
+			DaggerheartContent: contentClient,
+			DaggerheartAsset:   contentClient,
+		},
+		AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
 	}
 
 	catalog, err := gateway.CharacterCreationCatalog(context.Background(), language.MustParse("pt-BR"))
@@ -335,7 +341,7 @@ func TestCharacterCreationCatalogDefaultsLocaleToEnglishUS(t *testing.T) {
 	t.Parallel()
 
 	contentClient := &fakeDaggerheartContentClient{}
-	gateway := GRPCGateway{DaggerheartContent: contentClient, DaggerheartAsset: contentClient}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{DaggerheartContent: contentClient, DaggerheartAsset: contentClient}}
 
 	if _, err := gateway.CharacterCreationCatalog(context.Background(), language.Und); err != nil {
 		t.Fatalf("CharacterCreationCatalog() error = %v", err)
@@ -366,9 +372,11 @@ func TestCharacterCreationCatalog_ContinuesWhenAssetMapFails(t *testing.T) {
 		assetMapErr: errors.New("asset map unavailable"),
 	}
 	gateway := GRPCGateway{
-		DaggerheartContent: contentClient,
-		DaggerheartAsset:   contentClient,
-		AssetBaseURL:       "https://res.cloudinary.com/fracturing-space/image/upload",
+		Read: GRPCGatewayReadDeps{
+			DaggerheartContent: contentClient,
+			DaggerheartAsset:   contentClient,
+		},
+		AssetBaseURL: "https://res.cloudinary.com/fracturing-space/image/upload",
 	}
 
 	catalog, err := gateway.CharacterCreationCatalog(context.Background(), language.AmericanEnglish)
@@ -407,7 +415,7 @@ func TestCharacterCreationProfileMapsDaggerheartFields(t *testing.T) {
 			Connections:          "Bonded with the harbor watch.",
 		}}}},
 	}
-	gateway := GRPCGateway{CharacterClient: characterClient}
+	gateway := GRPCGateway{Read: GRPCGatewayReadDeps{Character: characterClient}}
 
 	profile, err := gateway.CharacterCreationProfile(context.Background(), "c1", "char-1")
 	if err != nil {
@@ -440,7 +448,7 @@ func TestApplyAndResetCharacterCreationWorkflowForwardRequests(t *testing.T) {
 	t.Parallel()
 
 	characterClient := &fakeCharacterWorkflowClient{}
-	gateway := GRPCGateway{CharacterClient: characterClient}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Character: characterClient}}
 
 	step := &campaignapp.CampaignCharacterCreationStepInput{Details: &campaignapp.CampaignCharacterCreationStepDetails{}}
 	if err := gateway.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", step); err != nil {
@@ -561,7 +569,7 @@ func TestCreateCharacterForwardsRequestAndReturnsCharacterID(t *testing.T) {
 	t.Parallel()
 
 	characterClient := &fakeCharacterWorkflowClient{createResp: &statev1.CreateCharacterResponse{Character: &statev1.Character{Id: "char-42"}}}
-	gateway := GRPCGateway{CharacterClient: characterClient}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Character: characterClient}}
 
 	created, err := gateway.CreateCharacter(context.Background(), "c1", campaignapp.CreateCharacterInput{Name: "Hero", Kind: campaignapp.CharacterKindPC})
 	if err != nil {
@@ -582,7 +590,7 @@ func TestCreateCharacterRejectsEmptyCreatedCharacterID(t *testing.T) {
 	t.Parallel()
 
 	characterClient := &fakeCharacterWorkflowClient{createResp: &statev1.CreateCharacterResponse{Character: &statev1.Character{}}}
-	gateway := GRPCGateway{CharacterClient: characterClient}
+	gateway := GRPCGateway{Mutation: GRPCGatewayMutationDeps{Character: characterClient}}
 
 	_, err := gateway.CreateCharacter(context.Background(), "c1", campaignapp.CreateCharacterInput{Name: "Hero", Kind: campaignapp.CharacterKindPC})
 	if err == nil {

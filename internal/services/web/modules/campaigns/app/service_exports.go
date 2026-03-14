@@ -171,11 +171,6 @@ func (s service) RevokeInvite(ctx context.Context, campaignID string, input Revo
 	return s.revokeInvite(ctx, campaignID, input)
 }
 
-// ResolveWorkflow resolves request-scoped values needed by this package.
-func (s service) ResolveWorkflow(system string) CharacterCreationWorkflow {
-	return s.resolveWorkflow(system)
-}
-
 // CampaignCharacterCreation centralizes this web behavior in one helper seam.
 func (s service) CampaignCharacterCreation(ctx context.Context, campaignID string, characterID string, locale language.Tag, workflow CharacterCreationWorkflow) (CampaignCharacterCreation, error) {
 	return s.campaignCharacterCreation(ctx, campaignID, characterID, locale, workflow)

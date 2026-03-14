@@ -7,16 +7,16 @@ import (
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 )
 
-// fakeGateway implements SettingsGateway for tests with configurable return
+// fakeGateway implements settingsapp.Gateway for tests with configurable return
 // values, error injection, and call recording.
 type fakeGateway struct {
-	profile          SettingsProfile
+	profile          settingsapp.SettingsProfile
 	locale           string
-	keys             []SettingsAIKey
-	passkeys         []SettingsPasskey
-	credentials      []SettingsAICredentialOption
-	models           []SettingsAIModelOption
-	agents           []SettingsAIAgent
+	keys             []settingsapp.SettingsAIKey
+	passkeys         []settingsapp.SettingsPasskey
+	credentials      []settingsapp.SettingsAICredentialOption
+	models           []settingsapp.SettingsAIModelOption
+	agents           []settingsapp.SettingsAIAgent
 	loadProfileErr   error
 	loadLocaleErr    error
 	listAIKeysErr    error
@@ -28,11 +28,11 @@ type fakeGateway struct {
 	createAIAgentErr error
 	revokeAIKeyErr   error
 
-	lastSavedProfile         SettingsProfile
+	lastSavedProfile         settingsapp.SettingsProfile
 	lastSavedLocale          string
 	lastCreatedLabel         string
 	lastCreatedSecret        string
-	lastCreatedAgent         CreateAIAgentInput
+	lastCreatedAgent         settingsapp.CreateAIAgentInput
 	lastSelectedCredentialID string
 	lastRevokedCredentialID  string
 	lastRequestedUserID      string
@@ -44,7 +44,7 @@ type fakeGateway struct {
 // data suitable for integration-level module tests.
 func newPopulatedFakeGateway() *fakeGateway {
 	return &fakeGateway{
-		profile: SettingsProfile{
+		profile: settingsapp.SettingsProfile{
 			Username:      "rhea",
 			Name:          "Rhea Vale",
 			AvatarSetID:   "set-a",
@@ -52,7 +52,7 @@ func newPopulatedFakeGateway() *fakeGateway {
 			Bio:           "Traveler",
 		},
 		locale: "pt-BR",
-		keys: []SettingsAIKey{{
+		keys: []settingsapp.SettingsAIKey{{
 			ID:        "cred-1",
 			Label:     "Primary Key",
 			Provider:  "OpenAI",
@@ -61,21 +61,21 @@ func newPopulatedFakeGateway() *fakeGateway {
 			RevokedAt: "-",
 			CanRevoke: true,
 		}},
-		passkeys: []SettingsPasskey{{
+		passkeys: []settingsapp.SettingsPasskey{{
 			Number:     1,
 			CreatedAt:  "2026-01-01 00:00 UTC",
 			LastUsedAt: "2026-01-02 00:00 UTC",
 		}},
-		credentials: []SettingsAICredentialOption{{
+		credentials: []settingsapp.SettingsAICredentialOption{{
 			ID:       "cred-1",
 			Label:    "Primary Key",
 			Provider: "OpenAI",
 		}},
-		models: []SettingsAIModelOption{{
+		models: []settingsapp.SettingsAIModelOption{{
 			ID:      "gpt-4o-mini",
 			OwnedBy: "openai",
 		}},
-		agents: []SettingsAIAgent{{
+		agents: []settingsapp.SettingsAIAgent{{
 			ID:           "agent-1",
 			Name:         "Narrator",
 			Provider:     "OpenAI",
@@ -87,18 +87,18 @@ func newPopulatedFakeGateway() *fakeGateway {
 	}
 }
 
-func (f *fakeGateway) LoadProfile(_ context.Context, userID string) (SettingsProfile, error) {
+func (f *fakeGateway) LoadProfile(_ context.Context, userID string) (settingsapp.SettingsProfile, error) {
 	f.lastRequestedUserID = userID
 	if f.loadProfileErr != nil {
-		return SettingsProfile{}, f.loadProfileErr
+		return settingsapp.SettingsProfile{}, f.loadProfileErr
 	}
-	if f.profile == (SettingsProfile{}) {
-		return SettingsProfile{Username: "adventurer", Name: "Adventurer"}, nil
+	if f.profile == (settingsapp.SettingsProfile{}) {
+		return settingsapp.SettingsProfile{Username: "adventurer", Name: "Adventurer"}, nil
 	}
 	return f.profile, nil
 }
 
-func (f *fakeGateway) SaveProfile(_ context.Context, userID string, profile SettingsProfile) error {
+func (f *fakeGateway) SaveProfile(_ context.Context, userID string, profile settingsapp.SettingsProfile) error {
 	f.lastRequestedUserID = userID
 	f.lastSavedProfile = profile
 	return f.saveProfileErr
@@ -121,10 +121,10 @@ func (f *fakeGateway) SaveLocale(_ context.Context, userID string, locale string
 	return f.saveLocaleErr
 }
 
-func (f *fakeGateway) ListPasskeys(_ context.Context, userID string) ([]SettingsPasskey, error) {
+func (f *fakeGateway) ListPasskeys(_ context.Context, userID string) ([]settingsapp.SettingsPasskey, error) {
 	f.lastRequestedUserID = userID
 	if f.passkeys == nil {
-		return []SettingsPasskey{}, nil
+		return []settingsapp.SettingsPasskey{}, nil
 	}
 	return f.passkeys, nil
 }
@@ -143,13 +143,13 @@ func (f *fakeGateway) FinishPasskeyRegistration(_ context.Context, sessionID str
 	return nil
 }
 
-func (f *fakeGateway) ListAIKeys(_ context.Context, userID string) ([]SettingsAIKey, error) {
+func (f *fakeGateway) ListAIKeys(_ context.Context, userID string) ([]settingsapp.SettingsAIKey, error) {
 	f.lastRequestedUserID = userID
 	if f.listAIKeysErr != nil {
 		return nil, f.listAIKeysErr
 	}
 	if f.keys == nil {
-		return []SettingsAIKey{}, nil
+		return []settingsapp.SettingsAIKey{}, nil
 	}
 	return f.keys, nil
 }
@@ -161,41 +161,41 @@ func (f *fakeGateway) CreateAIKey(_ context.Context, userID string, label string
 	return f.createAIKeyErr
 }
 
-func (f *fakeGateway) ListAIAgentCredentials(_ context.Context, userID string) ([]SettingsAICredentialOption, error) {
+func (f *fakeGateway) ListAIAgentCredentials(_ context.Context, userID string) ([]settingsapp.SettingsAICredentialOption, error) {
 	f.lastRequestedUserID = userID
 	if f.listAIKeysErr != nil {
 		return nil, f.listAIKeysErr
 	}
 	if f.credentials == nil {
-		return []SettingsAICredentialOption{}, nil
+		return []settingsapp.SettingsAICredentialOption{}, nil
 	}
 	return f.credentials, nil
 }
 
-func (f *fakeGateway) ListAIAgents(_ context.Context, userID string) ([]SettingsAIAgent, error) {
+func (f *fakeGateway) ListAIAgents(_ context.Context, userID string) ([]settingsapp.SettingsAIAgent, error) {
 	f.lastRequestedUserID = userID
 	if f.listAgentsErr != nil {
 		return nil, f.listAgentsErr
 	}
 	if f.agents == nil {
-		return []SettingsAIAgent{}, nil
+		return []settingsapp.SettingsAIAgent{}, nil
 	}
 	return f.agents, nil
 }
 
-func (f *fakeGateway) ListAIProviderModels(_ context.Context, userID string, credentialID string) ([]SettingsAIModelOption, error) {
+func (f *fakeGateway) ListAIProviderModels(_ context.Context, userID string, credentialID string) ([]settingsapp.SettingsAIModelOption, error) {
 	f.lastRequestedUserID = userID
 	f.lastSelectedCredentialID = credentialID
 	if f.listModelsErr != nil {
 		return nil, f.listModelsErr
 	}
 	if f.models == nil {
-		return []SettingsAIModelOption{}, nil
+		return []settingsapp.SettingsAIModelOption{}, nil
 	}
 	return f.models, nil
 }
 
-func (f *fakeGateway) CreateAIAgent(_ context.Context, userID string, input CreateAIAgentInput) error {
+func (f *fakeGateway) CreateAIAgent(_ context.Context, userID string, input settingsapp.CreateAIAgentInput) error {
 	f.lastRequestedUserID = userID
 	f.lastCreatedAgent = input
 	return f.createAIAgentErr

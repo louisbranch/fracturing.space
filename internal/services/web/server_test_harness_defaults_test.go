@@ -7,19 +7,22 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
 		Profile: &authv1.AccountProfile{Username: "adventurer", Locale: commonv1.Locale_LOCALE_EN_US},
 	}}
+	notifications := fakeWebNotificationClient{}
 	social := defaultSocialClient()
 	return Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{
-				SessionClient: auth,
-				AccountClient: account,
-				SocialClient:  social,
+			principal.Dependencies{
+				SessionClient:      auth,
+				AccountClient:      account,
+				SocialClient:       social,
+				NotificationClient: notifications,
 			},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{
@@ -43,6 +46,9 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 					PasskeyClient:    auth,
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
+				},
+				Notifications: modules.NotificationDependencies{
+					NotificationClient: notifications,
 				},
 				Profile: modules.ProfileDependencies{
 					AuthClient:   auth,

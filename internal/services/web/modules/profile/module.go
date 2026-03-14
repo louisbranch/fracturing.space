@@ -11,14 +11,14 @@ import (
 
 // Module provides public user profile routes.
 type Module struct {
-	gateway         ProfileGateway
+	gateway         profileapp.Gateway
 	assetBaseURL    string
 	resolveSignedIn module.ResolveSignedIn
 }
 
 // Config defines constructor dependencies for a profile module.
 type Config struct {
-	Gateway         ProfileGateway
+	Gateway         profileapp.Gateway
 	AssetBaseURL    string
 	ResolveSignedIn module.ResolveSignedIn
 }
@@ -43,9 +43,9 @@ func (m Module) Healthy() bool {
 // Mount wires public profile route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := profileapp.NewService(m.gateway, m.assetBaseURL)
+	svc := profileapp.NewService(m.gateway)
 	base := publichandler.NewBase(publichandler.WithResolveViewerSignedIn(m.resolveSignedIn))
-	h := newHandlers(svc, base)
+	h := newHandlers(svc, m.assetBaseURL, base)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.UserProfilePrefix, Handler: mux}, nil
 }

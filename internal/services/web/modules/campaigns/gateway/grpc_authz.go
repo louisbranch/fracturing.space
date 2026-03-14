@@ -16,14 +16,14 @@ func (g GRPCGateway) CanCampaignAction(
 	resource campaignapp.AuthorizationResource,
 	target *campaignapp.AuthorizationTarget,
 ) (campaignapp.AuthorizationDecision, error) {
-	if g.AuthorizationClient == nil {
+	if g.Authorization.Client == nil {
 		return campaignapp.AuthorizationDecision{}, nil
 	}
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return campaignapp.AuthorizationDecision{}, nil
 	}
-	resp, err := g.AuthorizationClient.Can(ctx, &statev1.CanRequest{
+	resp, err := g.Authorization.Client.Can(ctx, &statev1.CanRequest{
 		CampaignId: campaignID,
 		Action:     mapCampaignAuthorizationActionToProto(action),
 		Resource:   mapCampaignAuthorizationResourceToProto(resource),
@@ -50,7 +50,7 @@ func (g GRPCGateway) BatchCanCampaignAction(
 	campaignID string,
 	checks []campaignapp.AuthorizationCheck,
 ) ([]campaignapp.AuthorizationDecision, error) {
-	if g.AuthorizationClient == nil {
+	if g.Authorization.Client == nil {
 		return nil, nil
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -70,7 +70,7 @@ func (g GRPCGateway) BatchCanCampaignAction(
 		})
 	}
 
-	resp, err := g.AuthorizationClient.BatchCan(ctx, &statev1.BatchCanRequest{Checks: protoChecks})
+	resp, err := g.Authorization.Client.BatchCan(ctx, &statev1.BatchCanRequest{Checks: protoChecks})
 	if err != nil {
 		return nil, err
 	}

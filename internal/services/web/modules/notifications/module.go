@@ -11,13 +11,13 @@ import (
 
 // Module provides authenticated notification routes.
 type Module struct {
-	gateway NotificationGateway
+	gateway notificationsapp.Gateway
 	base    modulehandler.Base
 }
 
 // Config defines constructor dependencies for a notifications module.
 type Config struct {
-	Gateway NotificationGateway
+	Gateway notificationsapp.Gateway
 	Base    modulehandler.Base
 }
 

@@ -71,8 +71,8 @@ type staticGateway struct{}
 
 var staticGatewayFixedTime = time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
 
-func (staticGateway) ListNotifications(context.Context, string) ([]NotificationSummary, error) {
-	return []NotificationSummary{{
+func (staticGateway) ListNotifications(context.Context, string) ([]notificationsapp.NotificationSummary, error) {
+	return []notificationsapp.NotificationSummary{{
 		ID:          "notification-1",
 		MessageType: "auth.onboarding.welcome",
 		PayloadJSON: `{"signup_method":"passkey"}`,
@@ -83,23 +83,23 @@ func (staticGateway) ListNotifications(context.Context, string) ([]NotificationS
 	}}, nil
 }
 
-func (g staticGateway) GetNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
+func (g staticGateway) GetNotification(ctx context.Context, userID string, notificationID string) (notificationsapp.NotificationSummary, error) {
 	items, err := g.ListNotifications(ctx, userID)
 	if err != nil {
-		return NotificationSummary{}, err
+		return notificationsapp.NotificationSummary{}, err
 	}
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == strings.TrimSpace(notificationID) {
 			return item, nil
 		}
 	}
-	return NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
+	return notificationsapp.NotificationSummary{}, apperrors.E(apperrors.KindNotFound, "notification not found")
 }
 
-func (g staticGateway) OpenNotification(ctx context.Context, userID string, notificationID string) (NotificationSummary, error) {
+func (g staticGateway) OpenNotification(ctx context.Context, userID string, notificationID string) (notificationsapp.NotificationSummary, error) {
 	item, err := g.GetNotification(ctx, userID, notificationID)
 	if err != nil {
-		return NotificationSummary{}, err
+		return notificationsapp.NotificationSummary{}, err
 	}
 	readAt := staticGatewayFixedTime
 	item.Read = true

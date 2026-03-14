@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 )
@@ -16,24 +17,11 @@ type DiscoveryClient interface {
 	ListDiscoveryEntries(ctx context.Context, in *discoveryv1.ListDiscoveryEntriesRequest, opts ...grpc.CallOption) (*discoveryv1.ListDiscoveryEntriesResponse, error)
 }
 
-// StarterEntry is a presentation-ready discovery-entry card for the discovery page.
-type StarterEntry struct {
-	CampaignID  string
-	Title       string
-	Description string
-	Tags        []string
-	Difficulty  string
-	Duration    string
-	GmMode      string
-	System      string
-	Level       int32
-	Players     string
-}
+// StarterEntry is the transport-facing alias for discovery page entries.
+type StarterEntry = discoveryapp.StarterEntry
 
 // Gateway abstracts discovery-entry data access for the discovery module.
-type Gateway interface {
-	ListStarterEntries(ctx context.Context) ([]StarterEntry, error)
-}
+type Gateway = discoveryapp.Gateway
 
 // GRPCGateway implements Gateway backed by the discovery gRPC service.
 type GRPCGateway struct {
@@ -44,26 +32,14 @@ type GRPCGateway struct {
 // Returns an unavailable gateway when client is nil (fail-closed).
 func NewGRPCGateway(client DiscoveryClient) Gateway {
 	if client == nil {
-		return unavailableGateway{}
+		return discoveryapp.NewUnavailableGateway()
 	}
 	return GRPCGateway{client: client}
 }
 
 // IsGatewayHealthy reports whether a discovery gateway is configured and usable.
 func IsGatewayHealthy(gw Gateway) bool {
-	if gw == nil {
-		return false
-	}
-	_, unavailable := gw.(unavailableGateway)
-	return !unavailable
-}
-
-// unavailableGateway is a fail-closed Gateway returned when the discovery client is nil.
-type unavailableGateway struct{}
-
-// ListStarterEntries always returns an unavailable error.
-func (unavailableGateway) ListStarterEntries(context.Context) ([]StarterEntry, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "discovery service client is not configured")
+	return discoveryapp.IsGatewayHealthy(gw)
 }
 
 // ListStarterEntries fetches discovery entries and filters to starter intent.

@@ -130,11 +130,24 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 	t.Parallel()
 
 	gateway := NewUnavailableGateway()
-	if IsGatewayHealthy(nil) {
-		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
-	}
-	if IsGatewayHealthy(gateway) {
-		t.Fatalf("IsGatewayHealthy(unavailable) = true, want false")
+	for _, tc := range []struct {
+		name string
+		run  func() bool
+	}{
+		{name: "profile nil", run: func() bool { return IsProfileGatewayHealthy(nil) }},
+		{name: "locale nil", run: func() bool { return IsLocaleGatewayHealthy(nil) }},
+		{name: "ai keys nil", run: func() bool { return IsAIKeyGatewayHealthy(nil) }},
+		{name: "ai agents nil", run: func() bool { return IsAIAgentGatewayHealthy(nil) }},
+		{name: "gateway nil", run: func() bool { return IsGatewayHealthy(nil) }},
+		{name: "profile unavailable", run: func() bool { return IsProfileGatewayHealthy(gateway) }},
+		{name: "locale unavailable", run: func() bool { return IsLocaleGatewayHealthy(gateway) }},
+		{name: "ai keys unavailable", run: func() bool { return IsAIKeyGatewayHealthy(gateway) }},
+		{name: "ai agents unavailable", run: func() bool { return IsAIAgentGatewayHealthy(gateway) }},
+		{name: "gateway unavailable", run: func() bool { return IsGatewayHealthy(gateway) }},
+	} {
+		if tc.run() {
+			t.Fatalf("%s = true, want false", tc.name)
+		}
 	}
 	if !IsGatewayHealthy(&gatewayStub{}) {
 		t.Fatalf("IsGatewayHealthy(stub) = false, want true")

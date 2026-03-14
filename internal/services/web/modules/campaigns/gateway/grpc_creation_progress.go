@@ -11,7 +11,7 @@ import (
 
 // CharacterCreationProgress centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CharacterCreationProgress(ctx context.Context, campaignID string, characterID string) (campaignapp.CampaignCharacterCreationProgress, error) {
-	if g.CharacterClient == nil {
+	if g.Read.Character == nil {
 		return campaignapp.CampaignCharacterCreationProgress{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -20,7 +20,7 @@ func (g GRPCGateway) CharacterCreationProgress(ctx context.Context, campaignID s
 		return campaignapp.CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
 
-	resp, err := g.CharacterClient.GetCharacterCreationProgress(ctx, &statev1.GetCharacterCreationProgressRequest{
+	resp, err := g.Read.Character.GetCharacterCreationProgress(ctx, &statev1.GetCharacterCreationProgressRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})

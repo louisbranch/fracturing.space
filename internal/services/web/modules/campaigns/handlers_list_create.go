@@ -118,20 +118,20 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 }
 
 // parseAppGameSystem parses inbound values into package-safe forms.
-func parseAppGameSystem(value string) (GameSystem, bool) {
+func parseAppGameSystem(value string) (campaignapp.GameSystem, bool) {
 	return campaignapp.ParseGameSystem(value)
 }
 
 // parseAppGmMode parses inbound values into package-safe forms.
-func parseAppGmMode(value string) (GmMode, bool) {
+func parseAppGmMode(value string) (campaignapp.GmMode, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "human":
-		return GmModeHuman, true
+		return campaignapp.GmModeHuman, true
 	case "ai":
-		return GmModeAI, true
+		return campaignapp.GmModeAI, true
 	case "hybrid":
-		return GmModeHybrid, true
+		return campaignapp.GmModeHybrid, true
 	default:
-		return GmModeUnspecified, false
+		return campaignapp.GmModeUnspecified, false
 	}
 }

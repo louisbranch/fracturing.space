@@ -11,6 +11,26 @@ const DegradedDependencySocialProfile = "social.profile"
 const DegradedDependencyGameCampaigns = "game.campaigns"
 const DegradedDependencyGameSessions = "game.sessions"
 
+// DashboardDataStatus describes how complete the rendered dashboard data is.
+type DashboardDataStatus string
+
+const (
+	// DashboardDataStatusUnspecified indicates the service did not classify the result.
+	DashboardDataStatusUnspecified DashboardDataStatus = ""
+
+	// DashboardDataStatusAnonymous indicates no user identity was available for dashboard data.
+	DashboardDataStatusAnonymous DashboardDataStatus = "anonymous"
+
+	// DashboardDataStatusReady indicates dashboard data loaded without degraded dependencies.
+	DashboardDataStatusReady DashboardDataStatus = "ready"
+
+	// DashboardDataStatusDegraded indicates dashboard data loaded with degraded dependencies.
+	DashboardDataStatusDegraded DashboardDataStatus = "degraded"
+
+	// DashboardDataStatusUnavailable indicates dashboard data could not be loaded.
+	DashboardDataStatusUnavailable DashboardDataStatus = "unavailable"
+)
+
 // ServiceHealthEntry represents the availability status of a backend service group.
 type ServiceHealthEntry struct {
 	Label     string
@@ -23,6 +43,8 @@ type HealthProvider func(ctx context.Context) []ServiceHealthEntry
 
 // DashboardView is the web-dashboard view model derived from userhub state.
 type DashboardView struct {
+	DataStatus              DashboardDataStatus
+	DegradedDependencies    []string
 	ShowPendingProfileBlock bool
 	ShowAdventureBlock      bool
 	ActiveSessions          []ActiveSessionItem

@@ -3,12 +3,14 @@ package settings
 import (
 	"net/url"
 	"testing"
+
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 )
 
 func TestParseProfileInputTrimsAndPreservesAvatarIDs(t *testing.T) {
 	t.Parallel()
 
-	existing := SettingsProfile{
+	existing := settingsapp.SettingsProfile{
 		Username:      "rhea",
 		AvatarSetID:   "set-a",
 		AvatarAssetID: "asset-1",

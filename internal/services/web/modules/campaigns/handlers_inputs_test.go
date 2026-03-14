@@ -3,6 +3,8 @@ package campaigns
 import (
 	"net/url"
 	"testing"
+
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 )
 
 func TestParseCreateCampaignInputDefaultsAndValidation(t *testing.T) {
@@ -18,11 +20,11 @@ func TestParseCreateCampaignInputDefaultsAndValidation(t *testing.T) {
 	if input.Name != "Voyage" {
 		t.Fatalf("Name = %q, want %q", input.Name, "Voyage")
 	}
-	if input.System != GameSystemDaggerheart {
-		t.Fatalf("System = %q, want %q", input.System, GameSystemDaggerheart)
+	if input.System != campaignapp.GameSystemDaggerheart {
+		t.Fatalf("System = %q, want %q", input.System, campaignapp.GameSystemDaggerheart)
 	}
-	if input.GMMode != GmModeAI {
-		t.Fatalf("GMMode = %q, want %q", input.GMMode, GmModeAI)
+	if input.GMMode != campaignapp.GmModeAI {
+		t.Fatalf("GMMode = %q, want %q", input.GMMode, campaignapp.GmModeAI)
 	}
 	if input.ThemePrompt != "stormy sea" {
 		t.Fatalf("ThemePrompt = %q, want %q", input.ThemePrompt, "stormy sea")
@@ -46,8 +48,8 @@ func TestParseCreateCharacterInputDefaultsAndValidation(t *testing.T) {
 	if input.Name != "Aria" {
 		t.Fatalf("Name = %q, want %q", input.Name, "Aria")
 	}
-	if input.Kind != CharacterKindPC {
-		t.Fatalf("Kind = %q, want %q", input.Kind, CharacterKindPC)
+	if input.Kind != campaignapp.CharacterKindPC {
+		t.Fatalf("Kind = %q, want %q", input.Kind, campaignapp.CharacterKindPC)
 	}
 	if input.Pronouns != "she/her" {
 		t.Fatalf("Pronouns = %q, want %q", input.Pronouns, "she/her")
@@ -57,8 +59,8 @@ func TestParseCreateCharacterInputDefaultsAndValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseCreateCharacterInput() npc error = %v", err)
 	}
-	if input.Kind != CharacterKindNPC {
-		t.Fatalf("Kind = %q, want %q", input.Kind, CharacterKindNPC)
+	if input.Kind != campaignapp.CharacterKindNPC {
+		t.Fatalf("Kind = %q, want %q", input.Kind, campaignapp.CharacterKindNPC)
 	}
 
 	if _, err := parseCreateCharacterInput(url.Values{"kind": {"invalid"}}); err == nil {
