@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-14T19:56:03Z",
+  "updated_at": "2026-03-14T20:10:42Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -135,7 +135,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/composition",
-      "floor": 88.9,
+      "floor": 100,
       "description": "Web startup composition contract from resolvers/dependencies to module sets."
     },
     {
@@ -155,7 +155,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender",
-      "floor": 93.9,
+      "floor": 96.7,
       "description": "App-shell/public-page rendering contracts, including HTMX and flash-notice fallback behavior."
     },
     {
@@ -170,7 +170,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror",
-      "floor": 91.9,
+      "floor": 92,
       "description": "User-safe localized app/module error rendering and fallback message contracts."
     },
     {
