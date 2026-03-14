@@ -36,6 +36,11 @@ func (unavailableGateway) CreateAIAgent(context.Context, string, CreateAIAgentIn
 	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
 }
 
+// DeleteAIAgent executes package-scoped agent deletion behavior.
+func (unavailableGateway) DeleteAIAgent(context.Context, string, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+}
+
 // RevokeAIKey applies this package workflow transition.
 func (unavailableGateway) RevokeAIKey(context.Context, string, string) error {
 	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")

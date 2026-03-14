@@ -51,6 +51,12 @@ func (h handlers) withCredentialID(fn func(http.ResponseWriter, *http.Request, s
 	return routeparam.WithRequired("credentialID", h.WriteNotFound, fn)
 }
 
+// withAgentID extracts the agent ID path param and delegates to fn, returning
+// 404 when the param is missing.
+func (h handlers) withAgentID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
+	return routeparam.WithRequired("agentID", h.WriteNotFound, fn)
+}
+
 // writeSettingsPage centralizes common settings page shell rendering.
 func (h handlers) writeSettingsPage(
 	w http.ResponseWriter,

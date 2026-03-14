@@ -113,13 +113,15 @@ func mapAIAgentTemplateRows(agents []settingsapp.SettingsAIAgent) []webtemplates
 	rows := make([]webtemplates.SettingsAIAgentRow, 0, len(agents))
 	for _, agent := range agents {
 		rows = append(rows, webtemplates.SettingsAIAgentRow{
-			ID:           agent.ID,
-			Label:        agent.Label,
-			Provider:     agent.Provider,
-			Model:        agent.Model,
-			Status:       agent.Status,
-			CreatedAt:    agent.CreatedAt,
-			Instructions: agent.Instructions,
+			ID:                  agent.ID,
+			Label:               agent.Label,
+			Provider:            agent.Provider,
+			Model:               agent.Model,
+			AuthState:           agent.AuthState,
+			CanDelete:           agent.CanDelete,
+			ActiveCampaignCount: agent.ActiveCampaignCount,
+			CreatedAt:           agent.CreatedAt,
+			Instructions:        agent.Instructions,
 		})
 	}
 	return rows

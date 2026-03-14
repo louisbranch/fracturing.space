@@ -272,6 +272,7 @@ func (f *credentialClientStub) RevokeCredential(_ context.Context, req *aiv1.Rev
 
 type agentClientStub struct {
 	lastCreateReq *aiv1.CreateAgentRequest
+	lastDeleteReq *aiv1.DeleteAgentRequest
 }
 
 func (*agentClientStub) ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error) {
@@ -283,4 +284,8 @@ func (*agentClientStub) ListProviderModels(context.Context, *aiv1.ListProviderMo
 func (f *agentClientStub) CreateAgent(_ context.Context, req *aiv1.CreateAgentRequest, _ ...grpc.CallOption) (*aiv1.CreateAgentResponse, error) {
 	f.lastCreateReq = req
 	return &aiv1.CreateAgentResponse{}, nil
+}
+func (f *agentClientStub) DeleteAgent(_ context.Context, req *aiv1.DeleteAgentRequest, _ ...grpc.CallOption) (*aiv1.DeleteAgentResponse, error) {
+	f.lastDeleteReq = req
+	return &aiv1.DeleteAgentResponse{}, nil
 }

@@ -628,6 +628,46 @@ func TestMountAIAgentsGetLoadsModelsAndListsAgents(t *testing.T) {
 	}
 }
 
+func TestMountAIAgentsGetShowsDisabledDeleteTooltipWhenAgentIsInUse(t *testing.T) {
+	t.Parallel()
+
+	gateway := newPopulatedFakeGateway()
+	gateway.agents = []settingsapp.SettingsAIAgent{{
+		ID:                  "agent-1",
+		Label:               "narrator",
+		Provider:            "OpenAI",
+		Model:               "gpt-4o-mini",
+		AuthState:           "Ready",
+		CanDelete:           false,
+		ActiveCampaignCount: 2,
+		CreatedAt:           "2026-01-01 00:00 UTC",
+		Instructions:        "Keep the session moving.",
+	}}
+
+	m := New(Config{Gateway: gateway, Base: settingsTestBase()})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsAIAgents, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-settings-ai-agent-delete-disabled="true"`,
+		`data-tip="This AI agent is still bound to an active campaign."`,
+		`>Delete</button>`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestMountProfilePostSavesAndRedirects(t *testing.T) {
 	t.Parallel()
 

@@ -74,6 +74,7 @@ func (c *credentialStub) RevokeCredential(_ context.Context, req *aiv1.RevokeCre
 
 type agentStub struct {
 	lastCreateReq     *aiv1.CreateAgentRequest
+	lastDeleteReq     *aiv1.DeleteAgentRequest
 	lastListModelsReq *aiv1.ListProviderModelsRequest
 	lastListAgentsReq *aiv1.ListAgentsRequest
 	listAgentsCalls   int
@@ -83,9 +84,9 @@ func (a *agentStub) ListAgents(_ context.Context, req *aiv1.ListAgentsRequest, _
 	a.lastListAgentsReq = req
 	a.listAgentsCalls++
 	if strings.TrimSpace(req.GetPageToken()) == "" {
-		return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-1", Label: "narrator", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o-mini", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, Instructions: "Keep the session moving."}}, NextPageToken: "page-2"}, nil
+		return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-1", Label: "narrator", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o-mini", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, AuthState: aiv1.AgentAuthState_AGENT_AUTH_STATE_READY, ActiveCampaignCount: 1, Instructions: "Keep the session moving."}}, NextPageToken: "page-2"}, nil
 	}
-	return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-2", Label: "oracle", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, Instructions: "Answer briefly."}}}, nil
+	return &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{{Id: "agent-2", Label: "oracle", Provider: aiv1.Provider_PROVIDER_OPENAI, Model: "gpt-4o", Status: aiv1.AgentStatus_AGENT_STATUS_ACTIVE, AuthState: aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_REVOKED, ActiveCampaignCount: 0, Instructions: "Answer briefly."}}}, nil
 }
 
 func (a *agentStub) ListProviderModels(_ context.Context, req *aiv1.ListProviderModelsRequest, _ ...grpc.CallOption) (*aiv1.ListProviderModelsResponse, error) {
@@ -96,6 +97,11 @@ func (a *agentStub) ListProviderModels(_ context.Context, req *aiv1.ListProvider
 func (a *agentStub) CreateAgent(_ context.Context, req *aiv1.CreateAgentRequest, _ ...grpc.CallOption) (*aiv1.CreateAgentResponse, error) {
 	a.lastCreateReq = req
 	return &aiv1.CreateAgentResponse{}, nil
+}
+
+func (a *agentStub) DeleteAgent(_ context.Context, req *aiv1.DeleteAgentRequest, _ ...grpc.CallOption) (*aiv1.DeleteAgentResponse, error) {
+	a.lastDeleteReq = req
+	return &aiv1.DeleteAgentResponse{}, nil
 }
 
 func TestNewGRPCGatewayWithoutConfiguredClientsFailsClosed(t *testing.T) {

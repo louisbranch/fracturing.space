@@ -59,13 +59,15 @@ type SettingsAIModelOption struct {
 
 // SettingsAIAgent stores an agent row displayed in the AI agents page.
 type SettingsAIAgent struct {
-	ID           string
-	Label        string
-	Provider     string
-	Model        string
-	Status       string
-	CreatedAt    string
-	Instructions string
+	ID                  string
+	Label               string
+	Provider            string
+	Model               string
+	AuthState           string
+	CanDelete           bool
+	ActiveCampaignCount int32
+	CreatedAt           string
+	Instructions        string
 }
 
 // CreateAIAgentInput stores validated agent creation input.
@@ -126,6 +128,7 @@ type AIAgentGateway interface {
 	ListAIAgents(context.Context, string) ([]SettingsAIAgent, error)
 	ListAIProviderModels(context.Context, string, string) ([]SettingsAIModelOption, error)
 	CreateAIAgent(context.Context, string, CreateAIAgentInput) error
+	DeleteAIAgent(context.Context, string, string) error
 }
 
 // AccountGateway groups account-owned settings gateway behavior.
@@ -179,6 +182,7 @@ type AIAgentService interface {
 	ListAIAgents(context.Context, string) ([]SettingsAIAgent, error)
 	ListAIProviderModels(context.Context, string, string) ([]SettingsAIModelOption, error)
 	CreateAIAgent(context.Context, string, CreateAIAgentInput) error
+	DeleteAIAgent(context.Context, string, string) error
 }
 
 // AccountService groups account-owned settings orchestration.

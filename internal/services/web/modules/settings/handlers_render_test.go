@@ -77,12 +77,14 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 	gw := &fakeGateway{
 		credentials: []settingsapp.SettingsAICredentialOption{{ID: "cred-1", Label: "Primary", Provider: "OpenAI"}},
 		agents: []settingsapp.SettingsAIAgent{{
-			ID:        "agent-1",
-			Label:     "narrator",
-			Provider:  "OpenAI",
-			Model:     "gpt-4o-mini",
-			Status:    "Active",
-			CreatedAt: "2026-01-01 00:00 UTC",
+			ID:                  "agent-1",
+			Label:               "narrator",
+			Provider:            "OpenAI",
+			Model:               "gpt-4o-mini",
+			AuthState:           "Ready",
+			CanDelete:           true,
+			ActiveCampaignCount: 0,
+			CreatedAt:           "2026-01-01 00:00 UTC",
 		}},
 	}
 	svc := settingsapp.NewService(gw)

@@ -86,14 +86,17 @@ func (g GRPCGateway) ListAIAgents(ctx context.Context, userID string) ([]setting
 			if agent == nil {
 				continue
 			}
+			activeCampaignCount := agent.GetActiveCampaignCount()
 			agents = append(agents, settingsapp.SettingsAIAgent{
-				ID:           strings.TrimSpace(agent.GetId()),
-				Label:        strings.TrimSpace(agent.GetLabel()),
-				Provider:     providerDisplayLabel(agent.GetProvider()),
-				Model:        strings.TrimSpace(agent.GetModel()),
-				Status:       agentStatusDisplayLabel(agent.GetStatus()),
-				CreatedAt:    formatProtoTimestamp(agent.GetCreatedAt()),
-				Instructions: strings.TrimSpace(agent.GetInstructions()),
+				ID:                  strings.TrimSpace(agent.GetId()),
+				Label:               strings.TrimSpace(agent.GetLabel()),
+				Provider:            providerDisplayLabel(agent.GetProvider()),
+				Model:               strings.TrimSpace(agent.GetModel()),
+				AuthState:           agentAuthStateDisplayLabel(agent.GetAuthState()),
+				CanDelete:           activeCampaignCount == 0,
+				ActiveCampaignCount: activeCampaignCount,
+				CreatedAt:           formatProtoTimestamp(agent.GetCreatedAt()),
+				Instructions:        strings.TrimSpace(agent.GetInstructions()),
 			})
 		}
 		pageToken = strings.TrimSpace(resp.GetNextPageToken())
@@ -157,13 +160,22 @@ func (g GRPCGateway) CreateAIAgent(ctx context.Context, userID string, input set
 	return mapAIAgentMutationError(err)
 }
 
+// DeleteAIAgent deletes one AI agent when it is not currently in use.
+func (g GRPCGateway) DeleteAIAgent(ctx context.Context, userID string, agentID string) error {
+	if g.AgentClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.ai_agent_service_client_is_not_configured", "AI agent service client is not configured")
+	}
+	_, err := g.AgentClient.DeleteAgent(ctx, &aiv1.DeleteAgentRequest{AgentId: agentID})
+	return mapAIAgentMutationError(err)
+}
+
 // RevokeAIKey applies this package workflow transition.
 func (g GRPCGateway) RevokeAIKey(ctx context.Context, userID string, credentialID string) error {
 	if g.CredentialClient == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.credential_service_client_is_not_configured", "credential service client is not configured")
 	}
 	_, err := g.CredentialClient.RevokeCredential(ctx, &aiv1.RevokeCredentialRequest{CredentialId: credentialID})
-	return err
+	return mapAIKeyMutationError(err)
 }
 
 // providerDisplayLabel centralizes this web behavior in one helper seam.
@@ -198,6 +210,20 @@ func agentStatusDisplayLabel(statusValue aiv1.AgentStatus) string {
 	}
 }
 
+// agentAuthStateDisplayLabel centralizes user-facing auth health labels.
+func agentAuthStateDisplayLabel(state aiv1.AgentAuthState) string {
+	switch state {
+	case aiv1.AgentAuthState_AGENT_AUTH_STATE_READY:
+		return "Ready"
+	case aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_REVOKED:
+		return "Credential revoked"
+	case aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE:
+		return "Auth unavailable"
+	default:
+		return "Unknown"
+	}
+}
+
 // formatProtoTimestamp centralizes this web behavior in one helper seam.
 func formatProtoTimestamp(value *timestamppb.Timestamp) string {
 	if value == nil {
@@ -224,8 +250,13 @@ func mapAIKeyMutationError(err error) error {
 		return nil
 	}
 	st, ok := status.FromError(err)
-	if ok && st.Code() == codes.AlreadyExists {
-		return apperrors.EK(apperrors.KindConflict, "web.settings.ai_keys.error_duplicate_label", "AI key label already exists")
+	if ok {
+		switch st.Code() {
+		case codes.AlreadyExists:
+			return apperrors.EK(apperrors.KindConflict, "web.settings.ai_keys.error_duplicate_label", "AI key label already exists")
+		case codes.FailedPrecondition:
+			return apperrors.EK(apperrors.KindConflict, "web.settings.ai_keys.error_in_use", "AI key is in use by active campaigns")
+		}
 	}
 	return err
 }
@@ -236,8 +267,13 @@ func mapAIAgentMutationError(err error) error {
 		return nil
 	}
 	st, ok := status.FromError(err)
-	if ok && st.Code() == codes.AlreadyExists {
-		return apperrors.EK(apperrors.KindConflict, "web.settings.ai_agents.error_duplicate_label", "AI agent label already exists")
+	if ok {
+		switch st.Code() {
+		case codes.AlreadyExists:
+			return apperrors.EK(apperrors.KindConflict, "web.settings.ai_agents.error_duplicate_label", "AI agent label already exists")
+		case codes.FailedPrecondition:
+			return apperrors.EK(apperrors.KindConflict, "web.settings.ai_agents.error_in_use", "AI agent is in use by active campaigns")
+		}
 	}
 	return err
 }

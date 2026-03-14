@@ -120,6 +120,9 @@ func (s *Service) RevokeCredential(ctx context.Context, in *aiv1.RevokeCredentia
 	if credentialID == "" {
 		return nil, status.Error(codes.InvalidArgument, "credential_id is required")
 	}
+	if err := s.ensureCredentialNotBoundToActiveCampaigns(ctx, userID, credentialID); err != nil {
+		return nil, err
+	}
 
 	revokedAt := s.clock().UTC()
 	if err := s.credentialStore.RevokeCredential(ctx, userID, credentialID, revokedAt); err != nil {

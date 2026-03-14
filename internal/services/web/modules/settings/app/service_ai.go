@@ -132,6 +132,19 @@ func (s service) CreateAIAgent(ctx context.Context, userID string, input CreateA
 	return s.gateway.CreateAIAgent(ctx, resolvedUserID, input)
 }
 
+// DeleteAIAgent removes one user-owned AI agent when it is not in use.
+func (s service) DeleteAIAgent(ctx context.Context, userID string, agentID string) error {
+	resolvedUserID, err := RequireUserID(userID)
+	if err != nil {
+		return err
+	}
+	resolvedAgentID := strings.TrimSpace(agentID)
+	if resolvedAgentID == "" || !isSafeCredentialPathID(resolvedAgentID) {
+		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_agent_required", "agent is required")
+	}
+	return s.gateway.DeleteAIAgent(ctx, resolvedUserID, resolvedAgentID)
+}
+
 // RevokeAIKey applies this package workflow transition.
 func (s service) RevokeAIKey(ctx context.Context, userID string, credentialID string) error {
 	resolvedUserID, err := RequireUserID(userID)
@@ -197,19 +210,20 @@ func normalizeSettingsAIAgent(agent SettingsAIAgent) SettingsAIAgent {
 	agent.Label = strings.TrimSpace(agent.Label)
 	agent.Provider = strings.TrimSpace(agent.Provider)
 	agent.Model = strings.TrimSpace(agent.Model)
-	agent.Status = strings.TrimSpace(agent.Status)
+	agent.AuthState = strings.TrimSpace(agent.AuthState)
 	agent.CreatedAt = strings.TrimSpace(agent.CreatedAt)
 	agent.Instructions = strings.TrimSpace(agent.Instructions)
 
 	if agent.Provider == "" {
 		agent.Provider = "Unknown"
 	}
-	if agent.Status == "" {
-		agent.Status = "Unspecified"
+	if agent.AuthState == "" {
+		agent.AuthState = "Unknown"
 	}
 	if agent.CreatedAt == "" {
 		agent.CreatedAt = "-"
 	}
+	agent.CanDelete = agent.CanDelete && agent.ID != ""
 	return agent
 }
 

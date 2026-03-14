@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-03"
+last_reviewed: "2026-03-09"
 ---
 
 # Campaign AI Orchestration
@@ -83,6 +83,17 @@ in its claims check, so grants issued for a previous session are automatically
 invalid when a new session starts — no epoch bump required.
 
 Epoch does not rotate for unrelated campaign mutations (name/theme/cover/etc.).
+
+Credential/provider-grant revocation is blocked while the revoked auth reference
+is still used by any agent bound to a `DRAFT` or `ACTIVE` campaign. This keeps
+campaign bindings explicit and prevents silent breakage from a settings-side
+revoke.
+
+Agent bind eligibility requires both:
+
+- persisted agent lifecycle state `active`
+- a ready auth reference (`credential` or `provider grant`) that is neither
+  revoked nor otherwise unavailable
 
 ## Turn Flow
 

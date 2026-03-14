@@ -176,6 +176,36 @@ func TestRevokeCredential(t *testing.T) {
 	}
 }
 
+func TestRevokeCredentialFailsWhenReferencedAgentIsBoundToActiveCampaigns(t *testing.T) {
+	store := newFakeStore()
+	now := time.Now()
+	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: now, UpdatedAt: now}
+	store.Agents["agent-1"] = storage.AgentRecord{
+		ID:           "agent-1",
+		OwnerUserID:  "user-1",
+		Label:        "narrator",
+		Provider:     "openai",
+		Model:        "gpt-4o-mini",
+		CredentialID: "cred-1",
+		Status:       "active",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	svc := NewService(store, store, &fakeSealer{})
+	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
+		usageByAgent: map[string]int32{"agent-1": 1},
+	})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
+
+	_, err := svc.RevokeCredential(ctx, &aiv1.RevokeCredentialRequest{CredentialId: "cred-1"})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+
+	if got := store.Credentials["cred-1"].Status; got != "active" {
+		t.Fatalf("credential status = %q, want active", got)
+	}
+}
+
 func TestCreateAgentRequiresActiveOwnedCredential(t *testing.T) {
 	store := newFakeStore()
 	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "revoked", CreatedAt: time.Now(), UpdatedAt: time.Now()}
@@ -366,6 +396,86 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 	if got := resp.GetAgents()[0].GetId(); got != "agent-1" {
 		t.Fatalf("agent id = %q, want %q", got, "agent-1")
 	}
+}
+
+func TestListAgentsIncludesAuthStateAndUsage(t *testing.T) {
+	store := newFakeStore()
+	now := time.Now()
+	store.Credentials["cred-1"] = storage.CredentialRecord{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            "Main",
+		SecretCiphertext: "enc:sk-1",
+		Status:           "active",
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	store.Agents["agent-1"] = storage.AgentRecord{
+		ID:           "agent-1",
+		OwnerUserID:  "user-1",
+		Label:        "narrator",
+		Provider:     "openai",
+		Model:        "gpt-4o-mini",
+		CredentialID: "cred-1",
+		Status:       "active",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	svc := NewService(store, store, &fakeSealer{})
+	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
+		usageByAgent: map[string]int32{"agent-1": 2},
+	})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
+
+	resp, err := svc.ListAgents(ctx, &aiv1.ListAgentsRequest{PageSize: 10})
+	if err != nil {
+		t.Fatalf("list agents: %v", err)
+	}
+	if len(resp.GetAgents()) != 1 {
+		t.Fatalf("agents len = %d, want 1", len(resp.GetAgents()))
+	}
+	if got := resp.GetAgents()[0].GetAuthState(); got != aiv1.AgentAuthState_AGENT_AUTH_STATE_READY {
+		t.Fatalf("auth state = %v, want ready", got)
+	}
+	if got := resp.GetAgents()[0].GetActiveCampaignCount(); got != 2 {
+		t.Fatalf("active campaign count = %d, want 2", got)
+	}
+}
+
+func TestValidateCampaignAgentBindingRejectsRevokedCredentialBackedAgent(t *testing.T) {
+	store := newFakeStore()
+	now := time.Now()
+	store.Credentials["cred-1"] = storage.CredentialRecord{
+		ID:          "cred-1",
+		OwnerUserID: "user-1",
+		Provider:    "openai",
+		Label:       "Main",
+		Status:      "revoked",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	store.Agents["agent-1"] = storage.AgentRecord{
+		ID:           "agent-1",
+		OwnerUserID:  "user-1",
+		Label:        "narrator",
+		Provider:     "openai",
+		Model:        "gpt-4o-mini",
+		CredentialID: "cred-1",
+		Status:       "active",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	svc := NewService(store, store, &fakeSealer{})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
+
+	_, err := svc.ValidateCampaignAgentBinding(ctx, &aiv1.ValidateCampaignAgentBindingRequest{
+		AgentId:    "agent-1",
+		CampaignId: "camp-1",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
@@ -2154,6 +2264,45 @@ func TestRevokeProviderGrant(t *testing.T) {
 	}
 	if adapter.lastRevokedToken != "rt-1" {
 		t.Fatalf("revoked token = %q, want %q", adapter.lastRevokedToken, "rt-1")
+	}
+}
+
+func TestRevokeProviderGrantFailsWhenReferencedAgentIsBoundToActiveCampaigns(t *testing.T) {
+	store := newFakeStore()
+	now := time.Now()
+	store.ProviderGrants["grant-1"] = storage.ProviderGrantRecord{
+		ID:              "grant-1",
+		OwnerUserID:     "user-1",
+		Provider:        "openai",
+		GrantedScopes:   []string{"responses.read"},
+		TokenCiphertext: `enc:{"access_token":"at-1","refresh_token":"rt-1"}`,
+		Status:          "active",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+	store.Agents["agent-1"] = storage.AgentRecord{
+		ID:              "agent-1",
+		OwnerUserID:     "user-1",
+		Label:           "narrator",
+		Provider:        "openai",
+		Model:           "gpt-4o-mini",
+		ProviderGrantID: "grant-1",
+		Status:          "active",
+		CreatedAt:       now,
+		UpdatedAt:       now,
+	}
+
+	svc := NewService(store, store, &fakeSealer{})
+	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
+		usageByAgent: map[string]int32{"agent-1": 1},
+	})
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
+
+	_, err := svc.RevokeProviderGrant(ctx, &aiv1.RevokeProviderGrantRequest{ProviderGrantId: "grant-1"})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+
+	if got := store.ProviderGrants["grant-1"].Status; got != "active" {
+		t.Fatalf("provider grant status = %q, want active", got)
 	}
 }
 

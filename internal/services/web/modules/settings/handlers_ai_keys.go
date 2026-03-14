@@ -44,6 +44,12 @@ func (h handlers) handleAIKeysCreate(w http.ResponseWriter, r *http.Request) {
 func (h handlers) handleAIKeyRevoke(w http.ResponseWriter, r *http.Request, credentialID string) {
 	ctx, userID := h.RequestContextAndUserID(r)
 	if err := h.aiKeys.RevokeAIKey(ctx, userID, credentialID); err != nil {
+		statusCode := apperrors.HTTPStatus(err)
+		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
+			h.writeFlashNotice(w, r, flashnotice.Notice{Kind: flashnotice.KindError, Key: apperrors.LocalizationKey(err)})
+			httpx.WriteRedirect(w, r, routepath.AppSettingsAIKeys)
+			return
+		}
 		h.WriteError(w, r, err)
 		return
 	}

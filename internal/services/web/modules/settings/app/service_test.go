@@ -26,6 +26,7 @@ type gatewayStub struct {
 	lastLabel        string
 	lastSecret       string
 	lastAgent        CreateAIAgentInput
+	lastAgentID      string
 	lastCredentialID string
 	lastCredential   string
 }
@@ -105,6 +106,11 @@ func (g *gatewayStub) CreateAIKey(_ context.Context, userID string, label string
 func (g *gatewayStub) CreateAIAgent(_ context.Context, userID string, input CreateAIAgentInput) error {
 	g.lastUserID = userID
 	g.lastAgent = input
+	return g.err
+}
+func (g *gatewayStub) DeleteAIAgent(_ context.Context, userID string, agentID string) error {
+	g.lastUserID = userID
+	g.lastAgentID = agentID
 	return g.err
 }
 func (g *gatewayStub) RevokeAIKey(_ context.Context, userID string, credentialID string) error {
@@ -220,6 +226,11 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 		t.Fatalf("RevokeAIKey() error = nil, want unavailable error")
 	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
 		t.Fatalf("RevokeAIKey() status = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+	if err := gateway.DeleteAIAgent(ctx, "user-1", "agent-1"); err == nil {
+		t.Fatalf("DeleteAIAgent() error = nil, want unavailable error")
+	} else if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("DeleteAIAgent() status = %d, want %d", got, http.StatusServiceUnavailable)
 	}
 }
 
@@ -395,7 +406,7 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 	gateway := &gatewayStub{
 		credentials: []SettingsAICredentialOption{{ID: " cred-1 ", Label: " Primary ", Provider: " OpenAI "}},
 		models:      []SettingsAIModelOption{{ID: " gpt-4o-mini ", OwnedBy: " openai "}},
-		agents:      []SettingsAIAgent{{ID: " agent-1 ", Label: " narrator ", Provider: " OpenAI ", Model: " gpt-4o-mini ", Status: " Active ", CreatedAt: " 2026-01-01 00:00 UTC "}},
+		agents:      []SettingsAIAgent{{ID: " agent-1 ", Label: " narrator ", Provider: " OpenAI ", Model: " gpt-4o-mini ", AuthState: " Ready ", CanDelete: true, ActiveCampaignCount: 2, CreatedAt: " 2026-01-01 00:00 UTC "}},
 	}
 	svc := NewService(gateway)
 
@@ -422,7 +433,7 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListAIAgents() error = %v", err)
 	}
-	if len(agents) != 1 || agents[0].Label != "narrator" || agents[0].Status != "Active" {
+	if len(agents) != 1 || agents[0].Label != "narrator" || agents[0].AuthState != "Ready" || agents[0].ActiveCampaignCount != 2 {
 		t.Fatalf("agents = %+v", agents)
 	}
 
@@ -442,5 +453,11 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 	}
 	if gateway.lastAgent.Instructions != "Keep the session moving." {
 		t.Fatalf("instructions = %q, want %q", gateway.lastAgent.Instructions, "Keep the session moving.")
+	}
+	if err := svc.DeleteAIAgent(context.Background(), "user-1", " agent-1 "); err != nil {
+		t.Fatalf("DeleteAIAgent() error = %v", err)
+	}
+	if gateway.lastAgentID != "agent-1" {
+		t.Fatalf("agent id = %q, want %q", gateway.lastAgentID, "agent-1")
 	}
 }

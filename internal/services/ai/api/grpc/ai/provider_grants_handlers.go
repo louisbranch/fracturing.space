@@ -284,6 +284,9 @@ func (s *Service) RevokeProviderGrant(ctx context.Context, in *aiv1.RevokeProvid
 	if providerGrantID == "" {
 		return nil, status.Error(codes.InvalidArgument, "provider_grant_id is required")
 	}
+	if err := s.ensureProviderGrantNotBoundToActiveCampaigns(ctx, userID, providerGrantID); err != nil {
+		return nil, err
+	}
 
 	record, err := s.providerGrantStore.GetProviderGrant(ctx, providerGrantID)
 	if err != nil {
