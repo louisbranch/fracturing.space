@@ -8,7 +8,11 @@ import (
 	"time"
 
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
+	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
@@ -22,7 +26,7 @@ import (
 )
 
 // defaultProtectedModules returns stable authenticated web modules.
-func defaultProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []Module {
+func defaultProtectedModules(deps Dependencies, res ModuleResolvers, opts ProtectedModuleOptions) []module.Module {
 	return buildProtectedModules(deps, res, opts)
 }
 
@@ -31,7 +35,7 @@ func buildProtectedModules(
 	deps Dependencies,
 	res ModuleResolvers,
 	opts ProtectedModuleOptions,
-) []Module {
+) []module.Module {
 	base := modulehandler.NewBase(res.ResolveUserID, res.ResolveLanguage, res.ResolveViewer)
 	dashboardSync := dashboardsync.New(deps.DashboardSync.UserHubControlClient, deps.DashboardSync.GameEventClient, nil)
 	campaignMod := newCampaignModule(deps, base, opts.ChatFallbackPort, dashboardSync, defaultCampaignWorkflows(deps))
@@ -41,25 +45,28 @@ func buildProtectedModules(
 		FlashMeta:     opts.RequestSchemePolicy,
 		DashboardSync: dashboardSync,
 	})
-	notifMod := notifications.New(notifications.Config{
-		Gateway: notificationsgateway.NewGRPCGateway(deps.Notifications.NotificationClient),
-		Base:    base,
-	})
-
 	dashGw := dashboardgateway.NewGRPCGateway(deps.Dashboard.UserHubClient)
 	dashMod := dashboard.New(dashboard.Config{
 		Gateway:        dashGw,
 		Base:           base,
 		HealthProvider: statusHealthProvider(deps.Dashboard.StatusClient),
 	})
-	return []Module{dashMod, settingsMod, notifMod, campaignMod}
+	protected := []module.Module{dashMod, settingsMod}
+	if deps.Notifications.NotificationClient != nil {
+		protected = append(protected, notifications.New(notifications.Config{
+			Gateway: notificationsgateway.NewGRPCGateway(deps.Notifications.NotificationClient),
+			Base:    base,
+		}))
+	}
+	protected = append(protected, campaignMod)
+	return protected
 }
 
 // defaultCampaignWorkflows returns the production workflow implementations
 // keyed by canonical game-system identifiers.
-func defaultCampaignWorkflows(deps Dependencies) map[campaigns.GameSystem]campaigns.CharacterCreationWorkflow {
-	return map[campaigns.GameSystem]campaigns.CharacterCreationWorkflow{
-		campaigns.GameSystemDaggerheart: daggerheart.New(deps.AssetBaseURL),
+func defaultCampaignWorkflows(deps Dependencies) campaignworkflow.Registry {
+	return campaignworkflow.Registry{
+		campaignapp.GameSystemDaggerheart: daggerheart.New(deps.AssetBaseURL),
 	}
 }
 
@@ -69,8 +76,8 @@ func newCampaignModule(
 	base modulehandler.Base,
 	chatFallbackPort string,
 	dashboardSync campaigns.DashboardSync,
-	workflows map[campaigns.GameSystem]campaigns.CharacterCreationWorkflow,
-) Module {
+	workflows campaignworkflow.Registry,
+) module.Module {
 	return campaigns.New(campaigns.Config{
 		Gateway:          newCampaignGateway(deps),
 		Base:             base,
@@ -89,7 +96,7 @@ func statusHealthProvider(client statusv1.StatusServiceClient) dashboardapp.Heal
 	if client == nil {
 		return nil
 	}
-	return func(ctx context.Context) []dashboard.ServiceHealthEntry {
+	return func(ctx context.Context) []dashboardapp.ServiceHealthEntry {
 		ctx, cancel := context.WithTimeout(ctx, statusHealthTimeout)
 		defer cancel()
 		resp, err := client.GetSystemStatus(ctx, &statusv1.GetSystemStatusRequest{})
@@ -101,12 +108,12 @@ func statusHealthProvider(client statusv1.StatusServiceClient) dashboardapp.Heal
 		if len(services) == 0 {
 			return nil
 		}
-		entries := make([]dashboard.ServiceHealthEntry, 0, len(services))
+		entries := make([]dashboardapp.ServiceHealthEntry, 0, len(services))
 		for _, svc := range services {
 			if svc == nil {
 				continue
 			}
-			entries = append(entries, dashboard.ServiceHealthEntry{
+			entries = append(entries, dashboardapp.ServiceHealthEntry{
 				Label:     capitalizeLabel(strings.TrimSpace(svc.GetService())),
 				Available: svc.GetAggregateStatus() == statusv1.CapabilityStatus_CAPABILITY_STATUS_OPERATIONAL,
 			})
@@ -119,19 +126,30 @@ func statusHealthProvider(client statusv1.StatusServiceClient) dashboardapp.Heal
 }
 
 // newCampaignGateway builds package wiring for this web seam.
-func newCampaignGateway(deps Dependencies) campaigns.CampaignGateway {
-	return campaigns.NewGRPCGateway(campaigns.GRPCGatewayDeps{
-		CampaignClient:           deps.Campaigns.CampaignClient,
-		CommunicationClient:      deps.Campaigns.CommunicationClient,
-		AgentClient:              deps.Campaigns.AgentClient,
-		ParticipantClient:        deps.Campaigns.ParticipantClient,
-		CharacterClient:          deps.Campaigns.CharacterClient,
-		DaggerheartContentClient: deps.Campaigns.DaggerheartContentClient,
-		DaggerheartAssetClient:   deps.Campaigns.DaggerheartAssetClient,
-		SessionClient:            deps.Campaigns.SessionClient,
-		InviteClient:             deps.Campaigns.InviteClient,
-		AuthClient:               deps.Campaigns.AuthClient,
-		AuthorizationClient:      deps.Campaigns.AuthorizationClient,
-		AssetBaseURL:             deps.AssetBaseURL,
+func newCampaignGateway(deps Dependencies) campaignapp.CampaignGateway {
+	return campaigngateway.NewGRPCGateway(campaigngateway.GRPCGatewayDeps{
+		Read: campaigngateway.GRPCGatewayReadDeps{
+			Campaign:           deps.Campaigns.CampaignClient,
+			Communication:      deps.Campaigns.CommunicationClient,
+			Agent:              deps.Campaigns.AgentClient,
+			Participant:        deps.Campaigns.ParticipantClient,
+			Character:          deps.Campaigns.CharacterClient,
+			DaggerheartContent: deps.Campaigns.DaggerheartContentClient,
+			DaggerheartAsset:   deps.Campaigns.DaggerheartAssetClient,
+			Session:            deps.Campaigns.SessionClient,
+			Invite:             deps.Campaigns.InviteClient,
+		},
+		Mutation: campaigngateway.GRPCGatewayMutationDeps{
+			Campaign:    deps.Campaigns.CampaignClient,
+			Participant: deps.Campaigns.ParticipantClient,
+			Character:   deps.Campaigns.CharacterClient,
+			Session:     deps.Campaigns.SessionClient,
+			Invite:      deps.Campaigns.InviteClient,
+			Auth:        deps.Campaigns.AuthClient,
+		},
+		Authorization: campaigngateway.GRPCGatewayAuthorizationDeps{
+			Client: deps.Campaigns.AuthorizationClient,
+		},
+		AssetBaseURL: deps.AssetBaseURL,
 	})
 }

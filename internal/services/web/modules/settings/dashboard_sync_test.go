@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -42,7 +43,7 @@ func TestMountProfilePostDoesNotTriggerDashboardSyncOnValidationError(t *testing
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	form := url.Values{"name": {strings.Repeat("x", userProfileNameMaxLength+1)}}
+	form := url.Values{"name": {strings.Repeat("x", settingsapp.UserProfileNameMaxLength+1)}}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsProfile, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()

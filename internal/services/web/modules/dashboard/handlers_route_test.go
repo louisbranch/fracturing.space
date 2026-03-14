@@ -17,7 +17,7 @@ import (
 func TestHandleIndexRendersDashboard(t *testing.T) {
 	t.Parallel()
 
-	gw := &fakeGateway{snapshot: DashboardSnapshot{NeedsProfileCompletion: true}}
+	gw := &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{NeedsProfileCompletion: true}}
 	h := newTestHandlers(gw)
 	mux := http.NewServeMux()
 	registerRoutes(mux, h)
@@ -32,6 +32,9 @@ func TestHandleIndexRendersDashboard(t *testing.T) {
 	body := rr.Body.String()
 	if !strings.Contains(body, "Dashboard") {
 		t.Fatalf("body missing dashboard title")
+	}
+	if !strings.Contains(body, `data-dashboard-block="profile-pending"`) {
+		t.Fatalf("body missing pending-profile block: %q", body)
 	}
 }
 
@@ -72,6 +75,9 @@ func TestHandleIndexGracefullyDegradesWhenGatewayFails(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d (degraded render)", rr.Code, http.StatusOK)
 	}
+	if !strings.Contains(rr.Body.String(), `data-dashboard-status="unavailable"`) {
+		t.Fatalf("body = %q, want unavailable dashboard status notice", rr.Body.String())
+	}
 }
 
 func TestHandleIndexNilGatewayRendersDegradedDashboard(t *testing.T) {
@@ -87,6 +93,9 @@ func TestHandleIndexNilGatewayRendersDegradedDashboard(t *testing.T) {
 
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if !strings.Contains(rr.Body.String(), `data-dashboard-status="unavailable"`) {
+		t.Fatalf("body = %q, want unavailable dashboard status notice", rr.Body.String())
 	}
 }
 

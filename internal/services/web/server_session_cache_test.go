@@ -9,6 +9,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
@@ -18,7 +19,7 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 	_, _ = auth.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "user-1"})
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{SessionClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}},
+			principal.Dependencies{SessionClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -62,8 +63,8 @@ func campaignMainClass(coverImageURL string) string {
 
 // campaignPageContext holds the shared state loaded for any campaign detail page.
 type campaignPageContext struct {
-	workspace CampaignWorkspace
-	sessions  []CampaignSession
+	workspace campaignapp.CampaignWorkspace
+	sessions  []campaignapp.CampaignSession
 	loc       webtemplates.Localizer
 	lang      string
 	locale    language.Tag

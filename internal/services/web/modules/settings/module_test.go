@@ -11,6 +11,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
@@ -200,6 +201,60 @@ func TestMountSettingsRootHTMXUsesHXRedirect(t *testing.T) {
 	}
 }
 
+func TestMountRedirectsSettingsRootToFirstAvailableSurface(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		gateway  settingsapp.Gateway
+		expected string
+	}{
+		{
+			name: "locale when profile unavailable",
+			gateway: settingsgateway.NewGRPCGateway(
+				nil,
+				&accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+				nil,
+				nil,
+				nil,
+			),
+			expected: routepath.AppSettingsLocale,
+		},
+		{
+			name:     "ai keys when account unavailable",
+			gateway:  settingsgateway.NewGRPCGateway(nil, nil, nil, &credentialClientStub{}, nil),
+			expected: routepath.AppSettingsAIKeys,
+		},
+		{
+			name:     "ai agents when only agents surface available",
+			gateway:  settingsgateway.NewGRPCGateway(nil, nil, nil, &credentialClientStub{}, &agentClientStub{}),
+			expected: routepath.AppSettingsAIKeys,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			m := New(Config{Gateway: tc.gateway, Base: settingsTestBase()})
+			mount, err := m.Mount()
+			if err != nil {
+				t.Fatalf("Mount() error = %v", err)
+			}
+			req := httptest.NewRequest(http.MethodGet, routepath.AppSettings, nil)
+			rr := httptest.NewRecorder()
+			mount.Handler.ServeHTTP(rr, req)
+			if rr.Code != http.StatusFound {
+				t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+			}
+			if got := rr.Header().Get("Location"); got != tc.expected {
+				t.Fatalf("Location = %q, want %q", got, tc.expected)
+			}
+		})
+	}
+}
+
 func TestModuleIDReturnsSettings(t *testing.T) {
 	t.Parallel()
 
@@ -223,6 +278,30 @@ func TestModuleHealthyAndSchemePolicyOptions(t *testing.T) {
 	}
 	if module.flashMeta != scheme {
 		t.Fatalf("module.flashMeta = %+v, want %+v", module.flashMeta, scheme)
+	}
+}
+
+func TestModuleHealthyWhenAnySettingsSurfaceIsAvailable(t *testing.T) {
+	t.Parallel()
+
+	if !New(Config{
+		Gateway: settingsgateway.NewGRPCGateway(
+			nil,
+			&accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+			nil,
+			nil,
+			nil,
+		),
+		Base: settingsTestBase(),
+	}).Healthy() {
+		t.Fatalf("locale-only settings module = false, want true")
+	}
+
+	if !New(Config{
+		Gateway: settingsgateway.NewGRPCGateway(nil, nil, nil, &credentialClientStub{}, nil),
+		Base:    settingsTestBase(),
+	}).Healthy() {
+		t.Fatalf("ai-only settings module = false, want true")
 	}
 }
 
@@ -458,6 +537,40 @@ func TestMountServesSettingsSubpaths(t *testing.T) {
 	}
 }
 
+func TestMountHidesUnavailableSettingsLinksFromMenu(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{
+		Gateway: settingsgateway.NewGRPCGateway(
+			nil,
+			&accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+			nil,
+			nil,
+			nil,
+		),
+		Base: settingsTestBase(),
+	})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsLocale, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `href="`+routepath.AppSettingsLocale+`"`) {
+		t.Fatalf("body missing locale menu href: %q", body)
+	}
+	for _, href := range []string{routepath.AppSettingsProfile, routepath.AppSettingsAIKeys, routepath.AppSettingsAIAgents} {
+		if strings.Contains(body, `href="`+href+`"`) {
+			t.Fatalf("body unexpectedly exposes unavailable menu href %q: %q", href, body)
+		}
+	}
+}
+
 func TestMountSettingsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
@@ -654,7 +767,7 @@ func TestMountProfilePostValidationErrorRendersBadRequest(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	form := url.Values{"name": {strings.Repeat("x", userProfileNameMaxLength+1)}}
+	form := url.Values{"name": {strings.Repeat("x", settingsapp.UserProfileNameMaxLength+1)}}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsProfile, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
@@ -680,7 +793,7 @@ func TestMountProfilePostValidationErrorRendersLocalizedBadRequest(t *testing.T)
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	form := url.Values{"name": {strings.Repeat("x", userProfileNameMaxLength+1)}}
+	form := url.Values{"name": {strings.Repeat("x", settingsapp.UserProfileNameMaxLength+1)}}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsProfile, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()

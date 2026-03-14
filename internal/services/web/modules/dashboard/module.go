@@ -11,14 +11,14 @@ import (
 
 // Module provides authenticated dashboard routes.
 type Module struct {
-	gateway        DashboardGateway
+	gateway        dashboardapp.Gateway
 	base           modulehandler.Base
 	healthProvider dashboardapp.HealthProvider
 }
 
 // Config defines constructor dependencies for a dashboard module.
 type Config struct {
-	Gateway        DashboardGateway
+	Gateway        dashboardapp.Gateway
 	Base           modulehandler.Base
 	HealthProvider dashboardapp.HealthProvider
 }

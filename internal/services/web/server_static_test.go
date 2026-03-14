@@ -8,6 +8,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestStaticThemeServedByWeb(t *testing.T) {
@@ -200,7 +201,7 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 	h, err := NewHandler(Config{
 		ChatHTTPAddr: "localhost:8086",
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{SessionClient: auth},
+			principal.Dependencies{SessionClient: auth},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Campaigns: modules.CampaignDependencies{

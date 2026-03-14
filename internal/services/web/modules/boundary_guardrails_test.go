@@ -5,6 +5,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -12,12 +13,23 @@ func TestProtectedModuleCompatibilityShimsAreRemoved(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{
+		"campaigns/contracts.go",
+		"campaigns/contracts_gateway.go",
+		"campaigns/handlers_detail_pages.go",
+		"campaigns/routes_surface_core.go",
+		"campaigns/routes_surface_workflow.go",
+		"campaigns/routes_surface_mutations.go",
+		"campaigns/service_factory.go",
+		"campaigns/workflow_contract.go",
+		"settings/contracts.go",
 		"settings/service.go",
 		"settings/gateway_grpc.go",
 		"settings/gateway_unavailable.go",
+		"notifications/contracts.go",
 		"notifications/service.go",
 		"notifications/gateway_grpc.go",
 		"notifications/gateway_unavailable.go",
+		"dashboard/contracts.go",
 		"dashboard/service.go",
 		"dashboard/gateway_grpc.go",
 		"dashboard/gateway_unavailable.go",
@@ -46,6 +58,7 @@ func TestProtectedModuleRootsWireAppServicesDirectly(t *testing.T) {
 		pkg    string
 		method string
 	}{
+		{path: "campaigns/module.go", pkg: "campaignapp", method: "NewService"},
 		{path: "settings/module.go", pkg: "settingsapp", method: "NewService"},
 		{path: "notifications/module.go", pkg: "notificationsapp", method: "NewService"},
 		{path: "dashboard/module.go", pkg: "dashboardapp", method: "NewService"},
@@ -64,6 +77,7 @@ func TestProfileCompatibilityShimsAreRemoved(t *testing.T) {
 	t.Parallel()
 
 	paths := []string{
+		"profile/contracts.go",
 		"profile/service.go",
 		"profile/gateway_grpc.go",
 	}
@@ -110,6 +124,30 @@ func TestPublicAuthCompatibilityShimsAreRemoved(t *testing.T) {
 	}
 }
 
+func TestPublicAuthSurfaceWrapperPackagesAreRemoved(t *testing.T) {
+	t.Parallel()
+
+	paths := []string{
+		"publicauth/surfaces/shell/module.go",
+		"publicauth/surfaces/passkeys/module.go",
+		"publicauth/surfaces/authredirect/module.go",
+	}
+
+	for _, path := range paths {
+		path := path
+		t.Run(path, func(t *testing.T) {
+			t.Parallel()
+			_, err := os.Stat(path)
+			if err == nil {
+				t.Fatalf("%q exists; publicauth route-surface ownership should stay in the root package", path)
+			}
+			if !os.IsNotExist(err) {
+				t.Fatalf("Stat(%q) error = %v", path, err)
+			}
+		})
+	}
+}
+
 func TestPublicAuthRootWiresAppServiceDirectly(t *testing.T) {
 	t.Parallel()
 	assertMountCallsSelector(t, "publicauth/module.go", "publicauthapp", "NewService")
@@ -145,6 +183,34 @@ func TestRegistryWiresSplitSocialContracts(t *testing.T) {
 	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 0, "Profile", "AuthClient")
 	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 1, "Profile", "SocialClient")
 	assertRegistryGatewayCallUsesNestedDepField(t, "registry_protected.go", "settingsgateway", "NewGRPCGateway", 0, "Settings", "SocialClient")
+	assertRegistryUsesGatewayDepsLiteral(t, "registry_protected.go", "campaigngateway", "NewGRPCGateway")
+	assertFileDoesNotContain(t, "registry_protected.go", "campaigns.GameSystem")
+	assertFileDoesNotContain(t, "registry_protected.go", "campaigns.CharacterCreationWorkflow")
+	assertFileDoesNotContain(t, "registry_protected.go", "campaigns.CampaignGateway")
+}
+
+func TestModulesPackageDoesNotReexportModuleContractAliases(t *testing.T) {
+	t.Parallel()
+
+	parsed := parseFile(t, "module.go")
+	for _, decl := range parsed.Decls {
+		gen, ok := decl.(*ast.GenDecl)
+		if !ok || gen.Tok != token.TYPE {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok || typeSpec.Name == nil {
+				continue
+			}
+			if typeSpec.Name.Name != "Module" && typeSpec.Name.Name != "Mount" {
+				continue
+			}
+			if _, isAlias := typeSpec.Type.(*ast.Ident); isAlias && typeSpec.Assign.IsValid() {
+				t.Fatalf("modules/module.go reexports %s alias; singular internal/services/web/module should stay the only module contract owner", typeSpec.Name.Name)
+			}
+		}
+	}
 }
 
 func assertMountCallsSelector(t *testing.T, path, pkgName, methodName string) {
@@ -327,4 +393,48 @@ func parseFile(t *testing.T, path string) *ast.File {
 		t.Fatalf("parse %s: %v", path, err)
 	}
 	return parsed
+}
+
+func assertRegistryUsesGatewayDepsLiteral(t *testing.T, path, pkgName, methodName string) {
+	t.Helper()
+
+	parsed := parseFile(t, path)
+	found := false
+	ast.Inspect(parsed, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel == nil || sel.Sel.Name != methodName {
+			return true
+		}
+		ident, ok := sel.X.(*ast.Ident)
+		if !ok || ident.Name != pkgName || len(call.Args) != 1 {
+			return true
+		}
+		if _, ok := call.Args[0].(*ast.CompositeLit); !ok {
+			return true
+		}
+		found = true
+		return false
+	})
+	if !found {
+		t.Fatalf("%s does not call %s.%s with an explicit deps literal", path, pkgName, methodName)
+	}
+}
+
+func assertFileDoesNotContain(t *testing.T, path, fragment string) {
+	t.Helper()
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) error = %v", path, err)
+	}
+	if len(data) == 0 {
+		t.Fatalf("%s unexpectedly empty", path)
+	}
+	if strings.Contains(string(data), fragment) {
+		t.Fatalf("%s still contains %q", path, fragment)
+	}
 }

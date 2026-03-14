@@ -4,7 +4,7 @@ parent: "Guides"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-09"
 ---
 
 # Web Module Playbook
@@ -19,14 +19,15 @@ Create a package under `internal/services/web/modules/<area>/` with this
 baseline:
 
 - `module.go`: module identity and mount implementation.
-- `handlers.go`: HTTP handlers for the area.
+- `handlers.go`: shared HTTP transport wiring for the area.
 - `routes.go`: route registration within the local mux.
 - `routes_test.go`: route contract and method coverage.
 
 Supported module archetypes:
 
 - `transport-only`: root package owns route/handler rendering flow without
-  dedicated app/gateway subpackages (for example `discovery`).
+  dedicated app/gateway subpackages. Use this only while the area remains small
+  and has no meaningful orchestration policy.
 - `transport + app + gateway`: root package is transport-thin while
   orchestration and transport-adapter mapping live in subpackages.
 
@@ -37,6 +38,34 @@ inside the same area boundary:
 - `<area>/`: transport/module surface only (mount, handlers, routes, view maps).
 - `<area>/app/`: domain contracts + orchestration logic.
 - `<area>/gateway/`: transport adapter integrations (for example gRPC mapping).
+
+When a module has multiple contributor-owned sub-areas, keep that split visible
+in the root transport package too:
+
+- use shared files like `handlers.go` and `routes.go` only for package wiring or
+  true cross-area helpers,
+- move area-owned handler bodies into files such as
+  `handlers_profile.go`, `handlers_locale.go`, `handlers_ai_keys.go`,
+  `handlers_ai_agents.go`,
+- mirror the same ownership in route registration (for example
+  `routes_account.go`, `routes_ai.go`) so route edits stay local to the
+  transport surface they expose.
+
+For layered modules, carry the same ownership split below transport when the
+app/gateway seam stops being cohesive:
+
+- split area-local service methods by owned surface (for example
+  `app/service_account.go` and `app/service_ai.go`) instead of keeping one
+  catch-all service file,
+- split fail-closed gateway behavior the same way so degraded-mode policy stays
+  local to the owned surface,
+- split gateway adapters by dependency bundle (for example
+  `gateway/grpc_account.go` and `gateway/grpc_ai.go`) rather than mixing
+  unrelated backend clients behind one broad implementation file.
+- when one gateway still spans many operations, store query-side and
+  mutation-side dependencies in explicit bundles with narrow capability
+  interfaces instead of one flat “everything client” struct. Keep authz checks
+  in their own bundle when the module has fail-closed authorization behavior.
 
 ## Authoring Rules
 
@@ -51,7 +80,7 @@ inside the same area boundary:
   composition (registry composition files under `modules/registry_*.go`) rather
   than inside `Mount`.
 - Runtime module selection is composition-owned: `composition.ComposeAppHandler`
-  calls `modules.Registry.Build(modules.BuildInput)` to assemble module sets.
+  calls a `modules.RegistryBuilder` with `modules.RegistryInput` to assemble module sets.
   Keep module packages unaware of startup mode flags.
 - Modules receive their narrow dependencies at construction time via the
   registry, not through `Mount`.  Protected modules receive a
@@ -61,12 +90,41 @@ inside the same area boundary:
   `Dependencies.Campaigns.*`, `Dependencies.Settings.*`). Do not add new
   flat cross-area dependency fields.
 - For modules with segmented route ownership, assemble route registration
-  through explicit route-surface slices (for example campaigns:
-  stable core + stable workflow + stable mutations) so ownership stays
-  diffable in one place.
+  through explicit owned slices (for example campaigns:
+  overview + participants + characters + character-creation +
+  sessions/game + invites) so ownership stays diffable in one place.
+- When one module surface depends on multiple backend services with different
+  availability profiles, derive health per user-facing surface instead of one
+  module-wide backend bit. Hide unavailable sibling links from owned navigation
+  and choose `/app/<module>` redirects from the first available surface.
+- When a protected module is omitted entirely because its backend is not
+  configured, app-shell affordances for that module must also be explicit and
+  conditional. Do not keep unconditional nav links to routes that composition
+  no longer mounts.
 - Keep root module packages transport-thin: handlers/routes own request/response
   flow while orchestration and gateway mapping live in area-local `app` and
   `gateway` subpackages when present.
+- When a system-specific workflow includes form parsing or template/view
+  mapping, keep workflow registration in the root transport area. `app`
+  services may accept a workflow as input for orchestration, but they should
+  not also own the workflow registry or transport-facing parser/view methods.
+- When those system-specific workflows become a contributor-owned seam of their
+  own, move the contract into an area-local subpackage such as
+  `<area>/workflow` instead of defining it in the root module package.
+- For page-heavy transport areas, prefer explicit per-surface load -> populate
+  -> render flow over generic closure/spec scaffolds once contributors need to
+  trace behavior route-by-route.
+- Keep presentation-specific asset formatting in transport/view seams. `app`
+  services may return avatar or media identity fields, but final CDN/static URL
+  construction belongs in view mappers or template-facing formatters.
+- Keep module-owned browser copy/rendering inside the module area. Do not make
+  web modules import sibling service render helpers for user-facing copy; if a
+  web surface needs area-specific rendering, add an area-local seam/package
+  under `internal/services/web/modules/<area>/`.
+- Keep shared templ concerns narrow. `internal/services/web/templates` should
+  hold app-shell primitives and small shared helpers; when one area starts
+  accumulating a page set that contributors edit together, move that set under
+  the owning area instead of growing one cross-area template bucket.
 - Temporary root compatibility adapters are migration-only. Remove them in the
   same cutover slice once handlers/modules are wired directly to `app` and
   `gateway` contracts.
@@ -74,10 +132,16 @@ inside the same area boundary:
   out of handlers.
 - Prefer route-param guard helpers for multi-param routes (for example
   `withCampaignAndCharacterID`) so 404 behavior is centralized and testable.
+- Prefer `internal/services/web/platform/routeparam` for single-parameter
+  extraction/guard flow instead of repeating trimmed `PathValue` helpers in
+  individual modules.
 - Prefer route-level contracts that naturally support `HEAD` for `GET`
   surfaces.
 - Source browser endpoint URLs from `routepath` constants/builders (including
   script data attributes) instead of hardcoded literals.
+- Keep `routepath/` ownership split by area when adding or changing browser
+  endpoints. Add route constants/builders to the matching owned file instead of
+  reopening a shared monolith.
 - Emit server-owned app-shell route metadata in layout options so client behavior
   (for example campaign-workspace main styling) is driven by layout contracts,
   not client-side route regexes.
@@ -161,10 +225,8 @@ Public (unauthenticated) modules follow a lighter pattern than protected modules
 
 The `publicauth` package is the reference implementation for split-surface
 public module ownership plus `app`/`gateway` boundaries.
-Public/auth route ownership is split into explicit surface modules under:
-- `internal/services/web/modules/publicauth/surfaces/shell`
-- `internal/services/web/modules/publicauth/surfaces/passkeys`
-- `internal/services/web/modules/publicauth/surfaces/authredirect`
+Public/auth route ownership stays in the root `publicauth` package and is
+selected through explicit surface registration owned by composition.
 
 ## Registering a Module
 
@@ -177,7 +239,7 @@ Public/auth route ownership is split into explicit surface modules under:
   - mount only production-ready handlers by default,
   - keep incomplete handlers unregistered until contracts are stable and
     fail-closed checks are in place.
-5. Ensure new module dependencies are wired through `modules.BuildInput` and
+5. Ensure new module dependencies are wired through `modules.RegistryInput` and
    then assigned into the matching `modules.Dependencies.<Area>` bundle.
 6. If an area is partially ready, keep one module owner and split route
    registration by explicit surfaces instead of exposing unstable handlers by

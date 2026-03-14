@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -13,7 +14,7 @@ import (
 func TestMountCampaignGameRouteRendersNavbarBackButton(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
@@ -73,7 +74,7 @@ func TestMountCampaignGameRouteRendersNavbarBackButton(t *testing.T) {
 func TestMountCampaignGameRouteHTMXRedirectsToFullPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

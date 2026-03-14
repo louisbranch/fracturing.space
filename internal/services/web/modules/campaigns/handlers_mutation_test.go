@@ -417,7 +417,7 @@ func TestCampaignAIBindingRouteRedirectsBackToParticipantEdit(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		authorizationDecision: campaignapp.AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,
@@ -536,9 +536,9 @@ func TestParticipantCreateRouteRejectsHumanGMForAIGMCampaigns(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "First"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		workspaceGMMode: "AI",
-		participants: []CampaignParticipant{{
+		participants: []campaignapp.CampaignParticipant{{
 			ID:             "p-manager",
 			UserID:         "user-123",
 			CampaignAccess: "Manager",
@@ -566,8 +566,8 @@ func TestParticipantUpdateRouteRejectsAIInvariantTampering(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participant: CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participant: campaignapp.CampaignParticipant{
 			ID:             "p-ai",
 			Name:           "Caretaker",
 			Role:           "GM",
@@ -614,14 +614,14 @@ func TestCampaignUpdateRouteValidatesLocale(t *testing.T) {
 func TestRequestContextWithUserIDBehavior(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(newService(fakeGateway{}), modulehandler.NewBase(nil, nil, nil), "", nil)
+	h := newHandlers(campaignapp.NewService(fakeGateway{}), modulehandler.NewBase(nil, nil, nil), "", nil)
 	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
 	ctx, _ := h.RequestContextAndUserID(req)
 	if md, ok := metadata.FromOutgoingContext(ctx); ok && len(md.Get(grpcmeta.UserIDHeader)) > 0 {
 		t.Fatalf("unexpected user metadata when resolver is nil")
 	}
 
-	h = newHandlers(newService(fakeGateway{}), modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), "", nil)
+	h = newHandlers(campaignapp.NewService(fakeGateway{}), modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), "", nil)
 	ctx, _ = h.RequestContextAndUserID(req)
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {
@@ -635,10 +635,10 @@ func TestRequestContextWithUserIDBehavior(t *testing.T) {
 func TestParseAppCharacterKind(t *testing.T) {
 	t.Parallel()
 
-	if kind, ok := parseAppCharacterKind("pc"); !ok || kind != CharacterKindPC {
+	if kind, ok := parseAppCharacterKind("pc"); !ok || kind != campaignapp.CharacterKindPC {
 		t.Fatalf("parseAppCharacterKind pc = (%v, %v)", kind, ok)
 	}
-	if kind, ok := parseAppCharacterKind("npc"); !ok || kind != CharacterKindNPC {
+	if kind, ok := parseAppCharacterKind("npc"); !ok || kind != campaignapp.CharacterKindNPC {
 		t.Fatalf("parseAppCharacterKind npc = (%v, %v)", kind, ok)
 	}
 	if _, ok := parseAppCharacterKind("invalid"); ok {
@@ -648,8 +648,8 @@ func TestParseAppCharacterKind(t *testing.T) {
 
 func managerMutationGateway() fakeGateway {
 	return fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{{
 			ID:             "p-manager",
 			UserID:         "user-123",
 			CampaignAccess: "Manager",

@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	dashboardgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/gateway"
 	modulehandler "github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -110,18 +111,41 @@ func TestMountDashboardHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	}
 }
 
+func TestMountRendersUnavailableStatusNoticeWhenDashboardDataFails(t *testing.T) {
+	t.Parallel()
+
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	m := New(Config{Base: base})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if !strings.Contains(rr.Body.String(), `data-dashboard-status="unavailable"`) {
+		t.Fatalf("body = %q, want unavailable dashboard status notice", rr.Body.String())
+	}
+}
+
 func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 	t.Parallel()
 
-	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-		User: &userhubv1.UserSummary{NeedsProfileCompletion: true},
-	}}
 	base := modulehandler.NewBase(
 		func(*http.Request) string { return "user-1" },
 		func(*http.Request) string { return "pt-BR" },
 		nil,
 	)
-	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{NeedsProfileCompletion: true}}, Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -145,16 +169,15 @@ func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 	t.Parallel()
 
-	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-		User:     &userhubv1.UserSummary{NeedsProfileCompletion: true},
-		Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{"social.profile"}},
-	}}
 	base := modulehandler.NewBase(
 		func(*http.Request) string { return "user-1" },
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+		NeedsProfileCompletion: true,
+		DegradedDependencies:   []string{dashboardapp.DegradedDependencySocialProfile},
+	}}, Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -170,9 +193,12 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 	if strings.Contains(rr.Body.String(), `data-dashboard-block="profile-pending"`) {
 		t.Fatalf("body = %q, want no pending-profile block when social profile is degraded", rr.Body.String())
 	}
-	// Invariant: degraded social profile state suppresses dashboard nudges derived from userhub state.
-	if strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
-		t.Fatalf("body = %q, want no campaign-adventure block when social profile is degraded", rr.Body.String())
+	if !strings.Contains(rr.Body.String(), `data-dashboard-status="degraded"`) {
+		t.Fatalf("body = %q, want degraded dashboard status notice", rr.Body.String())
+	}
+	// Invariant: social-profile degradation must not suppress unrelated dashboard sections that still come from userhub.
+	if !strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
+		t.Fatalf("body = %q, want campaign-adventure block when campaign data remains available", rr.Body.String())
 	}
 	if strings.Contains(rr.Body.String(), `data-dashboard-block="active-sessions"`) {
 		t.Fatalf("body = %q, want no active-sessions block when social profile is degraded", rr.Body.String())
@@ -182,20 +208,15 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *testing.T) {
 	t.Parallel()
 
-	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-		Campaigns: &userhubv1.CampaignSummary{
-			HasMore: false,
-			Campaigns: []*userhubv1.CampaignPreview{
-				{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
-			},
-		},
-	}}
 	base := modulehandler.NewBase(
 		func(*http.Request) string { return "user-1" },
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+		HasDraftOrActiveCampaign: false,
+		CampaignsHasMore:         false,
+	}}, Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -219,20 +240,15 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *testing.T) {
 	t.Parallel()
 
-	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-		Campaigns: &userhubv1.CampaignSummary{
-			HasMore: false,
-			Campaigns: []*userhubv1.CampaignPreview{
-				{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_DRAFT},
-			},
-		},
-	}}
 	base := modulehandler.NewBase(
 		func(*http.Request) string { return "user-1" },
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+		HasDraftOrActiveCampaign: true,
+		CampaignsHasMore:         false,
+	}}, Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -253,21 +269,16 @@ func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.T) {
 	t.Parallel()
 
-	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
-		Metadata: &userhubv1.DashboardMetadata{DegradedDependencies: []string{"game.campaigns"}},
-		Campaigns: &userhubv1.CampaignSummary{
-			HasMore: false,
-			Campaigns: []*userhubv1.CampaignPreview{
-				{CampaignId: "camp-1", Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_COMPLETED},
-			},
-		},
-	}}
 	base := modulehandler.NewBase(
 		func(*http.Request) string { return "user-1" },
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+		HasDraftOrActiveCampaign: false,
+		CampaignsHasMore:         false,
+		DegradedDependencies:     []string{dashboardapp.DegradedDependencyGameCampaigns},
+	}}, Base: base, HealthProvider: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -282,6 +293,9 @@ func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.
 	// Invariant: degraded campaign dependency must suppress campaign-adventure block.
 	if strings.Contains(rr.Body.String(), `data-dashboard-block="campaign-adventure"`) {
 		t.Fatalf("body = %q, want no campaign-adventure block when campaign state is degraded", rr.Body.String())
+	}
+	if !strings.Contains(rr.Body.String(), `data-dashboard-status="degraded"`) {
+		t.Fatalf("body = %q, want degraded dashboard status notice", rr.Body.String())
 	}
 }
 

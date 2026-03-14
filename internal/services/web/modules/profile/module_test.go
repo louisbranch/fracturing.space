@@ -7,31 +7,23 @@ import (
 	"strings"
 	"testing"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
+	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func TestMountServesProfilePage(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &authClientStub{lookupResp: &authv1.LookupUserByUsernameResponse{User: &authv1.User{
-		Id:       "user-1",
-		Username: "louis",
-	}}}, &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
-		UserId:        "user-1",
+	mount := mountProfileModule(t, &moduleGatewayStub{lookupResp: profileapp.LookupUserProfileResponse{
+		UserID:        "user-1",
+		Username:      "louis",
 		Name:          "Louis",
-		Pronouns:      sharedpronouns.ToProto("they/them"),
-		AvatarSetId:   "avatar_set_v1",
-		AvatarAssetId: "apothecary_journeyman",
+		Pronouns:      "they/them",
+		AvatarSetID:   "avatar_set_v1",
+		AvatarAssetID: "apothecary_journeyman",
 		Bio:           "Building Fracturing.Space.",
-	}}}, "https://cdn.example.com/avatars", func(*http.Request) bool {
+	}}, "https://cdn.example.com/avatars", func(*http.Request) bool {
 		return true
 	})
 
@@ -59,10 +51,10 @@ func TestMountServesProfilePage(t *testing.T) {
 func TestMountServesHomeActionWhenViewerAnonymous(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &authClientStub{lookupResp: &authv1.LookupUserByUsernameResponse{User: &authv1.User{
-		Id:       "user-1",
+	mount := mountProfileModule(t, &moduleGatewayStub{lookupResp: profileapp.LookupUserProfileResponse{
+		UserID:   "user-1",
 		Username: "louis",
-	}}}, &socialClientStub{}, "", nil)
+	}}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -80,7 +72,7 @@ func TestMountServesHomeActionWhenViewerAnonymous(t *testing.T) {
 func TestMountServesProfileHead(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &authClientStub{lookupResp: &authv1.LookupUserByUsernameResponse{User: &authv1.User{Username: "louis"}}}, &socialClientStub{}, "", nil)
+	mount := mountProfileModule(t, &moduleGatewayStub{lookupResp: profileapp.LookupUserProfileResponse{Username: "louis"}}, "", nil)
 
 	req := httptest.NewRequest(http.MethodHead, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -93,7 +85,7 @@ func TestMountServesProfileHead(t *testing.T) {
 func TestMountReturnsNotFoundWhenProfileLookupMisses(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &authClientStub{lookupErr: status.Error(codes.NotFound, "username not found")}, &socialClientStub{}, "", nil)
+	mount := mountProfileModule(t, &moduleGatewayStub{}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("unknown"), nil)
 	rr := httptest.NewRecorder()
@@ -107,7 +99,10 @@ func TestMountReturnsNotFoundWhenProfileLookupMisses(t *testing.T) {
 func TestMountReturnsServiceUnavailableWhenAuthServiceMissing(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, nil, nil, "", nil)
+	mount, err := New(Config{}).Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -124,16 +119,21 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	if New(Config{}).Healthy() {
 		t.Fatalf("New(Config{}).Healthy() = true, want false")
 	}
-	if !New(Config{Gateway: profilegateway.NewGRPCGateway(&authClientStub{}, &socialClientStub{})}).Healthy() {
+	if !New(Config{Gateway: &moduleGatewayStub{}}).Healthy() {
 		t.Fatalf("expected configured gateway to be healthy")
 	}
 }
 
-func mountProfileModule(t *testing.T, authClient AuthClient, socialClient SocialClient, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) module.Mount {
+func mountProfileModule(
+	t *testing.T,
+	gateway profileapp.Gateway,
+	assetBaseURL string,
+	resolveSignedIn func(*http.Request) bool,
+) module.Mount {
 	t.Helper()
 
 	mount, err := New(Config{
-		Gateway:         profilegateway.NewGRPCGateway(authClient, socialClient),
+		Gateway:         gateway,
 		AssetBaseURL:    assetBaseURL,
 		ResolveSignedIn: resolveSignedIn,
 	}).Mount()
@@ -143,32 +143,14 @@ func mountProfileModule(t *testing.T, authClient AuthClient, socialClient Social
 	return mount
 }
 
-type authClientStub struct {
-	lookupResp *authv1.LookupUserByUsernameResponse
+type moduleGatewayStub struct {
+	lookupResp profileapp.LookupUserProfileResponse
 	lookupErr  error
 }
 
-func (s *authClientStub) LookupUserByUsername(context.Context, *authv1.LookupUserByUsernameRequest, ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
+func (s *moduleGatewayStub) LookupUserProfile(_ context.Context, _ profileapp.LookupUserProfileRequest) (profileapp.LookupUserProfileResponse, error) {
 	if s.lookupErr != nil {
-		return nil, s.lookupErr
+		return profileapp.LookupUserProfileResponse{}, s.lookupErr
 	}
-	if s.lookupResp != nil {
-		return s.lookupResp, nil
-	}
-	return &authv1.LookupUserByUsernameResponse{}, nil
-}
-
-type socialClientStub struct {
-	getResp *socialv1.GetUserProfileResponse
-	getErr  error
-}
-
-func (s *socialClientStub) GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error) {
-	if s.getErr != nil {
-		return nil, s.getErr
-	}
-	if s.getResp != nil {
-		return s.getResp, nil
-	}
-	return &socialv1.GetUserProfileResponse{}, nil
+	return s.lookupResp, nil
 }

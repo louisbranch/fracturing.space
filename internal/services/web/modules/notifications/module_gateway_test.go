@@ -66,14 +66,14 @@ func TestGRPCGatewayListNotificationsMapsFieldsAndUserMetadata(t *testing.T) {
 	if !items[0].Read {
 		t.Fatalf("expected read=true when read_at exists")
 	}
-	if items[0].Source != notificationSourceSystem {
-		t.Fatalf("Source = %q, want %q", items[0].Source, notificationSourceSystem)
+	if items[0].Source != notificationsgateway.NotificationSourceSystem {
+		t.Fatalf("Source = %q, want %q", items[0].Source, notificationsgateway.NotificationSourceSystem)
 	}
 	if client.lastListUserID != "user-1" {
 		t.Fatalf("list metadata user id = %q, want %q", client.lastListUserID, "user-1")
 	}
-	if client.lastListReq.GetPageSize() != notificationPageSize {
-		t.Fatalf("PageSize = %d, want %d", client.lastListReq.GetPageSize(), notificationPageSize)
+	if client.lastListReq.GetPageSize() != notificationsgateway.NotificationPageSize {
+		t.Fatalf("PageSize = %d, want %d", client.lastListReq.GetPageSize(), notificationsgateway.NotificationPageSize)
 	}
 }
 

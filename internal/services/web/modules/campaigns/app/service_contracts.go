@@ -86,7 +86,6 @@ type Service interface {
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	CreateInvite(context.Context, string, CreateInviteInput) error
 	RevokeInvite(context.Context, string, RevokeInviteInput) error
-	ResolveWorkflow(string) CharacterCreationWorkflow
 	CampaignCharacterCreation(context.Context, string, string, language.Tag, CharacterCreationWorkflow) (CampaignCharacterCreation, error)
 	CampaignCharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error)
 	ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error
@@ -98,17 +97,11 @@ type service struct {
 	readGateway     campaignReadGateway
 	mutationGateway campaignMutationGateway
 	authzGateway    AuthzGateway
-	workflows       map[GameSystem]CharacterCreationWorkflow
 }
 
 // NewService constructs a service with default workflows.
 func NewService(gateway CampaignGateway) Service {
 	return newService(gateway)
-}
-
-// NewServiceWithWorkflows constructs a service with explicit workflow map.
-func NewServiceWithWorkflows(gateway CampaignGateway, workflows map[GameSystem]CharacterCreationWorkflow) Service {
-	return newServiceWithWorkflows(gateway, workflows)
 }
 
 // IsGatewayHealthy reports whether the gateway is present and operational.
@@ -122,11 +115,6 @@ func IsGatewayHealthy(gateway CampaignGateway) bool {
 
 // newService builds package wiring for this web seam.
 func newService(gateway CampaignGateway) service {
-	return newServiceWithWorkflows(gateway, nil)
-}
-
-// newServiceWithWorkflows builds package wiring for this web seam.
-func newServiceWithWorkflows(gateway CampaignGateway, workflows map[GameSystem]CharacterCreationWorkflow) service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
@@ -138,18 +126,5 @@ func newServiceWithWorkflows(gateway CampaignGateway, workflows map[GameSystem]C
 		readGateway:     gateway,
 		mutationGateway: gateway,
 		authzGateway:    authz,
-		workflows:       workflows,
 	}
-}
-
-// resolveWorkflow returns the workflow implementation for the given system, or nil.
-func (s service) resolveWorkflow(system string) CharacterCreationWorkflow {
-	if s.workflows == nil {
-		return nil
-	}
-	resolvedSystem, ok := ParseGameSystem(system)
-	if !ok {
-		return nil
-	}
-	return s.workflows[resolvedSystem]
 }

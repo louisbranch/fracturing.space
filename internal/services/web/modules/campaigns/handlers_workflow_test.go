@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -17,9 +18,9 @@ func TestHandleCharacterCreationStepRouteAppliesStepAndRedirects(t *testing.T) {
 
 	gateway := &workflowCaptureGateway{
 		fakeGateway: fakeGateway{
-			items: []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-			characterCreationProgress: CampaignCharacterCreationProgress{
-				Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+			characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
+				Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 				NextStep: 1,
 			},
 		},
@@ -69,9 +70,9 @@ func TestHandleCharacterCreationStepRouteUsesHXRedirect(t *testing.T) {
 
 	gateway := &workflowCaptureGateway{
 		fakeGateway: fakeGateway{
-			items: []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-			characterCreationProgress: CampaignCharacterCreationProgress{
-				Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+			characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
+				Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 				NextStep: 1,
 			},
 		},
@@ -106,9 +107,9 @@ func TestHandleCharacterCreationStepRouteRedirectsWithFlashOnInvalidForm(t *test
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-		characterCreationProgress: CampaignCharacterCreationProgress{
-			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+		characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
+			Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 			NextStep: 1,
 		},
 	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
@@ -145,8 +146,8 @@ func TestHandleCharacterCreationStepRouteRedirectsWithFlashWhenWorkflowReady(t *
 
 	gateway := &workflowCaptureGateway{
 		fakeGateway: fakeGateway{
-			items: []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-			characterCreationProgress: CampaignCharacterCreationProgress{
+			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+			characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
 				Ready: true,
 			},
 		},
@@ -178,7 +179,7 @@ func TestHandleCharacterCreationResetRouteRedirectsAndCallsGateway(t *testing.T)
 
 	gateway := &workflowCaptureGateway{
 		fakeGateway: fakeGateway{
-			items: []CampaignSummary{{ID: "c1", Name: "Campaign"}},
+			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		},
 	}
 	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
@@ -213,7 +214,7 @@ func TestHandleCharacterCreationResetRouteUsesHXRedirect(t *testing.T) {
 
 	gateway := &workflowCaptureGateway{
 		fakeGateway: fakeGateway{
-			items: []CampaignSummary{{ID: "c1", Name: "Campaign"}},
+			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		},
 	}
 	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
@@ -240,7 +241,7 @@ type workflowCaptureGateway struct {
 	applyCalled      bool
 	applyCampaignID  string
 	applyCharacterID string
-	applyInput       *CampaignCharacterCreationStepInput
+	applyInput       *campaignapp.CampaignCharacterCreationStepInput
 	resetCalled      bool
 	resetCampaignID  string
 	resetCharacterID string
@@ -250,7 +251,7 @@ func (g *workflowCaptureGateway) ApplyCharacterCreationStep(
 	_ context.Context,
 	campaignID string,
 	characterID string,
-	input *CampaignCharacterCreationStepInput,
+	input *campaignapp.CampaignCharacterCreationStepInput,
 ) error {
 	g.applyCalled = true
 	g.applyCampaignID = campaignID

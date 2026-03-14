@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
@@ -82,7 +83,7 @@ func (h handlers) handleCharacterCreate(w http.ResponseWriter, r *http.Request, 
 
 	// Redirect to creation page if the campaign has a character creation workflow.
 	workspace, err := h.service.CampaignWorkspace(ctx, campaignID)
-	if err == nil && h.service.ResolveWorkflow(workspace.System) != nil {
+	if err == nil && h.resolveWorkflow(workspace.System) != nil {
 		h.writeMutationSuccess(w, r, "web.campaigns.notice_character_created", routepath.AppCampaignCharacterCreation(campaignID, created.CharacterID))
 		return
 	}
@@ -239,13 +240,13 @@ func (h handlers) handleCampaignUpdate(w http.ResponseWriter, r *http.Request, c
 }
 
 // parseAppCharacterKind parses inbound values into package-safe forms.
-func parseAppCharacterKind(value string) (CharacterKind, bool) {
+func parseAppCharacterKind(value string) (campaignapp.CharacterKind, bool) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "pc", "character_kind_pc":
-		return CharacterKindPC, true
+		return campaignapp.CharacterKindPC, true
 	case "npc", "character_kind_npc":
-		return CharacterKindNPC, true
+		return campaignapp.CharacterKindNPC, true
 	default:
-		return CharacterKindUnspecified, false
+		return campaignapp.CharacterKindUnspecified, false
 	}
 }

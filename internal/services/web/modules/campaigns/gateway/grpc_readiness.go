@@ -14,7 +14,7 @@ import (
 
 // CampaignSessionReadiness returns session-start blockers for the campaign.
 func (g GRPCGateway) CampaignSessionReadiness(ctx context.Context, campaignID string, locale language.Tag) (campaignapp.CampaignSessionReadiness, error) {
-	if g.Client == nil {
+	if g.Read.Campaign == nil {
 		return campaignapp.CampaignSessionReadiness{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.campaign_service_client_is_not_configured", "campaign service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -25,7 +25,7 @@ func (g GRPCGateway) CampaignSessionReadiness(ctx context.Context, campaignID st
 		}, nil
 	}
 
-	resp, err := g.Client.GetCampaignSessionReadiness(ctx, &statev1.GetCampaignSessionReadinessRequest{
+	resp, err := g.Read.Campaign.GetCampaignSessionReadiness(ctx, &statev1.GetCampaignSessionReadinessRequest{
 		CampaignId: campaignID,
 		Locale:     readinessLocaleForTag(locale),
 	})

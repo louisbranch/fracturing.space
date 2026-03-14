@@ -16,11 +16,11 @@ const campaignAIAgentsPageSize = 50
 
 // CampaignAIAgents returns selectable AI agents for owner-only campaign binding.
 func (g GRPCGateway) CampaignAIAgents(ctx context.Context) ([]campaignapp.CampaignAIAgentOption, error) {
-	if g.AgentClient == nil {
+	if g.Read.Agent == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.ai_agent_service_client_is_not_configured", "AI agent service client is not configured")
 	}
 
-	resp, err := g.AgentClient.ListAgents(ctx, &aiv1.ListAgentsRequest{PageSize: campaignAIAgentsPageSize})
+	resp, err := g.Read.Agent.ListAgents(ctx, &aiv1.ListAgentsRequest{PageSize: campaignAIAgentsPageSize})
 	if err != nil {
 		return nil, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,
@@ -49,7 +49,7 @@ func (g GRPCGateway) CampaignAIAgents(ctx context.Context) ([]campaignapp.Campai
 
 // UpdateCampaignAIBinding applies this package workflow transition.
 func (g GRPCGateway) UpdateCampaignAIBinding(ctx context.Context, campaignID string, input campaignapp.UpdateCampaignAIBindingInput) error {
-	if g.Client == nil {
+	if g.Mutation.Campaign == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.campaign_service_client_is_not_configured", "campaign service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -59,11 +59,11 @@ func (g GRPCGateway) UpdateCampaignAIBinding(ctx context.Context, campaignID str
 
 	aiAgentID := strings.TrimSpace(input.AIAgentID)
 	if aiAgentID == "" {
-		_, err := g.Client.ClearCampaignAIBinding(ctx, &statev1.ClearCampaignAIBindingRequest{CampaignId: campaignID})
+		_, err := g.Mutation.Campaign.ClearCampaignAIBinding(ctx, &statev1.ClearCampaignAIBindingRequest{CampaignId: campaignID})
 		return mapCampaignAIBindingMutationError(err)
 	}
 
-	_, err := g.Client.SetCampaignAIBinding(ctx, &statev1.SetCampaignAIBindingRequest{
+	_, err := g.Mutation.Campaign.SetCampaignAIBinding(ctx, &statev1.SetCampaignAIBindingRequest{
 		CampaignId: campaignID,
 		AiAgentId:  aiAgentID,
 	})

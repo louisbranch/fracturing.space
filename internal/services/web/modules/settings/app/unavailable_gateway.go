@@ -1,11 +1,29 @@
 package app
 
-import (
-	"context"
-	"encoding/json"
+// profileGatewayHealthReporter lets adapters report profile-surface readiness.
+type profileGatewayHealthReporter interface {
+	ProfileGatewayHealthy() bool
+}
 
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-)
+// localeGatewayHealthReporter lets adapters report locale-surface readiness.
+type localeGatewayHealthReporter interface {
+	LocaleGatewayHealthy() bool
+}
+
+// securityGatewayHealthReporter lets adapters report security-surface readiness.
+type securityGatewayHealthReporter interface {
+	SecurityGatewayHealthy() bool
+}
+
+// aiKeyGatewayHealthReporter lets adapters report AI-key surface readiness.
+type aiKeyGatewayHealthReporter interface {
+	AIKeyGatewayHealthy() bool
+}
+
+// aiAgentGatewayHealthReporter lets adapters report AI-agent surface readiness.
+type aiAgentGatewayHealthReporter interface {
+	AIAgentGatewayHealthy() bool
+}
 
 // unavailableGateway defines an internal contract used at this web package boundary.
 type unavailableGateway struct{}
@@ -15,81 +33,77 @@ func NewUnavailableGateway() Gateway {
 	return unavailableGateway{}
 }
 
-// IsGatewayHealthy reports whether a settings gateway is configured and usable.
-func IsGatewayHealthy(gateway Gateway) bool {
+// IsProfileGatewayHealthy reports whether profile settings can serve requests.
+func IsProfileGatewayHealthy(gateway ProfileGateway) bool {
 	if gateway == nil {
 		return false
+	}
+	if reporter, ok := gateway.(profileGatewayHealthReporter); ok {
+		return reporter.ProfileGatewayHealthy()
 	}
 	_, unavailable := gateway.(unavailableGateway)
 	return !unavailable
 }
 
-// LoadProfile loads the package state needed for this request path.
-func (unavailableGateway) LoadProfile(context.Context, string) (SettingsProfile, error) {
-	return SettingsProfile{}, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+// IsLocaleGatewayHealthy reports whether locale settings can serve requests.
+func IsLocaleGatewayHealthy(gateway LocaleGateway) bool {
+	if gateway == nil {
+		return false
+	}
+	if reporter, ok := gateway.(localeGatewayHealthReporter); ok {
+		return reporter.LocaleGatewayHealthy()
+	}
+	_, unavailable := gateway.(unavailableGateway)
+	return !unavailable
 }
 
-// SaveProfile centralizes this web behavior in one helper seam.
-func (unavailableGateway) SaveProfile(context.Context, string, SettingsProfile) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+// IsSecurityGatewayHealthy reports whether security settings can serve requests.
+func IsSecurityGatewayHealthy(gateway SecurityGateway) bool {
+	if gateway == nil {
+		return false
+	}
+	if reporter, ok := gateway.(securityGatewayHealthReporter); ok {
+		return reporter.SecurityGatewayHealthy()
+	}
+	_, unavailable := gateway.(unavailableGateway)
+	return !unavailable
 }
 
-// LoadLocale loads the package state needed for this request path.
-func (unavailableGateway) LoadLocale(context.Context, string) (string, error) {
-	return "", apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+// IsAIKeyGatewayHealthy reports whether AI credential settings can serve requests.
+func IsAIKeyGatewayHealthy(gateway AIKeyGateway) bool {
+	if gateway == nil {
+		return false
+	}
+	if reporter, ok := gateway.(aiKeyGatewayHealthReporter); ok {
+		return reporter.AIKeyGatewayHealthy()
+	}
+	_, unavailable := gateway.(unavailableGateway)
+	return !unavailable
 }
 
-// SaveLocale centralizes this web behavior in one helper seam.
-func (unavailableGateway) SaveLocale(context.Context, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+// IsAIAgentGatewayHealthy reports whether AI agent settings can serve requests.
+func IsAIAgentGatewayHealthy(gateway AIAgentGateway) bool {
+	if gateway == nil {
+		return false
+	}
+	if reporter, ok := gateway.(aiAgentGatewayHealthReporter); ok {
+		return reporter.AIAgentGatewayHealthy()
+	}
+	_, unavailable := gateway.(unavailableGateway)
+	return !unavailable
 }
 
-// ListPasskeys returns unavailable while settings is degraded.
-func (unavailableGateway) ListPasskeys(context.Context, string) ([]SettingsPasskey, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+// IsAccountGatewayHealthy reports whether any account-owned settings surface is available.
+func IsAccountGatewayHealthy(gateway AccountGateway) bool {
+	return IsProfileGatewayHealthy(gateway) || IsLocaleGatewayHealthy(gateway) || IsSecurityGatewayHealthy(gateway)
 }
 
-// BeginPasskeyRegistration returns unavailable while settings is degraded.
-func (unavailableGateway) BeginPasskeyRegistration(context.Context, string) (PasskeyChallenge, error) {
-	return PasskeyChallenge{}, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+// IsAIGatewayHealthy reports whether any AI-owned settings surface is available.
+func IsAIGatewayHealthy(gateway AIGateway) bool {
+	return IsAIKeyGatewayHealthy(gateway) || IsAIAgentGatewayHealthy(gateway)
 }
 
-// FinishPasskeyRegistration returns unavailable while settings is degraded.
-func (unavailableGateway) FinishPasskeyRegistration(context.Context, string, json.RawMessage) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-// ListAIKeys returns the package view collection for this workflow.
-func (unavailableGateway) ListAIKeys(context.Context, string) ([]SettingsAIKey, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-// ListAIAgentCredentials returns active credential options for agent creation.
-func (unavailableGateway) ListAIAgentCredentials(context.Context, string) ([]SettingsAICredentialOption, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-// ListAIAgents returns settings agent rows for the AI agents page.
-func (unavailableGateway) ListAIAgents(context.Context, string) ([]SettingsAIAgent, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-// ListAIProviderModels returns provider-backed model options for one credential.
-func (unavailableGateway) ListAIProviderModels(context.Context, string, string) ([]SettingsAIModelOption, error) {
-	return nil, apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-// CreateAIKey executes package-scoped creation behavior for this flow.
-func (unavailableGateway) CreateAIKey(context.Context, string, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-// CreateAIAgent executes package-scoped agent creation behavior.
-func (unavailableGateway) CreateAIAgent(context.Context, string, CreateAIAgentInput) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
-}
-
-// RevokeAIKey applies this package workflow transition.
-func (unavailableGateway) RevokeAIKey(context.Context, string, string) error {
-	return apperrors.E(apperrors.KindUnavailable, "settings service is not configured")
+// IsGatewayHealthy reports whether any settings surface is configured and usable.
+func IsGatewayHealthy(gateway Gateway) bool {
+	return IsAccountGatewayHealthy(gateway) || IsAIGatewayHealthy(gateway)
 }

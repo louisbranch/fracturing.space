@@ -12,7 +12,7 @@ import (
 
 // Module provides authenticated settings routes.
 type Module struct {
-	gateway   SettingsGateway
+	gateway   settingsapp.Gateway
 	base      modulehandler.Base
 	flashMeta requestmeta.SchemePolicy
 	sync      DashboardSync
@@ -20,7 +20,7 @@ type Module struct {
 
 // Config defines constructor dependencies for a settings module.
 type Config struct {
-	Gateway       SettingsGateway
+	Gateway       settingsapp.Gateway
 	Base          modulehandler.Base
 	FlashMeta     requestmeta.SchemePolicy
 	DashboardSync DashboardSync
@@ -48,7 +48,14 @@ func (m Module) Healthy() bool {
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	svc := settingsapp.NewService(m.gateway)
-	h := newHandlers(svc, m.base, m.flashMeta, m.sync)
+	availability := settingsSurfaceAvailability{
+		profile:  settingsapp.IsProfileGatewayHealthy(m.gateway),
+		locale:   settingsapp.IsLocaleGatewayHealthy(m.gateway),
+		security: settingsapp.IsSecurityGatewayHealthy(m.gateway),
+		aiKeys:   settingsapp.IsAIKeyGatewayHealthy(m.gateway),
+		aiAgents: settingsapp.IsAIAgentGatewayHealthy(m.gateway),
+	}
+	h := newHandlers(svc, svc, svc, svc, svc, availability, m.base, m.flashMeta, m.sync)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.SettingsPrefix, Handler: mux}, nil
 }

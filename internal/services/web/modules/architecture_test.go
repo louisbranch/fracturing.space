@@ -119,6 +119,55 @@ func TestFeatureModulesFollowTemplate(t *testing.T) {
 	}
 }
 
+func TestSelectedModulesKeepContributorOwnedTransportSplits(t *testing.T) {
+	t.Parallel()
+
+	requiredFilesByModule := map[string][]string{
+		"settings": {
+			"handlers_profile.go",
+			"handlers_locale.go",
+			"handlers_ai_keys.go",
+			"handlers_ai_agents.go",
+			"handlers_shell.go",
+			"routes_account.go",
+			"routes_ai.go",
+		},
+	}
+
+	for mod, files := range requiredFilesByModule {
+		for _, file := range files {
+			path := filepath.Join(mod, file)
+			if _, err := os.Stat(path); err != nil {
+				t.Fatalf("module %q missing contributor-owned transport file %q: %v", mod, file, err)
+			}
+		}
+	}
+}
+
+func TestSelectedModulesKeepContributorOwnedAppAndGatewaySplits(t *testing.T) {
+	t.Parallel()
+
+	requiredFilesByModule := map[string][]string{
+		"settings": {
+			filepath.Join("app", "service_account.go"),
+			filepath.Join("app", "service_ai.go"),
+			filepath.Join("app", "unavailable_account.go"),
+			filepath.Join("app", "unavailable_ai.go"),
+			filepath.Join("gateway", "grpc_account.go"),
+			filepath.Join("gateway", "grpc_ai.go"),
+		},
+	}
+
+	for mod, files := range requiredFilesByModule {
+		for _, file := range files {
+			path := filepath.Join(mod, file)
+			if _, err := os.Stat(path); err != nil {
+				t.Fatalf("module %q missing contributor-owned app/gateway file %q: %v", mod, file, err)
+			}
+		}
+	}
+}
+
 func TestModulesMountDoNotReadGatewayClientsFromDependencies(t *testing.T) {
 	t.Parallel()
 
@@ -191,6 +240,42 @@ func TestProtectedModuleServicesDoNotImportWebContext(t *testing.T) {
 	}
 }
 
+func TestProfileAppDoesNotImportAvatarURLFormatting(t *testing.T) {
+	t.Parallel()
+
+	forbidden := "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
+	for _, file := range goFilesUnder(t, filepath.Join("profile", "app"), false) {
+		parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("parse app file %s: %v", file, err)
+		}
+		for _, imp := range parsed.Imports {
+			path := strings.Trim(imp.Path.Value, "\"")
+			if path == forbidden {
+				t.Errorf("%s imports %s; avatar URL formatting belongs in transport/view mapping, not profile/app", file, path)
+			}
+		}
+	}
+}
+
+func TestNotificationsModuleDoesNotImportNotificationsServicePackages(t *testing.T) {
+	t.Parallel()
+
+	const forbiddenPrefix = "github.com/louisbranch/fracturing.space/internal/services/notifications/"
+	for _, file := range goFilesUnder(t, "notifications", false) {
+		parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("parse notifications file %s: %v", file, err)
+		}
+		for _, imp := range parsed.Imports {
+			path := strings.Trim(imp.Path.Value, "\"")
+			if strings.HasPrefix(path, forbiddenPrefix) {
+				t.Errorf("%s imports %s; notifications web copy/rendering must stay area-owned inside internal/services/web/modules/notifications", file, path)
+			}
+		}
+	}
+}
+
 func TestProtectedModuleHandlersDoNotImportProtoPackages(t *testing.T) {
 	t.Parallel()
 
@@ -210,6 +295,25 @@ func TestProtectedModuleHandlersDoNotImportProtoPackages(t *testing.T) {
 					t.Errorf("%s imports proto package %s; use domain types and map at the gateway boundary", file, path)
 				}
 			}
+		}
+	}
+}
+
+func TestSelectedModuleHandlersDoNotReadRawPathValues(t *testing.T) {
+	t.Parallel()
+
+	modulesUsingSharedRouteParamHelper := []string{"notifications", "settings", "profile"}
+	for _, mod := range modulesUsingSharedRouteParamHelper {
+		for _, file := range moduleHandlerFiles(t, mod) {
+			parsed := parseFile(t, file)
+			ast.Inspect(parsed, func(n ast.Node) bool {
+				sel, ok := n.(*ast.SelectorExpr)
+				if !ok || sel.Sel == nil || sel.Sel.Name != "PathValue" {
+					return true
+				}
+				t.Errorf("%s calls raw PathValue; use platform/routeparam helpers instead", file)
+				return true
+			})
 		}
 	}
 }

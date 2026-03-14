@@ -10,6 +10,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing.T) {
@@ -19,7 +20,7 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{SessionClient: auth, AccountClient: account},
+			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
@@ -68,7 +69,7 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{SessionClient: auth, AccountClient: account},
+			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
@@ -112,7 +113,7 @@ func TestLoginPageLocaleMenuUsesConsistentLabels(t *testing.T) {
 
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{},
+			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})

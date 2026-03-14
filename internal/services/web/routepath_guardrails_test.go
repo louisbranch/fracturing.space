@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -60,5 +61,61 @@ func TestGoSourcesDoNotHardcodeInternalRoutes(t *testing.T) {
 	})
 	if walkErr != nil {
 		t.Fatalf("scan web package: %v", walkErr)
+	}
+}
+
+func TestRoutepathPackageStaysSplitByOwnedSurface(t *testing.T) {
+	t.Parallel()
+
+	requiredFiles := []string{
+		"routepath/doc.go",
+		"routepath/helpers.go",
+		"routepath/core.go",
+		"routepath/publicauth.go",
+		"routepath/discovery.go",
+		"routepath/profile.go",
+		"routepath/dashboard.go",
+		"routepath/campaigns.go",
+		"routepath/notifications.go",
+		"routepath/settings.go",
+	}
+
+	for _, path := range requiredFiles {
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("routepath ownership file %s missing: %v", path, err)
+		}
+	}
+	if _, err := os.Stat("routepath/routepath.go"); !os.IsNotExist(err) {
+		t.Fatalf("routepath monolith returned; keep owned surfaces split into area files")
+	}
+
+	entries, err := os.ReadDir("routepath")
+	if err != nil {
+		t.Fatalf("read routepath dir: %v", err)
+	}
+
+	var goFiles []string
+	for _, entry := range entries {
+		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		goFiles = append(goFiles, entry.Name())
+	}
+	slices.Sort(goFiles)
+
+	wantFiles := []string{
+		"campaigns.go",
+		"core.go",
+		"dashboard.go",
+		"discovery.go",
+		"doc.go",
+		"helpers.go",
+		"notifications.go",
+		"profile.go",
+		"publicauth.go",
+		"settings.go",
+	}
+	if !slices.Equal(goFiles, wantFiles) {
+		t.Fatalf("routepath files = %v, want %v", goFiles, wantFiles)
 	}
 }

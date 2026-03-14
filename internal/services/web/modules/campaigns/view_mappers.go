@@ -13,7 +13,7 @@ import (
 )
 
 // campaignWorkspaceMenu builds the side navigation menu for a campaign workspace page.
-func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, sessions []CampaignSession, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
+func campaignWorkspaceMenu(workspace campaignapp.CampaignWorkspace, currentPath string, sessions []campaignapp.CampaignSession, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
 	campaignID := strings.TrimSpace(workspace.ID)
 	if campaignID == "" {
 		return nil
@@ -78,7 +78,7 @@ const campaignSessionTimestampLayout = "2006-01-02 15:04 UTC"
 
 // campaignSessionMenuSubItems builds campaign session subitems for workspace navigation.
 // Only active sessions are shown in the side menu, with a "Join Game" link.
-func campaignSessionMenuSubItems(campaignID string, sessions []CampaignSession, loc webtemplates.Localizer) []webtemplates.AppSideMenuSubItem {
+func campaignSessionMenuSubItems(campaignID string, sessions []campaignapp.CampaignSession, loc webtemplates.Localizer) []webtemplates.AppSideMenuSubItem {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" || len(sessions) == 0 {
 		return []webtemplates.AppSideMenuSubItem{}
@@ -111,7 +111,7 @@ func campaignSessionMenuSubItems(campaignID string, sessions []CampaignSession, 
 }
 
 // campaignSessionMenuCount returns the total number of sessions represented in the menu badge.
-func campaignSessionMenuCount(sessions []CampaignSession) int {
+func campaignSessionMenuCount(sessions []campaignapp.CampaignSession) int {
 	count := 0
 	for _, session := range sessions {
 		if strings.TrimSpace(session.ID) == "" {
@@ -123,7 +123,7 @@ func campaignSessionMenuCount(sessions []CampaignSession) int {
 }
 
 // campaignSessionMenuItemName returns a session menu label with safe fallback copy.
-func campaignSessionMenuItemName(session CampaignSession, loc webtemplates.Localizer) string {
+func campaignSessionMenuItemName(session campaignapp.CampaignSession, loc webtemplates.Localizer) string {
 	name := strings.TrimSpace(session.Name)
 	sessionID := strings.TrimSpace(session.ID)
 	if name != "" && (sessionID == "" || !strings.EqualFold(name, sessionID)) {
@@ -133,7 +133,7 @@ func campaignSessionMenuItemName(session CampaignSession, loc webtemplates.Local
 }
 
 // campaignSessionMenuStartTime parses session start timestamps used for deterministic ordering.
-func campaignSessionMenuStartTime(session CampaignSession) (time.Time, bool) {
+func campaignSessionMenuStartTime(session campaignapp.CampaignSession) (time.Time, bool) {
 	startedAt := strings.TrimSpace(session.StartedAt)
 	if startedAt == "" {
 		return time.Time{}, false
@@ -146,7 +146,7 @@ func campaignSessionMenuStartTime(session CampaignSession) (time.Time, bool) {
 }
 
 // campaignSessionMenuIsActive marks session rows that should receive active-session styling.
-func campaignSessionMenuIsActive(session CampaignSession) bool {
+func campaignSessionMenuIsActive(session campaignapp.CampaignSession) bool {
 	return strings.EqualFold(strings.TrimSpace(session.Status), "active")
 }
 
@@ -161,7 +161,7 @@ func campaignWorkspaceLocaleFormValue(value string) string {
 }
 
 // mapCampaignListItems converts domain summaries to template list items.
-func mapCampaignListItems(items []CampaignSummary, now time.Time, loc webtemplates.Localizer) []webtemplates.CampaignListItem {
+func mapCampaignListItems(items []campaignapp.CampaignSummary, now time.Time, loc webtemplates.Localizer) []webtemplates.CampaignListItem {
 	result := make([]webtemplates.CampaignListItem, 0, len(items))
 	for _, item := range items {
 		result = append(result, webtemplates.CampaignListItem{
@@ -194,7 +194,7 @@ func campaignListItemUpdatedAt(updatedAtUnixNano int64, now time.Time, loc webte
 }
 
 // mapParticipantsView converts domain participants to template view items.
-func mapParticipantsView(items []CampaignParticipant) []webtemplates.CampaignParticipantView {
+func mapParticipantsView(items []campaignapp.CampaignParticipant) []webtemplates.CampaignParticipantView {
 	result := make([]webtemplates.CampaignParticipantView, 0, len(items))
 	for _, p := range items {
 		result = append(result, webtemplates.CampaignParticipantView{
@@ -213,7 +213,7 @@ func mapParticipantsView(items []CampaignParticipant) []webtemplates.CampaignPar
 }
 
 // mapParticipantEditorView converts domain editor state to template view state.
-func mapParticipantEditorView(editor CampaignParticipantEditor) webtemplates.CampaignParticipantEditorView {
+func mapParticipantEditorView(editor campaignapp.CampaignParticipantEditor) webtemplates.CampaignParticipantEditorView {
 	accessOptions := make([]webtemplates.CampaignParticipantAccessOptionView, 0, len(editor.AccessOptions))
 	for _, option := range editor.AccessOptions {
 		accessOptions = append(accessOptions, webtemplates.CampaignParticipantAccessOptionView{
@@ -236,7 +236,7 @@ func mapParticipantEditorView(editor CampaignParticipantEditor) webtemplates.Cam
 }
 
 // mapParticipantCreatorView converts domain creator state to template view state.
-func mapParticipantCreatorView(creator CampaignParticipantCreator) webtemplates.CampaignParticipantCreatorView {
+func mapParticipantCreatorView(creator campaignapp.CampaignParticipantCreator) webtemplates.CampaignParticipantCreatorView {
 	accessOptions := make([]webtemplates.CampaignParticipantAccessOptionView, 0, len(creator.AccessOptions))
 	for _, option := range creator.AccessOptions {
 		accessOptions = append(accessOptions, webtemplates.CampaignParticipantAccessOptionView{
@@ -254,7 +254,7 @@ func mapParticipantCreatorView(creator CampaignParticipantCreator) webtemplates.
 }
 
 // mapAIBindingEditorView converts domain AI-binding editor state to template view state.
-func mapAIBindingEditorView(editor CampaignAIBindingEditor) webtemplates.CampaignAIBindingEditorView {
+func mapAIBindingEditorView(editor campaignapp.CampaignAIBindingEditor) webtemplates.CampaignAIBindingEditorView {
 	options := make([]webtemplates.CampaignAIAgentOptionView, 0, len(editor.Options))
 	for _, option := range editor.Options {
 		options = append(options, webtemplates.CampaignAIAgentOptionView{
@@ -274,7 +274,7 @@ func mapAIBindingEditorView(editor CampaignAIBindingEditor) webtemplates.Campaig
 }
 
 // mapCharactersView converts domain characters to template view items.
-func mapCharactersView(items []CampaignCharacter) []webtemplates.CampaignCharacterView {
+func mapCharactersView(items []campaignapp.CampaignCharacter) []webtemplates.CampaignCharacterView {
 	result := make([]webtemplates.CampaignCharacterView, 0, len(items))
 	for _, c := range items {
 		result = append(result, webtemplates.CampaignCharacterView{
@@ -323,7 +323,7 @@ func mapCharacterControlView(control campaignapp.CampaignCharacterControl) webte
 }
 
 // mapSessionsView converts domain sessions to template view items.
-func mapSessionsView(items []CampaignSession) []webtemplates.CampaignSessionView {
+func mapSessionsView(items []campaignapp.CampaignSession) []webtemplates.CampaignSessionView {
 	result := make([]webtemplates.CampaignSessionView, 0, len(items))
 	for _, s := range items {
 		result = append(result, webtemplates.CampaignSessionView{
@@ -339,7 +339,7 @@ func mapSessionsView(items []CampaignSession) []webtemplates.CampaignSessionView
 }
 
 // mapSessionReadinessView converts domain session readiness to template view.
-func mapSessionReadinessView(readiness CampaignSessionReadiness) webtemplates.CampaignSessionReadinessView {
+func mapSessionReadinessView(readiness campaignapp.CampaignSessionReadiness) webtemplates.CampaignSessionReadinessView {
 	result := webtemplates.CampaignSessionReadinessView{
 		Ready:    readiness.Ready,
 		Blockers: make([]webtemplates.CampaignSessionReadinessBlockerView, 0, len(readiness.Blockers)),
@@ -354,7 +354,7 @@ func mapSessionReadinessView(readiness CampaignSessionReadiness) webtemplates.Ca
 }
 
 // mapInvitesView converts domain invites to template view items.
-func mapInvitesView(items []CampaignInvite) []webtemplates.CampaignInviteView {
+func mapInvitesView(items []campaignapp.CampaignInvite) []webtemplates.CampaignInviteView {
 	result := make([]webtemplates.CampaignInviteView, 0, len(items))
 	for _, inv := range items {
 		result = append(result, webtemplates.CampaignInviteView{
@@ -368,7 +368,7 @@ func mapInvitesView(items []CampaignInvite) []webtemplates.CampaignInviteView {
 }
 
 // mapInviteSeatOptions converts eligible invite targets to template select options.
-func mapInviteSeatOptions(participants []CampaignParticipant, invites []CampaignInvite) []webtemplates.CampaignInviteSeatOptionView {
+func mapInviteSeatOptions(participants []campaignapp.CampaignParticipant, invites []campaignapp.CampaignInvite) []webtemplates.CampaignInviteSeatOptionView {
 	pendingByParticipantID := make(map[string]struct{}, len(invites))
 	for _, invite := range invites {
 		participantID := strings.TrimSpace(invite.ParticipantID)

@@ -16,37 +16,28 @@ func (h handlers) handleOverviewMethodNotAllowed(w http.ResponseWriter, _ *http.
 	httpx.MethodNotAllowed(http.MethodGet+", HEAD")(w, nil)
 }
 
-// --- Campaign detail scaffold ---
-
-// campaignDetailSpec describes one campaign sub-page. The scaffold loads the
-// campaign workspace, calls loadData to populate view-specific fields, builds
-// breadcrumbs, and renders the detail fragment.
-type campaignDetailSpec struct {
-	marker   string
-	extra    func(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem
-	loadData func(ctx context.Context, campaignID string, page *campaignPageContext, view *webtemplates.CampaignDetailView) error
-}
-
-// renderCampaignDetail centralizes this web behavior in one helper seam.
-func (h handlers) renderCampaignDetail(w http.ResponseWriter, r *http.Request, campaignID string, spec campaignDetailSpec) {
+// loadCampaignPageOrWriteError loads common campaign detail page state and
+// writes the transport error when loading fails.
+func (h handlers) loadCampaignPageOrWriteError(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, bool) {
 	ctx, page, err := h.loadCampaignPage(w, r, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
-		return
+		return nil, nil, false
 	}
-	view := page.detailView(campaignID, spec.marker)
-	if spec.loadData != nil {
-		if err := spec.loadData(ctx, campaignID, page, &view); err != nil {
-			h.WriteError(w, r, err)
-			return
-		}
-	}
-	var crumbs []sharedtemplates.BreadcrumbItem
-	if spec.extra != nil {
-		crumbs = campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc, spec.extra(page.loc, view)...)
-	} else {
-		crumbs = campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc)
-	}
+	return ctx, page, true
+}
+
+// writeCampaignDetailPage renders one populated campaign detail view with the
+// provided extra breadcrumbs.
+func (h handlers) writeCampaignDetailPage(
+	w http.ResponseWriter,
+	r *http.Request,
+	page *campaignPageContext,
+	campaignID string,
+	view webtemplates.CampaignDetailView,
+	extra ...sharedtemplates.BreadcrumbItem,
+) {
+	crumbs := campaignBreadcrumbs(campaignID, page.workspace.Name, page.loc, extra...)
 	h.WritePage(w, r, page.title(campaignID), http.StatusOK,
 		page.header(campaignID, crumbs),
 		page.layout(campaignID, r.URL.Path),

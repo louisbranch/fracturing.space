@@ -15,10 +15,10 @@ import (
 
 // CharacterCreationCatalog centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag language.Tag) (campaignapp.CampaignCharacterCreationCatalog, error) {
-	if g.DaggerheartContent == nil {
+	if g.Read.DaggerheartContent == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart content client is not configured")
 	}
-	if g.DaggerheartAsset == nil {
+	if g.Read.DaggerheartAsset == nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, apperrors.EK(apperrors.KindUnavailable, "error.web.message.daggerheart_content_client_is_not_configured", "daggerheart asset client is not configured")
 	}
 	locale := platformi18n.LocaleForTag(localeTag)
@@ -27,7 +27,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		locale = commonv1.Locale_LOCALE_EN_US
 	}
 
-	resp, err := g.DaggerheartContent.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
+	resp, err := g.Read.DaggerheartContent.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{Locale: locale})
 	if err != nil {
 		return campaignapp.CampaignCharacterCreationCatalog{}, err
 	}
@@ -35,7 +35,7 @@ func (g GRPCGateway) CharacterCreationCatalog(ctx context.Context, localeTag lan
 		return campaignapp.CampaignCharacterCreationCatalog{}, nil
 	}
 
-	assetMapResp, err := g.DaggerheartAsset.GetAssetMap(ctx, &daggerheartv1.GetDaggerheartAssetMapRequest{Locale: locale})
+	assetMapResp, err := g.Read.DaggerheartAsset.GetAssetMap(ctx, &daggerheartv1.GetDaggerheartAssetMapRequest{Locale: locale})
 	if err != nil {
 		assetMapResp = nil
 	}

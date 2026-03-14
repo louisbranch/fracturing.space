@@ -31,8 +31,11 @@ func registerRouteSurfaces(mux *http.ServeMux, h handlers, surfaces []routeSurfa
 // stableRouteSurfaces returns stable route-owner surfaces in mount order.
 func stableRouteSurfaces() []routeSurface {
 	return []routeSurface{
-		stableCampaignCoreSurface(),
-		stableCampaignWorkflowSurface(),
-		stableCampaignMutationSurface(),
+		stableCampaignOverviewRoutes(),
+		stableCampaignParticipantRoutes(),
+		stableCampaignCharacterRoutes(),
+		stableCampaignCharacterCreationRoutes(),
+		stableCampaignSessionGameRoutes(),
+		stableCampaignInviteRoutes(),
 	}
 }

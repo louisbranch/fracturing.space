@@ -8,6 +8,7 @@ type Viewer struct {
 	DisplayName            string
 	AvatarURL              string
 	ProfileURL             string
+	NotificationsAvailable bool
 	HasUnreadNotifications bool
 }
 

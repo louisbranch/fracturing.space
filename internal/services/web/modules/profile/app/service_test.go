@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 	"testing"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
@@ -13,7 +12,7 @@ import (
 func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(nil, "")
+	svc := NewService(nil)
 	_, err := svc.LoadProfile(context.Background(), "louis")
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -52,7 +51,7 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 func TestLoadProfileRequiresUsername(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&fakeGateway{}, "")
+	svc := NewService(&fakeGateway{})
 	_, err := svc.LoadProfile(context.Background(), "   ")
 	if err == nil {
 		t.Fatalf("expected not-found error")
@@ -65,7 +64,7 @@ func TestLoadProfileRequiresUsername(t *testing.T) {
 func TestLoadProfileReturnsNotFoundWhenGatewayMisses(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&fakeGateway{lookupResp: LookupUserProfileResponse{Username: "   "}}, "")
+	svc := NewService(&fakeGateway{lookupResp: LookupUserProfileResponse{Username: "   "}})
 	_, err := svc.LoadProfile(context.Background(), "louis")
 	if err == nil {
 		t.Fatalf("expected not-found error")
@@ -75,19 +74,20 @@ func TestLoadProfileReturnsNotFoundWhenGatewayMisses(t *testing.T) {
 	}
 }
 
-func TestLoadProfileNormalizesFieldsAndBuildsAvatarURL(t *testing.T) {
+func TestLoadProfileNormalizesFieldsAndKeepsAvatarIdentity(t *testing.T) {
 	t.Parallel()
 
 	gateway := &fakeGateway{lookupResp: LookupUserProfileResponse{
-		Username:      "  louis  ",
-		UserID:        "   ",
-		Name:          "  Louis Branch  ",
-		Pronouns:      "  they/them  ",
-		Bio:           "  Explorer  ",
-		AvatarSetID:   "  set-v1  ",
-		AvatarAssetID: "  001  ",
+		Username:            "  louis  ",
+		UserID:              "   ",
+		Name:                "  Louis Branch  ",
+		Pronouns:            "  they/them  ",
+		Bio:                 "  Explorer  ",
+		AvatarSetID:         "  set-v1  ",
+		AvatarAssetID:       "  001  ",
+		SocialProfileStatus: SocialProfileStatusLoaded,
 	}}
-	svc := NewService(gateway, "https://cdn.example.com")
+	svc := NewService(gateway)
 
 	profile, err := svc.LoadProfile(context.Background(), "  louis  ")
 	if err != nil {
@@ -99,6 +99,9 @@ func TestLoadProfileNormalizesFieldsAndBuildsAvatarURL(t *testing.T) {
 	if profile.Username != "louis" {
 		t.Fatalf("Username = %q, want %q", profile.Username, "louis")
 	}
+	if profile.UserID != "" {
+		t.Fatalf("UserID = %q, want empty string", profile.UserID)
+	}
 	if profile.Name != "Louis Branch" {
 		t.Fatalf("Name = %q, want %q", profile.Name, "Louis Branch")
 	}
@@ -108,15 +111,55 @@ func TestLoadProfileNormalizesFieldsAndBuildsAvatarURL(t *testing.T) {
 	if profile.Bio != "Explorer" {
 		t.Fatalf("Bio = %q, want %q", profile.Bio, "Explorer")
 	}
-	if !strings.HasPrefix(profile.AvatarURL, "https://cdn.example.com/") {
-		t.Fatalf("AvatarURL = %q, want asset base URL prefix", profile.AvatarURL)
+	if profile.AvatarSetID != "set-v1" {
+		t.Fatalf("AvatarSetID = %q, want %q", profile.AvatarSetID, "set-v1")
+	}
+	if profile.AvatarAssetID != "001" {
+		t.Fatalf("AvatarAssetID = %q, want %q", profile.AvatarAssetID, "001")
+	}
+	if profile.SocialProfileStatus != SocialProfileStatusLoaded {
+		t.Fatalf("SocialProfileStatus = %q, want %q", profile.SocialProfileStatus, SocialProfileStatusLoaded)
+	}
+}
+
+func TestLoadProfileKeepsExplicitSocialFallbackStatus(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		status SocialProfileStatus
+	}{
+		{name: "missing", status: SocialProfileStatusMissing},
+		{name: "unavailable", status: SocialProfileStatusUnavailable},
+		{name: "unconfigured", status: SocialProfileStatusUnconfigured},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			svc := NewService(&fakeGateway{lookupResp: LookupUserProfileResponse{
+				Username:            "louis",
+				UserID:              "user-1",
+				SocialProfileStatus: tc.status,
+			}})
+
+			profile, err := svc.LoadProfile(context.Background(), "louis")
+			if err != nil {
+				t.Fatalf("LoadProfile() error = %v", err)
+			}
+			if profile.SocialProfileStatus != tc.status {
+				t.Fatalf("SocialProfileStatus = %q, want %q", profile.SocialProfileStatus, tc.status)
+			}
+		})
 	}
 }
 
 func TestLoadProfilePropagatesGatewayError(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&fakeGateway{lookupErr: errors.New("boom")}, "")
+	svc := NewService(&fakeGateway{lookupErr: errors.New("boom")})
 	_, err := svc.LoadProfile(context.Background(), "louis")
 	if err == nil {
 		t.Fatalf("expected gateway error")

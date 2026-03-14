@@ -1,10 +1,9 @@
 package discovery
 
 import (
-	"context"
-	"log"
 	"net/http"
 
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
@@ -13,34 +12,23 @@ import (
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	publichandler.Base
-	gateway Gateway
+	service discoveryapp.Service
 }
 
 // newHandlers builds package wiring for this web seam.
-func newHandlers(base publichandler.Base, gw Gateway) handlers {
-	return handlers{Base: base, gateway: gw}
+func newHandlers(base publichandler.Base, service discoveryapp.Service) handlers {
+	if service == nil {
+		service = discoveryapp.NewService(nil)
+	}
+	return handlers{Base: base, service: service}
 }
 
 // handleIndex handles this route in the module transport layer.
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, lang := webi18n.ResolveLocalizer(w, r, nil)
-	entries := h.loadStarterEntriesView(r.Context())
+	page := h.service.LoadPage(r.Context())
+	entries := mapEntriesToView(page.Entries)
 	h.writeDiscoveryPage(w, r, loc, lang, entries)
-}
-
-// loadStarterEntriesView loads discovery entries and soft-degrades to an empty
-// list when the gateway is unavailable.
-func (h handlers) loadStarterEntriesView(ctx context.Context) []webtemplates.StarterEntryView {
-	if h.gateway == nil {
-		return nil
-	}
-	results, err := h.gateway.ListStarterEntries(ctx)
-	if err != nil {
-		log.Printf("discovery: list starter entries: %v", err)
-		// Render empty list on error — soft degradation.
-		return nil
-	}
-	return mapEntriesToView(results)
 }
 
 // writeDiscoveryPage writes the discovery page shell and content fragment.

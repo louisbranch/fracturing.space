@@ -17,20 +17,8 @@ func TestNewServiceAndWorkflowResolverContracts(t *testing.T) {
 	if IsGatewayHealthy(nil) {
 		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
 	}
-	if svc.ResolveWorkflow("daggerheart") != nil {
-		t.Fatalf("ResolveWorkflow() for nil workflow map = non-nil")
-	}
 	if _, err := svc.ListCampaigns(context.Background()); err == nil {
 		t.Fatalf("expected unavailable error for nil gateway")
-	}
-
-	workflow := testCreationWorkflow{}
-	svcWithWorkflow := NewServiceWithWorkflows(nil, map[GameSystem]CharacterCreationWorkflow{GameSystemDaggerheart: workflow})
-	if svcWithWorkflow.ResolveWorkflow(" DAggerHEART ") == nil {
-		t.Fatalf("ResolveWorkflow() should normalize workflow key")
-	}
-	if svcWithWorkflow.ResolveWorkflow("not-a-system") != nil {
-		t.Fatalf("ResolveWorkflow() should return nil for unknown systems")
 	}
 }
 
@@ -73,7 +61,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 		characterCreationCatalog:  CampaignCharacterCreationCatalog{},
 		characterCreationProfile:  CampaignCharacterCreationProfile{},
 	}
-	svc := NewServiceWithWorkflows(gateway, map[GameSystem]CharacterCreationWorkflow{GameSystemDaggerheart: testCreationWorkflow{}})
+	svc := NewService(gateway)
 	ctx := contextWithResolvedUserID("user-1")
 
 	if _, err := svc.ListCampaigns(ctx); err != nil {

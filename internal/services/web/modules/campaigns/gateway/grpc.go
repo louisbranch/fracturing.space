@@ -17,11 +17,15 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-// CampaignClient exposes discovery entry, lookup, and creation from the game service.
-type CampaignClient interface {
+// CampaignReadClient exposes campaign query operations from the game service.
+type CampaignReadClient interface {
 	ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error)
 	GetCampaign(context.Context, *statev1.GetCampaignRequest, ...grpc.CallOption) (*statev1.GetCampaignResponse, error)
 	GetCampaignSessionReadiness(context.Context, *statev1.GetCampaignSessionReadinessRequest, ...grpc.CallOption) (*statev1.GetCampaignSessionReadinessResponse, error)
+}
+
+// CampaignMutationClient exposes campaign mutation operations from the game service.
+type CampaignMutationClient interface {
 	CreateCampaign(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error)
 	UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error)
 	SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error)
@@ -38,25 +42,33 @@ type AgentClient interface {
 	ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error)
 }
 
-// ParticipantClient exposes participant listing for campaign workspace pages.
-type ParticipantClient interface {
+// ParticipantReadClient exposes participant queries for campaign workspace pages.
+type ParticipantReadClient interface {
 	ListParticipants(context.Context, *statev1.ListParticipantsRequest, ...grpc.CallOption) (*statev1.ListParticipantsResponse, error)
 	GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error)
+}
+
+// ParticipantMutationClient exposes participant mutations for campaign workspace pages.
+type ParticipantMutationClient interface {
 	CreateParticipant(context.Context, *statev1.CreateParticipantRequest, ...grpc.CallOption) (*statev1.CreateParticipantResponse, error)
 	UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error)
 }
 
-// CharacterClient exposes character operations for campaign workspace pages.
-type CharacterClient interface {
+// CharacterReadClient exposes character query operations for campaign workspace pages.
+type CharacterReadClient interface {
 	ListCharacters(context.Context, *statev1.ListCharactersRequest, ...grpc.CallOption) (*statev1.ListCharactersResponse, error)
+	GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error)
+	GetCharacterCreationProgress(context.Context, *statev1.GetCharacterCreationProgressRequest, ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error)
+}
+
+// CharacterMutationClient exposes character mutations for campaign workspace pages.
+type CharacterMutationClient interface {
 	CreateCharacter(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
 	UpdateCharacter(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error)
 	DeleteCharacter(context.Context, *statev1.DeleteCharacterRequest, ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error)
 	SetDefaultControl(context.Context, *statev1.SetDefaultControlRequest, ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error)
 	ClaimCharacterControl(context.Context, *statev1.ClaimCharacterControlRequest, ...grpc.CallOption) (*statev1.ClaimCharacterControlResponse, error)
 	ReleaseCharacterControl(context.Context, *statev1.ReleaseCharacterControlRequest, ...grpc.CallOption) (*statev1.ReleaseCharacterControlResponse, error)
-	GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error)
-	GetCharacterCreationProgress(context.Context, *statev1.GetCharacterCreationProgressRequest, ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error)
 	ApplyCharacterCreationStep(context.Context, *statev1.ApplyCharacterCreationStepRequest, ...grpc.CallOption) (*statev1.ApplyCharacterCreationStepResponse, error)
 	ResetCharacterCreationWorkflow(context.Context, *statev1.ResetCharacterCreationWorkflowRequest, ...grpc.CallOption) (*statev1.ResetCharacterCreationWorkflowResponse, error)
 }
@@ -71,16 +83,24 @@ type DaggerheartAssetClient interface {
 	GetAssetMap(context.Context, *daggerheartv1.GetDaggerheartAssetMapRequest, ...grpc.CallOption) (*daggerheartv1.GetDaggerheartAssetMapResponse, error)
 }
 
-// SessionClient exposes session listing for campaign workspace pages.
-type SessionClient interface {
+// SessionReadClient exposes session queries for campaign workspace pages.
+type SessionReadClient interface {
 	ListSessions(context.Context, *statev1.ListSessionsRequest, ...grpc.CallOption) (*statev1.ListSessionsResponse, error)
+}
+
+// SessionMutationClient exposes session mutations for campaign workspace pages.
+type SessionMutationClient interface {
 	StartSession(context.Context, *statev1.StartSessionRequest, ...grpc.CallOption) (*statev1.StartSessionResponse, error)
 	EndSession(context.Context, *statev1.EndSessionRequest, ...grpc.CallOption) (*statev1.EndSessionResponse, error)
 }
 
-// InviteClient exposes invite listing for campaign workspace pages.
-type InviteClient interface {
+// InviteReadClient exposes invite queries for campaign workspace pages.
+type InviteReadClient interface {
 	ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error)
+}
+
+// InviteMutationClient exposes invite mutations for campaign workspace pages.
+type InviteMutationClient interface {
 	CreateInvite(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error)
 	RevokeInvite(context.Context, *statev1.RevokeInviteRequest, ...grpc.CallOption) (*statev1.RevokeInviteResponse, error)
 }
@@ -96,66 +116,72 @@ type AuthorizationClient interface {
 	BatchCan(context.Context, *statev1.BatchCanRequest, ...grpc.CallOption) (*statev1.BatchCanResponse, error)
 }
 
+// GRPCGatewayReadDeps groups query-side dependencies so read paths stay explicit.
+type GRPCGatewayReadDeps struct {
+	Campaign           CampaignReadClient
+	Communication      CommunicationClient
+	Agent              AgentClient
+	Participant        ParticipantReadClient
+	Character          CharacterReadClient
+	DaggerheartContent DaggerheartContentClient
+	DaggerheartAsset   DaggerheartAssetClient
+	Session            SessionReadClient
+	Invite             InviteReadClient
+}
+
+// GRPCGatewayMutationDeps groups mutation-side dependencies so write paths stay explicit.
+type GRPCGatewayMutationDeps struct {
+	Campaign    CampaignMutationClient
+	Participant ParticipantMutationClient
+	Character   CharacterMutationClient
+	Session     SessionMutationClient
+	Invite      InviteMutationClient
+	Auth        AuthClient
+}
+
+// GRPCGatewayAuthorizationDeps groups authorization checks behind one seam.
+type GRPCGatewayAuthorizationDeps struct {
+	Client AuthorizationClient
+}
+
 // GRPCGatewayDeps carries the explicit client dependencies for the campaigns gRPC gateway.
 type GRPCGatewayDeps struct {
-	CampaignClient           CampaignClient
-	CommunicationClient      CommunicationClient
-	AgentClient              AgentClient
-	ParticipantClient        ParticipantClient
-	CharacterClient          CharacterClient
-	DaggerheartContentClient DaggerheartContentClient
-	DaggerheartAssetClient   DaggerheartAssetClient
-	SessionClient            SessionClient
-	InviteClient             InviteClient
-	AuthClient               AuthClient
-	AuthorizationClient      AuthorizationClient
-	AssetBaseURL             string
+	Read          GRPCGatewayReadDeps
+	Mutation      GRPCGatewayMutationDeps
+	Authorization GRPCGatewayAuthorizationDeps
+	AssetBaseURL  string
 }
 
 // NewGRPCGateway builds the production campaigns gateway from explicit client dependencies.
 // All required clients must be present — a partial set would report healthy while
 // individual campaign operations fail.
 func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
-	if deps.CampaignClient == nil || deps.CommunicationClient == nil || deps.ParticipantClient == nil || deps.CharacterClient == nil ||
-		deps.DaggerheartContentClient == nil || deps.DaggerheartAssetClient == nil ||
-		deps.SessionClient == nil || deps.InviteClient == nil || deps.AuthClient == nil || deps.AuthorizationClient == nil {
+	if deps.Read.Campaign == nil || deps.Read.Communication == nil || deps.Read.Participant == nil || deps.Read.Character == nil ||
+		deps.Read.DaggerheartContent == nil || deps.Read.DaggerheartAsset == nil ||
+		deps.Read.Session == nil || deps.Read.Invite == nil || deps.Mutation.Campaign == nil ||
+		deps.Mutation.Participant == nil || deps.Mutation.Character == nil || deps.Mutation.Session == nil ||
+		deps.Mutation.Invite == nil || deps.Mutation.Auth == nil || deps.Authorization.Client == nil {
 		return campaignapp.NewUnavailableGateway()
 	}
 	return GRPCGateway{
-		Client:              deps.CampaignClient,
-		CommunicationClient: deps.CommunicationClient,
-		AgentClient:         deps.AgentClient,
-		ParticipantClient:   deps.ParticipantClient,
-		CharacterClient:     deps.CharacterClient,
-		DaggerheartContent:  deps.DaggerheartContentClient,
-		DaggerheartAsset:    deps.DaggerheartAssetClient,
-		SessionClient:       deps.SessionClient,
-		InviteClient:        deps.InviteClient,
-		AuthClient:          deps.AuthClient,
-		AuthorizationClient: deps.AuthorizationClient,
-		AssetBaseURL:        deps.AssetBaseURL,
+		Read:          deps.Read,
+		Mutation:      deps.Mutation,
+		Authorization: deps.Authorization,
+		AssetBaseURL:  deps.AssetBaseURL,
 	}
 }
 
 // GRPCGateway defines an internal contract used at this web package boundary.
 type GRPCGateway struct {
-	Client              CampaignClient
-	CommunicationClient CommunicationClient
-	AgentClient         AgentClient
-	ParticipantClient   ParticipantClient
-	CharacterClient     CharacterClient
-	DaggerheartContent  DaggerheartContentClient
-	DaggerheartAsset    DaggerheartAssetClient
-	SessionClient       SessionClient
-	InviteClient        InviteClient
-	AuthClient          AuthClient
-	AuthorizationClient AuthorizationClient
-	AssetBaseURL        string
+	Read          GRPCGatewayReadDeps
+	Mutation      GRPCGatewayMutationDeps
+	Authorization GRPCGatewayAuthorizationDeps
+	AssetBaseURL  string
 }
 
 // ListCampaigns returns the package view collection for this workflow.
 func (g GRPCGateway) ListCampaigns(ctx context.Context) ([]campaignapp.CampaignSummary, error) {
-	resp, err := g.Client.ListCampaigns(ctx, &statev1.ListCampaignsRequest{PageSize: 10})
+	resp, err := g.Read.Campaign.ListCampaigns(ctx, &statev1.ListCampaignsRequest{PageSize: 10})
 	if err != nil {
 		return nil, err
 	}
@@ -185,7 +211,7 @@ func (g GRPCGateway) ListCampaigns(ctx context.Context) ([]campaignapp.CampaignS
 
 // CampaignName centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignName(ctx context.Context, campaignID string) (string, error) {
-	resp, err := g.Client.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
+	resp, err := g.Read.Campaign.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil {
 		return "", err
 	}
@@ -197,7 +223,7 @@ func (g GRPCGateway) CampaignName(ctx context.Context, campaignID string) (strin
 
 // CampaignWorkspace centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignWorkspace(ctx context.Context, campaignID string) (campaignapp.CampaignWorkspace, error) {
-	resp, err := g.Client.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
+	resp, err := g.Read.Campaign.GetCampaign(ctx, &statev1.GetCampaignRequest{CampaignId: campaignID})
 	if err != nil {
 		return campaignapp.CampaignWorkspace{}, err
 	}
@@ -237,7 +263,7 @@ func (g GRPCGateway) CreateCampaign(ctx context.Context, input campaignapp.Creat
 	if locale == commonv1.Locale_LOCALE_UNSPECIFIED {
 		locale = commonv1.Locale_LOCALE_EN_US
 	}
-	resp, err := g.Client.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
+	resp, err := g.Mutation.Campaign.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
 		Name:        input.Name,
 		Locale:      locale,
 		System:      mapGameSystemToProto(input.System),
@@ -256,7 +282,7 @@ func (g GRPCGateway) CreateCampaign(ctx context.Context, input campaignapp.Creat
 
 // UpdateCampaign applies this package workflow transition.
 func (g GRPCGateway) UpdateCampaign(ctx context.Context, campaignID string, input campaignapp.UpdateCampaignInput) error {
-	if g.Client == nil {
+	if g.Mutation.Campaign == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.campaign_service_client_is_not_configured", "campaign service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -279,7 +305,7 @@ func (g GRPCGateway) UpdateCampaign(ctx context.Context, campaignID string, inpu
 		req.Locale = locale
 	}
 
-	_, err := g.Client.UpdateCampaign(ctx, req)
+	_, err := g.Mutation.Campaign.UpdateCampaign(ctx, req)
 	if err != nil {
 		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,

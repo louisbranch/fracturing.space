@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"golang.org/x/text/language"
 )
@@ -50,7 +51,7 @@ func TestMapCampaignListItemsIncludesUpdatedAtLabel(t *testing.T) {
 
 	loc := webi18n.Printer(language.English)
 	now := time.Date(2026, 2, 27, 12, 0, 0, 0, time.UTC)
-	items := []CampaignSummary{
+	items := []campaignapp.CampaignSummary{
 		{
 			ID:                "c-1",
 			Name:              "Campaign 1",
@@ -70,12 +71,12 @@ func TestCampaignWorkspaceMenuShowsOnlyActiveSessionSubItems(t *testing.T) {
 	t.Parallel()
 
 	loc := webi18n.Printer(language.English)
-	workspace := CampaignWorkspace{
+	workspace := campaignapp.CampaignWorkspace{
 		ID:               "c1",
 		ParticipantCount: "4",
 		CharacterCount:   "3",
 	}
-	sessions := []CampaignSession{
+	sessions := []campaignapp.CampaignSession{
 		{
 			ID:        "s3",
 			Name:      "Third Light",
@@ -167,14 +168,14 @@ func TestCampaignWorkspaceMenuBadgeCountsAllSessionsButSubItemsOnlyActive(t *tes
 	t.Parallel()
 
 	loc := webi18n.Printer(language.English)
-	workspace := CampaignWorkspace{ID: "c1"}
+	workspace := campaignapp.CampaignWorkspace{ID: "c1"}
 
-	sessions := make([]CampaignSession, 0, 12)
+	sessions := make([]campaignapp.CampaignSession, 0, 12)
 	for day := 1; day <= 12; day++ {
 		sessionID := fmt.Sprintf("s%02d", day)
 		start := fmt.Sprintf("2026-02-%02d 20:00 UTC", day)
 		end := fmt.Sprintf("2026-02-%02d 22:00 UTC", day)
-		sessions = append(sessions, CampaignSession{
+		sessions = append(sessions, campaignapp.CampaignSession{
 			ID:        sessionID,
 			Name:      "Session " + sessionID,
 			Status:    "Ended",
@@ -203,14 +204,14 @@ func TestMapInviteSeatOptionsShowsOnlyAvailableHumanSeats(t *testing.T) {
 	t.Parallel()
 
 	options := mapInviteSeatOptions(
-		[]CampaignParticipant{
+		[]campaignapp.CampaignParticipant{
 			{ID: "p-open-b", Name: "Bryn", Controller: "Human"},
 			{ID: "p-pending", Name: "Ari", Controller: "Human"},
 			{ID: "p-bound", Name: "Cato", Controller: "Human", UserID: "user-1"},
 			{ID: "p-ai", Name: "Oracle", Controller: "AI"},
 			{ID: "p-open-a", Name: "Ada", Controller: "controller_human"},
 		},
-		[]CampaignInvite{
+		[]campaignapp.CampaignInvite{
 			{ID: "inv-1", ParticipantID: "p-pending", Status: "Pending"},
 			{ID: "inv-2", ParticipantID: "p-open-b", Status: "Claimed"},
 		},

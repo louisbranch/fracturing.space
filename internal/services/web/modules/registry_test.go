@@ -4,16 +4,17 @@ import (
 	"context"
 	"testing"
 
+	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	"google.golang.org/grpc"
 )
 
 func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	t.Parallel()
 
-	reg := NewRegistry()
-	built := reg.Build(BuildInput{
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
 		Dependencies:     Dependencies{},
 		Resolvers:        ModuleResolvers{},
 		PublicOptions:    PublicModuleOptions{},
@@ -24,8 +25,8 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if len(public) != 5 {
 		t.Fatalf("public module count = %d, want %d", len(public), 5)
 	}
-	if len(protected) != 4 {
-		t.Fatalf("protected module count = %d, want %d", len(protected), 4)
+	if len(protected) != 3 {
+		t.Fatalf("protected module count = %d, want %d", len(protected), 3)
 	}
 
 	if got := public[0].ID(); got != "public" {
@@ -49,11 +50,8 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if got := protected[1].ID(); got != "settings" {
 		t.Fatalf("default protected module[1] id = %q, want %q", got, "settings")
 	}
-	if got := protected[2].ID(); got != "notifications" {
-		t.Fatalf("default protected module[2] id = %q, want %q", got, "notifications")
-	}
-	if got := protected[3].ID(); got != "campaigns" {
-		t.Fatalf("default protected module[3] id = %q, want %q", got, "campaigns")
+	if got := protected[2].ID(); got != "campaigns" {
+		t.Fatalf("default protected module[2] id = %q, want %q", got, "campaigns")
 	}
 }
 
@@ -79,8 +77,8 @@ func TestDefaultProtectedModulesDelegatesToBuilder(t *testing.T) {
 func TestModulesHaveUniquePrefixes(t *testing.T) {
 	t.Parallel()
 
-	reg := NewRegistry()
-	built := reg.Build(BuildInput{
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
 		Dependencies:     Dependencies{},
 		Resolvers:        ModuleResolvers{},
 		PublicOptions:    PublicModuleOptions{},
@@ -105,8 +103,8 @@ func TestModulesHaveUniquePrefixes(t *testing.T) {
 func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 	t.Parallel()
 
-	reg := NewRegistry()
-	built := reg.Build(BuildInput{
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
 		Dependencies:     Dependencies{},
 		Resolvers:        ModuleResolvers{},
 		PublicOptions:    PublicModuleOptions{},
@@ -115,8 +113,30 @@ func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 	if len(built.Public) != 5 {
 		t.Fatalf("public module count = %d, want 5", len(built.Public))
 	}
+	if len(built.Protected) != 3 {
+		t.Fatalf("protected module count = %d, want 3", len(built.Protected))
+	}
+}
+
+func TestRegistryBuildIncludesNotificationsWhenClientConfigured(t *testing.T) {
+	t.Parallel()
+
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
+		Dependencies: Dependencies{
+			Notifications: NotificationDependencies{
+				NotificationClient: stubNotificationClient{},
+			},
+		},
+		Resolvers:        ModuleResolvers{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
 	if len(built.Protected) != 4 {
 		t.Fatalf("protected module count = %d, want 4", len(built.Protected))
+	}
+	if got := built.Protected[2].ID(); got != "notifications" {
+		t.Fatalf("protected module[2] id = %q, want %q", got, "notifications")
 	}
 }
 
@@ -144,6 +164,24 @@ type stubStatusClient struct {
 	statusv1.StatusServiceClient
 	resp *statusv1.GetSystemStatusResponse
 	err  error
+}
+
+type stubNotificationClient struct{}
+
+func (stubNotificationClient) GetUnreadNotificationStatus(context.Context, *notificationsv1.GetUnreadNotificationStatusRequest, ...grpc.CallOption) (*notificationsv1.GetUnreadNotificationStatusResponse, error) {
+	return &notificationsv1.GetUnreadNotificationStatusResponse{}, nil
+}
+
+func (stubNotificationClient) ListNotifications(context.Context, *notificationsv1.ListNotificationsRequest, ...grpc.CallOption) (*notificationsv1.ListNotificationsResponse, error) {
+	return &notificationsv1.ListNotificationsResponse{}, nil
+}
+
+func (stubNotificationClient) GetNotification(_ context.Context, req *notificationsv1.GetNotificationRequest, _ ...grpc.CallOption) (*notificationsv1.GetNotificationResponse, error) {
+	return &notificationsv1.GetNotificationResponse{Notification: &notificationsv1.Notification{Id: req.GetNotificationId()}}, nil
+}
+
+func (stubNotificationClient) MarkNotificationRead(_ context.Context, req *notificationsv1.MarkNotificationReadRequest, _ ...grpc.CallOption) (*notificationsv1.MarkNotificationReadResponse, error) {
+	return &notificationsv1.MarkNotificationReadResponse{Notification: &notificationsv1.Notification{Id: req.GetNotificationId()}}, nil
 }
 
 func (s *stubStatusClient) GetSystemStatus(_ context.Context, _ *statusv1.GetSystemStatusRequest, _ ...grpc.CallOption) (*statusv1.GetSystemStatusResponse, error) {
@@ -229,4 +267,4 @@ func TestStatusHealthProviderEmptyServicesReturnsNil(t *testing.T) {
 }
 
 // Verify ServiceHealthEntry is properly populated by checking the type contract.
-var _ = []dashboard.ServiceHealthEntry{}
+var _ = []dashboardapp.ServiceHealthEntry{}

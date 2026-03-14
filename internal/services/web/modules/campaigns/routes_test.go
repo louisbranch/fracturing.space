@@ -17,7 +17,7 @@ func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	registerStableRoutes(
 		nil,
 		newHandlers(
-			newService(fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
+			campaignapp.NewService(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
 			modulehandler.NewTestBase(),
 			"",
 			nil,
@@ -29,17 +29,21 @@ func TestStableRouteSurfacesOwnExpectedRouteGroups(t *testing.T) {
 	t.Parallel()
 
 	surfaces := stableRouteSurfaces()
-	if len(surfaces) != 3 {
-		t.Fatalf("len(stableRouteSurfaces()) = %d, want 3", len(surfaces))
+	if len(surfaces) != 6 {
+		t.Fatalf("len(stableRouteSurfaces()) = %d, want 6", len(surfaces))
 	}
-	if surfaces[0].id != "stable-core" {
-		t.Fatalf("stable surface[0] id = %q, want %q", surfaces[0].id, "stable-core")
+	wantIDs := []string{
+		"stable-overview",
+		"stable-participants",
+		"stable-characters",
+		"stable-character-creation",
+		"stable-sessions-game",
+		"stable-invites",
 	}
-	if surfaces[1].id != "stable-workflow" {
-		t.Fatalf("stable surface[1] id = %q, want %q", surfaces[1].id, "stable-workflow")
-	}
-	if surfaces[2].id != "stable-mutations" {
-		t.Fatalf("stable surface[2] id = %q, want %q", surfaces[2].id, "stable-mutations")
+	for idx, want := range wantIDs {
+		if surfaces[idx].id != want {
+			t.Fatalf("stable surface[%d] id = %q, want %q", idx, surfaces[idx].id, want)
+		}
 	}
 	for _, surface := range surfaces {
 		if surface.register == nil {
@@ -55,10 +59,10 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 	registerStableRoutes(
 		mux,
 		newHandlers(
-			newService(fakeGateway{
-				items:        []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-				participants: []CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
-				characters:   []CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
+			campaignapp.NewService(fakeGateway{
+				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+				participants: []campaignapp.CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
+				characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
 			}),
 			modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil),
 			"",
@@ -123,14 +127,14 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 	registerStableRoutes(
 		mux,
 		newHandlers(
-			newService(fakeGateway{
-				items:        []CampaignSummary{{ID: "c1", Name: "Campaign"}},
-				participants: []CampaignParticipant{{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"}},
-				participant:  CampaignParticipant{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
-				sessions:     []CampaignSession{{ID: "sess-1", Name: "Session One"}},
-				invites:      []CampaignInvite{{ID: "inv-1", ParticipantID: "p-1", RecipientUserID: "user-123", Status: "Pending"}},
-				characterCreationProgress: CampaignCharacterCreationProgress{
-					Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+			campaignapp.NewService(fakeGateway{
+				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+				participants: []campaignapp.CampaignParticipant{{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"}},
+				participant:  campaignapp.CampaignParticipant{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
+				sessions:     []campaignapp.CampaignSession{{ID: "sess-1", Name: "Session One"}},
+				invites:      []campaignapp.CampaignInvite{{ID: "inv-1", ParticipantID: "p-1", RecipientUserID: "user-123", Status: "Pending"}},
+				characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
+					Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 					NextStep: 1,
 				},
 				authorizationDecision: campaignapp.AuthorizationDecision{

@@ -10,6 +10,7 @@ import (
 
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
+	"github.com/louisbranch/fracturing.space/internal/services/web"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -167,7 +168,7 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	requirements := dependencyRequirements(testDependencyConfig())
 	requiredNames := make([]string, 0, len(requirements))
 	for _, dep := range requirements {
-		if dep.mode == platformgrpc.ModeRequired {
+		if dep.policy == startupDependencyRequired {
 			requiredNames = append(requiredNames, dep.name)
 		}
 	}
@@ -175,6 +176,34 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	want := []string{dependencyNameAuth, dependencyNameGame, dependencyNameSocial}
 	if !slices.Equal(requiredNames, want) {
 		t.Fatalf("required dependencies = %v, want %v", requiredNames, want)
+	}
+}
+
+func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
+	t.Parallel()
+
+	requirements := dependencyRequirements(testDependencyConfig())
+	got := map[string][]string{}
+	for _, dep := range requirements {
+		if len(dep.surfaces) == 0 {
+			t.Fatalf("dependency %q has no owned surfaces", dep.name)
+		}
+		got[dep.name] = dep.surfaces
+	}
+
+	tests := map[string][]string{
+		dependencyNameAuth:          {"principal", "publicauth", "profile", "settings"},
+		dependencyNameSocial:        {"principal", "profile", "settings"},
+		dependencyNameGame:          {"campaigns", "dashboard-sync"},
+		dependencyNameAI:            {"settings.ai", "campaigns.ai"},
+		dependencyNameDiscovery:     {"discovery"},
+		dependencyNameUserHub:       {"dashboard", "dashboard-sync"},
+		dependencyNameNotifications: {"principal", "notifications"},
+	}
+	for name, want := range tests {
+		if !slices.Equal(got[name], want) {
+			t.Fatalf("dependency %q surfaces = %v, want %v", name, got[name], want)
+		}
 	}
 }
 
@@ -194,6 +223,17 @@ func TestDependencyRequirementsCapabilitiesAreUnique(t *testing.T) {
 	}
 	if len(seen) != len(requirements) {
 		t.Fatalf("unique capabilities = %d, want %d", len(seen), len(requirements))
+	}
+}
+
+func TestDependencyRequirementManagedConnModeMatchesPolicy(t *testing.T) {
+	t.Parallel()
+
+	if got := startupDependencyRequired.managedConnMode(); got != platformgrpc.ModeRequired {
+		t.Fatalf("required managedConnMode = %v, want %v", got, platformgrpc.ModeRequired)
+	}
+	if got := startupDependencyOptional.managedConnMode(); got != platformgrpc.ModeOptional {
+		t.Fatalf("optional managedConnMode = %v, want %v", got, platformgrpc.ModeOptional)
 	}
 }
 
@@ -307,5 +347,53 @@ func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
 	// 7 requirements - 2 empty addresses = 5 connections.
 	if len(conns) != 5 {
 		t.Fatalf("managed conns = %d, want 5", len(conns))
+	}
+}
+
+func TestBootstrapRuntimeDependenciesWiresStatusClientIntoDashboard(t *testing.T) {
+	t.Parallel()
+
+	stubManagedConn(t)
+
+	cfg := testDependencyConfig()
+	cfg.StatusAddr = "status:8093"
+	reporter := platformstatus.NewReporter("web", nil)
+
+	runtimeDeps, err := bootstrapRuntimeDependencies(context.Background(), cfg, reporter)
+	if err != nil {
+		t.Fatalf("bootstrapRuntimeDependencies() error = %v", err)
+	}
+	defer runtimeDeps.close()
+
+	if runtimeDeps.bundle.Modules.Dashboard.StatusClient == nil {
+		t.Fatal("expected dashboard status client")
+	}
+	if runtimeDeps.statusConn == nil {
+		t.Fatal("expected status managed conn")
+	}
+}
+
+func TestConfigServerConfigMapsRuntimeDependencies(t *testing.T) {
+	t.Parallel()
+
+	cfg := Config{
+		HTTPAddr:            "127.0.0.1:8080",
+		ChatHTTPAddr:        "127.0.0.1:8086",
+		TrustForwardedProto: true,
+	}
+	deps := web.DependencyBundle{}
+
+	serverCfg := cfg.serverConfig(deps)
+	if serverCfg.HTTPAddr != cfg.HTTPAddr {
+		t.Fatalf("HTTPAddr = %q, want %q", serverCfg.HTTPAddr, cfg.HTTPAddr)
+	}
+	if serverCfg.ChatHTTPAddr != cfg.ChatHTTPAddr {
+		t.Fatalf("ChatHTTPAddr = %q, want %q", serverCfg.ChatHTTPAddr, cfg.ChatHTTPAddr)
+	}
+	if !serverCfg.RequestSchemePolicy.TrustForwardedProto {
+		t.Fatalf("TrustForwardedProto = false, want true")
+	}
+	if serverCfg.Dependencies == nil {
+		t.Fatal("expected dependencies pointer")
 	}
 }

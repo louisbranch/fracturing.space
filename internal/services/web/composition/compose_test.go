@@ -15,8 +15,8 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 	t.Parallel()
 
 	reg := &stubRegistry{
-		output: modules.BuildOutput{
-			Public: []modules.Module{
+		output: modules.RegistryOutput{
+			Public: []module.Module{
 				stubModule{
 					id: "public",
 					mount: module.Mount{
@@ -27,7 +27,7 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 					},
 				},
 			},
-			Protected: []modules.Module{
+			Protected: []module.Module{
 				stubModule{
 					id: "campaigns",
 					mount: module.Mount{
@@ -51,7 +51,7 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 		},
 		ChatHTTPAddr:        "127.0.0.1:9002",
 		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: true},
-		Registry:            reg,
+		RegistryBuilder:     reg,
 	})
 	if err != nil {
 		t.Fatalf("ComposeAppHandler() error = %v", err)
@@ -77,8 +77,8 @@ func TestComposeAppHandlerDefaultsAuthToFalseWhenNil(t *testing.T) {
 	t.Parallel()
 
 	reg := &stubRegistry{
-		output: modules.BuildOutput{
-			Protected: []modules.Module{
+		output: modules.RegistryOutput{
+			Protected: []module.Module{
 				stubModule{
 					id: "campaigns",
 					mount: module.Mount{
@@ -93,7 +93,7 @@ func TestComposeAppHandlerDefaultsAuthToFalseWhenNil(t *testing.T) {
 	}
 
 	h, err := ComposeAppHandler(ComposeInput{
-		Registry: reg,
+		RegistryBuilder: reg,
 	})
 	if err != nil {
 		t.Fatalf("ComposeAppHandler() error = %v", err)
@@ -111,11 +111,11 @@ func TestComposeAppHandlerDefaultsAuthToFalseWhenNil(t *testing.T) {
 }
 
 type stubRegistry struct {
-	input  modules.BuildInput
-	output modules.BuildOutput
+	input  modules.RegistryInput
+	output modules.RegistryOutput
 }
 
-func (s *stubRegistry) Build(input modules.BuildInput) modules.BuildOutput {
+func (s *stubRegistry) Build(input modules.RegistryInput) modules.RegistryOutput {
 	s.input = input
 	return s.output
 }

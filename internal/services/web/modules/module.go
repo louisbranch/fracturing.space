@@ -4,21 +4,15 @@ package modules
 import (
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
+	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
+	dashboardgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
+	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
+	profilegateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/gateway"
 	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
+	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 )
-
-// Mount aliases the module mount contract.
-type Mount = module.Mount
-
-// Module aliases the module interface contract.
-type Module = module.Module
 
 // ModuleResolvers carries request-scoped resolver functions derived from the
 // principal resolver. The server constructs these after building the principal
@@ -67,38 +61,73 @@ type Dependencies struct {
 
 // CampaignDependencies contains campaign feature clients.
 type CampaignDependencies struct {
-	CampaignClient           campaigns.CampaignClient
-	CommunicationClient      campaigns.CommunicationClient
-	AgentClient              campaigns.AgentClient
-	ParticipantClient        campaigns.ParticipantClient
-	CharacterClient          campaigns.CharacterClient
-	DaggerheartContentClient campaigns.DaggerheartContentClient
-	DaggerheartAssetClient   campaigns.DaggerheartAssetClient
-	SessionClient            campaigns.SessionClient
-	InviteClient             campaigns.InviteClient
-	AuthClient               campaigns.AuthClient
-	AuthorizationClient      campaigns.AuthorizationClient
+	CampaignClient           CampaignClient
+	CommunicationClient      campaigngateway.CommunicationClient
+	AgentClient              campaigngateway.AgentClient
+	ParticipantClient        ParticipantClient
+	CharacterClient          CharacterClient
+	DaggerheartContentClient campaigngateway.DaggerheartContentClient
+	DaggerheartAssetClient   campaigngateway.DaggerheartAssetClient
+	SessionClient            SessionClient
+	InviteClient             InviteClient
+	AuthClient               campaigngateway.AuthClient
+	AuthorizationClient      campaigngateway.AuthorizationClient
+}
+
+// CampaignClient keeps composition ownership on the generated campaigns client
+// while the gateway consumes narrower read/mutation bundles internally.
+type CampaignClient interface {
+	campaigngateway.CampaignReadClient
+	campaigngateway.CampaignMutationClient
+}
+
+// ParticipantClient keeps one composition-owned participant client while the
+// gateway consumes separate read and mutation seams internally.
+type ParticipantClient interface {
+	campaigngateway.ParticipantReadClient
+	campaigngateway.ParticipantMutationClient
+}
+
+// CharacterClient keeps one composition-owned character client while the
+// gateway consumes separate read and mutation seams internally.
+type CharacterClient interface {
+	campaigngateway.CharacterReadClient
+	campaigngateway.CharacterMutationClient
+}
+
+// SessionClient keeps one composition-owned session client while the gateway
+// consumes separate read and mutation seams internally.
+type SessionClient interface {
+	campaigngateway.SessionReadClient
+	campaigngateway.SessionMutationClient
+}
+
+// InviteClient keeps one composition-owned invite client while the gateway
+// consumes separate read and mutation seams internally.
+type InviteClient interface {
+	campaigngateway.InviteReadClient
+	campaigngateway.InviteMutationClient
 }
 
 // DashboardDependencies contains dashboard feature clients.
 type DashboardDependencies struct {
-	UserHubClient dashboard.UserHubClient
+	UserHubClient dashboardgateway.UserHubClient
 	StatusClient  statusv1.StatusServiceClient
 }
 
 // ProfileDependencies contains profile feature clients.
 type ProfileDependencies struct {
-	AuthClient   profile.AuthClient
-	SocialClient profile.SocialClient
+	AuthClient   profilegateway.AuthClient
+	SocialClient profilegateway.SocialClient
 }
 
 // SettingsDependencies contains settings feature clients.
 type SettingsDependencies struct {
-	SocialClient     settings.SocialClient
-	AccountClient    settings.AccountClient
-	PasskeyClient    settings.PasskeyClient
-	CredentialClient settings.CredentialClient
-	AgentClient      settings.AgentClient
+	SocialClient     settingsgateway.SocialClient
+	AccountClient    settingsgateway.AccountClient
+	PasskeyClient    settingsgateway.PasskeyClient
+	CredentialClient settingsgateway.CredentialClient
+	AgentClient      settingsgateway.AgentClient
 }
 
 // DashboardSyncDependencies contains shared mutation-sync clients.
@@ -115,7 +144,7 @@ type PublicAuthDependencies struct {
 
 // NotificationDependencies contains notification feature clients.
 type NotificationDependencies struct {
-	NotificationClient notifications.NotificationClient
+	NotificationClient notificationsgateway.NotificationClient
 }
 
 // DiscoveryDependencies contains discovery feature clients.

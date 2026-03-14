@@ -14,7 +14,7 @@ func IsDaggerheartSystem(system string) bool {
 	return strings.EqualFold(strings.TrimSpace(system), SystemLabel)
 }
 
-// Workflow implements campaigns.CharacterCreationWorkflow for Daggerheart.
+// Workflow implements workflow.CharacterCreation for Daggerheart.
 type Workflow struct {
 	AssetBaseURL string
 }

@@ -9,6 +9,7 @@ import (
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -19,35 +20,30 @@ type notificationService = notificationsapp.Service
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
-	service notificationService
-	nowFunc func() time.Time
+	service  notificationService
+	renderer notificationCopyRenderer
+	nowFunc  func() time.Time
 }
 
 // newHandlers builds package wiring for this web seam.
 func newHandlers(s notificationService, base modulehandler.Base) handlers {
-	return handlers{Base: base, service: s, nowFunc: time.Now}
+	return handlers{
+		Base:     base,
+		service:  s,
+		renderer: defaultNotificationCopyRenderer{},
+		nowFunc:  time.Now,
+	}
 }
 
 // routeNotificationID extracts the canonical notification route parameter.
 func (h handlers) routeNotificationID(r *http.Request) (string, bool) {
-	notificationID := strings.TrimSpace(r.PathValue("notificationID"))
-	if notificationID == "" {
-		return "", false
-	}
-	return notificationID, true
+	return routeparam.Read(r, "notificationID")
 }
 
 // withNotificationID extracts the notification ID path param and delegates to
 // fn, returning 404 when the param is missing.
 func (h handlers) withNotificationID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		notificationID, ok := h.routeNotificationID(r)
-		if !ok {
-			h.WriteNotFound(w, r)
-			return
-		}
-		fn(w, r, notificationID)
-	}
+	return routeparam.WithRequired("notificationID", h.WriteNotFound, fn)
 }
 
 // handleIndex handles this route in the module transport layer.

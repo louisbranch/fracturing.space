@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -16,7 +17,7 @@ import (
 func TestMountServesCampaignDetailRoutes(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -48,7 +49,7 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 func TestMountStableCampaignMutationDetailRoutes(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -75,8 +76,8 @@ func TestMountCampaignSessionsRouteRendersSessionCards(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		sessions: []CampaignSession{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		sessions: []campaignapp.CampaignSession{{
 			ID:     "s1",
 			Name:   "First Light",
 			Status: "Active",
@@ -111,13 +112,13 @@ func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{
+		items: []campaignapp.CampaignSummary{{
 			ID:               "c1",
 			Name:             "The Guildhouse",
 			ParticipantCount: "2",
 			CharacterCount:   "2",
 		}},
-		sessions: []CampaignSession{
+		sessions: []campaignapp.CampaignSession{
 			{
 				ID:        "s1",
 				Name:      "First Light",
@@ -177,8 +178,8 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		sessions: []CampaignSession{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		sessions: []campaignapp.CampaignSession{
 			{
 				ID:        "s3",
 				Name:      "Third Light",
@@ -252,10 +253,10 @@ func TestMountCampaignSessionsRouteRendersReadinessBlockers(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		sessionReadiness: CampaignSessionReadiness{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		sessionReadiness: campaignapp.CampaignSessionReadiness{
 			Ready: false,
-			Blockers: []CampaignSessionReadinessBlocker{
+			Blockers: []campaignapp.CampaignSessionReadinessBlocker{
 				{
 					Code:    "SESSION_READINESS_AI_GM_PARTICIPANT_REQUIRED",
 					Message: "Campaign readiness requires at least one AI-controlled GM participant for AI GM mode",
@@ -293,8 +294,8 @@ func TestMountCampaignSessionDetailRouteRendersSelectedSession(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		sessions: []CampaignSession{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		sessions: []campaignapp.CampaignSession{{
 			ID:     "s1",
 			Name:   "First Light",
 			Status: "Active",
@@ -328,14 +329,14 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{
 			{ID: "p-eligible", Name: "Aria", Controller: "Human"},
 			{ID: "p-bound", Name: "Bound Seat", Controller: "Human", UserID: "user-9"},
 			{ID: "p-ai", Name: "Oracle", Controller: "AI"},
 			{ID: "p1", Name: "Pending Seat", Controller: "Human"},
 		},
-		invites: []CampaignInvite{{
+		invites: []campaignapp.CampaignInvite{{
 			ID:              "inv-1",
 			ParticipantID:   "p1",
 			RecipientUserID: "user-2",
@@ -390,8 +391,8 @@ func TestMountCampaignInvitesRouteHidesManageControlsWithoutInvitePermission(t *
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		invites: []CampaignInvite{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		invites: []campaignapp.CampaignInvite{{
 			ID:              "inv-1",
 			ParticipantID:   "p1",
 			RecipientUserID: "user-2",
@@ -441,19 +442,19 @@ func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *te
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{{
 			ID:         "p-open",
 			Name:       "Aria",
 			Controller: "Human",
 		}},
-		invites: []CampaignInvite{{
+		invites: []campaignapp.CampaignInvite{{
 			ID:              "inv-1",
 			ParticipantID:   "p1",
 			RecipientUserID: "user-2",
 			Status:          "Pending",
 		}},
-		sessions: []CampaignSession{{
+		sessions: []campaignapp.CampaignSession{{
 			ID:        "s1",
 			Name:      "First Light",
 			Status:    "Active",
@@ -502,13 +503,13 @@ func TestMountCampaignInvitesRouteDisablesCreateWhenNoEligibleSeats(t *testing.T
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{
 			{ID: "p-bound", Name: "Bound Seat", Controller: "Human", UserID: "user-1"},
 			{ID: "p-ai", Name: "Oracle", Controller: "AI"},
 			{ID: "p-pending", Name: "Pending Seat", Controller: "Human"},
 		},
-		invites: []CampaignInvite{{
+		invites: []campaignapp.CampaignInvite{{
 			ID:            "inv-1",
 			ParticipantID: "p-pending",
 			Status:        "Pending",
@@ -552,8 +553,8 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		characters: []CampaignCharacter{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -604,12 +605,12 @@ func TestMountCampaignCharacterDetailShowsClaimAndManagerControlsForUnassignedCh
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{
 			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Manager"},
 			{ID: "p-2", UserID: "user-456", Name: "Moss", CampaignAccess: "Member"},
 		},
-		characters: []CampaignCharacter{{
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -657,11 +658,11 @@ func TestMountCampaignCharacterDetailShowsReleaseForCurrentController(t *testing
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{
 			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Member"},
 		},
-		characters: []CampaignCharacter{{
+		characters: []campaignapp.CampaignCharacter{{
 			ID:                      "char-1",
 			Name:                    "Aria",
 			Kind:                    "PC",
@@ -694,12 +695,12 @@ func TestMountCampaignCharacterDetailHidesSelfServiceControlsWhenAnotherParticip
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{
 			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Member"},
 			{ID: "p-2", UserID: "user-456", Name: "Moss", CampaignAccess: "Member"},
 		},
-		characters: []CampaignCharacter{{
+		characters: []campaignapp.CampaignCharacter{{
 			ID:                      "char-1",
 			Name:                    "Aria",
 			Kind:                    "PC",
@@ -736,17 +737,17 @@ func TestMountCampaignCharacterDetailDisablesControlAndDeleteActionsDuringActive
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		participants: []CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []campaignapp.CampaignParticipant{
 			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Manager"},
 		},
-		characters: []CampaignCharacter{{
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
 			Controller: "Unassigned",
 		}},
-		sessions: []CampaignSession{{ID: "sess-1", Name: "Session One", Status: "Active"}},
+		sessions: []campaignapp.CampaignSession{{ID: "sess-1", Name: "Session One", Status: "Active"}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
 			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 		},
@@ -780,8 +781,8 @@ func TestMountCampaignCharacterDetailBreadcrumbUsesCharacterName(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
-		characters: []CampaignCharacter{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -820,8 +821,8 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		characters: []CampaignCharacter{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -830,13 +831,13 @@ func TestMountCampaignCharacterDetailRendersCreationLinkCard(t *testing.T) {
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
 			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 		},
-		characterCreationProgress: CampaignCharacterCreationProgress{
-			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+		characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
+			Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 			NextStep: 1,
 		},
-		characterCreationCatalog: CampaignCharacterCreationCatalog{
-			Classes:    []CatalogClass{{ID: "warrior", Name: "Warrior"}},
-			Subclasses: []CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
+		characterCreationCatalog: campaignapp.CampaignCharacterCreationCatalog{
+			Classes:    []campaignapp.CatalogClass{{ID: "warrior", Name: "Warrior"}},
+			Subclasses: []campaignapp.CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
 		},
 	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
 
@@ -871,9 +872,9 @@ func TestMountCampaignCharacterDetailHidesWorkflowForNonDaggerheartCampaigns(t *
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "First"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		workspaceSystem: "Pathfinder",
-		characters: []CampaignCharacter{{
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -903,7 +904,7 @@ func TestMountCampaignCharacterCreatePageRendersDedicatedForm(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 
 	mount, err := m.Mount()
@@ -944,8 +945,8 @@ func TestMountCampaignCharacterEditPageRendersDedicatedForm(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		characters: []CampaignCharacter{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -988,14 +989,14 @@ func TestMountCampaignCharactersDisableMutationsDuringActiveSession(t *testing.T
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		characters: []CampaignCharacter{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
 			Controller: "Ariadne",
 		}},
-		sessions: []CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
+		sessions: []campaignapp.CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
 	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 
 	mount, err := m.Mount()
@@ -1022,25 +1023,25 @@ func TestMountCampaignCharacterDetailDisablesActionsDuringActiveSession(t *testi
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "First"}},
-		characters: []CampaignCharacter{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "char-1",
 			Name:       "Aria",
 			Kind:       "PC",
 			Controller: "Ariadne",
 			CanEdit:    true,
 		}},
-		sessions: []CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
+		sessions: []campaignapp.CampaignSession{{ID: "sess-1", Name: "Live", Status: "Active"}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
 			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
 		},
-		characterCreationProgress: CampaignCharacterCreationProgress{
-			Steps:    []CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+		characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
+			Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 			NextStep: 1,
 		},
-		characterCreationCatalog: CampaignCharacterCreationCatalog{
-			Classes:    []CatalogClass{{ID: "warrior", Name: "Warrior"}},
-			Subclasses: []CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
+		characterCreationCatalog: campaignapp.CampaignCharacterCreationCatalog{
+			Classes:    []campaignapp.CatalogClass{{ID: "warrior", Name: "Warrior"}},
+			Subclasses: []campaignapp.CatalogSubclass{{ID: "guardian", Name: "Guardian", ClassID: "warrior"}},
 		},
 	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
 
@@ -1069,7 +1070,7 @@ func TestMountCampaignCharacterDetailDisablesActionsDuringActiveSession(t *testi
 func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		Theme:         "Stormbound intrigue",
@@ -1114,7 +1115,7 @@ func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 func TestMountCampaignOverviewAllowsHead(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
@@ -1137,7 +1138,7 @@ func TestMountCampaignEditRequiresManagerOrOwnerAccess(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		authorizationDecision: campaignapp.AuthorizationDecision{
 			Evaluated:  true,
 			Allowed:    false,
@@ -1162,13 +1163,13 @@ func TestMountCampaignParticipantsMenuAndPortraitGallery(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{
+		items: []campaignapp.CampaignSummary{{
 			ID:               "c1",
 			Name:             "The Guildhouse",
 			ParticipantCount: "2",
 			CoverImageURL:    "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
-		participants: []CampaignParticipant{
+		participants: []campaignapp.CampaignParticipant{
 			{
 				ID:             "p-z",
 				Name:           "Zara",
@@ -1251,8 +1252,8 @@ func TestMountCampaignParticipantsShowsEditLinkForEditableParticipants(t *testin
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
-		participants: []CampaignParticipant{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []campaignapp.CampaignParticipant{
 			{ID: "p-a", Name: "Aria", Role: "GM", CampaignAccess: "Owner", Controller: "Human", AvatarURL: "/static/avatars/aria.png"},
 			{ID: "p-b", Name: "Bram", Role: "Player", CampaignAccess: "Member", Controller: "Human", AvatarURL: "/static/avatars/bram.png"},
 		},
@@ -1286,8 +1287,8 @@ func TestMountCampaignParticipantsShowsCreateLinkWhenManageAllowed(t *testing.T)
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
-		participants: []CampaignParticipant{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []campaignapp.CampaignParticipant{{
 			ID:             "p-manager",
 			UserID:         "user-123",
 			CampaignAccess: "Manager",
@@ -1318,8 +1319,8 @@ func TestMountCampaignParticipantCreateRendersForm(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:        []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
-		participants: []CampaignParticipant{{ID: "p-owner", UserID: "user-123", CampaignAccess: "Owner"}},
+		items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		participants: []campaignapp.CampaignParticipant{{ID: "p-owner", UserID: "user-123", CampaignAccess: "Owner"}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
 			{CheckID: "member", Evaluated: true, Allowed: true},
 			{CheckID: "manager", Evaluated: true, Allowed: true},
@@ -1360,9 +1361,9 @@ func TestMountCampaignParticipantCreateOmitsGMRoleForAIGMCampaigns(t *testing.T)
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		workspaceGMMode: "AI",
-		participants:    []CampaignParticipant{{ID: "p-owner", UserID: "user-123", CampaignAccess: "Owner"}},
+		participants:    []campaignapp.CampaignParticipant{{ID: "p-owner", UserID: "user-123", CampaignAccess: "Owner"}},
 		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
 			{CheckID: "member", Evaluated: true, Allowed: true},
 			{CheckID: "manager", Evaluated: true, Allowed: true},
@@ -1394,9 +1395,9 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		workspaceGMMode: "Human",
-		participant: CampaignParticipant{
+		participant: campaignapp.CampaignParticipant{
 			ID:             "p-a",
 			Name:           "Aria",
 			Role:           "GM",
@@ -1441,9 +1442,9 @@ func TestMountCampaignParticipantEditOmitsGMRoleForHumanSeatsInAIGMCampaigns(t *
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		workspaceGMMode: "AI",
-		participant: CampaignParticipant{
+		participant: campaignapp.CampaignParticipant{
 			ID:             "p-a",
 			Name:           "Aria",
 			Role:           "GM",
@@ -1481,9 +1482,9 @@ func TestMountCampaignParticipantEditRendersAIBindingColumnForOwner(t *testing.T
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:              []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		items:              []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		workspaceAIAgentID: "agent-current",
-		participant: CampaignParticipant{
+		participant: campaignapp.CampaignParticipant{
 			ID:             "p-ai",
 			Name:           "Caretaker",
 			Role:           "GM",
@@ -1491,7 +1492,7 @@ func TestMountCampaignParticipantEditRendersAIBindingColumnForOwner(t *testing.T
 			Controller:     "AI",
 			Pronouns:       "it/its",
 		},
-		campaignAIAgents: []CampaignAIAgentOption{{ID: "agent-current", Name: "Current", Enabled: true}},
+		campaignAIAgents: []campaignapp.CampaignAIAgentOption{{ID: "agent-current", Name: "Current", Enabled: true}},
 		authorizationDecision: campaignapp.AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,
@@ -1532,7 +1533,7 @@ func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{
+		items: []campaignapp.CampaignSummary{{
 			ID:             "c1",
 			Name:           "The Guildhouse",
 			CharacterCount: "2",
@@ -1558,8 +1559,8 @@ func TestMountCampaignParticipantsFailsClosedWhenParticipantClientMissing(t *tes
 	t.Parallel()
 
 	m := New(Config{})
-	deps := GRPCGatewayDeps{CampaignClient: fakeCampaignClient{}}
-	m = New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	deps := campaigngateway.GRPCGatewayDeps{Read: campaigngateway.GRPCGatewayReadDeps{Campaign: fakeCampaignClient{}}}
+	m = New(Config{Gateway: campaigngateway.NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1577,13 +1578,13 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{
+		items: []campaignapp.CampaignSummary{{
 			ID:             "c1",
 			Name:           "The Guildhouse",
 			CharacterCount: "2",
 			CoverImageURL:  "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
-		characters: []CampaignCharacter{
+		characters: []campaignapp.CampaignCharacter{
 			{
 				ID:         "ch-z",
 				Name:       "Zara",
@@ -1658,7 +1659,7 @@ func TestMountCampaignCharactersMenuAndPortraitGallery(t *testing.T) {
 func TestMountCampaignCharactersEmptyStateStillShowsCreateEntry(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1687,12 +1688,12 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForEditableCharacters(t *tes
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{
+		items: []campaignapp.CampaignSummary{{
 			ID:            "c1",
 			Name:          "The Guildhouse",
 			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
 		}},
-		characters: []CampaignCharacter{{
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "ch-a",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -1728,8 +1729,8 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForReadOnlyCharacters(t *tes
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
-		characters: []CampaignCharacter{{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "ch-a",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -1764,9 +1765,9 @@ func TestMountCampaignCharactersUsesViewCharacterCTAForNonDaggerheartCampaigns(t
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
 		workspaceSystem: "Pathfinder",
-		characters: []CampaignCharacter{{
+		characters: []campaignapp.CampaignCharacter{{
 			ID:         "ch-a",
 			Name:       "Aria",
 			Kind:       "PC",
@@ -1796,7 +1797,7 @@ func TestMountCampaignCharactersFailsWhenGatewayReturnsError(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items: []CampaignSummary{{
+		items: []campaignapp.CampaignSummary{{
 			ID:            "c1",
 			Name:          "The Guildhouse",
 			CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
@@ -1821,8 +1822,8 @@ func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing
 	t.Parallel()
 
 	m := New(Config{})
-	deps := GRPCGatewayDeps{CampaignClient: fakeCampaignClient{}}
-	m = New(Config{Gateway: NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	deps := campaigngateway.GRPCGatewayDeps{Read: campaigngateway.GRPCGatewayReadDeps{Campaign: fakeCampaignClient{}}}
+	m = New(Config{Gateway: campaigngateway.NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1839,7 +1840,7 @@ func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing
 func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First", CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First", CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1896,7 +1897,7 @@ func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{
 		ID:            "c1",
 		Name:          "First",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
@@ -1952,7 +1953,7 @@ func TestMountCampaignWorkspaceCoverStyleRendersForFullAndHTMX(t *testing.T) {
 func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -1972,8 +1973,8 @@ func TestMountCampaignSessionDetailRendersBreadcrumbs(t *testing.T) {
 	t.Parallel()
 
 	m := New(Config{Gateway: fakeGateway{
-		items:    []CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
-		sessions: []CampaignSession{{ID: "s1", Name: "First Light", Status: "Active"}},
+		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		sessions: []campaignapp.CampaignSession{{ID: "s1", Name: "First Light", Status: "Active"}},
 	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
@@ -2004,7 +2005,7 @@ func TestMountCampaignSessionDetailTruncatesLongBreadcrumbLabels(t *testing.T) {
 
 	longCampaignName := "Campaign-" + strings.Repeat("x", 64)
 	longSessionID := "session-" + strings.Repeat("y", 64)
-	m := New(Config{Gateway: fakeGateway{items: []CampaignSummary{{ID: "c1", Name: longCampaignName}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: longCampaignName}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

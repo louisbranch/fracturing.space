@@ -5,6 +5,7 @@ import (
 	"time"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
 
@@ -20,7 +21,7 @@ type handlers struct {
 	modulehandler.Base
 	service          campaignapp.Service
 	chatFallbackPort string
-	workflows        map[GameSystem]CharacterCreationWorkflow
+	workflows        campaignworkflow.Registry
 	nowFunc          func() time.Time
 	sync             DashboardSync
 }
@@ -31,12 +32,12 @@ func newHandlers(
 	base modulehandler.Base,
 	chatFallbackPort string,
 	sync DashboardSync,
-	workflows ...map[GameSystem]CharacterCreationWorkflow,
+	workflows ...campaignworkflow.Registry,
 ) handlers {
 	if s == nil {
 		s = campaignapp.NewService(nil)
 	}
-	var workflowMap map[GameSystem]CharacterCreationWorkflow
+	var workflowMap campaignworkflow.Registry
 	if len(workflows) > 0 {
 		workflowMap = workflows[0]
 	}
@@ -59,7 +60,7 @@ func (h handlers) now() time.Time {
 }
 
 // resolveWorkflow resolves request-scoped values needed by this package.
-func (h handlers) resolveWorkflow(system string) CharacterCreationWorkflow {
+func (h handlers) resolveWorkflow(system string) campaignworkflow.CharacterCreation {
 	if h.workflows == nil {
 		return nil
 	}

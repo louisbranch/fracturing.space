@@ -12,7 +12,7 @@ import (
 func TestMapAIKeyTemplateRows(t *testing.T) {
 	t.Parallel()
 
-	rows := mapAIKeyTemplateRows([]SettingsAIKey{{
+	rows := mapAIKeyTemplateRows([]settingsapp.SettingsAIKey{{
 		ID:        "cred-1",
 		Label:     "Primary",
 		Provider:  "OpenAI",
@@ -40,7 +40,7 @@ func TestLoadAIKeyRowsUsesServiceResult(t *testing.T) {
 	t.Parallel()
 
 	gw := &fakeGateway{
-		keys: []SettingsAIKey{{
+		keys: []settingsapp.SettingsAIKey{{
 			ID:        "cred-1",
 			Label:     "Primary",
 			Provider:  "OpenAI",
@@ -50,7 +50,14 @@ func TestLoadAIKeyRowsUsesServiceResult(t *testing.T) {
 			CanRevoke: true,
 		}},
 	}
-	h := newHandlers(settingsapp.NewService(gw), modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
+	svc := settingsapp.NewService(gw)
+	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
+		profile:  true,
+		locale:   true,
+		security: true,
+		aiKeys:   true,
+		aiAgents: true,
+	}, modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
 
 	rows, err := h.loadAIKeyRows(context.Background(), "user-1")
 	if err != nil {
@@ -68,8 +75,8 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 	t.Parallel()
 
 	gw := &fakeGateway{
-		credentials: []SettingsAICredentialOption{{ID: "cred-1", Label: "Primary", Provider: "OpenAI"}},
-		agents: []SettingsAIAgent{{
+		credentials: []settingsapp.SettingsAICredentialOption{{ID: "cred-1", Label: "Primary", Provider: "OpenAI"}},
+		agents: []settingsapp.SettingsAIAgent{{
 			ID:        "agent-1",
 			Name:      "Narrator",
 			Provider:  "OpenAI",
@@ -78,7 +85,14 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 			CreatedAt: "2026-01-01 00:00 UTC",
 		}},
 	}
-	h := newHandlers(settingsapp.NewService(gw), modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
+	svc := settingsapp.NewService(gw)
+	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
+		profile:  true,
+		locale:   true,
+		security: true,
+		aiKeys:   true,
+		aiAgents: true,
+	}, modulehandler.NewTestBase(), requestmeta.SchemePolicy{}, nil)
 
 	options, err := h.loadAIAgentCredentialOptions(context.Background(), "user-1")
 	if err != nil {

@@ -28,20 +28,27 @@ func NewService(gateway Gateway, logger *log.Logger, health HealthProvider) Serv
 	return service{readGateway: gateway, logger: logger, healthProvider: health}
 }
 
+// loadHealth resolves optional service-health entries for dashboard rendering.
+func (s service) loadHealth(ctx context.Context) []ServiceHealthEntry {
+	if s.healthProvider == nil {
+		return nil
+	}
+	return s.healthProvider(ctx)
+}
+
 // LoadDashboard loads the package state needed for this request path.
 func (s service) LoadDashboard(ctx context.Context, userID string, locale language.Tag) (DashboardView, error) {
 	userID = userid.Normalize(userID)
 	if userID == "" {
-		return DashboardView{}, nil
+		return DashboardView{DataStatus: DashboardDataStatusAnonymous}, nil
 	}
 	snapshot, err := s.readGateway.LoadDashboard(ctx, userID, locale)
 	if err != nil {
 		s.logger.Printf("dashboard: load failed for user %s: %v", userID, err)
-		return DashboardView{}, nil
-	}
-	if HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile) {
-		s.logger.Printf("dashboard: degraded dependency %s for user %s", DegradedDependencySocialProfile, userID)
-		return DashboardView{}, nil
+		return DashboardView{
+			DataStatus:    DashboardDataStatusUnavailable,
+			ServiceHealth: s.loadHealth(ctx),
+		}, nil
 	}
 	if snapshot.Freshness != DashboardFreshnessUnspecified || snapshot.CacheHit || !snapshot.GeneratedAt.IsZero() {
 		s.logger.Printf(
@@ -56,16 +63,22 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	if snapshot.ActiveSessionsAvailable && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameSessions) {
 		activeSessions = append(activeSessions, snapshot.ActiveSessions...)
 	}
+	if HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile) {
+		s.logger.Printf("dashboard: degraded dependency %s for user %s", DegradedDependencySocialProfile, userID)
+	}
+	health := s.loadHealth(ctx)
 	showAdventureBlock := false
 	if len(activeSessions) == 0 && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencyGameCampaigns) {
 		showAdventureBlock = !snapshot.HasDraftOrActiveCampaign && !snapshot.CampaignsHasMore
 	}
-	var health []ServiceHealthEntry
-	if s.healthProvider != nil {
-		health = s.healthProvider(ctx)
+	status := DashboardDataStatusReady
+	if len(snapshot.DegradedDependencies) > 0 {
+		status = DashboardDataStatusDegraded
 	}
 	return DashboardView{
-		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion,
+		DataStatus:              status,
+		DegradedDependencies:    snapshot.DegradedDependencies,
+		ShowPendingProfileBlock: snapshot.NeedsProfileCompletion && !HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile),
 		ShowAdventureBlock:      showAdventureBlock,
 		ActiveSessions:          activeSessions,
 		ServiceHealth:           health,

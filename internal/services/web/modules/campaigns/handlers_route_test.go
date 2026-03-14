@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -16,7 +17,7 @@ import (
 func TestHandleIndexRendersConfiguredCampaigns(t *testing.T) {
 	t.Parallel()
 
-	gw := fakeGateway{items: []CampaignSummary{
+	gw := fakeGateway{items: []campaignapp.CampaignSummary{
 		{ID: "c1", Name: "Remote Stronghold"},
 		{ID: "c2", Name: "Moonrise"},
 	}}
@@ -59,7 +60,7 @@ func TestHandleIndexReturnsErrorWhenGatewayFails(t *testing.T) {
 func TestHandleIndexHTMXRequestReturnsPartialResponse(t *testing.T) {
 	t.Parallel()
 
-	gw := fakeGateway{items: []CampaignSummary{{ID: "c1", Name: "Partial"}}}
+	gw := fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Partial"}}}
 	h := newTestHandlers(gw)
 	mux := http.NewServeMux()
 	registerStableRoutes(mux, h)
@@ -87,7 +88,7 @@ func TestHandleOverviewRendersWorkspace(t *testing.T) {
 	t.Parallel()
 
 	gw := fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "Remote"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "Remote"}},
 		workspaceSystem: "Daggerheart",
 	}
 	h := newTestHandlers(gw)
@@ -117,7 +118,7 @@ func TestHandleOverviewUsesCampaignIDForTitleWhenNameMissing(t *testing.T) {
 	t.Parallel()
 
 	gw := fakeGateway{
-		items: []CampaignSummary{{ID: "c-2"}},
+		items: []campaignapp.CampaignSummary{{ID: "c-2"}},
 	}
 	h := newTestHandlers(gw)
 	mux := http.NewServeMux()
@@ -163,7 +164,7 @@ func TestHandleParticipantsReturnsErrorWhenLookupFails(t *testing.T) {
 	t.Parallel()
 
 	gw := fakeGateway{
-		items:           []CampaignSummary{{ID: "c1", Name: "Remote"}},
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "Remote"}},
 		participantsErr: apperrors.E(apperrors.KindUnavailable, "participants down"),
 	}
 	h := newTestHandlers(gw)
@@ -183,7 +184,7 @@ func TestHandleParticipantEditReturnsErrorWhenLookupFails(t *testing.T) {
 	t.Parallel()
 
 	gw := fakeGateway{
-		items:          []CampaignSummary{{ID: "c1", Name: "Remote"}},
+		items:          []campaignapp.CampaignSummary{{ID: "c1", Name: "Remote"}},
 		participantErr: apperrors.E(apperrors.KindUnavailable, "participant down"),
 	}
 	h := newTestHandlers(gw)
@@ -205,7 +206,7 @@ func TestHandleCharactersReturnsErrorWhenLookupFails(t *testing.T) {
 	t.Parallel()
 
 	gw := fakeGateway{
-		items:         []CampaignSummary{{ID: "c1", Name: "Remote"}},
+		items:         []campaignapp.CampaignSummary{{ID: "c1", Name: "Remote"}},
 		charactersErr: apperrors.E(apperrors.KindUnavailable, "characters down"),
 	}
 	h := newTestHandlers(gw)
@@ -341,5 +342,5 @@ func TestWithCampaignAndSessionIDReturnsNotFoundForMissingSessionID(t *testing.T
 // --- helpers ---
 
 func newTestHandlers(gw fakeGateway) handlers {
-	return newHandlers(newService(gw), modulehandler.NewTestBase(), "", nil)
+	return newHandlers(campaignapp.NewService(gw), modulehandler.NewTestBase(), "", nil)
 }

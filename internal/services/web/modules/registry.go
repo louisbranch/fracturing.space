@@ -1,33 +1,39 @@
 package modules
 
 import (
+	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
+
+// RegistryBuilder builds public/protected module sets from registry inputs.
+type RegistryBuilder interface {
+	Build(RegistryInput) RegistryOutput
+}
 
 // Registry builds public/protected module sets from composition inputs.
 type Registry struct{}
 
-// BuildInput carries the dependencies and options needed to compose module sets.
-type BuildInput struct {
+// RegistryInput carries the dependencies and options needed to compose module sets.
+type RegistryInput struct {
 	Dependencies     Dependencies
 	Resolvers        ModuleResolvers
 	PublicOptions    PublicModuleOptions
 	ProtectedOptions ProtectedModuleOptions
 }
 
-// BuildOutput contains the composed module sets.
-type BuildOutput struct {
-	Public    []Module
-	Protected []Module
+// RegistryOutput contains the composed module sets.
+type RegistryOutput struct {
+	Public    []module.Module
+	Protected []module.Module
 }
 
-// NewRegistry returns the default web module registry.
-func NewRegistry() Registry {
+// NewRegistryBuilder returns the default web module registry builder.
+func NewRegistryBuilder() RegistryBuilder {
 	return Registry{}
 }
 
 // Build composes module sets for the requested stability mode.
-func (Registry) Build(input BuildInput) BuildOutput {
+func (Registry) Build(input RegistryInput) RegistryOutput {
 	publicModules := defaultPublicModules(input.Dependencies, input.Resolvers, input.PublicOptions)
 	protectedModules := buildProtectedModules(
 		input.Dependencies,
@@ -35,7 +41,7 @@ func (Registry) Build(input BuildInput) BuildOutput {
 		input.ProtectedOptions,
 	)
 
-	return BuildOutput{
+	return RegistryOutput{
 		Public:    publicModules,
 		Protected: protectedModules,
 	}

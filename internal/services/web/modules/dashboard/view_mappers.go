@@ -1,9 +1,12 @@
 package dashboard
 
-import webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+import (
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+)
 
 // mapDashboardTemplateView maps values across transport and domain boundaries.
-func mapDashboardTemplateView(view DashboardView) webtemplates.DashboardPageView {
+func mapDashboardTemplateView(view dashboardapp.DashboardView) webtemplates.DashboardPageView {
 	health := make([]webtemplates.DashboardServiceHealthEntry, len(view.ServiceHealth))
 	for i, e := range view.ServiceHealth {
 		health[i] = webtemplates.DashboardServiceHealthEntry{Label: e.Label, Available: e.Available}
@@ -17,7 +20,16 @@ func mapDashboardTemplateView(view DashboardView) webtemplates.DashboardPageView
 			SessionName:  session.SessionName,
 		}
 	}
+
+	statusNotice := webtemplates.DashboardStatusNotice{}
+	switch view.DataStatus {
+	case dashboardapp.DashboardDataStatusDegraded:
+		statusNotice = webtemplates.DashboardStatusNotice{Visible: true, Degraded: true}
+	case dashboardapp.DashboardDataStatusUnavailable:
+		statusNotice = webtemplates.DashboardStatusNotice{Visible: true}
+	}
 	return webtemplates.DashboardPageView{
+		StatusNotice:   statusNotice,
 		ProfilePending: webtemplates.DashboardProfilePendingBlock{Visible: view.ShowPendingProfileBlock},
 		Adventure:      webtemplates.DashboardAdventureBlock{Visible: view.ShowAdventureBlock},
 		ActiveSessions: webtemplates.DashboardActiveSessionsBlock{

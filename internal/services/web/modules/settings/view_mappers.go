@@ -2,51 +2,72 @@ package settings
 
 import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // settingsSideMenu centralizes this web behavior in one helper seam.
-func settingsSideMenu(currentPath string, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
-	return &webtemplates.AppSideMenu{
-		CurrentPath: currentPath,
-		Items: []webtemplates.AppSideMenuItem{
-			{
-				Label:      webtemplates.T(loc, "layout.settings_user_profile"),
-				URL:        routepath.AppSettingsProfile,
-				MatchExact: true,
-				IconID:     commonv1.IconId_ICON_ID_PROFILE,
-			},
-			{
-				Label:      webtemplates.T(loc, "layout.locale"),
-				URL:        routepath.AppSettingsLocale,
-				MatchExact: true,
-				IconID:     commonv1.IconId_ICON_ID_LOCALE,
-			},
-			{
-				Label:      webtemplates.T(loc, "layout.settings_security"),
-				URL:        routepath.AppSettingsSecurity,
-				MatchExact: true,
-				IconID:     commonv1.IconId_ICON_ID_KEY,
-			},
-			{
-				Label:      webtemplates.T(loc, "layout.settings_ai_keys"),
-				URL:        routepath.AppSettingsAIKeys,
-				MatchExact: true,
-				IconID:     commonv1.IconId_ICON_ID_AI,
-			},
-			{
-				Label:      webtemplates.T(loc, "layout.settings_ai_agents"),
-				URL:        routepath.AppSettingsAIAgents,
-				MatchExact: true,
-				IconID:     commonv1.IconId_ICON_ID_AI,
-			},
-		},
+func settingsSideMenu(currentPath string, loc webtemplates.Localizer, availability settingsSurfaceAvailability) *webtemplates.AppSideMenu {
+	items := make([]webtemplates.AppSideMenuItem, 0, 5)
+	if availability.profile {
+		items = append(items, webtemplates.AppSideMenuItem{
+			Label:      webtemplates.T(loc, "layout.settings_user_profile"),
+			URL:        routepath.AppSettingsProfile,
+			MatchExact: true,
+			IconID:     commonv1.IconId_ICON_ID_PROFILE,
+		})
 	}
+	if availability.locale {
+		items = append(items, webtemplates.AppSideMenuItem{
+			Label:      webtemplates.T(loc, "layout.locale"),
+			URL:        routepath.AppSettingsLocale,
+			MatchExact: true,
+			IconID:     commonv1.IconId_ICON_ID_LOCALE,
+		})
+	}
+	if availability.security {
+		items = append(items, webtemplates.AppSideMenuItem{
+			Label:      webtemplates.T(loc, "layout.settings_security"),
+			URL:        routepath.AppSettingsSecurity,
+			MatchExact: true,
+			IconID:     commonv1.IconId_ICON_ID_KEY,
+		})
+	}
+	if availability.aiKeys {
+		items = append(items, webtemplates.AppSideMenuItem{
+			Label:      webtemplates.T(loc, "layout.settings_ai_keys"),
+			URL:        routepath.AppSettingsAIKeys,
+			MatchExact: true,
+			IconID:     commonv1.IconId_ICON_ID_AI,
+		})
+	}
+	if availability.aiAgents {
+		items = append(items, webtemplates.AppSideMenuItem{
+			Label:      webtemplates.T(loc, "layout.settings_ai_agents"),
+			URL:        routepath.AppSettingsAIAgents,
+			MatchExact: true,
+			IconID:     commonv1.IconId_ICON_ID_AI,
+		})
+	}
+	return &webtemplates.AppSideMenu{CurrentPath: currentPath, Items: items}
+}
+
+// mapPasskeyTemplateRows maps settings passkeys into template rows.
+func mapPasskeyTemplateRows(passkeys []settingsapp.SettingsPasskey) []webtemplates.SettingsPasskeyRow {
+	rows := make([]webtemplates.SettingsPasskeyRow, 0, len(passkeys))
+	for _, passkey := range passkeys {
+		rows = append(rows, webtemplates.SettingsPasskeyRow{
+			Number:     passkey.Number,
+			CreatedAt:  passkey.CreatedAt,
+			LastUsedAt: passkey.LastUsedAt,
+		})
+	}
+	return rows
 }
 
 // mapAIKeyTemplateRows maps settings AI key values into template rows.
-func mapAIKeyTemplateRows(keys []SettingsAIKey) []webtemplates.SettingsAIKeyRow {
+func mapAIKeyTemplateRows(keys []settingsapp.SettingsAIKey) []webtemplates.SettingsAIKeyRow {
 	rows := make([]webtemplates.SettingsAIKeyRow, 0, len(keys))
 	for _, key := range keys {
 		rows = append(rows, webtemplates.SettingsAIKeyRow{
@@ -62,21 +83,8 @@ func mapAIKeyTemplateRows(keys []SettingsAIKey) []webtemplates.SettingsAIKeyRow 
 	return rows
 }
 
-// mapPasskeyTemplateRows maps settings passkeys into template rows.
-func mapPasskeyTemplateRows(passkeys []SettingsPasskey) []webtemplates.SettingsPasskeyRow {
-	rows := make([]webtemplates.SettingsPasskeyRow, 0, len(passkeys))
-	for _, passkey := range passkeys {
-		rows = append(rows, webtemplates.SettingsPasskeyRow{
-			Number:     passkey.Number,
-			CreatedAt:  passkey.CreatedAt,
-			LastUsedAt: passkey.LastUsedAt,
-		})
-	}
-	return rows
-}
-
 // mapAIAgentCredentialTemplateOptions maps credential options into template options.
-func mapAIAgentCredentialTemplateOptions(options []SettingsAICredentialOption) []webtemplates.SettingsAICredentialOption {
+func mapAIAgentCredentialTemplateOptions(options []settingsapp.SettingsAICredentialOption) []webtemplates.SettingsAICredentialOption {
 	rows := make([]webtemplates.SettingsAICredentialOption, 0, len(options))
 	for _, option := range options {
 		rows = append(rows, webtemplates.SettingsAICredentialOption{
@@ -89,7 +97,7 @@ func mapAIAgentCredentialTemplateOptions(options []SettingsAICredentialOption) [
 }
 
 // mapAIModelTemplateOptions maps provider-backed models into template options.
-func mapAIModelTemplateOptions(models []SettingsAIModelOption) []webtemplates.SettingsAIModelOption {
+func mapAIModelTemplateOptions(models []settingsapp.SettingsAIModelOption) []webtemplates.SettingsAIModelOption {
 	rows := make([]webtemplates.SettingsAIModelOption, 0, len(models))
 	for _, model := range models {
 		rows = append(rows, webtemplates.SettingsAIModelOption{
@@ -101,7 +109,7 @@ func mapAIModelTemplateOptions(models []SettingsAIModelOption) []webtemplates.Se
 }
 
 // mapAIAgentTemplateRows maps settings AI agents into template rows.
-func mapAIAgentTemplateRows(agents []SettingsAIAgent) []webtemplates.SettingsAIAgentRow {
+func mapAIAgentTemplateRows(agents []settingsapp.SettingsAIAgent) []webtemplates.SettingsAIAgentRow {
 	rows := make([]webtemplates.SettingsAIAgentRow, 0, len(agents))
 	for _, agent := range agents {
 		rows = append(rows, webtemplates.SettingsAIAgentRow{

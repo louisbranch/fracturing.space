@@ -12,7 +12,7 @@ import (
 
 // ApplyCharacterCreationStep applies this package workflow transition.
 func (g GRPCGateway) ApplyCharacterCreationStep(ctx context.Context, campaignID string, characterID string, step *campaignapp.CampaignCharacterCreationStepInput) error {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -28,7 +28,7 @@ func (g GRPCGateway) ApplyCharacterCreationStep(ctx context.Context, campaignID 
 		return err
 	}
 
-	_, err = g.CharacterClient.ApplyCharacterCreationStep(ctx, &statev1.ApplyCharacterCreationStepRequest{
+	_, err = g.Mutation.Character.ApplyCharacterCreationStep(ctx, &statev1.ApplyCharacterCreationStepRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 		SystemStep:  &statev1.ApplyCharacterCreationStepRequest_Daggerheart{Daggerheart: mappedStep},
@@ -212,7 +212,7 @@ func MapCampaignCharacterCreationStepToProto(step *campaignapp.CampaignCharacter
 
 // ResetCharacterCreationWorkflow applies this package workflow transition.
 func (g GRPCGateway) ResetCharacterCreationWorkflow(ctx context.Context, campaignID string, characterID string) error {
-	if g.CharacterClient == nil {
+	if g.Mutation.Character == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -220,7 +220,7 @@ func (g GRPCGateway) ResetCharacterCreationWorkflow(ctx context.Context, campaig
 	if campaignID == "" || characterID == "" {
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
 	}
-	_, err := g.CharacterClient.ResetCharacterCreationWorkflow(ctx, &statev1.ResetCharacterCreationWorkflowRequest{
+	_, err := g.Mutation.Character.ResetCharacterCreationWorkflow(ctx, &statev1.ResetCharacterCreationWorkflowRequest{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
 	})

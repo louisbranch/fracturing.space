@@ -4,22 +4,20 @@ import (
 	"context"
 	"strings"
 
-	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
 // service defines an internal contract used at this web package boundary.
 type service struct {
-	assetBaseURL string
-	gateway      Gateway
+	gateway Gateway
 }
 
 // NewService constructs a profile service with fail-closed gateway defaults.
-func NewService(gateway Gateway, assetBaseURL string) Service {
+func NewService(gateway Gateway) Service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
-	return service{gateway: gateway, assetBaseURL: strings.TrimSpace(assetBaseURL)}
+	return service{gateway: gateway}
 }
 
 // LoadProfile loads the package state needed for this request path.
@@ -37,22 +35,14 @@ func (s service) LoadProfile(ctx context.Context, username string) (Profile, err
 		return Profile{}, apperrors.E(apperrors.KindNotFound, ProfileNotFoundMessage)
 	}
 
-	entityID := strings.TrimSpace(resp.UserID)
-	if entityID == "" {
-		entityID = strings.TrimSpace(resp.Username)
-	}
-
 	return Profile{
-		Username: strings.TrimSpace(resp.Username),
-		Name:     strings.TrimSpace(resp.Name),
-		Pronouns: strings.TrimSpace(resp.Pronouns),
-		Bio:      strings.TrimSpace(resp.Bio),
-		AvatarURL: websupport.AvatarImageURL(
-			s.assetBaseURL,
-			"user",
-			entityID,
-			strings.TrimSpace(resp.AvatarSetID),
-			strings.TrimSpace(resp.AvatarAssetID),
-		),
+		Username:            strings.TrimSpace(resp.Username),
+		UserID:              strings.TrimSpace(resp.UserID),
+		Name:                strings.TrimSpace(resp.Name),
+		Pronouns:            strings.TrimSpace(resp.Pronouns),
+		Bio:                 strings.TrimSpace(resp.Bio),
+		AvatarSetID:         strings.TrimSpace(resp.AvatarSetID),
+		AvatarAssetID:       strings.TrimSpace(resp.AvatarAssetID),
+		SocialProfileStatus: resp.SocialProfileStatus,
 	}, nil
 }

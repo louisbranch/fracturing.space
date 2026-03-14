@@ -14,7 +14,7 @@ import (
 
 // CampaignSessions centralizes this web behavior in one helper seam.
 func (g GRPCGateway) CampaignSessions(ctx context.Context, campaignID string) ([]campaignapp.CampaignSession, error) {
-	if g.SessionClient == nil {
+	if g.Read.Session == nil {
 		return nil, apperrors.EK(apperrors.KindUnavailable, "error.web.message.session_service_client_is_not_configured", "session service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -25,7 +25,7 @@ func (g GRPCGateway) CampaignSessions(ctx context.Context, campaignID string) ([
 	return grpcpaging.CollectPages[campaignapp.CampaignSession, *statev1.Session](
 		ctx, 10,
 		func(ctx context.Context, pageToken string) ([]*statev1.Session, string, error) {
-			resp, err := g.SessionClient.ListSessions(ctx, &statev1.ListSessionsRequest{
+			resp, err := g.Read.Session.ListSessions(ctx, &statev1.ListSessionsRequest{
 				CampaignId: campaignID,
 				PageSize:   10,
 				PageToken:  pageToken,
@@ -56,7 +56,7 @@ func (g GRPCGateway) CampaignSessions(ctx context.Context, campaignID string) ([
 
 // StartSession applies this package workflow transition.
 func (g GRPCGateway) StartSession(ctx context.Context, campaignID string, input campaignapp.StartSessionInput) error {
-	if g.SessionClient == nil {
+	if g.Mutation.Session == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.session_service_client_is_not_configured", "session service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -64,7 +64,7 @@ func (g GRPCGateway) StartSession(ctx context.Context, campaignID string, input 
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
 	}
 
-	_, err := g.SessionClient.StartSession(ctx, &statev1.StartSessionRequest{
+	_, err := g.Mutation.Session.StartSession(ctx, &statev1.StartSessionRequest{
 		CampaignId: campaignID,
 		Name:       strings.TrimSpace(input.Name),
 	})
@@ -76,7 +76,7 @@ func (g GRPCGateway) StartSession(ctx context.Context, campaignID string, input 
 
 // EndSession applies this package workflow transition.
 func (g GRPCGateway) EndSession(ctx context.Context, campaignID string, input campaignapp.EndSessionInput) error {
-	if g.SessionClient == nil {
+	if g.Mutation.Session == nil {
 		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.session_service_client_is_not_configured", "session service client is not configured")
 	}
 	campaignID = strings.TrimSpace(campaignID)
@@ -88,7 +88,7 @@ func (g GRPCGateway) EndSession(ctx context.Context, campaignID string, input ca
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.session_id_is_required", "session id is required")
 	}
 
-	_, err := g.SessionClient.EndSession(ctx, &statev1.EndSessionRequest{
+	_, err := g.Mutation.Session.EndSession(ctx, &statev1.EndSessionRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
 	})

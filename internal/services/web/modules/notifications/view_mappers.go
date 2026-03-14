@@ -4,7 +4,8 @@ import (
 	"strings"
 	"time"
 
-	notificationsrender "github.com/louisbranch/fracturing.space/internal/services/notifications/render"
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
+	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -19,7 +20,7 @@ func (h handlers) now() time.Time {
 }
 
 // notificationListView centralizes this web behavior in one helper seam.
-func (h handlers) notificationListView(items []NotificationSummary, loc webtemplates.Localizer) []webtemplates.NotificationListItemView {
+func (h handlers) notificationListView(items []notificationsapp.NotificationSummary, loc webtemplates.Localizer) []webtemplates.NotificationListItemView {
 	if len(items) == 0 {
 		return nil
 	}
@@ -29,15 +30,11 @@ func (h handlers) notificationListView(items []NotificationSummary, loc webtempl
 		if itemID == "" {
 			continue
 		}
-		rendered := notificationsrender.Render(loc, notificationsrender.Input{
-			MessageType: item.MessageType,
-			PayloadJSON: item.PayloadJSON,
-			Channel:     notificationsrender.ChannelInApp,
-		})
+		rendered := h.copyRenderer().RenderInApp(loc, item)
 		rows = append(rows, webtemplates.NotificationListItemView{
 			ID:           itemID,
-			Title:        notificationTitle(rendered.Title, loc),
-			Body:         notificationBody(rendered.BodyText, loc),
+			Title:        rendered.Title,
+			Body:         rendered.Body,
 			SourceLabel:  notificationSourceLabel(item.Source, loc),
 			CreatedLabel: notificationCreatedLabel(item.CreatedAt, h.now(), loc),
 			Read:         item.Read,
@@ -49,20 +46,16 @@ func (h handlers) notificationListView(items []NotificationSummary, loc webtempl
 }
 
 // notificationDetailView centralizes this web behavior in one helper seam.
-func (h handlers) notificationDetailView(item NotificationSummary, loc webtemplates.Localizer) *webtemplates.NotificationDetailView {
+func (h handlers) notificationDetailView(item notificationsapp.NotificationSummary, loc webtemplates.Localizer) *webtemplates.NotificationDetailView {
 	itemID := strings.TrimSpace(item.ID)
 	if itemID == "" {
 		return nil
 	}
-	rendered := notificationsrender.Render(loc, notificationsrender.Input{
-		MessageType: item.MessageType,
-		PayloadJSON: item.PayloadJSON,
-		Channel:     notificationsrender.ChannelInApp,
-	})
+	rendered := h.copyRenderer().RenderInApp(loc, item)
 	return &webtemplates.NotificationDetailView{
 		ID:           itemID,
-		Title:        notificationTitle(rendered.Title, loc),
-		Body:         notificationBody(rendered.BodyText, loc),
+		Title:        rendered.Title,
+		Body:         rendered.Body,
 		SourceLabel:  notificationSourceLabel(item.Source, loc),
 		CreatedLabel: notificationCreatedLabel(item.CreatedAt, h.now(), loc),
 		Read:         item.Read,
@@ -92,7 +85,7 @@ func notificationBody(value string, loc webtemplates.Localizer) string {
 // notificationSourceLabel centralizes this web behavior in one helper seam.
 func notificationSourceLabel(source string, loc webtemplates.Localizer) string {
 	source = strings.ToLower(strings.TrimSpace(source))
-	if source == notificationSourceSystem {
+	if source == notificationsgateway.NotificationSourceSystem {
 		return webtemplates.T(loc, "game.notifications.source_system")
 	}
 	return webtemplates.T(loc, "game.notifications.source_unknown")

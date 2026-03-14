@@ -10,6 +10,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestNewServerRequiresHTTPAddr(t *testing.T) {
@@ -83,11 +84,8 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	notificationsReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
 	notificationsRR := httptest.NewRecorder()
 	h.ServeHTTP(notificationsRR, notificationsReq)
-	if notificationsRR.Code != http.StatusFound {
-		t.Fatalf("notifications status = %d, want %d", notificationsRR.Code, http.StatusFound)
-	}
-	if got := notificationsRR.Header().Get("Location"); got != "/login" {
-		t.Fatalf("notifications redirect = %q, want %q", got, "/login")
+	if notificationsRR.Code != http.StatusNotFound {
+		t.Fatalf("notifications status = %d, want %d", notificationsRR.Code, http.StatusNotFound)
 	}
 }
 
@@ -191,7 +189,7 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{SessionClient: auth},
+			principal.Dependencies{SessionClient: auth},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Campaigns: modules.CampaignDependencies{
@@ -231,7 +229,7 @@ func TestNewServerBuildsHTTPServer(t *testing.T) {
 	srv, err := NewServer(context.Background(), Config{
 		HTTPAddr: "127.0.0.1:0",
 		Dependencies: newDependencyBundle(
-			PrincipalDependencies{},
+			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
 	})

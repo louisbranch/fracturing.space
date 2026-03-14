@@ -10,6 +10,7 @@ import (
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,9 +18,9 @@ import (
 func TestViewerResolverAnonymousReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, nil, "", func(*http.Request) string { return "" })
+	r := principal.New(principal.Dependencies{})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	v := r.ResolveViewer(req)
 
 	if v.DisplayName != "" {
 		t.Fatalf("DisplayName = %q, want empty", v.DisplayName)
@@ -29,32 +30,34 @@ func TestViewerResolverAnonymousReturnsZeroViewer(t *testing.T) {
 func TestViewerResolverNilResolverReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, nil, "", nil)
+	r := principal.New(principal.Dependencies{})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	v := r.ResolveViewer(req)
 	if v != (module.Viewer{}) {
-		t.Fatalf("resolveViewer() = %+v, want zero viewer", v)
+		t.Fatalf("ResolveViewer() = %+v, want zero viewer", v)
 	}
 }
 
-func TestViewerResolverWhitespaceUserIDReturnsZeroViewer(t *testing.T) {
+func TestViewerResolverUnknownSessionReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, nil, "", func(*http.Request) string { return "   " })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{SessionClient: auth})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	req.AddCookie(&http.Cookie{Name: "web_session", Value: "unknown-session"})
+	v := r.ResolveViewer(req)
 	if v != (module.Viewer{}) {
-		t.Fatalf("resolveViewer() = %+v, want zero viewer", v)
+		t.Fatalf("ResolveViewer() = %+v, want zero viewer", v)
 	}
 }
 
 func TestViewerResolverNilRequestReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, nil, "", func(*http.Request) string { return "user-1" })
-	v := r.resolveViewer(nil)
+	r := principal.New(principal.Dependencies{})
+	v := r.ResolveViewer(nil)
 	if v != (module.Viewer{}) {
-		t.Fatalf("resolveViewer(nil) = %+v, want zero viewer", v)
+		t.Fatalf("ResolveViewer(nil) = %+v, want zero viewer", v)
 	}
 }
 
@@ -64,9 +67,15 @@ func TestViewerResolverNilSocialClientReturnsAuthBackedProfileLink(t *testing.T)
 	account := &fakeAccountClient{
 		getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "alice"}},
 	}
-	r := newViewerResolver(account, nil, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{
+		SessionClient: auth,
+		AccountClient: account,
+		AssetBaseURL:  "https://cdn.example.com",
+	})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
 
 	if v.DisplayName != "Adventurer" {
 		t.Fatalf("DisplayName = %q, want %q", v.DisplayName, "Adventurer")
@@ -82,9 +91,14 @@ func TestViewerResolverNilSocialClientReturnsAuthBackedProfileLink(t *testing.T)
 func TestViewerResolverWithoutAccountProfileDoesNotFallBackToSettingsProfile(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{
+		SessionClient: auth,
+		AssetBaseURL:  "https://cdn.example.com",
+	})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
 
 	if v.ProfileURL != "/app/dashboard" {
 		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/app/dashboard")
@@ -102,9 +116,16 @@ func TestViewerResolverWithSocialClientUsesProfileData(t *testing.T) {
 			UserProfile: &socialv1.UserProfile{Name: "Alice"},
 		},
 	}
-	r := newViewerResolver(account, social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{
+		SessionClient: auth,
+		AccountClient: account,
+		SocialClient:  social,
+		AssetBaseURL:  "https://cdn.example.com",
+	})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
 
 	if v.DisplayName != "Alice" {
 		t.Fatalf("DisplayName = %q, want %q", v.DisplayName, "Alice")
@@ -125,9 +146,16 @@ func TestViewerResolverWithSocialClientKeepsAuthBackedProfileRouteWhenSocialReco
 			UserProfile: &socialv1.UserProfile{Name: "Alice"},
 		},
 	}
-	r := newViewerResolver(account, social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{
+		SessionClient: auth,
+		AccountClient: account,
+		SocialClient:  social,
+		AssetBaseURL:  "https://cdn.example.com",
+	})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
 
 	if v.ProfileURL != "/u/alice" {
 		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/u/alice")
@@ -143,9 +171,16 @@ func TestViewerResolverWithSocialClientNotFoundKeepsAuthBackedProfileRoute(t *te
 	social := &fakeSocialClient{
 		getUserProfileErr: status.Error(codes.NotFound, "profile not found"),
 	}
-	r := newViewerResolver(account, social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{
+		SessionClient: auth,
+		AccountClient: account,
+		SocialClient:  social,
+		AssetBaseURL:  "https://cdn.example.com",
+	})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
 
 	if v.ProfileURL != "/u/alice" {
 		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/u/alice")
@@ -161,10 +196,18 @@ func TestViewerResolverUnreadNotifications(t *testing.T) {
 	notif := fakeWebNotificationClient{
 		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{HasUnread: true},
 	}
-	r := newViewerResolver(nil, nil, notif, "", func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{
+		SessionClient:      auth,
+		NotificationClient: notif,
+	})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
 
+	if !v.NotificationsAvailable {
+		t.Fatalf("NotificationsAvailable = false, want true")
+	}
 	if !v.HasUnreadNotifications {
 		t.Fatalf("HasUnreadNotifications = false, want true")
 	}
@@ -176,10 +219,35 @@ func TestViewerResolverNoUnreadNotifications(t *testing.T) {
 	notif := fakeWebNotificationClient{
 		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{HasUnread: false},
 	}
-	r := newViewerResolver(nil, nil, notif, "", func(*http.Request) string { return "user-1" })
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{
+		SessionClient:      auth,
+		NotificationClient: notif,
+	})
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	v := r.resolveViewer(req)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
 
+	if !v.NotificationsAvailable {
+		t.Fatalf("NotificationsAvailable = false, want true")
+	}
+	if v.HasUnreadNotifications {
+		t.Fatalf("HasUnreadNotifications = true, want false")
+	}
+}
+
+func TestViewerResolverWithoutNotificationClientOmitsNotificationsAvailability(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	r := principal.New(principal.Dependencies{SessionClient: auth})
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	v := r.ResolveViewer(req)
+
+	if v.NotificationsAvailable {
+		t.Fatalf("NotificationsAvailable = true, want false")
+	}
 	if v.HasUnreadNotifications {
 		t.Fatalf("HasUnreadNotifications = true, want false")
 	}

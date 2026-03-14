@@ -98,7 +98,7 @@ func (a *agentStub) CreateAgent(_ context.Context, req *aiv1.CreateAgentRequest,
 	return &aiv1.CreateAgentResponse{}, nil
 }
 
-func TestNewGRPCGatewayWithoutRequiredClientsFailsClosed(t *testing.T) {
+func TestNewGRPCGatewayWithoutConfiguredClientsFailsClosed(t *testing.T) {
 	t.Parallel()
 
 	gateway := NewGRPCGateway(nil, nil, nil, nil, nil)
@@ -108,6 +108,31 @@ func TestNewGRPCGatewayWithoutRequiredClientsFailsClosed(t *testing.T) {
 	}
 	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
 		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+}
+
+func TestGRPCGatewayReportsSurfaceHealthFromConfiguredClients(t *testing.T) {
+	t.Parallel()
+
+	accountOnly := NewGRPCGateway(socialStub{}, &accountStub{}, nil, nil, nil)
+	if !settingsapp.IsAccountGatewayHealthy(accountOnly) {
+		t.Fatalf("IsAccountGatewayHealthy(accountOnly) = false, want true")
+	}
+	if settingsapp.IsAIGatewayHealthy(accountOnly) {
+		t.Fatalf("IsAIGatewayHealthy(accountOnly) = true, want false")
+	}
+
+	aiKeysOnly := NewGRPCGateway(nil, nil, nil, &credentialStub{}, nil)
+	if !settingsapp.IsAIKeyGatewayHealthy(aiKeysOnly) {
+		t.Fatalf("IsAIKeyGatewayHealthy(aiKeysOnly) = false, want true")
+	}
+	if settingsapp.IsAIAgentGatewayHealthy(aiKeysOnly) {
+		t.Fatalf("IsAIAgentGatewayHealthy(aiKeysOnly) = true, want false")
+	}
+
+	agentsReady := NewGRPCGateway(nil, nil, nil, &credentialStub{}, &agentStub{})
+	if !settingsapp.IsAIAgentGatewayHealthy(agentsReady) {
+		t.Fatalf("IsAIAgentGatewayHealthy(agentsReady) = false, want true")
 	}
 }
 

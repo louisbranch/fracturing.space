@@ -26,6 +26,11 @@ type DashboardActiveSessionsBlock struct {
 	Sessions []DashboardActiveSessionEntry
 }
 
+type DashboardStatusNotice struct {
+	Visible  bool
+	Degraded bool
+}
+
 // DashboardServiceHealthEntry represents a backend service group's availability for template rendering.
 type DashboardServiceHealthEntry struct {
 	Label     string
@@ -33,10 +38,26 @@ type DashboardServiceHealthEntry struct {
 }
 
 type DashboardPageView struct {
+	StatusNotice   DashboardStatusNotice
 	ProfilePending DashboardProfilePendingBlock
 	Adventure      DashboardAdventureBlock
 	ActiveSessions DashboardActiveSessionsBlock
 	ServiceHealth  []DashboardServiceHealthEntry
+}
+
+func dashboardStatusNoticeVisible(view DashboardPageView) bool {
+	return view.StatusNotice.Visible
+}
+
+func dashboardStatusNoticeDegraded(view DashboardPageView) bool {
+	return view.StatusNotice.Visible && view.StatusNotice.Degraded
+}
+
+func dashboardStatusValue(view DashboardPageView) string {
+	if dashboardStatusNoticeDegraded(view) {
+		return "degraded"
+	}
+	return "unavailable"
 }
 
 func dashboardProfilePendingVisible(view DashboardPageView) bool {
@@ -78,6 +99,24 @@ func dashboardAllServicesOperational(view DashboardPageView) bool {
 
 templ DashboardFragment(view DashboardPageView, loc Localizer) {
 	<section id="dashboard-root" hx-history="false" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+		if dashboardStatusNoticeVisible(view) {
+			<section
+				id="dashboard-status-notice"
+				data-dashboard-block="status-notice"
+				data-dashboard-status={ dashboardStatusValue(view) }
+				class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-3"
+			>
+				<div class="card-body gap-2">
+					if dashboardStatusNoticeDegraded(view) {
+						<h2 class="card-title text-sm">{ T(loc, "web.dashboard.status.degraded.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "web.dashboard.status.degraded.body") }</p>
+					} else {
+						<h2 class="card-title text-sm">{ T(loc, "web.dashboard.status.unavailable.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "web.dashboard.status.unavailable.body") }</p>
+					}
+				</div>
+			</section>
+		}
 		if dashboardProfilePendingVisible(view) {
 			<section id="dashboard-profile-pending" data-dashboard-block="profile-pending" class="card bg-base-200 border border-base-300 shadow-sm lg:col-span-1">
 				<div class="card-body gap-4">

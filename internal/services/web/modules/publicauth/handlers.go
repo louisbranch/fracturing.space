@@ -97,7 +97,7 @@ func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request
 		h.writeJSONError(w, r, err)
 		return
 	}
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey})
+	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyChallengeResponse(start))
 }
 
 // handlePasskeyLoginFinish handles this route in the module transport layer.
@@ -113,7 +113,7 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	h.writeSessionCookie(w, r, finished.SessionID)
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": h.service.ResolvePostAuthRedirect(input.PendingID)})
+	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyLoginFinishResponse(h.service.ResolvePostAuthRedirect(input.PendingID)))
 }
 
 // handlePasskeyRegisterStart handles this route in the module transport layer.
@@ -128,7 +128,7 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		h.writeJSONError(w, r, err)
 		return
 	}
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey})
+	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyRegisterStartResponse(start))
 }
 
 // handlePasskeyRegisterFinish handles this route in the module transport layer.
@@ -148,10 +148,7 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		Code: finished.RecoveryCode,
 		Mode: recoveryRevealModeSignup,
 	})
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{
-		"user_id":      finished.UserID,
-		"redirect_url": routepath.LoginRecoveryCode,
-	})
+	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyRegisterFinishResponse(finished))
 }
 
 // handleRecoveryStart handles this route in the module transport layer.
@@ -166,11 +163,7 @@ func (h handlers) handleRecoveryStart(w http.ResponseWriter, r *http.Request) {
 		h.writeJSONError(w, r, err)
 		return
 	}
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{
-		"recovery_session_id": start.RecoverySessionID,
-		"session_id":          start.SessionID,
-		"public_key":          start.PublicKey,
-	})
+	_ = httpx.WriteJSON(w, http.StatusOK, newRecoveryStartResponse(start))
 }
 
 // handleRecoveryFinish handles this route in the module transport layer.
@@ -191,7 +184,7 @@ func (h handlers) handleRecoveryFinish(w http.ResponseWriter, r *http.Request) {
 		PendingID: input.PendingID,
 		Mode:      recoveryRevealModeRecovery,
 	})
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.LoginRecoveryCode})
+	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyLoginFinishResponse(routepath.LoginRecoveryCode))
 }
 
 // handleRecoveryCodeGet handles this route in the module transport layer.
@@ -286,10 +279,6 @@ func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Requ
 	if !h.service.HasValidWebSession(r.Context(), sessionID) {
 		return false
 	}
-	if pendingID := h.pendingID(r); pendingID != "" {
-		httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(pendingID))
-		return true
-	}
 	httpx.WriteRedirect(w, r, resolveAppRedirectPath(r.URL.Query().Get("next")))
 	return true
 }
@@ -345,10 +334,10 @@ func (h handlers) recoveryPageURL(r *http.Request) string {
 
 // resolveAppRedirectPath resolves request-scoped values needed by this package.
 func resolveAppRedirectPath(raw string) string {
-	if strings.TrimSpace(raw) == "" {
+	next := strings.TrimSpace(raw)
+	if next == "" {
 		return routepath.AppDashboard
 	}
-	next := strings.TrimSpace(raw)
 	parsed, err := url.Parse(next)
 	if err != nil || parsed.Scheme != "" || parsed.Host != "" || parsed.Opaque != "" {
 		return routepath.AppDashboard
