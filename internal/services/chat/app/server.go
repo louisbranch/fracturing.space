@@ -390,12 +390,19 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		return issueAISessionGrantForRoom(callCtx, campaignAIClient, room, userID)
 	}
 	var ensureAITurnSubscription func(string, string, string)
+	var releaseCampaignUpdateSubscription func(string)
+	var releaseAITurnSubscription func(string)
 	onCampaignEvent := func(campaignID string, eventType string) {
-		if !isAICampaignContextEvent(eventType) {
-			return
-		}
 		room := roomHub.roomIfExists(campaignID)
 		if room == nil {
+			return
+		}
+		if isCommunicationCampaignContextEvent(eventType) {
+			if err := refreshRoomCommunicationContext(ctx, authorizer, room, releaseCampaignUpdateSubscription, releaseAITurnSubscription); err != nil {
+				log.Printf("chat: refresh communication room context failed campaign=%q event=%q err=%v", campaignID, eventType, err)
+			}
+		}
+		if !isAICampaignContextEvent(eventType) {
 			return
 		}
 		if err := syncRoomAIContextFromGame(ctx, campaignAIClient, room); err != nil {

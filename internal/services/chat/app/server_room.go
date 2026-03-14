@@ -133,6 +133,7 @@ type campaignRoom struct {
 }
 
 type roomSubscription struct {
+	session        *wsSession
 	visibleStreams map[string]struct{}
 }
 
@@ -146,12 +147,32 @@ func newCampaignRoom(campaignID string) *campaignRoom {
 	}
 }
 
-func (r *campaignRoom) join(peer *wsPeer, streamIDs []string) int64 {
+func (r *campaignRoom) join(session *wsSession, streamIDs []string) int64 {
+	if session == nil || session.peer == nil {
+		return 0
+	}
 	r.mu.Lock()
-	r.subscribers[peer] = roomSubscription{visibleStreams: streamIDSet(streamIDs)}
+	r.subscribers[session.peer] = roomSubscription{
+		session:        session,
+		visibleStreams: streamIDSet(streamIDs),
+	}
 	latest := r.nextSequence
 	r.mu.Unlock()
 	return latest
+}
+
+func (r *campaignRoom) updateSessionSubscription(session *wsSession, streamIDs []string) {
+	if session == nil || session.peer == nil {
+		return
+	}
+	r.mu.Lock()
+	subscription, ok := r.subscribers[session.peer]
+	if ok {
+		subscription.session = session
+		subscription.visibleStreams = streamIDSet(streamIDs)
+		r.subscribers[session.peer] = subscription
+	}
+	r.mu.Unlock()
 }
 
 func (r *campaignRoom) setSessionID(sessionID string) {
@@ -193,6 +214,12 @@ func (r *campaignRoom) activeSessionGateState() *chatSessionGate {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return cloneChatSessionGate(r.activeSessionGate)
+}
+
+func (r *campaignRoom) activeSessionSpotlightState() *chatSessionSpotlight {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return cloneChatSessionSpotlight(r.activeSessionSpotlight)
 }
 
 func (r *campaignRoom) aiRelayEnabled() bool {
@@ -266,9 +293,19 @@ func (r *campaignRoom) currentSessionID() string {
 	return id
 }
 
-func (r *campaignRoom) leave(peer *wsPeer) bool {
+func (r *campaignRoom) latestSequenceID() int64 {
 	r.mu.Lock()
-	delete(r.subscribers, peer)
+	seq := r.nextSequence
+	r.mu.Unlock()
+	return seq
+}
+
+func (r *campaignRoom) leave(session *wsSession) bool {
+	if session == nil || session.peer == nil {
+		return false
+	}
+	r.mu.Lock()
+	delete(r.subscribers, session.peer)
 	empty := len(r.subscribers) == 0
 	r.mu.Unlock()
 	return empty
@@ -282,6 +319,18 @@ func (r *campaignRoom) subscribersSnapshot() []*wsPeer {
 	}
 	r.mu.Unlock()
 	return subscribers
+}
+
+func (r *campaignRoom) sessionsSnapshot() []*wsSession {
+	r.mu.Lock()
+	sessions := make([]*wsSession, 0, len(r.subscribers))
+	for _, subscription := range r.subscribers {
+		if subscription.session != nil {
+			sessions = append(sessions, subscription.session)
+		}
+	}
+	r.mu.Unlock()
+	return sessions
 }
 
 func (r *campaignRoom) appendMessage(actor messageActor, body string, clientMessageID string, streamID string) (chatMessage, bool, []*wsPeer) {
