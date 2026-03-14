@@ -8,6 +8,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
@@ -48,7 +49,10 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 	}
 	campaignID := createResp.Campaign.Id
 	lastSeq := requireEventTypesAfterSeq(t, ctx, eventClient, campaignID, 0, "campaign.created")
-	appendCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs("x-fracturing-space-append-event-scope", "maintenance"))
+	appendCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(
+		"x-fracturing-space-append-event-scope", "maintenance",
+		grpcmeta.ServiceIDHeader, "ai",
+	))
 
 	// Append events to the campaign journal.
 	for i := 0; i < 3; i++ {

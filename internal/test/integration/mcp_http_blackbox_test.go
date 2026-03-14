@@ -50,35 +50,35 @@ func TestMCPHTTPBlackboxSmoke(t *testing.T) {
 func runHTTPBlackboxFixtures(t *testing.T, fixtures []seed.BlackboxFixture, username string) {
 	t.Helper()
 
-	fixture := newSuiteFixture(t)
-	userID := fixture.newUserID(t, username)
+	suiteFixture := newSuiteFixture(t)
 
 	httpAddr := pickUnusedAddress(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	mcpCmd, err := startMCPHTTPServer(ctx, t, fixture.grpcAddr, httpAddr)
+	mcpCmd, err := startMCPHTTPServer(ctx, t, suiteFixture.grpcAddr, httpAddr)
 	if err != nil {
 		t.Fatalf("start MCP HTTP server: %v", err)
 	}
 	defer stopMCPProcess(t, cancel, mcpCmd)
 
 	baseURL := "http://" + httpAddr
-	client := newHTTPClient(t)
-	waitForHTTPHealth(t, client, baseURL+"/mcp/health")
+	waitForHTTPHealth(t, newHTTPClient(t), baseURL+"/mcp/health")
 
-	for _, fixture := range fixtures {
+	for _, blackboxFixture := range fixtures {
+		userID := suiteFixture.newUserID(t, uniqueTestUsername(t, username, blackboxFixture.Name))
+		client := newHTTPClient(t)
 		captures := make(map[string]string)
 		var sseResp *http.Response
 		var sseRecorder *sseCapture
-		for index, step := range fixture.Steps {
+		for index, step := range blackboxFixture.Steps {
 			executeBlackboxStep(t, client, baseURL+"/mcp", step, captures, userID)
-			if fixture.ExpectSSE && index == 0 {
+			if blackboxFixture.ExpectSSE && index == 0 {
 				sseClient := newSSEClient(t, client.Jar)
 				sseResp, sseRecorder = openSSE(t, sseClient, baseURL+"/mcp")
 			}
 		}
-		if fixture.ExpectSSE {
+		if blackboxFixture.ExpectSSE {
 			if sseRecorder == nil {
 				t.Fatal("SSE recorder not initialized")
 			}
@@ -312,7 +312,7 @@ func pickUnusedAddress(t *testing.T) string {
 func startMCPHTTPServer(ctx context.Context, t *testing.T, grpcAddr, httpAddr string) (*exec.Cmd, error) {
 	t.Helper()
 
-	cmd := exec.CommandContext(ctx, "go", "run", "./cmd/mcp", "-transport=http", "-http-addr="+httpAddr, "-addr="+grpcAddr)
+	cmd := exec.CommandContext(ctx, mcpBinaryForTests(t), "-transport=http", "-http-addr="+httpAddr, "-addr="+grpcAddr)
 	cmd.Dir = repoRoot(t)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr

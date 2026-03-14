@@ -27,6 +27,20 @@ type StdioClient struct {
 func StartMCPClient(ctx context.Context, repoRoot, grpcAddr string) (*StdioClient, error) {
 	cmd := exec.CommandContext(ctx, "go", "run", "./cmd/mcp", "-addr="+grpcAddr)
 	cmd.Dir = repoRoot
+	return startMCPClientCommand(cmd)
+}
+
+// StartMCPClientBinary launches a prebuilt MCP binary for integration tests that
+// need direct control over the actual server child process.
+func StartMCPClientBinary(ctx context.Context, binaryPath, grpcAddr string) (*StdioClient, error) {
+	cmd := exec.CommandContext(ctx, binaryPath, "-addr="+grpcAddr)
+	return startMCPClientCommand(cmd)
+}
+
+func startMCPClientCommand(cmd *exec.Cmd) (*StdioClient, error) {
+	if cmd == nil {
+		return nil, fmt.Errorf("command is required")
+	}
 	cmd.Stderr = os.Stderr
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 

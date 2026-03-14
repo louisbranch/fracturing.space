@@ -18,7 +18,7 @@ import (
 
 func CampaignCreateHandler(client statev1.CampaignServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignCreateInput, CampaignCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignCreateInput) (*mcp.CallToolResult, CampaignCreateResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := newToolInvocationContextWithTimeout(ctx, nil, grpcLongCallTimeout)
 		if err != nil {
 			return nil, CampaignCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}

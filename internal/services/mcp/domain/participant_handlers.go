@@ -15,7 +15,7 @@ import (
 
 func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantCreateInput) (*mcp.CallToolResult, ParticipantCreateResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := newToolInvocationContextWithTimeout(ctx, getContext, grpcLongCallTimeout)
 		if err != nil {
 			return nil, ParticipantCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
