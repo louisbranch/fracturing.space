@@ -55,8 +55,8 @@ INSERT INTO session_gates (
     campaign_id, session_id, gate_id, gate_type, status, reason,
     created_at, created_by_actor_type, created_by_actor_id,
     resolved_at, resolved_by_actor_type, resolved_by_actor_id,
-    metadata_json, resolution_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    metadata_json, progress_json, resolution_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     gate_type = excluded.gate_type,
     status = excluded.status,
@@ -68,6 +68,7 @@ ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     resolved_by_actor_type = excluded.resolved_by_actor_type,
     resolved_by_actor_id = excluded.resolved_by_actor_id,
     metadata_json = excluded.metadata_json,
+    progress_json = excluded.progress_json,
     resolution_json = excluded.resolution_json;
 
 -- name: GetSessionGate :one

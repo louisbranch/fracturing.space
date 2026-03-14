@@ -208,6 +208,7 @@ func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 		session.CommandTypeStart:                   sessionStartRoute,
 		session.CommandTypeEnd:                     sessionRoute,
 		session.CommandTypeGateOpen:                sessionRoute,
+		session.CommandTypeGateRespond:             sessionRoute,
 		session.CommandTypeGateResolve:             sessionRoute,
 		session.CommandTypeGateAbandon:             sessionRoute,
 		session.CommandTypeSpotlightSet:            sessionRoute,

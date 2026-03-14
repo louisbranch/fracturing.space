@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-09"
 ---
 
 # System Architecture
@@ -38,10 +38,28 @@ auth/social domain services.
 - **Status** (`internal/services/status/`): capability health and override state authority.
 - **Userhub** (`internal/services/userhub/`): experience read-model aggregation.
 - **Worker** (`internal/services/worker/`): asynchronous outbox and scheduled processing runtime.
-- **Chat** (`internal/services/chat/`): real-time campaign room transport and AI turn relay surface.
+- **Chat** (`internal/services/chat/`): real-time transcript delivery, stream fanout, websocket lifecycle, and AI turn relay. It is not the authority for gameplay routing or rules-affecting communication state.
 
 Each service owns transport, orchestration, domain logic, and storage adapters
 within its boundary.
+
+Communication boundary:
+
+- `game` owns authoritative communication context: visible streams, persona eligibility, session/scene routing, and any structured control state that affects gameplay.
+- In that model, a persona is a speaking identity, while workflow decisions
+  such as gate responses remain participant-scoped unless the game contract says
+  otherwise.
+- `chat` owns transcript delivery and transport concerns: websocket fanout, per-connection subscriptions, resume/history, and AI relay pacing.
+- `web` is one consumer surface of those contracts; it must not infer routing or authority from raw transcript text.
+- Communication context includes active session control state needed by UI surfaces
+  to render authoritative blockers and turn ownership, including current
+  `session gate` and `session spotlight` when present.
+- Communication gate workflows are game-owned controls over the active session
+  gate: `game` owns open/resolve/abandon commands and refreshed context reads,
+  while `chat` forwards websocket control frames and broadcasts the resulting
+  shared room state.
+- GM handoff remains a participant-facing special case built on that same
+  communication gate boundary.
 
 Authenticated surface: canonical `/app/*` routes (`/app/dashboard`, `/app/campaigns`, `/app/campaigns/{id}/*`, `/app/notifications`, `/app/settings/*`).
 

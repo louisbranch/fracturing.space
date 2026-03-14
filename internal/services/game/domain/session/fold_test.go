@@ -63,6 +63,20 @@ func TestFoldSessionGateOpenedSetsGateState(t *testing.T) {
 	}
 }
 
+func TestFoldSessionGateResponseRecordedLeavesGateLifecycleStateUnchanged(t *testing.T) {
+	state := State{GateOpen: true, GateID: "gate-1"}
+	updated, err := Fold(state, event.Event{
+		Type:        event.Type("session.gate_response_recorded"),
+		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":"part-1","decision":"ready"}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated != state {
+		t.Fatalf("updated state = %#v, want %#v", updated, state)
+	}
+}
+
 func TestFoldSessionGateResolvedClearsGateState(t *testing.T) {
 	state := State{GateOpen: true, GateID: "gate-1"}
 	updated, err := Fold(state, event.Event{
@@ -128,5 +142,27 @@ func TestFoldSessionSpotlightClearedResetsState(t *testing.T) {
 	}
 	if updated.SpotlightCharacterID != "" {
 		t.Fatalf("spotlight character id = %s, want empty", updated.SpotlightCharacterID)
+	}
+}
+
+func TestFoldRecognizedEventsRejectMalformedPayloads(t *testing.T) {
+	tests := []event.Type{
+		event.Type("session.started"),
+		event.Type("session.ended"),
+		event.Type("session.gate_opened"),
+		event.Type("session.spotlight_set"),
+	}
+
+	for _, eventType := range tests {
+		eventType := eventType
+		t.Run(string(eventType), func(t *testing.T) {
+			_, err := Fold(State{}, event.Event{
+				Type:        eventType,
+				PayloadJSON: []byte(`{`),
+			})
+			if err == nil {
+				t.Fatal("expected payload decode error")
+			}
+		})
 	}
 }

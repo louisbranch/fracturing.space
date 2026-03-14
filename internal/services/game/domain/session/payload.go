@@ -28,6 +28,14 @@ type GateResolvedPayload struct {
 	Resolution map[string]any `json:"resolution,omitempty"`
 }
 
+// GateResponseRecordedPayload captures the payload for session.gate_response_recorded events.
+type GateResponseRecordedPayload struct {
+	GateID        ids.GateID        `json:"gate_id"`
+	ParticipantID ids.ParticipantID `json:"participant_id"`
+	Decision      string            `json:"decision,omitempty"`
+	Response      map[string]any    `json:"response,omitempty"`
+}
+
 // GateAbandonedPayload captures the payload for session.gate_abandoned events.
 type GateAbandonedPayload struct {
 	GateID ids.GateID `json:"gate_id"`

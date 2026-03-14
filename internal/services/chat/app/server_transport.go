@@ -16,6 +16,8 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"golang.org/x/net/websocket"
+	gogrpccodes "google.golang.org/grpc/codes"
+	gogrpcstatus "google.golang.org/grpc/status"
 )
 
 // NewHandler creates chat routes for tests and offline paths.
@@ -205,8 +207,14 @@ func handleWSConn(
 			)
 		case "chat.send":
 			handleSendFrame(
+				session,
+				frame,
+			)
+		case "chat.control":
+			handleControlFrame(
 				conn.Request().Context(),
 				session,
+				authorizer,
 				frame,
 				aiInvocationClient,
 				ensureAITurnSubscription,
@@ -263,29 +271,18 @@ func handleJoinFrame(
 		return
 	}
 
-	welcome := joinWelcome{
-		ParticipantName: session.userID,
-		CampaignName:    campaignID,
-		SessionID:       "",
-		SessionName:     "",
-		GmMode:          "",
-		AIAgentID:       "",
-		Locale:          commonv1.Locale_LOCALE_EN_US,
-	}
-	if provider, ok := authorizer.(wsJoinWelcomeProvider); ok {
-		resolved, err := provider.ResolveJoinWelcome(ctx, campaignID, session.userID)
-		if err != nil {
-			if errors.Is(err, errCampaignParticipantRequired) {
-				log.Printf("chat: campaign participant required for user=%q campaign=%q", session.userID, campaignID)
-				_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", "participant access required for campaign")
-				return
-			}
-			log.Printf("chat: failed to resolve campaign context user=%q campaign=%q err=%v", session.userID, campaignID, err)
-			_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign context lookup unavailable")
+	contextState, err := resolveSessionCommunicationContext(ctx, authorizer, campaignID, session.userID)
+	if err != nil {
+		if errors.Is(err, errCampaignParticipantRequired) {
+			log.Printf("chat: campaign participant required for user=%q campaign=%q", session.userID, campaignID)
+			_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", "participant access required for campaign")
 			return
 		}
-		welcome = resolved
-	} else if authorizer != nil {
+		log.Printf("chat: failed to resolve campaign context user=%q campaign=%q err=%v", session.userID, campaignID, err)
+		_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "campaign context lookup unavailable")
+		return
+	}
+	if contextState.Welcome == (joinWelcome{}) && authorizer != nil {
 		allowed, err := authorizer.IsCampaignParticipant(ctx, campaignID, session.userID)
 		if err != nil {
 			log.Printf("chat: campaign membership check failed user=%q campaign=%q err=%v", session.userID, campaignID, err)
@@ -296,7 +293,20 @@ func handleJoinFrame(
 			_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", "participant access required for campaign")
 			return
 		}
+		contextState = fallbackCommunicationContext(campaignID, joinWelcome{
+			ParticipantName: session.userID,
+			CampaignName:    campaignID,
+			Locale:          commonv1.Locale_LOCALE_EN_US,
+		}, session.userID)
 	}
+	if contextState.Welcome == (joinWelcome{}) {
+		contextState = fallbackCommunicationContext(campaignID, joinWelcome{
+			ParticipantName: session.userID,
+			CampaignName:    campaignID,
+			Locale:          commonv1.Locale_LOCALE_EN_US,
+		}, session.userID)
+	}
+	welcome := contextState.Welcome
 	if gmModeRequiresAIBinding(welcome.GmMode) && strings.TrimSpace(welcome.AIAgentID) == "" {
 		_ = writeWSError(session.peer, frame.RequestID, "FAILED_PRECONDITION", "campaign ai binding is required")
 		return
@@ -308,6 +318,7 @@ func handleJoinFrame(
 	room := hub.room(campaignID)
 	room.setSessionID(welcome.SessionID)
 	room.setAIBinding(welcome.GmMode, welcome.AIAgentID)
+	room.setControlState(contextState.ActiveSessionGate, contextState.ActiveSessionSpotlight)
 	if room.aiRelayEnabled() && issueAISessionGrant != nil {
 		if err := issueAISessionGrant(ctx, room, session.userID); err != nil {
 			log.Printf("chat: failed to issue ai session grant campaign=%q err=%v", campaignID, err)
@@ -320,19 +331,29 @@ func handleJoinFrame(
 	if strings.TrimSpace(welcome.SessionName) == "" {
 		welcome.SessionName = room.currentSessionID()
 	}
+	if strings.TrimSpace(contextState.DefaultStreamID) == "" {
+		contextState.DefaultStreamID = chatDefaultStreamID(campaignID)
+	}
+	session.setCommunicationState(contextState)
 	previous := session.setRoom(room)
 	if previous != nil && previous != room {
 		leaveCampaignRoom(previous, session.peer, releaseCampaignUpdateSubscription, releaseAITurnSubscription)
 	}
-	latest := room.join(session.peer)
+	latest := room.join(session.peer, communicationStreamIDs(contextState.Streams))
 
 	_ = session.peer.writeFrame(wsFrame{
 		Type: "chat.joined",
 		Payload: mustJSON(joinedPayload{
-			CampaignID:       campaignID,
-			SessionID:        room.currentSessionID(),
-			LatestSequenceID: latest,
-			ServerTime:       time.Now().UTC().Format(time.RFC3339),
+			CampaignID:             campaignID,
+			SessionID:              room.currentSessionID(),
+			LatestSequenceID:       latest,
+			ServerTime:             time.Now().UTC().Format(time.RFC3339),
+			DefaultStreamID:        contextState.DefaultStreamID,
+			DefaultPersonaID:       contextState.DefaultPersonaID,
+			ActiveSessionGate:      contextState.ActiveSessionGate,
+			ActiveSessionSpotlight: contextState.ActiveSessionSpotlight,
+			Streams:                contextState.Streams,
+			Personas:               contextState.Personas,
 		}),
 	})
 	_ = session.peer.writeFrame(wsFrame{
@@ -345,8 +366,11 @@ func handleJoinFrame(
 				SequenceID: latest,
 				SentAt:     time.Now().UTC().Format(time.RFC3339),
 				Kind:       "system",
+				StreamID:   chatSystemStreamID(campaignID),
 				Actor: messageActor{
 					ParticipantID: "system",
+					PersonaID:     "participant:system",
+					Mode:          "participant",
 					Name:          localizedSystemLabel(welcome.Locale),
 				},
 				Body: localizedJoinWelcomeBody(welcome),
@@ -393,12 +417,8 @@ func localizedJoinWelcomeBody(welcome joinWelcome) string {
 }
 
 func handleSendFrame(
-	ctx context.Context,
 	session *wsSession,
 	frame wsFrame,
-	aiInvocationClient aiv1.InvocationServiceClient,
-	ensureAITurnSubscription func(string, string, string),
-	issueAISessionGrant func(context.Context, *campaignRoom, string) error,
 ) {
 	var payload sendPayload
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
@@ -422,7 +442,7 @@ func handleSendFrame(
 		return
 	}
 	if utf8.RuneCountInString(body) > maxMessageBodyRunes {
-		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "body must be at most 2000 characters")
+		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "body must be at most 12000 characters")
 		return
 	}
 
@@ -432,7 +452,19 @@ func handleSendFrame(
 		return
 	}
 
-	msg, duplicate, subscribers := room.appendMessage(session.userID, body, clientMessageID)
+	state := session.communicationState()
+	streamID, err := resolveOutgoingStreamID(state, payload.StreamID)
+	if err != nil {
+		_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", err.Error())
+		return
+	}
+	actor, err := resolveOutgoingActor(state, session.userID, payload.PersonaID)
+	if err != nil {
+		_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", err.Error())
+		return
+	}
+
+	msg, duplicate, subscribers := room.appendMessage(actor, body, clientMessageID, streamID)
 
 	_ = session.peer.writeFrame(wsFrame{
 		Type:      "chat.ack",
@@ -458,22 +490,117 @@ func handleSendFrame(
 		_ = subscriber.writeFrame(messageFrame)
 	}
 
-	if aiInvocationClient != nil && room.aiRelayEnabled() {
+}
+
+func handleControlFrame(
+	ctx context.Context,
+	session *wsSession,
+	authorizer wsAuthorizer,
+	frame wsFrame,
+	aiInvocationClient aiv1.InvocationServiceClient,
+	ensureAITurnSubscription func(string, string, string),
+	issueAISessionGrant func(context.Context, *campaignRoom, string) error,
+) {
+	var payload controlPayload
+	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
+		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "invalid control payload")
+		return
+	}
+
+	room := session.currentRoom()
+	if room == nil {
+		_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", "must join campaign room before sending control actions")
+		return
+	}
+
+	provider, ok := authorizer.(wsCommunicationControlProvider)
+	if !ok || provider == nil {
+		_ = writeWSError(session.peer, frame.RequestID, "UNAVAILABLE", "communication control is unavailable")
+		return
+	}
+
+	action := strings.ToLower(strings.TrimSpace(payload.Action))
+	if action == "" {
+		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "action is required")
+		return
+	}
+
+	state := session.communicationState()
+	callCtx := grpcauthctx.WithUserID(ctx, session.userID)
+	callCtx = grpcauthctx.WithParticipantID(callCtx, state.participantID)
+	previousGate := room.activeSessionGateState()
+
+	var (
+		updated communicationContext
+		err     error
+	)
+	switch action {
+	case "gate.open":
+		updated, err = provider.OpenCommunicationGate(callCtx, room.campaignID, state.participantID, payload.GateType, payload.Reason, payload.Metadata)
+	case "gate.respond":
+		updated, err = provider.RespondToCommunicationGate(callCtx, room.campaignID, state.participantID, payload.Decision, payload.Response)
+	case "gate.resolve":
+		updated, err = provider.ResolveCommunicationGate(callCtx, room.campaignID, state.participantID, payload.Decision, payload.Resolution)
+	case "gate.abandon":
+		updated, err = provider.AbandonCommunicationGate(callCtx, room.campaignID, state.participantID, payload.Reason)
+	case "gm_handoff.request":
+		updated, err = provider.RequestGMHandoff(callCtx, room.campaignID, state.participantID, payload.Reason, payload.Metadata)
+	case "gm_handoff.resolve":
+		updated, err = provider.ResolveGMHandoff(callCtx, room.campaignID, state.participantID, payload.Decision, payload.Resolution)
+	case "gm_handoff.abandon":
+		updated, err = provider.AbandonGMHandoff(callCtx, room.campaignID, state.participantID, payload.Reason)
+	default:
+		_ = writeWSError(session.peer, frame.RequestID, "INVALID_ARGUMENT", "unsupported control action")
+		return
+	}
+	if err != nil {
+		_ = writeWSRPCError(session.peer, frame.RequestID, err)
+		return
+	}
+
+	if strings.TrimSpace(updated.Welcome.SessionID) != "" {
+		room.setSessionID(updated.Welcome.SessionID)
+	}
+	room.setAIBinding(updated.Welcome.GmMode, updated.Welcome.AIAgentID)
+	room.setControlState(updated.ActiveSessionGate, updated.ActiveSessionSpotlight)
+	session.setCommunicationState(updated)
+
+	_ = session.peer.writeFrame(wsFrame{
+		Type:      "chat.ack",
+		RequestID: frame.RequestID,
+		Payload: mustJSON(ackEnvelope{
+			Result: ackResult{Status: "ok"},
+		}),
+	})
+
+	if shouldTriggerAIOnGMHandoffRequest(action, previousGate, updated.ActiveSessionGate) && aiInvocationClient != nil && room.aiRelayEnabled() {
 		if !room.aiRelayReady() && issueAISessionGrant != nil {
 			if err := issueAISessionGrant(ctx, room, session.userID); err != nil {
-				log.Printf("chat: refresh ai session grant on send failed campaign=%q err=%v", room.campaignID, err)
+				log.Printf("chat: refresh ai session grant on control failed campaign=%q err=%v", room.campaignID, err)
 				room.clearAISessionGrant()
 			}
 			if room.aiRelayReady() && ensureAITurnSubscription != nil {
 				ensureAITurnSubscription(room.campaignID, room.currentSessionID(), room.aiAgentIDValue())
 			}
 		}
+		if room.aiRelayReady() {
+			if err := submitBufferedCampaignTurnToAI(ctx, aiInvocationClient, room, session, payload.Reason); err != nil {
+				log.Printf("chat: submit buffered campaign turn to ai failed campaign=%q err=%v", room.campaignID, err)
+			}
+		}
 	}
 
-	if aiInvocationClient != nil && room.aiRelayReady() {
-		if err := submitCampaignTurnToAI(ctx, aiInvocationClient, room, session, msg); err != nil {
-			log.Printf("chat: submit campaign turn to ai failed campaign=%q err=%v", room.campaignID, err)
-		}
+	stateFrame := wsFrame{
+		Type: "chat.state",
+		Payload: mustJSON(statePayload{
+			CampaignID:             room.campaignID,
+			SessionID:              room.currentSessionID(),
+			ActiveSessionGate:      updated.ActiveSessionGate,
+			ActiveSessionSpotlight: updated.ActiveSessionSpotlight,
+		}),
+	}
+	for _, subscriber := range room.subscribersSnapshot() {
+		_ = subscriber.writeFrame(stateFrame)
 	}
 }
 
@@ -500,7 +627,13 @@ func handleHistoryBeforeFrame(session *wsSession, frame wsFrame) {
 		return
 	}
 
-	history := room.historyBefore(payload.BeforeSequenceID, payload.Limit)
+	streamID, err := resolveOutgoingStreamID(session.communicationState(), payload.StreamID)
+	if err != nil {
+		_ = writeWSError(session.peer, frame.RequestID, "FORBIDDEN", err.Error())
+		return
+	}
+
+	history := room.historyBefore(streamID, payload.BeforeSequenceID, payload.Limit)
 	for _, msg := range history {
 		_ = session.peer.writeFrame(wsFrame{
 			Type:    "chat.message",
@@ -519,6 +652,20 @@ func handleHistoryBeforeFrame(session *wsSession, frame wsFrame) {
 	})
 }
 
+func shouldTriggerAIOnGMHandoffRequest(action string, previousGate *chatSessionGate, updatedGate *chatSessionGate) bool {
+	if action != "gm_handoff.request" {
+		return false
+	}
+	return !isOpenGMHandoffGate(previousGate) && isOpenGMHandoffGate(updatedGate)
+}
+
+func isOpenGMHandoffGate(gate *chatSessionGate) bool {
+	if gate == nil {
+		return false
+	}
+	return strings.TrimSpace(gate.GateType) == "gm_handoff" && strings.TrimSpace(gate.Status) == "open"
+}
+
 func writeWSError(peer *wsPeer, requestID string, code string, message string) error {
 	return peer.writeFrame(wsFrame{
 		Type:      "chat.error",
@@ -533,7 +680,44 @@ func writeWSError(peer *wsPeer, requestID string, code string, message string) e
 	})
 }
 
-func submitCampaignTurnToAI(ctx context.Context, invocationClient aiv1.InvocationServiceClient, room *campaignRoom, session *wsSession, msg chatMessage) error {
+func writeWSRPCError(peer *wsPeer, requestID string, err error) error {
+	statusErr := gogrpcstatus.Convert(err)
+	code := wsErrorCodeFromRPC(statusErr.Code())
+	return peer.writeFrame(wsFrame{
+		Type:      "chat.error",
+		RequestID: requestID,
+		Payload: mustJSON(wsErrorEnvelope{
+			Error: wsError{
+				Code:      code,
+				Message:   statusErr.Message(),
+				Retryable: statusErr.Code() == gogrpccodes.Unavailable || statusErr.Code() == gogrpccodes.DeadlineExceeded,
+			},
+		}),
+	})
+}
+
+func wsErrorCodeFromRPC(code gogrpccodes.Code) string {
+	switch code {
+	case gogrpccodes.InvalidArgument:
+		return "INVALID_ARGUMENT"
+	case gogrpccodes.PermissionDenied:
+		return "FORBIDDEN"
+	case gogrpccodes.NotFound:
+		return "NOT_FOUND"
+	case gogrpccodes.FailedPrecondition:
+		return "FAILED_PRECONDITION"
+	case gogrpccodes.ResourceExhausted:
+		return "RESOURCE_EXHAUSTED"
+	case gogrpccodes.DeadlineExceeded:
+		return "UNAVAILABLE"
+	case gogrpccodes.Unavailable:
+		return "UNAVAILABLE"
+	default:
+		return "INTERNAL"
+	}
+}
+
+func submitBufferedCampaignTurnToAI(ctx context.Context, invocationClient aiv1.InvocationServiceClient, room *campaignRoom, session *wsSession, handoffReason string) error {
 	if invocationClient == nil || room == nil || session == nil {
 		return nil
 	}
@@ -541,17 +725,29 @@ func submitCampaignTurnToAI(ctx context.Context, invocationClient aiv1.Invocatio
 	if aiAgentID == "" {
 		return nil
 	}
+	submission, ok := room.pendingAITurnSubmission(handoffReason)
+	if !ok {
+		return nil
+	}
+	state := session.communicationState()
+	participantName := strings.TrimSpace(session.userID)
+	if persona, ok := state.personasByID[state.defaultPersonaID]; ok && strings.TrimSpace(persona.DisplayName) != "" {
+		participantName = strings.TrimSpace(persona.DisplayName)
+	}
 	callCtx := grpcauthctx.WithUserID(ctx, session.userID)
 	_, err := invocationClient.SubmitCampaignTurn(callCtx, &aiv1.SubmitCampaignTurnRequest{
 		CampaignId:      room.campaignID,
 		SessionId:       room.currentSessionID(),
 		AgentId:         aiAgentID,
-		ParticipantId:   msg.Actor.ParticipantID,
-		ParticipantName: msg.Actor.Name,
-		MessageId:       msg.MessageID,
-		Body:            msg.Body,
+		ParticipantId:   state.participantID,
+		ParticipantName: participantName,
+		MessageId:       submission.correlationMessageID,
+		Body:            submission.body,
 		SessionGrant:    room.aiSessionGrantValue(),
 	})
+	if err == nil {
+		room.markAITurnSubmitted(submission.highestSequenceID)
+	}
 	return err
 }
 
@@ -562,6 +758,114 @@ func gmModeRequiresAIBinding(mode string) bool {
 	default:
 		return false
 	}
+}
+
+func resolveSessionCommunicationContext(ctx context.Context, authorizer wsAuthorizer, campaignID string, userID string) (communicationContext, error) {
+	if provider, ok := authorizer.(wsCommunicationContextProvider); ok {
+		return provider.ResolveCommunicationContext(ctx, campaignID, userID)
+	}
+	if provider, ok := authorizer.(wsJoinWelcomeProvider); ok {
+		resolved, err := provider.ResolveJoinWelcome(ctx, campaignID, userID)
+		if err != nil {
+			return communicationContext{}, err
+		}
+		return fallbackCommunicationContext(campaignID, resolved, userID), nil
+	}
+	return communicationContext{}, nil
+}
+
+func fallbackCommunicationContext(campaignID string, welcome joinWelcome, userID string) communicationContext {
+	streams := []chatStream{
+		{
+			StreamID:  chatSystemStreamID(campaignID),
+			Kind:      "system",
+			Scope:     "session",
+			SessionID: welcome.SessionID,
+			Label:     chatStreamSystemLabel,
+		},
+		{
+			StreamID:  chatDefaultStreamID(campaignID),
+			Kind:      "table",
+			Scope:     "session",
+			SessionID: welcome.SessionID,
+			Label:     chatStreamTableLabel,
+		},
+		{
+			StreamID:  chatControlStreamID(campaignID),
+			Kind:      "control",
+			Scope:     "session",
+			SessionID: welcome.SessionID,
+			Label:     chatStreamControlLabel,
+		},
+	}
+	participantID := strings.TrimSpace(userID)
+	personas := []chatPersona{
+		{
+			PersonaID:     "participant:" + participantID,
+			Kind:          "participant",
+			ParticipantID: participantID,
+			DisplayName:   welcome.ParticipantName,
+		},
+	}
+	return communicationContext{
+		Welcome:          welcome,
+		ParticipantID:    participantID,
+		DefaultStreamID:  chatDefaultStreamID(campaignID),
+		DefaultPersonaID: "participant:" + participantID,
+		Streams:          streams,
+		Personas:         personas,
+	}
+}
+
+func communicationStreamIDs(streams []chatStream) []string {
+	ids := make([]string, 0, len(streams))
+	for _, stream := range streams {
+		if streamID := strings.TrimSpace(stream.StreamID); streamID != "" {
+			ids = append(ids, streamID)
+		}
+	}
+	return ids
+}
+
+func resolveOutgoingStreamID(state wsCommunicationState, requested string) (string, error) {
+	streamID := strings.TrimSpace(requested)
+	if streamID == "" {
+		streamID = strings.TrimSpace(state.defaultStreamID)
+	}
+	if streamID == "" {
+		return "", errors.New("stream_id is required")
+	}
+	if _, ok := state.streamsByID[streamID]; !ok {
+		return "", errors.New("stream is not available to this participant")
+	}
+	return streamID, nil
+}
+
+func resolveOutgoingActor(state wsCommunicationState, fallbackUserID string, requestedPersonaID string) (messageActor, error) {
+	personaID := strings.TrimSpace(requestedPersonaID)
+	if personaID == "" {
+		personaID = strings.TrimSpace(state.defaultPersonaID)
+	}
+	if personaID == "" {
+		personaID = "participant:" + strings.TrimSpace(fallbackUserID)
+	}
+	persona, ok := state.personasByID[personaID]
+	if !ok {
+		return messageActor{}, errors.New("persona is not available to this participant")
+	}
+	actor := messageActor{
+		ParticipantID: strings.TrimSpace(persona.ParticipantID),
+		CharacterID:   strings.TrimSpace(persona.CharacterID),
+		PersonaID:     persona.PersonaID,
+		Name:          persona.DisplayName,
+	}
+	switch strings.TrimSpace(persona.Kind) {
+	case "character":
+		actor.Mode = "character"
+	default:
+		actor.Mode = "participant"
+	}
+	return actor, nil
 }
 
 func mustJSON(v any) json.RawMessage {

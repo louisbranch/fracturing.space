@@ -40,13 +40,14 @@ const (
 
 // Session events.
 const (
-	TypeSessionStarted          Type = "session.started"
-	TypeSessionEnded            Type = "session.ended"
-	TypeSessionGateOpened       Type = "session.gate_opened"
-	TypeSessionGateResolved     Type = "session.gate_resolved"
-	TypeSessionGateAbandoned    Type = "session.gate_abandoned"
-	TypeSessionSpotlightSet     Type = "session.spotlight_set"
-	TypeSessionSpotlightCleared Type = "session.spotlight_cleared"
+	TypeSessionStarted              Type = "session.started"
+	TypeSessionEnded                Type = "session.ended"
+	TypeSessionGateOpened           Type = "session.gate_opened"
+	TypeSessionGateResponseRecorded Type = "session.gate_response_recorded"
+	TypeSessionGateResolved         Type = "session.gate_resolved"
+	TypeSessionGateAbandoned        Type = "session.gate_abandoned"
+	TypeSessionSpotlightSet         Type = "session.spotlight_set"
+	TypeSessionSpotlightCleared     Type = "session.spotlight_cleared"
 )
 
 // ActorType identifies who or what triggered an event.
@@ -101,6 +102,13 @@ type CampaignForkedPayload struct {
 
 type CampaignUpdatedPayload struct {
 	Fields map[string]any `json:"fields"`
+}
+
+type SessionGateResponseRecordedPayload struct {
+	GateID        string         `json:"gate_id"`
+	ParticipantID string         `json:"participant_id"`
+	Decision      string         `json:"decision,omitempty"`
+	Response      map[string]any `json:"response,omitempty"`
 }
 
 // Participant payloads.

@@ -9,6 +9,7 @@ import (
 // campaigns gateway package internals.
 type (
 	CampaignClient           = campaigngateway.CampaignClient
+	CommunicationClient      = campaigngateway.CommunicationClient
 	AgentClient              = campaigngateway.AgentClient
 	ParticipantClient        = campaigngateway.ParticipantClient
 	CharacterClient          = campaigngateway.CharacterClient

@@ -21,6 +21,7 @@ const (
 	SessionStart                   command.Type = "session.start"
 	SessionEnd                     command.Type = "session.end"
 	SessionGateOpen                command.Type = "session.gate_open"
+	SessionGateRespond             command.Type = "session.gate_record_response"
 	SessionGateResolve             command.Type = "session.gate_resolve"
 	SessionGateAbandon             command.Type = "session.gate_abandon"
 	SessionSpotlightSet            command.Type = "session.spotlight_set"

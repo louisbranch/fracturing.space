@@ -680,6 +680,8 @@ type fakeGateway struct {
 	workspaceIntent                   string
 	workspaceAccessPolicy             string
 	workspaceAIAgentID                string
+	gameSurface                       campaignapp.CampaignGameSurface
+	gameSurfaceErr                    error
 	campaignAIAgents                  []CampaignAIAgentOption
 	campaignAIAgentsErr               error
 	participants                      []CampaignParticipant
@@ -812,6 +814,46 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 		}, nil
 	}
 	return CampaignWorkspace{}, apperrors.E(apperrors.KindNotFound, "campaign not found")
+}
+
+func (f fakeGateway) CampaignGameSurface(_ context.Context, campaignID string) (campaignapp.CampaignGameSurface, error) {
+	if f.gameSurfaceErr != nil {
+		return campaignapp.CampaignGameSurface{}, f.gameSurfaceErr
+	}
+	surface := f.gameSurface
+	if strings.TrimSpace(surface.Participant.ID) == "" {
+		surface.Participant.ID = "p1"
+	}
+	if strings.TrimSpace(surface.Participant.Name) == "" {
+		surface.Participant.Name = "Owner"
+	}
+	if strings.TrimSpace(surface.Participant.Role) == "" {
+		surface.Participant.Role = "Player"
+	}
+	if strings.TrimSpace(surface.SessionID) == "" {
+		surface.SessionID = "sess-1"
+	}
+	if strings.TrimSpace(surface.SessionName) == "" {
+		surface.SessionName = "Session One"
+	}
+	if len(surface.Streams) == 0 {
+		surface.Streams = []campaignapp.CampaignGameStream{
+			{ID: "campaign:" + campaignID + ":table", Kind: "table", Scope: "session", SessionID: surface.SessionID, Label: "Table"},
+			{ID: "campaign:" + campaignID + ":system", Kind: "system", Scope: "session", SessionID: surface.SessionID, Label: "System"},
+		}
+	}
+	if len(surface.Personas) == 0 {
+		surface.Personas = []campaignapp.CampaignGamePersona{
+			{ID: "participant:" + surface.Participant.ID, Kind: "participant", ParticipantID: surface.Participant.ID, DisplayName: surface.Participant.Name},
+		}
+	}
+	if strings.TrimSpace(surface.DefaultStreamID) == "" {
+		surface.DefaultStreamID = surface.Streams[0].ID
+	}
+	if strings.TrimSpace(surface.DefaultPersonaID) == "" {
+		surface.DefaultPersonaID = surface.Personas[0].ID
+	}
+	return surface, nil
 }
 
 func (f fakeGateway) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {
@@ -1221,6 +1263,9 @@ func completeGRPCDeps(deps GRPCGatewayDeps) GRPCGatewayDeps {
 	if deps.CampaignClient == nil {
 		deps.CampaignClient = fakeCampaignClient{}
 	}
+	if deps.CommunicationClient == nil {
+		deps.CommunicationClient = stubCommunicationClient{}
+	}
 	if deps.ParticipantClient == nil {
 		deps.ParticipantClient = stubParticipantClient{}
 	}
@@ -1250,6 +1295,7 @@ func completeGRPCDeps(deps GRPCGatewayDeps) GRPCGatewayDeps {
 
 // Stubs satisfy client interfaces without being called — only non-nil checks matter.
 type stubParticipantClient struct{ ParticipantClient }
+type stubCommunicationClient struct{ CommunicationClient }
 type stubCharacterClient struct{ CharacterClient }
 type stubDaggerheartContentClient struct{ DaggerheartContentClient }
 type stubDaggerheartAssetClient struct{ DaggerheartAssetClient }

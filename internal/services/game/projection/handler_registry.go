@@ -96,6 +96,7 @@ func buildCoreRouter() *CoreRouter {
 	HandleProjection(r, session.EventTypeEnded, needSession, requireCampaignID, Applier.applySessionEnded)
 	// Gate handlers derive GateID from payload with EntityID fallback.
 	HandleProjection(r, session.EventTypeGateOpened, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateOpened)
+	HandleProjection(r, session.EventTypeGateResponseRecorded, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateResponseRecorded)
 	HandleProjection(r, session.EventTypeGateResolved, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateResolved)
 	HandleProjection(r, session.EventTypeGateAbandoned, needSessionGate, requireCampaignID|requireSessionID, Applier.applySessionGateAbandoned)
 	HandleProjection(r, session.EventTypeSpotlightSet, needSessionSpotlight, requireSessionID, Applier.applySessionSpotlightSet)

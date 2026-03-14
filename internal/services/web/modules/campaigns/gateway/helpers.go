@@ -200,6 +200,86 @@ func inviteStatusLabel(status statev1.InviteStatus) string {
 	}
 }
 
+// communicationStreamKindLabel centralizes this web behavior in one helper seam.
+func communicationStreamKindLabel(kind statev1.CommunicationStreamKind) string {
+	switch kind {
+	case statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_SYSTEM:
+		return "system"
+	case statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_TABLE:
+		return "table"
+	case statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_CHARACTER:
+		return "character"
+	case statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_CONTROL:
+		return "control"
+	default:
+		return "unspecified"
+	}
+}
+
+// communicationStreamScopeLabel centralizes this web behavior in one helper seam.
+func communicationStreamScopeLabel(scope statev1.CommunicationStreamScope) string {
+	switch scope {
+	case statev1.CommunicationStreamScope_COMMUNICATION_STREAM_SCOPE_CAMPAIGN:
+		return "campaign"
+	case statev1.CommunicationStreamScope_COMMUNICATION_STREAM_SCOPE_SESSION:
+		return "session"
+	case statev1.CommunicationStreamScope_COMMUNICATION_STREAM_SCOPE_SCENE:
+		return "scene"
+	default:
+		return "unspecified"
+	}
+}
+
+// communicationPersonaKindLabel centralizes this web behavior in one helper seam.
+func communicationPersonaKindLabel(kind statev1.CommunicationPersonaKind) string {
+	switch kind {
+	case statev1.CommunicationPersonaKind_COMMUNICATION_PERSONA_KIND_PARTICIPANT:
+		return "participant"
+	case statev1.CommunicationPersonaKind_COMMUNICATION_PERSONA_KIND_CHARACTER:
+		return "character"
+	default:
+		return "unspecified"
+	}
+}
+
+// communicationGateStatusLabel centralizes this web behavior in one helper seam.
+func communicationGateStatusLabel(status statev1.SessionGateStatus) string {
+	switch status {
+	case statev1.SessionGateStatus_SESSION_GATE_OPEN:
+		return "open"
+	case statev1.SessionGateStatus_SESSION_GATE_RESOLVED:
+		return "resolved"
+	case statev1.SessionGateStatus_SESSION_GATE_ABANDONED:
+		return "abandoned"
+	default:
+		return "unspecified"
+	}
+}
+
+// communicationSpotlightTypeLabel centralizes this web behavior in one helper seam.
+func communicationSpotlightTypeLabel(spotlightType statev1.SessionSpotlightType) string {
+	switch spotlightType {
+	case statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM:
+		return "gm"
+	case statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER:
+		return "character"
+	default:
+		return "unspecified"
+	}
+}
+
+// structpbMap centralizes this web behavior in one helper seam.
+func structpbMap(value interface{ AsMap() map[string]any }) map[string]any {
+	if value == nil {
+		return nil
+	}
+	resolved := value.AsMap()
+	if len(resolved) == 0 {
+		return nil
+	}
+	return resolved
+}
+
 // timestampString centralizes this web behavior in one helper seam.
 func timestampString(ts *timestamppb.Timestamp) string {
 	if ts == nil {

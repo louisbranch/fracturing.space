@@ -65,6 +65,10 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, pa
 	if err != nil {
 		return fmt.Errorf("encode gate metadata: %w", err)
 	}
+	progressJSON, err := session.BuildInitialGateProgress(gateType, metadataJSON)
+	if err != nil {
+		return fmt.Errorf("build gate progress: %w", err)
+	}
 	createdAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
 		return err
@@ -80,7 +84,40 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, pa
 		CreatedByActorType: string(evt.ActorType),
 		CreatedByActorID:   evt.ActorID,
 		MetadataJSON:       metadataJSON,
+		ProgressJSON:       progressJSON,
 	})
+}
+
+func (a Applier) applySessionGateResponseRecorded(ctx context.Context, evt event.Event, payload session.GateResponseRecordedPayload) error {
+	gateID := strings.TrimSpace(payload.GateID.String())
+	if gateID == "" {
+		gateID = strings.TrimSpace(evt.EntityID)
+	}
+	if gateID == "" {
+		return fmt.Errorf("gate id is required")
+	}
+	gate, err := a.SessionGate.GetSessionGate(ctx, string(evt.CampaignID), evt.SessionID.String(), gateID)
+	if err != nil {
+		return fmt.Errorf("get session gate: %w", err)
+	}
+	recordedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	progressJSON, err := session.RecordGateResponseProgress(
+		gate.GateType,
+		gate.MetadataJSON,
+		gate.ProgressJSON,
+		payload,
+		recordedAt,
+		string(evt.ActorType),
+		evt.ActorID,
+	)
+	if err != nil {
+		return fmt.Errorf("record gate response progress: %w", err)
+	}
+	gate.ProgressJSON = progressJSON
+	return a.SessionGate.PutSessionGate(ctx, gate)
 }
 
 func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event, payload session.GateResolvedPayload) error {

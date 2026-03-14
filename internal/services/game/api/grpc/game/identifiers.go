@@ -35,6 +35,7 @@ const (
 	commandTypeSessionEnd                     command.Type = commandids.SessionEnd
 	commandTypeSessionGateAbandon             command.Type = commandids.SessionGateAbandon
 	commandTypeSessionGateOpen                command.Type = commandids.SessionGateOpen
+	commandTypeSessionGateRespond             command.Type = commandids.SessionGateRespond
 	commandTypeSessionGateResolve             command.Type = commandids.SessionGateResolve
 	commandTypeSessionSpotlightClear          command.Type = commandids.SessionSpotlightClear
 	commandTypeSessionSpotlightSet            command.Type = commandids.SessionSpotlightSet

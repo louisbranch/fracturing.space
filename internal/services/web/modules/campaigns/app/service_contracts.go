@@ -11,6 +11,7 @@ type campaignReadGateway interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
 	CampaignName(context.Context, string) (string, error)
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
+	CampaignGameSurface(context.Context, string) (CampaignGameSurface, error)
 	CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error)
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
 	CampaignParticipant(context.Context, string, string) (CampaignParticipant, error)
@@ -56,6 +57,7 @@ type Service interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 	CampaignName(context.Context, string) string
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
+	CampaignGameSurface(context.Context, string) (CampaignGameSurface, error)
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
 	CampaignParticipantCreator(context.Context, string) (CampaignParticipantCreator, error)
 	CampaignParticipantEditor(context.Context, string, string) (CampaignParticipantEditor, error)

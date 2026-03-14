@@ -309,6 +309,7 @@ func (s *Store) PutSessionGate(ctx context.Context, gate storage.SessionGate) er
 		ResolvedByActorType: toNullString(gate.ResolvedByActorType),
 		ResolvedByActorID:   toNullString(gate.ResolvedByActorID),
 		MetadataJson:        gate.MetadataJSON,
+		ProgressJson:        gate.ProgressJSON,
 		ResolutionJson:      gate.ResolutionJSON,
 	})
 }

@@ -453,7 +453,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
 			},
 		),
 	})
@@ -514,7 +514,7 @@ func TestAppPageUserDropdownProfileUsesAuthUsernameWhenSocialProfileHasNoUsernam
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
 			},
 		),
 	})
@@ -558,7 +558,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
 			},
 		),
 	})

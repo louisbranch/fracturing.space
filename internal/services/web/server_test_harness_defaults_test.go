@@ -27,6 +27,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				},
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           defaultCampaignClient(),
+					CommunicationClient:      defaultCommunicationClient(),
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),
 					DaggerheartContentClient: defaultDaggerheartContentClient(),
@@ -68,6 +69,10 @@ func defaultParticipantClient() fakeWebParticipantClient {
 		Name:           "Owner",
 		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
 	}}}}
+}
+
+func defaultCommunicationClient() fakeWebCommunicationClient {
+	return fakeWebCommunicationClient{}
 }
 
 func defaultCharacterClient() fakeWebCharacterClient {

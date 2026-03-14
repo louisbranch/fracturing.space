@@ -22,7 +22,7 @@ func newToolInvocationContextWithTimeout(ctx context.Context, getContext func() 
 		return toolInvocationContext{}, err
 	}
 
-	runCtx, cancel := context.WithTimeout(ctx, timeout)
+	runCtx, cancel := deriveToolRunContext(ctx, timeout)
 
 	mcpCtx := Context{}
 	if getContext != nil {
@@ -35,4 +35,17 @@ func newToolInvocationContextWithTimeout(ctx context.Context, getContext func() 
 		MCPContext:   mcpCtx,
 		InvocationID: invocationID,
 	}, nil
+}
+
+func deriveToolRunContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if timeout <= 0 {
+		return context.WithCancel(ctx)
+	}
+	if _, hasDeadline := ctx.Deadline(); hasDeadline {
+		return context.WithCancel(ctx)
+	}
+	return context.WithTimeout(ctx, timeout)
 }

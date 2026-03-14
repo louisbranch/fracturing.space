@@ -26,6 +26,11 @@ func (s service) CampaignWorkspace(ctx context.Context, campaignID string) (Camp
 	return s.campaignWorkspace(ctx, campaignID)
 }
 
+// CampaignGameSurface centralizes this web behavior in one helper seam.
+func (s service) CampaignGameSurface(ctx context.Context, campaignID string) (CampaignGameSurface, error) {
+	return s.campaignGameSurface(ctx, campaignID)
+}
+
 // CampaignParticipants centralizes this web behavior in one helper seam.
 func (s service) CampaignParticipants(ctx context.Context, campaignID string) ([]CampaignParticipant, error) {
 	return s.campaignParticipants(ctx, campaignID)

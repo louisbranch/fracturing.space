@@ -44,6 +44,11 @@ message SessionGate {
   // Shape is determined by the gate type and the resolving actor. The field is
   // optional and may be empty when the resolution carries no structured data.
   google.protobuf.Struct resolution = 14;
+
+  // Gate-type-dependent progress data derived while the gate remains open.
+  // This is a projection-owned read model built from gate metadata and
+  // participant responses. It is optional and may be empty.
+  google.protobuf.Struct progress = 15;
 }
 
 message SessionSpotlight {

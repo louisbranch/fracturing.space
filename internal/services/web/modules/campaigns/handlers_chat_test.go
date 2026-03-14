@@ -32,17 +32,22 @@ func TestMountCampaignGameRouteRendersNavbarBackButton(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`data-campaign-chat-page="true"`,
+		`data-campaign-game-page="true"`,
 		`data-campaign-chat-title="The Guildhouse Game"`,
 		`href="/app/campaigns/c1"`,
 		`data-chat-fallback-port="8086"`,
-		`id="chat-messages"`,
+		`id="game-transcript"`,
+		`<textarea id="game-message-input"`,
+		`maxlength="12000"`,
+		`id="game-persona-select"`,
+		`id="game-request-handoff"`,
+		`id="campaign-game-bootstrap"`,
 		`src="/static/campaign-chat.js"`,
 		`class="navbar-start"`,
 		`class="navbar-end"`,
 		`class="btn btn-ghost"`,
 		`Back to Campaign`,
-		`class="grid grid-cols-1 gap-4 lg:grid-cols-2"`,
+		`class="grid grid-cols-1 gap-4 xl:grid-cols-[18rem_minmax(0,1fr)_18rem]"`,
 		`class="card border border-base-300 bg-base-100 shadow-xl"`,
 	} {
 		if !strings.Contains(body, marker) {

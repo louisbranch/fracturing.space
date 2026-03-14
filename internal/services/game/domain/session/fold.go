@@ -14,6 +14,7 @@ func FoldHandledTypes() []event.Type {
 		EventTypeStarted,
 		EventTypeEnded,
 		EventTypeGateOpened,
+		EventTypeGateResponseRecorded,
 		EventTypeGateResolved,
 		EventTypeGateAbandoned,
 		EventTypeSpotlightSet,
@@ -54,6 +55,8 @@ func Fold(state State, evt event.Event) (State, error) {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
 		}
 		state.GateID = ids.GateID(payload.GateID)
+	case EventTypeGateResponseRecorded:
+		// Gate response events do not change the gate-open lifecycle state.
 	case EventTypeGateResolved, EventTypeGateAbandoned:
 		state.GateOpen = false
 		state.GateID = ""

@@ -95,3 +95,78 @@ func (s service) campaignWorkspace(ctx context.Context, campaignID string) (Camp
 	}
 	return workspace, nil
 }
+
+// campaignGameSurface centralizes this web behavior in one helper seam.
+func (s service) campaignGameSurface(ctx context.Context, campaignID string) (CampaignGameSurface, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return CampaignGameSurface{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+	surface, err := s.readGateway.CampaignGameSurface(ctx, campaignID)
+	if err != nil {
+		return CampaignGameSurface{}, err
+	}
+	surface.Participant.ID = strings.TrimSpace(surface.Participant.ID)
+	surface.Participant.Name = strings.TrimSpace(surface.Participant.Name)
+	if surface.Participant.Name == "" {
+		surface.Participant.Name = surface.Participant.ID
+	}
+	surface.Participant.Role = strings.TrimSpace(surface.Participant.Role)
+	if surface.Participant.Role == "" {
+		surface.Participant.Role = "Unspecified"
+	}
+	surface.SessionID = strings.TrimSpace(surface.SessionID)
+	surface.SessionName = strings.TrimSpace(surface.SessionName)
+	if surface.SessionName == "" {
+		surface.SessionName = surface.SessionID
+	}
+	surface.DefaultStreamID = strings.TrimSpace(surface.DefaultStreamID)
+	surface.DefaultPersonaID = strings.TrimSpace(surface.DefaultPersonaID)
+	if len(surface.Streams) == 0 {
+		surface.Streams = []CampaignGameStream{}
+	}
+	for i := range surface.Streams {
+		surface.Streams[i].ID = strings.TrimSpace(surface.Streams[i].ID)
+		surface.Streams[i].Kind = strings.TrimSpace(surface.Streams[i].Kind)
+		surface.Streams[i].Scope = strings.TrimSpace(surface.Streams[i].Scope)
+		surface.Streams[i].SessionID = strings.TrimSpace(surface.Streams[i].SessionID)
+		surface.Streams[i].SceneID = strings.TrimSpace(surface.Streams[i].SceneID)
+		surface.Streams[i].Label = strings.TrimSpace(surface.Streams[i].Label)
+		if surface.Streams[i].Label == "" {
+			surface.Streams[i].Label = surface.Streams[i].ID
+		}
+		if surface.DefaultStreamID == "" && surface.Streams[i].ID != "" {
+			surface.DefaultStreamID = surface.Streams[i].ID
+		}
+	}
+	if len(surface.Personas) == 0 {
+		surface.Personas = []CampaignGamePersona{}
+	}
+	for i := range surface.Personas {
+		surface.Personas[i].ID = strings.TrimSpace(surface.Personas[i].ID)
+		surface.Personas[i].Kind = strings.TrimSpace(surface.Personas[i].Kind)
+		surface.Personas[i].ParticipantID = strings.TrimSpace(surface.Personas[i].ParticipantID)
+		surface.Personas[i].CharacterID = strings.TrimSpace(surface.Personas[i].CharacterID)
+		surface.Personas[i].DisplayName = strings.TrimSpace(surface.Personas[i].DisplayName)
+		if surface.Personas[i].DisplayName == "" {
+			surface.Personas[i].DisplayName = surface.Personas[i].ID
+		}
+		if surface.DefaultPersonaID == "" && surface.Personas[i].ID != "" {
+			surface.DefaultPersonaID = surface.Personas[i].ID
+		}
+	}
+	if surface.ActiveSessionGate != nil {
+		surface.ActiveSessionGate.ID = strings.TrimSpace(surface.ActiveSessionGate.ID)
+		surface.ActiveSessionGate.Type = strings.TrimSpace(surface.ActiveSessionGate.Type)
+		surface.ActiveSessionGate.Status = strings.TrimSpace(surface.ActiveSessionGate.Status)
+		surface.ActiveSessionGate.Reason = strings.TrimSpace(surface.ActiveSessionGate.Reason)
+		if len(surface.ActiveSessionGate.Metadata) == 0 {
+			surface.ActiveSessionGate.Metadata = nil
+		}
+	}
+	if surface.ActiveSessionSpotlight != nil {
+		surface.ActiveSessionSpotlight.Type = strings.TrimSpace(surface.ActiveSessionSpotlight.Type)
+		surface.ActiveSessionSpotlight.CharacterID = strings.TrimSpace(surface.ActiveSessionSpotlight.CharacterID)
+	}
+	return surface, nil
+}

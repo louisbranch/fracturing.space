@@ -359,6 +359,64 @@ func TestRegisterEvents_ValidatesGateAbandonedPayload(t *testing.T) {
 	}
 }
 
+func TestRegisterCommands_ValidatesGateResponsePayload(t *testing.T) {
+	registry := command.NewRegistry()
+	if err := RegisterCommands(registry); err != nil {
+		t.Fatalf("register commands: %v", err)
+	}
+
+	validCommand := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("session.gate_record_response"),
+		ActorType:   command.ActorTypeSystem,
+		SessionID:   "sess-1",
+		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":"part-1","decision":"ready"}`),
+	}
+	if _, err := registry.ValidateForDecision(validCommand); err != nil {
+		t.Fatalf("valid command rejected: %v", err)
+	}
+
+	invalidCommand := validCommand
+	invalidCommand.PayloadJSON = []byte(`{"gate_id":"gate-1","participant_id":1}`)
+	_, err := registry.ValidateForDecision(invalidCommand)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errors.Is(err, command.ErrTypeUnknown) {
+		t.Fatalf("expected payload validation error, got %v", err)
+	}
+}
+
+func TestRegisterEvents_ValidatesGateResponseRecordedPayload(t *testing.T) {
+	registry := event.NewRegistry()
+	if err := RegisterEvents(registry); err != nil {
+		t.Fatalf("register events: %v", err)
+	}
+
+	validEvent := event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("session.gate_response_recorded"),
+		Timestamp:   time.Unix(0, 0).UTC(),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "session_gate",
+		EntityID:    "gate-1",
+		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":"part-1","decision":"ready"}`),
+	}
+	if _, err := registry.ValidateForAppend(validEvent); err != nil {
+		t.Fatalf("valid event rejected: %v", err)
+	}
+
+	invalidEvent := validEvent
+	invalidEvent.PayloadJSON = []byte(`{"gate_id":"gate-1","participant_id":1}`)
+	_, err := registry.ValidateForAppend(invalidEvent)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if errors.Is(err, event.ErrTypeUnknown) {
+		t.Fatalf("expected payload validation error, got %v", err)
+	}
+}
+
 func TestRegisterCommands_ValidatesSpotlightSetPayload(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := RegisterCommands(registry); err != nil {
