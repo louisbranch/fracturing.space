@@ -781,7 +781,7 @@
 	text-anchor="start"
 	transform="translate(52.000000,100.400000) scale(1.000000)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">api/grpc 72.7%</text>
+	data-math="N">api/grpc 72.8%</text>
 		
 </g>
 
@@ -2846,14 +2846,14 @@
 
 
 <g>
-	<rect x="60.000000" y="128.000000" width="42.707225" height="41.161533" style="fill: rgb(219, 56, 41);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="60.000000" y="128.000000" width="42.707225" height="41.161533" style="fill: rgb(221, 62, 43);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(68.000000,143.600000) scale(0.103037)"
-	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(255, 255, 255); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">character_workflow.go 11.2%</text>
+	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
+	data-math="N">character_workflow.go 11.9%</text>
 		
 </g>
 
