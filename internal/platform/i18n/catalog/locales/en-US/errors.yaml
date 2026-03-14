@@ -85,6 +85,7 @@ messages:
   "INVITE_JTI_REQUIRED": "JTI is required"
   "INVITE_NOT_CREATED": "Invite does not exist"
   "INVITE_PARTICIPANT_ID_REQUIRED": "Participant ID is required"
+  "INVITE_RECIPIENT_ALREADY_INVITED": "User already has a pending invite in this campaign"
   "INVITE_RECIPIENT_USER_MISSING": "Invite recipient user was not found"
   "INVITE_STATUS_INVALID": "Invite status is invalid"
   "INVITE_USER_ID_REQUIRED": "User ID is required"

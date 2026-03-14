@@ -59,6 +59,9 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 		if userResponse == nil || userResponse.GetUser() == nil {
 			return storage.InviteRecord{}, status.Error(codes.Internal, "auth user response is missing")
 		}
+		if err := a.ensureCreateInviteRecipientAvailable(ctx, campaignID, recipientUserID); err != nil {
+			return storage.InviteRecord{}, err
+		}
 	}
 
 	inviteID, err := a.idGenerator()
@@ -109,4 +112,42 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	}
 
 	return inv, nil
+}
+
+func (a inviteApplication) ensureCreateInviteRecipientAvailable(ctx context.Context, campaignID, recipientUserID string) error {
+	campaignIDs, err := a.stores.Participant.ListCampaignIDsByUser(ctx, recipientUserID)
+	if err != nil {
+		return grpcerror.Internal("list recipient participant campaigns", err)
+	}
+	for _, existingCampaignID := range campaignIDs {
+		if existingCampaignID != campaignID {
+			continue
+		}
+		return apperrors.WithMetadata(
+			apperrors.CodeParticipantUserAlreadyClaimed,
+			"participant user already claimed",
+			map[string]string{
+				"CampaignID": campaignID,
+				"UserID":     recipientUserID,
+			},
+		)
+	}
+
+	page, err := a.stores.Invite.ListInvites(ctx, campaignID, recipientUserID, invite.StatusPending, 1, "")
+	if err != nil {
+		return grpcerror.Internal("list recipient pending invites", err)
+	}
+	if len(page.Invites) == 0 {
+		return nil
+	}
+
+	return apperrors.WithMetadata(
+		apperrors.CodeInviteRecipientAlreadyInvited,
+		"invite recipient already has a pending invite",
+		map[string]string{
+			"CampaignID": campaignID,
+			"InviteID":   page.Invites[0].ID,
+			"UserID":     recipientUserID,
+		},
+	)
 }
