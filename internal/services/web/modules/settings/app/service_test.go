@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ type gatewayStub struct {
 	profile     SettingsProfile
 	locale      string
 	keys        []SettingsAIKey
+	passkeys    []SettingsPasskey
 	credentials []SettingsAICredentialOption
 	models      []SettingsAIModelOption
 	agents      []SettingsAIAgent
@@ -48,6 +50,24 @@ func (g gatewayStub) LoadLocale(context.Context, string) (string, error) {
 func (g *gatewayStub) SaveLocale(_ context.Context, userID string, locale string) error {
 	g.lastUserID = userID
 	g.lastLocale = locale
+	return g.err
+}
+func (g gatewayStub) ListPasskeys(context.Context, string) ([]SettingsPasskey, error) {
+	if g.err != nil {
+		return nil, g.err
+	}
+	return g.passkeys, nil
+}
+func (g *gatewayStub) BeginPasskeyRegistration(_ context.Context, userID string) (PasskeyChallenge, error) {
+	g.lastUserID = userID
+	if g.err != nil {
+		return PasskeyChallenge{}, g.err
+	}
+	return PasskeyChallenge{SessionID: "passkey-session-1", PublicKey: json.RawMessage(`{"publicKey":{}}`)}, nil
+}
+func (g *gatewayStub) FinishPasskeyRegistration(_ context.Context, sessionID string, credential json.RawMessage) error {
+	g.lastCredentialID = sessionID
+	g.lastCredential = string(credential)
 	return g.err
 }
 func (g gatewayStub) ListAIKeys(context.Context, string) ([]SettingsAIKey, error) {

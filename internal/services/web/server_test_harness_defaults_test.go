@@ -38,6 +38,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				Settings: modules.SettingsDependencies{
 					SocialClient:     social,
 					AccountClient:    account,
+					PasskeyClient:    auth,
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},

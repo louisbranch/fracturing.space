@@ -1,9 +1,22 @@
 package settings
 
 import (
+	"encoding/json"
+	"net/http"
 	"net/url"
 	"strings"
+
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/jsoninput"
 )
+
+const maxJSONBodyBytes = 64 << 10
+
+// passkeyCredentialInput captures one authenticated WebAuthn completion payload.
+type passkeyCredentialInput struct {
+	SessionID  string          `json:"session_id"`
+	Credential json.RawMessage `json:"credential"`
+}
 
 // parseProfileInput maps profile form values and preserves avatar catalog IDs.
 func parseProfileInput(form url.Values, existingProfile SettingsProfile) SettingsProfile {
@@ -40,4 +53,16 @@ func parseAIAgentCreateInput(form url.Values) CreateAIAgentInput {
 		Model:        strings.TrimSpace(form.Get("model")),
 		Instructions: strings.TrimSpace(form.Get("instructions")),
 	}
+}
+
+// parsePasskeyCredentialInput parses and normalizes one settings passkey credential payload.
+func parsePasskeyCredentialInput(r *http.Request) (passkeyCredentialInput, error) {
+	var payload passkeyCredentialInput
+	if err := jsoninput.DecodeStrict(r, &payload, maxJSONBodyBytes); err != nil {
+		return passkeyCredentialInput{}, apperrors.E(apperrors.KindInvalidInput, "Invalid JSON body.")
+	}
+	return passkeyCredentialInput{
+		SessionID:  strings.TrimSpace(payload.SessionID),
+		Credential: payload.Credential,
+	}, nil
 }

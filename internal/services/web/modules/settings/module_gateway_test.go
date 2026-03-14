@@ -197,6 +197,41 @@ func (f *accountClientStub) UpdateProfile(_ context.Context, req *authv1.UpdateP
 	return &authv1.UpdateProfileResponse{}, nil
 }
 
+type passkeyClientStub struct {
+	listResp   *authv1.ListPasskeysResponse
+	listErr    error
+	beginErr   error
+	finishErr  error
+	lastBegin  *authv1.BeginPasskeyRegistrationRequest
+	lastFinish *authv1.FinishPasskeyRegistrationRequest
+}
+
+func (f *passkeyClientStub) ListPasskeys(context.Context, *authv1.ListPasskeysRequest, ...grpc.CallOption) (*authv1.ListPasskeysResponse, error) {
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	if f.listResp != nil {
+		return f.listResp, nil
+	}
+	return &authv1.ListPasskeysResponse{}, nil
+}
+
+func (f *passkeyClientStub) BeginPasskeyRegistration(_ context.Context, req *authv1.BeginPasskeyRegistrationRequest, _ ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	f.lastBegin = req
+	if f.beginErr != nil {
+		return nil, f.beginErr
+	}
+	return &authv1.BeginPasskeyRegistrationResponse{SessionId: "passkey-session-1", CredentialCreationOptionsJson: []byte(`{"publicKey":{}}`)}, nil
+}
+
+func (f *passkeyClientStub) FinishPasskeyRegistration(_ context.Context, req *authv1.FinishPasskeyRegistrationRequest, _ ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
+	f.lastFinish = req
+	if f.finishErr != nil {
+		return nil, f.finishErr
+	}
+	return &authv1.FinishPasskeyRegistrationResponse{}, nil
+}
+
 type credentialClientStub struct {
 	listResp      *aiv1.ListCredentialsResponse
 	listErr       error

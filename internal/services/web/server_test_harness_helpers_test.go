@@ -8,6 +8,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	settingsmodule "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 )
 
 func assertPrimaryNavLinks(t *testing.T, body string) {
@@ -45,6 +46,11 @@ func attachSessionCookie(t *testing.T, req *http.Request, auth *fakeWebAuthClien
 }
 
 func newDependencyBundle(principal PrincipalDependencies, moduleDeps modules.Dependencies) *DependencyBundle {
+	if moduleDeps.Settings.PasskeyClient == nil && moduleDeps.PublicAuth.AuthClient != nil {
+		if passkeyClient, ok := any(moduleDeps.PublicAuth.AuthClient).(settingsmodule.PasskeyClient); ok {
+			moduleDeps.Settings.PasskeyClient = passkeyClient
+		}
+	}
 	return &DependencyBundle{
 		Principal: principal,
 		Modules:   moduleDeps,

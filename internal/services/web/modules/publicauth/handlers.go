@@ -50,7 +50,17 @@ func (h handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	langTag := h.resolveAuthTag(w, r)
 	copy := webi18n.Auth(langTag)
-	h.writeAuthPage(w, r, copy.LoginTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyLoginPage(copy))
+	h.writeAuthPage(w, r, copy.LoginTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyLoginPage(copy, h.recoveryPageURL(r), h.pendingID(r)))
+}
+
+// handleRecoveryGet handles this route in the module transport layer.
+func (h handlers) handleRecoveryGet(w http.ResponseWriter, r *http.Request) {
+	if h.redirectAuthenticatedToApp(w, r) {
+		return
+	}
+	langTag := h.resolveAuthTag(w, r)
+	copy := webi18n.Auth(langTag)
+	h.writeAuthPage(w, r, copy.RecoveryTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyRecoveryPage(copy, h.pendingID(r)))
 }
 
 // handleAuthLogin handles this route in the module transport layer.
@@ -97,13 +107,13 @@ func (h handlers) handlePasskeyLoginFinish(w http.ResponseWriter, r *http.Reques
 		h.writeJSONError(w, r, err)
 		return
 	}
-	finished, err := h.service.PasskeyLoginFinish(r.Context(), input.SessionID, input.Credential)
+	finished, err := h.service.PasskeyLoginFinish(r.Context(), input.SessionID, input.Credential, input.PendingID)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
 	}
 	h.writeSessionCookie(w, r, finished.SessionID)
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.AppDashboard})
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": h.service.ResolvePostAuthRedirect(input.PendingID)})
 }
 
 // handlePasskeyRegisterStart handles this route in the module transport layer.
@@ -134,11 +144,99 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		return
 	}
 	h.writeSessionCookie(w, r, finished.SessionID)
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{
-		"user_id":       finished.UserID,
-		"redirect_url":  routepath.AppDashboard,
-		"recovery_code": finished.RecoveryCode,
+	h.writeRecoveryRevealState(w, r, recoveryRevealState{
+		Code: finished.RecoveryCode,
+		Mode: recoveryRevealModeSignup,
 	})
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{
+		"user_id":      finished.UserID,
+		"redirect_url": routepath.LoginRecoveryCode,
+	})
+}
+
+// handleRecoveryStart handles this route in the module transport layer.
+func (h handlers) handleRecoveryStart(w http.ResponseWriter, r *http.Request) {
+	input, err := parseRecoveryStartInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	start, err := h.service.RecoveryStart(r.Context(), input.Username, input.RecoveryCode)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{
+		"recovery_session_id": start.RecoverySessionID,
+		"session_id":          start.SessionID,
+		"public_key":          start.PublicKey,
+	})
+}
+
+// handleRecoveryFinish handles this route in the module transport layer.
+func (h handlers) handleRecoveryFinish(w http.ResponseWriter, r *http.Request) {
+	input, err := parseRecoveryFinishInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	finished, err := h.service.RecoveryFinish(r.Context(), input.RecoverySessionID, input.SessionID, input.Credential, input.PendingID)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	h.writeSessionCookie(w, r, finished.SessionID)
+	h.writeRecoveryRevealState(w, r, recoveryRevealState{
+		Code:      finished.RecoveryCode,
+		PendingID: input.PendingID,
+		Mode:      recoveryRevealModeRecovery,
+	})
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"redirect_url": routepath.LoginRecoveryCode})
+}
+
+// handleRecoveryCodeGet handles this route in the module transport layer.
+func (h handlers) handleRecoveryCodeGet(w http.ResponseWriter, r *http.Request) {
+	state, ok := h.readAndClearRecoveryRevealState(w, r)
+	if !ok {
+		if h.redirectAuthenticatedToApp(w, r) {
+			return
+		}
+		httpx.WriteRedirect(w, r, routepath.Login)
+		return
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	langTag := h.resolveAuthTag(w, r)
+	copy := webi18n.Auth(langTag)
+	h.writeAuthPage(
+		w,
+		r,
+		copy.RecoveryCodePageTitle,
+		copy.MetaDescription,
+		langTag.String(),
+		webtemplates.RecoveryCodePage(webtemplates.RecoveryCodePageParams{
+			Copy:       copy,
+			Code:       state.Code,
+			PendingID:  state.PendingID,
+			IsRecovery: state.Mode == recoveryRevealModeRecovery,
+		}),
+	)
+}
+
+// handleRecoveryCodeAcknowledge handles this route in the module transport layer.
+func (h handlers) handleRecoveryCodeAcknowledge(w http.ResponseWriter, r *http.Request) {
+	if !h.hasSameOriginProof(r) {
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	if strings.TrimSpace(r.FormValue("acknowledged")) == "" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+	httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(strings.TrimSpace(r.FormValue("pending_id"))))
 }
 
 // handleHealth handles this route in the module transport layer.
@@ -188,6 +286,10 @@ func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Requ
 	if !h.service.HasValidWebSession(r.Context(), sessionID) {
 		return false
 	}
+	if pendingID := h.pendingID(r); pendingID != "" {
+		httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(pendingID))
+		return true
+	}
 	httpx.WriteRedirect(w, r, resolveAppRedirectPath(r.URL.Query().Get("next")))
 	return true
 }
@@ -202,17 +304,51 @@ func (h handlers) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
 	sessioncookie.ClearWithPolicy(w, r, h.requestMeta)
 }
 
+// writeRecoveryRevealState stores one-time recovery-code display state.
+func (h handlers) writeRecoveryRevealState(w http.ResponseWriter, r *http.Request, state recoveryRevealState) {
+	writeRecoveryRevealState(w, r, h.requestMeta, state)
+}
+
+// readAndClearRecoveryRevealState reads and clears one-time recovery-code display state.
+func (h handlers) readAndClearRecoveryRevealState(w http.ResponseWriter, r *http.Request) (recoveryRevealState, bool) {
+	state, ok := readRecoveryRevealState(r)
+	if !ok {
+		return recoveryRevealState{}, false
+	}
+	clearRecoveryRevealState(w, r, h.requestMeta)
+	return state, true
+}
+
 // hasSameOriginProof reports whether this package condition is satisfied.
 func (h handlers) hasSameOriginProof(r *http.Request) bool {
 	return requestmeta.HasSameOriginProofWithPolicy(r, h.requestMeta)
 }
 
+// pendingID extracts an optional pending OAuth authorization ID from the query.
+func (h handlers) pendingID(r *http.Request) string {
+	if r == nil || r.URL == nil {
+		return ""
+	}
+	return strings.TrimSpace(r.URL.Query().Get("pending_id"))
+}
+
+// recoveryPageURL builds the login-to-recovery link, preserving pending auth state.
+func (h handlers) recoveryPageURL(r *http.Request) string {
+	pendingID := h.pendingID(r)
+	if pendingID == "" {
+		return routepath.LoginRecovery
+	}
+	values := url.Values{}
+	values.Set("pending_id", pendingID)
+	return routepath.LoginRecovery + "?" + values.Encode()
+}
+
 // resolveAppRedirectPath resolves request-scoped values needed by this package.
 func resolveAppRedirectPath(raw string) string {
-	next := strings.TrimSpace(raw)
-	if next == "" {
+	if strings.TrimSpace(raw) == "" {
 		return routepath.AppDashboard
 	}
+	next := strings.TrimSpace(raw)
 	parsed, err := url.Parse(next)
 	if err != nil || parsed.Scheme != "" || parsed.Host != "" || parsed.Opaque != "" {
 		return routepath.AppDashboard

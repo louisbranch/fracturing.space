@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"unicode/utf8"
 
@@ -33,6 +34,13 @@ type SettingsAIKey struct {
 	CreatedAt string
 	RevokedAt string
 	CanRevoke bool
+}
+
+// SettingsPasskey stores one passkey summary row rendered on the security page.
+type SettingsPasskey struct {
+	Number     int
+	CreatedAt  string
+	LastUsedAt string
 }
 
 // SettingsAICredentialOption stores an active credential option for agent creation.
@@ -89,6 +97,9 @@ type Gateway interface {
 	SaveProfile(context.Context, string, SettingsProfile) error
 	LoadLocale(context.Context, string) (string, error)
 	SaveLocale(context.Context, string, string) error
+	ListPasskeys(context.Context, string) ([]SettingsPasskey, error)
+	BeginPasskeyRegistration(context.Context, string) (PasskeyChallenge, error)
+	FinishPasskeyRegistration(context.Context, string, json.RawMessage) error
 	ListAIKeys(context.Context, string) ([]SettingsAIKey, error)
 	ListAIAgentCredentials(context.Context, string) ([]SettingsAICredentialOption, error)
 	ListAIAgents(context.Context, string) ([]SettingsAIAgent, error)
@@ -104,6 +115,9 @@ type Service interface {
 	SaveProfile(context.Context, string, SettingsProfile) error
 	LoadLocale(context.Context, string) (string, error)
 	SaveLocale(context.Context, string, string) error
+	ListPasskeys(context.Context, string) ([]SettingsPasskey, error)
+	BeginPasskeyRegistration(context.Context, string) (PasskeyChallenge, error)
+	FinishPasskeyRegistration(context.Context, string, json.RawMessage) error
 	ListAIKeys(context.Context, string) ([]SettingsAIKey, error)
 	ListAIAgentCredentials(context.Context, string) ([]SettingsAICredentialOption, error)
 	ListAIAgents(context.Context, string) ([]SettingsAIAgent, error)
@@ -111,6 +125,12 @@ type Service interface {
 	CreateAIKey(context.Context, string, string, string) error
 	CreateAIAgent(context.Context, string, CreateAIAgentInput) error
 	RevokeAIKey(context.Context, string, string) error
+}
+
+// PasskeyChallenge stores authenticated passkey enrollment begin state.
+type PasskeyChallenge struct {
+	SessionID string
+	PublicKey json.RawMessage
 }
 
 // RequireUserID validates and returns a trimmed user ID, or returns an

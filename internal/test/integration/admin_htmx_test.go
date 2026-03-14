@@ -905,9 +905,8 @@ func startAdminServer(ctx context.Context, t *testing.T, grpcAddr string) (strin
 
 	httpAddr := pickUnusedAddress(t)
 	config := admin.Config{
-		HTTPAddr:        httpAddr,
-		GRPCAddr:        grpcAddr,
-		GRPCDialTimeout: 5 * time.Second,
+		HTTPAddr: httpAddr,
+		GRPCAddr: grpcAddr,
 	}
 
 	server, err := admin.NewServer(ctx, config)

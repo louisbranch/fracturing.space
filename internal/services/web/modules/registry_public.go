@@ -18,14 +18,17 @@ func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicMod
 		shell.New(shell.Config{
 			Gateway:     authGateway,
 			RequestMeta: opts.RequestSchemePolicy,
+			AuthBaseURL: deps.PublicAuth.AuthBaseURL,
 		}),
 		passkeys.New(passkeys.Config{
 			Gateway:     authGateway,
 			RequestMeta: opts.RequestSchemePolicy,
+			AuthBaseURL: deps.PublicAuth.AuthBaseURL,
 		}),
 		authredirect.New(authredirect.Config{
 			Gateway:     authGateway,
 			RequestMeta: opts.RequestSchemePolicy,
+			AuthBaseURL: deps.PublicAuth.AuthBaseURL,
 		}),
 		discovery.New(discovery.Config{Gateway: discoveryGateway}),
 		profile.New(profile.Config{

@@ -33,8 +33,23 @@ func (unavailableGateway) BeginPasskeyLogin(context.Context, string) (PasskeyCha
 }
 
 // FinishPasskeyLogin fails fast because login cannot complete without auth.
-func (unavailableGateway) FinishPasskeyLogin(context.Context, string, json.RawMessage) (string, error) {
+func (unavailableGateway) FinishPasskeyLogin(context.Context, string, json.RawMessage, string) (string, error) {
 	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+}
+
+// BeginAccountRecovery fails fast because recovery cannot start without auth.
+func (unavailableGateway) BeginAccountRecovery(context.Context, string, string) (string, error) {
+	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+}
+
+// BeginRecoveryPasskeyRegistration fails fast because recovery cannot continue without auth.
+func (unavailableGateway) BeginRecoveryPasskeyRegistration(context.Context, string) (PasskeyChallenge, error) {
+	return PasskeyChallenge{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+}
+
+// FinishRecoveryPasskeyRegistration fails fast because recovery cannot complete without auth.
+func (unavailableGateway) FinishRecoveryPasskeyRegistration(context.Context, string, string, json.RawMessage, string) (PasskeyFinish, error) {
+	return PasskeyFinish{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
 // CreateWebSession fails fast because there is no auth service to mint sessions.

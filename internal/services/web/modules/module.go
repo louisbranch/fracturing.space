@@ -94,6 +94,7 @@ type ProfileDependencies struct {
 type SettingsDependencies struct {
 	SocialClient     settings.SocialClient
 	AccountClient    settings.AccountClient
+	PasskeyClient    settings.PasskeyClient
 	CredentialClient settings.CredentialClient
 	AgentClient      settings.AgentClient
 }
@@ -106,7 +107,8 @@ type DashboardSyncDependencies struct {
 
 // PublicAuthDependencies contains public-auth feature clients.
 type PublicAuthDependencies struct {
-	AuthClient publicauthgateway.AuthClient
+	AuthClient  publicauthgateway.AuthClient
+	AuthBaseURL string
 }
 
 // NotificationDependencies contains notification feature clients.

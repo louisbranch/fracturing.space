@@ -7,7 +7,7 @@ import (
 )
 
 func TestPasskeyLoginStartRequiresUsername(t *testing.T) {
-	svc := NewService(&authGatewayStub{})
+	svc := NewService(&authGatewayStub{}, "")
 	_, err := svc.PasskeyLoginStart(context.Background(), "  ")
 	if err == nil {
 		t.Fatal("expected validation error")
@@ -23,7 +23,7 @@ func TestPasskeyRegisterStartAndFinish(t *testing.T) {
 			RecoveryCode: "ABCD-EFGH",
 		},
 	}
-	svc := NewService(stub)
+	svc := NewService(stub, "")
 
 	start, err := svc.PasskeyRegisterStart(context.Background(), "louis")
 	if err != nil {
@@ -47,9 +47,9 @@ func TestPasskeyLoginFinishCreatesWebSession(t *testing.T) {
 		finishLoginUserID: "user-1",
 		webSessionID:      "web-1",
 	}
-	svc := NewService(stub)
+	svc := NewService(stub, "")
 
-	finish, err := svc.PasskeyLoginFinish(context.Background(), "login-1", json.RawMessage(`{}`))
+	finish, err := svc.PasskeyLoginFinish(context.Background(), "login-1", json.RawMessage(`{}`), "")
 	if err != nil {
 		t.Fatalf("PasskeyLoginFinish() error = %v", err)
 	}
@@ -78,8 +78,20 @@ func (f *authGatewayStub) BeginPasskeyLogin(context.Context, string) (PasskeyCha
 	return f.beginLoginResp, nil
 }
 
-func (f *authGatewayStub) FinishPasskeyLogin(context.Context, string, json.RawMessage) (string, error) {
+func (f *authGatewayStub) FinishPasskeyLogin(context.Context, string, json.RawMessage, string) (string, error) {
 	return f.finishLoginUserID, nil
+}
+
+func (*authGatewayStub) BeginAccountRecovery(context.Context, string, string) (string, error) {
+	return "", nil
+}
+
+func (*authGatewayStub) BeginRecoveryPasskeyRegistration(context.Context, string) (PasskeyChallenge, error) {
+	return PasskeyChallenge{}, nil
+}
+
+func (*authGatewayStub) FinishRecoveryPasskeyRegistration(context.Context, string, string, json.RawMessage, string) (PasskeyFinish, error) {
+	return PasskeyFinish{}, nil
 }
 
 func (f *authGatewayStub) CreateWebSession(context.Context, string) (string, error) {

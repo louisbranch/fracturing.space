@@ -16,6 +16,7 @@ type Module struct {
 type Config struct {
 	Gateway     publicauthapp.Gateway
 	RequestMeta requestmeta.SchemePolicy
+	AuthBaseURL string
 }
 
 // New builds the passkeys module with explicit dependencies.
@@ -23,6 +24,7 @@ func New(config Config) Module {
 	return Module{inner: publicauth.New(publicauth.Config{
 		Gateway:     config.Gateway,
 		RequestMeta: config.RequestMeta,
+		AuthBaseURL: config.AuthBaseURL,
 		Surface:     publicauth.SurfacePasskeys,
 	})}
 }

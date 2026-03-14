@@ -1,6 +1,11 @@
 package settings
 
-import "context"
+import (
+	"context"
+	"encoding/json"
+
+	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
+)
 
 // fakeGateway implements SettingsGateway for tests with configurable return
 // values, error injection, and call recording.
@@ -8,6 +13,7 @@ type fakeGateway struct {
 	profile          SettingsProfile
 	locale           string
 	keys             []SettingsAIKey
+	passkeys         []SettingsPasskey
 	credentials      []SettingsAICredentialOption
 	models           []SettingsAIModelOption
 	agents           []SettingsAIAgent
@@ -30,6 +36,8 @@ type fakeGateway struct {
 	lastSelectedCredentialID string
 	lastRevokedCredentialID  string
 	lastRequestedUserID      string
+	lastPasskeySessionID     string
+	lastPasskeyCredential    json.RawMessage
 }
 
 // newPopulatedFakeGateway returns a fakeGateway pre-loaded with rich canned
@@ -52,6 +60,11 @@ func newPopulatedFakeGateway() *fakeGateway {
 			CreatedAt: "2026-01-01 00:00 UTC",
 			RevokedAt: "-",
 			CanRevoke: true,
+		}},
+		passkeys: []SettingsPasskey{{
+			Number:     1,
+			CreatedAt:  "2026-01-01 00:00 UTC",
+			LastUsedAt: "2026-01-02 00:00 UTC",
 		}},
 		credentials: []SettingsAICredentialOption{{
 			ID:       "cred-1",
@@ -106,6 +119,28 @@ func (f *fakeGateway) SaveLocale(_ context.Context, userID string, locale string
 	f.lastRequestedUserID = userID
 	f.lastSavedLocale = locale
 	return f.saveLocaleErr
+}
+
+func (f *fakeGateway) ListPasskeys(_ context.Context, userID string) ([]SettingsPasskey, error) {
+	f.lastRequestedUserID = userID
+	if f.passkeys == nil {
+		return []SettingsPasskey{}, nil
+	}
+	return f.passkeys, nil
+}
+
+func (f *fakeGateway) BeginPasskeyRegistration(_ context.Context, userID string) (settingsapp.PasskeyChallenge, error) {
+	f.lastRequestedUserID = userID
+	return settingsapp.PasskeyChallenge{
+		SessionID: "passkey-session-1",
+		PublicKey: json.RawMessage(`{"publicKey":{}}`),
+	}, nil
+}
+
+func (f *fakeGateway) FinishPasskeyRegistration(_ context.Context, sessionID string, credential json.RawMessage) error {
+	f.lastPasskeySessionID = sessionID
+	f.lastPasskeyCredential = credential
+	return nil
 }
 
 func (f *fakeGateway) ListAIKeys(_ context.Context, userID string) ([]SettingsAIKey, error) {

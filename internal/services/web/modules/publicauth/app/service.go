@@ -3,23 +3,27 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"net/url"
+	"path"
 	"strings"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // service centralizes public auth orchestration so handlers stay transport-focused.
 type service struct {
-	auth Gateway
+	auth        Gateway
+	authBaseURL string
 }
 
 // NewService wires auth-backed public auth flows behind input validation.
-func NewService(gateway Gateway) Service {
+func NewService(gateway Gateway, authBaseURL string) Service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
-	return service{auth: gateway}
+	return service{auth: gateway, authBaseURL: strings.TrimSpace(authBaseURL)}
 }
 
 // HealthBody returns the plain-text health response expected by the endpoint.
@@ -37,7 +41,7 @@ func (s service) PasskeyLoginStart(ctx context.Context, username string) (Passke
 }
 
 // PasskeyLoginFinish validates the ceremony response, then creates a web session.
-func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error) {
+func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error) {
 	resolvedSessionID, err := requireSessionID(sessionID)
 	if err != nil {
 		return PasskeyFinish{}, err
@@ -45,7 +49,7 @@ func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, crede
 	if err := requireCredential(credential); err != nil {
 		return PasskeyFinish{}, err
 	}
-	userID, err := s.auth.FinishPasskeyLogin(ctx, resolvedSessionID, credential)
+	userID, err := s.auth.FinishPasskeyLogin(ctx, resolvedSessionID, credential, strings.TrimSpace(pendingID))
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
@@ -102,7 +106,100 @@ func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, cr
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
+	finished.RecoveryCode, err = requireRecoveryCode(finished.RecoveryCode)
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
 	return finished, nil
+}
+
+// RecoveryStart verifies the recovery code, then starts replacement passkey enrollment.
+func (s service) RecoveryStart(ctx context.Context, username string, recoveryCode string) (RecoveryChallenge, error) {
+	resolvedUsername, err := requireUsername(username)
+	if err != nil {
+		return RecoveryChallenge{}, err
+	}
+	resolvedRecoveryCode, err := requireRecoveryCode(recoveryCode)
+	if err != nil {
+		return RecoveryChallenge{}, err
+	}
+	recoverySessionID, err := s.auth.BeginAccountRecovery(ctx, resolvedUsername, resolvedRecoveryCode)
+	if err != nil {
+		return RecoveryChallenge{}, err
+	}
+	resolvedRecoverySessionID, err := requireGatewaySessionID(recoverySessionID)
+	if err != nil {
+		return RecoveryChallenge{}, err
+	}
+	challenge, err := s.auth.BeginRecoveryPasskeyRegistration(ctx, resolvedRecoverySessionID)
+	if err != nil {
+		return RecoveryChallenge{}, err
+	}
+	resolvedPasskeySessionID, err := requireGatewaySessionID(challenge.SessionID)
+	if err != nil {
+		return RecoveryChallenge{}, err
+	}
+	return RecoveryChallenge{
+		RecoverySessionID: resolvedRecoverySessionID,
+		SessionID:         resolvedPasskeySessionID,
+		PublicKey:         challenge.PublicKey,
+	}, nil
+}
+
+// RecoveryFinish completes replacement passkey enrollment and returns the signed-in session.
+func (s service) RecoveryFinish(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error) {
+	resolvedRecoverySessionID, err := requireSessionID(recoverySessionID)
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
+	resolvedSessionID, err := requireSessionID(sessionID)
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
+	if err := requireCredential(credential); err != nil {
+		return PasskeyFinish{}, err
+	}
+	finished, err := s.auth.FinishRecoveryPasskeyRegistration(ctx, resolvedRecoverySessionID, resolvedSessionID, credential, strings.TrimSpace(pendingID))
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
+	finished.UserID, err = requireGatewayUserID(finished.UserID)
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
+	finished.SessionID, err = requireGatewaySessionID(finished.SessionID)
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
+	finished.RecoveryCode, err = requireRecoveryCode(finished.RecoveryCode)
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
+	return finished, nil
+}
+
+// ResolvePostAuthRedirect returns the app dashboard or auth consent URL.
+func (s service) ResolvePostAuthRedirect(pendingID string) string {
+	pendingID = strings.TrimSpace(pendingID)
+	if pendingID == "" {
+		return routepath.AppDashboard
+	}
+	base := strings.TrimRight(strings.TrimSpace(s.authBaseURL), "/")
+	if base == "" {
+		return routepath.AppDashboard
+	}
+	parsed, err := url.Parse(base)
+	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
+		return routepath.AppDashboard
+	}
+	parsed.Path = path.Clean(strings.TrimRight(parsed.Path, "/") + "/authorize/consent")
+	if parsed.Path == "." {
+		parsed.Path = "/authorize/consent"
+	}
+	query := parsed.Query()
+	query.Set("pending_id", pendingID)
+	parsed.RawQuery = query.Encode()
+	return parsed.String()
 }
 
 // HasValidWebSession trims cookie input before delegating to auth session checks.
@@ -147,6 +244,15 @@ func requireUsername(username string) (string, error) {
 		return "", apperrors.E(apperrors.KindInvalidInput, "Username is required.")
 	}
 	return resolvedUsername, nil
+}
+
+// requireRecoveryCode rejects blank recovery credentials before calling auth.
+func requireRecoveryCode(recoveryCode string) (string, error) {
+	resolvedRecoveryCode := strings.TrimSpace(recoveryCode)
+	if resolvedRecoveryCode == "" {
+		return "", apperrors.E(apperrors.KindInvalidInput, "Recovery code is required.")
+	}
+	return resolvedRecoveryCode, nil
 }
 
 // requireGatewayUserID protects the web tier from empty auth responses.

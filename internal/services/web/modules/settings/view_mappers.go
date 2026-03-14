@@ -24,6 +24,12 @@ func settingsSideMenu(currentPath string, loc webtemplates.Localizer) *webtempla
 				IconID:     commonv1.IconId_ICON_ID_LOCALE,
 			},
 			{
+				Label:      webtemplates.T(loc, "layout.settings_security"),
+				URL:        routepath.AppSettingsSecurity,
+				MatchExact: true,
+				IconID:     commonv1.IconId_ICON_ID_KEY,
+			},
+			{
 				Label:      webtemplates.T(loc, "layout.settings_ai_keys"),
 				URL:        routepath.AppSettingsAIKeys,
 				MatchExact: true,
@@ -51,6 +57,19 @@ func mapAIKeyTemplateRows(keys []SettingsAIKey) []webtemplates.SettingsAIKeyRow 
 			CreatedAt: key.CreatedAt,
 			RevokedAt: key.RevokedAt,
 			CanRevoke: key.CanRevoke,
+		})
+	}
+	return rows
+}
+
+// mapPasskeyTemplateRows maps settings passkeys into template rows.
+func mapPasskeyTemplateRows(passkeys []SettingsPasskey) []webtemplates.SettingsPasskeyRow {
+	rows := make([]webtemplates.SettingsPasskeyRow, 0, len(passkeys))
+	for _, passkey := range passkeys {
+		rows = append(rows, webtemplates.SettingsPasskeyRow{
+			Number:     passkey.Number,
+			CreatedAt:  passkey.CreatedAt,
+			LastUsedAt: passkey.LastUsedAt,
 		})
 	}
 	return rows

@@ -14,14 +14,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(publicauthapp.NewService(nil), requestmeta.SchemePolicy{}))
+	registerRoutes(nil, newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{}))
 }
 
 func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(publicauthapp.NewService(nil), requestmeta.SchemePolicy{}))
+	registerRoutes(mux, newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{}))
 
 	tests := []struct {
 		name       string

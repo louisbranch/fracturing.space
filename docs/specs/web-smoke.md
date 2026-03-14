@@ -12,9 +12,10 @@ nav_exclude: true
 Quick regression coverage for web route and shell contracts:
 
 - landing + login pages render with expected auth entrypoints,
+- login recovery and recovery-code acknowledgement surfaces remain registered,
 - protected campaign route ownership keeps `/app/campaigns/{id}` canonical,
 - authenticated users can traverse critical app routes (dashboard, campaigns,
-  campaign creation surfaces, settings, notifications),
+  campaign creation surfaces, settings, settings security, notifications),
 - authenticated campaign mutations (character create, session start/end,
   invite create/revoke) complete successfully in a connected dependency stack.
 
@@ -79,8 +80,32 @@ async page => {
   await page.getByLabel("Email").waitFor();
   await page.getByRole("button", { name: "Create Account With Passkey" }).waitFor();
   await page.getByRole("button", { name: "Sign In With Passkey" }).waitFor();
+  await page.getByRole("link", { name: /Recover account/i }).waitFor();
+
+  const recoveryHref = await page.getByRole("link", { name: /Recover account/i }).getAttribute("href");
+  if (recoveryHref !== "/login/recovery?pending_id=test") {
+    throw new Error("Expected recovery link to preserve pending_id, got: " + recoveryHref);
+  }
 
   console.log("Login page OK");
+}
+EOF
+)"
+
+step "Navigate to recovery page and verify"
+cli run-code "$(cat <<'EOF'
+async page => {
+  page.setDefaultTimeout(10000);
+
+  const origin = page.url().replace(/\/[^/]*$/, "");
+  await page.goto(origin + "/login/recovery?pending_id=test");
+
+  await page.getByRole("heading", { name: /Recover your account/i }).waitFor();
+  await page.getByLabel("Username").waitFor();
+  await page.getByLabel(/Recovery code/i).waitFor();
+  await page.getByRole("button", { name: /Recover account/i }).waitFor();
+
+  console.log("Recovery page OK");
 }
 EOF
 )"
@@ -163,6 +188,10 @@ async page => {
     {
       path: "/app/settings/profile",
       selectors: ["#settings-profile"],
+    },
+    {
+      path: "/app/settings/security",
+      selectors: ["#settings-security", "#settings-passkey-add"],
     },
     {
       path: "/app/notifications",
