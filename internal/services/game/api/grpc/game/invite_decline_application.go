@@ -96,7 +96,6 @@ func (a inviteApplication) DeclineInvite(ctx context.Context, in *campaignv1.Dec
 	if err != nil {
 		return storage.InviteRecord{}, grpcerror.Internal("load invite", err)
 	}
-	a.notifyInviteDeclined(ctx, updated, userID)
 
 	return updated, nil
 }

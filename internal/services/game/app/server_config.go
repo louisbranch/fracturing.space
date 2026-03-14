@@ -10,7 +10,6 @@ import (
 
 type serverEnv struct {
 	AuthAddr                                 string `env:"FRACTURING_SPACE_AUTH_ADDR"`
-	NotificationsAddr                        string `env:"FRACTURING_SPACE_NOTIFICATIONS_ADDR"`
 	SocialAddr                               string `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
 	AIAddr                                   string `env:"FRACTURING_SPACE_AI_ADDR"`
 	StatusAddr                               string `env:"FRACTURING_SPACE_STATUS_ADDR"`
@@ -21,7 +20,7 @@ type serverEnv struct {
 	ProjectionApplyOutboxEnabled             bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED"     envDefault:"false"`
 	ProjectionApplyOutboxShadowWorkerEnabled bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED" envDefault:"false"`
 	ProjectionApplyOutboxWorkerEnabled       bool   `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED" envDefault:"false"`
-	InternalServiceAllowlist                 string `env:"FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,chat"`
+	InternalServiceAllowlist                 string `env:"FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,chat,worker"`
 }
 
 const (
@@ -34,7 +33,6 @@ func loadServerEnv() serverEnv {
 	var cfg serverEnv
 	_ = config.ParseEnv(&cfg)
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
-	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
 	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
 	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
 	// Status address is not defaulted — the status service is optional/advisory.

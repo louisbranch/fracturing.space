@@ -152,6 +152,9 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 	if err := s.enqueueProjectionApplyOutbox(ctx, tx, evt); err != nil {
 		return event.Event{}, err
 	}
+	if err := s.enqueueIntegrationOutboxForEvent(ctx, tx, evt); err != nil {
+		return event.Event{}, err
+	}
 
 	if err := tx.Commit(); err != nil {
 		return event.Event{}, fmt.Errorf("commit: %w", err)
@@ -287,6 +290,9 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 		}
 
 		if err := s.enqueueProjectionApplyOutbox(ctx, tx, evt); err != nil {
+			return nil, err
+		}
+		if err := s.enqueueIntegrationOutboxForEvent(ctx, tx, evt); err != nil {
 			return nil, err
 		}
 

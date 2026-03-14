@@ -10,33 +10,38 @@ import (
 	"testing"
 	"time"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	"google.golang.org/grpc"
+	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
 )
+
+type fakeOutboxEvent struct {
+	id           string
+	eventType    string
+	payloadJSON  string
+	attemptCount int32
+}
+
+func (e fakeOutboxEvent) GetId() string          { return e.id }
+func (e fakeOutboxEvent) GetEventType() string   { return e.eventType }
+func (e fakeOutboxEvent) GetPayloadJson() string { return e.payloadJSON }
+func (e fakeOutboxEvent) GetAttemptCount() int32 { return e.attemptCount }
 
 func TestServer_Run_AcksSucceeded(t *testing.T) {
 	now := time.Date(2026, 2, 21, 23, 0, 0, 0, time.UTC)
-	authClient := &fakeAuthOutboxClient{
-		leaseResponses: []*authv1.LeaseIntegrationOutboxEventsResponse{
+	client := &fakeOutboxClient{
+		leaseResponses: [][]workerdomain.OutboxEvent{
 			{
-				Events: []*authv1.IntegrationOutboxEvent{
-					{
-						Id:           "evt-1",
-						EventType:    "auth.signup_completed",
-						PayloadJson:  `{"user_id":"user-1"}`,
-						AttemptCount: 0,
-					},
-				},
+				fakeOutboxEvent{id: "evt-1", eventType: "auth.signup_completed", payloadJSON: `{"user_id":"user-1"}`},
 			},
-			{Events: []*authv1.IntegrationOutboxEvent{}},
+			{},
 		},
 	}
 
 	server := New(
-		authClient,
+		"auth",
+		client,
 		nil,
 		map[string]EventHandler{
-			"auth.signup_completed": EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			"auth.signup_completed": EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 				return nil
 			}),
 		},
@@ -59,58 +64,45 @@ func TestServer_Run_AcksSucceeded(t *testing.T) {
 	}()
 
 	waitForCondition(t, time.Second, func() bool {
-		authClient.mu.Lock()
-		defer authClient.mu.Unlock()
-		return len(authClient.ackRequests) >= 1
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		return len(client.ackRequests) >= 1
 	})
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
-	authClient.mu.Lock()
-	defer authClient.mu.Unlock()
-	if len(authClient.ackRequests) != 1 {
-		t.Fatalf("ack requests len = %d, want 1", len(authClient.ackRequests))
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	if len(client.ackRequests) != 1 {
+		t.Fatalf("ack requests len = %d, want 1", len(client.ackRequests))
 	}
-	if got := authClient.ackRequests[0].GetOutcome(); got != authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED {
-		t.Fatalf("ack outcome = %v, want %v", got, authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED)
+	if got := client.ackRequests[0].Outcome; got != workerdomain.AckOutcomeSucceeded {
+		t.Fatalf("ack outcome = %v, want %v", got, workerdomain.AckOutcomeSucceeded)
 	}
 }
 
 func TestServer_Run_RetryThenDead(t *testing.T) {
 	now := time.Date(2026, 2, 21, 23, 5, 0, 0, time.UTC)
-	authClient := &fakeAuthOutboxClient{
-		leaseResponses: []*authv1.LeaseIntegrationOutboxEventsResponse{
+	client := &fakeOutboxClient{
+		leaseResponses: [][]workerdomain.OutboxEvent{
 			{
-				Events: []*authv1.IntegrationOutboxEvent{
-					{
-						Id:           "evt-1",
-						EventType:    "auth.signup_completed",
-						PayloadJson:  `{"user_id":"user-1"}`,
-						AttemptCount: 0,
-					},
-				},
+				fakeOutboxEvent{id: "evt-1", eventType: "auth.signup_completed", payloadJSON: `{"user_id":"user-1"}`},
 			},
 			{
-				Events: []*authv1.IntegrationOutboxEvent{
-					{
-						Id:           "evt-1",
-						EventType:    "auth.signup_completed",
-						PayloadJson:  `{"user_id":"user-1"}`,
-						AttemptCount: 1,
-					},
-				},
+				fakeOutboxEvent{id: "evt-1", eventType: "auth.signup_completed", payloadJSON: `{"user_id":"user-1"}`, attemptCount: 1},
 			},
-			{Events: []*authv1.IntegrationOutboxEvent{}},
+			{},
 		},
 	}
 
 	server := New(
-		authClient,
+		"auth",
+		client,
 		nil,
 		map[string]EventHandler{
-			"auth.signup_completed": EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			"auth.signup_completed": EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 				return errors.New("transient failure")
 			}),
 		},
@@ -133,47 +125,41 @@ func TestServer_Run_RetryThenDead(t *testing.T) {
 	}()
 
 	waitForCondition(t, time.Second, func() bool {
-		authClient.mu.Lock()
-		defer authClient.mu.Unlock()
-		return len(authClient.ackRequests) >= 2
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		return len(client.ackRequests) >= 2
 	})
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
-	authClient.mu.Lock()
-	defer authClient.mu.Unlock()
-	if len(authClient.ackRequests) < 2 {
-		t.Fatalf("ack requests len = %d, want >=2", len(authClient.ackRequests))
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	if len(client.ackRequests) < 2 {
+		t.Fatalf("ack requests len = %d, want >=2", len(client.ackRequests))
 	}
-	if got := authClient.ackRequests[0].GetOutcome(); got != authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY {
-		t.Fatalf("first ack outcome = %v, want %v", got, authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY)
+	if got := client.ackRequests[0].Outcome; got != workerdomain.AckOutcomeRetry {
+		t.Fatalf("first ack outcome = %v, want %v", got, workerdomain.AckOutcomeRetry)
 	}
-	if got := authClient.ackRequests[1].GetOutcome(); got != authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD {
-		t.Fatalf("second ack outcome = %v, want %v", got, authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD)
+	if got := client.ackRequests[1].Outcome; got != workerdomain.AckOutcomeDead {
+		t.Fatalf("second ack outcome = %v, want %v", got, workerdomain.AckOutcomeDead)
 	}
 }
 
 func TestServer_Run_UnsupportedEventTypeDeadLetters(t *testing.T) {
 	now := time.Date(2026, 2, 21, 23, 8, 0, 0, time.UTC)
-	authClient := &fakeAuthOutboxClient{
-		leaseResponses: []*authv1.LeaseIntegrationOutboxEventsResponse{
+	client := &fakeOutboxClient{
+		leaseResponses: [][]workerdomain.OutboxEvent{
 			{
-				Events: []*authv1.IntegrationOutboxEvent{
-					{
-						Id:           "evt-unknown",
-						EventType:    "auth.unknown",
-						PayloadJson:  `{}`,
-						AttemptCount: 0,
-					},
-				},
+				fakeOutboxEvent{id: "evt-unknown", eventType: "auth.unknown", payloadJSON: `{}`},
 			},
 		},
 	}
 
 	server := New(
-		authClient,
+		"auth",
+		client,
 		nil,
 		map[string]EventHandler{},
 		Config{
@@ -195,34 +181,33 @@ func TestServer_Run_UnsupportedEventTypeDeadLetters(t *testing.T) {
 	}()
 
 	waitForCondition(t, time.Second, func() bool {
-		authClient.mu.Lock()
-		defer authClient.mu.Unlock()
-		return len(authClient.ackRequests) >= 1
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		return len(client.ackRequests) >= 1
 	})
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
-	authClient.mu.Lock()
-	defer authClient.mu.Unlock()
-	if got := authClient.ackRequests[0].GetOutcome(); got != authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD {
-		t.Fatalf("ack outcome = %v, want %v", got, authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD)
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	if got := client.ackRequests[0].Outcome; got != workerdomain.AckOutcomeDead {
+		t.Fatalf("ack outcome = %v, want %v", got, workerdomain.AckOutcomeDead)
 	}
 }
 
 func TestServer_Run_LogsLeaseErrors(t *testing.T) {
 	now := time.Date(2026, 2, 22, 0, 0, 0, 0, time.UTC)
-	authClient := &fakeAuthOutboxClient{
-		leaseErr: errors.New("lease unavailable"),
-	}
+	client := &fakeOutboxClient{leaseErr: errors.New("lease unavailable")}
 
 	var logs bytes.Buffer
 	restoreLog := captureLogs(&logs)
 	defer restoreLog()
 
 	server := New(
-		authClient,
+		"auth",
+		client,
 		nil,
 		map[string]EventHandler{},
 		Config{
@@ -244,33 +229,26 @@ func TestServer_Run_LogsLeaseErrors(t *testing.T) {
 	}()
 
 	waitForCondition(t, time.Second, func() bool {
-		authClient.mu.Lock()
-		defer authClient.mu.Unlock()
-		return authClient.leaseCalls >= 1
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		return client.leaseCalls >= 1
 	})
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
-	if !strings.Contains(logs.String(), "lease integration outbox events") {
+	if !strings.Contains(logs.String(), "lease auth integration outbox events") {
 		t.Fatalf("expected lease error log, got %q", logs.String())
 	}
 }
 
 func TestServer_Run_LogsAckErrors(t *testing.T) {
 	now := time.Date(2026, 2, 22, 0, 5, 0, 0, time.UTC)
-	authClient := &fakeAuthOutboxClient{
-		leaseResponses: []*authv1.LeaseIntegrationOutboxEventsResponse{
+	client := &fakeOutboxClient{
+		leaseResponses: [][]workerdomain.OutboxEvent{
 			{
-				Events: []*authv1.IntegrationOutboxEvent{
-					{
-						Id:           "evt-1",
-						EventType:    "auth.signup_completed",
-						PayloadJson:  `{"user_id":"user-1"}`,
-						AttemptCount: 0,
-					},
-				},
+				fakeOutboxEvent{id: "evt-1", eventType: "auth.signup_completed", payloadJSON: `{"user_id":"user-1"}`},
 			},
 		},
 		ackErr: errors.New("ack unavailable"),
@@ -281,10 +259,11 @@ func TestServer_Run_LogsAckErrors(t *testing.T) {
 	defer restoreLog()
 
 	server := New(
-		authClient,
+		"auth",
+		client,
 		nil,
 		map[string]EventHandler{
-			"auth.signup_completed": EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			"auth.signup_completed": EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 				return nil
 			}),
 		},
@@ -307,49 +286,38 @@ func TestServer_Run_LogsAckErrors(t *testing.T) {
 	}()
 
 	waitForCondition(t, time.Second, func() bool {
-		authClient.mu.Lock()
-		defer authClient.mu.Unlock()
-		return len(authClient.ackRequests) >= 1
+		client.mu.Lock()
+		defer client.mu.Unlock()
+		return len(client.ackRequests) >= 1
 	})
 	cancel()
 	if err := <-done; err != nil {
 		t.Fatalf("run: %v", err)
 	}
 
-	if !strings.Contains(logs.String(), "ack integration outbox event") {
+	if !strings.Contains(logs.String(), "ack auth integration outbox event") {
 		t.Fatalf("expected ack error log, got %q", logs.String())
 	}
 }
 
 func TestServer_RunOnce_BackoffsOnAckErrors(t *testing.T) {
 	now := time.Date(2026, 2, 22, 0, 10, 0, 0, time.UTC)
-	authClient := &fakeAuthOutboxClient{
-		leaseResponses: []*authv1.LeaseIntegrationOutboxEventsResponse{
+	client := &fakeOutboxClient{
+		leaseResponses: [][]workerdomain.OutboxEvent{
 			{
-				Events: []*authv1.IntegrationOutboxEvent{
-					{
-						Id:           "evt-1",
-						EventType:    "auth.signup_completed",
-						PayloadJson:  `{"user_id":"user-1"}`,
-						AttemptCount: 0,
-					},
-					{
-						Id:           "evt-2",
-						EventType:    "auth.signup_completed",
-						PayloadJson:  `{"user_id":"user-2"}`,
-						AttemptCount: 0,
-					},
-				},
+				fakeOutboxEvent{id: "evt-1", eventType: "auth.signup_completed", payloadJSON: `{"user_id":"user-1"}`},
+				fakeOutboxEvent{id: "evt-2", eventType: "auth.signup_completed", payloadJSON: `{"user_id":"user-2"}`},
 			},
 		},
 		ackErr: errors.New("ack unavailable"),
 	}
 
 	server := New(
-		authClient,
+		"auth",
+		client,
 		nil,
 		map[string]EventHandler{
-			"auth.signup_completed": EventHandlerFunc(func(context.Context, *authv1.IntegrationOutboxEvent) error {
+			"auth.signup_completed": EventHandlerFunc(func(context.Context, workerdomain.OutboxEvent) error {
 				return nil
 			}),
 		},
@@ -372,16 +340,61 @@ func TestServer_RunOnce_BackoffsOnAckErrors(t *testing.T) {
 	}
 }
 
-type fakeAuthOutboxClient struct {
+func TestParallelLoop_Run(t *testing.T) {
+	t.Parallel()
+
+	t.Run("success", func(t *testing.T) {
+		t.Parallel()
+
+		var ran int
+		loop := parallelLoop{loops: []workerLoop{
+			loopRunnerFunc(func(context.Context) error {
+				ran++
+				return nil
+			}),
+			nil,
+			loopRunnerFunc(func(context.Context) error {
+				ran++
+				return nil
+			}),
+		}}
+
+		if err := loop.Run(context.Background()); err != nil {
+			t.Fatalf("Run: %v", err)
+		}
+		if ran != 2 {
+			t.Fatalf("ran = %d, want 2", ran)
+		}
+	})
+
+	t.Run("returns first non-cancel error", func(t *testing.T) {
+		t.Parallel()
+
+		want := errors.New("boom")
+		loop := parallelLoop{loops: []workerLoop{
+			loopRunnerFunc(func(context.Context) error { return want }),
+			loopRunnerFunc(func(ctx context.Context) error {
+				<-ctx.Done()
+				return ctx.Err()
+			}),
+		}}
+
+		if err := loop.Run(context.Background()); !errors.Is(err, want) {
+			t.Fatalf("Run error = %v, want %v", err, want)
+		}
+	})
+}
+
+type fakeOutboxClient struct {
 	mu             sync.Mutex
-	leaseResponses []*authv1.LeaseIntegrationOutboxEventsResponse
+	leaseResponses [][]workerdomain.OutboxEvent
 	leaseCalls     int
 	leaseErr       error
-	ackRequests    []*authv1.AckIntegrationOutboxEventRequest
+	ackRequests    []AckRequest
 	ackErr         error
 }
 
-func (f *fakeAuthOutboxClient) LeaseIntegrationOutboxEvents(_ context.Context, _ *authv1.LeaseIntegrationOutboxEventsRequest, _ ...grpc.CallOption) (*authv1.LeaseIntegrationOutboxEventsResponse, error) {
+func (f *fakeOutboxClient) Lease(_ context.Context, _ LeaseRequest) ([]workerdomain.OutboxEvent, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.leaseCalls++
@@ -389,20 +402,19 @@ func (f *fakeAuthOutboxClient) LeaseIntegrationOutboxEvents(_ context.Context, _
 		return nil, f.leaseErr
 	}
 	if f.leaseCalls > len(f.leaseResponses) {
-		return &authv1.LeaseIntegrationOutboxEventsResponse{}, nil
+		return nil, nil
 	}
-	resp := f.leaseResponses[f.leaseCalls-1]
-	return resp, nil
+	return f.leaseResponses[f.leaseCalls-1], nil
 }
 
-func (f *fakeAuthOutboxClient) AckIntegrationOutboxEvent(_ context.Context, in *authv1.AckIntegrationOutboxEventRequest, _ ...grpc.CallOption) (*authv1.AckIntegrationOutboxEventResponse, error) {
+func (f *fakeOutboxClient) Ack(_ context.Context, req AckRequest) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	f.ackRequests = append(f.ackRequests, in)
+	f.ackRequests = append(f.ackRequests, req)
 	if f.ackErr != nil {
-		return nil, f.ackErr
+		return f.ackErr
 	}
-	return &authv1.AckIntegrationOutboxEventResponse{}, nil
+	return nil
 }
 
 func waitForCondition(t *testing.T, timeout time.Duration, cond func() bool) {

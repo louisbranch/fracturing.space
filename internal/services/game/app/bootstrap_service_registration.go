@@ -6,7 +6,6 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
@@ -31,7 +30,6 @@ func (b *serverBootstrap) registerServices(
 	stores gamegrpc.Stores,
 	bundle *storageBundle,
 	authClient authv1.AuthServiceClient,
-	notificationClient notificationsv1.NotificationServiceClient,
 	aiAgentClient aiv1.AgentServiceClient,
 	systemRegistry *bridge.MetadataRegistry,
 	sessionGrantConfig aisessiongrant.Config,
@@ -40,7 +38,6 @@ func (b *serverBootstrap) registerServices(
 		stores,
 		bundle,
 		authClient,
-		notificationClient,
 		aiAgentClient,
 		systemRegistry,
 		sessionGrantConfig,
@@ -60,7 +57,6 @@ func buildServiceDescriptors(
 	stores gamegrpc.Stores,
 	bundle *storageBundle,
 	authClient authv1.AuthServiceClient,
-	notificationClient notificationsv1.NotificationServiceClient,
 	aiAgentClient aiv1.AgentServiceClient,
 	systemRegistry *bridge.MetadataRegistry,
 	sessionGrantConfig aisessiongrant.Config,
@@ -87,13 +83,14 @@ func buildServiceDescriptors(
 	}
 	campaignService := gamegrpc.NewCampaignService(stores, authClient, aiAgentClient)
 	participantService := gamegrpc.NewParticipantService(stores, authClient)
-	inviteService := gamegrpc.NewInviteService(stores, authClient, notificationClient)
+	inviteService := gamegrpc.NewInviteService(stores, authClient)
 	characterService := gamegrpc.NewCharacterService(stores)
 	snapshotService := gamegrpc.NewSnapshotService(stores)
 	sessionService := gamegrpc.NewSessionService(stores)
 	sceneService := gamegrpc.NewSceneService(stores)
 	forkService := gamegrpc.NewForkService(stores)
 	eventService := gamegrpc.NewEventService(stores)
+	integrationService := gamegrpc.NewIntegrationService(stores.Event)
 	statisticsService := gamegrpc.NewStatisticsService(stores.Statistics)
 	systemService := gamegrpc.NewSystemService(systemRegistry)
 	authorizationService := gamegrpc.NewAuthorizationService(stores)
@@ -177,6 +174,12 @@ func buildServiceDescriptors(
 			healthService: "game.v1.EventService",
 			register: func(server *grpc.Server) {
 				statev1.RegisterEventServiceServer(server, eventService)
+			},
+		},
+		{
+			healthService: "game.v1.IntegrationService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterIntegrationServiceServer(server, integrationService)
 			},
 		},
 		{

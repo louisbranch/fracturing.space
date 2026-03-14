@@ -29,7 +29,7 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY`: root secret used to sign event chain hashes. Required. Generate with `go run ./cmd/hmac-key`.
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS`: optional comma-separated key ring (`key_id=secret`).
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID`: active key id when using the key ring. Default: `v1`.
-- `FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST`: comma-separated internal service IDs allowed to call internal game APIs (currently `game.v1.CampaignAIService`). Default: `ai,chat`.
+- `FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST`: comma-separated internal service IDs allowed to call internal game APIs (currently `game.v1.CampaignAIService` and `game.v1.IntegrationService`). Default: `ai,chat,worker`.
 
 ### Auth + OAuth
 
@@ -83,11 +83,13 @@ User-configurable per-message-type delivery preferences are planned but not yet 
 
 - `FRACTURING_SPACE_WORKER_PORT`: gRPC port for worker health endpoint. Default: `8089`.
 - `FRACTURING_SPACE_WORKER_AUTH_ADDR`: auth gRPC dependency address. Default: `auth:8083`.
+- `FRACTURING_SPACE_WORKER_GAME_ADDR`: game gRPC dependency address. Default: `game:8082`.
+- `FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `notifications:8088`.
 - `FRACTURING_SPACE_WORKER_SOCIAL_ADDR`: social gRPC dependency address. Default: `social:8090`.
 - `FRACTURING_SPACE_WORKER_DB_PATH`: worker SQLite path for durable attempt logs. Default: `data/worker.db`.
-- `FRACTURING_SPACE_WORKER_CONSUMER`: auth outbox consumer identifier. Default: `worker-onboarding`.
-- `FRACTURING_SPACE_WORKER_POLL_INTERVAL`: auth outbox poll interval. Default: `2s`.
-- `FRACTURING_SPACE_WORKER_LEASE_TTL`: auth outbox lease duration. Default: `30s`.
+- `FRACTURING_SPACE_WORKER_CONSUMER`: worker consumer identifier shared across auth and game outbox leasing. Default: `worker-onboarding`.
+- `FRACTURING_SPACE_WORKER_POLL_INTERVAL`: worker outbox poll interval. Default: `2s`.
+- `FRACTURING_SPACE_WORKER_LEASE_TTL`: worker outbox lease duration. Default: `30s`.
 - `FRACTURING_SPACE_WORKER_MAX_ATTEMPTS`: max processing attempts before dead-letter. Default: `8`.
 - `FRACTURING_SPACE_WORKER_RETRY_BACKOFF`: base retry delay before exponential backoff. Default: `5s`.
 - `FRACTURING_SPACE_WORKER_RETRY_MAX_DELAY`: upper bound for retry delay growth. Default: `5m`.

@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 )
 
 // signupCompletedEventPayload captures the durable fields consumed by worker handlers.
@@ -17,7 +15,7 @@ type signupCompletedEventPayload struct {
 
 // decodeSignupCompletedPayload centralizes payload parsing so all signup handlers
 // enforce the same required fields and permanent-error semantics.
-func decodeSignupCompletedPayload(event *authv1.IntegrationOutboxEvent) (signupCompletedEventPayload, error) {
+func decodeSignupCompletedPayload(event OutboxEvent) (signupCompletedEventPayload, error) {
 	if event == nil {
 		return signupCompletedEventPayload{}, fmt.Errorf("event is required")
 	}

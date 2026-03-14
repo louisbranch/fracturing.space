@@ -109,7 +109,6 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		if err != nil {
 			return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load participant", err)
 		}
-		a.notifyInviteClaimed(ctx, updatedInvite, userID)
 		return updatedInvite, updatedParticipant, nil
 	}
 	if inv.Status == invite.StatusClaimed {
@@ -236,7 +235,6 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	if err != nil {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load participant", err)
 	}
-	a.notifyInviteClaimed(ctx, updatedInvite, userID)
 
 	return updatedInvite, updatedParticipant, nil
 }

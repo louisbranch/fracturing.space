@@ -193,6 +193,8 @@ func inviteStatusLabel(status statev1.InviteStatus) string {
 		return "Pending"
 	case statev1.InviteStatus_CLAIMED:
 		return "Claimed"
+	case statev1.InviteStatus_DECLINED:
+		return "Declined"
 	case statev1.InviteStatus_REVOKED:
 		return "Revoked"
 	default:

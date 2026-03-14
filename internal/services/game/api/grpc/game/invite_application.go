@@ -4,7 +4,6 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -15,15 +14,14 @@ import (
 // inviteApplication coordinates invite transport use-cases across focused
 // create, claim, and revoke files.
 type inviteApplication struct {
-	auth               Stores
-	stores             inviteApplicationStores
-	write              domainwriteexec.WritePath
-	applier            projection.Applier
-	clock              func() time.Time
-	idGenerator        func() (string, error)
-	authClient         authv1.AuthServiceClient
-	notificationClient notificationsv1.NotificationServiceClient
-	joinGrantVerifier  joingrant.Verifier
+	auth              Stores
+	stores            inviteApplicationStores
+	write             domainwriteexec.WritePath
+	applier           projection.Applier
+	clock             func() time.Time
+	idGenerator       func() (string, error)
+	authClient        authv1.AuthServiceClient
+	joinGrantVerifier joingrant.Verifier
 }
 
 type inviteApplicationStores struct {
@@ -46,12 +44,11 @@ func newInviteApplication(service *InviteService) inviteApplication {
 			Event:       service.stores.Event,
 			Social:      service.stores.Social,
 		},
-		write:              service.stores.Write,
-		applier:            service.stores.Applier(),
-		clock:              service.clock,
-		idGenerator:        service.idGenerator,
-		authClient:         service.authClient,
-		notificationClient: service.notificationClient,
+		write:       service.stores.Write,
+		applier:     service.stores.Applier(),
+		clock:       service.clock,
+		idGenerator: service.idGenerator,
+		authClient:  service.authClient,
 	}
 	if app.clock == nil {
 		app.clock = time.Now
