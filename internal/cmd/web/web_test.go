@@ -11,6 +11,8 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
+	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -260,6 +262,9 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	if bundle.Modules.Campaigns.CampaignClient == nil {
 		t.Fatal("expected campaign client")
 	}
+	if bundle.Modules.Campaigns.CommunicationClient == nil {
+		t.Fatal("expected campaign communication client")
+	}
 	if bundle.Modules.Campaigns.AuthClient == nil {
 		t.Fatal("expected campaign auth client")
 	}
@@ -289,6 +294,48 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	}
 	if bundle.Modules.AssetBaseURL != "https://cdn.example.com/assets" {
 		t.Fatalf("Modules.AssetBaseURL = %q, want %q", bundle.Modules.AssetBaseURL, "https://cdn.example.com/assets")
+	}
+}
+
+func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
+	stubManagedConn(t)
+
+	cfg := testDependencyConfig()
+	requirements := dependencyRequirements(cfg)
+	reporter := platformstatus.NewReporter("web", nil)
+
+	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
+	if err != nil {
+		t.Fatalf("bootstrapDependencies() error = %v", err)
+	}
+	defer closeManagedConns(conns)
+
+	gateway := campaigngateway.NewGRPCGateway(campaigngateway.GRPCGatewayDeps{
+		Read: campaigngateway.GRPCGatewayReadDeps{
+			Campaign:           bundle.Modules.Campaigns.CampaignClient,
+			Communication:      bundle.Modules.Campaigns.CommunicationClient,
+			Agent:              bundle.Modules.Campaigns.AgentClient,
+			Participant:        bundle.Modules.Campaigns.ParticipantClient,
+			Character:          bundle.Modules.Campaigns.CharacterClient,
+			DaggerheartContent: bundle.Modules.Campaigns.DaggerheartContentClient,
+			DaggerheartAsset:   bundle.Modules.Campaigns.DaggerheartAssetClient,
+			Session:            bundle.Modules.Campaigns.SessionClient,
+			Invite:             bundle.Modules.Campaigns.InviteClient,
+		},
+		Mutation: campaigngateway.GRPCGatewayMutationDeps{
+			Campaign:    bundle.Modules.Campaigns.CampaignClient,
+			Participant: bundle.Modules.Campaigns.ParticipantClient,
+			Character:   bundle.Modules.Campaigns.CharacterClient,
+			Session:     bundle.Modules.Campaigns.SessionClient,
+			Invite:      bundle.Modules.Campaigns.InviteClient,
+			Auth:        bundle.Modules.Campaigns.AuthClient,
+		},
+		Authorization: campaigngateway.GRPCGatewayAuthorizationDeps{
+			Client: bundle.Modules.Campaigns.AuthorizationClient,
+		},
+	})
+	if !campaignapp.IsGatewayHealthy(gateway) {
+		t.Fatal("expected bootstrapped campaigns gateway to be healthy")
 	}
 }
 
