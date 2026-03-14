@@ -47,6 +47,8 @@ wait_for_services_ready() {
     "web"
   )
 
+  # Match stable message stems instead of formatting-specific log output so
+  # readiness survives moves between plain logs and structured slog output.
   local markers=(
     "status server listening at"
     "game server listening at"
@@ -59,7 +61,7 @@ wait_for_services_ready() {
     "admin listening on"
     "chat server listening on"
     "worker server listening at"
-    "web server listening on"
+    "web server listening"
   )
 
   local -a ready
