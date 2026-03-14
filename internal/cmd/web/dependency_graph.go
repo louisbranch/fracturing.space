@@ -196,6 +196,7 @@ func setDependencySocial(p *principal.Dependencies, m *modules.Dependencies, con
 // setDependencyGame wires game clients into module bundles.
 func setDependencyGame(_ *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	m.Campaigns.CampaignClient = statev1.NewCampaignServiceClient(conn)
+	m.Campaigns.CommunicationClient = statev1.NewCommunicationServiceClient(conn)
 	m.Campaigns.ParticipantClient = statev1.NewParticipantServiceClient(conn)
 	m.Campaigns.CharacterClient = statev1.NewCharacterServiceClient(conn)
 	m.Campaigns.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
