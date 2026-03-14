@@ -13,6 +13,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
@@ -700,6 +701,8 @@ type fakeGateway struct {
 	sessionReadinessErr               error
 	invites                           []campaignapp.CampaignInvite
 	invitesErr                        error
+	inviteSearchResults               []campaignapp.InviteUserSearchResult
+	inviteSearchErr                   error
 	characterCreationProgress         campaignapp.CampaignCharacterCreationProgress
 	characterCreationProgressErr      error
 	characterCreationCatalog          campaignapp.CampaignCharacterCreationCatalog
@@ -916,6 +919,13 @@ func (f fakeGateway) CampaignInvites(context.Context, string) ([]campaignapp.Cam
 		return nil, f.invitesErr
 	}
 	return f.invites, nil
+}
+
+func (f fakeGateway) SearchInviteUsers(context.Context, campaignapp.SearchInviteUsersInput) ([]campaignapp.InviteUserSearchResult, error) {
+	if f.inviteSearchErr != nil {
+		return nil, f.inviteSearchErr
+	}
+	return f.inviteSearchResults, nil
 }
 
 func (f fakeGateway) CharacterCreationProgress(context.Context, string, string) (campaignapp.CampaignCharacterCreationProgress, error) {
@@ -1306,6 +1316,9 @@ func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPC
 	if deps.Read.Invite == nil {
 		deps.Read.Invite = fakeInviteClient{}
 	}
+	if deps.Read.Social == nil {
+		deps.Read.Social = fakeSocialClient{}
+	}
 	if deps.Mutation.Invite == nil {
 		deps.Mutation.Invite = fakeInviteClient{}
 	}
@@ -1346,6 +1359,8 @@ type stubAuthorizationClient struct {
 
 type fakeAuthClient struct{}
 
+type fakeSocialClient struct{}
+
 func (fakeAuthClient) LookupUserByUsername(_ context.Context, req *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
 	username := strings.TrimSpace(req.GetUsername())
 	if username == "" {
@@ -1354,4 +1369,8 @@ func (fakeAuthClient) LookupUserByUsername(_ context.Context, req *authv1.Lookup
 	return &authv1.LookupUserByUsernameResponse{
 		User: &authv1.User{Id: "user-lookup-" + username, Username: username},
 	}, nil
+}
+
+func (fakeSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {
+	return &socialv1.SearchUsersResponse{}, nil
 }

@@ -8,7 +8,9 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	workersqlite "github.com/louisbranch/fracturing.space/internal/services/worker/storage/sqlite"
+	"google.golang.org/grpc"
 )
 
 func TestAttemptStoreRecorder_EmptyConsumerUsesDefault(t *testing.T) {
@@ -160,4 +162,80 @@ func TestFanoutEventHandlers_StopsAtFirstError(t *testing.T) {
 	if len(called) != 1 || called[0] != "first" {
 		t.Fatalf("called order = %v, want [first]", called)
 	}
+}
+
+func TestSyncSocialUserDirectory_BackfillsAllUsers(t *testing.T) {
+	authClient := &authDirectoryBootstrapClientStub{
+		responses: []*authv1.ListUsersResponse{
+			{
+				Users: []*authv1.User{
+					{Id: "user-1", Username: "alpha"},
+					{Id: "user-2", Username: "beta"},
+				},
+				NextPageToken: "page-2",
+			},
+			{
+				Users: []*authv1.User{
+					{Id: "user-3", Username: "gamma"},
+				},
+			},
+		},
+	}
+	socialClient := &socialDirectoryBootstrapClientStub{}
+
+	if err := syncSocialUserDirectory(context.Background(), authClient, socialClient); err != nil {
+		t.Fatalf("sync social user directory: %v", err)
+	}
+	if len(socialClient.requests) != 3 {
+		t.Fatalf("sync requests len = %d, want 3", len(socialClient.requests))
+	}
+	if socialClient.requests[0].GetUsername() != "alpha" || socialClient.requests[2].GetUsername() != "gamma" {
+		t.Fatalf("sync requests = %+v, want alpha..gamma", socialClient.requests)
+	}
+}
+
+func TestSyncSocialUserDirectory_PropagatesSyncErrors(t *testing.T) {
+	authClient := &authDirectoryBootstrapClientStub{
+		responses: []*authv1.ListUsersResponse{
+			{Users: []*authv1.User{{Id: "user-1", Username: "alpha"}}},
+		},
+	}
+	socialClient := &socialDirectoryBootstrapClientStub{
+		err: errors.New("boom"),
+	}
+
+	if err := syncSocialUserDirectory(context.Background(), authClient, socialClient); err == nil {
+		t.Fatal("expected sync error")
+	}
+}
+
+type authDirectoryBootstrapClientStub struct {
+	responses []*authv1.ListUsersResponse
+	err       error
+	callCount int
+}
+
+func (s *authDirectoryBootstrapClientStub) ListUsers(context.Context, *authv1.ListUsersRequest, ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
+	if s.err != nil {
+		return nil, s.err
+	}
+	if s.callCount >= len(s.responses) {
+		return &authv1.ListUsersResponse{}, nil
+	}
+	resp := s.responses[s.callCount]
+	s.callCount++
+	return resp, nil
+}
+
+type socialDirectoryBootstrapClientStub struct {
+	requests []*socialv1.SyncDirectoryUserRequest
+	err      error
+}
+
+func (s *socialDirectoryBootstrapClientStub) SyncDirectoryUser(_ context.Context, in *socialv1.SyncDirectoryUserRequest, _ ...grpc.CallOption) (*socialv1.SyncDirectoryUserResponse, error) {
+	s.requests = append(s.requests, in)
+	if s.err != nil {
+		return nil, s.err
+	}
+	return &socialv1.SyncDirectoryUserResponse{}, nil
 }

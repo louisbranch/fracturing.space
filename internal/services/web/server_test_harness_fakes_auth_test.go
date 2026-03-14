@@ -44,6 +44,17 @@ func (f *fakeWebAuthClient) BeginAccountRegistration(context.Context, *authv1.Be
 	return &authv1.BeginAccountRegistrationResponse{SessionId: "register-session", CredentialCreationOptionsJson: []byte(`{"publicKey":{"challenge":"ZmFrZQ","rp":{"name":"web"},"user":{"id":"dXNlcg","name":"louis","displayName":"louis"},"pubKeyCredParams":[{"type":"public-key","alg":-7}]}}`)}, nil
 }
 
+func (f *fakeWebAuthClient) CheckUsernameAvailability(_ context.Context, req *authv1.CheckUsernameAvailabilityRequest, _ ...grpc.CallOption) (*authv1.CheckUsernameAvailabilityResponse, error) {
+	username := req.GetUsername()
+	if username == "" {
+		username = "louis"
+	}
+	return &authv1.CheckUsernameAvailabilityResponse{
+		CanonicalUsername: username,
+		State:             authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_AVAILABLE,
+	}, nil
+}
+
 func (f *fakeWebAuthClient) FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
 	return &authv1.FinishAccountRegistrationResponse{
 		User:         &authv1.User{Id: "user-1", Username: "louis"},

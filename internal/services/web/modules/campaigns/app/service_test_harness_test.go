@@ -50,6 +50,8 @@ type campaignGatewayStub struct {
 	campaignSessionReadinessErr             error
 	campaignInvites                         []CampaignInvite
 	campaignInvitesErr                      error
+	inviteSearchResults                     []InviteUserSearchResult
+	inviteSearchErr                         error
 	createCampaignResult                    CreateCampaignResult
 	createCampaignErr                       error
 	lastCreateInput                         CreateCampaignInput
@@ -227,6 +229,13 @@ func (f *campaignGatewayStub) CampaignInvites(context.Context, string) ([]Campai
 		return nil, f.campaignInvitesErr
 	}
 	return f.campaignInvites, nil
+}
+
+func (f *campaignGatewayStub) SearchInviteUsers(context.Context, SearchInviteUsersInput) ([]InviteUserSearchResult, error) {
+	if f.inviteSearchErr != nil {
+		return nil, f.inviteSearchErr
+	}
+	return f.inviteSearchResults, nil
 }
 
 func (f *campaignGatewayStub) CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error) {

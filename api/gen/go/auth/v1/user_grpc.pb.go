@@ -35,6 +35,7 @@ const (
 	AuthService_ListPasskeys_FullMethodName                      = "/auth.v1.AuthService/ListPasskeys"
 	AuthService_IssueJoinGrant_FullMethodName                    = "/auth.v1.AuthService/IssueJoinGrant"
 	AuthService_LookupUserByUsername_FullMethodName              = "/auth.v1.AuthService/LookupUserByUsername"
+	AuthService_CheckUsernameAvailability_FullMethodName         = "/auth.v1.AuthService/CheckUsernameAvailability"
 	AuthService_GetUser_FullMethodName                           = "/auth.v1.AuthService/GetUser"
 	AuthService_ListUsers_FullMethodName                         = "/auth.v1.AuthService/ListUsers"
 	AuthService_LeaseIntegrationOutboxEvents_FullMethodName      = "/auth.v1.AuthService/LeaseIntegrationOutboxEvents"
@@ -77,6 +78,8 @@ type AuthServiceClient interface {
 	IssueJoinGrant(ctx context.Context, in *IssueJoinGrantRequest, opts ...grpc.CallOption) (*IssueJoinGrantResponse, error)
 	// Resolve a user by username.
 	LookupUserByUsername(ctx context.Context, in *LookupUserByUsernameRequest, opts ...grpc.CallOption) (*LookupUserByUsernameResponse, error)
+	// Check whether a username is valid and currently available.
+	CheckUsernameAvailability(ctx context.Context, in *CheckUsernameAvailabilityRequest, opts ...grpc.CallOption) (*CheckUsernameAvailabilityResponse, error)
 	// Get a user record by ID.
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
 	// List user records.
@@ -245,6 +248,16 @@ func (c *authServiceClient) LookupUserByUsername(ctx context.Context, in *Lookup
 	return out, nil
 }
 
+func (c *authServiceClient) CheckUsernameAvailability(ctx context.Context, in *CheckUsernameAvailabilityRequest, opts ...grpc.CallOption) (*CheckUsernameAvailabilityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckUsernameAvailabilityResponse)
+	err := c.cc.Invoke(ctx, AuthService_CheckUsernameAvailability_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetUserResponse)
@@ -321,6 +334,8 @@ type AuthServiceServer interface {
 	IssueJoinGrant(context.Context, *IssueJoinGrantRequest) (*IssueJoinGrantResponse, error)
 	// Resolve a user by username.
 	LookupUserByUsername(context.Context, *LookupUserByUsernameRequest) (*LookupUserByUsernameResponse, error)
+	// Check whether a username is valid and currently available.
+	CheckUsernameAvailability(context.Context, *CheckUsernameAvailabilityRequest) (*CheckUsernameAvailabilityResponse, error)
 	// Get a user record by ID.
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
 	// List user records.
@@ -383,6 +398,9 @@ func (UnimplementedAuthServiceServer) IssueJoinGrant(context.Context, *IssueJoin
 }
 func (UnimplementedAuthServiceServer) LookupUserByUsername(context.Context, *LookupUserByUsernameRequest) (*LookupUserByUsernameResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method LookupUserByUsername not implemented")
+}
+func (UnimplementedAuthServiceServer) CheckUsernameAvailability(context.Context, *CheckUsernameAvailabilityRequest) (*CheckUsernameAvailabilityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CheckUsernameAvailability not implemented")
 }
 func (UnimplementedAuthServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
@@ -687,6 +705,24 @@ func _AuthService_LookupUserByUsername_Handler(srv interface{}, ctx context.Cont
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_CheckUsernameAvailability_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckUsernameAvailabilityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).CheckUsernameAvailability(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_CheckUsernameAvailability_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).CheckUsernameAvailability(ctx, req.(*CheckUsernameAvailabilityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_GetUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetUserRequest)
 	if err := dec(in); err != nil {
@@ -825,6 +861,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "LookupUserByUsername",
 			Handler:    _AuthService_LookupUserByUsername_Handler,
+		},
+		{
+			MethodName: "CheckUsernameAvailability",
+			Handler:    _AuthService_CheckUsernameAvailability_Handler,
 		},
 		{
 			MethodName: "GetUser",

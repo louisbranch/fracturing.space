@@ -97,6 +97,9 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if _, err := svc.CampaignInvites(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignInvites() error = %v", err)
 	}
+	if _, err := svc.SearchInviteUsers(ctx, "c1", SearchInviteUsersInput{ViewerUserID: "user-1", Query: "al"}); err != nil {
+		t.Fatalf("SearchInviteUsers() error = %v", err)
+	}
 	if err := svc.RequireManageCampaign(ctx, "c1"); err != nil {
 		t.Fatalf("RequireManageCampaign() error = %v", err)
 	}
@@ -187,6 +190,9 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	}
 	if _, err := gw.CampaignInvites(ctx, "c1"); err != nil {
 		assertUnavailable(t, err, "CampaignInvites")
+	}
+	if _, err := gw.SearchInviteUsers(ctx, SearchInviteUsersInput{ViewerUserID: "user-1", Query: "al"}); err != nil {
+		assertUnavailable(t, err, "SearchInviteUsers")
 	}
 	if _, err := gw.CharacterCreationProgress(ctx, "c1", "char-1"); err != nil {
 		assertUnavailable(t, err, "CharacterCreationProgress")

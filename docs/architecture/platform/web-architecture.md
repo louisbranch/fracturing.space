@@ -60,6 +60,10 @@ Required properties:
   orchestrate only request flow + app service calls.
 - Protected mutations require authenticated session context.
 - Public-auth flows are isolated under public module ownership.
+- Username-aware typeahead may be shared across modules, but ownership stays at
+  the service seam:
+  - signup availability checks call auth-owned advisory validation endpoints,
+  - authenticated invite/mention search calls social-owned ranked people search.
 - Legacy top-level invites scaffolding (`/app/invites`) remains intentionally
   unregistered until that area has a production route owner.
 
@@ -110,11 +114,12 @@ composition.
 
 - Startup-blocking integrations are explicit and limited to:
   - `auth`: principal resolution plus auth-owned public/profile/settings flows
-  - `social`: principal/profile/settings social metadata
+  - `social`: principal/profile/settings social metadata plus authenticated
+    people-search for invite UX
   - `game`: campaigns and dashboard-sync mutation freshness
 - Optional integrations must degrade only the surfaces they own:
   - `ai`: settings AI surfaces and campaign AI affordances
-  - `discovery`: discovery public surface
+  - `discovery`: public discovery and future public people-browsing surface
   - `userhub`: dashboard and dashboard-sync freshness
   - `notifications`: principal unread badge and notifications module
 - This policy is owned by `internal/cmd/web/dependency_graph.go`; when startup

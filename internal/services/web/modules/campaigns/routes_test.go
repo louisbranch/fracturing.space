@@ -172,6 +172,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "sessions", method: http.MethodGet, path: routepath.AppCampaignSessions("c1"), wantStatus: http.StatusOK},
 		{name: "session detail", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
 		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
+		{name: "invite search", method: http.MethodPost, path: routepath.AppCampaignInviteSearch("c1"), body: `{"query":"al"}`, wantStatus: http.StatusOK},
 		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusOK},
 		{name: "participant update", method: http.MethodPost, path: routepath.AppCampaignParticipantEdit("c1", "p-1"), body: "name=Owner&role=gm&pronouns=they%2Fthem", wantStatus: http.StatusFound},
 		{name: "participant create submit", method: http.MethodPost, path: routepath.AppCampaignParticipantCreate("c1"), body: "name=Pending+Seat&role=player&campaign_access=member", wantStatus: http.StatusFound},
@@ -191,7 +192,11 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 			t.Parallel()
 			req := httptest.NewRequest(tc.method, tc.path, strings.NewReader(tc.body))
 			if tc.method == http.MethodPost {
-				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				if strings.HasPrefix(tc.body, "{") {
+					req.Header.Set("Content-Type", "application/json")
+				} else {
+					req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				}
 			}
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)

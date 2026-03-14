@@ -131,6 +131,21 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyRegisterStartResponse(start))
 }
 
+// handleUsernameCheck handles this route in the module transport layer.
+func (h handlers) handleUsernameCheck(w http.ResponseWriter, r *http.Request) {
+	input, err := parseUsernameCheckInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	result, err := h.service.CheckUsernameAvailability(r.Context(), input.Username)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	_ = httpx.WriteJSON(w, http.StatusOK, newUsernameAvailabilityResponse(result))
+}
+
 // handlePasskeyRegisterFinish handles this route in the module transport layer.
 func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Request) {
 	input, err := parsePasskeyCredentialInput(r)

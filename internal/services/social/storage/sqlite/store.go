@@ -52,3 +52,4 @@ func (s *Store) Close() error {
 
 var _ storage.ContactStore = (*Store)(nil)
 var _ storage.UserProfileStore = (*Store)(nil)
+var _ storage.UserDirectoryStore = (*Store)(nil)

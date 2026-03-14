@@ -45,6 +45,63 @@ func TestLookupUserByUsername_Success(t *testing.T) {
 	}
 }
 
+func TestCheckUsernameAvailability_Available(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "  ALIce  "})
+	if err != nil {
+		t.Fatalf("check username availability: %v", err)
+	}
+	if got := resp.GetCanonicalUsername(); got != "alice" {
+		t.Fatalf("canonical username = %q, want %q", got, "alice")
+	}
+	if got := resp.GetState(); got != authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_AVAILABLE {
+		t.Fatalf("state = %v, want %v", got, authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_AVAILABLE)
+	}
+}
+
+func TestCheckUsernameAvailability_Unavailable(t *testing.T) {
+	store := newFakeUserStore()
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	store.users["user-1"] = user.User{ID: "user-1", Username: "alice", CreatedAt: now, UpdatedAt: now}
+
+	svc := NewAuthService(store, nil, nil)
+	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "Alice"})
+	if err != nil {
+		t.Fatalf("check username availability: %v", err)
+	}
+	if got := resp.GetState(); got != authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_UNAVAILABLE {
+		t.Fatalf("state = %v, want %v", got, authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_UNAVAILABLE)
+	}
+}
+
+func TestCheckUsernameAvailability_Invalid(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "a"})
+	if err != nil {
+		t.Fatalf("check username availability: %v", err)
+	}
+	if got := resp.GetCanonicalUsername(); got != "a" {
+		t.Fatalf("canonical username = %q, want %q", got, "a")
+	}
+	if got := resp.GetState(); got != authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_INVALID {
+		t.Fatalf("state = %v, want %v", got, authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_INVALID)
+	}
+}
+
+func TestCheckUsernameAvailability_NonASCIIInvalid(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "álvaro"})
+	if err != nil {
+		t.Fatalf("check username availability: %v", err)
+	}
+	if got := resp.GetCanonicalUsername(); got != "" {
+		t.Fatalf("canonical username = %q, want empty", got)
+	}
+	if got := resp.GetState(); got != authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_INVALID {
+		t.Fatalf("state = %v, want %v", got, authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_INVALID)
+	}
+}
+
 func TestGetUser_Success(t *testing.T) {
 	store := newFakeUserStore()
 	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
@@ -176,6 +233,18 @@ func TestLookupUserByUsername_NotFound(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
 	_, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "missing"})
 	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestCheckUsernameAvailability_NilRequest(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	_, err := svc.CheckUsernameAvailability(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCheckUsernameAvailability_MissingStore(t *testing.T) {
+	svc := NewAuthService(nil, nil, nil)
+	_, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "alice"})
+	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestLookupUserByUsername_EmptyUsername(t *testing.T) {

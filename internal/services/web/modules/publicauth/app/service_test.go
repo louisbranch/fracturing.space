@@ -58,8 +58,32 @@ func TestPasskeyLoginFinishCreatesWebSession(t *testing.T) {
 	}
 }
 
+func TestCheckUsernameAvailabilityTreatsBlankAsInvalid(t *testing.T) {
+	svc := NewService(&authGatewayStub{}, "")
+	availability, err := svc.CheckUsernameAvailability(context.Background(), "   ")
+	if err != nil {
+		t.Fatalf("CheckUsernameAvailability() error = %v", err)
+	}
+	if availability.State != UsernameAvailabilityStateInvalid {
+		t.Fatalf("state = %q, want %q", availability.State, UsernameAvailabilityStateInvalid)
+	}
+}
+
+func TestCheckUsernameAvailabilityDelegatesToGateway(t *testing.T) {
+	stub := &authGatewayStub{usernameAvailability: UsernameAvailability{CanonicalUsername: "louis", State: UsernameAvailabilityStateAvailable}}
+	svc := NewService(stub, "")
+	availability, err := svc.CheckUsernameAvailability(context.Background(), "Louis")
+	if err != nil {
+		t.Fatalf("CheckUsernameAvailability() error = %v", err)
+	}
+	if availability.CanonicalUsername != "louis" || availability.State != UsernameAvailabilityStateAvailable {
+		t.Fatalf("availability = %+v", availability)
+	}
+}
+
 type authGatewayStub struct {
 	beginRegistrationResp  PasskeyChallenge
+	usernameAvailability   UsernameAvailability
 	finishRegistrationResp PasskeyFinish
 	beginLoginResp         PasskeyChallenge
 	finishLoginUserID      string
@@ -68,6 +92,10 @@ type authGatewayStub struct {
 
 func (f *authGatewayStub) BeginAccountRegistration(context.Context, string) (PasskeyChallenge, error) {
 	return f.beginRegistrationResp, nil
+}
+
+func (f *authGatewayStub) CheckUsernameAvailability(context.Context, string) (UsernameAvailability, error) {
+	return f.usernameAvailability, nil
 }
 
 func (f *authGatewayStub) FinishAccountRegistration(context.Context, string, json.RawMessage) (PasskeyFinish, error) {

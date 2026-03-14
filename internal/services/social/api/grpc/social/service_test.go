@@ -185,15 +185,76 @@ func TestGetUserProfile_NotFoundReturnsNotFound(t *testing.T) {
 	}
 }
 
+func TestSyncDirectoryUser_StoresCanonicalUsername(t *testing.T) {
+	store := newFakeContactStore()
+	svc := NewService(store)
+
+	if _, err := svc.SyncDirectoryUser(context.Background(), &socialv1.SyncDirectoryUserRequest{
+		UserId:   "user-1",
+		Username: "  ALIce  ",
+	}); err != nil {
+		t.Fatalf("sync directory user: %v", err)
+	}
+	if got := store.directory["user-1"].Username; got != "alice" {
+		t.Fatalf("username = %q, want %q", got, "alice")
+	}
+}
+
+func TestSearchUsers_RanksContactsFirst(t *testing.T) {
+	store := newFakeContactStore()
+	_ = store.PutDirectoryUser(context.Background(), storage.DirectoryUser{UserID: "user-2", Username: "alice"})
+	_ = store.PutDirectoryUser(context.Background(), storage.DirectoryUser{UserID: "user-3", Username: "alina"})
+	_ = store.PutDirectoryUser(context.Background(), storage.DirectoryUser{UserID: "user-4", Username: "alfred"})
+	_ = store.PutUserProfile(context.Background(), storage.UserProfile{UserID: "user-2", Name: "Alice"})
+	_ = store.PutUserProfile(context.Background(), storage.UserProfile{UserID: "user-3", Name: "Alina"})
+	_ = store.PutContact(context.Background(), storage.Contact{OwnerUserID: "viewer-1", ContactUserID: "user-3"})
+
+	svc := NewService(store)
+	resp, err := svc.SearchUsers(context.Background(), &socialv1.SearchUsersRequest{
+		ViewerUserId: "viewer-1",
+		Query:        "al",
+		Limit:        10,
+	})
+	if err != nil {
+		t.Fatalf("search users: %v", err)
+	}
+	if len(resp.GetUsers()) != 3 {
+		t.Fatalf("users len = %d, want 3", len(resp.GetUsers()))
+	}
+	if got := resp.GetUsers()[0].GetUsername(); got != "alina" {
+		t.Fatalf("first username = %q, want %q", got, "alina")
+	}
+	if !resp.GetUsers()[0].GetIsContact() {
+		t.Fatal("expected first result to be a contact")
+	}
+}
+
+func TestSearchUsers_ShortQueryReturnsEmpty(t *testing.T) {
+	svc := NewService(newFakeContactStore())
+	resp, err := svc.SearchUsers(context.Background(), &socialv1.SearchUsersRequest{
+		ViewerUserId: "viewer-1",
+		Query:        "a",
+		Limit:        10,
+	})
+	if err != nil {
+		t.Fatalf("search users: %v", err)
+	}
+	if len(resp.GetUsers()) != 0 {
+		t.Fatalf("users len = %d, want 0", len(resp.GetUsers()))
+	}
+}
+
 type fakeContactStore struct {
-	contacts map[string]storage.Contact
-	profiles map[string]storage.UserProfile
+	contacts  map[string]storage.Contact
+	profiles  map[string]storage.UserProfile
+	directory map[string]storage.DirectoryUser
 }
 
 func newFakeContactStore() *fakeContactStore {
 	return &fakeContactStore{
-		contacts: map[string]storage.Contact{},
-		profiles: map[string]storage.UserProfile{},
+		contacts:  map[string]storage.Contact{},
+		profiles:  map[string]storage.UserProfile{},
+		directory: map[string]storage.DirectoryUser{},
 	}
 }
 
@@ -269,6 +330,54 @@ func (s *fakeContactStore) PutUserProfile(_ context.Context, profile storage.Use
 	}
 	s.profiles[profile.UserID] = profile
 	return nil
+}
+
+func (s *fakeContactStore) PutDirectoryUser(_ context.Context, user storage.DirectoryUser) error {
+	if existing, ok := s.directory[user.UserID]; ok && strings.TrimSpace(existing.Username) == strings.TrimSpace(user.Username) {
+		user.CreatedAt = existing.CreatedAt
+		user.UpdatedAt = existing.UpdatedAt
+	}
+	s.directory[user.UserID] = user
+	return nil
+}
+
+func (s *fakeContactStore) SearchUsers(_ context.Context, viewerUserID string, query string, limit int) ([]storage.SearchUser, error) {
+	results := make([]storage.SearchUser, 0, len(s.directory))
+	query = strings.ToLower(strings.TrimSpace(query))
+	for _, entry := range s.directory {
+		name := ""
+		avatarSetID := ""
+		avatarAssetID := ""
+		if profile, ok := s.profiles[entry.UserID]; ok {
+			name = profile.Name
+			avatarSetID = profile.AvatarSetID
+			avatarAssetID = profile.AvatarAssetID
+		}
+		usernameMatch := strings.HasPrefix(strings.ToLower(entry.Username), query)
+		nameMatch := strings.HasPrefix(strings.ToLower(strings.TrimSpace(name)), query)
+		if !usernameMatch && !nameMatch {
+			continue
+		}
+		_, isContact := s.contacts[viewerUserID+"|"+entry.UserID]
+		results = append(results, storage.SearchUser{
+			UserID:        entry.UserID,
+			Username:      entry.Username,
+			Name:          name,
+			AvatarSetID:   avatarSetID,
+			AvatarAssetID: avatarAssetID,
+			IsContact:     isContact,
+		})
+	}
+	sort.Slice(results, func(i, j int) bool {
+		if results[i].IsContact != results[j].IsContact {
+			return results[i].IsContact
+		}
+		return results[i].Username < results[j].Username
+	})
+	if limit > 0 && len(results) > limit {
+		results = results[:limit]
+	}
+	return results, nil
 }
 
 func (s *fakeContactStore) GetUserProfileByUserID(_ context.Context, userID string) (storage.UserProfile, error) {

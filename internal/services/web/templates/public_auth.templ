@@ -31,17 +31,17 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID stri
 			<div class="card border border-base-300 bg-base-200 shadow-xl">
 				<div class="card-body justify-center">
 					<h2 class="card-title text-xl">{ copy.LoginJoinTitle }</h2>
-					<div id="register-error" role="alert" class="alert alert-error mt-4" hidden></div>
-					<div id="register-success" role="status" class="alert alert-success mt-4" hidden></div>
-					<form class="grid gap-4 mt-4" id="register-form">
-						<label for="register-username" class="form-control w-full">
-							<span class="label">
-								<span class="label-text">{ copy.LoginUsername }</span>
-							</span>
-							<input id="register-username" name="username" type="text" autocomplete="username" class="input input-bordered w-full"/>
-						</label>
-						<button id="passkey-register" type="button" class="btn btn-primary">{ copy.LoginCreatePasskey }</button>
-					</form>
+						<div id="register-error" role="alert" class="alert alert-error mt-4" hidden></div>
+						<form class="grid gap-4 mt-4" id="register-form">
+							<label for="register-username" class="form-control w-full">
+								<span class="label">
+									<span class="label-text">{ copy.LoginUsername }</span>
+								</span>
+								<input id="register-username" name="username" type="text" autocomplete="username" class="input input-bordered w-full"/>
+								<p id="register-username-hint" class="validator-hint hidden"></p>
+							</label>
+							<button id="passkey-register" type="button" class="btn btn-primary">{ copy.LoginCreatePasskey }</button>
+						</form>
 				</div>
 			</div>
 			<div class="divider my-0 lg:divider-horizontal">{ copy.LoginDivider }</div>
@@ -70,6 +70,7 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID stri
 		hidden
 		data-login-start-path={ routepath.PasskeyLoginStart }
 		data-login-finish-path={ routepath.PasskeyLoginFinish }
+		data-register-check-path={ routepath.PasskeyRegisterCheck }
 		data-register-start-path={ routepath.PasskeyRegisterStart }
 		data-register-finish-path={ routepath.PasskeyRegisterFinish }
 		data-pending-id={ pendingID }
@@ -77,12 +78,17 @@ templ PasskeyLoginPage(copy webi18n.AuthCopy, recoveryURL string, pendingID stri
 		data-login-finish-error={ copy.JSLoginFinishError }
 		data-register-start-error={ copy.JSRegisterStartErr }
 		data-register-finish-error={ copy.JSRegisterFinishErr }
+		data-register-check-error={ copy.JSRegisterCheckError }
 		data-passkey-failed={ copy.JSPasskeyFailed }
 		data-login-username-required={ copy.JSLoginUsernameReq }
 		data-register-username-required={ copy.JSRegisterUserReq }
+		data-register-username-invalid={ copy.JSRegisterUsernameInvalid }
+		data-register-username-unavailable={ copy.JSRegisterUsernameUnavailable }
+		data-register-username-available={ copy.JSRegisterUsernameAvailable }
 		data-passkey-created={ copy.JSPasskeyCreated }
 		data-register-failed={ copy.JSRegisterFailed }
 	></div>
+	<script defer src="/static/username-input.js"></script>
 	<script defer src="/static/passkey-auth.js"></script>
 }
 

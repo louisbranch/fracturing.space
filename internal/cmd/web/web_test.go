@@ -195,7 +195,7 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 
 	tests := map[string][]string{
 		dependencyNameAuth:          {"principal", "publicauth", "profile", "settings"},
-		dependencyNameSocial:        {"principal", "profile", "settings"},
+		dependencyNameSocial:        {"principal", "profile", "settings", "campaigns"},
 		dependencyNameGame:          {"campaigns", "dashboard-sync"},
 		dependencyNameAI:            {"settings.ai", "campaigns.ai"},
 		dependencyNameDiscovery:     {"discovery"},

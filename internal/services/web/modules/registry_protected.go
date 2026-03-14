@@ -138,6 +138,7 @@ func newCampaignGateway(deps Dependencies) campaignapp.CampaignGateway {
 			DaggerheartAsset:   deps.Campaigns.DaggerheartAssetClient,
 			Session:            deps.Campaigns.SessionClient,
 			Invite:             deps.Campaigns.InviteClient,
+			Social:             deps.Campaigns.SocialClient,
 		},
 		Mutation: campaigngateway.GRPCGatewayMutationDeps{
 			Campaign:    deps.Campaigns.CampaignClient,

@@ -22,6 +22,11 @@ func (unavailableGateway) BeginAccountRegistration(context.Context, string) (Pas
 	return PasskeyChallenge{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
+// CheckUsernameAvailability fails fast because signup validation requires auth.
+func (unavailableGateway) CheckUsernameAvailability(context.Context, string) (UsernameAvailability, error) {
+	return UsernameAvailability{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+}
+
 // FinishAccountRegistration fails fast because signup cannot complete without auth.
 func (unavailableGateway) FinishAccountRegistration(context.Context, string, json.RawMessage) (PasskeyFinish, error) {
 	return PasskeyFinish{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)

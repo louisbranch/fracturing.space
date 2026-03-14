@@ -12,6 +12,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
@@ -41,6 +42,7 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 			DaggerheartAsset:   &fakeDaggerheartContentClient{},
 			Session:            &contractSessionClient{},
 			Invite:             &contractInviteClient{},
+			Social:             &contractSocialClient{},
 		},
 		Mutation: GRPCGatewayMutationDeps{
 			Campaign:    &contractCampaignClient{},
@@ -273,6 +275,35 @@ func TestEntityReadersMapParticipantsCharactersSessionsAndInvites(t *testing.T) 
 	}
 	if len(invites) != 1 || invites[0].Status != "Pending" {
 		t.Fatalf("invites = %#v", invites)
+	}
+}
+
+func TestSearchInviteUsersMapsSocialResults(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{
+		Read: GRPCGatewayReadDeps{
+			Social: &contractSocialClient{searchResp: &socialv1.SearchUsersResponse{
+				Users: []*socialv1.SearchUserResult{{
+					UserId:    "user-2",
+					Username:  "alice",
+					Name:      "Alice",
+					IsContact: true,
+				}},
+			}},
+		},
+	}
+
+	results, err := gateway.SearchInviteUsers(context.Background(), campaignapp.SearchInviteUsersInput{
+		ViewerUserID: "user-1",
+		Query:        "al",
+		Limit:        8,
+	})
+	if err != nil {
+		t.Fatalf("SearchInviteUsers() error = %v", err)
+	}
+	if len(results) != 1 || results[0].Username != "alice" || !results[0].IsContact {
+		t.Fatalf("results = %#v", results)
 	}
 }
 
@@ -1284,6 +1315,11 @@ type contractAuthorizationClient struct {
 	nilCan  bool
 }
 
+type contractSocialClient struct {
+	searchResp *socialv1.SearchUsersResponse
+	searchErr  error
+}
+
 type contractAuthClient struct {
 	lookupResp *authv1.LookupUserByUsernameResponse
 	lookupErr  error
@@ -1299,6 +1335,16 @@ func (c *contractAuthClient) LookupUserByUsername(_ context.Context, req *authv1
 		return c.lookupResp, nil
 	}
 	return &authv1.LookupUserByUsernameResponse{}, nil
+}
+
+func (c *contractSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {
+	if c.searchErr != nil {
+		return nil, c.searchErr
+	}
+	if c.searchResp != nil {
+		return c.searchResp, nil
+	}
+	return &socialv1.SearchUsersResponse{}, nil
 }
 
 func (c contractAuthorizationClient) Can(context.Context, *statev1.CanRequest, ...grpc.CallOption) (*statev1.CanResponse, error) {

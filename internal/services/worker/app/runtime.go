@@ -49,8 +49,18 @@ var (
 	listenTCP       = net.Listen
 )
 
+const socialDirectoryBackfillPageSize = 50
+
 type workerLoop interface {
 	Run(ctx context.Context) error
+}
+
+type authDirectoryBootstrapClient interface {
+	ListUsers(ctx context.Context, in *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error)
+}
+
+type socialDirectoryBootstrapClient interface {
+	SyncDirectoryUser(ctx context.Context, in *socialv1.SyncDirectoryUserRequest, opts ...grpc.CallOption) (*socialv1.SyncDirectoryUserResponse, error)
 }
 
 // Runtime wires worker transport, dependency clients, and loop execution.
@@ -134,8 +144,17 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 
 	authClient := authv1.NewAuthServiceClient(authMc.Conn())
 	socialClient := socialv1.NewSocialServiceClient(socialMc.Conn())
+	if err := syncSocialUserDirectory(ctx, authClient, socialClient); err != nil {
+		closeManagedConn(socialMc, "social")
+		closeManagedConn(authMc, "auth")
+		if closeErr := workerStore.Close(); closeErr != nil {
+			log.Printf("close worker sqlite store: %v", closeErr)
+		}
+		return nil, fmt.Errorf("backfill social user directory: %w", err)
+	}
 	profileHandler := workerdomain.NewSignupSocialProfileHandler(socialClient)
-	handler := fanoutEventHandlers(profileHandler)
+	directoryHandler := workerdomain.NewSignupSocialDirectoryHandler(socialClient)
+	handler := fanoutEventHandlers(directoryHandler, profileHandler)
 	loopConfig := Config{
 		Consumer:      normalized.Consumer,
 		PollInterval:  normalized.PollInterval,
@@ -181,6 +200,49 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		authMc:     authMc,
 		socialMc:   socialMc,
 	}, nil
+}
+
+func syncSocialUserDirectory(ctx context.Context, authClient authDirectoryBootstrapClient, socialClient socialDirectoryBootstrapClient) error {
+	if ctx == nil {
+		return errors.New("context is required")
+	}
+	if authClient == nil {
+		return errors.New("auth client is required")
+	}
+	if socialClient == nil {
+		return errors.New("social client is required")
+	}
+
+	pageToken := ""
+	for {
+		resp, err := authClient.ListUsers(ctx, &authv1.ListUsersRequest{
+			PageSize:  socialDirectoryBackfillPageSize,
+			PageToken: pageToken,
+		})
+		if err != nil {
+			return err
+		}
+		for _, user := range resp.GetUsers() {
+			if user == nil {
+				continue
+			}
+			userID := strings.TrimSpace(user.GetId())
+			username := strings.TrimSpace(user.GetUsername())
+			if userID == "" || username == "" {
+				return fmt.Errorf("list users returned blank directory fields")
+			}
+			if _, err := socialClient.SyncDirectoryUser(ctx, &socialv1.SyncDirectoryUserRequest{
+				UserId:   userID,
+				Username: username,
+			}); err != nil {
+				return err
+			}
+		}
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			return nil
+		}
+	}
 }
 
 // Addr returns the bound worker runtime listener address.

@@ -61,6 +61,7 @@ func TestFinishAccountRegistrationMapsSessionAndRecoveryCode(t *testing.T) {
 
 type recordingAuthClient struct {
 	beginRegistrationResp  *authv1.BeginAccountRegistrationResponse
+	usernameCheckResp      *authv1.CheckUsernameAvailabilityResponse
 	finishRegistrationResp *authv1.FinishAccountRegistrationResponse
 	lastBeginRegistration  *authv1.BeginAccountRegistrationRequest
 }
@@ -71,6 +72,13 @@ func (f *recordingAuthClient) BeginAccountRegistration(_ context.Context, req *a
 		return f.beginRegistrationResp, nil
 	}
 	return &authv1.BeginAccountRegistrationResponse{}, nil
+}
+
+func (f *recordingAuthClient) CheckUsernameAvailability(context.Context, *authv1.CheckUsernameAvailabilityRequest, ...grpc.CallOption) (*authv1.CheckUsernameAvailabilityResponse, error) {
+	if f.usernameCheckResp != nil {
+		return f.usernameCheckResp, nil
+	}
+	return &authv1.CheckUsernameAvailabilityResponse{}, nil
 }
 
 func (f *recordingAuthClient) FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {

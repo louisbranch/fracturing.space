@@ -46,6 +46,7 @@ func attachSessionCookie(t *testing.T, req *http.Request, auth *fakeWebAuthClien
 }
 
 func newDependencyBundle(principalDeps principal.Dependencies, moduleDeps modules.Dependencies) *DependencyBundle {
+	moduleDeps = completeTestModuleDependencies(moduleDeps)
 	return &DependencyBundle{
 		Principal: principalDeps,
 		Modules:   moduleDeps,
@@ -54,4 +55,54 @@ func newDependencyBundle(principalDeps principal.Dependencies, moduleDeps module
 
 func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBundle {
 	return newDependencyBundle(principal.Dependencies{}, moduleDeps)
+}
+
+func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dependencies {
+	hasCampaignDependency := moduleDeps.Campaigns.CampaignClient != nil ||
+		moduleDeps.Campaigns.CommunicationClient != nil ||
+		moduleDeps.Campaigns.ParticipantClient != nil ||
+		moduleDeps.Campaigns.CharacterClient != nil ||
+		moduleDeps.Campaigns.DaggerheartContentClient != nil ||
+		moduleDeps.Campaigns.DaggerheartAssetClient != nil ||
+		moduleDeps.Campaigns.SessionClient != nil ||
+		moduleDeps.Campaigns.InviteClient != nil ||
+		moduleDeps.Campaigns.SocialClient != nil ||
+		moduleDeps.Campaigns.AuthClient != nil ||
+		moduleDeps.Campaigns.AuthorizationClient != nil
+	if hasCampaignDependency {
+		if moduleDeps.Campaigns.CampaignClient == nil {
+			moduleDeps.Campaigns.CampaignClient = defaultCampaignClient()
+		}
+		if moduleDeps.Campaigns.CommunicationClient == nil {
+			moduleDeps.Campaigns.CommunicationClient = defaultCommunicationClient()
+		}
+		if moduleDeps.Campaigns.ParticipantClient == nil {
+			moduleDeps.Campaigns.ParticipantClient = defaultParticipantClient()
+		}
+		if moduleDeps.Campaigns.CharacterClient == nil {
+			moduleDeps.Campaigns.CharacterClient = defaultCharacterClient()
+		}
+		if moduleDeps.Campaigns.DaggerheartContentClient == nil {
+			moduleDeps.Campaigns.DaggerheartContentClient = defaultDaggerheartContentClient()
+		}
+		if moduleDeps.Campaigns.DaggerheartAssetClient == nil {
+			moduleDeps.Campaigns.DaggerheartAssetClient = defaultDaggerheartAssetClient()
+		}
+		if moduleDeps.Campaigns.SessionClient == nil {
+			moduleDeps.Campaigns.SessionClient = defaultSessionClient()
+		}
+		if moduleDeps.Campaigns.InviteClient == nil {
+			moduleDeps.Campaigns.InviteClient = defaultInviteClient()
+		}
+		if moduleDeps.Campaigns.SocialClient == nil {
+			moduleDeps.Campaigns.SocialClient = defaultSocialClient()
+		}
+		if moduleDeps.Campaigns.AuthClient == nil {
+			moduleDeps.Campaigns.AuthClient = newFakeWebAuthClient()
+		}
+		if moduleDeps.Campaigns.AuthorizationClient == nil {
+			moduleDeps.Campaigns.AuthorizationClient = defaultAuthorizationClient()
+		}
+	}
+	return moduleDeps
 }

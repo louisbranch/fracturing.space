@@ -725,7 +725,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									</div>
 								</div>
 							} else {
-								<form method="post" action={ routepath.AppCampaignInviteCreate(view.CampaignID) } class="grid gap-3 md:grid-cols-2" data-campaign-invite-create-form="true">
+								<form method="post" action={ routepath.AppCampaignInviteCreate(view.CampaignID) } class="grid gap-3 md:grid-cols-2" data-campaign-invite-create-form="true" data-campaign-invite-search-path={ routepath.AppCampaignInviteSearch(view.CampaignID) } data-campaign-invite-search-error="Unable to search users right now.">
 									<label class="form-control">
 										<span class="label-text">{ T(loc, "game.campaign_invites.field_participant") }</span>
 										<select class="select select-bordered w-full" name="participant_id" required disabled?={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-participant-select="true" data-campaign-invite-create-participant-disabled={ len(view.InviteSeatOptions) == 0 }>
@@ -737,8 +737,10 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									</label>
 									<label class="form-control">
 										<span class="label-text">{ T(loc, "game.campaign_invites.field_recipient_username") }</span>
-										<input type="text" name="username" placeholder={ T(loc, "game.campaign_invites.placeholder_recipient_username") } class="input input-bordered"/>
+										<input type="text" name="username" placeholder={ T(loc, "game.campaign_invites.placeholder_recipient_username") } class="input input-bordered" autocomplete="off" data-campaign-invite-search-input="true"/>
 									</label>
+									<div class="md:col-span-2 grid gap-2" hidden data-campaign-invite-search-results="true"></div>
+									<p class="text-sm opacity-70 md:col-span-2" hidden data-campaign-invite-search-empty="true">No users found.</p>
 									if len(view.InviteSeatOptions) == 0 {
 										<p class="text-sm opacity-70 md:col-span-2" data-campaign-invite-create-empty="true">{ T(loc, "game.campaign_invites.empty_targets") }</p>
 									}
@@ -783,4 +785,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 			<div class="alert alert-error" data-campaign-detail-unsupported-view="true">{ T(loc, "web.error.message_not_found") }</div>
 		}
 	</section>
+	if view.Marker == "campaign-invites" && view.CanManageInvites && !campaignActionsLocked(view) {
+		<script defer src="/static/username-input.js"></script>
+	}
 }

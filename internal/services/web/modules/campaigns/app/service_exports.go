@@ -81,6 +81,11 @@ func (s service) CampaignInvites(ctx context.Context, campaignID string) ([]Camp
 	return s.campaignInvites(ctx, campaignID)
 }
 
+// SearchInviteUsers centralizes invite typeahead search for one campaign.
+func (s service) SearchInviteUsers(ctx context.Context, campaignID string, input SearchInviteUsersInput) ([]InviteUserSearchResult, error) {
+	return s.searchInviteUsers(ctx, campaignID, input)
+}
+
 // RequireManageCampaign enforces owner/manager campaign access.
 func (s service) RequireManageCampaign(ctx context.Context, campaignID string) error {
 	return s.requireManageCampaign(ctx, campaignID)

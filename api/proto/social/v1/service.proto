@@ -59,6 +59,32 @@ message ListContactsResponse {
   string next_page_token = 2;
 }
 
+message SyncDirectoryUserRequest {
+  string user_id = 1;
+  string username = 2;
+}
+
+message SyncDirectoryUserResponse {}
+
+message SearchUsersRequest {
+  string viewer_user_id = 1;
+  string query = 2;
+  int32 limit = 3;
+}
+
+message SearchUserResult {
+  string user_id = 1;
+  string username = 2;
+  string name = 3;
+  string avatar_set_id = 4;
+  string avatar_asset_id = 5;
+  bool is_contact = 6;
+}
+
+message SearchUsersResponse {
+  repeated SearchUserResult users = 1;
+}
+
 message SetUserProfileRequest {
   string user_id = 1;
   string name = 2;
@@ -85,6 +111,8 @@ service SocialService {
   rpc AddContact(AddContactRequest) returns (AddContactResponse);
   rpc RemoveContact(RemoveContactRequest) returns (RemoveContactResponse);
   rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
+  rpc SyncDirectoryUser(SyncDirectoryUserRequest) returns (SyncDirectoryUserResponse);
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse);
   rpc SetUserProfile(SetUserProfileRequest) returns (SetUserProfileResponse);
   rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
 }

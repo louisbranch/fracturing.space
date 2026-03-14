@@ -9,6 +9,8 @@ import (
 type Gateway interface {
 	// BeginAccountRegistration starts account creation and first-passkey enrollment.
 	BeginAccountRegistration(ctx context.Context, username string) (PasskeyChallenge, error)
+	// CheckUsernameAvailability validates and checks username availability.
+	CheckUsernameAvailability(ctx context.Context, username string) (UsernameAvailability, error)
 	// FinishAccountRegistration completes account creation and returns the signed-in session.
 	FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
 	// BeginPasskeyLogin starts a username-scoped passkey login flow.
@@ -32,6 +34,7 @@ type Gateway interface {
 // Service exposes publicauth orchestration methods used by transport handlers.
 type Service interface {
 	HealthBody() string
+	CheckUsernameAvailability(ctx context.Context, username string) (UsernameAvailability, error)
 	PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error)
 	PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
 	PasskeyRegisterStart(ctx context.Context, username string) (PasskeyRegisterResult, error)
@@ -53,6 +56,21 @@ type PasskeyChallenge struct {
 type PasskeyRegisterResult struct {
 	SessionID string
 	PublicKey json.RawMessage
+}
+
+// UsernameAvailabilityState identifies the live validation outcome for signup input.
+type UsernameAvailabilityState string
+
+const (
+	UsernameAvailabilityStateInvalid     UsernameAvailabilityState = "invalid"
+	UsernameAvailabilityStateUnavailable UsernameAvailabilityState = "unavailable"
+	UsernameAvailabilityStateAvailable   UsernameAvailabilityState = "available"
+)
+
+// UsernameAvailability stores live username validation state for signup UX.
+type UsernameAvailability struct {
+	CanonicalUsername string
+	State             UsernameAvailabilityState
 }
 
 // RecoveryChallenge stores the combined recovery session and replacement-passkey begin state.

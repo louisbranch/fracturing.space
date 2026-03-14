@@ -70,6 +70,7 @@ type CampaignDependencies struct {
 	DaggerheartAssetClient   campaigngateway.DaggerheartAssetClient
 	SessionClient            SessionClient
 	InviteClient             InviteClient
+	SocialClient             campaigngateway.SocialClient
 	AuthClient               campaigngateway.AuthClient
 	AuthorizationClient      campaigngateway.AuthorizationClient
 }

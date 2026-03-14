@@ -9,6 +9,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -110,6 +111,11 @@ type AuthClient interface {
 	LookupUserByUsername(context.Context, *authv1.LookupUserByUsernameRequest, ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error)
 }
 
+// SocialClient exposes invite-search operations backed by social data.
+type SocialClient interface {
+	SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error)
+}
+
 // AuthorizationClient exposes campaign authorization checks.
 type AuthorizationClient interface {
 	Can(context.Context, *statev1.CanRequest, ...grpc.CallOption) (*statev1.CanResponse, error)
@@ -127,6 +133,7 @@ type GRPCGatewayReadDeps struct {
 	DaggerheartAsset   DaggerheartAssetClient
 	Session            SessionReadClient
 	Invite             InviteReadClient
+	Social             SocialClient
 }
 
 // GRPCGatewayMutationDeps groups mutation-side dependencies so write paths stay explicit.
@@ -158,7 +165,7 @@ type GRPCGatewayDeps struct {
 func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 	if deps.Read.Campaign == nil || deps.Read.Communication == nil || deps.Read.Participant == nil || deps.Read.Character == nil ||
 		deps.Read.DaggerheartContent == nil || deps.Read.DaggerheartAsset == nil ||
-		deps.Read.Session == nil || deps.Read.Invite == nil || deps.Mutation.Campaign == nil ||
+		deps.Read.Session == nil || deps.Read.Invite == nil || deps.Read.Social == nil || deps.Mutation.Campaign == nil ||
 		deps.Mutation.Participant == nil || deps.Mutation.Character == nil || deps.Mutation.Session == nil ||
 		deps.Mutation.Invite == nil || deps.Mutation.Auth == nil || deps.Authorization.Client == nil {
 		return campaignapp.NewUnavailableGateway()

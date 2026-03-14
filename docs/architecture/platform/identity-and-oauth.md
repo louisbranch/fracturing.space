@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-08"
+last_reviewed: "2026-03-09"
 ---
 
 # Identity and OAuth
@@ -30,13 +30,22 @@ Define service ownership, security boundaries, and invariants for:
 - **Web service** hosts signup/login/settings UX and delegates passkey and
   recovery verification/storage to auth.
 - **Social service** owns optional public profile metadata (display name,
-  pronouns, bio, avatar metadata), not authentication or authorization.
+  pronouns, bio, avatar metadata), contact relationships, and authenticated
+  people-search read models. It does not own authentication, authorization, or
+  username truth.
+- **Discovery service** remains the public browsing surface for non-authenticated
+  discovery entries. Public profile routing does not imply a separate public
+  account type or a discovery-owned username index.
 
 Boundary rules:
 
 1. If a field proves identity or grants/denies access, it belongs to `auth`.
-2. If a field is social/discovery profile metadata, it belongs to `social`.
+2. If a field is profile metadata, contact ranking state, or authenticated
+   people-search projection data, it belongs to `social`.
 3. Account preferences (for example locale) are account data and belong to `auth`.
+4. If a surface is public browsing or discovery indexing, it belongs to
+   `discovery`, but it must consume published public data rather than becoming
+   the source of username ownership.
 
 ## Identity model
 
@@ -48,6 +57,9 @@ Boundary rules:
 - **Public profile**: baseline profile exists as soon as the account exists;
   social metadata is optional enrichment, not a prerequisite for profile
   routing.
+- **Authenticated people search**: social-owned read model keyed by auth-owned
+  usernames and enriched with contact/profile metadata for invite and mention
+  UX.
 
 ## Passkey and recovery model
 
@@ -109,9 +121,13 @@ Endpoint:
 - Public auth pages treat users as authenticated only after passkey or
   recovery-session completion plus web-session validation.
 - Username ownership and uniqueness are enforced in `auth`, not `social`.
+- Username availability checks are advisory reads from `auth`; successful signup
+  remains the only authoritative reservation path.
 - A linked user-facing identity always has an auth username; downstream
   services should fall back to that username before rendering anonymous
   placeholders.
+- Worker-driven sync may project auth-owned usernames into `social` read models,
+  but those projections are derivative and rebuildable.
 - Recovery codes are stored only as hashes and are rotated after successful
   recovery.
 - If all passkeys and the recovery code are lost, the account is unrecoverable

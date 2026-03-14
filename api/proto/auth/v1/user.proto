@@ -80,6 +80,9 @@ service AuthService {
   // Resolve a user by username.
   rpc LookupUserByUsername(LookupUserByUsernameRequest) returns (LookupUserByUsernameResponse);
 
+  // Check whether a username is valid and currently available.
+  rpc CheckUsernameAvailability(CheckUsernameAvailabilityRequest) returns (CheckUsernameAvailabilityResponse);
+
   // Get a user record by ID.
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
 
@@ -226,6 +229,22 @@ message LookupUserByUsernameRequest {
 
 message LookupUserByUsernameResponse {
   User user = 1;
+}
+
+enum UsernameAvailabilityState {
+  USERNAME_AVAILABILITY_STATE_UNSPECIFIED = 0;
+  USERNAME_AVAILABILITY_STATE_INVALID = 1;
+  USERNAME_AVAILABILITY_STATE_UNAVAILABLE = 2;
+  USERNAME_AVAILABILITY_STATE_AVAILABLE = 3;
+}
+
+message CheckUsernameAvailabilityRequest {
+  string username = 1;
+}
+
+message CheckUsernameAvailabilityResponse {
+  string canonical_username = 1;
+  UsernameAvailabilityState state = 2;
 }
 
 message GetUserRequest {

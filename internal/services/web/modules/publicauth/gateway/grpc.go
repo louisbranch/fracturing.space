@@ -14,6 +14,7 @@ import (
 // AuthClient performs passkey and user bootstrap operations.
 type AuthClient interface {
 	BeginAccountRegistration(context.Context, *authv1.BeginAccountRegistrationRequest, ...grpc.CallOption) (*authv1.BeginAccountRegistrationResponse, error)
+	CheckUsernameAvailability(context.Context, *authv1.CheckUsernameAvailabilityRequest, ...grpc.CallOption) (*authv1.CheckUsernameAvailabilityResponse, error)
 	FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error)
 	BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error)
 	FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest, ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error)
@@ -68,6 +69,18 @@ func (g GRPCGateway) BeginAccountRegistration(ctx context.Context, username stri
 		return publicauthapp.PasskeyChallenge{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a registration session.")
 	}
 	return publicauthapp.PasskeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialCreationOptionsJson())}, nil
+}
+
+// CheckUsernameAvailability returns advisory signup validation state.
+func (g GRPCGateway) CheckUsernameAvailability(ctx context.Context, username string) (publicauthapp.UsernameAvailability, error) {
+	resp, err := g.Client.CheckUsernameAvailability(ctx, &authv1.CheckUsernameAvailabilityRequest{Username: username})
+	if err != nil {
+		return publicauthapp.UsernameAvailability{}, mapGRPCError(err, apperrors.KindUnavailable, "Unable to validate the username.")
+	}
+	return publicauthapp.UsernameAvailability{
+		CanonicalUsername: strings.TrimSpace(resp.GetCanonicalUsername()),
+		State:             mapUsernameAvailabilityState(resp.GetState()),
+	}, nil
 }
 
 // FinishAccountRegistration centralizes this web behavior in one helper seam.
@@ -207,4 +220,16 @@ func (g GRPCGateway) HasValidWebSession(ctx context.Context, sessionID string) b
 func (g GRPCGateway) RevokeWebSession(ctx context.Context, sessionID string) error {
 	_, err := g.Client.RevokeWebSession(ctx, &authv1.RevokeWebSessionRequest{SessionId: sessionID})
 	return mapGRPCError(err, apperrors.KindUnknown, "Failed to revoke the web session.")
+}
+
+// mapUsernameAvailabilityState maps auth transport enum values to web app state.
+func mapUsernameAvailabilityState(state authv1.UsernameAvailabilityState) publicauthapp.UsernameAvailabilityState {
+	switch state {
+	case authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_AVAILABLE:
+		return publicauthapp.UsernameAvailabilityStateAvailable
+	case authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_UNAVAILABLE:
+		return publicauthapp.UsernameAvailabilityStateUnavailable
+	default:
+		return publicauthapp.UsernameAvailabilityStateInvalid
+	}
 }
