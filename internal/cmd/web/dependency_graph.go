@@ -107,7 +107,7 @@ func dependencyRequirementSocial(address string) dependencyRequirement {
 		address:    address,
 		policy:     startupDependencyRequired,
 		capability: "web.social.integration",
-		surfaces:   []string{"principal", "profile", "settings"},
+		surfaces:   []string{"principal", "profile", "settings", "campaigns"},
 		setInput:   setDependencySocial,
 	}
 }
@@ -189,6 +189,7 @@ func setDependencyAuth(p *principal.Dependencies, m *modules.Dependencies, conn 
 func setDependencySocial(p *principal.Dependencies, m *modules.Dependencies, conn *grpc.ClientConn) {
 	socialClient := socialv1.NewSocialServiceClient(conn)
 	p.SocialClient = socialClient
+	m.Campaigns.SocialClient = socialClient
 	m.Profile.SocialClient = socialClient
 	m.Settings.SocialClient = socialClient
 }

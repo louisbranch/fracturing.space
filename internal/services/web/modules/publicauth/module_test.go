@@ -82,6 +82,13 @@ func (fakeAuthClient) BeginAccountRegistration(context.Context, *authv1.BeginAcc
 	return &authv1.BeginAccountRegistrationResponse{SessionId: "reg-1", CredentialCreationOptionsJson: []byte(`{"publicKey":{}}`)}, nil
 }
 
+func (fakeAuthClient) CheckUsernameAvailability(context.Context, *authv1.CheckUsernameAvailabilityRequest, ...grpc.CallOption) (*authv1.CheckUsernameAvailabilityResponse, error) {
+	return &authv1.CheckUsernameAvailabilityResponse{
+		CanonicalUsername: "louis",
+		State:             authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_AVAILABLE,
+	}, nil
+}
+
 func (fakeAuthClient) FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
 	return &authv1.FinishAccountRegistrationResponse{User: &authv1.User{Id: "user-1"}, Session: &authv1.WebSession{Id: "web-1"}, RecoveryCode: "ABCD-EFGH"}, nil
 }

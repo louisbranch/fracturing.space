@@ -668,6 +668,10 @@ func (f *fakeSocialClient) ListContacts(context.Context, *socialv1.ListContactsR
 	return &socialv1.ListContactsResponse{}, nil
 }
 
+func (f *fakeSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {
+	return &socialv1.SearchUsersResponse{}, nil
+}
+
 func (f *fakeSocialClient) SetUserProfile(context.Context, *socialv1.SetUserProfileRequest, ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error) {
 	return &socialv1.SetUserProfileResponse{}, nil
 }

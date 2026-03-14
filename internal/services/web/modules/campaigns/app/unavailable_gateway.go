@@ -70,6 +70,11 @@ func (unavailableGateway) CampaignInvites(context.Context, string) ([]CampaignIn
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// SearchInviteUsers centralizes invite-search reads for this workflow.
+func (unavailableGateway) SearchInviteUsers(context.Context, SearchInviteUsersInput) ([]InviteUserSearchResult, error) {
+	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // CharacterCreationProgress centralizes this web behavior in one helper seam.
 func (unavailableGateway) CharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error) {
 	return CampaignCharacterCreationProgress{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")

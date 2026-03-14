@@ -20,11 +20,13 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SocialService_AddContact_FullMethodName     = "/social.v1.SocialService/AddContact"
-	SocialService_RemoveContact_FullMethodName  = "/social.v1.SocialService/RemoveContact"
-	SocialService_ListContacts_FullMethodName   = "/social.v1.SocialService/ListContacts"
-	SocialService_SetUserProfile_FullMethodName = "/social.v1.SocialService/SetUserProfile"
-	SocialService_GetUserProfile_FullMethodName = "/social.v1.SocialService/GetUserProfile"
+	SocialService_AddContact_FullMethodName        = "/social.v1.SocialService/AddContact"
+	SocialService_RemoveContact_FullMethodName     = "/social.v1.SocialService/RemoveContact"
+	SocialService_ListContacts_FullMethodName      = "/social.v1.SocialService/ListContacts"
+	SocialService_SyncDirectoryUser_FullMethodName = "/social.v1.SocialService/SyncDirectoryUser"
+	SocialService_SearchUsers_FullMethodName       = "/social.v1.SocialService/SearchUsers"
+	SocialService_SetUserProfile_FullMethodName    = "/social.v1.SocialService/SetUserProfile"
+	SocialService_GetUserProfile_FullMethodName    = "/social.v1.SocialService/GetUserProfile"
 )
 
 // SocialServiceClient is the client API for SocialService service.
@@ -36,6 +38,8 @@ type SocialServiceClient interface {
 	AddContact(ctx context.Context, in *AddContactRequest, opts ...grpc.CallOption) (*AddContactResponse, error)
 	RemoveContact(ctx context.Context, in *RemoveContactRequest, opts ...grpc.CallOption) (*RemoveContactResponse, error)
 	ListContacts(ctx context.Context, in *ListContactsRequest, opts ...grpc.CallOption) (*ListContactsResponse, error)
+	SyncDirectoryUser(ctx context.Context, in *SyncDirectoryUserRequest, opts ...grpc.CallOption) (*SyncDirectoryUserResponse, error)
+	SearchUsers(ctx context.Context, in *SearchUsersRequest, opts ...grpc.CallOption) (*SearchUsersResponse, error)
 	SetUserProfile(ctx context.Context, in *SetUserProfileRequest, opts ...grpc.CallOption) (*SetUserProfileResponse, error)
 	GetUserProfile(ctx context.Context, in *GetUserProfileRequest, opts ...grpc.CallOption) (*GetUserProfileResponse, error)
 }
@@ -78,6 +82,26 @@ func (c *socialServiceClient) ListContacts(ctx context.Context, in *ListContacts
 	return out, nil
 }
 
+func (c *socialServiceClient) SyncDirectoryUser(ctx context.Context, in *SyncDirectoryUserRequest, opts ...grpc.CallOption) (*SyncDirectoryUserResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SyncDirectoryUserResponse)
+	err := c.cc.Invoke(ctx, SocialService_SyncDirectoryUser_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *socialServiceClient) SearchUsers(ctx context.Context, in *SearchUsersRequest, opts ...grpc.CallOption) (*SearchUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchUsersResponse)
+	err := c.cc.Invoke(ctx, SocialService_SearchUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *socialServiceClient) SetUserProfile(ctx context.Context, in *SetUserProfileRequest, opts ...grpc.CallOption) (*SetUserProfileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetUserProfileResponse)
@@ -107,6 +131,8 @@ type SocialServiceServer interface {
 	AddContact(context.Context, *AddContactRequest) (*AddContactResponse, error)
 	RemoveContact(context.Context, *RemoveContactRequest) (*RemoveContactResponse, error)
 	ListContacts(context.Context, *ListContactsRequest) (*ListContactsResponse, error)
+	SyncDirectoryUser(context.Context, *SyncDirectoryUserRequest) (*SyncDirectoryUserResponse, error)
+	SearchUsers(context.Context, *SearchUsersRequest) (*SearchUsersResponse, error)
 	SetUserProfile(context.Context, *SetUserProfileRequest) (*SetUserProfileResponse, error)
 	GetUserProfile(context.Context, *GetUserProfileRequest) (*GetUserProfileResponse, error)
 	mustEmbedUnimplementedSocialServiceServer()
@@ -127,6 +153,12 @@ func (UnimplementedSocialServiceServer) RemoveContact(context.Context, *RemoveCo
 }
 func (UnimplementedSocialServiceServer) ListContacts(context.Context, *ListContactsRequest) (*ListContactsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListContacts not implemented")
+}
+func (UnimplementedSocialServiceServer) SyncDirectoryUser(context.Context, *SyncDirectoryUserRequest) (*SyncDirectoryUserResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SyncDirectoryUser not implemented")
+}
+func (UnimplementedSocialServiceServer) SearchUsers(context.Context, *SearchUsersRequest) (*SearchUsersResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchUsers not implemented")
 }
 func (UnimplementedSocialServiceServer) SetUserProfile(context.Context, *SetUserProfileRequest) (*SetUserProfileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetUserProfile not implemented")
@@ -209,6 +241,42 @@ func _SocialService_ListContacts_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SocialService_SyncDirectoryUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SyncDirectoryUserRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SocialServiceServer).SyncDirectoryUser(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SocialService_SyncDirectoryUser_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SocialServiceServer).SyncDirectoryUser(ctx, req.(*SyncDirectoryUserRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SocialService_SearchUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SocialServiceServer).SearchUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SocialService_SearchUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SocialServiceServer).SearchUsers(ctx, req.(*SearchUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SocialService_SetUserProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(SetUserProfileRequest)
 	if err := dec(in); err != nil {
@@ -263,6 +331,14 @@ var SocialService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListContacts",
 			Handler:    _SocialService_ListContacts_Handler,
+		},
+		{
+			MethodName: "SyncDirectoryUser",
+			Handler:    _SocialService_SyncDirectoryUser_Handler,
+		},
+		{
+			MethodName: "SearchUsers",
+			Handler:    _SocialService_SearchUsers_Handler,
 		},
 		{
 			MethodName: "SetUserProfile",

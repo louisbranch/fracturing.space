@@ -49,6 +49,9 @@ func registerPasskeyRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodPost+" "+routepath.PasskeyRegisterStart, h.handlePasskeyRegisterStart)
 	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeyRegisterStart, httpx.MethodNotAllowed(http.MethodPost))
 
+	mux.HandleFunc(http.MethodPost+" "+routepath.PasskeyRegisterCheck, h.handleUsernameCheck)
+	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeyRegisterCheck, httpx.MethodNotAllowed(http.MethodPost))
+
 	mux.HandleFunc(http.MethodPost+" "+routepath.PasskeyRegisterFinish, h.handlePasskeyRegisterFinish)
 	mux.HandleFunc(http.MethodGet+" "+routepath.PasskeyRegisterFinish, httpx.MethodNotAllowed(http.MethodPost))
 

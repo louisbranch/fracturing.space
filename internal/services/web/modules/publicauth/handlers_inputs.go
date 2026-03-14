@@ -24,6 +24,11 @@ type passkeyRegisterStartInput struct {
 	Username string `json:"username"`
 }
 
+// usernameCheckInput carries parsed username-check fields.
+type usernameCheckInput struct {
+	Username string `json:"username"`
+}
+
 // passkeyLoginStartInput carries parsed login-start fields.
 type passkeyLoginStartInput struct {
 	Username string `json:"username"`
@@ -63,6 +68,15 @@ func parsePasskeyRegisterStartInput(r *http.Request) (passkeyRegisterStartInput,
 		return passkeyRegisterStartInput{}, err
 	}
 	return passkeyRegisterStartInput{Username: strings.TrimSpace(payload.Username)}, nil
+}
+
+// parseUsernameCheckInput parses and normalizes username availability input.
+func parseUsernameCheckInput(r *http.Request) (usernameCheckInput, error) {
+	var payload usernameCheckInput
+	if err := decodeJSONBodyStrict(r, &payload); err != nil {
+		return usernameCheckInput{}, err
+	}
+	return usernameCheckInput{Username: strings.TrimSpace(payload.Username)}, nil
 }
 
 // parsePasskeyLoginStartInput parses and normalizes passkey login-start input.

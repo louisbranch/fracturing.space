@@ -39,6 +39,24 @@ type UserProfile struct {
 	UpdatedAt     time.Time
 }
 
+// DirectoryUser stores one auth-synced username directory record.
+type DirectoryUser struct {
+	UserID    string
+	Username  string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// SearchUser stores one social search result row.
+type SearchUser struct {
+	UserID        string
+	Username      string
+	Name          string
+	AvatarSetID   string
+	AvatarAssetID string
+	IsContact     bool
+}
+
 // ContactStore persists owner-scoped directed contact relationships.
 type ContactStore interface {
 	PutContact(ctx context.Context, contact Contact) error
@@ -51,4 +69,10 @@ type ContactStore interface {
 type UserProfileStore interface {
 	PutUserProfile(ctx context.Context, profile UserProfile) error
 	GetUserProfileByUserID(ctx context.Context, userID string) (UserProfile, error)
+}
+
+// UserDirectoryStore persists auth-synced directory data used for search.
+type UserDirectoryStore interface {
+	PutDirectoryUser(ctx context.Context, user DirectoryUser) error
+	SearchUsers(ctx context.Context, viewerUserID string, query string, limit int) ([]SearchUser, error)
 }

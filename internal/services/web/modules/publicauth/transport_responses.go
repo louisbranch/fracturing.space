@@ -33,6 +33,12 @@ type recoveryStartResponse struct {
 	PublicKey         json.RawMessage `json:"public_key"`
 }
 
+// usernameAvailabilityResponse defines the JSON contract for signup checks.
+type usernameAvailabilityResponse struct {
+	CanonicalUsername string `json:"canonical_username"`
+	State             string `json:"state"`
+}
+
 // newPasskeyChallengeResponse maps app-layer challenge data to the transport contract.
 func newPasskeyChallengeResponse(challenge publicauthapp.PasskeyChallenge) passkeyChallengeResponse {
 	return passkeyChallengeResponse{
@@ -69,5 +75,13 @@ func newRecoveryStartResponse(challenge publicauthapp.RecoveryChallenge) recover
 		RecoverySessionID: challenge.RecoverySessionID,
 		SessionID:         challenge.SessionID,
 		PublicKey:         challenge.PublicKey,
+	}
+}
+
+// newUsernameAvailabilityResponse maps signup validation state to transport JSON.
+func newUsernameAvailabilityResponse(result publicauthapp.UsernameAvailability) usernameAvailabilityResponse {
+	return usernameAvailabilityResponse{
+		CanonicalUsername: result.CanonicalUsername,
+		State:             string(result.State),
 	}
 }

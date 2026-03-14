@@ -31,8 +31,8 @@ auth/social domain services.
 - **Admin** (`internal/services/admin/`): operator-facing web surface.
 - **MCP** (`internal/services/mcp/`): JSON-RPC tool/resource bridge.
 - **Auth** (`internal/services/auth/`): identity/authentication and OAuth primitives.
-- **Social** (`internal/services/social/`): discovery/profile metadata and contacts.
-- **Discovery** (`internal/services/discovery/`): public discovery entry metadata.
+- **Social** (`internal/services/social/`): profile metadata, contacts, and authenticated people-search read models built from auth-owned identity data.
+- **Discovery** (`internal/services/discovery/`): public discovery entry metadata and future public browsing indexes, not authenticated invite search.
 - **AI** (`internal/services/ai/`): AI credential/agent orchestration.
 - **Notifications** (`internal/services/notifications/`): user inbox intent and channel-delivery orchestration.
 - **Status** (`internal/services/status/`): capability health and override state authority.

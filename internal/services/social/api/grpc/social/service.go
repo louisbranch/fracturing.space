@@ -11,6 +11,7 @@ import (
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	profileutil "github.com/louisbranch/fracturing.space/internal/services/social/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
+	socialusername "github.com/louisbranch/fracturing.space/internal/services/social/username"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -19,11 +20,15 @@ import (
 const (
 	defaultListContactsPageSize = 10
 	maxListContactsPageSize     = 50
+	defaultSearchUsersLimit     = 8
+	maxSearchUsersLimit         = 10
+	minSearchUsersQueryLength   = 2
 )
 
 type contactAndUserProfileStore interface {
 	storage.ContactStore
 	storage.UserProfileStore
+	storage.UserDirectoryStore
 }
 
 // Service exposes social.v1 gRPC operations.
@@ -138,6 +143,79 @@ func (s *Service) ListContacts(ctx context.Context, in *socialv1.ListContactsReq
 	}
 	for _, contact := range page.Contacts {
 		resp.Contacts = append(resp.Contacts, contactToProto(contact))
+	}
+	return resp, nil
+}
+
+// SyncDirectoryUser upserts one auth-synced directory record.
+func (s *Service) SyncDirectoryUser(ctx context.Context, in *socialv1.SyncDirectoryUserRequest) (*socialv1.SyncDirectoryUserResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "sync directory user request is required")
+	}
+	if s == nil || s.store == nil {
+		return nil, status.Error(codes.Internal, "contact store is not configured")
+	}
+
+	userID := strings.TrimSpace(in.GetUserId())
+	if userID == "" {
+		return nil, status.Error(codes.InvalidArgument, "user id is required")
+	}
+	username, err := socialusername.Canonicalize(in.GetUsername())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, "username is invalid")
+	}
+
+	now := time.Now().UTC()
+	if s.clock != nil {
+		now = s.clock().UTC()
+	}
+	if err := s.store.PutDirectoryUser(ctx, storage.DirectoryUser{
+		UserID:    userID,
+		Username:  username,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		return nil, status.Errorf(codes.Internal, "sync directory user: %v", err)
+	}
+	return &socialv1.SyncDirectoryUserResponse{}, nil
+}
+
+// SearchUsers returns ranked invite-search matches for one viewer.
+func (s *Service) SearchUsers(ctx context.Context, in *socialv1.SearchUsersRequest) (*socialv1.SearchUsersResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "search users request is required")
+	}
+	if s == nil || s.store == nil {
+		return nil, status.Error(codes.Internal, "contact store is not configured")
+	}
+	viewerUserID := strings.TrimSpace(in.GetViewerUserId())
+	if viewerUserID == "" {
+		return nil, status.Error(codes.InvalidArgument, "viewer user id is required")
+	}
+	query := strings.ToLower(strings.TrimSpace(in.GetQuery()))
+	if len(query) < minSearchUsersQueryLength {
+		return &socialv1.SearchUsersResponse{}, nil
+	}
+	limit := pagination.ClampPageSize(in.GetLimit(), pagination.PageSizeConfig{
+		Default: defaultSearchUsersLimit,
+		Max:     maxSearchUsersLimit,
+	})
+	items, err := s.store.SearchUsers(ctx, viewerUserID, query, limit)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "search users: %v", err)
+	}
+	resp := &socialv1.SearchUsersResponse{
+		Users: make([]*socialv1.SearchUserResult, 0, len(items)),
+	}
+	for _, item := range items {
+		resp.Users = append(resp.Users, &socialv1.SearchUserResult{
+			UserId:        item.UserID,
+			Username:      item.Username,
+			Name:          item.Name,
+			AvatarSetId:   item.AvatarSetID,
+			AvatarAssetId: item.AvatarAssetID,
+			IsContact:     item.IsContact,
+		})
 	}
 	return resp, nil
 }

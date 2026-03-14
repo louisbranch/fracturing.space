@@ -97,3 +97,32 @@ func TestPasskeyLoginFinishReturnsTypedJSONContract(t *testing.T) {
 		t.Fatalf("redirect_url = %q, want %q", payload.RedirectURL, routepath.AppDashboard)
 	}
 }
+
+func TestUsernameCheckReturnsTypedJSONContract(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: publicauthgateway.NewGRPCGateway(fakeAuthClient{})})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, routepath.PasskeyRegisterCheck, strings.NewReader(`{"username":"louis"}`))
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+
+	var payload usernameAvailabilityResponse
+	if err := json.NewDecoder(rr.Body).Decode(&payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.CanonicalUsername != "louis" {
+		t.Fatalf("canonical_username = %q, want %q", payload.CanonicalUsername, "louis")
+	}
+	if payload.State != "available" {
+		t.Fatalf("state = %q, want %q", payload.State, "available")
+	}
+}

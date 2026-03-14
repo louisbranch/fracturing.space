@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -105,13 +107,60 @@ func stubManagedConn(t *testing.T) {
 	})
 }
 
+type lifecycleAuthServer struct {
+	authv1.UnimplementedAuthServiceServer
+}
+
+func (lifecycleAuthServer) ListUsers(context.Context, *authv1.ListUsersRequest) (*authv1.ListUsersResponse, error) {
+	return &authv1.ListUsersResponse{}, nil
+}
+
+type lifecycleSocialServer struct {
+	socialv1.UnimplementedSocialServiceServer
+}
+
+func (lifecycleSocialServer) SyncDirectoryUser(context.Context, *socialv1.SyncDirectoryUserRequest) (*socialv1.SyncDirectoryUserResponse, error) {
+	return &socialv1.SyncDirectoryUserResponse{}, nil
+}
+
+func startLifecycleDependencyServers(t *testing.T) (string, string) {
+	t.Helper()
+
+	startServer := func(register func(*grpc.Server), label string) string {
+		t.Helper()
+		listener, err := net.Listen("tcp", "127.0.0.1:0")
+		if err != nil {
+			t.Fatalf("%s listen: %v", label, err)
+		}
+		server := grpc.NewServer()
+		register(server)
+		go func() {
+			_ = server.Serve(listener)
+		}()
+		t.Cleanup(func() {
+			server.Stop()
+			_ = listener.Close()
+		})
+		return listener.Addr().String()
+	}
+
+	authAddr := startServer(func(server *grpc.Server) {
+		authv1.RegisterAuthServiceServer(server, lifecycleAuthServer{})
+	}, "auth")
+	socialAddr := startServer(func(server *grpc.Server) {
+		socialv1.RegisterSocialServiceServer(server, lifecycleSocialServer{})
+	}, "social")
+	return authAddr, socialAddr
+}
+
 func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 	stubManagedConn(t)
+	authAddr, socialAddr := startLifecycleDependencyServers(t)
 
 	srv, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:       freeWorkerTCPPort(t),
-		AuthAddr:   "auth:8083",
-		SocialAddr: "social:8090",
+		AuthAddr:   authAddr,
+		SocialAddr: socialAddr,
 		DBPath:     filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err != nil {
@@ -167,11 +216,12 @@ func TestRuntimeServeStopsOnContextCancellation(t *testing.T) {
 
 func TestRuntimeServeRequiresContext(t *testing.T) {
 	stubManagedConn(t)
+	authAddr, socialAddr := startLifecycleDependencyServers(t)
 
 	runtime, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:       freeWorkerTCPPort(t),
-		AuthAddr:   "auth:8083",
-		SocialAddr: "social:8090",
+		AuthAddr:   authAddr,
+		SocialAddr: socialAddr,
 		DBPath:     filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err != nil {

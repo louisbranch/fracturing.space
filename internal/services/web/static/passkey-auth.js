@@ -200,6 +200,9 @@
           return;
         }
         try {
+          if (registerButton.disabled) {
+            return;
+          }
           var start = await startPasskeyRegister(username);
           var publicKey = normalizeCreationOptions(start.public_key.publicKey);
           var credential = await navigator.credentials.create({ publicKey: publicKey });

@@ -17,6 +17,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/auth/recoverycode"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
+	authusername "github.com/louisbranch/fracturing.space/internal/services/auth/username"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -123,6 +124,44 @@ func (s *AuthService) LookupUserByUsername(ctx context.Context, in *authv1.Looku
 	return &authv1.LookupUserByUsernameResponse{User: userToProto(found)}, nil
 }
 
+// CheckUsernameAvailability reports whether a username is valid and available.
+func (s *AuthService) CheckUsernameAvailability(ctx context.Context, in *authv1.CheckUsernameAvailabilityRequest) (*authv1.CheckUsernameAvailabilityResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "Check username availability request is required.")
+	}
+	if s.store == nil {
+		return nil, status.Error(codes.Internal, "User store is not configured.")
+	}
+
+	canonicalUsername, normalized := normalizeUsernameCandidate(in.GetUsername())
+	if canonicalUsername == "" || !normalized {
+		return &authv1.CheckUsernameAvailabilityResponse{
+			State: authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_INVALID,
+		}, nil
+	}
+	if _, err := authusername.Canonicalize(canonicalUsername); err != nil {
+		return &authv1.CheckUsernameAvailabilityResponse{
+			CanonicalUsername: canonicalUsername,
+			State:             authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_INVALID,
+		}, nil
+	}
+
+	_, err := s.store.GetUserByUsername(ctx, canonicalUsername)
+	if err == nil {
+		return &authv1.CheckUsernameAvailabilityResponse{
+			CanonicalUsername: canonicalUsername,
+			State:             authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_UNAVAILABLE,
+		}, nil
+	}
+	if err == storage.ErrNotFound {
+		return &authv1.CheckUsernameAvailabilityResponse{
+			CanonicalUsername: canonicalUsername,
+			State:             authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_AVAILABLE,
+		}, nil
+	}
+	return nil, handleDomainError(err)
+}
+
 // GetUser resolves a user ID to an identity record for cross-service lookups.
 func (s *AuthService) GetUser(ctx context.Context, in *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
 	if in == nil {
@@ -185,6 +224,26 @@ func userToProto(u user.User) *authv1.User {
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
 	}
+}
+
+func normalizeUsernameCandidate(input string) (string, bool) {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return "", false
+	}
+	var builder strings.Builder
+	builder.Grow(len(input))
+	for i := 0; i < len(input); i++ {
+		ch := input[i]
+		if ch > 0x7f {
+			return "", false
+		}
+		if ch >= 'A' && ch <= 'Z' {
+			ch = ch - 'A' + 'a'
+		}
+		builder.WriteByte(ch)
+	}
+	return builder.String(), true
 }
 
 func (s *AuthService) generateRecoveryCode() (string, string, error) {

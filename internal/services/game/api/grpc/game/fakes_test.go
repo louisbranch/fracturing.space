@@ -1092,6 +1092,10 @@ func (f *fakeAuthClient) FinishAccountRegistration(ctx context.Context, req *aut
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
+func (f *fakeAuthClient) CheckUsernameAvailability(ctx context.Context, req *authv1.CheckUsernameAvailabilityRequest, opts ...grpc.CallOption) (*authv1.CheckUsernameAvailabilityResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
 func (f *fakeAuthClient) GetUser(ctx context.Context, req *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error) {
 	f.lastGetUserRequest = req
 	if f.getUserErr != nil {
@@ -1169,6 +1173,14 @@ func (f *fakeSocialClient) RemoveContact(context.Context, *socialv1.RemoveContac
 }
 
 func (f *fakeSocialClient) ListContacts(context.Context, *socialv1.ListContactsRequest, ...grpc.CallOption) (*socialv1.ListContactsResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
+}
+
+func (f *fakeSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
+}
+
+func (f *fakeSocialClient) SyncDirectoryUser(context.Context, *socialv1.SyncDirectoryUserRequest, ...grpc.CallOption) (*socialv1.SyncDirectoryUserResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
 }
 

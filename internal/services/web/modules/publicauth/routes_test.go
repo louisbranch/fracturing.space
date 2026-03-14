@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
+	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
@@ -21,7 +22,7 @@ func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{}))
+	registerRoutes(mux, newHandlers(publicauthapp.NewService(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), ""), requestmeta.SchemePolicy{}))
 
 	tests := []struct {
 		name       string
@@ -38,7 +39,9 @@ func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 		{name: "logout get rejected", method: http.MethodGet, path: routepath.Logout, wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
 		{name: "logout post", method: http.MethodPost, path: routepath.Logout, wantStatus: http.StatusFound},
 		{name: "passkey login start get rejected", method: http.MethodGet, path: routepath.PasskeyLoginStart, wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
-		{name: "passkey login start post", method: http.MethodPost, path: routepath.PasskeyLoginStart, wantStatus: http.StatusServiceUnavailable},
+		{name: "passkey login start post", method: http.MethodPost, path: routepath.PasskeyLoginStart, wantStatus: http.StatusOK},
+		{name: "username check get rejected", method: http.MethodGet, path: routepath.PasskeyRegisterCheck, wantStatus: http.StatusMethodNotAllowed, wantAllow: http.MethodPost},
+		{name: "username check post", method: http.MethodPost, path: routepath.PasskeyRegisterCheck, wantStatus: http.StatusOK},
 		{name: "unknown get path", method: http.MethodGet, path: "/unknown", wantStatus: http.StatusNotFound},
 	}
 
@@ -47,7 +50,7 @@ func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			body := strings.NewReader("")
-			if tc.method == http.MethodPost && tc.path == routepath.PasskeyLoginStart {
+			if tc.method == http.MethodPost && (tc.path == routepath.PasskeyLoginStart || tc.path == routepath.PasskeyRegisterCheck) {
 				body = strings.NewReader(`{"username":"louis"}`)
 			}
 			req := httptest.NewRequest(tc.method, tc.path, body)

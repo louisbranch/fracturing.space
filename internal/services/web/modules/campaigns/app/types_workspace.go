@@ -149,3 +149,13 @@ type CampaignInvite struct {
 	RecipientUserID string `json:"recipientUserId"`
 	Status          string `json:"status"`
 }
+
+// InviteUserSearchResult stores one invite typeahead option.
+type InviteUserSearchResult struct {
+	UserID        string `json:"user_id"`
+	Username      string `json:"username"`
+	Name          string `json:"name"`
+	AvatarSetID   string `json:"avatar_set_id"`
+	AvatarAssetID string `json:"avatar_asset_id"`
+	IsContact     bool   `json:"is_contact"`
+}

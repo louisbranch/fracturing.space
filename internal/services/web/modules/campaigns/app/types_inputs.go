@@ -45,6 +45,13 @@ type CreateInviteInput struct {
 	RecipientUsername string
 }
 
+// SearchInviteUsersInput stores invite-search request values.
+type SearchInviteUsersInput struct {
+	ViewerUserID string
+	Query        string
+	Limit        int
+}
+
 // CreateParticipantInput stores participant create form values.
 type CreateParticipantInput struct {
 	Name           string

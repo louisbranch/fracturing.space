@@ -31,6 +31,15 @@ func (service) HealthBody() string {
 	return "ok"
 }
 
+// CheckUsernameAvailability returns advisory live validation state for signup.
+func (s service) CheckUsernameAvailability(ctx context.Context, username string) (UsernameAvailability, error) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return UsernameAvailability{State: UsernameAvailabilityStateInvalid}, nil
+	}
+	return s.auth.CheckUsernameAvailability(ctx, username)
+}
+
 // PasskeyLoginStart normalizes the username before asking auth to begin login.
 func (s service) PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error) {
 	resolvedUsername, err := requireUsername(username)
