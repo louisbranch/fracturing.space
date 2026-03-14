@@ -14,6 +14,17 @@
 // content dependencies instead of teaching core storage bundles as the default
 // extension pattern.
 //
+// Transport entrypoints are intentionally split by contribution area:
+//   - deterministic mechanics/read endpoints (`service.go`, `workflow_outcome_service.go`)
+//   - session gameplay workflow handlers (`workflow_session_service.go`, `session_*flow.go`)
+//   - state mutation applications (`*_application.go`, `actions_*.go`)
+//   - content/catalog reads (`content_*`, `asset_service.go`)
+//   - package-local write/runtime/store seams (`domain_write_helper.go`, `stores.go`)
+//
+// The package is intentionally isolated from `api/grpc/game`; shared transport
+// helpers must stay in common internal packages, not by reaching back through
+// the root game transport surface.
+//
 // This package implements systems.daggerheart.v1.DaggerheartService from
 // api/proto/systems/daggerheart/v1/service.proto.
 package daggerheart

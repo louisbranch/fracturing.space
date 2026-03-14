@@ -209,6 +209,74 @@ func (s *Store) ListActiveScenes(ctx context.Context, campaignID string) ([]stor
 	return result, nil
 }
 
+// ListVisibleActiveScenesForCharacters returns active session scenes visible to one of the characters.
+func (s *Store) ListVisibleActiveScenesForCharacters(ctx context.Context, campaignID, sessionID string, characterIDs []string) ([]storage.SceneRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(sessionID) == "" {
+		return nil, fmt.Errorf("session id is required")
+	}
+
+	visibleCharacterIDs := make([]string, 0, len(characterIDs))
+	for _, characterID := range characterIDs {
+		characterID = strings.TrimSpace(characterID)
+		if characterID == "" {
+			continue
+		}
+		visibleCharacterIDs = append(visibleCharacterIDs, characterID)
+	}
+	if len(visibleCharacterIDs) == 0 {
+		return []storage.SceneRecord{}, nil
+	}
+
+	args := make([]any, 0, len(visibleCharacterIDs)+2)
+	args = append(args, campaignID, sessionID)
+	placeholders := make([]string, 0, len(visibleCharacterIDs))
+	for _, characterID := range visibleCharacterIDs {
+		placeholders = append(placeholders, "?")
+		args = append(args, characterID)
+	}
+
+	rows, err := s.projectionQueryable().QueryContext(ctx,
+		fmt.Sprintf(
+			`SELECT DISTINCT s.campaign_id, s.scene_id, s.session_id, s.name, s.description, s.active, s.created_at, s.updated_at, s.ended_at
+			 FROM scenes s
+			 JOIN scene_characters sc
+			   ON sc.campaign_id = s.campaign_id
+			  AND sc.scene_id = s.scene_id
+			 WHERE s.campaign_id = ? AND s.session_id = ? AND s.active = 1
+			   AND sc.character_id IN (%s)
+			 ORDER BY s.scene_id ASC`,
+			strings.Join(placeholders, ","),
+		),
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list visible active scenes: %w", err)
+	}
+	defer rows.Close()
+
+	var result []storage.SceneRecord
+	for rows.Next() {
+		rec, err := scanSceneRows(rows)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, rec)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list visible active scenes rows: %w", err)
+	}
+	return result, nil
+}
+
 // Scene character methods
 
 // PutSceneCharacter adds a character to a scene.

@@ -9,6 +9,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -2354,17 +2355,17 @@ func TestPatchCharacterProfile_RejectsCreationWorkflowFields(t *testing.T) {
 
 func TestDaggerheartExperiencesToProto(t *testing.T) {
 	// Nil/empty input
-	result := daggerheartExperiencesToProto(nil)
+	result := charactertransport.DaggerheartExperiencesToProto(nil)
 	if result != nil {
 		t.Fatalf("expected nil for nil input, got %v", result)
 	}
-	result = daggerheartExperiencesToProto([]storage.DaggerheartExperience{})
+	result = charactertransport.DaggerheartExperiencesToProto([]storage.DaggerheartExperience{})
 	if result != nil {
 		t.Fatalf("expected nil for empty input, got %v", result)
 	}
 
 	// Normal conversion
-	result = daggerheartExperiencesToProto([]storage.DaggerheartExperience{
+	result = charactertransport.DaggerheartExperiencesToProto([]storage.DaggerheartExperience{
 		{Name: "Stealth", Modifier: 3},
 		{Name: "Insight", Modifier: -1},
 	})

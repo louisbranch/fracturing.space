@@ -4,10 +4,8 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -22,37 +20,22 @@ func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv
 	if err != nil {
 		return nil, err
 	}
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+
+	page, err := newParticipantApplication(s).ListParticipants(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
 	if err != nil {
 		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
-		return nil, err
-	}
-
-	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
-		Default: defaultListParticipantsPageSize,
-		Max:     maxListParticipantsPageSize,
-	})
-
-	page, err := s.stores.Participant.ListParticipants(ctx, campaignID, pageSize, in.GetPageToken())
-	if err != nil {
-		return nil, grpcerror.Internal("list participants", err)
 	}
 
 	response := &campaignv1.ListParticipantsResponse{
-		NextPageToken: page.NextPageToken,
+		NextPageToken: page.nextPageToken,
 	}
-	if len(page.Participants) == 0 {
+	if len(page.participants) == 0 {
 		return response, nil
 	}
 
-	response.Participants = make([]*campaignv1.Participant, 0, len(page.Participants))
-	for _, p := range page.Participants {
-		response.Participants = append(response.Participants, participantToProto(p))
+	response.Participants = make([]*campaignv1.Participant, 0, len(page.participants))
+	for _, p := range page.participants {
+		response.Participants = append(response.Participants, participanttransport.ParticipantToProto(p))
 	}
 
 	return response, nil
@@ -74,23 +57,12 @@ func (s *ParticipantService) GetParticipant(ctx context.Context, in *campaignv1.
 		return nil, err
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
-		return nil, err
-	}
-
-	p, err := s.stores.Participant.GetParticipant(ctx, campaignID, participantID)
+	p, err := newParticipantApplication(s).GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
 		return nil, err
 	}
 
 	return &campaignv1.GetParticipantResponse{
-		Participant: participantToProto(p),
+		Participant: participanttransport.ParticipantToProto(p),
 	}, nil
 }

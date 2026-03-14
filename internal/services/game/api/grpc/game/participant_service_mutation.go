@@ -4,6 +4,7 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -25,7 +26,7 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	return &campaignv1.CreateParticipantResponse{Participant: participantToProto(created)}, nil
+	return &campaignv1.CreateParticipantResponse{Participant: participanttransport.ParticipantToProto(created)}, nil
 }
 
 // UpdateParticipant updates a participant.
@@ -44,7 +45,7 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	return &campaignv1.UpdateParticipantResponse{Participant: participantToProto(updated)}, nil
+	return &campaignv1.UpdateParticipantResponse{Participant: participanttransport.ParticipantToProto(updated)}, nil
 }
 
 // DeleteParticipant deletes a participant.
@@ -63,5 +64,5 @@ func (s *ParticipantService) DeleteParticipant(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	return &campaignv1.DeleteParticipantResponse{Participant: participantToProto(current)}, nil
+	return &campaignv1.DeleteParticipantResponse{Participant: participanttransport.ParticipantToProto(current)}, nil
 }

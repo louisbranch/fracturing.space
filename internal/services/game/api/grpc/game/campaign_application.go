@@ -14,7 +14,7 @@ import (
 // campaignApplication coordinates campaign transport use-cases across focused
 // method files (creation, mutation, status transitions, and AI binding).
 type campaignApplication struct {
-	auth        Stores
+	auth        policyDependencies
 	stores      campaignApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -39,7 +39,7 @@ type campaignCommandExecution struct {
 
 func newCampaignApplication(service *CampaignService) campaignApplication {
 	app := campaignApplication{
-		auth: service.stores,
+		auth: newPolicyDependencies(service.stores),
 		stores: campaignApplicationStores{
 			Campaign:    service.stores.Campaign,
 			Participant: service.stores.Participant,

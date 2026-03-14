@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -54,7 +55,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		fields["name"] = trimmed
 	}
 	if in.GetKind() != campaignv1.CharacterKind_CHARACTER_KIND_UNSPECIFIED {
-		kind := characterKindFromProto(in.GetKind())
+		kind := charactertransport.KindFromProto(in.GetKind())
 		if kind == character.KindUnspecified {
 			return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "character kind is invalid")
 		}
@@ -111,12 +112,12 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 
 	var policyActor storage.ParticipantRecord
 	if transferOwnershipRequested {
-		policyActor, err = requirePolicyActor(ctx, c.auth, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
+		policyActor, err = requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
 		if err != nil {
 			return storage.CharacterRecord{}, err
 		}
 	} else {
-		policyActor, err = requireCharacterMutationPolicy(
+		policyActor, err = requireCharacterMutationPolicyWithDependencies(
 			ctx,
 			c.auth,
 			campaignRecord,

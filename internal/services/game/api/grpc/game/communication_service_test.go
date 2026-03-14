@@ -25,6 +25,7 @@ func TestGetCommunicationContextForPlayerScopesSceneStreamsToOwnedCharacters(t *
 	sessionStore := newFakeSessionStore()
 	sceneStore := newFakeCommunicationSceneStore()
 	sceneCharacterStore := newFakeCommunicationSceneCharacterStore()
+	sceneStore.sceneCharacters = sceneCharacterStore.byScene
 	sessionGateStore := newFakeSessionGateStore()
 	sessionSpotlightStore := newFakeSessionSpotlightStore()
 
@@ -195,6 +196,24 @@ func TestGetCommunicationContextForPlayerScopesSceneStreamsToOwnedCharacters(t *
 	if context.GetPersonas()[1].GetCharacterId() != "char-1" {
 		t.Fatalf("character persona id = %q, want %q", context.GetPersonas()[1].GetCharacterId(), "char-1")
 	}
+	if characterStore.listByOwnerCalls != 1 {
+		t.Fatalf("list by owner calls = %d, want 1", characterStore.listByOwnerCalls)
+	}
+	if characterStore.listCalls != 0 {
+		t.Fatalf("list calls = %d, want 0", characterStore.listCalls)
+	}
+	if characterStore.lastOwnerCampaignID != "camp-1" || characterStore.lastOwnerID != "part-player" {
+		t.Fatalf("owner lookup = (%q,%q), want (%q,%q)", characterStore.lastOwnerCampaignID, characterStore.lastOwnerID, "camp-1", "part-player")
+	}
+	if sceneStore.listVisibleCalls != 1 {
+		t.Fatalf("list visible scene calls = %d, want 1", sceneStore.listVisibleCalls)
+	}
+	if sceneStore.listActiveCalls != 0 {
+		t.Fatalf("list active scene calls = %d, want 0", sceneStore.listActiveCalls)
+	}
+	if sceneCharacterStore.listCalls != 0 {
+		t.Fatalf("scene character list calls = %d, want 0", sceneCharacterStore.listCalls)
+	}
 }
 
 func TestGetCommunicationContextForGMIncludesAllActiveSceneStreams(t *testing.T) {
@@ -205,6 +224,7 @@ func TestGetCommunicationContextForGMIncludesAllActiveSceneStreams(t *testing.T)
 	sessionStore := newFakeSessionStore()
 	sceneStore := newFakeCommunicationSceneStore()
 	sceneCharacterStore := newFakeCommunicationSceneCharacterStore()
+	sceneStore.sceneCharacters = sceneCharacterStore.byScene
 	sessionGateStore := newFakeSessionGateStore()
 	sessionSpotlightStore := newFakeSessionSpotlightStore()
 
@@ -287,6 +307,15 @@ func TestGetCommunicationContextForGMIncludesAllActiveSceneStreams(t *testing.T)
 	if len(context.GetPersonas()) != 1 {
 		t.Fatalf("persona count = %d, want 1", len(context.GetPersonas()))
 	}
+	if sceneStore.listActiveCalls != 1 {
+		t.Fatalf("list active scene calls = %d, want 1", sceneStore.listActiveCalls)
+	}
+	if sceneStore.listVisibleCalls != 0 {
+		t.Fatalf("list visible scene calls = %d, want 0", sceneStore.listVisibleCalls)
+	}
+	if sceneCharacterStore.listCalls != 0 {
+		t.Fatalf("scene character list calls = %d, want 0", sceneCharacterStore.listCalls)
+	}
 }
 
 func TestGetCommunicationContextRequiresParticipantIdentity(t *testing.T) {
@@ -320,11 +349,20 @@ func TestGetCommunicationContextRequiresParticipantIdentity(t *testing.T) {
 }
 
 type fakeCommunicationSceneStore struct {
-	scenes map[string]storage.SceneRecord
+	scenes               map[string]storage.SceneRecord
+	sceneCharacters      map[string][]storage.SceneCharacterRecord
+	listActiveCalls      int
+	listVisibleCalls     int
+	lastVisibleCampaign  string
+	lastVisibleSession   string
+	lastVisibleCharacter []string
 }
 
 func newFakeCommunicationSceneStore() *fakeCommunicationSceneStore {
-	return &fakeCommunicationSceneStore{scenes: make(map[string]storage.SceneRecord)}
+	return &fakeCommunicationSceneStore{
+		scenes:          make(map[string]storage.SceneRecord),
+		sceneCharacters: make(map[string][]storage.SceneCharacterRecord),
+	}
 }
 
 func (s *fakeCommunicationSceneStore) PutScene(_ context.Context, record storage.SceneRecord) error {
@@ -363,6 +401,7 @@ func (s *fakeCommunicationSceneStore) ListScenes(_ context.Context, campaignID, 
 }
 
 func (s *fakeCommunicationSceneStore) ListActiveScenes(_ context.Context, campaignID string) ([]storage.SceneRecord, error) {
+	s.listActiveCalls++
 	scenes := make([]storage.SceneRecord, 0)
 	for _, record := range s.scenes {
 		if record.CampaignID == campaignID && record.Active {
@@ -372,8 +411,36 @@ func (s *fakeCommunicationSceneStore) ListActiveScenes(_ context.Context, campai
 	return scenes, nil
 }
 
+func (s *fakeCommunicationSceneStore) ListVisibleActiveScenesForCharacters(_ context.Context, campaignID, sessionID string, characterIDs []string) ([]storage.SceneRecord, error) {
+	s.listVisibleCalls++
+	s.lastVisibleCampaign = campaignID
+	s.lastVisibleSession = sessionID
+	s.lastVisibleCharacter = append([]string(nil), characterIDs...)
+
+	visibleIDs := make(map[string]struct{}, len(characterIDs))
+	for _, characterID := range characterIDs {
+		visibleIDs[characterID] = struct{}{}
+	}
+
+	scenes := make([]storage.SceneRecord, 0)
+	for _, record := range s.scenes {
+		if record.CampaignID != campaignID || record.SessionID != sessionID || !record.Active {
+			continue
+		}
+		sceneCharacters := s.sceneCharacters[campaignID+":"+record.SceneID]
+		for _, sceneCharacter := range sceneCharacters {
+			if _, ok := visibleIDs[sceneCharacter.CharacterID]; ok {
+				scenes = append(scenes, record)
+				break
+			}
+		}
+	}
+	return scenes, nil
+}
+
 type fakeCommunicationSceneCharacterStore struct {
-	byScene map[string][]storage.SceneCharacterRecord
+	byScene   map[string][]storage.SceneCharacterRecord
+	listCalls int
 }
 
 func newFakeCommunicationSceneCharacterStore() *fakeCommunicationSceneCharacterStore {
@@ -406,5 +473,6 @@ func (s *fakeCommunicationSceneCharacterStore) DeleteSceneCharacter(_ context.Co
 }
 
 func (s *fakeCommunicationSceneCharacterStore) ListSceneCharacters(_ context.Context, campaignID, sceneID string) ([]storage.SceneCharacterRecord, error) {
+	s.listCalls++
 	return append([]storage.SceneCharacterRecord(nil), s.byScene[campaignID+":"+sceneID]...), nil
 }

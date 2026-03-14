@@ -347,11 +347,16 @@ func (s *fakeParticipantStore) CountParticipants(_ context.Context, campaignID s
 
 // fakeCharacterStore is a test double for storage.CharacterStore.
 type fakeCharacterStore struct {
-	characters map[string]map[string]storage.CharacterRecord // campaignID -> characterID -> Character
-	putErr     error
-	getErr     error
-	deleteErr  error
-	listErr    error
+	characters          map[string]map[string]storage.CharacterRecord // campaignID -> characterID -> Character
+	putErr              error
+	getErr              error
+	deleteErr           error
+	listErr             error
+	listCalls           int
+	listByOwnerCalls    int
+	lastListCampaignID  string
+	lastOwnerCampaignID string
+	lastOwnerID         string
 }
 
 func newFakeCharacterStore() *fakeCharacterStore {
@@ -401,10 +406,33 @@ func (s *fakeCharacterStore) DeleteCharacter(_ context.Context, campaignID, char
 	return nil
 }
 
+func (s *fakeCharacterStore) ListCharactersByOwnerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	if s.listErr != nil {
+		return nil, s.listErr
+	}
+	s.listByOwnerCalls++
+	s.lastOwnerCampaignID = campaignID
+	s.lastOwnerID = participantID
+
+	byID, ok := s.characters[campaignID]
+	if !ok {
+		return nil, nil
+	}
+	result := make([]storage.CharacterRecord, 0, len(byID))
+	for _, c := range byID {
+		if c.OwnerParticipantID == participantID {
+			result = append(result, c)
+		}
+	}
+	return result, nil
+}
+
 func (s *fakeCharacterStore) ListCharacters(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
 	if s.listErr != nil {
 		return storage.CharacterPage{}, s.listErr
 	}
+	s.listCalls++
+	s.lastListCampaignID = campaignID
 	byID, ok := s.characters[campaignID]
 	if !ok {
 		return storage.CharacterPage{}, nil

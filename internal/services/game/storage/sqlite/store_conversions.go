@@ -335,31 +335,6 @@ func dbSessionToDomain(row db.Session) (storage.SessionRecord, error) {
 	return sess, nil
 }
 
-func dbSessionGateToStorage(row db.SessionGate) storage.SessionGate {
-	gate := storage.SessionGate{
-		CampaignID:         row.CampaignID,
-		SessionID:          row.SessionID,
-		GateID:             row.GateID,
-		GateType:           row.GateType,
-		Status:             session.GateStatus(strings.ToLower(strings.TrimSpace(row.Status))),
-		Reason:             row.Reason,
-		CreatedAt:          fromMillis(row.CreatedAt),
-		CreatedByActorType: row.CreatedByActorType,
-		CreatedByActorID:   row.CreatedByActorID,
-		MetadataJSON:       row.MetadataJson,
-		ProgressJSON:       row.ProgressJson,
-		ResolutionJSON:     row.ResolutionJson,
-	}
-	gate.ResolvedAt = fromNullMillis(row.ResolvedAt)
-	if row.ResolvedByActorType.Valid {
-		gate.ResolvedByActorType = row.ResolvedByActorType.String
-	}
-	if row.ResolvedByActorID.Valid {
-		gate.ResolvedByActorID = row.ResolvedByActorID.String
-	}
-	return gate
-}
-
 func dbSessionSpotlightToStorage(row db.SessionSpotlight) storage.SessionSpotlight {
 	return storage.SessionSpotlight{
 		CampaignID:         row.CampaignID,

@@ -26,7 +26,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
+	policyActor, err := requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}

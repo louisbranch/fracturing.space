@@ -26,6 +26,11 @@ SELECT * FROM characters
 WHERE campaign_id = ?
 ORDER BY id;
 
+-- name: ListCharactersByOwnerParticipant :many
+SELECT * FROM characters
+WHERE campaign_id = ? AND owner_participant_id = ?
+ORDER BY id;
+
 -- name: ListCharactersByCampaignPaged :many
 SELECT * FROM characters
 WHERE campaign_id = ? AND id > ?

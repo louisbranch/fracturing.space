@@ -306,6 +306,10 @@ func (s *readinessCharacterPagingStore) CountCharacters(context.Context, string)
 	return 0, nil
 }
 
+func (s *readinessCharacterPagingStore) ListCharactersByOwnerParticipant(context.Context, string, string) ([]storage.CharacterRecord, error) {
+	return nil, nil
+}
+
 func (s *readinessCharacterPagingStore) ListCharacters(_ context.Context, _ string, _ int, pageToken string) (storage.CharacterPage, error) {
 	if s.errByPage != nil {
 		if err := s.errByPage[pageToken]; err != nil {

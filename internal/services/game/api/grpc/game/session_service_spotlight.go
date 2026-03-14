@@ -4,8 +4,8 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/sessiontransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -15,36 +15,13 @@ func (s *SessionService) GetSessionSpotlight(ctx context.Context, in *campaignv1
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get session spotlight request is required")
 	}
-	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
-	if err != nil {
-		return nil, err
-	}
-	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
-	if err != nil {
-		return nil, err
-	}
-
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
-		return nil, err
-	}
-	if _, err := s.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
-		return nil, err
-	}
-
-	spotlight, err := s.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
+	spotlight, err := newSessionApplication(s).GetSessionSpotlight(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
 	return &campaignv1.GetSessionSpotlightResponse{
-		Spotlight: sessionSpotlightToProto(spotlight),
+		Spotlight: sessiontransport.SpotlightToProto(spotlight),
 	}, nil
 }
 
@@ -63,7 +40,7 @@ func (s *SessionService) SetSessionSpotlight(ctx context.Context, in *campaignv1
 		return nil, err
 	}
 
-	return &campaignv1.SetSessionSpotlightResponse{Spotlight: sessionSpotlightToProto(spotlight)}, nil
+	return &campaignv1.SetSessionSpotlightResponse{Spotlight: sessiontransport.SpotlightToProto(spotlight)}, nil
 }
 
 // ClearSessionSpotlight clears the spotlight for a session.
@@ -81,5 +58,5 @@ func (s *SessionService) ClearSessionSpotlight(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	return &campaignv1.ClearSessionSpotlightResponse{Spotlight: sessionSpotlightToProto(spotlight)}, nil
+	return &campaignv1.ClearSessionSpotlightResponse{Spotlight: sessiontransport.SpotlightToProto(spotlight)}, nil
 }

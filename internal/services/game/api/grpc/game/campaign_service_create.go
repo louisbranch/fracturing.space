@@ -4,6 +4,8 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,7 +22,7 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 	}
 
 	return &campaignv1.CreateCampaignResponse{
-		Campaign:         campaignToProto(created),
-		OwnerParticipant: participantToProto(owner),
+		Campaign:         campaigntransport.CampaignToProto(created),
+		OwnerParticipant: participanttransport.ParticipantToProto(owner),
 	}, nil
 }

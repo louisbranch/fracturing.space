@@ -79,6 +79,31 @@ func TestDaggerheartArchScanIncludesNonLegacyFiles(t *testing.T) {
 	}
 }
 
+func TestDaggerheartPackageDoesNotImportRootGameTransport(t *testing.T) {
+	dir := handlerDir(t)
+	files, err := testkit.ScanHandlerDir(dir)
+	if err != nil {
+		t.Fatalf("load architecture scan files: %v", err)
+	}
+
+	var violations []string
+	for _, filename := range files {
+		path := filepath.Join(dir, filename)
+		imports, err := importPaths(path)
+		if err != nil {
+			t.Fatalf("scan imports in %s: %v", filename, err)
+		}
+		for _, importPath := range imports {
+			if importPath == "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game" {
+				violations = append(violations, filename)
+				break
+			}
+		}
+	}
+
+	assertNoViolations(t, "Daggerheart transport imports the root game transport package", violations)
+}
+
 // handlerDir resolves the directory containing this test file at runtime.
 func handlerDir(t *testing.T) string {
 	t.Helper()
@@ -169,6 +194,23 @@ func containsFile(files []string, target string) bool {
 		}
 	}
 	return false
+}
+
+func importPaths(path string) ([]string, error) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, path, nil, parser.ImportsOnly)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", path, err)
+	}
+
+	imports := make([]string, 0, len(file.Imports))
+	for _, spec := range file.Imports {
+		importPath := strings.Trim(spec.Path.Value, "\"")
+		if importPath != "" {
+			imports = append(imports, importPath)
+		}
+	}
+	return imports, nil
 }
 
 func assertNoViolations(t *testing.T, message string, violations []string) {

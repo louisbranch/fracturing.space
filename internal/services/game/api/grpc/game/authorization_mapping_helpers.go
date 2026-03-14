@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -12,7 +13,7 @@ func canResponse(allowed bool, reasonCode string, actor storage.ParticipantRecor
 	return &campaignv1.CanResponse{
 		Allowed:             allowed,
 		ReasonCode:          strings.TrimSpace(reasonCode),
-		ActorCampaignAccess: campaignAccessToProto(actor.CampaignAccess),
+		ActorCampaignAccess: participanttransport.CampaignAccessToProto(actor.CampaignAccess),
 		ActorParticipantId:  strings.TrimSpace(actor.ID),
 	}
 }

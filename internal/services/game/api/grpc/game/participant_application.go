@@ -13,7 +13,7 @@ import (
 // participantApplication coordinates participant transport use-cases across
 // focused method files (create, update, delete, and policy helpers).
 type participantApplication struct {
-	auth        Stores
+	auth        policyDependencies
 	stores      participantApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -31,7 +31,7 @@ type participantApplicationStores struct {
 
 func newParticipantApplication(service *ParticipantService) participantApplication {
 	app := participantApplication{
-		auth: service.stores,
+		auth: newPolicyDependencies(service.stores),
 		stores: participantApplicationStores{
 			Campaign:    service.stores.Campaign,
 			Participant: service.stores.Participant,

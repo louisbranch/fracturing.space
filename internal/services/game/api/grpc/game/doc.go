@@ -40,23 +40,26 @@
 //   - workflow flow (`character_workflow.go`)
 //   - workflow RPC handlers (`character_workflow_service.go`)
 //   - profile patch flow (`character_profile_patch.go`)
+//   - shared read/sheet flow (`character_read_application.go`)
 //
 // Character service RPC handlers are split by transport intent:
 //   - service constructors/coordinator (`character_service.go`)
 //   - mutation handlers (`character_service_mutation.go`)
 //   - read/sheet handlers (`character_service_read.go`)
-//   - Daggerheart profile/state proto mappers (`character_service_helpers.go`)
+//   - character-owned protobuf/system mapping boundary (`charactertransport/`)
 //
 // Campaign transport orchestration follows the same split-by-use-case pattern:
 //   - create flow (`campaign_create_application.go`)
 //   - mutation flow (`campaign_mutation_application.go`)
 //   - status transitions (`campaign_status_application.go`)
 //   - AI binding flow (`campaign_ai_binding_application.go`)
+//   - shared read/list flow (`campaign_read_application.go`)
+//   - campaign-owned protobuf mapping boundary (`campaigntransport/`)
 //
 // Campaign service RPC handlers are split by transport intent:
 //   - service constructors/coordinator (`campaign_service.go`)
 //   - create handler (`campaign_service_create.go`)
-//   - list handler + pagination helpers (`campaign_service_list.go`)
+//   - list handler (`campaign_service_list.go`)
 //   - read handler (`campaign_service_read.go`)
 //   - mutation handlers (`campaign_service_mutation.go`)
 //   - shared campaign service helpers (`campaign_service_helpers.go`)
@@ -75,6 +78,8 @@
 //   - application coordinator (`fork_application.go`)
 //   - fork command flow + event replay (`fork_application_fork.go`)
 //   - fork-point resolution (`fork_application_fork_point.go`)
+//   - replay/copy helper seam (`fork_event_replay.go`)
+//   - source-campaign load + lineage helpers (`fork_source_state.go`, `fork_read_application.go`)
 //
 // Fork service RPC handlers and shared helpers are split by intent:
 //   - service constructors/coordinator (`fork_service.go`)
@@ -88,11 +93,13 @@
 //   - delete flow (`participant_delete_application.go`)
 //   - mutation helpers (`participant_mutation_helpers.go`)
 //   - policy helpers (`participant_policy_helpers.go`)
+//   - shared read/list flow (`participant_read_application.go`)
 //
 // Participant service RPC handlers are split by transport intent:
 //   - service constructors/coordinator (`participant_service.go`)
 //   - mutation handlers (`participant_service_mutation.go`)
 //   - read/list handlers (`participant_service_read.go`)
+//   - participant-owned protobuf mapping boundary (`participanttransport/`)
 //
 // Scene transport orchestration is partitioned by intent:
 //   - lifecycle flow (`scene_lifecycle_application.go`)
@@ -112,7 +119,13 @@
 //   - lifecycle flow (`session_lifecycle_application.go`)
 //   - gate flow (`session_gate_application.go`)
 //   - spotlight flow (`session_spotlight_application.go`)
+//   - shared read/query flow (`session_read_application.go`)
+//   - shared lifecycle/spotlight command execution seam (`session_command_execution.go`)
 //   - shared gate command execution seam (`session_gate_command_execution.go`)
+//   - focused policy dependency bundle for session-owned authz checks/telemetry
+//   - typed session-gate read model surface; SQLite persists structured gate
+//     metadata/options/responses and only uses JSON for optional opaque extras
+//   - session-owned protobuf mapping boundary (`sessiontransport/`)
 //
 // Session service RPC handlers are split by transport intent:
 //   - service constructors/coordinator (`session_service.go`)
@@ -123,11 +136,16 @@
 // Communication transport keeps chat/web-facing read assembly separate from the
 // session aggregate while routing control writes through session-owned gate
 // events:
-//   - context read assembly (`communication_service.go`)
-//   - control handlers (`communication_service_control.go`)
-//   - shared session-gate command execution seam (`session_gate_command_execution.go`)
+//   - gRPC handlers (`communication_service.go`, `communication_service_control.go`)
+//   - application/use-case boundary (`communication_application*.go`)
+//   - shared session command seams (`session_command_execution.go`, `session_gate_command_execution.go`)
+//   - focused policy dependency bundle instead of carrying the full `Stores` auth surface
+//   - typed session-gate read state from storage instead of transport-local JSON decoding
+//   - session-owned read and mapping boundaries via `session_read_application.go`
+//     and `sessiontransport/`
 //
 // Snapshot transport orchestration isolates mutation paths:
+//   - read/snapshot assembly flow (`snapshot_read_application.go`)
 //   - character state patch flow (`snapshot_state_patch_application.go`)
 //   - character state patch validation/payload helpers (`snapshot_state_patch_helpers.go`)
 //   - character state/condition command emission helpers (`snapshot_state_patch_commands.go`)
@@ -135,12 +153,14 @@
 //   - stress->condition helper flow (`snapshot_condition_helpers.go`)
 //
 // Event stream transport orchestration is split by read/stream concerns:
+//   - application coordinator for append/read/timeline flows (`event_application.go`, `event_read_application.go`)
 //   - append write flow (`event_append_service.go`)
 //   - list pagination flow (`event_list_service.go`)
 //   - subscribe realtime flow (`event_subscribe_service.go`)
 //   - event/update mapping helpers (`event_mapping_helpers.go`)
 //
 // Authorization transport orchestration is partitioned by policy intent:
+//   - shared application coordinator (`authorization_application.go`)
 //   - single-check policy flow (`authorization_can_service.go`)
 //   - batch-check fanout flow (`authorization_batch_service.go`)
 //   - action/resource mapping helpers (`authorization_mapping_helpers.go`)

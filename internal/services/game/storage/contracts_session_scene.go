@@ -64,9 +64,9 @@ type SessionGate struct {
 	ResolvedAt          *time.Time
 	ResolvedByActorType string
 	ResolvedByActorID   string
-	MetadataJSON        []byte
-	ProgressJSON        []byte
-	ResolutionJSON      []byte
+	Metadata            map[string]any
+	Progress            *session.GateProgress
+	Resolution          map[string]any
 }
 
 // SessionGateStore persists gate state for the same lifecycle rules the game engine enforces.
@@ -182,6 +182,9 @@ type SceneReader interface {
 	ListScenes(ctx context.Context, campaignID, sessionID string, pageSize int, pageToken string) (ScenePage, error)
 	// ListActiveScenes returns all active scenes for a campaign.
 	ListActiveScenes(ctx context.Context, campaignID string) ([]SceneRecord, error)
+	// ListVisibleActiveScenesForCharacters returns the active session scenes that
+	// contain at least one of the provided character ids.
+	ListVisibleActiveScenesForCharacters(ctx context.Context, campaignID, sessionID string, characterIDs []string) ([]SceneRecord, error)
 }
 
 // SceneStore owns scene lifecycle read state. Projection handlers use

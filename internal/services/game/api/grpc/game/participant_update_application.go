@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -83,7 +84,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		fields["user_id"] = trimmed
 	}
 	if in.GetRole() != campaignv1.ParticipantRole_ROLE_UNSPECIFIED {
-		role := participantRoleFromProto(in.GetRole())
+		role := participanttransport.RoleFromProto(in.GetRole())
 		if role == participant.RoleUnspecified {
 			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "role is invalid")
 		}
@@ -94,7 +95,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		fields["role"] = in.GetRole().String()
 	}
 	if in.GetController() != campaignv1.Controller_CONTROLLER_UNSPECIFIED {
-		controller := controllerFromProto(in.GetController())
+		controller := participanttransport.ControllerFromProto(in.GetController())
 		if controller == participant.ControllerUnspecified {
 			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "controller is invalid")
 		}
@@ -105,7 +106,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		fields["controller"] = in.GetController().String()
 	}
 	if in.GetCampaignAccess() != campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED {
-		access := campaignAccessFromProto(in.GetCampaignAccess())
+		access := participanttransport.CampaignAccessFromProto(in.GetCampaignAccess())
 		if access == participant.CampaignAccessUnspecified {
 			return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "campaign_access is invalid")
 		}
@@ -237,11 +238,11 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 
 func resolveParticipantUpdateActor(
 	ctx context.Context,
-	stores Stores,
+	auth policyDependencies,
 	campaignRecord storage.CampaignRecord,
 	current storage.ParticipantRecord,
 ) (storage.ParticipantRecord, bool, error) {
-	actor, _, err := authorizePolicyActorWithParticipantStore(ctx, stores.Participant, domainauthz.CapabilityReadCampaign, campaignRecord)
+	actor, _, err := authorizePolicyActorWithParticipantStore(ctx, auth.Participant, domainauthz.CapabilityReadCampaign, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, false, err
 	}

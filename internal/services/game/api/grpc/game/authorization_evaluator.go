@@ -19,18 +19,22 @@ type authorizationEvaluatorStores struct {
 	Audit       storage.AuditEventStore
 }
 
+func newAuthorizationEvaluatorDependencies(stores Stores) authorizationEvaluatorStores {
+	return authorizationEvaluatorStores{
+		Campaign:    stores.Campaign,
+		Participant: stores.Participant,
+		Character:   stores.Character,
+		Audit:       stores.Audit,
+	}
+}
+
 type authorizationEvaluator struct {
 	stores authorizationEvaluatorStores
 }
 
-func newAuthorizationEvaluator(stores Stores) authorizationEvaluator {
+func newAuthorizationEvaluator(stores authorizationEvaluatorStores) authorizationEvaluator {
 	return authorizationEvaluator{
-		stores: authorizationEvaluatorStores{
-			Campaign:    stores.Campaign,
-			Participant: stores.Participant,
-			Character:   stores.Character,
-			Audit:       stores.Audit,
-		},
+		stores: stores,
 	}
 }
 

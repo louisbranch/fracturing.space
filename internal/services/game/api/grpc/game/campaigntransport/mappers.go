@@ -1,6 +1,8 @@
-package game
+package campaigntransport
 
 import (
+	"time"
+
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
@@ -10,17 +12,18 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Campaign proto conversion helpers.
-func campaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
+// CampaignToProto converts a campaign projection record to its protobuf read
+// model.
+func CampaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 	return &campaignv1.Campaign{
 		Id:               c.ID,
 		Name:             c.Name,
 		Locale:           platformi18n.NormalizeLocale(c.Locale),
-		System:           gameSystemToProto(c.System),
-		Status:           campaignStatusToProto(c.Status),
-		GmMode:           gmModeToProto(c.GmMode),
-		Intent:           campaignIntentToProto(c.Intent),
-		AccessPolicy:     campaignAccessPolicyToProto(c.AccessPolicy),
+		System:           GameSystemToProto(c.System),
+		Status:           CampaignStatusToProto(c.Status),
+		GmMode:           GMModeToProto(c.GmMode),
+		Intent:           CampaignIntentToProto(c.Intent),
+		AccessPolicy:     CampaignAccessPolicyToProto(c.AccessPolicy),
 		ParticipantCount: int32(c.ParticipantCount),
 		CharacterCount:   int32(c.CharacterCount),
 		ThemePrompt:      c.ThemePrompt,
@@ -34,7 +37,8 @@ func campaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 	}
 }
 
-func campaignStatusToProto(status campaign.Status) campaignv1.CampaignStatus {
+// CampaignStatusToProto converts a campaign status to its protobuf enum.
+func CampaignStatusToProto(status campaign.Status) campaignv1.CampaignStatus {
 	switch status {
 	case campaign.StatusDraft:
 		return campaignv1.CampaignStatus_DRAFT
@@ -49,7 +53,8 @@ func campaignStatusToProto(status campaign.Status) campaignv1.CampaignStatus {
 	}
 }
 
-func gmModeFromProto(mode campaignv1.GmMode) campaign.GmMode {
+// GMModeFromProto converts the protobuf GM mode to the domain value.
+func GMModeFromProto(mode campaignv1.GmMode) campaign.GmMode {
 	switch mode {
 	case campaignv1.GmMode_HUMAN:
 		return campaign.GmModeHuman
@@ -62,7 +67,8 @@ func gmModeFromProto(mode campaignv1.GmMode) campaign.GmMode {
 	}
 }
 
-func gmModeToProto(mode campaign.GmMode) campaignv1.GmMode {
+// GMModeToProto converts the domain GM mode to the protobuf enum.
+func GMModeToProto(mode campaign.GmMode) campaignv1.GmMode {
 	switch mode {
 	case campaign.GmModeHuman:
 		return campaignv1.GmMode_HUMAN
@@ -75,7 +81,8 @@ func gmModeToProto(mode campaign.GmMode) campaignv1.GmMode {
 	}
 }
 
-func campaignIntentFromProto(intent campaignv1.CampaignIntent) campaign.Intent {
+// CampaignIntentFromProto converts the protobuf intent to the domain value.
+func CampaignIntentFromProto(intent campaignv1.CampaignIntent) campaign.Intent {
 	switch intent {
 	case campaignv1.CampaignIntent_STANDARD:
 		return campaign.IntentStandard
@@ -88,7 +95,8 @@ func campaignIntentFromProto(intent campaignv1.CampaignIntent) campaign.Intent {
 	}
 }
 
-func campaignIntentToProto(intent campaign.Intent) campaignv1.CampaignIntent {
+// CampaignIntentToProto converts the domain intent to the protobuf enum.
+func CampaignIntentToProto(intent campaign.Intent) campaignv1.CampaignIntent {
 	switch intent {
 	case campaign.IntentStandard:
 		return campaignv1.CampaignIntent_STANDARD
@@ -101,7 +109,9 @@ func campaignIntentToProto(intent campaign.Intent) campaignv1.CampaignIntent {
 	}
 }
 
-func campaignAccessPolicyFromProto(policy campaignv1.CampaignAccessPolicy) campaign.AccessPolicy {
+// CampaignAccessPolicyFromProto converts the protobuf access policy to the
+// domain value.
+func CampaignAccessPolicyFromProto(policy campaignv1.CampaignAccessPolicy) campaign.AccessPolicy {
 	switch policy {
 	case campaignv1.CampaignAccessPolicy_PRIVATE:
 		return campaign.AccessPolicyPrivate
@@ -114,7 +124,9 @@ func campaignAccessPolicyFromProto(policy campaignv1.CampaignAccessPolicy) campa
 	}
 }
 
-func campaignAccessPolicyToProto(policy campaign.AccessPolicy) campaignv1.CampaignAccessPolicy {
+// CampaignAccessPolicyToProto converts the domain access policy to the protobuf
+// enum.
+func CampaignAccessPolicyToProto(policy campaign.AccessPolicy) campaignv1.CampaignAccessPolicy {
 	switch policy {
 	case campaign.AccessPolicyPrivate:
 		return campaignv1.CampaignAccessPolicy_PRIVATE
@@ -127,7 +139,8 @@ func campaignAccessPolicyToProto(policy campaign.AccessPolicy) campaignv1.Campai
 	}
 }
 
-func gameSystemToProto(system bridge.SystemID) commonv1.GameSystem {
+// GameSystemToProto converts the bridge system id to the common protobuf enum.
+func GameSystemToProto(system bridge.SystemID) commonv1.GameSystem {
 	switch system {
 	case bridge.SystemIDDaggerheart:
 		return commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART
@@ -136,6 +149,20 @@ func gameSystemToProto(system bridge.SystemID) commonv1.GameSystem {
 	}
 }
 
-func gameSystemFromProto(system commonv1.GameSystem) bridge.SystemID {
-	return systemIDFromGameSystemProto(system)
+// GameSystemFromProto converts the common protobuf enum to the bridge system
+// id.
+func GameSystemFromProto(system commonv1.GameSystem) bridge.SystemID {
+	switch system {
+	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
+		return bridge.SystemIDDaggerheart
+	default:
+		return ""
+	}
+}
+
+func timestampOrNil(value *time.Time) *timestamppb.Timestamp {
+	if value == nil {
+		return nil
+	}
+	return timestamppb.New(*value)
 }

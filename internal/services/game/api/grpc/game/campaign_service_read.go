@@ -4,8 +4,8 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,18 +23,12 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 		return nil, err
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	c, err := newCampaignApplication(s).GetCampaign(ctx, campaignID)
 	if err != nil {
-		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
 		return nil, err
 	}
 
 	return &campaignv1.GetCampaignResponse{
-		Campaign: campaignToProto(c),
+		Campaign: campaigntransport.CampaignToProto(c),
 	}, nil
 }

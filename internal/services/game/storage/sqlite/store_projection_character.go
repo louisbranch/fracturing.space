@@ -105,6 +105,40 @@ func (s *Store) GetCharacter(ctx context.Context, campaignID, characterID string
 	return dbCharacterToDomain(row)
 }
 
+// ListCharactersByOwnerParticipant returns all character records owned by one participant.
+func (s *Store) ListCharactersByOwnerParticipant(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(participantID) == "" {
+		return nil, fmt.Errorf("participant id is required")
+	}
+
+	rows, err := s.q.ListCharactersByOwnerParticipant(ctx, db.ListCharactersByOwnerParticipantParams{
+		CampaignID:         campaignID,
+		OwnerParticipantID: participantID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list owned characters: %w", err)
+	}
+
+	characters := make([]storage.CharacterRecord, 0, len(rows))
+	for _, row := range rows {
+		characterRecord, err := dbCharacterToDomain(row)
+		if err != nil {
+			return nil, err
+		}
+		characters = append(characters, characterRecord)
+	}
+	return characters, nil
+}
+
 // ListCharacters returns a page of character records.
 func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
 	if err := ctx.Err(); err != nil {

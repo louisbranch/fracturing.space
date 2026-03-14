@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -50,12 +51,12 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if err := validate.MaxLength(in.GetNotes(), "notes", validate.MaxNotesLen); err != nil {
 		return storage.CharacterRecord{}, err
 	}
-	kind := characterKindFromProto(in.GetKind())
+	kind := charactertransport.KindFromProto(in.GetKind())
 	if kind == character.KindUnspecified {
 		return storage.CharacterRecord{}, apperrors.New(apperrors.CodeCharacterInvalidKind, "character kind is required")
 	}
 	notes := strings.TrimSpace(in.GetNotes())
-	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityMutateCharacters, campaignRecord)
+	policyActor, err := requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityMutateCharacters, campaignRecord)
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}

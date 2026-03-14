@@ -4,10 +4,8 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/sessiontransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -30,7 +28,7 @@ func (s *SessionService) StartSession(ctx context.Context, in *campaignv1.StartS
 	}
 
 	return &campaignv1.StartSessionResponse{
-		Session: sessionToProto(sess),
+		Session: sessiontransport.SessionToProto(sess),
 	}, nil
 }
 
@@ -39,30 +37,9 @@ func (s *SessionService) ListSessions(ctx context.Context, in *campaignv1.ListSe
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list sessions request is required")
 	}
-
-	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	page, err := newSessionApplication(s).ListSessions(ctx, in)
 	if err != nil {
 		return nil, err
-	}
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
-		return nil, err
-	}
-
-	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
-		Default: defaultListSessionsPageSize,
-		Max:     maxListSessionsPageSize,
-	})
-
-	page, err := s.stores.Session.ListSessions(ctx, campaignID, pageSize, in.GetPageToken())
-	if err != nil {
-		return nil, grpcerror.Internal("list sessions", err)
 	}
 
 	response := &campaignv1.ListSessionsResponse{
@@ -74,7 +51,7 @@ func (s *SessionService) ListSessions(ctx context.Context, in *campaignv1.ListSe
 
 	response.Sessions = make([]*campaignv1.Session, 0, len(page.Sessions))
 	for _, sess := range page.Sessions {
-		response.Sessions = append(response.Sessions, sessionToProto(sess))
+		response.Sessions = append(response.Sessions, sessiontransport.SessionToProto(sess))
 	}
 
 	return response, nil
@@ -85,35 +62,13 @@ func (s *SessionService) GetSession(ctx context.Context, in *campaignv1.GetSessi
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get session request is required")
 	}
-
-	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
-	if err != nil {
-		return nil, err
-	}
-
-	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
-	if err != nil {
-		return nil, err
-	}
-
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
-		return nil, err
-	}
-
-	sess, err := s.stores.Session.GetSession(ctx, campaignID, sessionID)
+	sess, err := newSessionApplication(s).GetSession(ctx, in)
 	if err != nil {
 		return nil, err
 	}
 
 	return &campaignv1.GetSessionResponse{
-		Session: sessionToProto(sess),
+		Session: sessiontransport.SessionToProto(sess),
 	}, nil
 }
 
@@ -139,6 +94,6 @@ func (s *SessionService) EndSession(ctx context.Context, in *campaignv1.EndSessi
 	}
 
 	return &campaignv1.EndSessionResponse{
-		Session: sessionToProto(updated),
+		Session: sessiontransport.SessionToProto(updated),
 	}, nil
 }

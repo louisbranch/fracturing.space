@@ -197,6 +197,54 @@ func (q *Queries) ListCharactersByCampaignPagedFirst(ctx context.Context, arg Li
 	return items, nil
 }
 
+const listCharactersByOwnerParticipant = `-- name: ListCharactersByOwnerParticipant :many
+SELECT campaign_id, id, controller_participant_id, name, kind, notes, pronouns, aliases_json, created_at, updated_at, avatar_set_id, avatar_asset_id, owner_participant_id FROM characters
+WHERE campaign_id = ? AND owner_participant_id = ?
+ORDER BY id
+`
+
+type ListCharactersByOwnerParticipantParams struct {
+	CampaignID         string `json:"campaign_id"`
+	OwnerParticipantID string `json:"owner_participant_id"`
+}
+
+func (q *Queries) ListCharactersByOwnerParticipant(ctx context.Context, arg ListCharactersByOwnerParticipantParams) ([]Character, error) {
+	rows, err := q.db.QueryContext(ctx, listCharactersByOwnerParticipant, arg.CampaignID, arg.OwnerParticipantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Character{}
+	for rows.Next() {
+		var i Character
+		if err := rows.Scan(
+			&i.CampaignID,
+			&i.ID,
+			&i.ControllerParticipantID,
+			&i.Name,
+			&i.Kind,
+			&i.Notes,
+			&i.Pronouns,
+			&i.AliasesJson,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.AvatarSetID,
+			&i.AvatarAssetID,
+			&i.OwnerParticipantID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const putCharacter = `-- name: PutCharacter :exec
 INSERT INTO characters (
     campaign_id, id, owner_participant_id, controller_participant_id, name, kind, notes, avatar_set_id, avatar_asset_id, pronouns, aliases_json, created_at, updated_at

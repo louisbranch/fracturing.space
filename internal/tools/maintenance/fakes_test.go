@@ -84,6 +84,7 @@ type fakeProjectionStore struct {
 	get                        func(ctx context.Context, id string) (storage.CampaignRecord, error)
 	put                        func(ctx context.Context, c storage.CampaignRecord) error
 	listCharacters             func(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error)
+	listCharactersByOwner      func(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error)
 	getDaggerheartSnapshot     func(ctx context.Context, campaignID string) (storage.DaggerheartSnapshot, error)
 	putDaggerheartSnapshot     func(ctx context.Context, snap storage.DaggerheartSnapshot) error
 	getDaggerheartCharState    func(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error)
@@ -205,6 +206,13 @@ func (f *fakeProjectionStore) ListCharacters(ctx context.Context, campaignID str
 		return f.listCharacters(ctx, campaignID, pageSize, pageToken)
 	}
 	return storage.CharacterPage{}, fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) ListCharactersByOwnerParticipant(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	if f.listCharactersByOwner != nil {
+		return f.listCharactersByOwner(ctx, campaignID, participantID)
+	}
+	return nil, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) PutDaggerheartCharacterProfile(ctx context.Context, profile storage.DaggerheartCharacterProfile) error {

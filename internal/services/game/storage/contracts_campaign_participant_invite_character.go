@@ -170,6 +170,9 @@ type CharacterReader interface {
 	GetCharacter(ctx context.Context, campaignID, characterID string) (CharacterRecord, error)
 	// CountCharacters returns the number of characters for a campaign.
 	CountCharacters(ctx context.Context, campaignID string) (int, error)
+	// ListCharactersByOwnerParticipant returns all characters owned by one participant
+	// within a campaign.
+	ListCharactersByOwnerParticipant(ctx context.Context, campaignID, participantID string) ([]CharacterRecord, error)
 	// ListCharacters returns a page of character records for a campaign starting after the page token.
 	ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (CharacterPage, error)
 }

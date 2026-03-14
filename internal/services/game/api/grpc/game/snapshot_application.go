@@ -10,7 +10,7 @@ import (
 // state patch/update helper files using Daggerheart-specific reads and explicit
 // write execution seams.
 type snapshotApplication struct {
-	auth    Stores
+	auth    policyDependencies
 	stores  snapshotApplicationStores
 	write   domainwriteexec.WritePath
 	applier projection.Applier
@@ -24,7 +24,7 @@ type snapshotApplicationStores struct {
 
 func newSnapshotApplication(service *SnapshotService) snapshotApplication {
 	return snapshotApplication{
-		auth: service.stores,
+		auth: newPolicyDependencies(service.stores),
 		stores: snapshotApplicationStores{
 			Campaign:    service.stores.Campaign,
 			Character:   service.stores.Character,

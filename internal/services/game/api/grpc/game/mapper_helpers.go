@@ -1,7 +1,6 @@
 package game
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -23,17 +22,6 @@ func structToMap(input *structpb.Struct) map[string]any {
 		return nil
 	}
 	return input.AsMap()
-}
-
-func structFromJSON(data []byte) (*structpb.Struct, error) {
-	if len(data) == 0 {
-		return nil, nil
-	}
-	var payload map[string]any
-	if err := json.Unmarshal(data, &payload); err != nil {
-		return nil, err
-	}
-	return structpb.NewStruct(payload)
 }
 
 func validateStructPayload(values map[string]any) error {

@@ -64,8 +64,19 @@ func TestFoldSessionGateOpenedSetsGateState(t *testing.T) {
 	if updated.GateType != "vote" {
 		t.Fatalf("gate type = %s, want vote", updated.GateType)
 	}
-	if string(updated.GateMetadataJSON) != `{"eligible_participant_ids":["p2","p1"],"options":["south","north"]}` {
+	if string(updated.GateMetadataJSON) != `{"eligible_participant_ids":["p1","p2"],"options":["north","south"],"response_authority":"participant"}` {
 		t.Fatalf("gate metadata = %s", string(updated.GateMetadataJSON))
+	}
+}
+
+func TestFoldSessionGateOpenedRejectsInvalidWorkflowMetadata(t *testing.T) {
+	state := State{}
+	_, err := Fold(state, event.Event{
+		Type:        event.Type("session.gate_opened"),
+		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"ready_check","metadata":{"options":["ready"]}}`),
+	})
+	if err == nil {
+		t.Fatal("expected gate metadata validation error")
 	}
 }
 

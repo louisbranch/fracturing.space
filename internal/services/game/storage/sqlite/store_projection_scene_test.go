@@ -195,6 +195,89 @@ func TestListActiveScenes(t *testing.T) {
 	}
 }
 
+func TestListVisibleActiveScenesForCharacters(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+	now := time.Date(2026, 3, 1, 12, 0, 0, 0, time.UTC)
+	endedAt := now.Add(time.Hour)
+
+	seedCampaign(t, store, "camp-visible", now)
+	for _, sceneRecord := range []storage.SceneRecord{
+		{
+			CampaignID: "camp-visible",
+			SceneID:    "sc-1",
+			SessionID:  "sess-1",
+			Name:       "Visible One",
+			Active:     true,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		},
+		{
+			CampaignID: "camp-visible",
+			SceneID:    "sc-2",
+			SessionID:  "sess-1",
+			Name:       "Visible Two",
+			Active:     true,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		},
+		{
+			CampaignID: "camp-visible",
+			SceneID:    "sc-3",
+			SessionID:  "sess-2",
+			Name:       "Other Session",
+			Active:     true,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+		},
+		{
+			CampaignID: "camp-visible",
+			SceneID:    "sc-4",
+			SessionID:  "sess-1",
+			Name:       "Ended",
+			Active:     false,
+			CreatedAt:  now,
+			UpdatedAt:  now,
+			EndedAt:    &endedAt,
+		},
+	} {
+		if err := store.PutScene(ctx, sceneRecord); err != nil {
+			t.Fatalf("put scene %s: %v", sceneRecord.SceneID, err)
+		}
+	}
+
+	for _, sceneCharacter := range []storage.SceneCharacterRecord{
+		{CampaignID: "camp-visible", SceneID: "sc-1", CharacterID: "char-1", AddedAt: now},
+		{CampaignID: "camp-visible", SceneID: "sc-1", CharacterID: "char-9", AddedAt: now},
+		{CampaignID: "camp-visible", SceneID: "sc-2", CharacterID: "char-2", AddedAt: now},
+		{CampaignID: "camp-visible", SceneID: "sc-3", CharacterID: "char-1", AddedAt: now},
+		{CampaignID: "camp-visible", SceneID: "sc-4", CharacterID: "char-1", AddedAt: now},
+	} {
+		if err := store.PutSceneCharacter(ctx, sceneCharacter); err != nil {
+			t.Fatalf("put scene character %+v: %v", sceneCharacter, err)
+		}
+	}
+
+	scenes, err := store.ListVisibleActiveScenesForCharacters(ctx, "camp-visible", "sess-1", []string{"char-2", "char-1", "char-1", ""})
+	if err != nil {
+		t.Fatalf("list visible active scenes: %v", err)
+	}
+	if len(scenes) != 2 {
+		t.Fatalf("visible scene count = %d, want 2", len(scenes))
+	}
+	if scenes[0].SceneID != "sc-1" || scenes[1].SceneID != "sc-2" {
+		t.Fatalf("visible scenes = %#v, want [sc-1 sc-2]", scenes)
+	}
+
+	empty, err := store.ListVisibleActiveScenesForCharacters(ctx, "camp-visible", "sess-1", []string{"", " "})
+	if err != nil {
+		t.Fatalf("list visible active scenes with empty characters: %v", err)
+	}
+	if len(empty) != 0 {
+		t.Fatalf("visible scenes with empty character ids = %d, want 0", len(empty))
+	}
+}
+
 func TestSceneCharacterLifecycle(t *testing.T) {
 	store := openTestStore(t)
 	ctx := context.Background()
@@ -536,6 +619,28 @@ func TestListActiveScenes_ValidationErrors(t *testing.T) {
 	_, err := store.ListActiveScenes(context.Background(), "")
 	if err == nil {
 		t.Fatal("expected error for empty campaign_id")
+	}
+}
+
+func TestListVisibleActiveScenesForCharacters_ValidationErrors(t *testing.T) {
+	store := openTestStore(t)
+	ctx := context.Background()
+
+	tests := []struct {
+		name         string
+		campaignID   string
+		sessionID    string
+		characterIDs []string
+	}{
+		{name: "missing campaign_id", campaignID: "", sessionID: "s1", characterIDs: []string{"char-1"}},
+		{name: "missing session_id", campaignID: "c1", sessionID: "", characterIDs: []string{"char-1"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if _, err := store.ListVisibleActiveScenesForCharacters(ctx, tt.campaignID, tt.sessionID, tt.characterIDs); err == nil {
+				t.Fatal("expected error")
+			}
+		})
 	}
 }
 

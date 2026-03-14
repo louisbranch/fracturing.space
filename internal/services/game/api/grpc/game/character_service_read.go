@@ -2,16 +2,12 @@ package game
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,37 +22,21 @@ func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.Li
 	if err != nil {
 		return nil, err
 	}
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	page, err := newCharacterApplication(s).ListCharacters(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
 	if err != nil {
 		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
-		return nil, err
-	}
-
-	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
-		Default: defaultListCharactersPageSize,
-		Max:     maxListCharactersPageSize,
-	})
-
-	page, err := s.stores.Character.ListCharacters(ctx, campaignID, pageSize, in.GetPageToken())
-	if err != nil {
-		return nil, grpcerror.Internal("list characters", err)
 	}
 
 	response := &campaignv1.ListCharactersResponse{
-		NextPageToken: page.NextPageToken,
+		NextPageToken: page.nextPageToken,
 	}
-	if len(page.Characters) == 0 {
+	if len(page.characters) == 0 {
 		return response, nil
 	}
 
-	response.Characters = make([]*campaignv1.Character, 0, len(page.Characters))
-	for _, ch := range page.Characters {
-		response.Characters = append(response.Characters, characterToProto(ch))
+	response.Characters = make([]*campaignv1.Character, 0, len(page.characters))
+	for _, ch := range page.characters {
+		response.Characters = append(response.Characters, charactertransport.CharacterToProto(ch))
 	}
 
 	return response, nil
@@ -72,40 +52,23 @@ func (s *CharacterService) ListCharacterProfiles(ctx context.Context, in *campai
 	if err != nil {
 		return nil, err
 	}
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
-	if err != nil {
-		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
-		return nil, err
-	}
-
 	response := &campaignv1.ListCharacterProfilesResponse{}
-	if !strings.EqualFold(string(c.System), string(bridge.SystemIDDaggerheart)) {
-		return response, nil
-	}
-
-	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
-		Default: defaultListCharactersPageSize,
-		Max:     maxListCharactersPageSize,
-	})
-
-	page, err := s.stores.SystemStores.Daggerheart.ListDaggerheartCharacterProfiles(ctx, campaignID, pageSize, in.GetPageToken())
+	page, systemID, err := newCharacterApplication(s).ListCharacterProfiles(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
 	if err != nil {
-		return nil, grpcerror.Internal("list daggerheart character profiles", err)
+		return nil, err
 	}
-
-	response.NextPageToken = page.NextPageToken
-	if len(page.Profiles) == 0 {
+	if !strings.EqualFold(string(systemID), string(bridge.SystemIDDaggerheart)) {
 		return response, nil
 	}
 
-	response.Profiles = make([]*campaignv1.CharacterProfile, 0, len(page.Profiles))
-	for _, profile := range page.Profiles {
-		response.Profiles = append(response.Profiles, daggerheartProfileToProto(campaignID, profile.CharacterID, profile))
+	response.NextPageToken = page.nextPageToken
+	if len(page.profiles) == 0 {
+		return response, nil
+	}
+
+	response.Profiles = make([]*campaignv1.CharacterProfile, 0, len(page.profiles))
+	for _, profile := range page.profiles {
+		response.Profiles = append(response.Profiles, charactertransport.DaggerheartProfileToProto(campaignID, profile.CharacterID, profile))
 	}
 
 	return response, nil
@@ -127,35 +90,14 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 		return nil, err
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	sheet, err := newCharacterApplication(s).GetCharacterSheet(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, err
-	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
-		return nil, err
-	}
-
-	ch, err := s.stores.Character.GetCharacter(ctx, campaignID, characterID)
-	if err != nil {
-		return nil, err
-	}
-
-	dhProfile, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, grpcerror.Internal("get daggerheart profile", err)
-	}
-
-	dhState, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, grpcerror.Internal("get daggerheart state", err)
 	}
 
 	return &campaignv1.GetCharacterSheetResponse{
-		Character: characterToProto(ch),
-		Profile:   daggerheartProfileToProto(campaignID, characterID, dhProfile),
-		State:     daggerheartStateToProto(campaignID, characterID, dhState),
+		Character: charactertransport.CharacterToProto(sheet.character),
+		Profile:   charactertransport.DaggerheartProfileToProto(campaignID, characterID, sheet.profile),
+		State:     charactertransport.DaggerheartStateToProto(campaignID, characterID, sheet.state),
 	}, nil
 }
