@@ -75,6 +75,20 @@ func TestGetDashboardMapsDomainResponse(t *testing.T) {
 					UpdatedAt:        now.Add(-1 * time.Hour),
 				}},
 			},
+			CampaignStartNudges: domain.CampaignStartNudgeSummary{
+				Available:   true,
+				ListedCount: 1,
+				HasMore:     false,
+				Nudges: []domain.CampaignStartNudge{{
+					CampaignID:          "camp-1",
+					CampaignName:        "Sunfall",
+					CampaignUpdatedAt:   now.Add(-30 * time.Minute),
+					BlockerCode:         "SESSION_READINESS_PLAYER_CHARACTER_REQUIRED",
+					BlockerMessage:      "Create a character before starting.",
+					ActionKind:          domain.CampaignStartNudgeActionCreateCharacter,
+					TargetParticipantID: "part-1",
+				}},
+			},
 			ActiveSessions: domain.ActiveSessionSummary{
 				Available:   true,
 				ListedCount: 1,
@@ -120,6 +134,16 @@ func TestGetDashboardMapsDomainResponse(t *testing.T) {
 	}
 	if got := resp.GetActiveSessions().GetSessions(); len(got) != 1 || got[0].GetSessionId() != "session-1" {
 		t.Fatalf("active sessions = %+v, want one session-1 entry", got)
+	}
+	if got := resp.GetCampaignStartNudges().GetNudges(); len(got) != 1 {
+		t.Fatalf("campaign start nudges = %+v, want one entry", got)
+	} else {
+		if got[0].GetActionKind() != userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_CREATE_CHARACTER {
+			t.Fatalf("nudge action kind = %v, want %v", got[0].GetActionKind(), userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_CREATE_CHARACTER)
+		}
+		if got[0].GetTargetParticipantId() != "part-1" {
+			t.Fatalf("nudge target participant id = %q, want %q", got[0].GetTargetParticipantId(), "part-1")
+		}
 	}
 }
 

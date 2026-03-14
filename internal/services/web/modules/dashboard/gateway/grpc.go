@@ -59,15 +59,18 @@ func (g GRPCGateway) LoadDashboard(ctx context.Context, userID string, localeTag
 		return dashboardapp.DashboardSnapshot{}, nil
 	}
 	return dashboardapp.DashboardSnapshot{
-		NeedsProfileCompletion:   resp.GetUser().GetNeedsProfileCompletion(),
-		HasDraftOrActiveCampaign: HasDraftOrActiveCampaign(resp.GetCampaigns().GetCampaigns()),
-		CampaignsHasMore:         resp.GetCampaigns().GetHasMore(),
-		ActiveSessionsAvailable:  resp.GetActiveSessions().GetAvailable(),
-		ActiveSessions:           mapActiveSessions(resp.GetActiveSessions().GetSessions()),
-		DegradedDependencies:     normalizedDependencies(resp.GetMetadata().GetDegradedDependencies()),
-		Freshness:                mapFreshness(resp.GetMetadata().GetFreshness()),
-		CacheHit:                 resp.GetMetadata().GetCacheHit(),
-		GeneratedAt:              protoTime(resp.GetMetadata().GetGeneratedAt()),
+		NeedsProfileCompletion:       resp.GetUser().GetNeedsProfileCompletion(),
+		HasDraftOrActiveCampaign:     HasDraftOrActiveCampaign(resp.GetCampaigns().GetCampaigns()),
+		CampaignsHasMore:             resp.GetCampaigns().GetHasMore(),
+		CampaignStartNudgesAvailable: resp.GetCampaignStartNudges().GetAvailable(),
+		CampaignStartNudges:          mapCampaignStartNudges(resp.GetCampaignStartNudges().GetNudges()),
+		CampaignStartNudgesHasMore:   resp.GetCampaignStartNudges().GetHasMore(),
+		ActiveSessionsAvailable:      resp.GetActiveSessions().GetAvailable(),
+		ActiveSessions:               mapActiveSessions(resp.GetActiveSessions().GetSessions()),
+		DegradedDependencies:         normalizedDependencies(resp.GetMetadata().GetDegradedDependencies()),
+		Freshness:                    mapFreshness(resp.GetMetadata().GetFreshness()),
+		CacheHit:                     resp.GetMetadata().GetCacheHit(),
+		GeneratedAt:                  protoTime(resp.GetMetadata().GetGeneratedAt()),
 	}, nil
 }
 
@@ -128,6 +131,32 @@ func mapActiveSessions(sessions []*userhubv1.ActiveSessionPreview) []dashboardap
 	return items
 }
 
+// mapCampaignStartNudges keeps the gateway-to-app mapping for readiness nudges local to the dashboard transport seam.
+func mapCampaignStartNudges(nudges []*userhubv1.CampaignStartNudge) []dashboardapp.CampaignStartNudgeItem {
+	if len(nudges) == 0 {
+		return nil
+	}
+	items := make([]dashboardapp.CampaignStartNudgeItem, 0, len(nudges))
+	for _, nudge := range nudges {
+		if nudge == nil {
+			continue
+		}
+		items = append(items, dashboardapp.CampaignStartNudgeItem{
+			CampaignID:          nudge.GetCampaignId(),
+			CampaignName:        nudge.GetCampaignName(),
+			BlockerCode:         nudge.GetBlockerCode(),
+			BlockerMessage:      nudge.GetBlockerMessage(),
+			ActionKind:          campaignStartNudgeActionKindFromProto(nudge.GetActionKind()),
+			TargetParticipantID: nudge.GetTargetParticipantId(),
+			TargetCharacterID:   nudge.GetTargetCharacterId(),
+		})
+	}
+	if len(items) == 0 {
+		return nil
+	}
+	return items
+}
+
 // mapFreshness preserves userhub cache metadata for dashboard logging seams.
 func mapFreshness(value userhubv1.DashboardFreshness) dashboardapp.DashboardFreshness {
 	switch value {
@@ -146,4 +175,22 @@ func protoTime(value *timestamppb.Timestamp) time.Time {
 		return time.Time{}
 	}
 	return value.AsTime()
+}
+
+// campaignStartNudgeActionKindFromProto translates userhub CTA enums into dashboard-local action kinds.
+func campaignStartNudgeActionKindFromProto(value userhubv1.CampaignStartNudgeActionKind) dashboardapp.CampaignStartNudgeActionKind {
+	switch value {
+	case userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_CREATE_CHARACTER:
+		return dashboardapp.CampaignStartNudgeActionKindCreateCharacter
+	case userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_COMPLETE_CHARACTER:
+		return dashboardapp.CampaignStartNudgeActionKindCompleteCharacter
+	case userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_CONFIGURE_AI_AGENT:
+		return dashboardapp.CampaignStartNudgeActionKindConfigureAIAgent
+	case userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_INVITE_PLAYER:
+		return dashboardapp.CampaignStartNudgeActionKindInvitePlayer
+	case userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_MANAGE_PARTICIPANTS:
+		return dashboardapp.CampaignStartNudgeActionKindManageParticipants
+	default:
+		return dashboardapp.CampaignStartNudgeActionKindUnspecified
+	}
 }

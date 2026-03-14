@@ -328,10 +328,115 @@ func TestGetDashboardIncludesContinueActionWhenActiveSessionFallsOutsidePreviewP
 	}
 }
 
+func TestGetDashboardIncludesCampaignStartNudgesForCurrentUser(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 3, 8, 12, 0, 0, 0, time.UTC)
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
+	game := &fakeGameGateway{
+		campaignPage: CampaignPage{},
+		invitePage:   InvitePage{},
+		readinessCampaigns: []CampaignPreview{
+			{CampaignID: "camp-older", Name: "Older", Status: CampaignStatusDraft, UpdatedAt: now.Add(-2 * time.Hour)},
+			{CampaignID: "camp-newer", Name: "Newer", Status: CampaignStatusActive, UpdatedAt: now.Add(-1 * time.Hour)},
+		},
+		readinessByCampaign: map[string]CampaignReadiness{
+			"camp-older": {
+				Blockers: []CampaignReadinessBlocker{{
+					Code:                "PLAYER_CHARACTER_REQUIRED",
+					Message:             "Create a character",
+					ResponsibleUserIDs:  []string{"user-1"},
+					ActionKind:          CampaignStartNudgeActionCreateCharacter,
+					TargetParticipantID: "part-1",
+				}},
+			},
+			"camp-newer": {
+				Blockers: []CampaignReadinessBlocker{
+					{
+						Code:               "PLAYER_CHARACTER_REQUIRED",
+						Message:            "Someone else should act",
+						ResponsibleUserIDs: []string{"user-2"},
+						ActionKind:         CampaignStartNudgeActionCreateCharacter,
+					},
+					{
+						Code:               "CHARACTER_SYSTEM_REQUIRED",
+						Message:            "Finish Aria",
+						ResponsibleUserIDs: []string{"user-1"},
+						ActionKind:         CampaignStartNudgeActionCompleteCharacter,
+						TargetCharacterID:  "char-1",
+					},
+				},
+			},
+		},
+	}
+	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
+	notifications := &fakeNotificationsGateway{}
+	svc := NewService(auth, game, social, notifications, Config{})
+
+	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1", CampaignPreviewLimit: 1})
+	if err != nil {
+		t.Fatalf("GetDashboard error: %v", err)
+	}
+	if !dashboard.CampaignStartNudges.Available {
+		t.Fatal("campaign_start_nudges.available = false, want true")
+	}
+	if dashboard.CampaignStartNudges.ListedCount != 1 {
+		t.Fatalf("listed_count = %d, want 1", dashboard.CampaignStartNudges.ListedCount)
+	}
+	if !dashboard.CampaignStartNudges.HasMore {
+		t.Fatal("has_more = false, want true")
+	}
+	nudge := dashboard.CampaignStartNudges.Nudges[0]
+	if nudge.CampaignID != "camp-newer" {
+		t.Fatalf("campaign id = %q, want %q", nudge.CampaignID, "camp-newer")
+	}
+	if nudge.ActionKind != CampaignStartNudgeActionCompleteCharacter {
+		t.Fatalf("action kind = %v, want %v", nudge.ActionKind, CampaignStartNudgeActionCompleteCharacter)
+	}
+	if nudge.TargetCharacterID != "char-1" {
+		t.Fatalf("target_character_id = %q, want %q", nudge.TargetCharacterID, "char-1")
+	}
+}
+
+func TestGetDashboardDegradesReadinessWithoutFailingWholeDashboard(t *testing.T) {
+	t.Parallel()
+
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
+	game := &fakeGameGateway{
+		campaignPage:          CampaignPage{},
+		invitePage:            InvitePage{},
+		readinessCampaignsErr: errors.New("readiness unavailable"),
+	}
+	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
+	notifications := &fakeNotificationsGateway{}
+	svc := NewService(auth, game, social, notifications, Config{})
+
+	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1"})
+	if err != nil {
+		t.Fatalf("GetDashboard error: %v", err)
+	}
+	if dashboard.CampaignStartNudges.Available {
+		t.Fatal("campaign_start_nudges.available = true, want false")
+	}
+	if !dashboard.Metadata.Degraded {
+		t.Fatal("degraded = false, want true")
+	}
+	if !contains(dashboard.Metadata.DegradedDependencies, dependencyGameReadiness) {
+		t.Fatalf("degraded_dependencies = %v, want %q", dashboard.Metadata.DegradedDependencies, dependencyGameReadiness)
+	}
+}
+
 type fakeGameGateway struct {
 	campaignPage  CampaignPage
 	campaignErr   error
 	campaignCalls int
+
+	readinessCampaigns     []CampaignPreview
+	readinessCampaignsErr  error
+	readinessCampaignCalls int
+	readinessByCampaign    map[string]CampaignReadiness
+	readinessErr           error
+	readinessCalls         int
 
 	activeSessionPage  ActiveSessionPage
 	activeSessionErr   error
@@ -348,6 +453,22 @@ func (f *fakeGameGateway) ListCampaignPreviews(_ context.Context, _ string, _ in
 		return CampaignPage{}, f.campaignErr
 	}
 	return f.campaignPage, nil
+}
+
+func (f *fakeGameGateway) ListReadinessCampaigns(_ context.Context, _ string) ([]CampaignPreview, error) {
+	f.readinessCampaignCalls++
+	if f.readinessCampaignsErr != nil {
+		return nil, f.readinessCampaignsErr
+	}
+	return append([]CampaignPreview{}, f.readinessCampaigns...), nil
+}
+
+func (f *fakeGameGateway) GetCampaignReadiness(_ context.Context, _ string, campaignID string) (CampaignReadiness, error) {
+	f.readinessCalls++
+	if f.readinessErr != nil {
+		return CampaignReadiness{}, f.readinessErr
+	}
+	return f.readinessByCampaign[campaignID], nil
 }
 
 func (f *fakeGameGateway) ListPendingInvitePreviews(_ context.Context, _ string, _ int) (InvitePage, error) {

@@ -158,6 +158,10 @@ message ListCampaignsRequest {
 
   // A page token received from a prior ListCampaignsResponse.
   string page_token = 2;
+
+  // Optional lifecycle statuses to include.
+  // When empty, all statuses remain eligible.
+  repeated CampaignStatus statuses = 3;
 }
 
 message ListCampaignsResponse {
@@ -181,6 +185,30 @@ message CampaignSessionReadinessBlocker {
   string message = 2;
   // Structured blocker attributes (for transport/UI mapping).
   map<string, string> metadata = 3;
+  // Structured responsibility and resolution data for UI/action mapping.
+  CampaignSessionReadinessAction action = 4;
+}
+
+enum CampaignSessionReadinessResolutionKind {
+  CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_UNSPECIFIED = 0;
+  CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_CREATE_CHARACTER = 1;
+  CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_COMPLETE_CHARACTER = 2;
+  CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_CONFIGURE_AI_AGENT = 3;
+  CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_INVITE_PLAYER = 4;
+  CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_MANAGE_PARTICIPANTS = 5;
+}
+
+message CampaignSessionReadinessAction {
+  // User IDs that can directly resolve this blocker.
+  repeated string responsible_user_ids = 1;
+  // Participant IDs that can directly resolve this blocker.
+  repeated string responsible_participant_ids = 2;
+  // Stable machine-readable resolution kind.
+  CampaignSessionReadinessResolutionKind resolution_kind = 3;
+  // Optional participant identifier needed by the resolution route.
+  string target_participant_id = 4;
+  // Optional character identifier needed by the resolution route.
+  string target_character_id = 5;
 }
 
 message CampaignSessionReadiness {

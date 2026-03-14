@@ -40,6 +40,7 @@ message GetDashboardResponse {
   CampaignSummary campaigns = 5;
   repeated DashboardAction next_actions = 6;
   ActiveSessionSummary active_sessions = 7;
+  CampaignStartNudgeSummary campaign_start_nudges = 8;
 }
 
 message InvalidateDashboardsRequest {
@@ -145,6 +146,33 @@ message ActiveSessionPreview {
   string session_id = 3;
   string session_name = 4;
   google.protobuf.Timestamp started_at = 5;
+}
+
+message CampaignStartNudgeSummary {
+  bool available = 1;
+  int32 listed_count = 2;
+  bool has_more = 3;
+  repeated CampaignStartNudge nudges = 4;
+}
+
+message CampaignStartNudge {
+  string campaign_id = 1;
+  string campaign_name = 2;
+  google.protobuf.Timestamp campaign_updated_at = 3;
+  string blocker_code = 4;
+  string blocker_message = 5;
+  CampaignStartNudgeActionKind action_kind = 6;
+  string target_participant_id = 7;
+  string target_character_id = 8;
+}
+
+enum CampaignStartNudgeActionKind {
+  CAMPAIGN_START_NUDGE_ACTION_KIND_UNSPECIFIED = 0;
+  CAMPAIGN_START_NUDGE_ACTION_KIND_CREATE_CHARACTER = 1;
+  CAMPAIGN_START_NUDGE_ACTION_KIND_COMPLETE_CHARACTER = 2;
+  CAMPAIGN_START_NUDGE_ACTION_KIND_CONFIGURE_AI_AGENT = 3;
+  CAMPAIGN_START_NUDGE_ACTION_KIND_INVITE_PLAYER = 4;
+  CAMPAIGN_START_NUDGE_ACTION_KIND_MANAGE_PARTICIPANTS = 5;
 }
 
 enum DashboardActionID {

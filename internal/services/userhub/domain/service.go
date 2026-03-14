@@ -17,6 +17,7 @@ const (
 
 	dependencyAuthUser          = "auth.user"
 	dependencyGameCampaigns     = "game.campaigns"
+	dependencyGameReadiness     = "game.readiness"
 	dependencyGameInvites       = "game.invites"
 	dependencyGameSessions      = "game.sessions"
 	dependencySocialProfile     = "social.profile"
@@ -109,13 +110,14 @@ type InvalidateDashboardsResult struct {
 
 // Dashboard is the userhub at-a-glance aggregate view model.
 type Dashboard struct {
-	Metadata       DashboardMetadata
-	User           UserSummary
-	Invites        InviteSummary
-	Notifications  NotificationSummary
-	Campaigns      CampaignSummary
-	ActiveSessions ActiveSessionSummary
-	NextActions    []DashboardAction
+	Metadata            DashboardMetadata
+	User                UserSummary
+	Invites             InviteSummary
+	Notifications       NotificationSummary
+	Campaigns           CampaignSummary
+	ActiveSessions      ActiveSessionSummary
+	CampaignStartNudges CampaignStartNudgeSummary
+	NextActions         []DashboardAction
 }
 
 // DashboardMetadata carries freshness and degradation status for one response.
@@ -209,6 +211,26 @@ type ActiveSessionPreview struct {
 	StartedAt    time.Time
 }
 
+// CampaignStartNudgeSummary captures user-actionable campaign start blockers.
+type CampaignStartNudgeSummary struct {
+	Available   bool
+	ListedCount int
+	HasMore     bool
+	Nudges      []CampaignStartNudge
+}
+
+// CampaignStartNudge captures one user-specific readiness blocker plus action target.
+type CampaignStartNudge struct {
+	CampaignID          string
+	CampaignName        string
+	CampaignUpdatedAt   time.Time
+	BlockerCode         string
+	BlockerMessage      string
+	ActionKind          CampaignStartNudgeActionKind
+	TargetParticipantID string
+	TargetCharacterID   string
+}
+
 // CampaignStatus identifies lifecycle state for one campaign preview.
 type CampaignStatus int
 
@@ -248,6 +270,39 @@ const (
 	// DashboardActionReviewNotifications asks the user to review unread notifications.
 	DashboardActionReviewNotifications
 )
+
+// CampaignStartNudgeActionKind identifies one stable dashboard CTA mapping.
+type CampaignStartNudgeActionKind int
+
+const (
+	// CampaignStartNudgeActionUnspecified indicates no stable dashboard CTA exists.
+	CampaignStartNudgeActionUnspecified CampaignStartNudgeActionKind = iota
+	// CampaignStartNudgeActionCreateCharacter asks the user to create a character.
+	CampaignStartNudgeActionCreateCharacter
+	// CampaignStartNudgeActionCompleteCharacter asks the user to finish a character.
+	CampaignStartNudgeActionCompleteCharacter
+	// CampaignStartNudgeActionConfigureAIAgent asks the user to bind an AI agent.
+	CampaignStartNudgeActionConfigureAIAgent
+	// CampaignStartNudgeActionInvitePlayer asks the user to invite another player.
+	CampaignStartNudgeActionInvitePlayer
+	// CampaignStartNudgeActionManageParticipants asks the user to manage participant seats.
+	CampaignStartNudgeActionManageParticipants
+)
+
+// CampaignReadiness captures current campaign start blockers for one campaign.
+type CampaignReadiness struct {
+	Blockers []CampaignReadinessBlocker
+}
+
+// CampaignReadinessBlocker captures one localized blocker plus action metadata.
+type CampaignReadinessBlocker struct {
+	Code                string
+	Message             string
+	ResponsibleUserIDs  []string
+	ActionKind          CampaignStartNudgeActionKind
+	TargetParticipantID string
+	TargetCharacterID   string
+}
 
 // UserProfile stores profile state resolved from social.
 type UserProfile struct {
@@ -291,6 +346,8 @@ type AuthGateway interface {
 // GameGateway resolves user-scoped campaign and invite summaries.
 type GameGateway interface {
 	ListCampaignPreviews(ctx context.Context, userID string, limit int) (CampaignPage, error)
+	ListReadinessCampaigns(ctx context.Context, userID string) ([]CampaignPreview, error)
+	GetCampaignReadiness(ctx context.Context, userID, campaignID string) (CampaignReadiness, error)
 	ListPendingInvitePreviews(ctx context.Context, userID string, limit int) (InvitePage, error)
 	ListActiveSessionPreviews(ctx context.Context, userID string, limit int) (ActiveSessionPage, error)
 }
@@ -398,6 +455,9 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 		ActiveSessions: ActiveSessionSummary{
 			Available: true,
 		},
+		CampaignStartNudges: CampaignStartNudgeSummary{
+			Available: true,
+		},
 	}
 	for _, campaign := range campaignPage.Campaigns {
 		if campaign.Status == CampaignStatusActive {
@@ -441,6 +501,22 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 		result.ActiveSessions.ListedCount = len(activeSessionPage.Sessions)
 		result.ActiveSessions.HasMore = activeSessionPage.HasMore
 		result.ActiveSessions.Sessions = cloneActiveSessionPreviews(activeSessionPage.Sessions)
+	}
+
+	readinessCampaigns, err := s.game.ListReadinessCampaigns(ctx, userID)
+	if err != nil {
+		result.CampaignStartNudges.Available = false
+		degradedDependencies = append(degradedDependencies, dependencyGameReadiness)
+	} else {
+		nudges, nudgeHasMore, readinessErr := s.buildCampaignStartNudges(ctx, userID, campaignLimit, readinessCampaigns)
+		if readinessErr != nil {
+			result.CampaignStartNudges.Available = false
+			degradedDependencies = append(degradedDependencies, dependencyGameReadiness)
+		} else {
+			result.CampaignStartNudges.ListedCount = len(nudges)
+			result.CampaignStartNudges.HasMore = nudgeHasMore
+			result.CampaignStartNudges.Nudges = nudges
+		}
 	}
 
 	profile, err := s.social.GetUserProfile(ctx, userID)
@@ -629,6 +705,7 @@ func cloneDashboard(input Dashboard) Dashboard {
 	result.Invites.Pending = clonePendingInvites(input.Invites.Pending)
 	result.Campaigns.Campaigns = cloneCampaignPreviews(input.Campaigns.Campaigns)
 	result.ActiveSessions.Sessions = cloneActiveSessionPreviews(input.ActiveSessions.Sessions)
+	result.CampaignStartNudges.Nudges = cloneCampaignStartNudges(input.CampaignStartNudges.Nudges)
 	result.NextActions = append([]DashboardAction{}, input.NextActions...)
 	return result
 }
@@ -663,10 +740,90 @@ func cloneActiveSessionPreviews(input []ActiveSessionPreview) []ActiveSessionPre
 	return result
 }
 
+func cloneCampaignStartNudges(input []CampaignStartNudge) []CampaignStartNudge {
+	if len(input) == 0 {
+		return nil
+	}
+	result := make([]CampaignStartNudge, len(input))
+	copy(result, input)
+	return result
+}
+
 // nowUTC resolves current time for deterministic cache behavior.
 func (s *Service) nowUTC() time.Time {
 	if s == nil || s.clock == nil {
 		return time.Now().UTC()
 	}
 	return s.clock().UTC()
+}
+
+func (s *Service) buildCampaignStartNudges(ctx context.Context, userID string, limit int, campaigns []CampaignPreview) ([]CampaignStartNudge, bool, error) {
+	if len(campaigns) == 0 {
+		return nil, false, nil
+	}
+	collected := make([]CampaignStartNudge, 0, len(campaigns))
+	for _, campaign := range campaigns {
+		readiness, err := s.game.GetCampaignReadiness(ctx, userID, campaign.CampaignID)
+		if err != nil {
+			return nil, false, err
+		}
+		blocker, ok := actionableReadinessBlockerForUser(userID, readiness.Blockers)
+		if !ok {
+			continue
+		}
+		collected = append(collected, CampaignStartNudge{
+			CampaignID:          campaign.CampaignID,
+			CampaignName:        campaign.Name,
+			CampaignUpdatedAt:   campaign.UpdatedAt,
+			BlockerCode:         blocker.Code,
+			BlockerMessage:      blocker.Message,
+			ActionKind:          blocker.ActionKind,
+			TargetParticipantID: blocker.TargetParticipantID,
+			TargetCharacterID:   blocker.TargetCharacterID,
+		})
+	}
+	if len(collected) == 0 {
+		return nil, false, nil
+	}
+	sort.SliceStable(collected, func(i, j int) bool {
+		left := collected[i].CampaignUpdatedAt.UTC()
+		right := collected[j].CampaignUpdatedAt.UTC()
+		if left.Equal(right) {
+			return collected[i].CampaignID < collected[j].CampaignID
+		}
+		return left.After(right)
+	})
+	if limit <= 0 || len(collected) <= limit {
+		return collected, false, nil
+	}
+	return append([]CampaignStartNudge{}, collected[:limit]...), true, nil
+}
+
+func actionableReadinessBlockerForUser(userID string, blockers []CampaignReadinessBlocker) (CampaignReadinessBlocker, bool) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return CampaignReadinessBlocker{}, false
+	}
+	for _, blocker := range blockers {
+		if blocker.ActionKind == CampaignStartNudgeActionUnspecified {
+			continue
+		}
+		if containsNormalizedString(blocker.ResponsibleUserIDs, userID) {
+			return blocker, true
+		}
+	}
+	return CampaignReadinessBlocker{}, false
+}
+
+func containsNormalizedString(values []string, want string) bool {
+	want = strings.TrimSpace(want)
+	if want == "" {
+		return false
+	}
+	for _, value := range values {
+		if strings.EqualFold(strings.TrimSpace(value), want) {
+			return true
+		}
+	}
+	return false
 }

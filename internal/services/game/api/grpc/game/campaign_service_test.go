@@ -1113,6 +1113,115 @@ func TestListCampaigns_UserScopedByMetadataAfterPageBoundary(t *testing.T) {
 	}
 }
 
+func TestListCampaigns_UserScopedByMetadataAppliesStatusFilterAcrossPages(t *testing.T) {
+	ts := newTestStores()
+	orderedStore := &orderedCampaignStore{
+		campaigns: []storage.CampaignRecord{
+			{
+				ID:        "campaign-001",
+				Name:      "Campaign 1",
+				System:    bridge.SystemIDDaggerheart,
+				Status:    campaign.StatusDraft,
+				GmMode:    campaign.GmModeHuman,
+				CreatedAt: time.Now().UTC(),
+			},
+			{
+				ID:        "campaign-002",
+				Name:      "Campaign 2",
+				System:    bridge.SystemIDDaggerheart,
+				Status:    campaign.StatusCompleted,
+				GmMode:    campaign.GmModeHuman,
+				CreatedAt: time.Now().UTC(),
+			},
+			{
+				ID:        "campaign-003",
+				Name:      "Campaign 3",
+				System:    bridge.SystemIDDaggerheart,
+				Status:    campaign.StatusActive,
+				GmMode:    campaign.GmModeHuman,
+				CreatedAt: time.Now().UTC(),
+			},
+			{
+				ID:        "campaign-004",
+				Name:      "Campaign 4",
+				System:    bridge.SystemIDDaggerheart,
+				Status:    campaign.StatusArchived,
+				GmMode:    campaign.GmModeHuman,
+				CreatedAt: time.Now().UTC(),
+			},
+		},
+	}
+	for _, record := range orderedStore.campaigns {
+		ts.Participant.participants[record.ID] = map[string]storage.ParticipantRecord{
+			"p1": userParticipantRecord(record.ID, "p1", "user-123", "Alice"),
+		}
+	}
+
+	stores := ts.build()
+	stores.Campaign = orderedStore
+	svc := NewCampaignService(stores, nil, nil)
+	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
+
+	firstPage, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{
+		PageSize: 1,
+		Statuses: []statev1.CampaignStatus{
+			statev1.CampaignStatus_DRAFT,
+			statev1.CampaignStatus_ACTIVE,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ListCampaigns first page returned error: %v", err)
+	}
+	if len(firstPage.GetCampaigns()) != 1 {
+		t.Fatalf("first page campaigns = %d, want 1", len(firstPage.GetCampaigns()))
+	}
+	if got := firstPage.GetCampaigns()[0].GetId(); got != "campaign-001" {
+		t.Fatalf("first page campaign id = %q, want %q", got, "campaign-001")
+	}
+	if got := firstPage.GetNextPageToken(); got != "campaign-001" {
+		t.Fatalf("first page next token = %q, want %q", got, "campaign-001")
+	}
+
+	secondPage, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{
+		PageSize:  1,
+		PageToken: firstPage.GetNextPageToken(),
+		Statuses: []statev1.CampaignStatus{
+			statev1.CampaignStatus_DRAFT,
+			statev1.CampaignStatus_ACTIVE,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ListCampaigns second page returned error: %v", err)
+	}
+	if len(secondPage.GetCampaigns()) != 1 {
+		t.Fatalf("second page campaigns = %d, want 1", len(secondPage.GetCampaigns()))
+	}
+	if got := secondPage.GetCampaigns()[0].GetId(); got != "campaign-003" {
+		t.Fatalf("second page campaign id = %q, want %q", got, "campaign-003")
+	}
+	if got := secondPage.GetNextPageToken(); got != "campaign-003" {
+		t.Fatalf("second page next token = %q, want %q", got, "campaign-003")
+	}
+
+	thirdPage, err := svc.ListCampaigns(ctx, &statev1.ListCampaignsRequest{
+		PageSize:  1,
+		PageToken: secondPage.GetNextPageToken(),
+		Statuses: []statev1.CampaignStatus{
+			statev1.CampaignStatus_DRAFT,
+			statev1.CampaignStatus_ACTIVE,
+		},
+	})
+	if err != nil {
+		t.Fatalf("ListCampaigns third page returned error: %v", err)
+	}
+	if len(thirdPage.GetCampaigns()) != 0 {
+		t.Fatalf("third page campaigns = %d, want 0", len(thirdPage.GetCampaigns()))
+	}
+	if got := thirdPage.GetNextPageToken(); got != "" {
+		t.Fatalf("third page next token = %q, want empty", got)
+	}
+}
+
 func TestListCampaigns_UserScopedByMetadataQueryFailure(t *testing.T) {
 	ts := newTestStores()
 	ts.Campaign.campaigns["c1"] = daggerheartCampaignRecordWithCreatedAt("c1", "Campaign One", campaign.StatusDraft, campaign.GmModeHuman, time.Now().UTC())

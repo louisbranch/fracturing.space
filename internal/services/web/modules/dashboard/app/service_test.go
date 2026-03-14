@@ -168,6 +168,30 @@ func TestLoadDashboardRendersActiveSessionsAndSuppressesAdventure(t *testing.T) 
 	}
 }
 
+func TestLoadDashboardRendersCampaignStartNudges(t *testing.T) {
+	t.Parallel()
+
+	svc := NewService(&gatewayStub{snapshot: DashboardSnapshot{
+		CampaignStartNudgesAvailable: true,
+		CampaignStartNudges: []CampaignStartNudgeItem{{
+			CampaignID:     "camp-1",
+			CampaignName:   "Sunfall",
+			BlockerMessage: "Finish Aria",
+			ActionKind:     CampaignStartNudgeActionKindCompleteCharacter,
+		}},
+	}}, nil, nil)
+	view, err := svc.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("LoadDashboard() error = %v", err)
+	}
+	if len(view.CampaignStartNudges) != 1 {
+		t.Fatalf("CampaignStartNudges = %+v, want one item", view.CampaignStartNudges)
+	}
+	if view.CampaignStartNudges[0].CampaignID != "camp-1" {
+		t.Fatalf("CampaignStartNudges[0].CampaignID = %q, want %q", view.CampaignStartNudges[0].CampaignID, "camp-1")
+	}
+}
+
 func TestLoadDashboardHidesActiveSessionsWhenSessionStateIsDegraded(t *testing.T) {
 	t.Parallel()
 
@@ -183,6 +207,24 @@ func TestLoadDashboardHidesActiveSessionsWhenSessionStateIsDegraded(t *testing.T
 	}
 	if len(view.ActiveSessions) != 0 {
 		t.Fatalf("ActiveSessions = %+v, want none", view.ActiveSessions)
+	}
+}
+
+func TestLoadDashboardHidesCampaignStartNudgesWhenReadinessIsDegraded(t *testing.T) {
+	t.Parallel()
+
+	svc := NewService(&gatewayStub{snapshot: DashboardSnapshot{
+		CampaignStartNudgesAvailable: true,
+		CampaignStartNudges:          []CampaignStartNudgeItem{{CampaignID: "camp-1"}},
+		DegradedDependencies:         []string{DegradedDependencyGameReadiness},
+	}}, nil, nil)
+
+	view, err := svc.LoadDashboard(context.Background(), "user-1", language.AmericanEnglish)
+	if err != nil {
+		t.Fatalf("LoadDashboard() error = %v", err)
+	}
+	if len(view.CampaignStartNudges) != 0 {
+		t.Fatalf("CampaignStartNudges = %+v, want none", view.CampaignStartNudges)
 	}
 }
 

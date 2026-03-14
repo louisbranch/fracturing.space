@@ -55,13 +55,14 @@ func (s *Service) GetDashboard(ctx context.Context, in *userhubv1.GetDashboardRe
 	}
 
 	return &userhubv1.GetDashboardResponse{
-		Metadata:       dashboardMetadataToProto(dashboard.Metadata),
-		User:           userSummaryToProto(dashboard.User),
-		Invites:        inviteSummaryToProto(dashboard.Invites),
-		Notifications:  notificationSummaryToProto(dashboard.Notifications),
-		Campaigns:      campaignSummaryToProto(dashboard.Campaigns),
-		ActiveSessions: activeSessionSummaryToProto(dashboard.ActiveSessions),
-		NextActions:    dashboardActionsToProto(dashboard.NextActions),
+		Metadata:            dashboardMetadataToProto(dashboard.Metadata),
+		User:                userSummaryToProto(dashboard.User),
+		Invites:             inviteSummaryToProto(dashboard.Invites),
+		Notifications:       notificationSummaryToProto(dashboard.Notifications),
+		Campaigns:           campaignSummaryToProto(dashboard.Campaigns),
+		ActiveSessions:      activeSessionSummaryToProto(dashboard.ActiveSessions),
+		CampaignStartNudges: campaignStartNudgeSummaryToProto(dashboard.CampaignStartNudges),
+		NextActions:         dashboardActionsToProto(dashboard.NextActions),
 	}, nil
 }
 
@@ -193,6 +194,28 @@ func activeSessionSummaryToProto(summary domain.ActiveSessionSummary) *userhubv1
 	return result
 }
 
+func campaignStartNudgeSummaryToProto(summary domain.CampaignStartNudgeSummary) *userhubv1.CampaignStartNudgeSummary {
+	result := &userhubv1.CampaignStartNudgeSummary{
+		Available:   summary.Available,
+		ListedCount: int32(summary.ListedCount),
+		HasMore:     summary.HasMore,
+		Nudges:      make([]*userhubv1.CampaignStartNudge, 0, len(summary.Nudges)),
+	}
+	for _, nudge := range summary.Nudges {
+		result.Nudges = append(result.Nudges, &userhubv1.CampaignStartNudge{
+			CampaignId:          nudge.CampaignID,
+			CampaignName:        nudge.CampaignName,
+			CampaignUpdatedAt:   timestamppb.New(nudge.CampaignUpdatedAt),
+			BlockerCode:         nudge.BlockerCode,
+			BlockerMessage:      nudge.BlockerMessage,
+			ActionKind:          campaignStartNudgeActionKindToProto(nudge.ActionKind),
+			TargetParticipantId: nudge.TargetParticipantID,
+			TargetCharacterId:   nudge.TargetCharacterID,
+		})
+	}
+	return result
+}
+
 // dashboardActionsToProto maps action lists to proto values.
 func dashboardActionsToProto(actions []domain.DashboardAction) []*userhubv1.DashboardAction {
 	if len(actions) == 0 {
@@ -251,5 +274,22 @@ func dashboardActionToProto(value domain.DashboardActionID) userhubv1.DashboardA
 		return userhubv1.DashboardActionID_DASHBOARD_ACTION_ID_REVIEW_NOTIFICATIONS
 	default:
 		return userhubv1.DashboardActionID_DASHBOARD_ACTION_ID_UNSPECIFIED
+	}
+}
+
+func campaignStartNudgeActionKindToProto(value domain.CampaignStartNudgeActionKind) userhubv1.CampaignStartNudgeActionKind {
+	switch value {
+	case domain.CampaignStartNudgeActionCreateCharacter:
+		return userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_CREATE_CHARACTER
+	case domain.CampaignStartNudgeActionCompleteCharacter:
+		return userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_COMPLETE_CHARACTER
+	case domain.CampaignStartNudgeActionConfigureAIAgent:
+		return userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_CONFIGURE_AI_AGENT
+	case domain.CampaignStartNudgeActionInvitePlayer:
+		return userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_INVITE_PLAYER
+	case domain.CampaignStartNudgeActionManageParticipants:
+		return userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_MANAGE_PARTICIPANTS
+	default:
+		return userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_UNSPECIFIED
 	}
 }

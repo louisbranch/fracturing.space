@@ -8,6 +8,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"golang.org/x/text/language"
 	"google.golang.org/grpc"
@@ -50,8 +51,16 @@ func TestGRPCGatewayMapsSnapshotAndMetadata(t *testing.T) {
 	t.Parallel()
 
 	client := &userHubClientStub{resp: &userhubv1.GetDashboardResponse{
-		User:           &userhubv1.UserSummary{NeedsProfileCompletion: true},
-		Campaigns:      &userhubv1.CampaignSummary{Campaigns: []*userhubv1.CampaignPreview{{Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_ACTIVE}}},
+		User:      &userhubv1.UserSummary{NeedsProfileCompletion: true},
+		Campaigns: &userhubv1.CampaignSummary{Campaigns: []*userhubv1.CampaignPreview{{Status: userhubv1.CampaignStatus_CAMPAIGN_STATUS_ACTIVE}}},
+		CampaignStartNudges: &userhubv1.CampaignStartNudgeSummary{Available: true, Nudges: []*userhubv1.CampaignStartNudge{{
+			CampaignId:        "camp-2",
+			CampaignName:      "Moonwake",
+			BlockerCode:       "CHARACTER_SYSTEM_REQUIRED",
+			BlockerMessage:    "Finish Aria",
+			ActionKind:        userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_COMPLETE_CHARACTER,
+			TargetCharacterId: "char-1",
+		}}},
 		ActiveSessions: &userhubv1.ActiveSessionSummary{Available: true, Sessions: []*userhubv1.ActiveSessionPreview{{CampaignId: "camp-1", CampaignName: "Sunfall", SessionId: "session-1", SessionName: "The Crossing"}}},
 		Metadata:       &userhubv1.DashboardMetadata{DegradedDependencies: []string{" social.profile "}},
 	}}
@@ -65,6 +74,12 @@ func TestGRPCGatewayMapsSnapshotAndMetadata(t *testing.T) {
 	}
 	if !snapshot.ActiveSessionsAvailable || len(snapshot.ActiveSessions) != 1 || snapshot.ActiveSessions[0].CampaignID != "camp-1" {
 		t.Fatalf("ActiveSessions = %+v", snapshot.ActiveSessions)
+	}
+	if !snapshot.CampaignStartNudgesAvailable || len(snapshot.CampaignStartNudges) != 1 || snapshot.CampaignStartNudges[0].CampaignID != "camp-2" {
+		t.Fatalf("CampaignStartNudges = %+v", snapshot.CampaignStartNudges)
+	}
+	if snapshot.CampaignStartNudges[0].ActionKind != dashboardapp.CampaignStartNudgeActionKindCompleteCharacter {
+		t.Fatalf("CampaignStartNudges[0].ActionKind = %q, want %q", snapshot.CampaignStartNudges[0].ActionKind, dashboardapp.CampaignStartNudgeActionKindCompleteCharacter)
 	}
 	if snapshot.ActiveSessions[0].SessionID != "session-1" {
 		t.Fatalf("ActiveSessions[0].SessionID = %q, want %q", snapshot.ActiveSessions[0].SessionID, "session-1")

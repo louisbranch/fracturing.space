@@ -15,6 +15,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+const readinessCampaignPageSize = 10
+
 // grpcAuthGateway adapts auth.v1 clients to domain identity lookups.
 type grpcAuthGateway struct {
 	users authv1.AuthServiceClient
@@ -88,6 +90,75 @@ func (g *grpcGameGateway) ListCampaignPreviews(ctx context.Context, userID strin
 		})
 	}
 	return page, nil
+}
+
+// ListReadinessCampaigns resolves all draft/active campaigns eligible for readiness scanning.
+func (g *grpcGameGateway) ListReadinessCampaigns(ctx context.Context, userID string) ([]domain.CampaignPreview, error) {
+	if g == nil || g.campaigns == nil {
+		return nil, errors.New("game campaign client is not configured")
+	}
+	callCtx := grpcauthctx.WithUserID(ctx, userID)
+	pageToken := ""
+	campaigns := make([]domain.CampaignPreview, 0, readinessCampaignPageSize)
+	for {
+		resp, err := g.campaigns.ListCampaigns(callCtx, &gamev1.ListCampaignsRequest{
+			PageSize:  readinessCampaignPageSize,
+			PageToken: pageToken,
+			Statuses: []gamev1.CampaignStatus{
+				gamev1.CampaignStatus_DRAFT,
+				gamev1.CampaignStatus_ACTIVE,
+			},
+		})
+		if err != nil {
+			return nil, err
+		}
+		for _, campaign := range resp.GetCampaigns() {
+			if campaign == nil {
+				continue
+			}
+			campaigns = append(campaigns, domain.CampaignPreview{
+				CampaignID:       campaign.GetId(),
+				Name:             campaign.GetName(),
+				Status:           campaignStatusFromProto(campaign.GetStatus()),
+				ParticipantCount: int(campaign.GetParticipantCount()),
+				CharacterCount:   int(campaign.GetCharacterCount()),
+				UpdatedAt:        campaign.GetUpdatedAt().AsTime(),
+			})
+		}
+		pageToken = strings.TrimSpace(resp.GetNextPageToken())
+		if pageToken == "" {
+			return campaigns, nil
+		}
+	}
+}
+
+// GetCampaignReadiness resolves localized campaign session-start blockers for one user-scoped campaign.
+func (g *grpcGameGateway) GetCampaignReadiness(ctx context.Context, userID, campaignID string) (domain.CampaignReadiness, error) {
+	if g == nil || g.campaigns == nil {
+		return domain.CampaignReadiness{}, errors.New("game campaign client is not configured")
+	}
+	callCtx := grpcauthctx.WithUserID(ctx, userID)
+	resp, err := g.campaigns.GetCampaignSessionReadiness(callCtx, &gamev1.GetCampaignSessionReadinessRequest{CampaignId: campaignID})
+	if err != nil {
+		return domain.CampaignReadiness{}, err
+	}
+	result := domain.CampaignReadiness{
+		Blockers: make([]domain.CampaignReadinessBlocker, 0, len(resp.GetReadiness().GetBlockers())),
+	}
+	for _, blocker := range resp.GetReadiness().GetBlockers() {
+		if blocker == nil {
+			continue
+		}
+		result.Blockers = append(result.Blockers, domain.CampaignReadinessBlocker{
+			Code:                strings.TrimSpace(blocker.GetCode()),
+			Message:             strings.TrimSpace(blocker.GetMessage()),
+			ResponsibleUserIDs:  normalizedIDs(blocker.GetAction().GetResponsibleUserIds()),
+			ActionKind:          readinessActionKindFromProto(blocker.GetAction().GetResolutionKind()),
+			TargetParticipantID: strings.TrimSpace(blocker.GetAction().GetTargetParticipantId()),
+			TargetCharacterID:   strings.TrimSpace(blocker.GetAction().GetTargetCharacterId()),
+		})
+	}
+	return result, nil
 }
 
 // ListPendingInvitePreviews resolves one page of user-scoped pending invites.
@@ -222,6 +293,46 @@ func campaignStatusFromProto(value gamev1.CampaignStatus) domain.CampaignStatus 
 	default:
 		return domain.CampaignStatusUnspecified
 	}
+}
+
+func readinessActionKindFromProto(value gamev1.CampaignSessionReadinessResolutionKind) domain.CampaignStartNudgeActionKind {
+	switch value {
+	case gamev1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_CREATE_CHARACTER:
+		return domain.CampaignStartNudgeActionCreateCharacter
+	case gamev1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_COMPLETE_CHARACTER:
+		return domain.CampaignStartNudgeActionCompleteCharacter
+	case gamev1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_CONFIGURE_AI_AGENT:
+		return domain.CampaignStartNudgeActionConfigureAIAgent
+	case gamev1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_INVITE_PLAYER:
+		return domain.CampaignStartNudgeActionInvitePlayer
+	case gamev1.CampaignSessionReadinessResolutionKind_CAMPAIGN_SESSION_READINESS_RESOLUTION_KIND_MANAGE_PARTICIPANTS:
+		return domain.CampaignStartNudgeActionManageParticipants
+	default:
+		return domain.CampaignStartNudgeActionUnspecified
+	}
+}
+
+func normalizedIDs(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	seen := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value == "" {
+			continue
+		}
+		if _, ok := seen[value]; ok {
+			continue
+		}
+		seen[value] = struct{}{}
+		result = append(result, value)
+	}
+	if len(result) == 0 {
+		return nil
+	}
+	return result
 }
 
 var (

@@ -346,6 +346,51 @@ func TestMountRendersActiveSessionsBlockWithMultipleJoinLinks(t *testing.T) {
 	}
 }
 
+func TestMountRendersCampaignStartNudgesBlock(t *testing.T) {
+	t.Parallel()
+
+	client := dashboardUserHubClientStub{resp: &userhubv1.GetDashboardResponse{
+		CampaignStartNudges: &userhubv1.CampaignStartNudgeSummary{
+			Available: true,
+			Nudges: []*userhubv1.CampaignStartNudge{{
+				CampaignId:        "camp-1",
+				CampaignName:      "Sunfall",
+				BlockerCode:       "CHARACTER_SYSTEM_REQUIRED",
+				BlockerMessage:    "Finish Aria",
+				ActionKind:        userhubv1.CampaignStartNudgeActionKind_CAMPAIGN_START_NUDGE_ACTION_KIND_COMPLETE_CHARACTER,
+				TargetCharacterId: "char-1",
+			}},
+		},
+	}}
+	base := modulehandler.NewBase(
+		func(*http.Request) string { return "user-1" },
+		func(*http.Request) string { return "en-US" },
+		nil,
+	)
+	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-dashboard-block="campaign-start-nudges"`) {
+		t.Fatalf("body = %q, want campaign-start-nudges block", body)
+	}
+	if !strings.Contains(body, routepath.AppCampaignCharacter("camp-1", "char-1")) {
+		t.Fatalf("body = %q, want character detail CTA", body)
+	}
+	if !strings.Contains(body, "Finish character") {
+		t.Fatalf("body = %q, want finish-character CTA label", body)
+	}
+}
+
 type dashboardUserHubClientStub struct {
 	resp *userhubv1.GetDashboardResponse
 	err  error

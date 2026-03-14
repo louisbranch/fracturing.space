@@ -284,6 +284,7 @@ func (s *fakeParticipantStore) ListCampaignIDsByUser(_ context.Context, userID s
 			ids = append(ids, campaignID)
 		}
 	}
+	sort.Strings(ids)
 	return ids, nil
 }
 
@@ -314,6 +315,7 @@ func (s *fakeParticipantStore) ListCampaignIDsByParticipant(_ context.Context, p
 			ids = append(ids, campaignID)
 		}
 	}
+	sort.Strings(ids)
 	return ids, nil
 }
 

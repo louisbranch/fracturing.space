@@ -20,6 +20,17 @@ func mapDashboardTemplateView(view dashboardapp.DashboardView) webtemplates.Dash
 			SessionName:  session.SessionName,
 		}
 	}
+	startNudges := make([]webtemplates.DashboardCampaignStartNudgeEntry, len(view.CampaignStartNudges))
+	for i, nudge := range view.CampaignStartNudges {
+		startNudges[i] = webtemplates.DashboardCampaignStartNudgeEntry{
+			CampaignID:          nudge.CampaignID,
+			CampaignName:        nudge.CampaignName,
+			Message:             nudge.BlockerMessage,
+			ActionKind:          string(nudge.ActionKind),
+			TargetParticipantID: nudge.TargetParticipantID,
+			TargetCharacterID:   nudge.TargetCharacterID,
+		}
+	}
 
 	statusNotice := webtemplates.DashboardStatusNotice{}
 	switch view.DataStatus {
@@ -31,7 +42,12 @@ func mapDashboardTemplateView(view dashboardapp.DashboardView) webtemplates.Dash
 	return webtemplates.DashboardPageView{
 		StatusNotice:   statusNotice,
 		ProfilePending: webtemplates.DashboardProfilePendingBlock{Visible: view.ShowPendingProfileBlock},
-		Adventure:      webtemplates.DashboardAdventureBlock{Visible: view.ShowAdventureBlock},
+		CampaignStartNudges: webtemplates.DashboardCampaignStartNudgesBlock{
+			Visible: len(startNudges) > 0,
+			HasMore: view.CampaignStartNudgesMore,
+			Nudges:  startNudges,
+		},
+		Adventure: webtemplates.DashboardAdventureBlock{Visible: view.ShowAdventureBlock},
 		ActiveSessions: webtemplates.DashboardActiveSessionsBlock{
 			Visible:  len(activeSessions) > 0,
 			Sessions: activeSessions,
