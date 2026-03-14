@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-14T12:59:47Z",
+  "updated_at": "2026-03-14T13:09:02Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -115,7 +115,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/replay",
-      "floor": 98.3,
+      "floor": 98.4,
       "description": "Deterministic replay sequencing and checkpoint persistence."
     },
     {
