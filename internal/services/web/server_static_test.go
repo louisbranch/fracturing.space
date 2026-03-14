@@ -211,6 +211,7 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 					DaggerheartAssetClient:   defaultDaggerheartAssetClient(),
 					SessionClient:            defaultSessionClient(),
 					InviteClient:             defaultInviteClient(),
+					AuthClient:               auth,
 					AuthorizationClient:      defaultAuthorizationClient(),
 				},
 			},

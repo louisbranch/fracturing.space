@@ -17,8 +17,8 @@ func (s service) createInvite(ctx context.Context, campaignID string, input Crea
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
 	}
 	return s.mutationGateway.CreateInvite(ctx, campaignID, CreateInviteInput{
-		ParticipantID:   participantID,
-		RecipientUserID: strings.TrimSpace(input.RecipientUserID),
+		ParticipantID:     participantID,
+		RecipientUsername: strings.TrimSpace(input.RecipientUsername),
 	})
 }
 

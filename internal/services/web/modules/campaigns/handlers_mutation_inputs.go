@@ -50,8 +50,8 @@ func parseSetCharacterControllerInput(form url.Values) string {
 // parseCreateInviteInput maps form values into invite-create input.
 func parseCreateInviteInput(form url.Values) CreateInviteInput {
 	return CreateInviteInput{
-		ParticipantID:   strings.TrimSpace(form.Get("participant_id")),
-		RecipientUserID: strings.TrimSpace(form.Get("recipient_user_id")),
+		ParticipantID:     strings.TrimSpace(form.Get("participant_id")),
+		RecipientUsername: strings.TrimSpace(form.Get("username")),
 	}
 }
 

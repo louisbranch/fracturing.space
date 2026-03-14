@@ -41,8 +41,8 @@ type EndSessionInput struct {
 
 // CreateInviteInput stores create-invite form values.
 type CreateInviteInput struct {
-	ParticipantID   string
-	RecipientUserID string
+	ParticipantID     string
+	RecipientUsername string
 }
 
 // RevokeInviteInput stores revoke-invite form values.

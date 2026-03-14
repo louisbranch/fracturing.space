@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -78,6 +79,11 @@ type InviteClient interface {
 	RevokeInvite(context.Context, *statev1.RevokeInviteRequest, ...grpc.CallOption) (*statev1.RevokeInviteResponse, error)
 }
 
+// AuthClient resolves auth-owned users from usernames for invite targeting.
+type AuthClient interface {
+	LookupUserByUsername(context.Context, *authv1.LookupUserByUsernameRequest, ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error)
+}
+
 // AuthorizationClient exposes campaign authorization checks.
 type AuthorizationClient interface {
 	Can(context.Context, *statev1.CanRequest, ...grpc.CallOption) (*statev1.CanResponse, error)
@@ -94,6 +100,7 @@ type GRPCGatewayDeps struct {
 	DaggerheartAssetClient   DaggerheartAssetClient
 	SessionClient            SessionClient
 	InviteClient             InviteClient
+	AuthClient               AuthClient
 	AuthorizationClient      AuthorizationClient
 	AssetBaseURL             string
 }
@@ -104,7 +111,7 @@ type GRPCGatewayDeps struct {
 func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 	if deps.CampaignClient == nil || deps.ParticipantClient == nil || deps.CharacterClient == nil ||
 		deps.DaggerheartContentClient == nil || deps.DaggerheartAssetClient == nil ||
-		deps.SessionClient == nil || deps.InviteClient == nil || deps.AuthorizationClient == nil {
+		deps.SessionClient == nil || deps.InviteClient == nil || deps.AuthClient == nil || deps.AuthorizationClient == nil {
 		return campaignapp.NewUnavailableGateway()
 	}
 	return GRPCGateway{
@@ -116,6 +123,7 @@ func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 		DaggerheartAsset:    deps.DaggerheartAssetClient,
 		SessionClient:       deps.SessionClient,
 		InviteClient:        deps.InviteClient,
+		AuthClient:          deps.AuthClient,
 		AuthorizationClient: deps.AuthorizationClient,
 		AssetBaseURL:        deps.AssetBaseURL,
 	}
@@ -131,6 +139,7 @@ type GRPCGateway struct {
 	DaggerheartAsset    DaggerheartAssetClient
 	SessionClient       SessionClient
 	InviteClient        InviteClient
+	AuthClient          AuthClient
 	AuthorizationClient AuthorizationClient
 	AssetBaseURL        string
 }

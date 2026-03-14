@@ -81,6 +81,11 @@ func (s service) RequireManageParticipants(ctx context.Context, campaignID strin
 	return s.requireManageParticipants(ctx, campaignID)
 }
 
+// RequireManageInvites enforces owner/manager invite governance access.
+func (s service) RequireManageInvites(ctx context.Context, campaignID string) error {
+	return s.requireManageInvites(ctx, campaignID)
+}
+
 // RequireMutateCharacters enforces character-mutation access.
 func (s service) RequireMutateCharacters(ctx context.Context, campaignID string) error {
 	return s.requireMutateCharacters(ctx, campaignID)

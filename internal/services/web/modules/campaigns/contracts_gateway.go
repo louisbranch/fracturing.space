@@ -16,6 +16,7 @@ type (
 	DaggerheartAssetClient   = campaigngateway.DaggerheartAssetClient
 	SessionClient            = campaigngateway.SessionClient
 	InviteClient             = campaigngateway.InviteClient
+	AuthClient               = campaigngateway.AuthClient
 	AuthorizationClient      = campaigngateway.AuthorizationClient
 	GRPCGatewayDeps          = campaigngateway.GRPCGatewayDeps
 	grpcGateway              = campaigngateway.GRPCGateway

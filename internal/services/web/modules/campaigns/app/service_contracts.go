@@ -66,6 +66,7 @@ type Service interface {
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
 	RequireManageCampaign(context.Context, string) error
 	RequireManageParticipants(context.Context, string) error
+	RequireManageInvites(context.Context, string) error
 	RequireMutateCharacters(context.Context, string) error
 	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
 	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error

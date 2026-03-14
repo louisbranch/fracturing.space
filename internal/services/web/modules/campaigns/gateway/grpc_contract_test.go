@@ -9,6 +9,7 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -38,6 +39,7 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 		DaggerheartAssetClient:   &fakeDaggerheartContentClient{},
 		SessionClient:            &contractSessionClient{},
 		InviteClient:             &contractInviteClient{},
+		AuthClient:               &contractAuthClient{},
 		AuthorizationClient:      contractAuthorizationClient{},
 	})
 	if _, ok := ready.(GRPCGateway); !ok {
@@ -520,7 +522,15 @@ func TestMutationReadersValidateAndMapTransportErrors(t *testing.T) {
 
 	sessionClient := &contractSessionClient{startErr: status.Error(codes.InvalidArgument, "bad session"), endErr: status.Error(codes.InvalidArgument, "bad session")}
 	inviteClient := &contractInviteClient{createErr: status.Error(codes.InvalidArgument, "bad invite"), revokeErr: status.Error(codes.InvalidArgument, "bad invite")}
-	gateway = GRPCGateway{SessionClient: sessionClient, InviteClient: inviteClient}
+	gateway = GRPCGateway{
+		SessionClient: sessionClient,
+		InviteClient:  inviteClient,
+		AuthClient: &contractAuthClient{
+			lookupResp: &authv1.LookupUserByUsernameResponse{
+				User: &authv1.User{Id: "user-2", Username: "alice"},
+			},
+		},
+	}
 
 	if err := gateway.StartSession(context.Background(), "c1", campaignapp.StartSessionInput{Name: "Session"}); err == nil {
 		t.Fatalf("expected StartSession mapping error")
@@ -564,7 +574,7 @@ func TestMutationReadersValidateAndMapTransportErrors(t *testing.T) {
 		assertAppErrorKind(t, err, apperrors.KindConflict)
 	}
 
-	if err := gateway.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{ParticipantID: "p1", RecipientUserID: "user-2"}); err == nil {
+	if err := gateway.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{ParticipantID: "p1", RecipientUsername: "alice"}); err == nil {
 		t.Fatalf("expected CreateInvite mapping error")
 	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_create_invite" {
 		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_create_invite")
@@ -837,6 +847,54 @@ func TestCanCampaignActionAndHelperMappings(t *testing.T) {
 	}
 }
 
+func TestCreateInviteResolvesPlainUsernameBeforeGameRPC(t *testing.T) {
+	t.Parallel()
+
+	inviteClient := &contractInviteClient{}
+	authClient := &contractAuthClient{
+		lookupResp: &authv1.LookupUserByUsernameResponse{
+			User: &authv1.User{Id: "user-2", Username: "alice"},
+		},
+	}
+	gateway := GRPCGateway{InviteClient: inviteClient, AuthClient: authClient}
+
+	if err := gateway.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{
+		ParticipantID:     "p1",
+		RecipientUsername: "alice",
+	}); err != nil {
+		t.Fatalf("CreateInvite() error = %v", err)
+	}
+	if authClient.lastLookup == nil || authClient.lastLookup.GetUsername() != "alice" {
+		t.Fatalf("lookup request = %#v, want username alice", authClient.lastLookup)
+	}
+	if inviteClient.lastCreate == nil {
+		t.Fatal("expected create invite request to be sent")
+	}
+	if inviteClient.lastCreate.GetRecipientUserId() != "user-2" {
+		t.Fatalf("RecipientUserId = %q, want %q", inviteClient.lastCreate.GetRecipientUserId(), "user-2")
+	}
+}
+
+func TestCreateInviteMapsUnknownRecipientUsernameToValidationError(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{
+		InviteClient: &contractInviteClient{},
+		AuthClient:   &contractAuthClient{lookupErr: status.Error(codes.NotFound, "user not found")},
+	}
+
+	err := gateway.CreateInvite(context.Background(), "c1", campaignapp.CreateInviteInput{
+		ParticipantID:     "p1",
+		RecipientUsername: "missing-user",
+	})
+	if err == nil {
+		t.Fatal("expected CreateInvite error")
+	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.recipient_username_was_not_found" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.recipient_username_was_not_found")
+	}
+}
+
 func TestMapCampaignCharacterCreationStepToProtoWrapper(t *testing.T) {
 	t.Parallel()
 
@@ -1036,10 +1094,11 @@ func (c *contractSessionClient) EndSession(context.Context, *statev1.EndSessionR
 }
 
 type contractInviteClient struct {
-	listResp  *statev1.ListInvitesResponse
-	listErr   error
-	createErr error
-	revokeErr error
+	listResp   *statev1.ListInvitesResponse
+	listErr    error
+	createErr  error
+	revokeErr  error
+	lastCreate *statev1.CreateInviteRequest
 }
 
 func (c *contractInviteClient) ListInvites(context.Context, *statev1.ListInvitesRequest, ...grpc.CallOption) (*statev1.ListInvitesResponse, error) {
@@ -1052,7 +1111,8 @@ func (c *contractInviteClient) ListInvites(context.Context, *statev1.ListInvites
 	return &statev1.ListInvitesResponse{}, nil
 }
 
-func (c *contractInviteClient) CreateInvite(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
+func (c *contractInviteClient) CreateInvite(_ context.Context, req *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
+	c.lastCreate = req
 	if c.createErr != nil {
 		return nil, c.createErr
 	}
@@ -1070,6 +1130,23 @@ type contractAuthorizationClient struct {
 	canResp *statev1.CanResponse
 	canErr  error
 	nilCan  bool
+}
+
+type contractAuthClient struct {
+	lookupResp *authv1.LookupUserByUsernameResponse
+	lookupErr  error
+	lastLookup *authv1.LookupUserByUsernameRequest
+}
+
+func (c *contractAuthClient) LookupUserByUsername(_ context.Context, req *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
+	c.lastLookup = req
+	if c.lookupErr != nil {
+		return nil, c.lookupErr
+	}
+	if c.lookupResp != nil {
+		return c.lookupResp, nil
+	}
+	return &authv1.LookupUserByUsernameResponse{}, nil
 }
 
 func (c contractAuthorizationClient) Can(context.Context, *statev1.CanRequest, ...grpc.CallOption) (*statev1.CanResponse, error) {

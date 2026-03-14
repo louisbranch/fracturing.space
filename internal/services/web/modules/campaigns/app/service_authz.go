@@ -19,6 +19,11 @@ func (s service) requireManageParticipants(ctx context.Context, campaignID strin
 	return s.requirePolicy(ctx, campaignID, policyManageParticipant)
 }
 
+// requireManageInvites enforces invite-manage access for owner/manager workflows.
+func (s service) requireManageInvites(ctx context.Context, campaignID string) error {
+	return s.requirePolicy(ctx, campaignID, policyManageInvite)
+}
+
 // requireMutateCharacters enforces baseline character-mutation access.
 func (s service) requireMutateCharacters(ctx context.Context, campaignID string) error {
 	return s.requirePolicy(ctx, campaignID, policyMutateCharacter)

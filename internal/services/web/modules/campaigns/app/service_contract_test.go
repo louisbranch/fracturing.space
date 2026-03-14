@@ -131,7 +131,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if err := svc.UpdateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p1", Name: "Owner Prime", Role: "gm", Pronouns: "they/them"}); err != nil {
 		t.Fatalf("UpdateParticipant() error = %v", err)
 	}
-	if err := svc.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUserID: "user-2"}); err != nil {
+	if err := svc.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUsername: "alice"}); err != nil {
 		t.Fatalf("CreateInvite() error = %v", err)
 	}
 	if err := svc.RevokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}); err != nil {
@@ -214,7 +214,7 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	}
 	assertUnavailable(t, gw.UpdateCharacter(ctx, "c1", "char-1", UpdateCharacterInput{}), "UpdateCharacter")
 	assertUnavailable(t, gw.UpdateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p1"}), "UpdateParticipant")
-	assertUnavailable(t, gw.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUserID: "user-2"}), "CreateInvite")
+	assertUnavailable(t, gw.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUsername: "alice"}), "CreateInvite")
 	assertUnavailable(t, gw.RevokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}), "RevokeInvite")
 	assertUnavailable(t, gw.ApplyCharacterCreationStep(ctx, "c1", "char-1", &CampaignCharacterCreationStepInput{}), "ApplyCharacterCreationStep")
 	assertUnavailable(t, gw.ResetCharacterCreationWorkflow(ctx, "c1", "char-1"), "ResetCharacterCreationWorkflow")

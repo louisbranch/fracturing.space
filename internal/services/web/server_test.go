@@ -123,7 +123,7 @@ func TestDefaultCampaignSurfaceExposesDetailAndMutationRoutes(t *testing.T) {
 	}{
 		{path: "/app/campaigns/c1/sessions/start", body: "name=Session+One", wantPath: "/app/campaigns/c1/sessions"},
 		{path: "/app/campaigns/c1/sessions/end", body: "session_id=sess-1", wantPath: "/app/campaigns/c1/sessions"},
-		{path: "/app/campaigns/c1/invites/create", body: "participant_id=p1&recipient_user_id=user-2", wantPath: "/app/campaigns/c1/invites"},
+		{path: "/app/campaigns/c1/invites/create", body: "participant_id=p1&username=alice", wantPath: "/app/campaigns/c1/invites"},
 		{path: "/app/campaigns/c1/invites/revoke", body: "invite_id=inv-1", wantPath: "/app/campaigns/c1/invites"},
 	} {
 		req := httptest.NewRequest(http.MethodPost, tc.path, strings.NewReader(tc.body))
@@ -202,6 +202,7 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 					DaggerheartAssetClient:   defaultDaggerheartAssetClient(),
 					SessionClient:            defaultSessionClient(),
 					InviteClient:             defaultInviteClient(),
+					AuthClient:               auth,
 					AuthorizationClient:      defaultAuthorizationClient(),
 				},
 			},

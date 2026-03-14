@@ -285,6 +285,14 @@ func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaign
 			if err != nil {
 				return err
 			}
+			if err := h.service.RequireManageInvites(ctx, campaignID); err == nil {
+				view.CanManageInvites = true
+				participants, err := h.service.CampaignParticipants(ctx, campaignID)
+				if err != nil {
+					return err
+				}
+				view.InviteSeatOptions = mapInviteSeatOptions(participants, items)
+			}
 			view.Invites = mapInvitesView(items)
 			return nil
 		},

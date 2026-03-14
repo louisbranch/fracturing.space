@@ -35,6 +35,7 @@ type CampaignDetailView struct {
 	ActionsLocked            bool
 	CanEditCampaign          bool
 	CanManageParticipants    bool
+	CanManageInvites         bool
 	CanCreateCharacter       bool
 	Participants             []CampaignParticipantView
 	ParticipantEditor        CampaignParticipantEditorView
@@ -45,6 +46,7 @@ type CampaignDetailView struct {
 	Sessions                 []CampaignSessionView
 	SessionReadiness         CampaignSessionReadinessView
 	Invites                  []CampaignInviteView
+	InviteSeatOptions        []CampaignInviteSeatOptionView
 	CharacterCreationEnabled bool
 	CharacterCreation       CampaignCharacterCreationView
 }
@@ -222,6 +224,11 @@ type CampaignInviteView struct {
 	ParticipantID   string
 	RecipientUserID string
 	Status          string
+}
+
+type CampaignInviteSeatOptionView struct {
+	ParticipantID string
+	Label         string
 }
 
 type CampaignCharacterCreationStepView struct {

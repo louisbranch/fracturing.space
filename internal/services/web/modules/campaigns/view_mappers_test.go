@@ -103,8 +103,8 @@ func TestCampaignWorkspaceMenuShowsOnlyActiveSessionSubItems(t *testing.T) {
 	if menu == nil {
 		t.Fatalf("campaignWorkspaceMenu(...) = nil, want non-nil")
 	}
-	if len(menu.Items) != 4 {
-		t.Fatalf("len(menu.Items) = %d, want 4", len(menu.Items))
+	if len(menu.Items) != 5 {
+		t.Fatalf("len(menu.Items) = %d, want 5", len(menu.Items))
 	}
 	if menu.Items[1].Label != "Participants" {
 		t.Fatalf("menu.Items[1].Label = %q, want %q", menu.Items[1].Label, "Participants")
@@ -117,6 +117,18 @@ func TestCampaignWorkspaceMenuShowsOnlyActiveSessionSubItems(t *testing.T) {
 	}
 	if menu.Items[3].URL != routepath.AppCampaignSessions("c1") {
 		t.Fatalf("menu.Items[3].URL = %q, want %q", menu.Items[3].URL, routepath.AppCampaignSessions("c1"))
+	}
+	if menu.Items[4].Label != "Invites" {
+		t.Fatalf("menu.Items[4].Label = %q, want %q", menu.Items[4].Label, "Invites")
+	}
+	if menu.Items[4].URL != routepath.AppCampaignInvites("c1") {
+		t.Fatalf("menu.Items[4].URL = %q, want %q", menu.Items[4].URL, routepath.AppCampaignInvites("c1"))
+	}
+	if menu.Items[4].IconID != commonv1.IconId_ICON_ID_INVITES {
+		t.Fatalf("menu.Items[4].IconID = %v, want %v", menu.Items[4].IconID, commonv1.IconId_ICON_ID_INVITES)
+	}
+	if menu.Items[4].Badge != "" {
+		t.Fatalf("menu.Items[4].Badge = %q, want empty badge", menu.Items[4].Badge)
 	}
 	// Badge still shows total count of all sessions.
 	if menu.Items[3].Badge != "3" {
@@ -184,5 +196,33 @@ func TestCampaignWorkspaceMenuBadgeCountsAllSessionsButSubItemsOnlyActive(t *tes
 	// No active sessions, so no sub-items.
 	if len(sessionItem.SubItems) != 0 {
 		t.Fatalf("len(session subitems) = %d, want 0", len(sessionItem.SubItems))
+	}
+}
+
+func TestMapInviteSeatOptionsShowsOnlyAvailableHumanSeats(t *testing.T) {
+	t.Parallel()
+
+	options := mapInviteSeatOptions(
+		[]CampaignParticipant{
+			{ID: "p-open-b", Name: "Bryn", Controller: "Human"},
+			{ID: "p-pending", Name: "Ari", Controller: "Human"},
+			{ID: "p-bound", Name: "Cato", Controller: "Human", UserID: "user-1"},
+			{ID: "p-ai", Name: "Oracle", Controller: "AI"},
+			{ID: "p-open-a", Name: "Ada", Controller: "controller_human"},
+		},
+		[]CampaignInvite{
+			{ID: "inv-1", ParticipantID: "p-pending", Status: "Pending"},
+			{ID: "inv-2", ParticipantID: "p-open-b", Status: "Claimed"},
+		},
+	)
+
+	if len(options) != 2 {
+		t.Fatalf("len(options) = %d, want 2", len(options))
+	}
+	if options[0].ParticipantID != "p-open-a" || options[0].Label != "Ada" {
+		t.Fatalf("options[0] = %#v, want participant p-open-a / Ada", options[0])
+	}
+	if options[1].ParticipantID != "p-open-b" || options[1].Label != "Bryn" {
+		t.Fatalf("options[1] = %#v, want participant p-open-b / Bryn", options[1])
 	}
 }
