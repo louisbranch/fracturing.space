@@ -8,14 +8,13 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (a sessionApplication) StartSession(ctx context.Context, campaignID string, in *campaignv1.StartSessionRequest) (storage.SessionRecord, error) {
@@ -27,9 +26,13 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		return storage.SessionRecord{}, err
 	}
 
+	if err := validate.MaxLength(in.GetName(), "name", validate.MaxNameLen); err != nil {
+		return storage.SessionRecord{}, err
+	}
+
 	sessionID, err := a.idGenerator()
 	if err != nil {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "generate session id: %v", err)
+		return storage.SessionRecord{}, grpcerror.Internal("generate session id", err)
 	}
 	sessionName := strings.TrimSpace(in.GetName())
 
@@ -42,7 +45,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionRecord{}, grpcerror.Internal("encode payload", err)
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -68,7 +71,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 
 	sess, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "load session: %v", err)
+		return storage.SessionRecord{}, grpcerror.Internal("load session", err)
 	}
 	return sess, nil
 }
@@ -97,7 +100,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	payload := session.EndPayload{SessionID: ids.SessionID(sessionID)}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -126,7 +129,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 
 	updated, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return storage.SessionRecord{}, status.Errorf(codes.Internal, "load session: %v", err)
+		return storage.SessionRecord{}, grpcerror.Internal("load session", err)
 	}
 
 	return updated, nil

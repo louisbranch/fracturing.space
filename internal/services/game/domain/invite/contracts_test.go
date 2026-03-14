@@ -141,9 +141,9 @@ func TestNormalizeStatus(t *testing.T) {
 			if got != tc.want || ok != tc.wantOK {
 				t.Fatalf("NormalizeStatus(%q) = (%q, %v), want (%q, %v)", tc.value, got, ok, tc.want, tc.wantOK)
 			}
-			raw, rawOK := normalizeStatusLabel(tc.value)
+			raw, rawOK := NormalizeStatusLabel(tc.value)
 			if raw != tc.wantRaw || rawOK != tc.wantOK {
-				t.Fatalf("normalizeStatusLabel(%q) = (%q, %v), want (%q, %v)", tc.value, raw, rawOK, tc.wantRaw, tc.wantOK)
+				t.Fatalf("NormalizeStatusLabel(%q) = (%q, %v), want (%q, %v)", tc.value, raw, rawOK, tc.wantRaw, tc.wantOK)
 			}
 		})
 	}

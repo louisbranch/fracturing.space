@@ -168,6 +168,10 @@ func checkMissingStores(required storeRequirement, a Applier) []string {
 // the handler registry is satisfied by this Applier. Call at startup to fail
 // fast on misconfiguration instead of discovering nil stores at runtime when the
 // first event of a given type arrives.
+//
+// In addition to core router requirements, it checks that Adapters is present
+// whenever the event registry contains system-owned event types, since those
+// events are routed through the adapter path rather than the core router.
 func (a Applier) ValidateStorePreconditions() error {
 	if a.BuildErr != nil {
 		return fmt.Errorf("projection applier initialization failed: %w", a.BuildErr)
@@ -176,6 +180,17 @@ func (a Applier) ValidateStorePreconditions() error {
 	var required storeRequirement
 	for _, h := range coreRouter.handlers {
 		required |= h.stores
+	}
+
+	// System-owned events bypass the core router and route through Adapters.
+	// Require Adapters when the event registry contains any system event types.
+	if a.Events != nil {
+		for _, def := range a.Events.ListDefinitions() {
+			if def.Owner == event.OwnerSystem {
+				required |= needAdapters
+				break
+			}
+		}
 	}
 
 	if missing := checkMissingStores(required, a); len(missing) > 0 {

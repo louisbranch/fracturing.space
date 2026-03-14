@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
@@ -83,7 +84,7 @@ func (s *DaggerheartService) runSessionDamageRoll(ctx context.Context, in *pb.Se
 
 	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load latest event seq: %v", err)
+		return nil, grpcerror.Internal("load latest event seq", err)
 	}
 	rollSeq := latestSeq + 1
 
@@ -96,7 +97,7 @@ func (s *DaggerheartService) runSessionDamageRoll(ctx context.Context, in *pb.Se
 		if errors.Is(err, random.ErrSeedOutOfRange()) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to resolve seed: %v", err)
+		return nil, grpcerror.Internal("failed to resolve seed", err)
 	}
 
 	result, err := daggerheart.RollDamage(daggerheart.DamageRollRequest{
@@ -109,7 +110,7 @@ func (s *DaggerheartService) runSessionDamageRoll(ctx context.Context, in *pb.Se
 		if errors.Is(err, dice.ErrMissingDice) || errors.Is(err, dice.ErrInvalidDiceSpec) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to roll damage: %v", err)
+		return nil, grpcerror.Internal("failed to roll damage", err)
 	}
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
@@ -137,7 +138,7 @@ func (s *DaggerheartService) runSessionDamageRoll(ctx context.Context, in *pb.Se
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	var rollSeqValue uint64

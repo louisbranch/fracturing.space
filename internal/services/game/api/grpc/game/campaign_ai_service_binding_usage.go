@@ -4,6 +4,7 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -29,7 +30,7 @@ func (s *CampaignAIService) GetCampaignAIBindingUsage(ctx context.Context, in *c
 
 	campaignIDs, err := bindingReader.ListCampaignIDsByAIAgent(ctx, aiAgentID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list campaign ids by ai agent: %v", err)
+		return nil, grpcerror.Internal("list campaign ids by ai agent", err)
 	}
 	return &campaignv1.GetCampaignAIBindingUsageResponse{
 		ActiveCampaignCount: int32(len(campaignIDs)),

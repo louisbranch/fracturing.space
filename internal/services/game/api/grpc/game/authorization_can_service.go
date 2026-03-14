@@ -41,7 +41,15 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 
 	actor, reasonCode, err := authorizePolicyActor(ctx, s.stores, capability, campaignRecord)
 	if err != nil {
-		emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, reasonCode, actor, err, nil)
+		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+			Store:      s.stores.Audit,
+			CampaignID: campaignID,
+			Capability: capability,
+			Decision:   authzDecisionDeny,
+			ReasonCode: reasonCode,
+			Actor:      actor,
+			Err:        err,
+		})
 		if status.Code(err) == codes.PermissionDenied {
 			return canResponse(false, reasonCode, actor), nil
 		}
@@ -53,7 +61,15 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 		if capability == domainauthz.CapabilityMutateCharacters {
 			ownerParticipantID, evaluateOwnership, resolveErr := resolveCanCharacterOwnerParticipantID(ctx, s.stores, campaignID, in.GetTarget())
 			if resolveErr != nil {
-				emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, domainauthz.ReasonErrorOwnerResolution, actor, resolveErr, nil)
+				emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+					Store:      s.stores.Audit,
+					CampaignID: campaignID,
+					Capability: capability,
+					Decision:   authzDecisionDeny,
+					ReasonCode: domainauthz.ReasonErrorOwnerResolution,
+					Actor:      actor,
+					Err:        resolveErr,
+				})
 				return nil, resolveErr
 			}
 			if evaluateOwnership {
@@ -69,7 +85,16 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 				decision := domainauthz.CanCharacterMutation(actor.CampaignAccess, ids.ParticipantID(actor.ID), ids.ParticipantID(ownerParticipantID))
 				if !decision.Allowed {
 					authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
-					emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, decision.ReasonCode, actor, authErr, extraAttributes)
+					emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+						Store:           s.stores.Audit,
+						CampaignID:      campaignID,
+						Capability:      capability,
+						Decision:        authzDecisionDeny,
+						ReasonCode:      decision.ReasonCode,
+						Actor:           actor,
+						Err:             authErr,
+						ExtraAttributes: extraAttributes,
+					})
 					return canResponse(false, decision.ReasonCode, actor), nil
 				}
 				reasonCode = decision.ReasonCode
@@ -85,14 +110,32 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 				in.GetTarget(),
 			)
 			if evaluationErr != nil {
-				emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, authzReasonErrorActorLoad, actor, evaluationErr, participantAttributes)
+				emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+					Store:           s.stores.Audit,
+					CampaignID:      campaignID,
+					Capability:      capability,
+					Decision:        authzDecisionDeny,
+					ReasonCode:      authzReasonErrorActorLoad,
+					Actor:           actor,
+					Err:             evaluationErr,
+					ExtraAttributes: participantAttributes,
+				})
 				return nil, evaluationErr
 			}
 			if evaluated {
 				extraAttributes = mergeAuthzAttributes(extraAttributes, participantAttributes)
 				if !decision.Allowed {
 					authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
-					emitAuthzDecisionTelemetry(ctx, s.stores.Audit, campaignID, capability, authzDecisionDeny, decision.ReasonCode, actor, authErr, extraAttributes)
+					emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+						Store:           s.stores.Audit,
+						CampaignID:      campaignID,
+						Capability:      capability,
+						Decision:        authzDecisionDeny,
+						ReasonCode:      decision.ReasonCode,
+						Actor:           actor,
+						Err:             authErr,
+						ExtraAttributes: extraAttributes,
+					})
 					return canResponse(false, decision.ReasonCode, actor), nil
 				}
 				reasonCode = decision.ReasonCode
@@ -100,16 +143,14 @@ func (s *AuthorizationService) Can(ctx context.Context, in *campaignv1.CanReques
 		}
 	}
 
-	emitAuthzDecisionTelemetry(
-		ctx,
-		s.stores.Audit,
-		campaignID,
-		capability,
-		authzDecisionForReason(reasonCode),
-		reasonCode,
-		actor,
-		nil,
-		extraAttributes,
-	)
+	emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+		Store:           s.stores.Audit,
+		CampaignID:      campaignID,
+		Capability:      capability,
+		Decision:        authzDecisionForReason(reasonCode),
+		ReasonCode:      reasonCode,
+		Actor:           actor,
+		ExtraAttributes: extraAttributes,
+	})
 	return canResponse(true, reasonCode, actor), nil
 }

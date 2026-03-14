@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -41,7 +42,7 @@ func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.Li
 
 	page, err := s.stores.Character.ListCharacters(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list characters: %v", err)
+		return nil, grpcerror.Internal("list characters", err)
 	}
 
 	response := &campaignv1.ListCharactersResponse{
@@ -93,12 +94,12 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 
 	dhProfile, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, status.Errorf(codes.Internal, "get daggerheart profile: %v", err)
+		return nil, grpcerror.Internal("get daggerheart profile", err)
 	}
 
 	dhState, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, status.Errorf(codes.Internal, "get daggerheart state: %v", err)
+		return nil, grpcerror.Internal("get daggerheart state", err)
 	}
 
 	return &campaignv1.GetCharacterSheetResponse{

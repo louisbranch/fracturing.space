@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -18,8 +19,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (s *DaggerheartService) outcomeAlreadyAppliedForSessionRequest(ctx context.Context, campaignID, sessionID string, rollSeq uint64, requestID string) (bool, error) {
@@ -140,7 +139,7 @@ func (s *DaggerheartService) buildApplyRollOutcomeIdempotentResponse(
 
 	currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load gm fear snapshot: %v", err)
+		return nil, grpcerror.Internal("load gm fear snapshot", err)
 	}
 	value := int32(currentSnap.GMFear)
 	response.Updated.GmFear = &value
@@ -175,16 +174,16 @@ func (s *DaggerheartService) resolveGMConsequence(
 	if _, err := s.stores.SessionGate.GetOpenSessionGate(ctx, campaignID, sessionID); err == nil {
 		gateOpen = true
 	} else if !errors.Is(err, storage.ErrNotFound) {
-		return res, status.Errorf(codes.Internal, "check session gate: %v", err)
+		return res, grpcerror.Internal("check session gate", err)
 	}
 	if !gateOpen {
 		gateID, err := id.NewID()
 		if err != nil {
-			return res, status.Errorf(codes.Internal, "generate gate id: %v", err)
+			return res, grpcerror.Internal("generate gate id", err)
 		}
 		gateType, err := session.NormalizeGateType("gm_consequence")
 		if err != nil {
-			return res, status.Errorf(codes.Internal, "normalize gate type: %v", err)
+			return res, grpcerror.Internal("normalize gate type", err)
 		}
 		payload := session.GateOpenedPayload{
 			GateID:   ids.GateID(gateID),
@@ -197,7 +196,7 @@ func (s *DaggerheartService) resolveGMConsequence(
 		}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return res, status.Errorf(codes.Internal, "encode session gate payload: %v", err)
+			return res, grpcerror.Internal("encode session gate payload", err)
 		}
 		res.needsGate = true
 		res.gateID = gateID
@@ -211,7 +210,7 @@ func (s *DaggerheartService) resolveGMConsequence(
 			return res, nil
 		}
 	} else if !errors.Is(err, storage.ErrNotFound) {
-		return res, status.Errorf(codes.Internal, "check session spotlight: %v", err)
+		return res, grpcerror.Internal("check session spotlight", err)
 	}
 
 	spotlightPayload := session.SpotlightSetPayload{
@@ -219,7 +218,7 @@ func (s *DaggerheartService) resolveGMConsequence(
 	}
 	payloadJSON, err := json.Marshal(spotlightPayload)
 	if err != nil {
-		return res, status.Errorf(codes.Internal, "encode spotlight payload: %v", err)
+		return res, grpcerror.Internal("encode spotlight payload", err)
 	}
 	res.needsSpotlight = true
 	res.spotlightPayloadJSON = payloadJSON

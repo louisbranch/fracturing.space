@@ -7,12 +7,11 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string) (storage.CampaignRecord, error) {
@@ -52,7 +51,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	}
 	updated, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}
 
 	return updated, nil
@@ -95,7 +94,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	}
 	updated, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}
 
 	return updated, nil
@@ -134,7 +133,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	}
 	updated, err := c.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, status.Errorf(codes.Internal, "load campaign: %v", err)
+		return storage.CampaignRecord{}, grpcerror.Internal("load campaign", err)
 	}
 
 	return updated, nil

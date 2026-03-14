@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
@@ -67,12 +68,12 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 		func(mode commonv1.RollMode) bool { return mode == commonv1.RollMode_REPLAY },
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to resolve rest seed: %v", err)
+		return nil, grpcerror.Internal("failed to resolve rest seed", err)
 	}
 
 	currentSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, status.Errorf(codes.Internal, "get daggerheart snapshot: %v", err)
+		return nil, grpcerror.Internal("get daggerheart snapshot", err)
 	}
 	state := daggerheart.RestState{ConsecutiveShortRests: currentSnap.ConsecutiveShortRests}
 	restType, err := daggerheartRestTypeFromProto(in.Rest.RestType)
@@ -113,7 +114,7 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -138,7 +139,7 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 
 	updatedSnap, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart snapshot: %v", err)
+		return nil, grpcerror.Internal("load daggerheart snapshot", err)
 	}
 
 	entries := make([]*pb.DaggerheartCharacterStateEntry, 0, len(characterIDs))
@@ -151,7 +152,7 @@ func (s *DaggerheartService) runApplyRest(ctx context.Context, in *pb.Daggerhear
 			if errors.Is(err, storage.ErrNotFound) {
 				continue
 			}
-			return nil, status.Errorf(codes.Internal, "get daggerheart character state: %v", err)
+			return nil, grpcerror.Internal("get daggerheart character state", err)
 		}
 		entries = append(entries, &pb.DaggerheartCharacterStateEntry{
 			CharacterId: id,
@@ -258,7 +259,7 @@ func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -295,7 +296,7 @@ func (s *DaggerheartService) runApplyDowntimeMove(ctx context.Context, in *pb.Da
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+		return nil, grpcerror.Internal("load daggerheart state", err)
 	}
 	return &pb.DaggerheartApplyDowntimeMoveResponse{
 		CharacterId: characterID,
@@ -359,7 +360,7 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -385,7 +386,7 @@ func (s *DaggerheartService) runApplyTemporaryArmor(ctx context.Context, in *pb.
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+		return nil, grpcerror.Internal("load daggerheart state", err)
 	}
 	return &pb.DaggerheartApplyTemporaryArmorResponse{
 		CharacterId: characterID,
@@ -482,7 +483,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -527,7 +528,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 		}
 		stressSpendJSON, err := json.Marshal(stressSpendPayload)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "encode stress spend payload: %v", err)
+			return nil, grpcerror.Internal("encode stress spend payload", err)
 		}
 		_, err = s.executeAndApplyDomainCommand(ctx, command.Command{
 			CampaignID:    ids.CampaignID(campaignID),
@@ -550,7 +551,7 @@ func (s *DaggerheartService) runSwapLoadout(ctx context.Context, in *pb.Daggerhe
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+		return nil, grpcerror.Internal("load daggerheart state", err)
 	}
 	return &pb.DaggerheartSwapLoadoutResponse{
 		CharacterId: characterID,
@@ -612,7 +613,7 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 		func(mode commonv1.RollMode) bool { return mode == commonv1.RollMode_REPLAY },
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to resolve death move seed: %v", err)
+		return nil, grpcerror.Internal("failed to resolve death move seed", err)
 	}
 
 	profile, err := s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
@@ -721,7 +722,7 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 	}
 	payloadJSON, err := json.Marshal(patchPayload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -764,7 +765,7 @@ func (s *DaggerheartService) runApplyDeathMove(ctx context.Context, in *pb.Dagge
 
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+		return nil, grpcerror.Internal("load daggerheart state", err)
 	}
 
 	return &pb.DaggerheartApplyDeathMoveResponse{

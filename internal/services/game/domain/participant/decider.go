@@ -64,7 +64,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	handler, ok := participantDecisionHandlers[cmd.Type]
 	if !ok {
 		return command.Reject(command.Rejection{
-			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Code:    command.RejectionCodeCommandTypeUnsupported,
 			Message: fmt.Sprintf("command type %s is not supported by participant decider", cmd.Type),
 		})
 	}
@@ -90,6 +90,8 @@ func decodeCommandPayload[T any](cmd command.Command) (T, error) {
 }
 
 func decideJoin(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	if state.Joined {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantAlreadyJoined,
@@ -99,7 +101,7 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 	var payload JoinPayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
@@ -160,10 +162,6 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 	}
 	pronouns := strings.TrimSpace(payload.Pronouns)
 
-	if now == nil {
-		now = time.Now
-	}
-
 	normalizedPayload := JoinPayload{
 		ParticipantID:  ids.ParticipantID(participantID),
 		UserID:         ids.UserID(userID),
@@ -182,6 +180,8 @@ func decideJoin(state State, cmd command.Command, now func() time.Time) command.
 }
 
 func decideUpdate(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	if !state.Joined || state.Left {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantNotJoined,
@@ -191,7 +191,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 	var payload UpdatePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
@@ -317,9 +317,6 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 	if rejection, ok := validateAISeatInvariant(effectiveUserID, effectiveRole, effectiveController, effectiveAccess); !ok {
 		return command.Reject(rejection)
 	}
-	if now == nil {
-		now = time.Now
-	}
 
 	normalizedPayload := UpdatePayload{ParticipantID: ids.ParticipantID(participantID), Fields: normalizedFields}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
@@ -328,6 +325,8 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 }
 
 func decideLeave(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	if !state.Joined || state.Left {
 		return command.Reject(command.Rejection{
 			Code:    rejectionCodeParticipantNotJoined,
@@ -337,7 +336,7 @@ func decideLeave(state State, cmd command.Command, now func() time.Time) command
 	var payload LeavePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
@@ -349,9 +348,6 @@ func decideLeave(state State, cmd command.Command, now func() time.Time) command
 		})
 	}
 	reason := strings.TrimSpace(payload.Reason)
-	if now == nil {
-		now = time.Now
-	}
 
 	normalizedPayload := LeavePayload{ParticipantID: ids.ParticipantID(participantID), Reason: reason}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
@@ -360,6 +356,8 @@ func decideLeave(state State, cmd command.Command, now func() time.Time) command
 }
 
 func decideBind(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
 	}
@@ -372,7 +370,7 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 	payload, err := decodeCommandPayload[BindPayload](cmd)
 	if err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
@@ -390,9 +388,6 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 			Message: "user id is required",
 		})
 	}
-	if now == nil {
-		now = time.Now
-	}
 
 	normalizedPayload := BindPayload{ParticipantID: ids.ParticipantID(participantID), UserID: ids.UserID(userID)}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
@@ -401,6 +396,8 @@ func decideBind(state State, cmd command.Command, now func() time.Time) command.
 }
 
 func decideUnbind(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
 	}
@@ -413,7 +410,7 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 	payload, err := decodeCommandPayload[UnbindPayload](cmd)
 	if err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
@@ -432,9 +429,6 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 		})
 	}
 	reason := strings.TrimSpace(payload.Reason)
-	if now == nil {
-		now = time.Now
-	}
 
 	normalizedPayload := UnbindPayload{ParticipantID: ids.ParticipantID(participantID), UserID: ids.UserID(userID), Reason: reason}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
@@ -443,6 +437,8 @@ func decideUnbind(state State, cmd command.Command, now func() time.Time) comman
 }
 
 func decideSeatReassign(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	if rejection, ok := ensureParticipantActive(state); !ok {
 		return command.Reject(rejection)
 	}
@@ -455,7 +451,7 @@ func decideSeatReassign(state State, cmd command.Command, now func() time.Time) 
 	payload, err := decodeCommandPayload[SeatReassignPayload](cmd)
 	if err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
@@ -481,9 +477,6 @@ func decideSeatReassign(state State, cmd command.Command, now func() time.Time) 
 		})
 	}
 	reason := strings.TrimSpace(payload.Reason)
-	if now == nil {
-		now = time.Now
-	}
 
 	normalizedPayload := SeatReassignPayload{
 		ParticipantID: ids.ParticipantID(participantID),

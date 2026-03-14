@@ -133,6 +133,10 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		CausationID:    evt.CausationID,
 		PayloadJson:    evt.PayloadJSON,
 	}); err != nil {
+		// Idempotency contract: if the event already exists (constraint violation on
+		// the unique hash), return the previously stored copy. This allows callers to
+		// safely retry AppendEvent without generating duplicate journal entries. The
+		// lookup by hash confirms the stored event matches the one being appended.
 		if isConstraintError(err) {
 			stored, lookupErr := s.GetEventByHash(ctx, evt.Hash)
 			if lookupErr == nil {
@@ -141,6 +145,10 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		}
 		return event.Event{}, fmt.Errorf("append event: %w", err)
 	}
+	// Outbox enqueue runs inside the same append transaction so the event and
+	// its projection-apply work item are committed atomically. This guarantees
+	// every persisted event has a corresponding outbox entry when the feature
+	// is enabled, preventing silent projection gaps.
 	if err := s.enqueueProjectionApplyOutbox(ctx, tx, evt); err != nil {
 		return event.Event{}, err
 	}
@@ -570,6 +578,10 @@ func (s *Store) GetLatestEventSeq(ctx context.Context, campaignID string) (uint6
 }
 
 // ListEventsPage returns a paginated, filtered, and sorted list of events.
+//
+// PageSize is capped at 200 rows to bound memory and query latency. Callers
+// requesting more than 200 are silently clamped; a default of 50 applies when
+// the caller supplies zero or a negative value.
 func (s *Store) ListEventsPage(ctx context.Context, req storage.ListEventsPageRequest) (storage.ListEventsPageResult, error) {
 	if err := ctx.Err(); err != nil {
 		return storage.ListEventsPageResult{}, err

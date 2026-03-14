@@ -41,6 +41,8 @@ var (
 	// ErrPostPersistCheckpointFailed indicates checkpoint persistence failed
 	// after journal append succeeded.
 	ErrPostPersistCheckpointFailed = errors.New("post-persist checkpoint save failed")
+	// ErrStateFactoryRequired indicates a missing state factory.
+	ErrStateFactoryRequired = errors.New("state factory is required")
 )
 
 // GateStateLoader loads session state for gate checks.
@@ -162,6 +164,10 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 		return Result{Decision: decision, State: state}, nil
 	}
 
+	// Capture a single post-persist timestamp for both snapshot and checkpoint
+	// so they share one consistent clock reading.
+	postPersistTime := h.nowFunc()().UTC()
+
 	if h.Snapshots != nil {
 		if err := h.Snapshots.SaveState(ctx, string(validated.CampaignID), lastSeq, state); err != nil {
 			return Result{}, newPostPersistError(
@@ -173,11 +179,10 @@ func (h Handler) Execute(ctx context.Context, cmd command.Command) (Result, erro
 		}
 	}
 	if h.Checkpoints != nil {
-		now := h.nowFunc()
 		if err := h.Checkpoints.Save(ctx, replay.Checkpoint{
 			CampaignID: string(validated.CampaignID),
 			LastSeq:    lastSeq,
-			UpdatedAt:  now().UTC(),
+			UpdatedAt:  postPersistTime,
 		}); err != nil {
 			return Result{}, newPostPersistError(
 				PostPersistStageCheckpoint,

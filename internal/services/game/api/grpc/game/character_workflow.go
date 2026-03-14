@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
@@ -137,7 +138,7 @@ func (c characterApplication) executeCharacterProfileUpdate(ctx context.Context,
 	}
 	commandPayloadJSON, err := json.Marshal(commandPayload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 
 	actorType := command.ActorTypeSystem

@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -56,7 +57,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionSpotlight{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
@@ -88,7 +89,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	}
 	spotlight, err := a.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
 	if err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "load session spotlight: %v", err)
+		return storage.SessionSpotlight{}, grpcerror.Internal("load session spotlight", err)
 	}
 
 	return spotlight, nil
@@ -119,7 +120,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	payload := session.SpotlightClearedPayload{Reason: reason}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.SessionSpotlight{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.SessionSpotlight{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)

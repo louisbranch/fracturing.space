@@ -30,8 +30,8 @@ func TestMapContentErr(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected grpc status error, got %T", err)
 	}
-	if statusErr.Message() != "get class: boom" {
-		t.Fatalf("message = %q, want %q", statusErr.Message(), "get class: boom")
+	if statusErr.Message() != "get class" {
+		t.Fatalf("message = %q, want %q", statusErr.Message(), "get class")
 	}
 }
 

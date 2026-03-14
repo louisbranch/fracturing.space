@@ -12,7 +12,7 @@ const (
 
 // NormalizeStatus parses a status label into a canonical value.
 func NormalizeStatus(value string) (Status, bool) {
-	if normalized, ok := normalizeStatusLabel(value); ok {
+	if normalized, ok := NormalizeStatusLabel(value); ok {
 		return Status(normalized), true
 	}
 	return StatusUnspecified, false

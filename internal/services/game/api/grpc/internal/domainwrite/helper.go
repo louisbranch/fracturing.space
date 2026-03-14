@@ -206,6 +206,13 @@ func ExecuteAndApply(
 	if options.RequireEvents && len(result.Decision.Events) == 0 {
 		return engine.Result{}, errors.New(options.MissingEventMsg)
 	}
+	// Inline apply: projection state is updated within the same gRPC handler
+	// call, but NOT the same database transaction as the event append. Between
+	// event commit and projection apply completion (~microseconds), concurrent
+	// readers may observe stale projection state. This is by design — the event
+	// journal is authoritative and projections are eventually consistent. The
+	// outbox-only mode has a wider consistency window (seconds) but identical
+	// semantics.
 	if options.InlineApplyEnabled {
 		for _, evt := range result.Decision.Events {
 			if options.ShouldApply != nil && !options.ShouldApply(evt) {

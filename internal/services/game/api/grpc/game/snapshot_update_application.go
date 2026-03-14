@@ -9,6 +9,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -39,7 +40,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		}
 		existingSnap, err := a.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "load existing daggerheart snapshot: %v", err)
+			return storage.DaggerheartSnapshot{}, grpcerror.Internal("load existing daggerheart snapshot", err)
 		}
 		if errors.Is(err, storage.ErrNotFound) {
 			existingSnap = storage.DaggerheartSnapshot{
@@ -60,7 +61,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		payload := daggerheart.GMFearSetPayload{After: &after}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+			return storage.DaggerheartSnapshot{}, grpcerror.Internal("encode payload", err)
 		}
 		actorTypeForCommand := command.ActorTypeSystem
 		if actorID != "" {
@@ -98,7 +99,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 
 		dhSnapshot, err := a.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil {
-			return storage.DaggerheartSnapshot{}, status.Errorf(codes.Internal, "load daggerheart snapshot: %v", err)
+			return storage.DaggerheartSnapshot{}, grpcerror.Internal("load daggerheart snapshot", err)
 		}
 
 		return dhSnapshot, nil

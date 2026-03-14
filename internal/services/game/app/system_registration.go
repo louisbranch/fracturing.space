@@ -61,7 +61,7 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 		}
 		gameSystem, err := parseGameSystemID(moduleID)
 		if err != nil {
-			return fmt.Errorf("%w: %v", errSystemModuleRegistryMismatch, err)
+			return fmt.Errorf("%w: %w", errSystemModuleRegistryMismatch, err)
 		}
 		moduleKeys[systemParityKey(moduleID, moduleVersion)] = struct{}{}
 		systemIDToModuleID[gameSystem] = moduleID
@@ -74,7 +74,7 @@ func validateSystemRegistrationParity(modules []domainsystem.Module, metadata *d
 	}
 
 	if err := systemmanifest.ValidateProfileAdapterCoverage(adapters); err != nil {
-		return fmt.Errorf("%w: %v", errSystemModuleRegistryMismatch, err)
+		return fmt.Errorf("%w: %w", errSystemModuleRegistryMismatch, err)
 	}
 
 	for _, gameSystem := range metadata.List() {

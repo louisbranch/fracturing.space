@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -46,6 +47,9 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		if trimmed == "" {
 			return storage.CharacterRecord{}, status.Error(codes.InvalidArgument, "name must not be empty")
 		}
+		if err := validate.MaxLength(trimmed, "name", validate.MaxNameLen); err != nil {
+			return storage.CharacterRecord{}, err
+		}
 		ch.Name = trimmed
 		fields["name"] = trimmed
 	}
@@ -58,7 +62,11 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 		fields["kind"] = in.GetKind().String()
 	}
 	if notes := in.GetNotes(); notes != nil {
-		ch.Notes = strings.TrimSpace(notes.GetValue())
+		trimmedNotes := strings.TrimSpace(notes.GetValue())
+		if err := validate.MaxLength(trimmedNotes, "notes", validate.MaxNotesLen); err != nil {
+			return storage.CharacterRecord{}, err
+		}
+		ch.Notes = trimmedNotes
 		fields["notes"] = ch.Notes
 	}
 	if avatarSetID := in.GetAvatarSetId(); avatarSetID != nil {
@@ -138,7 +146,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CharacterRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
 	actorType := command.ActorTypeSystem
@@ -168,7 +176,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 
 	updated, err := c.stores.Character.GetCharacter(ctx, campaignID, characterID)
 	if err != nil {
-		return storage.CharacterRecord{}, status.Errorf(codes.Internal, "load character: %v", err)
+		return storage.CharacterRecord{}, grpcerror.Internal("load character", err)
 	}
 
 	return updated, nil

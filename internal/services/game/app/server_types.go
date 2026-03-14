@@ -24,6 +24,8 @@ type Server struct {
 	socialMc                                 *platformgrpc.ManagedConn
 	aiMc                                     *platformgrpc.ManagedConn
 	statusMc                                 *platformgrpc.ManagedConn
+	statusBindDone                           <-chan struct{}
+	statusBindCancel                         context.CancelFunc
 	projectionApplyOutboxWorkerEnabled       bool
 	projectionApplyOutboxApply               func(context.Context, event.Event) error
 	projectionApplyOutboxShadowWorkerEnabled bool

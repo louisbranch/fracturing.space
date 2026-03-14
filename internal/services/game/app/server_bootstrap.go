@@ -36,17 +36,16 @@ func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
 	return newServerBootstrap().NewWithAddr(ctx, addr)
 }
 
-func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, eventRegistry *event.Registry) func(context.Context, event.Event) error {
+func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, eventRegistry *event.Registry) (func(context.Context, event.Event) error, error) {
 	if projectionStore == nil {
-		return nil
+		return nil, nil
 	}
 	// Build a base adapter registry once at closure creation. Per-transaction
 	// callbacks rebind it with the transaction-scoped store so each adapter
 	// operates within the exactly-once transaction boundary.
 	baseAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(projectionStore))
 	if err != nil {
-		log.Printf("build base adapter registry: %v", err)
-		return nil
+		return nil, fmt.Errorf("build base adapter registry: %w", err)
 	}
 	return func(ctx context.Context, evt event.Event) error {
 		_, err := projectionStore.ApplyProjectionEventExactlyOnce(
@@ -79,7 +78,7 @@ func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, event
 			},
 		)
 		return err
-	}
+	}, nil
 }
 
 func buildSystemRegistry() (*bridge.MetadataRegistry, error) {
@@ -179,6 +178,11 @@ func openContentStore(path string) (*storagesqlite.Store, error) {
 
 // repairProjectionGaps detects and auto-repairs projection gaps on startup by
 // replaying missing events from the journal into the projection applier.
+//
+// Errors are logged but do not prevent startup. This is intentional: gap repair
+// is best-effort hardening. A repair failure (e.g., corrupt event) should not
+// block the server from serving traffic with stale-but-usable projection state.
+// The outbox worker and inline apply handle new events regardless.
 func repairProjectionGaps(ctx context.Context, bundle *storageBundle, applier projection.Applier) {
 	if bundle == nil || bundle.projections == nil || bundle.events == nil {
 		return

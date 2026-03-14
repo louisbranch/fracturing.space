@@ -51,7 +51,11 @@ type Store struct {
 	projectionApplyOutboxEnabled bool
 }
 
-func (s *Store) withTx(tx *sql.Tx) *Store {
+// txStore returns a shallow clone of the Store that routes all queries through
+// the given transaction. The original Store is not mutated. This is used by
+// ApplyProjectionEventExactlyOnce so the caller's apply callback operates
+// inside the same transaction that reserves the idempotency checkpoint.
+func (s *Store) txStore(tx *sql.Tx) *Store {
 	if s == nil || tx == nil {
 		return s
 	}

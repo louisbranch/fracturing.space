@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/fork"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"google.golang.org/grpc/codes"
@@ -21,10 +22,7 @@ func (a forkApplication) resolveForkPoint(ctx context.Context, campaignID string
 		}
 		sess, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
 		if err != nil {
-			if isNotFound(err) {
-				return 0, status.Error(codes.NotFound, "session not found")
-			}
-			return 0, status.Errorf(codes.Internal, "get session: %v", err)
+			return 0, grpcerror.EnsureStatus(err)
 		}
 		if sess.Status != session.StatusEnded {
 			return 0, status.Error(codes.FailedPrecondition, "session has not ended")
@@ -35,7 +33,7 @@ func (a forkApplication) resolveForkPoint(ctx context.Context, campaignID string
 		for {
 			events, err := a.stores.Event.ListEventsBySession(ctx, campaignID, sessionID, afterSeq, forkEventPageSize)
 			if err != nil {
-				return 0, status.Errorf(codes.Internal, "list session events: %v", err)
+				return 0, grpcerror.Internal("list session events", err)
 			}
 			if len(events) == 0 {
 				if lastSeq == 0 {
@@ -57,7 +55,7 @@ func (a forkApplication) resolveForkPoint(ctx context.Context, campaignID string
 	if forkPoint.EventSeq == 0 {
 		latestSeq, err := a.stores.Event.GetLatestEventSeq(ctx, campaignID)
 		if err != nil {
-			return 0, status.Errorf(codes.Internal, "get latest event seq: %v", err)
+			return 0, grpcerror.Internal("get latest event seq", err)
 		}
 		// If no events exist, fork at seq 0 (start of campaign).
 		return latestSeq, nil
@@ -66,7 +64,7 @@ func (a forkApplication) resolveForkPoint(ctx context.Context, campaignID string
 	// Validate that the requested event seq exists.
 	latestSeq, err := a.stores.Event.GetLatestEventSeq(ctx, campaignID)
 	if err != nil {
-		return 0, status.Errorf(codes.Internal, "get latest event seq: %v", err)
+		return 0, grpcerror.Internal("get latest event seq", err)
 	}
 
 	if forkPoint.EventSeq > latestSeq {

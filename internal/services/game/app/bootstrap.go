@@ -10,6 +10,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -59,7 +60,7 @@ type serverBootstrapConfig struct {
 	newHealthServer                 func() *health.Server
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
 	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
-	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) func(context.Context, event.Event) error
+	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error)
 }
 
 // storageBundleOpener creates startup storage bundles for the server.
@@ -113,7 +114,10 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	if cfg.newGRPCServer == nil {
 		cfg.newGRPCServer = func(bundle *storageBundle, srvEnv serverEnv) *grpc.Server {
 			internalIdentity := interceptors.InternalServiceIdentityConfig{
-				MethodPrefixes:    []string{"/game.v1.CampaignAIService/"},
+				MethodPrefixes: []string{
+					"/game.v1.CampaignAIService/",
+					campaignv1.EventService_AppendEvent_FullMethodName,
+				},
 				AllowedServiceIDs: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
 			}
 			return grpc.NewServer(
@@ -209,6 +213,12 @@ type dependencyConns struct {
 	social *platformgrpc.ManagedConn
 	ai     *platformgrpc.ManagedConn
 	status *platformgrpc.ManagedConn
+
+	// statusBindDone is closed when the background goroutine that late-binds
+	// the status reporter client exits. Callers should wait on this channel
+	// during shutdown before closing statusMc or reporter.
+	statusBindDone   <-chan struct{}
+	statusBindCancel context.CancelFunc
 }
 
 func (b *serverBootstrap) dialDependencies(
@@ -277,17 +287,26 @@ func (b *serverBootstrap) dialDependencies(
 	}
 
 	// Late-bind the reporter's client when the status service becomes reachable.
+	// The done channel is closed when the goroutine exits so the shutdown path
+	// can wait for it before tearing down statusMc and reporter.
+	bindCtx, bindCancel := context.WithCancel(ctx)
+	bindDone := make(chan struct{})
 	go func() {
-		if statusMc.WaitReady(ctx) == nil {
-			reporter.SetClient(statusv1.NewStatusServiceClient(statusMc.Conn()))
+		defer close(bindDone)
+		if err := statusMc.WaitReady(bindCtx); err != nil {
+			log.Printf("status reporter: failed to bind client: %v", err)
+			return
 		}
+		reporter.SetClient(statusv1.NewStatusServiceClient(statusMc.Conn()))
 	}()
 
 	return dependencyConns{
-		auth:   authMc,
-		social: socialMc,
-		ai:     aiMc,
-		status: statusMc,
+		auth:             authMc,
+		social:           socialMc,
+		ai:               aiMc,
+		status:           statusMc,
+		statusBindDone:   bindDone,
+		statusBindCancel: bindCancel,
 	}, nil
 }
 
@@ -315,10 +334,15 @@ func (b *serverBootstrap) configureProjectionRuntime(
 		stores.Write.Runtime.SetIntentFilter(projectionRegistries)
 	}
 
+	applyOutbox, err := b.config.buildProjectionApplyOutboxApply(projectionStore, projectionRegistries)
+	if err != nil {
+		return projectionRuntimeState{}, fmt.Errorf("build projection apply outbox: %w", err)
+	}
+
 	return projectionRuntimeState{
 		enableApplyWorker:  enableApplyWorker,
 		enableShadowWorker: enableShadowWorker,
-		applyOutbox:        b.config.buildProjectionApplyOutboxApply(projectionStore, projectionRegistries),
+		applyOutbox:        applyOutbox,
 	}, nil
 }
 
@@ -440,6 +464,8 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 		socialMc:                                 deps.social,
 		aiMc:                                     deps.ai,
 		statusMc:                                 deps.status,
+		statusBindDone:                           deps.statusBindDone,
+		statusBindCancel:                         deps.statusBindCancel,
 		projectionApplyOutboxWorkerEnabled:       projectionRuntime.enableApplyWorker,
 		projectionApplyOutboxApply:               projectionRuntime.applyOutbox,
 		projectionApplyOutboxShadowWorkerEnabled: projectionRuntime.enableShadowWorker,

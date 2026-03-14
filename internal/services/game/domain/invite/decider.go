@@ -50,7 +50,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 	case CommandTypeUpdate:
 		return decideUpdate(state, cmd, now)
 	default:
-		return command.Reject(command.Rejection{Code: "COMMAND_TYPE_UNSUPPORTED", Message: fmt.Sprintf("command type %s is not supported by invite decider", cmd.Type)})
+		return command.Reject(command.Rejection{Code: command.RejectionCodeCommandTypeUnsupported, Message: fmt.Sprintf("command type %s is not supported by invite decider", cmd.Type)})
 	}
 }
 
@@ -167,7 +167,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 			if payload.InviteID == "" {
 				return &command.Rejection{Code: rejectionCodeInviteIDRequired, Message: "invite id is required"}
 			}
-			status, ok := normalizeStatusLabel(payload.Status)
+			status, ok := NormalizeStatusLabel(payload.Status)
 			if !ok {
 				return &command.Rejection{Code: rejectionCodeInviteStatusInvalid, Message: "invite status is invalid"}
 			}

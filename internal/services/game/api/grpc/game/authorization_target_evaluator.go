@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -62,7 +63,7 @@ func evaluateCanParticipantGovernanceTarget(
 		targetRecord, err := stores.Participant.GetParticipant(ctx, campaignID, targetParticipantID)
 		if err != nil {
 			if !errors.Is(err, storage.ErrNotFound) {
-				return domainauthz.PolicyDecision{}, nil, false, status.Errorf(codes.Internal, "load target participant: %v", err)
+				return domainauthz.PolicyDecision{}, nil, false, grpcerror.Internal("load target participant", err)
 			}
 		} else {
 			targetAccess = targetRecord.CampaignAccess

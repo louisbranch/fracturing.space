@@ -68,6 +68,10 @@ func ValidateSystemConformance(t *testing.T, mod module.Module, adapter bridge.A
 	// must produce identical results. This catches fold functions that use
 	// deltas instead of absolute values.
 	validateFoldIdempotency(t, mod)
+
+	// G4: Snapshot smoke — calling Snapshot with a campaign that has no
+	// data must not panic; it should return a graceful error or zero value.
+	validateAdapterSnapshotSmoke(t, adapter)
 }
 
 // ValidateAdapterIdempotency applies each handled event type twice to the
@@ -110,6 +114,29 @@ func ValidateAdapterIdempotency(t *testing.T, adapter bridge.Adapter) {
 			}
 		})
 	}
+}
+
+// validateAdapterSnapshotSmoke calls Snapshot with a campaign ID that has no
+// stored data and verifies the adapter does not panic. A non-nil error is
+// acceptable (e.g. storage.ErrNotFound); the goal is to catch nil-pointer
+// dereferences in adapters that assume projection data already exists.
+func validateAdapterSnapshotSmoke(t *testing.T, adapter bridge.Adapter) {
+	t.Helper()
+
+	const campaignID = "snapshot-smoke-test"
+	ctx := context.Background()
+
+	// Recover from panics so the test reports a clear failure instead of
+	// crashing the entire suite.
+	defer func() {
+		if r := recover(); r != nil {
+			t.Errorf("adapter Snapshot panicked with empty state: %v", r)
+		}
+	}()
+
+	// We only care that the call does not panic. Both a nil result with an
+	// error and a zero-value result with nil error are acceptable.
+	_, _ = adapter.Snapshot(ctx, campaignID)
 }
 
 // validateFoldIdempotency folds each handled event type twice into fresh

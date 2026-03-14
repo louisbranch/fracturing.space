@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -61,7 +62,7 @@ func (s *CampaignAIService) IssueCampaignAISessionGrant(ctx context.Context, in 
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.FailedPrecondition, "campaign session is not active")
 		}
-		return nil, status.Errorf(codes.Internal, "get active session: %v", err)
+		return nil, grpcerror.Internal("get active session", err)
 	}
 	if strings.TrimSpace(activeSession.ID) != sessionID {
 		return nil, status.Error(codes.FailedPrecondition, "requested session does not match active campaign session")
@@ -69,7 +70,7 @@ func (s *CampaignAIService) IssueCampaignAISessionGrant(ctx context.Context, in 
 
 	grantID, err := s.idGenerator()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "generate grant id: %v", err)
+		return nil, grpcerror.Internal("generate grant id", err)
 	}
 	issuedForUserID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
 	grantToken, claims, err := aisessiongrant.Issue(s.sessionGrantConfig, aisessiongrant.IssueInput{
@@ -81,7 +82,7 @@ func (s *CampaignAIService) IssueCampaignAISessionGrant(ctx context.Context, in 
 		IssuedForUserID: issuedForUserID,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "issue ai session grant: %v", err)
+		return nil, grpcerror.Internal("issue ai session grant", err)
 	}
 
 	return &campaignv1.IssueCampaignAISessionGrantResponse{

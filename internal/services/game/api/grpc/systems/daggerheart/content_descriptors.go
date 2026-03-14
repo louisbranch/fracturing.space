@@ -6,6 +6,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	contentfilter "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/content/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -39,7 +40,7 @@ func getContentEntry[T any, P any](
 	}
 	items := []T{item}
 	if err := descriptor.localize(ctx, store, locale, items); err != nil {
-		return nil, status.Errorf(codes.Internal, "%s: %v", descriptor.localizeAction, err)
+		return nil, grpcerror.Internal(descriptor.localizeAction, err)
 	}
 	return descriptor.toProto(items[0]), nil
 }
@@ -59,7 +60,7 @@ func listContentEntries[T any, P any](
 	}
 	items, err := listFunc(ctx, store)
 	if err != nil {
-		return nil, contentPage[T]{}, status.Errorf(codes.Internal, "%s: %v", descriptor.listAction, err)
+		return nil, contentPage[T]{}, grpcerror.Internal(descriptor.listAction, err)
 	}
 	listConfig := descriptor.listConfig
 	if descriptor.filterHashSeed != nil {
@@ -70,7 +71,7 @@ func listContentEntries[T any, P any](
 		return nil, contentPage[T]{}, status.Errorf(codes.InvalidArgument, "%s: %v", descriptor.listAction, err)
 	}
 	if err := descriptor.localize(ctx, store, locale, page.Items); err != nil {
-		return nil, contentPage[T]{}, status.Errorf(codes.Internal, "%s: %v", descriptor.localizeAction, err)
+		return nil, contentPage[T]{}, grpcerror.Internal(descriptor.localizeAction, err)
 	}
 	return descriptor.toProtoList(page.Items), page, nil
 }

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,7 +27,7 @@ func (a contentApplication) runGetContentCatalog(ctx context.Context, in *pb.Get
 	}
 	catalog := newContentCatalog(store, in.GetLocale())
 	if err := catalog.run(ctx); err != nil {
-		return nil, status.Errorf(codes.Internal, "content catalog pipeline: %v", err)
+		return nil, grpcerror.Internal("content catalog pipeline", err)
 	}
 	return &pb.GetDaggerheartContentCatalogResponse{Catalog: catalog.proto()}, nil
 }

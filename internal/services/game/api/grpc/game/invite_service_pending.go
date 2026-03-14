@@ -7,6 +7,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -39,7 +40,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 
 	page, err := s.stores.Invite.ListPendingInvites(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list pending invites: %v", err)
+		return nil, grpcerror.Internal("list pending invites", err)
 	}
 
 	response := &campaignv1.ListPendingInvitesResponse{NextPageToken: page.NextPageToken}
@@ -49,7 +50,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 
 	participants, err := s.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list participants: %v", err)
+		return nil, grpcerror.Internal("list participants", err)
 	}
 	participantsByID := make(map[string]storage.ParticipantRecord, len(participants))
 	for _, p := range participants {
@@ -79,7 +80,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 				if !ok {
 					userResponse, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: creatorUserID})
 					if err != nil {
-						return nil, status.Errorf(codes.Internal, "get auth user: %v", err)
+						return nil, grpcerror.Internal("get auth user", err)
 					}
 					if userResponse == nil || userResponse.GetUser() == nil {
 						return nil, status.Error(codes.Internal, "auth user response is missing")
@@ -118,7 +119,7 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 
 	page, err := s.stores.Invite.ListPendingInvitesForRecipient(ctx, userID, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list pending invites for user: %v", err)
+		return nil, grpcerror.Internal("list pending invites for user", err)
 	}
 
 	response := &campaignv1.ListPendingInvitesForUserResponse{NextPageToken: page.NextPageToken}

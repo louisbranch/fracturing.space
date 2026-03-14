@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/filter"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -86,7 +87,7 @@ func (s *EventService) ListTimelineEntries(ctx context.Context, in *campaignv1.L
 
 	result, err := s.stores.Event.ListEventsPage(ctx, req)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list timeline entries: %v", err)
+		return nil, grpcerror.Internal("list timeline entries", err)
 	}
 
 	resolver := newTimelineProjectionResolver(s.stores)
@@ -98,7 +99,7 @@ func (s *EventService) ListTimelineEntries(ctx context.Context, in *campaignv1.L
 	for _, evt := range result.Events {
 		entry, err := timelineEntryFromEvent(ctx, resolver, evt)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "resolve timeline entry: %v", err)
+			return nil, grpcerror.Internal("resolve timeline entry", err)
 		}
 		response.Entries = append(response.Entries, entry)
 	}

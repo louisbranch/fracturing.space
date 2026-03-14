@@ -232,6 +232,16 @@ func (r *Registry) ValidateForAppend(evt Event) (Event, error) {
 		return Event{}, err
 	}
 
+	// Owner-independent invariant: SystemID and SystemVersion must both be set
+	// or both empty. The owner-specific checks below enforce stronger semantics
+	// (system events require both, core events forbid both), but this guard
+	// catches construction bugs where only one field is populated — regardless
+	// of which owner branch applies.
+	if (normalized.SystemID == "") != (normalized.SystemVersion == "") {
+		return Event{}, fmt.Errorf("%w: system_id=%q system_version=%q",
+			ErrSystemMetadataRequired, normalized.SystemID, normalized.SystemVersion)
+	}
+
 	requireEntityType, requireEntityID := requiredAddressing(def.Addressing)
 	requireEntityType, requireEntityID, err = applyOwnerAddressingConstraints(def.Owner, normalized, requireEntityType, requireEntityID)
 	if err != nil {
@@ -334,7 +344,7 @@ func applyOwnerAddressingConstraints(owner Owner, evt Event, requireEntityType, 
 			return false, false, ErrSystemMetadataRequired
 		}
 		if err := naming.ValidateSystemNamespace(string(evt.Type), evt.SystemID); err != nil {
-			return false, false, fmt.Errorf("%w: %v", ErrSystemTypeNamespaceMismatch, err)
+			return false, false, fmt.Errorf("%w: %w", ErrSystemTypeNamespaceMismatch, err)
 		}
 		return true, true, nil
 	case OwnerCore:

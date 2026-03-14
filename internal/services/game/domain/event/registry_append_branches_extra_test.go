@@ -149,6 +149,38 @@ func TestRegistryValidateForAppend_RejectsInvalidDefinitionOwner(t *testing.T) {
 	}
 }
 
+func TestRegistryValidateForAppend_RejectsPartialSystemMetadata(t *testing.T) {
+	registry := NewRegistry()
+	if err := registry.Register(Definition{Type: Type("core.event"), Owner: OwnerCore}); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	tests := []struct {
+		name          string
+		systemID      string
+		systemVersion string
+	}{
+		{"system_id without system_version", "daggerheart", ""},
+		{"system_version without system_id", "", "1.0"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := registry.ValidateForAppend(Event{
+				CampaignID:    "camp-1",
+				Type:          Type("core.event"),
+				Timestamp:     time.Unix(0, 0).UTC(),
+				ActorType:     ActorTypeSystem,
+				SystemID:      tt.systemID,
+				SystemVersion: tt.systemVersion,
+				PayloadJSON:   []byte(`{}`),
+			})
+			if !errors.Is(err, ErrSystemMetadataRequired) {
+				t.Fatalf("ValidateForAppend() error = %v, want %v", err, ErrSystemMetadataRequired)
+			}
+		})
+	}
+}
+
 func TestRegistryValidateForAppend_CanonicalPayloadFailure(t *testing.T) {
 	registry := NewRegistry()
 	if err := registry.Register(Definition{Type: Type("core.event"), Owner: OwnerCore}); err != nil {

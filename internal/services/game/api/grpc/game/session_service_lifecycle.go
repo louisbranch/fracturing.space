@@ -5,6 +5,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"google.golang.org/grpc/codes"
@@ -61,7 +62,7 @@ func (s *SessionService) ListSessions(ctx context.Context, in *campaignv1.ListSe
 
 	page, err := s.stores.Session.ListSessions(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list sessions: %v", err)
+		return nil, grpcerror.Internal("list sessions", err)
 	}
 
 	response := &campaignv1.ListSessionsResponse{

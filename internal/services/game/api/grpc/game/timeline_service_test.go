@@ -68,9 +68,7 @@ func TestListTimelineEntries_MissingParticipantStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	if err == nil || !strings.Contains(err.Error(), "participant store is not configured") {
-		t.Fatalf("expected participant store configuration error, got %v", err)
-	}
+	assertStatusMessage(t, err, "resolve timeline entry")
 }
 
 func TestListTimelineEntries_MissingCampaignStoreFailsFast(t *testing.T) {
@@ -94,9 +92,7 @@ func TestListTimelineEntries_MissingCampaignStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	if err == nil || !strings.Contains(err.Error(), "campaign store is not configured") {
-		t.Fatalf("expected campaign store configuration error, got %v", err)
-	}
+	assertStatusMessage(t, err, "resolve timeline entry")
 }
 
 func TestListTimelineEntries_MissingCharacterStoreFailsFast(t *testing.T) {
@@ -120,9 +116,7 @@ func TestListTimelineEntries_MissingCharacterStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	if err == nil || !strings.Contains(err.Error(), "character store is not configured") {
-		t.Fatalf("expected character store configuration error, got %v", err)
-	}
+	assertStatusMessage(t, err, "resolve timeline entry")
 }
 
 func TestListTimelineEntries_MissingSessionStoreFailsFast(t *testing.T) {
@@ -146,9 +140,7 @@ func TestListTimelineEntries_MissingSessionStoreFailsFast(t *testing.T) {
 		CampaignId: "c1",
 	})
 	assertStatusCode(t, err, codes.Internal)
-	if err == nil || !strings.Contains(err.Error(), "session store is not configured") {
-		t.Fatalf("expected session store configuration error, got %v", err)
-	}
+	assertStatusMessage(t, err, "resolve timeline entry")
 }
 
 func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {

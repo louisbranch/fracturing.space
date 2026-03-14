@@ -79,5 +79,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		// aggregate state but is acknowledged here so fold coverage
 		// validation knows the event was deliberately considered.
 	}
+	// Unknown event types are silently ignored so that replay remains
+	// forward-compatible when new events are added before the fold is updated.
 	return state, nil
 }

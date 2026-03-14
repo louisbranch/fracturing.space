@@ -9,6 +9,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -86,7 +87,7 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 	if countdownID == "" {
 		countdownID, err = id.NewID()
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "generate countdown id: %v", err)
+			return nil, grpcerror.Internal("generate countdown id", err)
 		}
 	}
 	if _, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err == nil {
@@ -106,7 +107,7 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode countdown payload: %v", err)
+		return nil, grpcerror.Internal("encode countdown payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -132,7 +133,7 @@ func (s *DaggerheartService) runCreateCountdown(ctx context.Context, in *pb.Dagg
 
 	countdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load countdown: %v", err)
+		return nil, grpcerror.Internal("load countdown", err)
 	}
 
 	return &pb.DaggerheartCreateCountdownResponse{
@@ -209,7 +210,7 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 	}
 	payloadJSON, err := json.Marshal(mutation.Payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode countdown update payload: %v", err)
+		return nil, grpcerror.Internal("encode countdown update payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -235,7 +236,7 @@ func (s *DaggerheartService) runUpdateCountdown(ctx context.Context, in *pb.Dagg
 
 	updatedCountdown, err := s.stores.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load countdown: %v", err)
+		return nil, grpcerror.Internal("load countdown", err)
 	}
 
 	return &pb.DaggerheartUpdateCountdownResponse{
@@ -300,7 +301,7 @@ func (s *DaggerheartService) runDeleteCountdown(ctx context.Context, in *pb.Dagg
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode countdown delete payload: %v", err)
+		return nil, grpcerror.Internal("encode countdown delete payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -387,7 +388,7 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 	}
 	payloadJSON, err := json.Marshal(patchPayload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return nil, grpcerror.Internal("encode payload", err)
 	}
 
 	adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
@@ -412,7 +413,7 @@ func (s *DaggerheartService) runResolveBlazeOfGlory(ctx context.Context, in *pb.
 	}
 	updated, err := s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load daggerheart state: %v", err)
+		return nil, grpcerror.Internal("load daggerheart state", err)
 	}
 	if err := s.appendCharacterDeletedEvent(ctx, campaignID, characterID, daggerheart.LifeStateBlazeOfGlory); err != nil {
 		return nil, err

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
@@ -87,7 +88,7 @@ func SessionLockInterceptor(sessionStore storage.SessionStore) grpc.UnaryServerI
 		if errors.Is(err, storage.ErrNotFound) {
 			return handler(ctx, req)
 		}
-		return nil, status.Errorf(codes.Internal, "check active session: %v", err)
+		return nil, grpcerror.Internal("check active session", err)
 	}
 }
 

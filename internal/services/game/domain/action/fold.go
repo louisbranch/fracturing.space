@@ -48,5 +48,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		}
 		state.AppliedOutcomes[payload.RollSeq] = struct{}{}
 	}
+	// Unknown event types are silently ignored so that replay remains
+	// forward-compatible when new events are added before the fold is updated.
 	return state, nil
 }

@@ -187,6 +187,14 @@ func (s *Server) closeResources() {
 		return
 	}
 	s.stores.Close()
+	// Cancel and join the status-bind goroutine before closing the connection
+	// it references.
+	if s.statusBindCancel != nil {
+		s.statusBindCancel()
+	}
+	if s.statusBindDone != nil {
+		<-s.statusBindDone
+	}
 	closeManagedConn(s.statusMc, "status")
 	closeManagedConn(s.aiMc, "ai")
 	closeManagedConn(s.socialMc, "social")

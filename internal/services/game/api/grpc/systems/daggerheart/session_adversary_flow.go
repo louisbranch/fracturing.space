@@ -9,6 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
@@ -85,7 +86,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 		if errors.Is(err, random.ErrSeedOutOfRange()) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to resolve seed: %v", err)
+		return nil, grpcerror.Internal("failed to resolve seed", err)
 	}
 
 	advantage := int(in.GetAdvantage())
@@ -104,7 +105,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 		Seed: seed,
 	})
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "failed to roll adversary die: %v", err)
+		return nil, grpcerror.Internal("failed to roll adversary die", err)
 	}
 	rolls := result.Rolls[0].Results
 	selected := rolls[0]
@@ -124,7 +125,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 
 	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load latest event seq: %v", err)
+		return nil, grpcerror.Internal("load latest event seq", err)
 	}
 	rollSeq := latestSeq + 1
 
@@ -153,7 +154,7 @@ func (s *DaggerheartService) runSessionAdversaryAttackRoll(ctx context.Context, 
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode adversary roll payload: %v", err)
+		return nil, grpcerror.Internal("encode adversary roll payload", err)
 	}
 
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
@@ -255,7 +256,7 @@ func (s *DaggerheartService) runSessionAdversaryActionCheck(ctx context.Context,
 
 	latestSeq, err := s.stores.Event.GetLatestEventSeq(ctx, campaignID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load latest event seq: %v", err)
+		return nil, grpcerror.Internal("load latest event seq", err)
 	}
 	rollSeq := latestSeq + 1
 
@@ -277,14 +278,14 @@ func (s *DaggerheartService) runSessionAdversaryActionCheck(ctx context.Context,
 			if errors.Is(err, random.ErrSeedOutOfRange()) {
 				return nil, status.Error(codes.InvalidArgument, err.Error())
 			}
-			return nil, status.Errorf(codes.Internal, "failed to resolve seed: %v", err)
+			return nil, grpcerror.Internal("failed to resolve seed", err)
 		}
 		result, err := dice.RollDice(dice.Request{
 			Dice: []dice.Spec{{Sides: 20, Count: 1}},
 			Seed: seed,
 		})
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to roll adversary action die: %v", err)
+			return nil, grpcerror.Internal("failed to roll adversary action die", err)
 		}
 		roll = result.Rolls[0].Results[0]
 		total = roll + modifier

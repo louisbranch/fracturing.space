@@ -11,10 +11,9 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 )
 
 // RequestIDHeader is the gRPC metadata key for request correlation IDs.
@@ -163,11 +162,11 @@ func UnaryServerInterceptor(idGenerator func() (string, error)) grpc.UnaryServer
 	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
 		updatedCtx, requestID, invocationID, err := ensureRequestMetadata(ctx, idGenerator)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "ensure request metadata: %v", err)
+			return nil, grpcerror.Internal("ensure request metadata", err)
 		}
 		headerErr := grpc.SetHeader(updatedCtx, responseHeaders(requestID, invocationID))
 		if headerErr != nil {
-			return nil, status.Errorf(codes.Internal, "set response metadata: %v", headerErr)
+			return nil, grpcerror.Internal("set response metadata", headerErr)
 		}
 
 		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes for unary calls once tracing is added.
@@ -192,11 +191,11 @@ func StreamServerInterceptor(idGenerator func() (string, error)) grpc.StreamServ
 	return func(srv any, stream grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 		updatedCtx, requestID, invocationID, err := ensureRequestMetadata(stream.Context(), idGenerator)
 		if err != nil {
-			return status.Errorf(codes.Internal, "ensure request metadata: %v", err)
+			return grpcerror.Internal("ensure request metadata", err)
 		}
 		headerErr := stream.SetHeader(responseHeaders(requestID, invocationID))
 		if headerErr != nil {
-			return status.Errorf(codes.Internal, "set response metadata: %v", headerErr)
+			return grpcerror.Internal("set response metadata", headerErr)
 		}
 
 		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes for stream calls once tracing is added.

@@ -6,11 +6,10 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 func applyDaggerheartCharacterStatePatchCommand(
@@ -24,7 +23,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 ) error {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode payload: %v", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,
@@ -71,7 +70,7 @@ func executeDaggerheartConditionChangeCommand(
 ) error {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return status.Errorf(codes.Internal, "encode condition payload: %v", err)
+		return grpcerror.Internal("encode condition payload", err)
 	}
 	_, err = executeAndApplyDomainCommand(
 		ctx,

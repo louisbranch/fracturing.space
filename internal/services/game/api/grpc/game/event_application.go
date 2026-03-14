@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -75,7 +76,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		RequireEvents:   true,
 		MissingEventMsg: "append event did not emit an event",
 		ExecuteErr: func(err error) error {
-			return status.Errorf(codes.Internal, "execute domain command: %v", err)
+			return grpcerror.Internal("execute domain command", err)
 		},
 	})
 	if err != nil {

@@ -36,10 +36,10 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 		buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
 			return projectionRegistries, nil
 		},
-		buildProjectionApplyOutboxApply: func(store projectionApplyStore, registries *event.Registry) func(context.Context, event.Event) error {
+		buildProjectionApplyOutboxApply: func(store projectionApplyStore, registries *event.Registry) (func(context.Context, event.Event) error, error) {
 			capturedStore = store
 			capturedRegistry = registries
-			return applyFn
+			return applyFn, nil
 		},
 	})
 
@@ -96,9 +96,9 @@ func TestConfigureProjectionRuntime_ReturnsResolveModeError(t *testing.T) {
 			calledBuildRegistries = true
 			return nil, nil
 		},
-		buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) func(context.Context, event.Event) error {
+		buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
 			calledBuildApply = true
-			return nil
+			return nil, nil
 		},
 	})
 
@@ -126,9 +126,9 @@ func TestConfigureProjectionRuntime_ReturnsBuildProjectionRegistriesError(t *tes
 		buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
 			return nil, wantErr
 		},
-		buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) func(context.Context, event.Event) error {
+		buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
 			calledBuildApply = true
-			return nil
+			return nil, nil
 		},
 	})
 

@@ -98,21 +98,34 @@ func TestDecideActionOutcomeApply_EmitsPreThenOutcomeThenPost(t *testing.T) {
 	}
 }
 
-func TestDecideAction_NoteAddAllowsMalformedPayloadAsZeroValuePayload(t *testing.T) {
-	decision := Decide(State{}, command.Command{
-		CampaignID:  "camp-1",
-		Type:        CommandTypeNoteAdd,
-		ActorType:   command.ActorTypeSystem,
-		EntityID:    "note-1",
-		PayloadJSON: []byte(`{malformed`),
-	}, time.Now)
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+func TestDecideAction_RejectsMalformedPayload(t *testing.T) {
+	tests := []struct {
+		name    string
+		cmdType command.Type
+	}{
+		{name: "roll resolve", cmdType: CommandTypeRollResolve},
+		{name: "outcome apply", cmdType: CommandTypeOutcomeApply},
+		{name: "outcome reject", cmdType: CommandTypeOutcomeReject},
+		{name: "note add", cmdType: CommandTypeNoteAdd},
 	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-	if string(decision.Events[0].PayloadJSON) != `{"content":""}` {
-		t.Fatalf("payload = %s, want {\"content\":\"\"}", string(decision.Events[0].PayloadJSON))
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			decision := Decide(State{}, command.Command{
+				CampaignID:  "camp-1",
+				Type:        tc.cmdType,
+				ActorType:   command.ActorTypeSystem,
+				EntityID:    "ent-1",
+				PayloadJSON: []byte(`{malformed`),
+			}, time.Now)
+			if len(decision.Events) != 0 {
+				t.Fatalf("expected no events, got %d", len(decision.Events))
+			}
+			if len(decision.Rejections) != 1 {
+				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+			}
+			if decision.Rejections[0].Code != "PAYLOAD_DECODE_FAILED" {
+				t.Fatalf("rejection code = %s, want PAYLOAD_DECODE_FAILED", decision.Rejections[0].Code)
+			}
+		})
 	}
 }

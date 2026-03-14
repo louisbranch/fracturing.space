@@ -103,7 +103,7 @@ func (s *DaggerheartService) buildStressVulnerableConditionEffect(
 
 	normalized, err := daggerheart.NormalizeConditions(conditions)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "invalid stored conditions: %v", err)
+		return nil, grpcerror.Internal("invalid stored conditions", err)
 	}
 	hasVulnerable := containsString(normalized, daggerheart.ConditionVulnerable)
 	if shouldAdd && hasVulnerable {
@@ -129,7 +129,7 @@ func (s *DaggerheartService) buildStressVulnerableConditionEffect(
 	}
 	after, err := daggerheart.NormalizeConditions(afterList)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "invalid condition set: %v", err)
+		return nil, grpcerror.Internal("invalid condition set", err)
 	}
 	added, removed := daggerheart.DiffConditions(normalized, after)
 	if len(added) == 0 && len(removed) == 0 {
@@ -146,7 +146,7 @@ func (s *DaggerheartService) buildStressVulnerableConditionEffect(
 			characterID,
 		)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "check condition change applied: %v", err)
+			return nil, grpcerror.Internal("check condition change applied", err)
 		}
 		if exists {
 			return nil, nil
@@ -163,7 +163,7 @@ func (s *DaggerheartService) buildStressVulnerableConditionEffect(
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode condition payload: %v", err)
+		return nil, grpcerror.Internal("encode condition payload", err)
 	}
 	return &action.OutcomeAppliedEffect{
 		Type:          "sys.daggerheart.condition_changed",
@@ -238,7 +238,7 @@ func (s *DaggerheartService) ensureNoOpenSessionGate(ctx context.Context, campai
 	if errors.Is(err, storage.ErrNotFound) {
 		return nil
 	}
-	return status.Errorf(codes.Internal, "load session gate: %v", err)
+	return grpcerror.Internal("load session gate", err)
 }
 
 func normalizeActionModifiers(modifiers []*pb.ActionRollModifier) (int, []rollModifierMetadata) {

@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
@@ -53,7 +54,7 @@ func (s *DaggerheartService) ActionRoll(ctx context.Context, in *pb.ActionRollRe
 		if errors.Is(err, random.ErrSeedOutOfRange()) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
+		return nil, grpcerror.Internal("failed to generate seed", err)
 	}
 
 	var difficulty *int
@@ -73,7 +74,7 @@ func (s *DaggerheartService) ActionRoll(ctx context.Context, in *pb.ActionRollRe
 		if errors.Is(err, daggerheartdomain.ErrInvalidDifficulty) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to roll action: %v", err)
+		return nil, grpcerror.Internal("failed to roll action", err)
 	}
 
 	response := &pb.ActionRollResponse{
@@ -123,7 +124,7 @@ func (s *DaggerheartService) DualityOutcome(ctx context.Context, in *pb.DualityO
 		if errors.Is(err, daggerheartdomain.ErrInvalidDifficulty) || errors.Is(err, daggerheartdomain.ErrInvalidDualityDie) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to evaluate outcome: %v", err)
+		return nil, grpcerror.Internal("failed to evaluate outcome", err)
 	}
 
 	response := &pb.DualityOutcomeResponse{
@@ -165,7 +166,7 @@ func (s *DaggerheartService) DualityExplain(ctx context.Context, in *pb.DualityE
 		if errors.Is(err, daggerheartdomain.ErrInvalidDifficulty) || errors.Is(err, daggerheartdomain.ErrInvalidDualityDie) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to explain outcome: %v", err)
+		return nil, grpcerror.Internal("failed to explain outcome", err)
 	}
 
 	response := &pb.DualityExplainResponse{
@@ -195,7 +196,7 @@ func (s *DaggerheartService) DualityExplain(ctx context.Context, in *pb.DualityE
 	for _, step := range result.Steps {
 		data, err := stepDataToStruct(step.Data)
 		if err != nil {
-			return nil, status.Errorf(codes.Internal, "failed to encode step %s: %v", step.Code, err)
+			return nil, grpcerror.Internal(fmt.Sprintf("failed to encode step %s", step.Code), err)
 		}
 		response.Steps = append(response.Steps, &pb.ExplainStep{
 			Code:    step.Code,
@@ -221,7 +222,7 @@ func (s *DaggerheartService) DualityProbability(ctx context.Context, in *pb.Dual
 		if errors.Is(err, daggerheartdomain.ErrInvalidDifficulty) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to compute probability: %v", err)
+		return nil, grpcerror.Internal("failed to compute probability", err)
 	}
 
 	response := &pb.DualityProbabilityResponse{
@@ -285,7 +286,7 @@ func (s *DaggerheartService) RollDice(ctx context.Context, in *pb.RollDiceReques
 		if errors.Is(err, random.ErrSeedOutOfRange()) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to generate seed: %v", err)
+		return nil, grpcerror.Internal("failed to generate seed", err)
 	}
 
 	request := dice.Request{
@@ -304,7 +305,7 @@ func (s *DaggerheartService) RollDice(ctx context.Context, in *pb.RollDiceReques
 		if errors.Is(err, dice.ErrMissingDice) || errors.Is(err, dice.ErrInvalidDiceSpec) {
 			return nil, status.Error(codes.InvalidArgument, err.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "failed to roll dice: %v", err)
+		return nil, grpcerror.Internal("failed to roll dice", err)
 	}
 
 	response := &pb.RollDiceResponse{

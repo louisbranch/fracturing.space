@@ -11,6 +11,7 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -31,10 +32,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	// Get source campaign
 	sourceCampaign, err := a.stores.Campaign.Get(ctx, sourceCampaignID)
 	if err != nil {
-		if isNotFound(err) {
-			return storage.CampaignRecord{}, nil, 0, status.Error(codes.NotFound, "source campaign not found")
-		}
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "get source campaign: %v", err)
+		return storage.CampaignRecord{}, nil, 0, grpcerror.EnsureStatus(err)
 	}
 	if err := requirePolicy(ctx, a.stores, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
 		return storage.CampaignRecord{}, nil, 0, err
@@ -51,7 +49,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 			)
 		}
 		if !errors.Is(err, storage.ErrNotFound) {
-			return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "check active session: %v", err)
+			return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("check active session", err)
 		}
 	}
 
@@ -64,8 +62,8 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 
 	// Get source campaign's fork metadata to determine origin
 	sourceMetadata, err := a.stores.CampaignFork.GetCampaignForkMetadata(ctx, sourceCampaignID)
-	if err != nil && !isNotFound(err) {
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "get source fork metadata: %v", err)
+	if err != nil && !errors.Is(err, storage.ErrNotFound) {
+		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("get source fork metadata", err)
 	}
 
 	originCampaignID := sourceMetadata.OriginCampaignID
@@ -102,7 +100,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	campaignJSON, err := json.Marshal(campaignPayload)
 	if err != nil {
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("encode payload", err)
 	}
 	applier := a.stores.Applier()
 	actorID, actorType := resolveCommandActor(ctx)
@@ -137,7 +135,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	forkJSON, err := json.Marshal(forkPayload)
 	if err != nil {
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "encode payload: %v", err)
+		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("encode payload", err)
 	}
 	actorType = command.ActorTypeSystem
 	if actorID != "" {
@@ -167,7 +165,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 
 	if _, err := a.copyForkEvents(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants(), applier); err != nil {
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "copy events: %v", err)
+		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("copy events", err)
 	}
 
 	// Calculate depth by walking the parent chain
@@ -175,7 +173,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 
 	newCampaign, err := a.stores.Campaign.Get(ctx, f.NewCampaignID)
 	if err != nil {
-		return storage.CampaignRecord{}, nil, 0, status.Errorf(codes.Internal, "load forked campaign: %v", err)
+		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("load forked campaign", err)
 	}
 
 	lineage := &campaignv1.Lineage{

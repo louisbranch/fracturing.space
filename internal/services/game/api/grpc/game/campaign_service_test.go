@@ -1816,3 +1816,18 @@ func assertStatusCode(t *testing.T, err error, want codes.Code) {
 		t.Fatalf("status code = %v, want %v (message: %s)", statusErr.Code(), want, statusErr.Message())
 	}
 }
+
+func assertStatusMessage(t *testing.T, err error, want string) {
+	t.Helper()
+
+	if err == nil {
+		t.Fatalf("expected error with message %q", want)
+	}
+	statusErr, ok := status.FromError(err)
+	if !ok {
+		t.Fatalf("expected gRPC status error, got %T", err)
+	}
+	if statusErr.Message() != want {
+		t.Fatalf("status message = %q, want %q", statusErr.Message(), want)
+	}
+}

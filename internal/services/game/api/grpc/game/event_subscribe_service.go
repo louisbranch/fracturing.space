@@ -6,6 +6,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -51,7 +52,7 @@ func (s *EventService) SubscribeCampaignUpdates(in *campaignv1.SubscribeCampaign
 	sendAvailable := func() error {
 		events, err := s.stores.Event.ListEvents(ctx, normalized.campaignID, lastSeq, maxListEventsPageSize)
 		if err != nil {
-			return status.Errorf(codes.Internal, "list events: %v", err)
+			return grpcerror.Internal("list events", err)
 		}
 
 		for _, evt := range events {

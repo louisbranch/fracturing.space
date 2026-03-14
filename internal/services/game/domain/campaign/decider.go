@@ -46,8 +46,8 @@ const (
 	rejectionCodeCampaignAIAgentIDRequired    = "CAMPAIGN_AI_AGENT_ID_REQUIRED"
 	rejectionCodeCampaignParticipantsEmpty    = "CAMPAIGN_PARTICIPANTS_REQUIRED"
 	rejectionCodeCampaignParticipantDuplicate = "CAMPAIGN_PARTICIPANT_DUPLICATE"
-	rejectionCodeCommandTypeUnsupported       = "COMMAND_TYPE_UNSUPPORTED"
-	rejectionCodePayloadDecodeFailed          = "PAYLOAD_DECODE_FAILED"
+	rejectionCodeCommandTypeUnsupported       = command.RejectionCodeCommandTypeUnsupported
+	rejectionCodePayloadDecodeFailed          = command.RejectionCodePayloadDecodeFailed
 )
 
 var lifecycleCommandTargets = map[command.Type]Status{
@@ -152,7 +152,7 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 		return command.Reject(*rejection)
 	}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeCreated, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -183,7 +183,7 @@ func decideCreateWithParticipants(state State, cmd command.Command, now func() t
 		})
 	}
 
-	decisionTime := nowFunc(now)().UTC()
+	decisionTime := command.NowFunc(now)().UTC()
 	campaignPayloadJSON, _ := json.Marshal(normalizedCampaign)
 	campaignCreated := command.NewEvent(cmd, EventTypeCreated, "campaign", string(cmd.CampaignID), campaignPayloadJSON, decisionTime)
 
@@ -345,7 +345,7 @@ func decideUpdate(state State, cmd command.Command, now func() time.Time) comman
 
 	normalizedPayload := UpdatePayload{Fields: normalizedFields}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -373,7 +373,7 @@ func decideAIBind(state State, cmd command.Command, now func() time.Time) comman
 
 	normalizedPayload := AIBindPayload{AIAgentID: agentID}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeAIBound, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIBound, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -385,7 +385,7 @@ func decideAIUnbind(state State, cmd command.Command, now func() time.Time) comm
 		})
 	}
 	payloadJSON, _ := json.Marshal(AIUnbindPayload{})
-	evt := command.NewEvent(cmd, EventTypeAIUnbound, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIUnbound, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -408,7 +408,7 @@ func decideAIAuthRotate(state State, cmd command.Command, now func() time.Time) 
 	payload.EpochAfter = state.AIAuthEpoch + 1
 	payload.Reason = strings.TrimSpace(payload.Reason)
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeAIAuthRotated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeAIAuthRotated, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -429,7 +429,7 @@ func decideFork(state State, cmd command.Command, now func() time.Time) command.
 	payload.ParentCampaignID = ids.CampaignID(strings.TrimSpace(payload.ParentCampaignID.String()))
 	payload.OriginCampaignID = ids.CampaignID(strings.TrimSpace(payload.OriginCampaignID.String()))
 	payloadJSON, _ := json.Marshal(payload)
-	evt := command.NewEvent(cmd, EventTypeForked, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeForked, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
 	return command.Accept(evt)
 }
 
@@ -454,15 +454,8 @@ func decideLifecycleStatus(state State, cmd command.Command, now func() time.Tim
 
 	normalizedPayload := UpdatePayload{Fields: map[string]string{"status": string(targetStatus)}}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
-	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, nowFunc(now)().UTC())
+	evt := command.NewEvent(cmd, EventTypeUpdated, "campaign", string(cmd.CampaignID), payloadJSON, command.NowFunc(now)().UTC())
 	return command.Accept(evt)
-}
-
-func nowFunc(now func() time.Time) func() time.Time {
-	if now == nil {
-		return time.Now
-	}
-	return now
 }
 
 // statusCommandTarget maps lifecycle command names to their destination status.

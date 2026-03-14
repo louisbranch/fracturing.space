@@ -51,6 +51,9 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 	if l.Folder == nil {
 		return nil, replay.ErrFolderRequired
 	}
+	if l.StateFactory == nil {
+		return nil, ErrStateFactoryRequired
+	}
 	var state any
 	options := l.Options
 	checkpoints := l.Checkpoints
@@ -74,10 +77,8 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 			}
 		}
 	}
-	if l.StateFactory != nil {
-		if state == nil {
-			state = l.StateFactory()
-		}
+	if state == nil {
+		state = l.StateFactory()
 	}
 	result, err := replay.Replay(ctx, l.Events, checkpoints, l.Folder, string(cmd.CampaignID), state, options)
 	if err != nil {

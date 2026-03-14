@@ -10,6 +10,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -53,7 +54,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 					"invite recipient user not found",
 				)
 			}
-			return storage.InviteRecord{}, status.Errorf(codes.Internal, "get auth user: %v", err)
+			return storage.InviteRecord{}, grpcerror.Internal("get auth user", err)
 		}
 		if userResponse == nil || userResponse.GetUser() == nil {
 			return storage.InviteRecord{}, status.Error(codes.Internal, "auth user response is missing")
@@ -62,7 +63,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 
 	inviteID, err := a.idGenerator()
 	if err != nil {
-		return storage.InviteRecord{}, status.Errorf(codes.Internal, "generate invite id: %v", err)
+		return storage.InviteRecord{}, grpcerror.Internal("generate invite id", err)
 	}
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
@@ -76,7 +77,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return storage.InviteRecord{}, status.Errorf(codes.Internal, "encode invite payload: %v", err)
+		return storage.InviteRecord{}, grpcerror.Internal("encode invite payload", err)
 	}
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
@@ -104,7 +105,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 
 	inv, err := a.stores.Invite.GetInvite(ctx, inviteID)
 	if err != nil {
-		return storage.InviteRecord{}, status.Errorf(codes.Internal, "load invite: %v", err)
+		return storage.InviteRecord{}, grpcerror.Internal("load invite", err)
 	}
 
 	return inv, nil

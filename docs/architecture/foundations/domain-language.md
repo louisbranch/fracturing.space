@@ -84,6 +84,16 @@ participant/character blockers.
 2. Keep event type names readable and ownership-scoped.
 3. Avoid naming that hard-codes implementation details.
 
+## Error architecture
+
+Domain errors use `apperrors.Error` to carry a stable rejection code, structured
+metadata, and an i18n key. Rejection codes are stable machine-readable strings
+intended for integrations and client branching; messages are diagnostic and not
+guaranteed stable. Transport layers convert domain codes to gRPC status codes via
+`HandleError()` (in `grpcerror`), keeping the domain layer transport-agnostic.
+`CodeUnknown` is reserved for unexpected/internal errors that do not map to a
+specific domain condition — all other rejection reasons use explicit domain codes.
+
 ## Non-goals
 
 - Preserving legacy event API vocabulary by default.

@@ -7,6 +7,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -51,13 +52,13 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 	// Get Daggerheart snapshot projection (GM Fear)
 	dhSnapshot, err := s.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, status.Errorf(codes.Internal, "get daggerheart snapshot: %v", err)
+		return nil, grpcerror.Internal("get daggerheart snapshot", err)
 	}
 
 	// Get all character states for this campaign
 	charPage, err := s.stores.Character.ListCharacters(ctx, campaignID, 100, "")
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list characters: %v", err)
+		return nil, grpcerror.Internal("list characters", err)
 	}
 
 	characterStates := make([]*campaignv1.CharacterState, 0, len(charPage.Characters))
@@ -68,7 +69,7 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 			if errors.Is(err, storage.ErrNotFound) {
 				continue
 			}
-			return nil, status.Errorf(codes.Internal, "get daggerheart character state: %v", err)
+			return nil, grpcerror.Internal("get daggerheart character state", err)
 		}
 
 		characterStates = append(characterStates, daggerheartStateToProto(campaignID, ch.ID, dhState))

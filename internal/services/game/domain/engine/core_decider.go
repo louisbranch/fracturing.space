@@ -286,95 +286,70 @@ func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]cor
 //  2. Command.PayloadJSON — the fallback channel, used when the entity ID is
 //     embedded in the command body rather than the request envelope.
 //
-// The *StateFor helpers below try EntityID first, then unmarshal PayloadJSON
-// as a last resort. If neither source provides a valid ID, the helper returns
-// a zero-value state. The downstream decider is responsible for rejecting
+// resolveEntityID tries EntityID first, then unmarshals PayloadJSON using the
+// given JSON field name as a last resort. If neither source provides a valid
+// ID, it returns "". The downstream decider is responsible for rejecting
 // commands that require a target entity but received none.
 //
 // This dual-source pattern keeps transport layers flexible (some APIs carry
 // the entity in the path, others in the body) while the domain layer remains
 // transport-agnostic.
 
-type participantIDPayload struct {
-	ParticipantID string `json:"participant_id"`
+// resolveEntityID returns the entity ID from either cmd.EntityID or the named
+// JSON field in cmd.PayloadJSON. Unmarshal failures are safe — an empty string
+// causes the downstream decider to reject when the entity is required.
+func resolveEntityID(cmd command.Command, jsonField string) string {
+	id := strings.TrimSpace(cmd.EntityID)
+	if id != "" {
+		return id
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(cmd.PayloadJSON, &raw); err != nil {
+		return ""
+	}
+	fieldJSON, ok := raw[jsonField]
+	if !ok {
+		return ""
+	}
+	var val string
+	if err := json.Unmarshal(fieldJSON, &val); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(val)
 }
 
 // participantStateFor loads the target participant from command metadata.
-//
-// Commands can carry the participant reference in either EntityID or payload body;
-// this lets callers keep transport-level shape flexible while preserving deterministic
-// routing.
 func participantStateFor(cmd command.Command, current aggregate.State) participant.State {
 	if current.Participants == nil {
 		return participant.State{}
 	}
-	participantID := strings.TrimSpace(cmd.EntityID)
-	if participantID == "" {
-		var payload participantIDPayload
-		// PayloadJSON may not carry the target ID for all command types;
-		// unmarshal failure is safe — empty fallback causes the decider to
-		// reject if the entity is required but missing.
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		participantID = strings.TrimSpace(payload.ParticipantID)
-	}
-	if participantID == "" {
+	id := resolveEntityID(cmd, "participant_id")
+	if id == "" {
 		return participant.State{}
 	}
-	return current.Participants[ids.ParticipantID(participantID)]
-}
-
-type characterIDPayload struct {
-	CharacterID string `json:"character_id"`
+	return current.Participants[ids.ParticipantID(id)]
 }
 
 // characterStateFor loads the target character from command metadata.
-//
-// Commands can carry the character reference in either EntityID or payload body;
-// this lets callers keep transport-level shape flexible while preserving deterministic
-// routing.
 func characterStateFor(cmd command.Command, current aggregate.State) character.State {
 	if current.Characters == nil {
 		return character.State{}
 	}
-	characterID := strings.TrimSpace(cmd.EntityID)
-	if characterID == "" {
-		var payload characterIDPayload
-		// PayloadJSON may not carry the target ID for all command types;
-		// unmarshal failure is safe — empty fallback causes the decider to
-		// reject if the entity is required but missing.
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		characterID = strings.TrimSpace(payload.CharacterID)
-	}
-	if characterID == "" {
+	id := resolveEntityID(cmd, "character_id")
+	if id == "" {
 		return character.State{}
 	}
-	return current.Characters[ids.CharacterID(characterID)]
-}
-
-type inviteIDPayload struct {
-	InviteID string `json:"invite_id"`
+	return current.Characters[ids.CharacterID(id)]
 }
 
 // inviteStateFor loads the target invite from command metadata.
-//
-// Commands can carry the invite reference in either EntityID or payload body;
-// this lets callers keep transport-level shape flexible while preserving deterministic
-// routing.
 func inviteStateFor(cmd command.Command, current aggregate.State) invite.State {
 	if current.Invites == nil {
 		return invite.State{}
 	}
-	inviteID := strings.TrimSpace(cmd.EntityID)
-	if inviteID == "" {
-		var payload inviteIDPayload
-		// PayloadJSON may not carry the target ID for all command types;
-		// unmarshal failure is safe — empty fallback causes the decider to
-		// reject if the entity is required but missing.
-		_ = json.Unmarshal(cmd.PayloadJSON, &payload)
-		inviteID = strings.TrimSpace(payload.InviteID)
-	}
-	if inviteID == "" {
+	id := resolveEntityID(cmd, "invite_id")
+	if id == "" {
 		return invite.State{}
 	}
-	return current.Invites[ids.InviteID(inviteID)]
+	return current.Invites[ids.InviteID(id)]
 }

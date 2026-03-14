@@ -212,6 +212,39 @@ func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 	}
 }
 
+func TestResolveEntityID(t *testing.T) {
+	tests := []struct {
+		name      string
+		entityID  string
+		payload   string
+		jsonField string
+		want      string
+	}{
+		{name: "from EntityID", entityID: "ent-1", payload: `{}`, jsonField: "id", want: "ent-1"},
+		{name: "from EntityID trims spaces", entityID: "  ent-1  ", payload: `{}`, jsonField: "id", want: "ent-1"},
+		{name: "from payload fallback", entityID: "", payload: `{"id":"ent-2"}`, jsonField: "id", want: "ent-2"},
+		{name: "from payload trims spaces", entityID: "", payload: `{"id":" ent-2 "}`, jsonField: "id", want: "ent-2"},
+		{name: "EntityID takes precedence over payload", entityID: "ent-1", payload: `{"id":"ent-2"}`, jsonField: "id", want: "ent-1"},
+		{name: "malformed payload returns empty", entityID: "", payload: `{broken`, jsonField: "id", want: ""},
+		{name: "missing field returns empty", entityID: "", payload: `{"other":"val"}`, jsonField: "id", want: ""},
+		{name: "non-string field returns empty", entityID: "", payload: `{"id":42}`, jsonField: "id", want: ""},
+		{name: "empty EntityID and empty payload value", entityID: "", payload: `{"id":""}`, jsonField: "id", want: ""},
+		{name: "whitespace-only EntityID falls through to payload", entityID: "   ", payload: `{"id":"ent-3"}`, jsonField: "id", want: "ent-3"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := command.Command{
+				EntityID:    tc.entityID,
+				PayloadJSON: []byte(tc.payload),
+			}
+			got := resolveEntityID(cmd, tc.jsonField)
+			if got != tc.want {
+				t.Fatalf("resolveEntityID() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestParticipantStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 	current := aggregate.State{
 		Participants: map[ids.ParticipantID]participant.State{

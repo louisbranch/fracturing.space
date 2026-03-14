@@ -40,6 +40,8 @@ const (
 // Character changes are intentionally event-driven so ownership and profile edits
 // can be replayed and projected consistently across tools and clients.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
+	now = command.NowFunc(now)
+
 	switch cmd.Type {
 	case CommandTypeCreate:
 		return decideCreate(state, cmd, now)
@@ -56,7 +58,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		var payload UpdatePayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
+				Code:    command.RejectionCodePayloadDecodeFailed,
 				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 			})
 		}
@@ -158,10 +160,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				normalizedFields["avatar_asset_id"] = resolvedAssetID
 			}
 		}
-		if now == nil {
-			now = time.Now
-		}
-
 		normalizedPayload := UpdatePayload{CharacterID: ids.CharacterID(characterID), Fields: normalizedFields}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
 		evt := command.NewEvent(cmd, EventTypeUpdated, "character", characterID, payloadJSON, now().UTC())
@@ -178,7 +176,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		var payload DeletePayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
+				Code:    command.RejectionCodePayloadDecodeFailed,
 				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 			})
 		}
@@ -190,9 +188,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 			})
 		}
 		reason := strings.TrimSpace(payload.Reason)
-		if now == nil {
-			now = time.Now
-		}
 
 		normalizedPayload := DeletePayload{CharacterID: ids.CharacterID(characterID), Reason: reason}
 		payloadJSON, _ := json.Marshal(normalizedPayload)
@@ -210,7 +205,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 		var payload ProfileUpdatePayload
 		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 			return command.Reject(command.Rejection{
-				Code:    "PAYLOAD_DECODE_FAILED",
+				Code:    command.RejectionCodePayloadDecodeFailed,
 				Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 			})
 		}
@@ -220,9 +215,6 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 				Code:    rejectionCodeCharacterIDRequired,
 				Message: "character id is required",
 			})
-		}
-		if now == nil {
-			now = time.Now
 		}
 
 		normalizedPayload := ProfileUpdatePayload{
@@ -236,7 +228,7 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 	default:
 		return command.Reject(command.Rejection{
-			Code:    "COMMAND_TYPE_UNSUPPORTED",
+			Code:    command.RejectionCodeCommandTypeUnsupported,
 			Message: fmt.Sprintf("command type %s is not supported by character decider", cmd.Type),
 		})
 	}
@@ -252,7 +244,7 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 	var payload CreatePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
@@ -290,9 +282,6 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 	if err != nil {
 		return command.Reject(characterAvatarRejection(err))
 	}
-	if now == nil {
-		now = time.Now
-	}
 
 	normalizedPayload := CreatePayload{
 		CharacterID:        ids.CharacterID(characterID),
@@ -315,7 +304,7 @@ func decideCreateWithProfile(state State, cmd command.Command, now func() time.T
 	var payload CreateWithProfilePayload
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{
-			Code:    "PAYLOAD_DECODE_FAILED",
+			Code:    command.RejectionCodePayloadDecodeFailed,
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}

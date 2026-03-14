@@ -77,6 +77,8 @@ func Fold(state State, evt event.Event) (State, error) {
 	case EventTypeProfileUpdated:
 		return foldProfileUpdated(state, evt)
 	}
+	// Unknown event types are silently ignored so that replay remains
+	// forward-compatible when new events are added before the fold is updated.
 	return state, nil
 }
 
@@ -136,7 +138,11 @@ func foldProfileUpdated(state State, evt event.Event) (State, error) {
 	if payload.CharacterID != "" {
 		state.CharacterID = ids.CharacterID(payload.CharacterID)
 	}
-	state.SystemProfile = payload.SystemProfile
+	if payload.SystemProfile == nil {
+		state.SystemProfile = make(map[string]any)
+	} else {
+		state.SystemProfile = payload.SystemProfile
+	}
 	return state, nil
 }
 
