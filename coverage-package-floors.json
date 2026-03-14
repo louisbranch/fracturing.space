@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-14T04:16:50Z",
+  "updated_at": "2026-03-14T04:35:25Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
