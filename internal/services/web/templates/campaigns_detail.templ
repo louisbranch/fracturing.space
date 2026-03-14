@@ -29,14 +29,10 @@ templ campaignCharacterEditorForm(view CampaignDetailView, loc Localizer, title 
 				if isCreate {
 					<input type="hidden" name="kind" value="pc"/>
 				}
-				<dl class="grid gap-3 text-sm md:grid-cols-2">
+				<dl class="grid gap-3 text-sm">
 					<div>
 						<dt class="opacity-70">{ T(loc, "game.characters.field_kind") }</dt>
 						<dd>{ campaignCharacterKindLabel(loc, view.CharacterEditor.Kind) }</dd>
-					</div>
-					<div>
-						<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }</dt>
-						<dd>{ campaignParticipantControllerLabel(loc, view.CharacterEditor.Controller) }</dd>
 					</div>
 				</dl>
 				<div class="card-actions justify-end">
@@ -54,15 +50,15 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 				<div class="card-body gap-4">
 					<div class="flex items-center justify-between gap-3">
 						<h2 class="card-title">{ T(loc, "game.campaign.menu.overview") }</h2>
-						if view.CanEditCampaign {
-							if campaignActionsLocked(view) {
-								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ T(loc, "game.campaign.action_edit") }</button>
-								</div>
-							} else {
-								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ T(loc, "game.campaign.action_edit") }</a>
+							if view.CanEditCampaign {
+								if campaignActionsLocked(view) {
+									<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+										<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ T(loc, "game.campaign.action_edit") }</button>
+									</div>
+								} else {
+									<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ T(loc, "game.campaign.action_edit") }</a>
+								}
 							}
-						}
 					</div>
 					<dl class="grid gap-3 md:grid-cols-2 text-sm">
 						<div>
@@ -142,18 +138,18 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 					<div class="card-body">
 						<div class="flex items-center justify-between gap-3">
 							<h2 class="card-title">{ T(loc, "game.participants.title") }</h2>
-							if view.CanManageParticipants {
-								if campaignActionsLocked(view) {
-									<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+								if view.CanManageParticipants {
+									if campaignActionsLocked(view) {
+										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+											<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+										</div>
+									} else {
 										<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
-									</div>
-								} else {
-									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-participants-add-disabled="true">{ T(loc, "game.participants.action_add") }</button>
+									}
 								}
-							}
+							</div>
 						</div>
-					</div>
-				</div>
+						</div>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 				if len(view.Participants) == 0 {
 					<p>{ T(loc, "game.participants.empty") }</p>
@@ -315,7 +311,7 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 							}
 						</div>
 					</div>
-				</div>
+					</div>
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					if len(view.Characters) == 0 {
 						<p>{ T(loc, "game.characters.empty") }</p>
@@ -530,38 +526,79 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 						</div>
 						<dl class="grid gap-3 text-sm md:grid-cols-2">
 							<div>
-								<dt class="opacity-70">{ T(loc, "game.characters.field_name") }</dt>
-								<dd data-campaign-character-detail-name={ campaignCharacterByID(view).Name }>{ campaignCharacterByID(view).Name }</dd>
-							</div>
-							<div>
 								<dt class="opacity-70">{ T(loc, "game.characters.field_pronouns") }</dt>
-								<dd>{ participantPronounsLabel(loc, campaignCharacterByID(view).Pronouns) }</dd>
+								<dd data-campaign-character-detail-pronouns={ participantPronounsLabel(loc, campaignCharacterByID(view).Pronouns) }>{ participantPronounsLabel(loc, campaignCharacterByID(view).Pronouns) }</dd>
 							</div>
 							<div>
 								<dt class="opacity-70">{ T(loc, "game.characters.field_kind") }</dt>
 								<dd data-campaign-character-detail-kind={ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }>{ campaignCharacterKindLabel(loc, campaignCharacterByID(view).Kind) }</dd>
 							</div>
-							<div>
-								<dt class="opacity-70">{ T(loc, "game.participants.field_controller") }</dt>
-								<dd data-campaign-character-detail-controller={ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }>{ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }</dd>
-							</div>
 						</dl>
 					</div>
+				</div>
+				<div class="grid grid-cols-1 gap-4 md:grid-cols-2" data-campaign-character-control-layout="true">
+					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-character-control-card="true">
+						<div class="card-body gap-4">
+							<div class="flex flex-wrap items-start justify-between gap-3">
+								<div class="space-y-1 text-sm">
+									<div class="opacity-70">{ T(loc, "game.participants.field_controller") }</div>
+									<div class="font-medium" data-campaign-character-control-current-controller={ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }>{ campaignParticipantControllerLabel(loc, campaignCharacterByID(view).Controller) }</div>
+								</div>
+								if view.CharacterControl.CanSelfClaim {
+									<form method="post" action={ routepath.AppCampaignCharacterControlClaim(view.CampaignID, view.CharacterID) } data-campaign-character-claim-form="true">
+										if campaignActionsLocked(view) {
+											<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+												<button class="btn btn-primary btn-sm" type="submit" disabled data-campaign-character-claim-disabled="true">{ T(loc, "game.characters.control.action_claim") }</button>
+											</div>
+										} else {
+											<button class="btn btn-primary btn-sm" type="submit">{ T(loc, "game.characters.control.action_claim") }</button>
+										}
+									</form>
+								}
+								if view.CharacterControl.CanSelfRelease {
+									<form method="post" action={ routepath.AppCampaignCharacterControlRelease(view.CampaignID, view.CharacterID) } data-campaign-character-release-form="true">
+										if campaignActionsLocked(view) {
+											<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+												<button class="btn btn-outline btn-sm" type="submit" disabled data-campaign-character-release-disabled="true">{ T(loc, "game.characters.control.action_release") }</button>
+											</div>
+										} else {
+											<button class="btn btn-outline btn-sm" type="submit">{ T(loc, "game.characters.control.action_release") }</button>
+										}
+									</form>
+								}
+							</div>
+						</div>
+					</div>
+					if view.CharacterControl.CanManageControl {
+						<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-character-control-manager-card="true">
+							<div class="card-body gap-4">
+								<div class="text-sm opacity-70">{ T(loc, "game.characters.control.field_manager_override") }</div>
+								<form method="post" action={ routepath.AppCampaignCharacterControl(view.CampaignID, view.CharacterID) } class="flex flex-wrap items-center gap-3" data-campaign-character-controller-form="true">
+									<div class="form-control min-w-0 flex-1">
+										<select class="select select-bordered w-full" name="participant_id" disabled?={ campaignActionsLocked(view) } data-campaign-character-controller-select="true">
+											for _, option := range view.CharacterControl.Options {
+												<option value={ option.ParticipantID } selected?={ option.Selected }>{ campaignCharacterControlOptionLabel(loc, option) }</option>
+											}
+										</select>
+									</div>
+									if campaignActionsLocked(view) {
+										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+											<button class="btn btn-outline btn-sm" type="submit" disabled data-campaign-character-controller-submit-disabled="true">{ T(loc, "game.characters.submit_set_controller") }</button>
+										</div>
+									} else {
+										<button class="btn btn-outline btn-sm" type="submit">{ T(loc, "game.characters.submit_set_controller") }</button>
+									}
+								</form>
+							</div>
+						</div>
+					}
 				</div>
 				if view.CharacterCreationEnabled {
 					<div class="card bg-base-100 border border-base-300 shadow-sm" data-character-creation-workflow="true">
 						<div class="card-body space-y-4">
 							<div class="flex items-center justify-between gap-3">
 								<h3 class="text-lg font-semibold">{ campaignCharacterSheetTitle(loc, view) }</h3>
-								if view.CharacterCreation.Ready {
-									<span class="badge badge-success badge-outline">{ T(loc, "game.character_creation.ready") }</span>
-								} else {
-									<span class="badge badge-warning badge-outline">{ T(loc, "game.character_creation.current_step") } { view.CharacterCreation.NextStep }</span>
-								}
-							</div>
-							@creationSummaryBody(view.CharacterCreation, loc)
-							if campaignCharacterByID(view).CanEdit {
-								<div class="card-actions justify-end">
+								if campaignCharacterByID(view).CanEdit {
 									if campaignActionsLocked(view) {
 										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
 											<button class="btn btn-primary btn-sm" type="button" disabled data-character-creation-disabled="true">
@@ -579,8 +616,32 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 									} else {
 										<a class="btn btn-primary btn-sm" href={ routepath.AppCampaignCharacterCreation(view.CampaignID, view.CharacterID) } data-character-creation-link="true">{ T(loc, "game.character_creation.action_continue_creation") }</a>
 									}
+								} else if view.CharacterCreation.Ready {
+									<span class="badge badge-success badge-outline">{ T(loc, "game.character_creation.ready") }</span>
+								}
+							</div>
+							@creationSummaryBody(view.CharacterCreation, loc)
+						</div>
+					</div>
+				}
+				if campaignCharacterByID(view).CanEdit {
+					<div class="card bg-base-100 border border-error/30 shadow-sm" data-campaign-character-danger-zone="true">
+						<div class="card-body gap-4">
+							<div class="flex items-start justify-between gap-3">
+								<div class="space-y-1">
+									<h3 class="text-lg font-semibold text-error">{ T(loc, "game.characters.danger.title") }</h3>
+									<p class="text-sm opacity-70">{ T(loc, "game.characters.danger.description") }</p>
 								</div>
-							}
+								<form method="post" action={ routepath.AppCampaignCharacterDelete(view.CampaignID, view.CharacterID) } data-campaign-character-delete-form="true" onsubmit="return confirm(this.dataset.confirmText);" data-confirm-text={ T(loc, "game.characters.confirm_delete") }>
+									if campaignActionsLocked(view) {
+										<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+											<button class="btn btn-outline btn-error btn-sm" type="submit" disabled data-campaign-character-delete-disabled="true">{ T(loc, "game.characters.action_delete") }</button>
+										</div>
+									} else {
+										<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.characters.action_delete") }</button>
+									}
+								</form>
+							</div>
 						</div>
 					</div>
 				}

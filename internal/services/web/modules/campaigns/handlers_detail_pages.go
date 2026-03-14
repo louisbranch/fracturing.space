@@ -137,8 +137,7 @@ func (h handlers) handleCharacterCreatePage(w http.ResponseWriter, r *http.Reque
 			}
 			view.CanCreateCharacter = true
 			view.CharacterEditor = webtemplates.CampaignCharacterEditorView{
-				Kind:       "PC",
-				Controller: "Unassigned",
+				Kind: "PC",
 			}
 			return nil
 		},
@@ -167,13 +166,14 @@ func (h handlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, ca
 				view.CharacterID = characterID
 			}
 			view.Characters = []webtemplates.CampaignCharacterView{{
-				ID:             editor.Character.ID,
-				Name:           editor.Character.Name,
-				Kind:           editor.Character.Kind,
-				Controller:     editor.Character.Controller,
-				Pronouns:       editor.Character.Pronouns,
-				CanEdit:        true,
-				EditReasonCode: editor.Character.EditReasonCode,
+				ID:                      editor.Character.ID,
+				Name:                    editor.Character.Name,
+				Kind:                    editor.Character.Kind,
+				Controller:              editor.Character.Controller,
+				ControllerParticipantID: editor.Character.ControllerParticipantID,
+				Pronouns:                editor.Character.Pronouns,
+				CanEdit:                 true,
+				EditReasonCode:          editor.Character.EditReasonCode,
 			}}
 			return nil
 		},
@@ -182,6 +182,7 @@ func (h handlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, ca
 
 // handleCharacterDetail handles this route in the module transport layer.
 func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	userID := h.RequestUserID(r)
 	h.renderCampaignDetail(w, r, campaignID, campaignDetailSpec{
 		marker: markerCharacterDetail,
 		extra: func(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) []sharedtemplates.BreadcrumbItem {
@@ -197,6 +198,11 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 			}
 			view.CharacterID = characterID
 			view.Characters = mapCharactersView(characterItems)
+			control, err := h.service.CampaignCharacterControl(ctx, campaignID, characterID, userID)
+			if err != nil {
+				return err
+			}
+			view.CharacterControl = mapCharacterControlView(control)
 			workflow := h.resolveWorkflow(page.workspace.System)
 			view.CharacterCreationEnabled = workflow != nil
 			if view.CharacterCreationEnabled {

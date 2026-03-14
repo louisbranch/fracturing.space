@@ -76,20 +76,37 @@ type CampaignAIBindingEditor struct {
 
 // CampaignCharacter stores character details used by campaign characters pages.
 type CampaignCharacter struct {
-	ID             string   `json:"id"`
-	Name           string   `json:"name"`
-	Kind           string   `json:"kind"`
-	Controller     string   `json:"controller"`
-	Pronouns       string   `json:"pronouns"`
-	Aliases        []string `json:"aliases"`
-	AvatarURL      string   `json:"avatarUrl"`
-	CanEdit        bool     `json:"canEdit"`
-	EditReasonCode string   `json:"editReasonCode"`
+	ID                      string   `json:"id"`
+	Name                    string   `json:"name"`
+	Kind                    string   `json:"kind"`
+	Controller              string   `json:"controller"`
+	ControllerParticipantID string   `json:"controllerParticipantId"`
+	Pronouns                string   `json:"pronouns"`
+	Aliases                 []string `json:"aliases"`
+	AvatarURL               string   `json:"avatarUrl"`
+	CanEdit                 bool     `json:"canEdit"`
+	EditReasonCode          string   `json:"editReasonCode"`
 }
 
 // CampaignCharacterEditor stores character edit page data.
 type CampaignCharacterEditor struct {
 	Character CampaignCharacter `json:"character"`
+}
+
+// CampaignCharacterControlOption stores one selectable character-controller option.
+type CampaignCharacterControlOption struct {
+	ParticipantID string `json:"participantId"`
+	Label         string `json:"label"`
+	Selected      bool   `json:"selected"`
+}
+
+// CampaignCharacterControl stores character-detail control state.
+type CampaignCharacterControl struct {
+	CurrentParticipantName string                           `json:"currentParticipantName"`
+	CanSelfClaim           bool                             `json:"canSelfClaim"`
+	CanSelfRelease         bool                             `json:"canSelfRelease"`
+	CanManageControl       bool                             `json:"canManageControl"`
+	Options                []CampaignCharacterControlOption `json:"options"`
 }
 
 // CampaignSession stores session details used by campaign sessions pages.

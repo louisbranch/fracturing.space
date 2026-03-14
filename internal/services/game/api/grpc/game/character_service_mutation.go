@@ -94,6 +94,51 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 	}, nil
 }
 
+// ClaimCharacterControl claims control of an unassigned character for the current participant.
+func (s *CharacterService) ClaimCharacterControl(ctx context.Context, in *campaignv1.ClaimCharacterControlRequest) (*campaignv1.ClaimCharacterControlResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "claim character control request is required")
+	}
+
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+
+	characterID, participantID, err := newCharacterApplication(s).ClaimCharacterControl(ctx, campaignID, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &campaignv1.ClaimCharacterControlResponse{
+		CampaignId:    campaignID,
+		CharacterId:   characterID,
+		ParticipantId: wrapperspb.String(participantID),
+	}, nil
+}
+
+// ReleaseCharacterControl releases control of a character currently controlled by the current participant.
+func (s *CharacterService) ReleaseCharacterControl(ctx context.Context, in *campaignv1.ReleaseCharacterControlRequest) (*campaignv1.ReleaseCharacterControlResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "release character control request is required")
+	}
+
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+
+	characterID, err := newCharacterApplication(s).ReleaseCharacterControl(ctx, campaignID, in)
+	if err != nil {
+		return nil, err
+	}
+
+	return &campaignv1.ReleaseCharacterControlResponse{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	}, nil
+}
+
 // PatchCharacterProfile patches a character profile (all fields optional).
 func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campaignv1.PatchCharacterProfileRequest) (*campaignv1.PatchCharacterProfileResponse, error) {
 	if in == nil {

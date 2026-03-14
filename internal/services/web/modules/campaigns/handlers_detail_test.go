@@ -387,12 +387,20 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`data-campaign-character-detail-id="char-1"`,
-		`data-campaign-character-detail-name="Aria"`,
+		`data-campaign-character-detail-pronouns=`,
 		`data-campaign-character-detail-kind="PC"`,
-		`data-campaign-character-detail-controller="Ariadne"`,
+		`data-campaign-character-control-current-controller="Ariadne"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing character detail marker %q: %q", marker, body)
+		}
+	}
+	for _, marker := range []string{
+		`data-campaign-character-detail-name=`,
+		`data-campaign-character-detail-controller=`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body should not render redundant character detail marker %q: %q", marker, body)
 		}
 	}
 	if !strings.Contains(body, `data-campaign-character-detail-id="char-1">Aria</h2>`) {
@@ -400,6 +408,182 @@ func TestMountCampaignCharacterDetailRouteRendersSelectedCharacter(t *testing.T)
 	}
 	if strings.Contains(body, `data-campaign-character-detail-id="char-1">char-1</h2>`) {
 		t.Fatalf("character detail heading should not render character id, got %q", body)
+	}
+}
+
+func TestMountCampaignCharacterDetailShowsClaimAndManagerControlsForUnassignedCharacter(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []CampaignParticipant{
+			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Manager"},
+			{ID: "p-2", UserID: "user-456", Name: "Moss", CampaignAccess: "Member"},
+		},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Unassigned",
+			AvatarURL:  "/static/avatars/aria.png",
+		}},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		},
+		authorizationDecision: campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-control-card="true"`,
+		`data-campaign-character-control-manager-card="true"`,
+		`data-campaign-character-claim-form="true"`,
+		`data-campaign-character-controller-form="true"`,
+		`data-campaign-character-delete-form="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing character control marker %q: %q", marker, body)
+		}
+	}
+	if strings.Contains(body, "Signed in as Ariadne.") {
+		t.Fatalf("character detail should not render signed-in participant copy: %q", body)
+	}
+	if strings.Contains(body, `data-campaign-character-release-form="true"`) {
+		t.Fatalf("character detail should not show release action for unassigned character: %q", body)
+	}
+}
+
+func TestMountCampaignCharacterDetailShowsReleaseForCurrentController(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []CampaignParticipant{
+			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Member"},
+		},
+		characters: []CampaignCharacter{{
+			ID:                      "char-1",
+			Name:                    "Aria",
+			Kind:                    "PC",
+			Controller:              "Ariadne",
+			ControllerParticipantID: "p-1",
+		}},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, `data-campaign-character-release-form="true"`) {
+		t.Fatalf("character detail should show release action for current controller: %q", body)
+	}
+	if strings.Contains(body, `data-campaign-character-claim-form="true"`) {
+		t.Fatalf("character detail should not show claim action for current controller: %q", body)
+	}
+}
+
+func TestMountCampaignCharacterDetailHidesSelfServiceControlsWhenAnotherParticipantControlsCharacter(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []CampaignParticipant{
+			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Member"},
+			{ID: "p-2", UserID: "user-456", Name: "Moss", CampaignAccess: "Member"},
+		},
+		characters: []CampaignCharacter{{
+			ID:                      "char-1",
+			Name:                    "Aria",
+			Kind:                    "PC",
+			Controller:              "Moss",
+			ControllerParticipantID: "p-2",
+		}},
+		authorizationDecision: campaignapp.AuthorizationDecision{Evaluated: true, Allowed: false, ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED"},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-claim-form="true"`,
+		`data-campaign-character-release-form="true"`,
+		`data-campaign-character-controller-form="true"`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("character detail unexpectedly rendered %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharacterDetailDisablesControlAndDeleteActionsDuringActiveSession(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []CampaignParticipant{
+			{ID: "p-1", UserID: "user-123", Name: "Ariadne", CampaignAccess: "Manager"},
+		},
+		characters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Unassigned",
+		}},
+		sessions: []CampaignSession{{ID: "sess-1", Name: "Session One", Status: "Active"}},
+		batchAuthorizationDecisions: []campaignapp.AuthorizationDecision{
+			{CheckID: "char-1", Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+		},
+		authorizationDecision: campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	}, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacter("c1", "char-1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-claim-disabled="true"`,
+		`data-campaign-character-controller-submit-disabled="true"`,
+		`data-campaign-character-delete-disabled="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing active-session disabled marker %q: %q", marker, body)
+		}
 	}
 }
 
@@ -562,6 +746,9 @@ func TestMountCampaignCharacterCreatePageRendersDedicatedForm(t *testing.T) {
 			t.Fatalf("body missing character create marker %q: %q", marker, body)
 		}
 	}
+	if strings.Contains(body, `>Controller</dt>`) || strings.Contains(body, `>Unassigned</dd>`) {
+		t.Fatalf("character create page should not render controller summary: %q", body)
+	}
 }
 
 func TestMountCampaignCharacterEditPageRendersDedicatedForm(t *testing.T) {
@@ -602,6 +789,9 @@ func TestMountCampaignCharacterEditPageRendersDedicatedForm(t *testing.T) {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing character edit marker %q: %q", marker, body)
 		}
+	}
+	if strings.Contains(body, `>Controller</dt>`) || strings.Contains(body, `>Ariadne</dd>`) {
+		t.Fatalf("character edit page should not render controller summary: %q", body)
 	}
 }
 

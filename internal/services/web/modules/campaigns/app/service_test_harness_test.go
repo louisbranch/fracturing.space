@@ -28,63 +28,76 @@ func contextWithResolvedUserID(userID string) context.Context {
 }
 
 type campaignGatewayStub struct {
-	items                             []CampaignSummary
-	listErr                           error
-	campaignName                      string
-	campaignNameErr                   error
-	campaignWorkspace                 CampaignWorkspace
-	campaignWorkspaceErr              error
-	campaignAIAgents                  []CampaignAIAgentOption
-	campaignAIAgentsErr               error
-	campaignParticipants              []CampaignParticipant
-	campaignParticipantsErr           error
-	campaignParticipant               CampaignParticipant
-	campaignParticipantErr            error
-	campaignCharacters                []CampaignCharacter
-	campaignCharactersErr             error
-	campaignSessions                  []CampaignSession
-	campaignSessionsErr               error
-	campaignSessionReadiness          CampaignSessionReadiness
-	campaignSessionReadinessErr       error
-	campaignInvites                   []CampaignInvite
-	campaignInvitesErr                error
-	createCampaignResult              CreateCampaignResult
-	createCampaignErr                 error
-	lastCreateInput                   CreateCampaignInput
-	updateCampaignErr                 error
-	lastUpdateCampaignInput           UpdateCampaignInput
-	updateCampaignAIBindingErr        error
-	lastUpdateCampaignAIBindingInput  UpdateCampaignAIBindingInput
-	authorizationDecision             AuthorizationDecision
-	authorizationErr                  error
-	authorizationCalls                int
-	authorizationRequests             []campaignAuthorizationRequest
-	batchAuthorizationDecisions       []AuthorizationDecision
-	batchAuthorizationErr             error
-	batchAuthorizationCalls           int
-	batchAuthorizationRequests        []AuthorizationCheck
-	characterCreationProgress         CampaignCharacterCreationProgress
-	characterCreationProgressErr      error
-	characterCreationCatalog          CampaignCharacterCreationCatalog
-	characterCreationCatalogErr       error
-	characterCreationCatalogLocale    language.Tag
-	characterCreationProfile          CampaignCharacterCreationProfile
-	characterCreationProfileErr       error
-	createCharacterResult             CreateCharacterResult
-	createCharacterResultSet          bool
-	createCharacterErr                error
-	updateCharacterErr                error
-	lastUpdateCharacterCampaignID     string
-	lastUpdateCharacterID             string
-	lastUpdateCharacterInput          UpdateCharacterInput
-	lastStartSessionInput             StartSessionInput
-	lastEndSessionInput               EndSessionInput
-	lastCreateInviteInput             CreateInviteInput
-	lastRevokeInviteInput             RevokeInviteInput
-	lastUpdateParticipantInput        UpdateParticipantInput
-	applyCharacterCreationStepErr     error
-	resetCharacterCreationWorkflowErr error
-	calls                             []string
+	items                                   []CampaignSummary
+	listErr                                 error
+	campaignName                            string
+	campaignNameErr                         error
+	campaignWorkspace                       CampaignWorkspace
+	campaignWorkspaceErr                    error
+	campaignAIAgents                        []CampaignAIAgentOption
+	campaignAIAgentsErr                     error
+	campaignParticipants                    []CampaignParticipant
+	campaignParticipantsErr                 error
+	campaignParticipant                     CampaignParticipant
+	campaignParticipantErr                  error
+	campaignCharacters                      []CampaignCharacter
+	campaignCharactersErr                   error
+	campaignSessions                        []CampaignSession
+	campaignSessionsErr                     error
+	campaignSessionReadiness                CampaignSessionReadiness
+	campaignSessionReadinessErr             error
+	campaignInvites                         []CampaignInvite
+	campaignInvitesErr                      error
+	createCampaignResult                    CreateCampaignResult
+	createCampaignErr                       error
+	lastCreateInput                         CreateCampaignInput
+	updateCampaignErr                       error
+	lastUpdateCampaignInput                 UpdateCampaignInput
+	updateCampaignAIBindingErr              error
+	lastUpdateCampaignAIBindingInput        UpdateCampaignAIBindingInput
+	authorizationDecision                   AuthorizationDecision
+	authorizationErr                        error
+	authorizationCalls                      int
+	authorizationRequests                   []campaignAuthorizationRequest
+	batchAuthorizationDecisions             []AuthorizationDecision
+	batchAuthorizationErr                   error
+	batchAuthorizationCalls                 int
+	batchAuthorizationRequests              []AuthorizationCheck
+	characterCreationProgress               CampaignCharacterCreationProgress
+	characterCreationProgressErr            error
+	characterCreationCatalog                CampaignCharacterCreationCatalog
+	characterCreationCatalogErr             error
+	characterCreationCatalogLocale          language.Tag
+	characterCreationProfile                CampaignCharacterCreationProfile
+	characterCreationProfileErr             error
+	createCharacterResult                   CreateCharacterResult
+	createCharacterResultSet                bool
+	createCharacterErr                      error
+	updateCharacterErr                      error
+	deleteCharacterErr                      error
+	setCharacterControllerErr               error
+	claimCharacterControlErr                error
+	releaseCharacterControlErr              error
+	lastUpdateCharacterCampaignID           string
+	lastUpdateCharacterID                   string
+	lastUpdateCharacterInput                UpdateCharacterInput
+	lastDeleteCharacterCampaignID           string
+	lastDeleteCharacterID                   string
+	lastSetCharacterControllerCampaignID    string
+	lastSetCharacterControllerCharacterID   string
+	lastSetCharacterControllerParticipantID string
+	lastClaimCharacterControlCampaignID     string
+	lastClaimCharacterControlCharacterID    string
+	lastReleaseCharacterControlCampaignID   string
+	lastReleaseCharacterControlCharacterID  string
+	lastStartSessionInput                   StartSessionInput
+	lastEndSessionInput                     EndSessionInput
+	lastCreateInviteInput                   CreateInviteInput
+	lastRevokeInviteInput                   RevokeInviteInput
+	lastUpdateParticipantInput              UpdateParticipantInput
+	applyCharacterCreationStepErr           error
+	resetCharacterCreationWorkflowErr       error
+	calls                                   []string
 }
 
 type campaignAuthorizationRequest struct {
@@ -255,6 +268,35 @@ func (f *campaignGatewayStub) UpdateCharacter(_ context.Context, campaignID stri
 	f.lastUpdateCharacterInput = input
 	f.calls = append(f.calls, "update-character")
 	return f.updateCharacterErr
+}
+
+func (f *campaignGatewayStub) DeleteCharacter(_ context.Context, campaignID string, characterID string) error {
+	f.lastDeleteCharacterCampaignID = campaignID
+	f.lastDeleteCharacterID = characterID
+	f.calls = append(f.calls, "delete-character")
+	return f.deleteCharacterErr
+}
+
+func (f *campaignGatewayStub) SetCharacterController(_ context.Context, campaignID string, characterID string, participantID string) error {
+	f.lastSetCharacterControllerCampaignID = campaignID
+	f.lastSetCharacterControllerCharacterID = characterID
+	f.lastSetCharacterControllerParticipantID = participantID
+	f.calls = append(f.calls, "set-character-controller")
+	return f.setCharacterControllerErr
+}
+
+func (f *campaignGatewayStub) ClaimCharacterControl(_ context.Context, campaignID string, characterID string) error {
+	f.lastClaimCharacterControlCampaignID = campaignID
+	f.lastClaimCharacterControlCharacterID = characterID
+	f.calls = append(f.calls, "claim-character-control")
+	return f.claimCharacterControlErr
+}
+
+func (f *campaignGatewayStub) ReleaseCharacterControl(_ context.Context, campaignID string, characterID string) error {
+	f.lastReleaseCharacterControlCampaignID = campaignID
+	f.lastReleaseCharacterControlCharacterID = characterID
+	f.calls = append(f.calls, "release-character-control")
+	return f.releaseCharacterControlErr
 }
 
 func (f *campaignGatewayStub) UpdateParticipant(_ context.Context, _ string, input UpdateParticipantInput) error {

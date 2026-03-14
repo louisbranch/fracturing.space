@@ -25,6 +25,8 @@ const (
 	CharacterService_DeleteCharacter_FullMethodName                = "/game.v1.CharacterService/DeleteCharacter"
 	CharacterService_ListCharacters_FullMethodName                 = "/game.v1.CharacterService/ListCharacters"
 	CharacterService_SetDefaultControl_FullMethodName              = "/game.v1.CharacterService/SetDefaultControl"
+	CharacterService_ClaimCharacterControl_FullMethodName          = "/game.v1.CharacterService/ClaimCharacterControl"
+	CharacterService_ReleaseCharacterControl_FullMethodName        = "/game.v1.CharacterService/ReleaseCharacterControl"
 	CharacterService_GetCharacterSheet_FullMethodName              = "/game.v1.CharacterService/GetCharacterSheet"
 	CharacterService_PatchCharacterProfile_FullMethodName          = "/game.v1.CharacterService/PatchCharacterProfile"
 	CharacterService_GetCharacterCreationProgress_FullMethodName   = "/game.v1.CharacterService/GetCharacterCreationProgress"
@@ -49,6 +51,10 @@ type CharacterServiceClient interface {
 	ListCharacters(ctx context.Context, in *ListCharactersRequest, opts ...grpc.CallOption) (*ListCharactersResponse, error)
 	// Assign a campaign-scoped default controller for a character.
 	SetDefaultControl(ctx context.Context, in *SetDefaultControlRequest, opts ...grpc.CallOption) (*SetDefaultControlResponse, error)
+	// Claim control of an unassigned character for the current participant.
+	ClaimCharacterControl(ctx context.Context, in *ClaimCharacterControlRequest, opts ...grpc.CallOption) (*ClaimCharacterControlResponse, error)
+	// Release control of a character currently controlled by the current participant.
+	ReleaseCharacterControl(ctx context.Context, in *ReleaseCharacterControlRequest, opts ...grpc.CallOption) (*ReleaseCharacterControlResponse, error)
 	// Get a character sheet (character, profile, and state).
 	GetCharacterSheet(ctx context.Context, in *GetCharacterSheetRequest, opts ...grpc.CallOption) (*GetCharacterSheetResponse, error)
 	// Patch a character profile (all fields optional).
@@ -115,6 +121,26 @@ func (c *characterServiceClient) SetDefaultControl(ctx context.Context, in *SetD
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(SetDefaultControlResponse)
 	err := c.cc.Invoke(ctx, CharacterService_SetDefaultControl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *characterServiceClient) ClaimCharacterControl(ctx context.Context, in *ClaimCharacterControlRequest, opts ...grpc.CallOption) (*ClaimCharacterControlResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ClaimCharacterControlResponse)
+	err := c.cc.Invoke(ctx, CharacterService_ClaimCharacterControl_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *characterServiceClient) ReleaseCharacterControl(ctx context.Context, in *ReleaseCharacterControlRequest, opts ...grpc.CallOption) (*ReleaseCharacterControlResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReleaseCharacterControlResponse)
+	err := c.cc.Invoke(ctx, CharacterService_ReleaseCharacterControl_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,6 +223,10 @@ type CharacterServiceServer interface {
 	ListCharacters(context.Context, *ListCharactersRequest) (*ListCharactersResponse, error)
 	// Assign a campaign-scoped default controller for a character.
 	SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error)
+	// Claim control of an unassigned character for the current participant.
+	ClaimCharacterControl(context.Context, *ClaimCharacterControlRequest) (*ClaimCharacterControlResponse, error)
+	// Release control of a character currently controlled by the current participant.
+	ReleaseCharacterControl(context.Context, *ReleaseCharacterControlRequest) (*ReleaseCharacterControlResponse, error)
 	// Get a character sheet (character, profile, and state).
 	GetCharacterSheet(context.Context, *GetCharacterSheetRequest) (*GetCharacterSheetResponse, error)
 	// Patch a character profile (all fields optional).
@@ -233,6 +263,12 @@ func (UnimplementedCharacterServiceServer) ListCharacters(context.Context, *List
 }
 func (UnimplementedCharacterServiceServer) SetDefaultControl(context.Context, *SetDefaultControlRequest) (*SetDefaultControlResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method SetDefaultControl not implemented")
+}
+func (UnimplementedCharacterServiceServer) ClaimCharacterControl(context.Context, *ClaimCharacterControlRequest) (*ClaimCharacterControlResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClaimCharacterControl not implemented")
+}
+func (UnimplementedCharacterServiceServer) ReleaseCharacterControl(context.Context, *ReleaseCharacterControlRequest) (*ReleaseCharacterControlResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReleaseCharacterControl not implemented")
 }
 func (UnimplementedCharacterServiceServer) GetCharacterSheet(context.Context, *GetCharacterSheetRequest) (*GetCharacterSheetResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCharacterSheet not implemented")
@@ -359,6 +395,42 @@ func _CharacterService_SetDefaultControl_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(CharacterServiceServer).SetDefaultControl(ctx, req.(*SetDefaultControlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CharacterService_ClaimCharacterControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClaimCharacterControlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CharacterServiceServer).ClaimCharacterControl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CharacterService_ClaimCharacterControl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CharacterServiceServer).ClaimCharacterControl(ctx, req.(*ClaimCharacterControlRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CharacterService_ReleaseCharacterControl_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseCharacterControlRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CharacterServiceServer).ReleaseCharacterControl(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CharacterService_ReleaseCharacterControl_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CharacterServiceServer).ReleaseCharacterControl(ctx, req.(*ReleaseCharacterControlRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -497,6 +569,14 @@ var CharacterService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "SetDefaultControl",
 			Handler:    _CharacterService_SetDefaultControl_Handler,
+		},
+		{
+			MethodName: "ClaimCharacterControl",
+			Handler:    _CharacterService_ClaimCharacterControl_Handler,
+		},
+		{
+			MethodName: "ReleaseCharacterControl",
+			Handler:    _CharacterService_ReleaseCharacterControl_Handler,
 		},
 		{
 			MethodName: "GetCharacterSheet",

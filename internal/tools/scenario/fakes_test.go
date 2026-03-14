@@ -132,6 +132,14 @@ func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, in *gamev1.
 	return nil, unimplemented("SetDefaultControl")
 }
 
+func (f *fakeCharacterClient) ClaimCharacterControl(context.Context, *gamev1.ClaimCharacterControlRequest, ...grpc.CallOption) (*gamev1.ClaimCharacterControlResponse, error) {
+	return nil, unimplemented("ClaimCharacterControl")
+}
+
+func (f *fakeCharacterClient) ReleaseCharacterControl(context.Context, *gamev1.ReleaseCharacterControlRequest, ...grpc.CallOption) (*gamev1.ReleaseCharacterControlResponse, error) {
+	return nil, unimplemented("ReleaseCharacterControl")
+}
+
 func (f *fakeCharacterClient) GetCharacterSheet(ctx context.Context, in *gamev1.GetCharacterSheetRequest, opts ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
 	if f.getSheet != nil {
 		return f.getSheet(ctx, in, opts...)

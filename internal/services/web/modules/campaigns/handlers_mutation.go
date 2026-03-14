@@ -102,6 +102,62 @@ func (h handlers) handleCharacterUpdate(w http.ResponseWriter, r *http.Request, 
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_character_updated", routepath.AppCampaignCharacter(campaignID, characterID))
 }
 
+// handleCharacterControlSet updates the character controller from the detail page.
+func (h handlers) handleCharacterControlSet(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
+		return
+	}
+	ctx, _ := h.RequestContextAndUserID(r)
+	if err := h.service.SetCharacterController(ctx, campaignID, characterID, parseSetCharacterControllerInput(r.Form)); err != nil {
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_set_character_controller", redirectURL)
+		return
+	}
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_character_controller_updated", redirectURL)
+}
+
+// handleCharacterControlClaim claims an unassigned character for the current participant.
+func (h handlers) handleCharacterControlClaim(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
+		return
+	}
+	ctx, userID := h.RequestContextAndUserID(r)
+	if err := h.service.ClaimCharacterControl(ctx, campaignID, characterID, userID); err != nil {
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_claim_character_control", redirectURL)
+		return
+	}
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_character_control_claimed", redirectURL)
+}
+
+// handleCharacterControlRelease releases the current participant's control.
+func (h handlers) handleCharacterControlRelease(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
+		return
+	}
+	ctx, userID := h.RequestContextAndUserID(r)
+	if err := h.service.ReleaseCharacterControl(ctx, campaignID, characterID, userID); err != nil {
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_release_character_control", redirectURL)
+		return
+	}
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_character_control_released", redirectURL)
+}
+
+// handleCharacterDelete removes a character from the campaign.
+func (h handlers) handleCharacterDelete(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
+	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_character_delete_form", redirectURL) {
+		return
+	}
+	ctx, _ := h.RequestContextAndUserID(r)
+	if err := h.service.DeleteCharacter(ctx, campaignID, characterID); err != nil {
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_delete_character", redirectURL)
+		return
+	}
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_character_deleted", routepath.AppCampaignCharacters(campaignID))
+}
+
 // handleInviteCreate handles this route in the module transport layer.
 func (h handlers) handleInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !h.requireParsedForm(w, r, "error.web.message.failed_to_parse_invite_create_form", routepath.AppCampaignInvites(campaignID)) {

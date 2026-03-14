@@ -745,3 +745,43 @@ func TestCampaignSessionReadinessEmptyCampaignIDReturnsReady(t *testing.T) {
 		t.Fatalf("len(readiness.Blockers) = %d, want 0", len(readiness.Blockers))
 	}
 }
+
+func TestCampaignCharacterControlResolvesViewerActionsAndManagerOptions(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		campaignParticipants: []CampaignParticipant{
+			{ID: "p-1", UserID: "user-1", Name: "Ariadne", CampaignAccess: "Manager"},
+			{ID: "p-2", UserID: "user-2", Name: "Moss", CampaignAccess: "Member"},
+		},
+		campaignCharacters: []CampaignCharacter{{
+			ID:         "char-1",
+			Name:       "Aria",
+			Controller: "Unassigned",
+		}},
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true, ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL"},
+	})
+
+	control, err := svc.campaignCharacterControl(context.Background(), "c1", "char-1", "user-1")
+	if err != nil {
+		t.Fatalf("campaignCharacterControl() error = %v", err)
+	}
+	if !control.CanSelfClaim {
+		t.Fatalf("CanSelfClaim = false, want true")
+	}
+	if control.CanSelfRelease {
+		t.Fatalf("CanSelfRelease = true, want false")
+	}
+	if !control.CanManageControl {
+		t.Fatalf("CanManageControl = false, want true")
+	}
+	if control.CurrentParticipantName != "Ariadne" {
+		t.Fatalf("CurrentParticipantName = %q, want %q", control.CurrentParticipantName, "Ariadne")
+	}
+	if len(control.Options) != 3 {
+		t.Fatalf("len(control.Options) = %d, want 3", len(control.Options))
+	}
+	if control.Options[0].ParticipantID != "" || !control.Options[0].Selected {
+		t.Fatalf("control.Options[0] = %+v, want selected unassigned option", control.Options[0])
+	}
+}

@@ -101,12 +101,13 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string) 
 				}
 			}
 			return campaignapp.CampaignCharacter{
-				ID:         characterID,
-				Name:       characterDisplayName(character),
-				Kind:       characterKindLabel(character.GetKind()),
-				Controller: controllerLabel,
-				Pronouns:   pronouns.FromProto(character.GetPronouns()),
-				Aliases:    append([]string(nil), character.GetAliases()...),
+				ID:                      characterID,
+				Name:                    characterDisplayName(character),
+				Kind:                    characterKindLabel(character.GetKind()),
+				Controller:              controllerLabel,
+				ControllerParticipantID: controllerParticipantID,
+				Pronouns:                pronouns.FromProto(character.GetPronouns()),
+				Aliases:                 append([]string(nil), character.GetAliases()...),
 				AvatarURL: websupport.AvatarImageURL(
 					g.AssetBaseURL,
 					catalog.AvatarRoleCharacter,
@@ -150,6 +151,107 @@ func (g GRPCGateway) UpdateCharacter(ctx context.Context, campaignID string, cha
 			FallbackKind:    apperrors.KindUnknown,
 			FallbackKey:     "error.web.message.failed_to_update_character",
 			FallbackMessage: "failed to update character",
+		})
+	}
+	return nil
+}
+
+// DeleteCharacter applies a character deletion via gRPC.
+func (g GRPCGateway) DeleteCharacter(ctx context.Context, campaignID string, characterID string) error {
+	if g.CharacterClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+
+	_, err := g.CharacterClient.DeleteCharacter(ctx, &statev1.DeleteCharacterRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_delete_character",
+			FallbackMessage: "failed to delete character",
+		})
+	}
+	return nil
+}
+
+// SetCharacterController applies an explicit controller update via gRPC.
+func (g GRPCGateway) SetCharacterController(ctx context.Context, campaignID string, characterID string, participantID string) error {
+	if g.CharacterClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+
+	_, err := g.CharacterClient.SetDefaultControl(ctx, &statev1.SetDefaultControlRequest{
+		CampaignId:    campaignID,
+		CharacterId:   characterID,
+		ParticipantId: wrapperspb.String(strings.TrimSpace(participantID)),
+	})
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_set_character_controller",
+			FallbackMessage: "failed to set character controller",
+		})
+	}
+	return nil
+}
+
+// ClaimCharacterControl claims character control via gRPC.
+func (g GRPCGateway) ClaimCharacterControl(ctx context.Context, campaignID string, characterID string) error {
+	if g.CharacterClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+
+	_, err := g.CharacterClient.ClaimCharacterControl(ctx, &statev1.ClaimCharacterControlRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_claim_character_control",
+			FallbackMessage: "failed to claim character control",
+		})
+	}
+	return nil
+}
+
+// ReleaseCharacterControl releases character control via gRPC.
+func (g GRPCGateway) ReleaseCharacterControl(ctx context.Context, campaignID string, characterID string) error {
+	if g.CharacterClient == nil {
+		return apperrors.EK(apperrors.KindUnavailable, "error.web.message.character_service_client_is_not_configured", "character service client is not configured")
+	}
+	campaignID = strings.TrimSpace(campaignID)
+	characterID = strings.TrimSpace(characterID)
+	if campaignID == "" || characterID == "" {
+		return apperrors.E(apperrors.KindInvalidInput, "campaign id and character id are required")
+	}
+
+	_, err := g.CharacterClient.ReleaseCharacterControl(ctx, &statev1.ReleaseCharacterControlRequest{
+		CampaignId:  campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_release_character_control",
+			FallbackMessage: "failed to release character control",
 		})
 	}
 	return nil
