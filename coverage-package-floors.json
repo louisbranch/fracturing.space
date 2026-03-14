@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-14T15:55:49Z",
+  "updated_at": "2026-03-14T16:06:37Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -90,7 +90,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/invite",
-      "floor": 98.7,
+      "floor": 98.8,
       "description": "Invite lifecycle and grant-validation path."
     },
     {
