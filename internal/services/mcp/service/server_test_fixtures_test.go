@@ -87,6 +87,8 @@ type fakeCharacterClient struct {
 	deleteCharacterResponse          *statev1.DeleteCharacterResponse
 	listCharactersResponse           *statev1.ListCharactersResponse
 	setDefaultControlResponse        *statev1.SetDefaultControlResponse
+	claimCharacterControlResponse    *statev1.ClaimCharacterControlResponse
+	releaseCharacterControlResponse  *statev1.ReleaseCharacterControlResponse
 	getCharacterSheetResponse        *statev1.GetCharacterSheetResponse
 	patchCharacterProfileResponse    *statev1.PatchCharacterProfileResponse
 	createCharacterErr               error
@@ -94,6 +96,8 @@ type fakeCharacterClient struct {
 	deleteCharacterErr               error
 	listCharactersErr                error
 	setDefaultControlErr             error
+	claimCharacterControlErr         error
+	releaseCharacterControlErr       error
 	getCharacterSheetErr             error
 	patchCharacterProfileErr         error
 	lastCreateCharacterRequest       *statev1.CreateCharacterRequest
@@ -101,6 +105,8 @@ type fakeCharacterClient struct {
 	lastDeleteCharacterRequest       *statev1.DeleteCharacterRequest
 	lastListCharactersRequest        *statev1.ListCharactersRequest
 	lastSetDefaultControlRequest     *statev1.SetDefaultControlRequest
+	lastClaimCharacterControlRequest *statev1.ClaimCharacterControlRequest
+	lastReleaseControlRequest        *statev1.ReleaseCharacterControlRequest
 	lastGetCharacterSheetRequest     *statev1.GetCharacterSheetRequest
 	lastPatchCharacterProfileRequest *statev1.PatchCharacterProfileRequest
 }
@@ -270,6 +276,18 @@ func (f *fakeCharacterClient) ListCharacters(ctx context.Context, req *statev1.L
 func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, req *statev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
 	f.lastSetDefaultControlRequest = req
 	return f.setDefaultControlResponse, f.setDefaultControlErr
+}
+
+// ClaimCharacterControl records the request and returns the configured response.
+func (f *fakeCharacterClient) ClaimCharacterControl(ctx context.Context, req *statev1.ClaimCharacterControlRequest, opts ...grpc.CallOption) (*statev1.ClaimCharacterControlResponse, error) {
+	f.lastClaimCharacterControlRequest = req
+	return f.claimCharacterControlResponse, f.claimCharacterControlErr
+}
+
+// ReleaseCharacterControl records the request and returns the configured response.
+func (f *fakeCharacterClient) ReleaseCharacterControl(ctx context.Context, req *statev1.ReleaseCharacterControlRequest, opts ...grpc.CallOption) (*statev1.ReleaseCharacterControlResponse, error) {
+	f.lastReleaseControlRequest = req
+	return f.releaseCharacterControlResponse, f.releaseCharacterControlErr
 }
 
 // GetCharacterSheet records the request and returns the configured response.

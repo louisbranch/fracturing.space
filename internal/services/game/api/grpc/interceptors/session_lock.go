@@ -41,6 +41,8 @@ var blockedMethodCommandTypes = map[string]command.Type{
 	campaignv1.CharacterService_UpdateCharacter_FullMethodName:                commandids.CharacterUpdate,
 	campaignv1.CharacterService_DeleteCharacter_FullMethodName:                commandids.CharacterDelete,
 	campaignv1.CharacterService_SetDefaultControl_FullMethodName:              commandids.CharacterUpdate,
+	campaignv1.CharacterService_ClaimCharacterControl_FullMethodName:          commandids.CharacterUpdate,
+	campaignv1.CharacterService_ReleaseCharacterControl_FullMethodName:        commandids.CharacterUpdate,
 	campaignv1.CharacterService_PatchCharacterProfile_FullMethodName:          commandids.CharacterProfileUpdate,
 	campaignv1.CharacterService_ApplyCharacterCreationStep_FullMethodName:     commandids.CharacterProfileUpdate,
 	campaignv1.CharacterService_ApplyCharacterCreationWorkflow_FullMethodName: commandids.CharacterProfileUpdate,

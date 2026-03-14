@@ -62,6 +62,12 @@ service CharacterService {
   // Assign a campaign-scoped default controller for a character.
   rpc SetDefaultControl(SetDefaultControlRequest) returns (SetDefaultControlResponse);
 
+  // Claim control of an unassigned character for the current participant.
+  rpc ClaimCharacterControl(ClaimCharacterControlRequest) returns (ClaimCharacterControlResponse);
+
+  // Release control of a character currently controlled by the current participant.
+  rpc ReleaseCharacterControl(ReleaseCharacterControlRequest) returns (ReleaseCharacterControlResponse);
+
   // Get a character sheet (character, profile, and state).
   rpc GetCharacterSheet(GetCharacterSheetRequest) returns (GetCharacterSheetResponse);
 
@@ -198,6 +204,44 @@ message SetDefaultControlResponse {
   string character_id = 2;
 
   // The participant ID of the controller (empty means unassigned).
+  google.protobuf.StringValue participant_id = 3;
+}
+
+message ClaimCharacterControlRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+}
+
+message ClaimCharacterControlResponse {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+
+  // The participant ID of the controller after the claim.
+  google.protobuf.StringValue participant_id = 3;
+}
+
+message ReleaseCharacterControlRequest {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+}
+
+message ReleaseCharacterControlResponse {
+  // The campaign ID.
+  string campaign_id = 1;
+
+  // The character ID.
+  string character_id = 2;
+
+  // The participant ID of the controller after the release (empty means unassigned).
   google.protobuf.StringValue participant_id = 3;
 }
 

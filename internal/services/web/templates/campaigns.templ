@@ -41,6 +41,7 @@ type CampaignDetailView struct {
 	AIBindingEditor          CampaignAIBindingEditorView
 	Characters               []CampaignCharacterView
 	CharacterEditor          CampaignCharacterEditorView
+	CharacterControl         CampaignCharacterControlView
 	Sessions                 []CampaignSessionView
 	SessionReadiness         CampaignSessionReadinessView
 	Invites                  []CampaignInviteView
@@ -100,15 +101,16 @@ type CampaignParticipantEditorView struct {
 }
 
 type CampaignCharacterView struct {
-	ID             string
-	Name           string
-	Kind           string
-	Controller     string
-	Pronouns       string
-	Aliases        []string
-	AvatarURL      string
-	CanEdit        bool
-	EditReasonCode string
+	ID                      string
+	Name                    string
+	Kind                    string
+	Controller              string
+	ControllerParticipantID string
+	Pronouns                string
+	Aliases                 []string
+	AvatarURL               string
+	CanEdit                 bool
+	EditReasonCode          string
 }
 
 type CampaignCharacterEditorView struct {
@@ -116,7 +118,20 @@ type CampaignCharacterEditorView struct {
 	Name       string
 	Pronouns   string
 	Kind       string
-	Controller string
+}
+
+type CampaignCharacterControlOptionView struct {
+	ParticipantID string
+	Label         string
+	Selected      bool
+}
+
+type CampaignCharacterControlView struct {
+	CurrentParticipantName string
+	CanSelfClaim           bool
+	CanSelfRelease         bool
+	CanManageControl       bool
+	Options                []CampaignCharacterControlOptionView
 }
 
 func campaignCharacterDetailURL(view CampaignDetailView, character CampaignCharacterView) string {
@@ -170,6 +185,17 @@ func campaignCharacterCanEditAttr(character CampaignCharacterView) string {
 		return "true"
 	}
 	return "false"
+}
+
+func campaignCharacterControlOptionLabel(loc Localizer, option CampaignCharacterControlOptionView) string {
+	if strings.TrimSpace(option.ParticipantID) == "" {
+		return T(loc, "game.participants.value_unassigned")
+	}
+	label := strings.TrimSpace(option.Label)
+	if label == "" {
+		return strings.TrimSpace(option.ParticipantID)
+	}
+	return label
 }
 
 type CampaignSessionView struct {

@@ -39,6 +39,12 @@ var (
 		denyKey:  "error.web.message.campaign_membership_required_for_character_action",
 		denyMsg:  "campaign membership required for character action",
 	}
+	policyManageCharacter = mutationAuthzPolicy{
+		action:   campaignAuthzActionManage,
+		resource: campaignAuthzResourceCharacter,
+		denyKey:  "error.web.message.manager_or_owner_access_required_for_character_action",
+		denyMsg:  "manager or owner access required for character action",
+	}
 	policyManageInvite = mutationAuthzPolicy{
 		action:   campaignAuthzActionManage,
 		resource: campaignAuthzResourceInvite,

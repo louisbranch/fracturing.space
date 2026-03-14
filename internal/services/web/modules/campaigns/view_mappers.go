@@ -251,15 +251,16 @@ func mapCharactersView(items []CampaignCharacter) []webtemplates.CampaignCharact
 	result := make([]webtemplates.CampaignCharacterView, 0, len(items))
 	for _, c := range items {
 		result = append(result, webtemplates.CampaignCharacterView{
-			ID:             c.ID,
-			Name:           c.Name,
-			Kind:           c.Kind,
-			Controller:     c.Controller,
-			Pronouns:       c.Pronouns,
-			Aliases:        append([]string(nil), c.Aliases...),
-			AvatarURL:      c.AvatarURL,
-			CanEdit:        c.CanEdit,
-			EditReasonCode: c.EditReasonCode,
+			ID:                      c.ID,
+			Name:                    c.Name,
+			Kind:                    c.Kind,
+			Controller:              c.Controller,
+			ControllerParticipantID: c.ControllerParticipantID,
+			Pronouns:                c.Pronouns,
+			Aliases:                 append([]string(nil), c.Aliases...),
+			AvatarURL:               c.AvatarURL,
+			CanEdit:                 c.CanEdit,
+			EditReasonCode:          c.EditReasonCode,
 		})
 	}
 	return result
@@ -268,11 +269,29 @@ func mapCharactersView(items []CampaignCharacter) []webtemplates.CampaignCharact
 // mapCharacterEditorView converts domain character editor state to template view state.
 func mapCharacterEditorView(editor campaignapp.CampaignCharacterEditor) webtemplates.CampaignCharacterEditorView {
 	return webtemplates.CampaignCharacterEditorView{
-		ID:         editor.Character.ID,
-		Name:       editor.Character.Name,
-		Pronouns:   editor.Character.Pronouns,
-		Kind:       editor.Character.Kind,
-		Controller: editor.Character.Controller,
+		ID:       editor.Character.ID,
+		Name:     editor.Character.Name,
+		Pronouns: editor.Character.Pronouns,
+		Kind:     editor.Character.Kind,
+	}
+}
+
+// mapCharacterControlView converts domain control state to template view state.
+func mapCharacterControlView(control campaignapp.CampaignCharacterControl) webtemplates.CampaignCharacterControlView {
+	options := make([]webtemplates.CampaignCharacterControlOptionView, 0, len(control.Options))
+	for _, option := range control.Options {
+		options = append(options, webtemplates.CampaignCharacterControlOptionView{
+			ParticipantID: option.ParticipantID,
+			Label:         option.Label,
+			Selected:      option.Selected,
+		})
+	}
+	return webtemplates.CampaignCharacterControlView{
+		CurrentParticipantName: control.CurrentParticipantName,
+		CanSelfClaim:           control.CanSelfClaim,
+		CanSelfRelease:         control.CanSelfRelease,
+		CanManageControl:       control.CanManageControl,
+		Options:                options,
 	}
 }
 

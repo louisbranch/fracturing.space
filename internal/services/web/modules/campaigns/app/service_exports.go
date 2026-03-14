@@ -51,6 +51,11 @@ func (s service) CampaignCharacterEditor(ctx context.Context, campaignID string,
 	return s.campaignCharacterEditor(ctx, campaignID, characterID)
 }
 
+// CampaignCharacterControl centralizes this web behavior in one helper seam.
+func (s service) CampaignCharacterControl(ctx context.Context, campaignID string, characterID string, userID string) (CampaignCharacterControl, error) {
+	return s.campaignCharacterControl(ctx, campaignID, characterID, userID)
+}
+
 // CampaignSessions centralizes this web behavior in one helper seam.
 func (s service) CampaignSessions(ctx context.Context, campaignID string) ([]CampaignSession, error) {
 	return s.campaignSessions(ctx, campaignID)
@@ -109,6 +114,26 @@ func (s service) CreateCharacter(ctx context.Context, campaignID string, input C
 // UpdateCharacter applies this package workflow transition.
 func (s service) UpdateCharacter(ctx context.Context, campaignID string, characterID string, input UpdateCharacterInput) error {
 	return s.updateCharacter(ctx, campaignID, characterID, input)
+}
+
+// DeleteCharacter applies this package workflow transition.
+func (s service) DeleteCharacter(ctx context.Context, campaignID string, characterID string) error {
+	return s.deleteCharacter(ctx, campaignID, characterID)
+}
+
+// SetCharacterController applies this package workflow transition.
+func (s service) SetCharacterController(ctx context.Context, campaignID string, characterID string, participantID string) error {
+	return s.setCharacterController(ctx, campaignID, characterID, participantID)
+}
+
+// ClaimCharacterControl applies this package workflow transition.
+func (s service) ClaimCharacterControl(ctx context.Context, campaignID string, characterID string, userID string) error {
+	return s.claimCharacterControl(ctx, campaignID, characterID, userID)
+}
+
+// ReleaseCharacterControl applies this package workflow transition.
+func (s service) ReleaseCharacterControl(ctx context.Context, campaignID string, characterID string, userID string) error {
+	return s.releaseCharacterControl(ctx, campaignID, characterID, userID)
 }
 
 // UpdateParticipant applies this package workflow transition.

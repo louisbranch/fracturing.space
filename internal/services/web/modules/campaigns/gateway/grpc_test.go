@@ -681,6 +681,22 @@ func (f *fakeCharacterWorkflowClient) UpdateCharacter(_ context.Context, _ *stat
 	return &statev1.UpdateCharacterResponse{}, nil
 }
 
+func (f *fakeCharacterWorkflowClient) DeleteCharacter(_ context.Context, _ *statev1.DeleteCharacterRequest, _ ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error) {
+	return &statev1.DeleteCharacterResponse{}, nil
+}
+
+func (f *fakeCharacterWorkflowClient) SetDefaultControl(_ context.Context, _ *statev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
+	return &statev1.SetDefaultControlResponse{}, nil
+}
+
+func (f *fakeCharacterWorkflowClient) ClaimCharacterControl(_ context.Context, _ *statev1.ClaimCharacterControlRequest, _ ...grpc.CallOption) (*statev1.ClaimCharacterControlResponse, error) {
+	return &statev1.ClaimCharacterControlResponse{}, nil
+}
+
+func (f *fakeCharacterWorkflowClient) ReleaseCharacterControl(_ context.Context, _ *statev1.ReleaseCharacterControlRequest, _ ...grpc.CallOption) (*statev1.ReleaseCharacterControlResponse, error) {
+	return &statev1.ReleaseCharacterControlResponse{}, nil
+}
+
 func (f *fakeCharacterWorkflowClient) GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
 	if f.sheetErr != nil {
 		return nil, f.sheetErr
@@ -723,6 +739,10 @@ type moduleCharacterClientContract interface {
 	ListCharacters(context.Context, *statev1.ListCharactersRequest, ...grpc.CallOption) (*statev1.ListCharactersResponse, error)
 	CreateCharacter(context.Context, *statev1.CreateCharacterRequest, ...grpc.CallOption) (*statev1.CreateCharacterResponse, error)
 	UpdateCharacter(context.Context, *statev1.UpdateCharacterRequest, ...grpc.CallOption) (*statev1.UpdateCharacterResponse, error)
+	DeleteCharacter(context.Context, *statev1.DeleteCharacterRequest, ...grpc.CallOption) (*statev1.DeleteCharacterResponse, error)
+	SetDefaultControl(context.Context, *statev1.SetDefaultControlRequest, ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error)
+	ClaimCharacterControl(context.Context, *statev1.ClaimCharacterControlRequest, ...grpc.CallOption) (*statev1.ClaimCharacterControlResponse, error)
+	ReleaseCharacterControl(context.Context, *statev1.ReleaseCharacterControlRequest, ...grpc.CallOption) (*statev1.ReleaseCharacterControlResponse, error)
 	GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error)
 	GetCharacterCreationProgress(context.Context, *statev1.GetCharacterCreationProgressRequest, ...grpc.CallOption) (*statev1.GetCharacterCreationProgressResponse, error)
 	ApplyCharacterCreationStep(context.Context, *statev1.ApplyCharacterCreationStepRequest, ...grpc.CallOption) (*statev1.ApplyCharacterCreationStepResponse, error)

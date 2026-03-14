@@ -1380,12 +1380,13 @@ func TestSetDefaultControl_ParticipantNotFound(t *testing.T) {
 	now := time.Now().UTC()
 
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Participant = characterManagerParticipantStore("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
 	}
 
 	svc := NewCharacterService(ts.build())
-	_, err := svc.SetDefaultControl(context.Background(), &statev1.SetDefaultControlRequest{
+	_, err := svc.SetDefaultControl(contextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
 		CharacterId:   "ch1",
 		ParticipantId: wrapperspb.String("nonexistent"),
@@ -1628,6 +1629,185 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 	if updated.ParticipantID != "p1" {
 		t.Fatalf("ParticipantID = %q, want %q", updated.ParticipantID, "p1")
 	}
+}
+
+func TestClaimCharacterControl_NilRequest(t *testing.T) {
+	svc := NewCharacterService(Stores{})
+	_, err := svc.ClaimCharacterControl(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestClaimCharacterControl_Success_WithUserIdentity(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	now := time.Now().UTC()
+
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
+	}
+	player := memberUserParticipantRecord("c1", "player-1", "user-1", "Player One")
+	player.AvatarSetID = assetcatalog.AvatarSetPeopleV1
+	player.AvatarAssetID = "009"
+	player.Pronouns = "they/them"
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"player-1": player,
+	}
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
+		command.Type("character.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("character.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "player-1",
+				EntityType:  "character",
+				EntityID:    "ch1",
+				PayloadJSON: []byte(`{"character_id":"ch1","fields":{"participant_id":"player-1"}}`),
+			}),
+		},
+	}}
+
+	svc := NewCharacterService(ts.withDomain(domain).build())
+	resp, err := svc.ClaimCharacterControl(contextWithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	if err != nil {
+		t.Fatalf("ClaimCharacterControl returned error: %v", err)
+	}
+	if resp.GetCampaignId() != "c1" || resp.GetCharacterId() != "ch1" {
+		t.Fatalf("response ids = %q/%q, want c1/ch1", resp.GetCampaignId(), resp.GetCharacterId())
+	}
+	if got := resp.GetParticipantId().GetValue(); got != "player-1" {
+		t.Fatalf("response participant id = %q, want %q", got, "player-1")
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].ActorType != command.ActorTypeParticipant || domain.commands[0].ActorID != "player-1" {
+		t.Fatalf("command actor = %s/%q, want participant/player-1", domain.commands[0].ActorType, domain.commands[0].ActorID)
+	}
+	var payload character.UpdatePayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode command payload: %v", err)
+	}
+	if payload.Fields["participant_id"] != "player-1" {
+		t.Fatalf("participant_id = %q, want %q", payload.Fields["participant_id"], "player-1")
+	}
+	if payload.Fields["avatar_set_id"] != assetcatalog.AvatarSetPeopleV1 {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Fields["avatar_set_id"], assetcatalog.AvatarSetPeopleV1)
+	}
+	if payload.Fields["avatar_asset_id"] != "009" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "009")
+	}
+	if payload.Fields["pronouns"] != "they/them" {
+		t.Fatalf("pronouns = %q, want %q", payload.Fields["pronouns"], "they/them")
+	}
+	updated, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
+	if err != nil {
+		t.Fatalf("Character not persisted: %v", err)
+	}
+	if updated.ParticipantID != "player-1" {
+		t.Fatalf("ParticipantID = %q, want %q", updated.ParticipantID, "player-1")
+	}
+}
+
+func TestClaimCharacterControl_RejectsAssignedCharacter(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	now := time.Now().UTC()
+
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", ParticipantID: "player-2", CreatedAt: now},
+	}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"player-1": memberUserParticipantRecord("c1", "player-1", "user-1", "Player One"),
+		"player-2": memberUserParticipantRecord("c1", "player-2", "user-2", "Player Two"),
+	}
+
+	svc := NewCharacterService(ts.build())
+	_, err := svc.ClaimCharacterControl(contextWithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestReleaseCharacterControl_Success_WithUserIdentity(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	now := time.Now().UTC()
+
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", ParticipantID: "player-1", CreatedAt: now},
+	}
+	player := memberUserParticipantRecord("c1", "player-1", "user-1", "Player One")
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"player-1": player,
+	}
+	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
+		command.Type("character.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("character.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "player-1",
+				EntityType:  "character",
+				EntityID:    "ch1",
+				PayloadJSON: []byte(`{"character_id":"ch1","fields":{"participant_id":""}}`),
+			}),
+		},
+	}}
+
+	svc := NewCharacterService(ts.withDomain(domain).build())
+	resp, err := svc.ReleaseCharacterControl(contextWithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	if err != nil {
+		t.Fatalf("ReleaseCharacterControl returned error: %v", err)
+	}
+	if resp.GetCampaignId() != "c1" || resp.GetCharacterId() != "ch1" {
+		t.Fatalf("response ids = %q/%q, want c1/ch1", resp.GetCampaignId(), resp.GetCharacterId())
+	}
+	if resp.GetParticipantId() != nil {
+		t.Fatalf("response participant id = %v, want nil", resp.GetParticipantId())
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].ActorType != command.ActorTypeParticipant || domain.commands[0].ActorID != "player-1" {
+		t.Fatalf("command actor = %s/%q, want participant/player-1", domain.commands[0].ActorType, domain.commands[0].ActorID)
+	}
+	updated, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
+	if err != nil {
+		t.Fatalf("Character not persisted: %v", err)
+	}
+	if updated.ParticipantID != "" {
+		t.Fatalf("ParticipantID = %q, want empty", updated.ParticipantID)
+	}
+}
+
+func TestReleaseCharacterControl_DeniesNonController(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	now := time.Now().UTC()
+
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", ParticipantID: "player-2", CreatedAt: now},
+	}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"player-1": memberUserParticipantRecord("c1", "player-1", "user-1", "Player One"),
+		"player-2": memberUserParticipantRecord("c1", "player-2", "user-2", "Player Two"),
+	}
+
+	svc := NewCharacterService(ts.build())
+	_, err := svc.ReleaseCharacterControl(contextWithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestGetCharacterSheet_NilRequest(t *testing.T) {

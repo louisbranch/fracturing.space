@@ -30,6 +30,10 @@ type campaignMutationGateway interface {
 	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
 	UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error
+	DeleteCharacter(context.Context, string, string) error
+	SetCharacterController(context.Context, string, string, string) error
+	ClaimCharacterControl(context.Context, string, string) error
+	ReleaseCharacterControl(context.Context, string, string) error
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
@@ -56,6 +60,7 @@ type Service interface {
 	CampaignAIBindingEditor(context.Context, string, string) (CampaignAIBindingEditor, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
 	CampaignCharacterEditor(context.Context, string, string) (CampaignCharacterEditor, error)
+	CampaignCharacterControl(context.Context, string, string, string) (CampaignCharacterControl, error)
 	CampaignSessions(context.Context, string) ([]CampaignSession, error)
 	CampaignSessionReadiness(context.Context, string, language.Tag) (CampaignSessionReadiness, error)
 	CampaignInvites(context.Context, string) ([]CampaignInvite, error)
@@ -68,6 +73,10 @@ type Service interface {
 	EndSession(context.Context, string, EndSessionInput) error
 	CreateCharacter(context.Context, string, CreateCharacterInput) (CreateCharacterResult, error)
 	UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error
+	DeleteCharacter(context.Context, string, string) error
+	SetCharacterController(context.Context, string, string, string) error
+	ClaimCharacterControl(context.Context, string, string, string) error
+	ReleaseCharacterControl(context.Context, string, string, string) error
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	CreateInvite(context.Context, string, CreateInviteInput) error
 	RevokeInvite(context.Context, string, RevokeInviteInput) error

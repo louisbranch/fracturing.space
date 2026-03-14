@@ -702,6 +702,10 @@ type fakeGateway struct {
 	resetCharacterCreationWorkflowErr error
 	createCharacterErr                error
 	createdCharacterID                string
+	deleteCharacterErr                error
+	setCharacterControllerErr         error
+	claimCharacterControlErr          error
+	releaseCharacterControlErr        error
 	updateCampaignErr                 error
 	updateCampaignAIBindingErr        error
 	updateParticipantErr              error
@@ -909,6 +913,18 @@ func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInp
 }
 func (fakeGateway) UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error {
 	return nil
+}
+func (f fakeGateway) DeleteCharacter(context.Context, string, string) error {
+	return f.deleteCharacterErr
+}
+func (f fakeGateway) SetCharacterController(context.Context, string, string, string) error {
+	return f.setCharacterControllerErr
+}
+func (f fakeGateway) ClaimCharacterControl(context.Context, string, string) error {
+	return f.claimCharacterControlErr
+}
+func (f fakeGateway) ReleaseCharacterControl(context.Context, string, string) error {
+	return f.releaseCharacterControlErr
 }
 func (f fakeGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
 	return f.updateParticipantErr

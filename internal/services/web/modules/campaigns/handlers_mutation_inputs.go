@@ -42,6 +42,11 @@ func parseUpdateCharacterInput(form url.Values) UpdateCharacterInput {
 	}
 }
 
+// parseSetCharacterControllerInput maps form values into controller-set input.
+func parseSetCharacterControllerInput(form url.Values) string {
+	return strings.TrimSpace(form.Get("participant_id"))
+}
+
 // parseCreateInviteInput maps form values into invite-create input.
 func parseCreateInviteInput(form url.Values) CreateInviteInput {
 	return CreateInviteInput{

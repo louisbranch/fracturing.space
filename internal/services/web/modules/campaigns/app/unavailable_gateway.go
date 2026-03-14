@@ -115,6 +115,26 @@ func (unavailableGateway) UpdateCharacter(context.Context, string, string, Updat
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// DeleteCharacter applies this package workflow transition.
+func (unavailableGateway) DeleteCharacter(context.Context, string, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+// SetCharacterController applies this package workflow transition.
+func (unavailableGateway) SetCharacterController(context.Context, string, string, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+// ClaimCharacterControl applies this package workflow transition.
+func (unavailableGateway) ClaimCharacterControl(context.Context, string, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
+// ReleaseCharacterControl applies this package workflow transition.
+func (unavailableGateway) ReleaseCharacterControl(context.Context, string, string) error {
+	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // UpdateParticipant applies this package workflow transition.
 func (unavailableGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")

@@ -40,13 +40,14 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]C
 			controller = "Unassigned"
 		}
 		normalized = append(normalized, CampaignCharacter{
-			ID:         characterID,
-			Name:       characterName,
-			Kind:       kind,
-			Controller: controller,
-			Pronouns:   strings.TrimSpace(character.Pronouns),
-			Aliases:    append([]string(nil), character.Aliases...),
-			AvatarURL:  strings.TrimSpace(character.AvatarURL),
+			ID:                      characterID,
+			Name:                    characterName,
+			Kind:                    kind,
+			Controller:              controller,
+			ControllerParticipantID: strings.TrimSpace(character.ControllerParticipantID),
+			Pronouns:                strings.TrimSpace(character.Pronouns),
+			Aliases:                 append([]string(nil), character.Aliases...),
+			AvatarURL:               strings.TrimSpace(character.AvatarURL),
 		})
 	}
 
