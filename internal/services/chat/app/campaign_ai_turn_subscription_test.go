@@ -147,7 +147,7 @@ func TestConsumeCampaignAITurnUpdatesPublishesVisibleMessages(t *testing.T) {
 
 	buf := &bytes.Buffer{}
 	peer := newWSPeer(json.NewEncoder(buf))
-	room.join(peer, []string{chatDefaultStreamID("camp-1")})
+	room.join(newWSSession("user-1", peer), []string{chatDefaultStreamID("camp-1")})
 
 	client := &testInvocationClient{}
 	client.subscribeFn = func(ctx context.Context, req *aiv1.SubscribeCampaignTurnEventsRequest) (grpc.ServerStreamingClient[aiv1.CampaignTurnEvent], error) {

@@ -152,7 +152,7 @@ func handleWSConn(
 	session := newWSSession(userID, peer)
 	defer func() {
 		if room := session.currentRoom(); room != nil {
-			leaveCampaignRoom(room, session.peer, releaseCampaignUpdateSubscription, releaseAITurnSubscription)
+			leaveCampaignRoom(room, session, releaseCampaignUpdateSubscription, releaseAITurnSubscription)
 		}
 	}()
 
@@ -230,14 +230,17 @@ func handleWSConn(
 
 func leaveCampaignRoom(
 	room *campaignRoom,
-	peer *wsPeer,
+	session *wsSession,
 	releaseCampaignUpdateSubscription func(string),
 	releaseAITurnSubscription func(string),
 ) {
-	if room == nil || peer == nil {
+	if room == nil || session == nil {
 		return
 	}
-	if room.leave(peer) {
+	if session.currentRoom() == room {
+		session.setRoom(nil)
+	}
+	if room.leave(session) {
 		if releaseCampaignUpdateSubscription != nil {
 			releaseCampaignUpdateSubscription(room.campaignID)
 		}
@@ -337,24 +340,13 @@ func handleJoinFrame(
 	session.setCommunicationState(contextState)
 	previous := session.setRoom(room)
 	if previous != nil && previous != room {
-		leaveCampaignRoom(previous, session.peer, releaseCampaignUpdateSubscription, releaseAITurnSubscription)
+		leaveCampaignRoom(previous, session, releaseCampaignUpdateSubscription, releaseAITurnSubscription)
 	}
-	latest := room.join(session.peer, communicationStreamIDs(contextState.Streams))
+	latest := room.join(session, communicationStreamIDs(contextState.Streams))
 
 	_ = session.peer.writeFrame(wsFrame{
-		Type: "chat.joined",
-		Payload: mustJSON(joinedPayload{
-			CampaignID:             campaignID,
-			SessionID:              room.currentSessionID(),
-			LatestSequenceID:       latest,
-			ServerTime:             time.Now().UTC().Format(time.RFC3339),
-			DefaultStreamID:        contextState.DefaultStreamID,
-			DefaultPersonaID:       contextState.DefaultPersonaID,
-			ActiveSessionGate:      contextState.ActiveSessionGate,
-			ActiveSessionSpotlight: contextState.ActiveSessionSpotlight,
-			Streams:                contextState.Streams,
-			Personas:               contextState.Personas,
-		}),
+		Type:    "chat.joined",
+		Payload: mustJSON(joinedPayloadForRoom(room, contextState, latest)),
 	})
 	_ = session.peer.writeFrame(wsFrame{
 		Type: "chat.message",

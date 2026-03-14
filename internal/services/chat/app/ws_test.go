@@ -48,9 +48,23 @@ type wsTestMessagePayload struct {
 }
 
 type wsTestJoinedPayload struct {
+	CampaignID       string `json:"campaign_id"`
+	SessionID        string `json:"session_id"`
+	DefaultStreamID  string `json:"default_stream_id"`
+	DefaultPersonaID string `json:"default_persona_id"`
+	Streams          []struct {
+		StreamID string `json:"stream_id"`
+		Label    string `json:"label"`
+	} `json:"streams"`
+	Personas []struct {
+		PersonaID   string `json:"persona_id"`
+		DisplayName string `json:"display_name"`
+	} `json:"personas"`
 	ActiveSessionGate struct {
-		GateID string `json:"gate_id"`
-		Status string `json:"status"`
+		GateID   string         `json:"gate_id"`
+		GateType string         `json:"gate_type"`
+		Status   string         `json:"status"`
+		Progress map[string]any `json:"progress"`
 	} `json:"active_session_gate"`
 	ActiveSessionSpotlight struct {
 		Type        string `json:"type"`
@@ -1019,6 +1033,440 @@ func TestWebSocketControlGateRespondBroadcastsState(t *testing.T) {
 	}
 	if authorizer.lastControlGateType != "ready" {
 		t.Fatalf("control decision = %q, want %q", authorizer.lastControlGateType, "ready")
+	}
+}
+
+func TestRefreshRoomCommunicationContextBroadcastsContextAndState(t *testing.T) {
+	roomHub := newRoomHub()
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+			"token-b": "user-b",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-1", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-1", Label: "Table"},
+					{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-1", Label: "Control"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+				},
+			},
+			"user-b": {
+				Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-b",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-b",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-1", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-1", Label: "Table"},
+					{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-1", Label: "Control"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-b", Kind: "participant", ParticipantID: "part-b", DisplayName: "B"},
+				},
+			},
+		},
+	}
+	handler := newHandler(authorizer, true, roomHub, nil, nil, nil, nil, nil, nil)
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-a")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-b")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	authorizer.contextByUserID["user-a"] = communicationContext{
+		Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-2", SessionName: "Session Two", Locale: commonv1.Locale_LOCALE_EN_US},
+		ParticipantID:    "part-a",
+		DefaultStreamID:  "campaign:camp-1:table",
+		DefaultPersonaID: "participant:part-a",
+		ActiveSessionGate: &chatSessionGate{
+			GateID:   "gate-2",
+			GateType: "ready_check",
+			Status:   "open",
+			Progress: map[string]any{
+				"responded_count": float64(1),
+			},
+		},
+		ActiveSessionSpotlight: &chatSessionSpotlight{
+			Type:        "character",
+			CharacterID: "char-7",
+		},
+		Streams: []chatStream{
+			{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-2", Label: "System"},
+			{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-2", Label: "Table"},
+			{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-2", Label: "Control"},
+		},
+		Personas: []chatPersona{
+			{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+		},
+	}
+	authorizer.contextByUserID["user-b"] = communicationContext{
+		Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", SessionID: "sess-2", SessionName: "Session Two", Locale: commonv1.Locale_LOCALE_EN_US},
+		ParticipantID:    "part-b",
+		DefaultStreamID:  "campaign:camp-1:table",
+		DefaultPersonaID: "participant:part-b",
+		ActiveSessionGate: &chatSessionGate{
+			GateID:   "gate-2",
+			GateType: "ready_check",
+			Status:   "open",
+			Progress: map[string]any{
+				"responded_count": float64(1),
+			},
+		},
+		ActiveSessionSpotlight: &chatSessionSpotlight{
+			Type:        "character",
+			CharacterID: "char-7",
+		},
+		Streams: []chatStream{
+			{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-2", Label: "System"},
+			{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-2", Label: "Table"},
+			{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-2", Label: "Control"},
+		},
+		Personas: []chatPersona{
+			{PersonaID: "participant:part-b", Kind: "participant", ParticipantID: "part-b", DisplayName: "B"},
+			{PersonaID: "character:char-7", Kind: "character", ParticipantID: "part-b", CharacterID: "char-7", DisplayName: "Vera"},
+		},
+	}
+
+	room := roomHub.roomIfExists("camp-1")
+	if room == nil {
+		t.Fatal("expected room for campaign")
+	}
+	if err := refreshRoomCommunicationContext(context.Background(), authorizer, room, nil, nil); err != nil {
+		t.Fatalf("refresh room communication context: %v", err)
+	}
+
+	contextA := readFrame(t, connA)
+	contextB := readFrame(t, connB)
+	if contextA.Type != "chat.context" {
+		t.Fatalf("connA frame type = %q, want chat.context", contextA.Type)
+	}
+	if contextB.Type != "chat.context" {
+		t.Fatalf("connB frame type = %q, want chat.context", contextB.Type)
+	}
+
+	stateA := readFrame(t, connA)
+	stateB := readFrame(t, connB)
+	if stateA.Type != "chat.state" {
+		t.Fatalf("connA frame type = %q, want chat.state", stateA.Type)
+	}
+	if stateB.Type != "chat.state" {
+		t.Fatalf("connB frame type = %q, want chat.state", stateB.Type)
+	}
+
+	var payloadA wsTestJoinedPayload
+	if err := json.Unmarshal(contextA.Payload, &payloadA); err != nil {
+		t.Fatalf("decode connA context: %v", err)
+	}
+	if payloadA.SessionID != "sess-2" || payloadA.ActiveSessionGate.GateID != "gate-2" {
+		t.Fatalf("unexpected connA context payload: %+v", payloadA)
+	}
+
+	var payloadB wsTestJoinedPayload
+	if err := json.Unmarshal(contextB.Payload, &payloadB); err != nil {
+		t.Fatalf("decode connB context: %v", err)
+	}
+	if len(payloadB.Personas) != 2 || payloadB.Personas[1].PersonaID != "character:char-7" {
+		t.Fatalf("unexpected connB personas: %+v", payloadB.Personas)
+	}
+
+	var statePayload wsTestStatePayload
+	if err := json.Unmarshal(stateA.Payload, &statePayload); err != nil {
+		t.Fatalf("decode state payload: %v", err)
+	}
+	if statePayload.SessionID != "sess-2" || statePayload.ActiveSessionGate.GateID != "gate-2" {
+		t.Fatalf("unexpected state payload: %+v", statePayload)
+	}
+}
+
+func TestRefreshRoomCommunicationContextClearsSessionIDWhenSessionEnds(t *testing.T) {
+	roomHub := newRoomHub()
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-1", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-1", Label: "Table"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+				},
+			},
+		},
+	}
+	handler := newHandler(authorizer, true, roomHub, nil, nil, nil, nil, nil, nil)
+	conn := dialWSWithHandler(t, handler, "/ws", "fs_token=token-a")
+	joinCampaign(t, conn, "camp-1")
+
+	authorizer.contextByUserID["user-a"] = communicationContext{
+		Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+		ParticipantID:    "part-a",
+		DefaultStreamID:  "campaign:camp-1:table",
+		DefaultPersonaID: "participant:part-a",
+		Streams: []chatStream{
+			{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "campaign", Label: "System"},
+			{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "campaign", Label: "Table"},
+		},
+		Personas: []chatPersona{
+			{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+		},
+	}
+
+	room := roomHub.roomIfExists("camp-1")
+	if room == nil {
+		t.Fatal("expected room for campaign")
+	}
+	if err := refreshRoomCommunicationContext(context.Background(), authorizer, room, nil, nil); err != nil {
+		t.Fatalf("refresh room communication context: %v", err)
+	}
+
+	contextFrame := readFrame(t, conn)
+	if contextFrame.Type != "chat.context" {
+		t.Fatalf("frame type = %q, want chat.context", contextFrame.Type)
+	}
+	stateFrame := readFrame(t, conn)
+	if stateFrame.Type != "chat.state" {
+		t.Fatalf("frame type = %q, want chat.state", stateFrame.Type)
+	}
+
+	var payload wsTestJoinedPayload
+	if err := json.Unmarshal(contextFrame.Payload, &payload); err != nil {
+		t.Fatalf("decode context payload: %v", err)
+	}
+	if payload.SessionID != "" {
+		t.Fatalf("context session_id = %q, want empty", payload.SessionID)
+	}
+
+	var statePayload wsTestStatePayload
+	if err := json.Unmarshal(stateFrame.Payload, &statePayload); err != nil {
+		t.Fatalf("decode state payload: %v", err)
+	}
+	if statePayload.SessionID != "" {
+		t.Fatalf("state session_id = %q, want empty", statePayload.SessionID)
+	}
+}
+
+func TestRefreshRoomCommunicationContextUpdatesStreamAccess(t *testing.T) {
+	roomHub := newRoomHub()
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+			"token-b": "user-b",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", Label: "Table"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+				},
+			},
+			"user-b": {
+				Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-b",
+				DefaultStreamID:  "campaign:camp-1:system",
+				DefaultPersonaID: "participant:part-b",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-b", Kind: "participant", ParticipantID: "part-b", DisplayName: "B"},
+				},
+			},
+		},
+	}
+	handler := newHandler(authorizer, true, roomHub, nil, nil, nil, nil, nil, nil)
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-a")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-b")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	authorizer.contextByUserID["user-b"] = communicationContext{
+		Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+		ParticipantID:    "part-b",
+		DefaultStreamID:  "campaign:camp-1:table",
+		DefaultPersonaID: "participant:part-b",
+		Streams: []chatStream{
+			{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+			{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", Label: "Table"},
+		},
+		Personas: []chatPersona{
+			{PersonaID: "participant:part-b", Kind: "participant", ParticipantID: "part-b", DisplayName: "B"},
+			{PersonaID: "character:char-9", Kind: "character", ParticipantID: "part-b", CharacterID: "char-9", DisplayName: "Mira"},
+		},
+	}
+
+	room := roomHub.roomIfExists("camp-1")
+	if room == nil {
+		t.Fatal("expected room for campaign")
+	}
+	if err := refreshRoomCommunicationContext(context.Background(), authorizer, room, nil, nil); err != nil {
+		t.Fatalf("refresh room communication context: %v", err)
+	}
+
+	_ = readFrame(t, connA)
+	contextB := readFrame(t, connB)
+	if contextB.Type != "chat.context" {
+		t.Fatalf("connB frame type = %q, want chat.context", contextB.Type)
+	}
+	var payloadB wsTestJoinedPayload
+	if err := json.Unmarshal(contextB.Payload, &payloadB); err != nil {
+		t.Fatalf("decode connB context: %v", err)
+	}
+	if payloadB.DefaultStreamID != "campaign:camp-1:table" || len(payloadB.Streams) != 2 {
+		t.Fatalf("unexpected connB stream refresh: %+v", payloadB)
+	}
+
+	writeFrame(t, connA, map[string]any{
+		"type":       "chat.send",
+		"request_id": "req-send-after-refresh",
+		"payload": map[string]any{
+			"client_message_id": "cli-refresh-1",
+			"stream_id":         "campaign:camp-1:table",
+			"body":              "table after refresh",
+		},
+	})
+
+	ack := readFrame(t, connA)
+	if ack.Type != "chat.ack" {
+		t.Fatalf("sender frame type = %q, want chat.ack", ack.Type)
+	}
+	_ = readFrame(t, connA)
+
+	receiverMessage := readFrame(t, connB)
+	if receiverMessage.Type != "chat.message" {
+		t.Fatalf("receiver frame type = %q, want chat.message", receiverMessage.Type)
+	}
+	payload := decodeMessagePayload(t, receiverMessage.Payload)
+	if payload.Message.Body != "table after refresh" {
+		t.Fatalf("receiver message body = %q, want %q", payload.Message.Body, "table after refresh")
+	}
+}
+
+func TestRefreshRoomCommunicationContextEvictsPeerOnPermissionLoss(t *testing.T) {
+	roomHub := newRoomHub()
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+			"token-b": "user-b",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", Label: "Table"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+				},
+			},
+			"user-b": {
+				Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-b",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-b",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", Label: "Table"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-b", Kind: "participant", ParticipantID: "part-b", DisplayName: "B"},
+				},
+			},
+		},
+	}
+	handler := newHandler(authorizer, true, roomHub, nil, nil, nil, nil, nil, nil)
+	srv := httptest.NewServer(handler)
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-a")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-b")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	delete(authorizer.contextByUserID, "user-b")
+
+	room := roomHub.roomIfExists("camp-1")
+	if room == nil {
+		t.Fatal("expected room for campaign")
+	}
+	if err := refreshRoomCommunicationContext(context.Background(), authorizer, room, nil, nil); err != nil {
+		t.Fatalf("refresh room communication context: %v", err)
+	}
+
+	contextA := readFrame(t, connA)
+	if contextA.Type != "chat.context" {
+		t.Fatalf("connA frame type = %q, want chat.context", contextA.Type)
+	}
+	eviction := readFrame(t, connB)
+	if eviction.Type != "chat.error" {
+		t.Fatalf("connB frame type = %q, want chat.error", eviction.Type)
+	}
+	if !strings.Contains(string(eviction.Payload), "FORBIDDEN") {
+		t.Fatalf("eviction payload = %s, want FORBIDDEN", string(eviction.Payload))
+	}
+
+	writeFrame(t, connB, map[string]any{
+		"type":       "chat.send",
+		"request_id": "req-send-after-evict",
+		"payload": map[string]any{
+			"client_message_id": "cli-evicted-1",
+			"body":              "should fail",
+		},
+	})
+
+	postEviction := readFrame(t, connB)
+	if postEviction.Type != "chat.error" {
+		t.Fatalf("post-eviction frame type = %q, want chat.error", postEviction.Type)
+	}
+	if !strings.Contains(string(postEviction.Payload), "FORBIDDEN") {
+		t.Fatalf("post-eviction payload = %s, want FORBIDDEN", string(postEviction.Payload))
+	}
+}
+
+func TestLeaveCampaignRoomKeepsNewRoomAssignment(t *testing.T) {
+	session := newWSSession("user-1", &wsPeer{})
+	roomA := newCampaignRoom("camp-a")
+	roomB := newCampaignRoom("camp-b")
+
+	roomA.join(session, []string{chatDefaultStreamID("camp-a")})
+	session.setRoom(roomA)
+	roomB.join(session, []string{chatDefaultStreamID("camp-b")})
+	session.setRoom(roomB)
+
+	leaveCampaignRoom(roomA, session, nil, nil)
+
+	if session.currentRoom() != roomB {
+		t.Fatal("expected session to keep current room assignment")
 	}
 }
 
