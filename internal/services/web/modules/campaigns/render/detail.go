@@ -46,6 +46,7 @@ type ParticipantView struct {
 	Controller     string
 	Pronouns       string
 	AvatarURL      string
+	IsViewer       bool
 	CanEdit        bool
 	EditReasonCode string
 }
@@ -110,6 +111,7 @@ type CharacterView struct {
 	Pronouns                string
 	Aliases                 []string
 	AvatarURL               string
+	OwnedByViewer           bool
 	CanEdit                 bool
 	EditReasonCode          string
 	Daggerheart             *CharacterDaggerheartSummaryView

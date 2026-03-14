@@ -156,7 +156,7 @@ templ Fragment(view DetailView, loc Localizer) {
 					<p>{ T(loc, "game.participants.empty") }</p>
 				}
 				for _, participant := range view.Participants {
-					<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side" data-campaign-participant-card-id={ participant.ID }>
+					<div class={ campaignParticipantCardClass(participant) } data-campaign-participant-card-id={ participant.ID } data-campaign-participant-current-user={ campaignParticipantViewerAttr(participant) }>
 						<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0 overflow-hidden">
 							@AppImage(AppImageView{
 								Src:        participant.AvatarURL,
@@ -360,7 +360,7 @@ templ Fragment(view DetailView, loc Localizer) {
 						<p>{ T(loc, "game.characters.empty") }</p>
 					}
 					for _, character := range view.Characters {
-						<div class="card bg-base-100 border border-base-300 shadow-sm md:card-side" data-campaign-character-card-id={ character.ID }>
+						<div class={ campaignCharacterCardClass(character) } data-campaign-character-card-id={ character.ID } data-campaign-character-owned-by-viewer={ campaignCharacterOwnedByViewerAttr(character) }>
 							<figure class="h-48 md:h-auto md:w-44 bg-base-300 shrink-0 overflow-hidden">
 								@AppImage(AppImageView{
 									Src:        character.AvatarURL,

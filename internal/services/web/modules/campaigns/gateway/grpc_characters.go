@@ -34,10 +34,13 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string, 
 
 	// Collect participant names so character controller labels can be resolved.
 	type participantEntry struct {
-		ID   string
-		Name string
+		ID     string
+		UserID string
+		Name   string
 	}
 	participantNamesByID := map[string]string{}
+	viewerParticipantID := ""
+	viewerUserID := strings.TrimSpace(options.ViewerUserID)
 	if g.Read.Participant != nil {
 		entries, err := grpcpaging.CollectPages[participantEntry, *statev1.Participant](
 			ctx, 10,
@@ -63,7 +66,11 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string, 
 				if id == "" {
 					return participantEntry{}, false
 				}
-				return participantEntry{ID: id, Name: participantDisplayName(p)}, true
+				return participantEntry{
+					ID:     id,
+					UserID: strings.TrimSpace(p.GetUserId()),
+					Name:   participantDisplayName(p),
+				}, true
 			},
 		)
 		if err != nil {
@@ -71,6 +78,9 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string, 
 		}
 		for _, e := range entries {
 			participantNamesByID[e.ID] = e.Name
+			if viewerParticipantID == "" && viewerUserID != "" && strings.EqualFold(strings.TrimSpace(e.UserID), viewerUserID) {
+				viewerParticipantID = e.ID
+			}
 		}
 	}
 
@@ -116,6 +126,7 @@ func (g GRPCGateway) CampaignCharacters(ctx context.Context, campaignID string, 
 				ControllerParticipantID: controllerParticipantID,
 				Pronouns:                pronouns.FromProto(character.GetPronouns()),
 				Aliases:                 append([]string(nil), character.GetAliases()...),
+				OwnedByViewer:           viewerParticipantID != "" && controllerParticipantID == viewerParticipantID,
 				Daggerheart:             daggerheartSummariesByCharacterID[characterID],
 				AvatarURL: websupport.AvatarImageURL(
 					g.AssetBaseURL,

@@ -7,6 +7,32 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
+// campaignParticipantCardClass keeps participant highlight styling localized to the render seam.
+func campaignParticipantCardClass(participant ParticipantView) string {
+	if participant.IsViewer {
+		return "card bg-base-100 border border-primary shadow-sm md:card-side"
+	}
+	return "card bg-base-100 border border-base-300 shadow-sm md:card-side"
+}
+
+// campaignParticipantViewerAttr exposes viewer state as a stable data-attribute value.
+func campaignParticipantViewerAttr(participant ParticipantView) string {
+	return strconv.FormatBool(participant.IsViewer)
+}
+
+// campaignCharacterCardClass keeps owned-character highlight styling localized to the render seam.
+func campaignCharacterCardClass(character CharacterView) string {
+	if character.OwnedByViewer {
+		return "card bg-base-100 border border-primary shadow-sm md:card-side"
+	}
+	return "card bg-base-100 border border-base-300 shadow-sm md:card-side"
+}
+
+// campaignCharacterOwnedByViewerAttr exposes viewer-ownership state as a stable data-attribute value.
+func campaignCharacterOwnedByViewerAttr(character CharacterView) string {
+	return strconv.FormatBool(character.OwnedByViewer)
+}
+
 // campaignCharacterDetailURL centralizes character detail links for render-owned cards.
 func campaignCharacterDetailURL(view DetailView, character CharacterView) string {
 	campaignID := strings.TrimSpace(view.CampaignID)

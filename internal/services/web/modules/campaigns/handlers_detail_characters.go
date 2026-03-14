@@ -13,13 +13,15 @@ import (
 
 // handleCharacters handles this route in the module transport layer.
 func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campaignID string) {
+	viewerUserID := h.RequestUserID(r)
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
 	}
 	items, err := h.service.CampaignCharacters(ctx, campaignID, campaignapp.CampaignCharactersReadOptions{
-		System: page.workspace.System,
-		Locale: page.locale,
+		System:       page.workspace.System,
+		Locale:       page.locale,
+		ViewerUserID: viewerUserID,
 	})
 	if err != nil {
 		h.WriteError(w, r, err)
@@ -105,8 +107,9 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	characterItems, err := h.service.CampaignCharacters(ctx, campaignID, campaignapp.CampaignCharactersReadOptions{
-		System: page.workspace.System,
-		Locale: page.locale,
+		System:       page.workspace.System,
+		Locale:       page.locale,
+		ViewerUserID: userID,
 	})
 	if err != nil {
 		h.WriteError(w, r, err)

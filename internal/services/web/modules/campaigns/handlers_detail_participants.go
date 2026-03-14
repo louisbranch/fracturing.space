@@ -11,6 +11,7 @@ import (
 
 // handleParticipants handles this route in the module transport layer.
 func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, campaignID string) {
+	viewerUserID := h.RequestUserID(r)
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -24,7 +25,7 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 	if err := h.service.RequireManageParticipants(ctx, campaignID); err == nil {
 		view.CanManageParticipants = true
 	}
-	view.Participants = mapParticipantsView(items)
+	view.Participants = mapParticipantsView(items, viewerUserID)
 	h.writeCampaignDetailPage(w, r, page, campaignID, view, sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.participants.title")})
 }
 
