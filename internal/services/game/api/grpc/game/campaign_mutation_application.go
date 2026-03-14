@@ -27,7 +27,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
@@ -93,7 +93,7 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {

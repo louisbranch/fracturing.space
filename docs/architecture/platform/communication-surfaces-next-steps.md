@@ -89,12 +89,53 @@ The following should remain out of scope until intentionally designed:
 - Persona-scoped vote counting.
 - Transcript parsing that tries to infer gameplay decisions from free-form chat.
 
+## Protocol evolution next step
+
+The next communication architecture step is a contract cleanup, not another
+authority move.
+
+`game` already owns communication context, session-gate workflow state, derived
+progress, and GM handoff behavior. The remaining gap is that the public game
+contract still exposes gate metadata, progress, resolution, and response
+payloads through `google.protobuf.Struct`. That keeps `chat` and `web` on
+dynamic-map adapters even though the game domain and projection path are now
+typed internally.
+
+Target direction for the next slice:
+
+- Replace generic gate payloads with typed workflow envelopes.
+- Define explicit workflow messages for `ready_check`, `vote`, and
+  `gm_handoff`.
+- Use typed fields for open metadata, participant responses, derived progress,
+  and resolution payloads.
+- Keep a generic fallback only if unknown/custom gate types remain a real
+  product requirement.
+
+Consumer expectations after that cut:
+
+- `chat` stays transport-focused and forwards typed workflow state without
+  reinterpreting game policy.
+- `web` renders workflow-specific controls and summaries from typed fields,
+  not dynamic `Struct` decoding.
+- Persona selection remains message-presentation state.
+- Workflow responses remain participant-scoped unless a future game contract
+  explicitly changes that rule.
+
+Deliberate non-behavior for that slice:
+
+- No transcript parsing to infer workflow decisions.
+- No browser-only automatic gate resolution writes.
+- No chat-owned workflow semantics.
+- No persona-scoped vote counting.
+
 ## Sequencing guidance
 
 Recommended order for the next implementation phase:
 
-1. Teach the web surface to render workflow-specific progress and policy state.
-2. Add workflow-specific open/respond controls in the web game surface.
-3. Add durable transcript storage and resume/history behavior in `chat`.
-4. Decide whether any derived workflow states should produce automatic
+1. Define typed workflow messages in the game/session communication proto.
+2. Cut game transport mappers to the typed workflow envelope.
+3. Cut chat and web adapters to typed workflow mapping.
+4. Delete generic-map workflow handling on the main path.
+5. Add durable transcript storage and resume/history behavior in `chat`.
+6. Decide whether any derived workflow states should produce automatic
    game-owned resolution writes, or remain advisory-only for GM control.

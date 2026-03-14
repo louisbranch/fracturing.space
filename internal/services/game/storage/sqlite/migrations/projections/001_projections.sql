@@ -232,15 +232,56 @@ CREATE TABLE IF NOT EXISTS session_gates (
     resolved_at INTEGER,
     resolved_by_actor_type TEXT,
     resolved_by_actor_id TEXT,
-    metadata_json BLOB,
-    progress_json BLOB,
-    resolution_json BLOB,
+    response_authority TEXT NOT NULL DEFAULT '',
+    metadata_extra_json BLOB,
+    resolution_decision TEXT NOT NULL DEFAULT '',
+    resolution_extra_json BLOB,
     PRIMARY KEY (campaign_id, session_id, gate_id)
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_session_gates_open
     ON session_gates(campaign_id, session_id)
     WHERE status = 'open';
+
+CREATE TABLE IF NOT EXISTS session_gate_eligible_participants (
+    campaign_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    gate_id TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    participant_id TEXT NOT NULL,
+    PRIMARY KEY (campaign_id, session_id, gate_id, participant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_gate_eligible_participants_gate
+    ON session_gate_eligible_participants(campaign_id, session_id, gate_id, position);
+
+CREATE TABLE IF NOT EXISTS session_gate_options (
+    campaign_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    gate_id TEXT NOT NULL,
+    position INTEGER NOT NULL,
+    option_value TEXT NOT NULL,
+    PRIMARY KEY (campaign_id, session_id, gate_id, option_value)
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_gate_options_gate
+    ON session_gate_options(campaign_id, session_id, gate_id, position);
+
+CREATE TABLE IF NOT EXISTS session_gate_responses (
+    campaign_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    gate_id TEXT NOT NULL,
+    participant_id TEXT NOT NULL,
+    decision TEXT NOT NULL DEFAULT '',
+    response_json BLOB,
+    recorded_at INTEGER,
+    actor_type TEXT NOT NULL DEFAULT '',
+    actor_id TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (campaign_id, session_id, gate_id, participant_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_session_gate_responses_gate
+    ON session_gate_responses(campaign_id, session_id, gate_id, participant_id);
 
 CREATE TABLE IF NOT EXISTS session_spotlight (
     campaign_id TEXT NOT NULL,
@@ -258,6 +299,12 @@ CREATE INDEX IF NOT EXISTS idx_session_spotlight_session ON session_spotlight(ca
 -- +migrate Down
 DROP INDEX IF EXISTS idx_session_spotlight_session;
 DROP TABLE IF EXISTS session_spotlight;
+DROP INDEX IF EXISTS idx_session_gate_responses_gate;
+DROP TABLE IF EXISTS session_gate_responses;
+DROP INDEX IF EXISTS idx_session_gate_options_gate;
+DROP TABLE IF EXISTS session_gate_options;
+DROP INDEX IF EXISTS idx_session_gate_eligible_participants_gate;
+DROP TABLE IF EXISTS session_gate_eligible_participants;
 DROP INDEX IF EXISTS idx_session_gates_open;
 DROP TABLE IF EXISTS session_gates;
 DROP TABLE IF EXISTS daggerheart_adversaries;

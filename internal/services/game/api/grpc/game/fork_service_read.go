@@ -2,12 +2,9 @@ package game
 
 import (
 	"context"
-	"errors"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,40 +20,11 @@ func (s *ForkService) GetLineage(ctx context.Context, in *campaignv1.GetLineageR
 		return nil, err
 	}
 
-	// Verify campaign exists
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	lineage, err := newForkApplication(s).GetLineage(ctx, campaignID)
 	if err != nil {
-		return nil, grpcerror.EnsureStatus(err)
-	}
-	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
 		return nil, err
 	}
-
-	metadata, err := s.stores.CampaignFork.GetCampaignForkMetadata(ctx, campaignID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, grpcerror.Internal("get fork metadata", err)
-	}
-
-	// Calculate depth by walking up the chain
-	depth := 0
-	if metadata.ParentCampaignID != "" {
-		depth = calculateDepth(ctx, s.stores.CampaignFork, metadata.ParentCampaignID) + 1
-	}
-
-	originID := metadata.OriginCampaignID
-	if originID == "" {
-		originID = campaignID
-	}
-
-	return &campaignv1.GetLineageResponse{
-		Lineage: &campaignv1.Lineage{
-			CampaignId:       campaignID,
-			ParentCampaignId: metadata.ParentCampaignID,
-			ForkEventSeq:     metadata.ForkEventSeq,
-			OriginCampaignId: originID,
-			Depth:            int32(depth),
-		},
-	}, nil
+	return &campaignv1.GetLineageResponse{Lineage: lineage}, nil
 }
 
 // ListForks returns campaigns forked from a given campaign.

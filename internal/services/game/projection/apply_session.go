@@ -61,11 +61,11 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, pa
 		return err
 	}
 	reason := session.NormalizeGateReason(payload.Reason)
-	metadataJSON, err := marshalOptionalMap(payload.Metadata)
+	metadata, err := session.NormalizeGateWorkflowMetadata(gateType, payload.Metadata)
 	if err != nil {
-		return fmt.Errorf("encode gate metadata: %w", err)
+		return fmt.Errorf("normalize gate metadata: %w", err)
 	}
-	progressJSON, err := session.BuildInitialGateProgress(gateType, metadataJSON)
+	progress, err := session.BuildInitialGateProgressState(gateType, metadata)
 	if err != nil {
 		return fmt.Errorf("build gate progress: %w", err)
 	}
@@ -83,8 +83,8 @@ func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, pa
 		CreatedAt:          createdAt,
 		CreatedByActorType: string(evt.ActorType),
 		CreatedByActorID:   evt.ActorID,
-		MetadataJSON:       metadataJSON,
-		ProgressJSON:       progressJSON,
+		Metadata:           metadata,
+		Progress:           progress,
 	})
 }
 
@@ -104,10 +104,10 @@ func (a Applier) applySessionGateResponseRecorded(ctx context.Context, evt event
 	if err != nil {
 		return err
 	}
-	progressJSON, err := session.RecordGateResponseProgress(
+	progress, err := session.RecordGateResponseProgressState(
 		gate.GateType,
-		gate.MetadataJSON,
-		gate.ProgressJSON,
+		gate.Metadata,
+		gate.Progress,
 		payload,
 		recordedAt,
 		string(evt.ActorType),
@@ -116,7 +116,7 @@ func (a Applier) applySessionGateResponseRecorded(ctx context.Context, evt event
 	if err != nil {
 		return fmt.Errorf("record gate response progress: %w", err)
 	}
-	gate.ProgressJSON = progressJSON
+	gate.Progress = progress
 	return a.SessionGate.PutSessionGate(ctx, gate)
 }
 
@@ -132,9 +132,9 @@ func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event, 
 	if err != nil {
 		return fmt.Errorf("get session gate: %w", err)
 	}
-	resolutionJSON, err := marshalResolutionPayload(payload.Decision, payload.Resolution)
+	resolution, err := session.BuildGateResolutionMap(payload.Decision, payload.Resolution)
 	if err != nil {
-		return fmt.Errorf("encode gate resolution: %w", err)
+		return fmt.Errorf("build gate resolution: %w", err)
 	}
 	resolvedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
@@ -144,7 +144,7 @@ func (a Applier) applySessionGateResolved(ctx context.Context, evt event.Event, 
 	gate.ResolvedAt = &resolvedAt
 	gate.ResolvedByActorType = string(evt.ActorType)
 	gate.ResolvedByActorID = evt.ActorID
-	gate.ResolutionJSON = resolutionJSON
+	gate.Resolution = resolution
 	return a.SessionGate.PutSessionGate(ctx, gate)
 }
 
@@ -160,9 +160,9 @@ func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event,
 	if err != nil {
 		return fmt.Errorf("get session gate: %w", err)
 	}
-	resolutionJSON, err := marshalResolutionPayload("abandoned", map[string]any{"reason": session.NormalizeGateReason(payload.Reason)})
+	resolution, err := session.BuildGateResolutionMap("abandoned", map[string]any{"reason": session.NormalizeGateReason(payload.Reason)})
 	if err != nil {
-		return fmt.Errorf("encode gate resolution: %w", err)
+		return fmt.Errorf("build gate resolution: %w", err)
 	}
 	resolvedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
@@ -172,7 +172,7 @@ func (a Applier) applySessionGateAbandoned(ctx context.Context, evt event.Event,
 	gate.ResolvedAt = &resolvedAt
 	gate.ResolvedByActorType = string(evt.ActorType)
 	gate.ResolvedByActorID = evt.ActorID
-	gate.ResolutionJSON = resolutionJSON
+	gate.Resolution = resolution
 	return a.SessionGate.PutSessionGate(ctx, gate)
 }
 

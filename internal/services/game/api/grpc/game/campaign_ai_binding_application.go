@@ -116,8 +116,8 @@ func (c campaignApplication) validateAIBindingAgent(ctx context.Context, campaig
 	return nil
 }
 
-func requireCampaignOwner(ctx context.Context, stores Stores, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, error) {
-	actor, err := requirePolicyActor(ctx, stores, domainauthz.CapabilityManageCampaign, campaignRecord)
+func requireCampaignOwner(ctx context.Context, deps policyDependencies, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, error) {
+	actor, err := requirePolicyActorWithDependencies(ctx, deps, domainauthz.CapabilityManageCampaign, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}

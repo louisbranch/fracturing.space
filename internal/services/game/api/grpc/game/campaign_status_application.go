@@ -19,7 +19,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -62,7 +62,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -105,7 +105,7 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusDraft); err != nil {

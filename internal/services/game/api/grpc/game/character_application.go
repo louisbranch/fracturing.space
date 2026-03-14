@@ -11,7 +11,7 @@ import (
 // characterApplication coordinates character transport use-cases across focused
 // method files (create, update, delete, control, workflow, and profile patching).
 type characterApplication struct {
-	auth        Stores
+	auth        policyDependencies
 	stores      characterApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -29,7 +29,7 @@ type characterApplicationStores struct {
 
 func newCharacterApplication(service *CharacterService) characterApplication {
 	app := characterApplication{
-		auth: service.stores,
+		auth: newPolicyDependencies(service.stores),
 		stores: characterApplicationStores{
 			Campaign:           service.stores.Campaign,
 			Character:          service.stores.Character,

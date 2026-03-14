@@ -7,6 +7,8 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
@@ -78,9 +80,9 @@ func (s *InviteService) GetPublicInvite(ctx context.Context, in *campaignv1.GetP
 		Campaign: &campaignv1.PublicInviteCampaign{
 			Id:     campaignRecord.ID,
 			Name:   campaignRecord.Name,
-			Status: campaignStatusToProto(campaignRecord.Status),
+			Status: campaigntransport.CampaignStatusToProto(campaignRecord.Status),
 		},
-		Participant:   participantToProto(seat),
+		Participant:   participanttransport.ParticipantToProto(seat),
 		CreatedByUser: createdByUser,
 	}, nil
 }

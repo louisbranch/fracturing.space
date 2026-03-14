@@ -7,6 +7,8 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -94,7 +96,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 
 		response.Invites = append(response.Invites, &campaignv1.PendingInvite{
 			Invite:        inviteToProto(inv),
-			Participant:   participantToProto(seat),
+			Participant:   participanttransport.ParticipantToProto(seat),
 			CreatedByUser: createdByUser,
 		})
 	}
@@ -154,8 +156,8 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 
 		response.Invites = append(response.Invites, &campaignv1.PendingUserInvite{
 			Invite:      inviteToProto(inv),
-			Campaign:    campaignToProto(campaignRecord),
-			Participant: participantToProto(seat),
+			Campaign:    campaigntransport.CampaignToProto(campaignRecord),
+			Participant: participanttransport.ParticipantToProto(seat),
 		})
 	}
 

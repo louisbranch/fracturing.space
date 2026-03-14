@@ -4,6 +4,7 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/sessiontransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
@@ -24,7 +25,7 @@ func (s *SessionService) OpenSessionGate(ctx context.Context, in *campaignv1.Ope
 	if err != nil {
 		return nil, err
 	}
-	pbGate, err := sessionGateToProto(gate)
+	pbGate, err := sessiontransport.GateToProto(gate)
 	if err != nil {
 		return nil, grpcerror.Internal("decode session gate", err)
 	}
@@ -46,7 +47,7 @@ func (s *SessionService) ResolveSessionGate(ctx context.Context, in *campaignv1.
 	if err != nil {
 		return nil, err
 	}
-	pbGate, err := sessionGateToProto(gate)
+	pbGate, err := sessiontransport.GateToProto(gate)
 	if err != nil {
 		return nil, grpcerror.Internal("decode session gate", err)
 	}
@@ -68,7 +69,7 @@ func (s *SessionService) AbandonSessionGate(ctx context.Context, in *campaignv1.
 	if err != nil {
 		return nil, err
 	}
-	pbGate, err := sessionGateToProto(gate)
+	pbGate, err := sessiontransport.GateToProto(gate)
 	if err != nil {
 		return nil, grpcerror.Internal("decode session gate", err)
 	}

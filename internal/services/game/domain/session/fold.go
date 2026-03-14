@@ -57,15 +57,11 @@ func Fold(state State, evt event.Event) (State, error) {
 		}
 		state.GateID = ids.GateID(payload.GateID)
 		state.GateType = strings.TrimSpace(payload.GateType)
-		if len(payload.Metadata) == 0 {
-			state.GateMetadataJSON = nil
-		} else {
-			metadataJSON, err := json.Marshal(payload.Metadata)
-			if err != nil {
-				return state, fmt.Errorf("session fold %s metadata: %w", evt.Type, err)
-			}
-			state.GateMetadataJSON = metadataJSON
+		metadataJSON, err := MarshalGateMetadataJSON(state.GateType, payload.Metadata)
+		if err != nil {
+			return state, fmt.Errorf("session fold %s metadata: %w", evt.Type, err)
 		}
+		state.GateMetadataJSON = metadataJSON
 	case EventTypeGateResponseRecorded:
 		// Gate response events do not change the gate-open lifecycle state.
 	case EventTypeGateResolved, EventTypeGateAbandoned:

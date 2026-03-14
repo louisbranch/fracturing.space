@@ -2,14 +2,11 @@ package game
 
 import (
 	"context"
-	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -38,41 +35,14 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	c, err := s.stores.Campaign.Get(ctx, campaignID)
+	readState, err := newSnapshotApplication(s).GetSnapshot(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
-	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpRead); err != nil {
-		return nil, err
-	}
-	if err := requireReadPolicy(ctx, s.stores, c); err != nil {
-		return nil, err
-	}
 
-	// Get Daggerheart snapshot projection (GM Fear)
-	dhSnapshot, err := s.stores.SystemStores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
-	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return nil, grpcerror.Internal("get daggerheart snapshot", err)
-	}
-
-	// Get all character states for this campaign
-	charPage, err := s.stores.Character.ListCharacters(ctx, campaignID, 100, "")
-	if err != nil {
-		return nil, grpcerror.Internal("list characters", err)
-	}
-
-	characterStates := make([]*campaignv1.CharacterState, 0, len(charPage.Characters))
-	for _, ch := range charPage.Characters {
-		// Get Daggerheart-specific state (includes HP)
-		dhState, err := s.stores.SystemStores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, ch.ID)
-		if err != nil {
-			if errors.Is(err, storage.ErrNotFound) {
-				continue
-			}
-			return nil, grpcerror.Internal("get daggerheart character state", err)
-		}
-
-		characterStates = append(characterStates, daggerheartStateToProto(campaignID, ch.ID, dhState))
+	characterStates := make([]*campaignv1.CharacterState, 0, len(readState.characterStates))
+	for _, state := range readState.characterStates {
+		characterStates = append(characterStates, charactertransport.DaggerheartStateToProto(campaignID, state.CharacterID, state))
 	}
 
 	return &campaignv1.GetSnapshotResponse{
@@ -81,8 +51,8 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 			CharacterStates: characterStates,
 			SystemSnapshot: &campaignv1.Snapshot_Daggerheart{
 				Daggerheart: &daggerheartv1.DaggerheartSnapshot{
-					GmFear:                int32(dhSnapshot.GMFear),
-					ConsecutiveShortRests: int32(dhSnapshot.ConsecutiveShortRests),
+					GmFear:                int32(readState.systemState.GMFear),
+					ConsecutiveShortRests: int32(readState.systemState.ConsecutiveShortRests),
 				},
 			},
 		},
@@ -106,7 +76,7 @@ func (s *SnapshotService) PatchCharacterState(ctx context.Context, in *campaignv
 	}
 
 	return &campaignv1.PatchCharacterStateResponse{
-		State: daggerheartStateToProto(campaignID, characterID, dhState),
+		State: charactertransport.DaggerheartStateToProto(campaignID, characterID, dhState),
 	}, nil
 }
 

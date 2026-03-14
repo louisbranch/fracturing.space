@@ -28,7 +28,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.DaggerheartSnapshot{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.DaggerheartSnapshot{}, err
 	}
 

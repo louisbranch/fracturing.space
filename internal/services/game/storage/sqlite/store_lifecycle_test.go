@@ -354,8 +354,8 @@ func TestSessionGateResolvedFields(t *testing.T) {
 		ResolvedAt:          &resolvedAt,
 		ResolvedByActorType: "participant",
 		ResolvedByActorID:   "part-1",
-		MetadataJSON:        []byte(`{}`),
-		ResolutionJSON:      []byte(`{"approved":true}`),
+		Metadata:            map[string]any{},
+		Resolution:          map[string]any{"approved": true},
 	}
 	if err := store.PutSessionGate(context.Background(), gate); err != nil {
 		t.Fatalf("put resolved gate: %v", err)
@@ -374,8 +374,8 @@ func TestSessionGateResolvedFields(t *testing.T) {
 	if got.ResolvedByActorType != "participant" || got.ResolvedByActorID != "part-1" {
 		t.Fatal("expected resolved actor fields to match")
 	}
-	if string(got.ResolutionJSON) != `{"approved":true}` {
-		t.Fatalf("expected resolution json to match, got %s", string(got.ResolutionJSON))
+	if got.Resolution["approved"] != true {
+		t.Fatalf("expected resolution to match, got %#v", got.Resolution)
 	}
 }
 

@@ -504,9 +504,38 @@ type SessionGate struct {
 	ResolvedAt          sql.NullInt64  `json:"resolved_at"`
 	ResolvedByActorType sql.NullString `json:"resolved_by_actor_type"`
 	ResolvedByActorID   sql.NullString `json:"resolved_by_actor_id"`
-	MetadataJson        []byte         `json:"metadata_json"`
-	ProgressJson        []byte         `json:"progress_json"`
-	ResolutionJson      []byte         `json:"resolution_json"`
+	ResponseAuthority   string         `json:"response_authority"`
+	MetadataExtraJson   []byte         `json:"metadata_extra_json"`
+	ResolutionDecision  string         `json:"resolution_decision"`
+	ResolutionExtraJson []byte         `json:"resolution_extra_json"`
+}
+
+type SessionGateEligibleParticipant struct {
+	CampaignID    string `json:"campaign_id"`
+	SessionID     string `json:"session_id"`
+	GateID        string `json:"gate_id"`
+	Position      int64  `json:"position"`
+	ParticipantID string `json:"participant_id"`
+}
+
+type SessionGateOption struct {
+	CampaignID  string `json:"campaign_id"`
+	SessionID   string `json:"session_id"`
+	GateID      string `json:"gate_id"`
+	Position    int64  `json:"position"`
+	OptionValue string `json:"option_value"`
+}
+
+type SessionGateResponse struct {
+	CampaignID    string        `json:"campaign_id"`
+	SessionID     string        `json:"session_id"`
+	GateID        string        `json:"gate_id"`
+	ParticipantID string        `json:"participant_id"`
+	Decision      string        `json:"decision"`
+	ResponseJson  []byte        `json:"response_json"`
+	RecordedAt    sql.NullInt64 `json:"recorded_at"`
+	ActorType     string        `json:"actor_type"`
+	ActorID       string        `json:"actor_id"`
 }
 
 type SessionSpotlight struct {

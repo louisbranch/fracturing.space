@@ -1,22 +1,24 @@
-package game
+package sessiontransport
 
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// Session proto conversion helpers.
-func sessionToProto(sess storage.SessionRecord) *campaignv1.Session {
+// SessionToProto converts a session projection record into its gRPC read model.
+func SessionToProto(sess storage.SessionRecord) *campaignv1.Session {
 	pb := &campaignv1.Session{
 		Id:         sess.ID,
 		CampaignId: sess.CampaignID,
 		Name:       sess.Name,
-		Status:     sessionStatusToProto(sess.Status),
+		Status:     SessionStatusToProto(sess.Status),
 		StartedAt:  timestamppb.New(sess.StartedAt),
 		UpdatedAt:  timestamppb.New(sess.UpdatedAt),
 	}
@@ -26,7 +28,8 @@ func sessionToProto(sess storage.SessionRecord) *campaignv1.Session {
 	return pb
 }
 
-func sessionStatusToProto(status session.Status) campaignv1.SessionStatus {
+// SessionStatusToProto converts a domain session status to its protobuf enum.
+func SessionStatusToProto(status session.Status) campaignv1.SessionStatus {
 	switch status {
 	case session.StatusActive:
 		return campaignv1.SessionStatus_SESSION_ACTIVE
@@ -37,7 +40,8 @@ func sessionStatusToProto(status session.Status) campaignv1.SessionStatus {
 	}
 }
 
-func activeUserSessionToProto(campaign storage.CampaignRecord, sess storage.SessionRecord) *campaignv1.ActiveUserSession {
+// ActiveUserSessionToProto converts an active-session listing record for a user.
+func ActiveUserSessionToProto(campaign storage.CampaignRecord, sess storage.SessionRecord) *campaignv1.ActiveUserSession {
 	return &campaignv1.ActiveUserSession{
 		CampaignId:   campaign.ID,
 		CampaignName: campaign.Name,
@@ -47,16 +51,17 @@ func activeUserSessionToProto(campaign storage.CampaignRecord, sess storage.Sess
 	}
 }
 
-func sessionGateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, error) {
-	metadata, err := structFromJSON(gate.MetadataJSON)
+// GateToProto converts a session gate projection record into its protobuf read model.
+func GateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, error) {
+	metadata, err := structFromMap(gate.Metadata)
 	if err != nil {
 		return nil, err
 	}
-	resolution, err := structFromJSON(gate.ResolutionJSON)
+	resolution, err := structFromMap(gate.Resolution)
 	if err != nil {
 		return nil, err
 	}
-	progress, err := structFromJSON(gate.ProgressJSON)
+	progress, err := structFromValue(gate.Progress)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +70,7 @@ func sessionGateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, erro
 		CampaignId:          gate.CampaignID,
 		SessionId:           gate.SessionID,
 		Type:                gate.GateType,
-		Status:              sessionGateStatusToProto(gate.Status),
+		Status:              GateStatusToProto(gate.Status),
 		Reason:              gate.Reason,
 		CreatedAt:           timestamppb.New(gate.CreatedAt),
 		CreatedByActorType:  gate.CreatedByActorType,
@@ -79,7 +84,8 @@ func sessionGateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, erro
 	}, nil
 }
 
-func sessionGateStatusToProto(status session.GateStatus) campaignv1.SessionGateStatus {
+// GateStatusToProto converts a domain gate status to its protobuf enum.
+func GateStatusToProto(status session.GateStatus) campaignv1.SessionGateStatus {
 	switch strings.ToLower(strings.TrimSpace(string(status))) {
 	case string(session.GateStatusOpen):
 		return campaignv1.SessionGateStatus_SESSION_GATE_OPEN
@@ -92,11 +98,12 @@ func sessionGateStatusToProto(status session.GateStatus) campaignv1.SessionGateS
 	}
 }
 
-func sessionSpotlightToProto(spotlight storage.SessionSpotlight) *campaignv1.SessionSpotlight {
+// SpotlightToProto converts a session spotlight projection into its protobuf read model.
+func SpotlightToProto(spotlight storage.SessionSpotlight) *campaignv1.SessionSpotlight {
 	return &campaignv1.SessionSpotlight{
 		CampaignId:         spotlight.CampaignID,
 		SessionId:          spotlight.SessionID,
-		Type:               sessionSpotlightTypeToProto(spotlight.SpotlightType),
+		Type:               SpotlightTypeToProto(spotlight.SpotlightType),
 		CharacterId:        spotlight.CharacterID,
 		UpdatedAt:          timestamppb.New(spotlight.UpdatedAt),
 		UpdatedByActorType: spotlight.UpdatedByActorType,
@@ -104,7 +111,8 @@ func sessionSpotlightToProto(spotlight storage.SessionSpotlight) *campaignv1.Ses
 	}
 }
 
-func sessionSpotlightTypeToProto(value session.SpotlightType) campaignv1.SessionSpotlightType {
+// SpotlightTypeToProto converts a domain spotlight type to its protobuf enum.
+func SpotlightTypeToProto(value session.SpotlightType) campaignv1.SessionSpotlightType {
 	trimmed := strings.ToLower(strings.TrimSpace(string(value)))
 	switch trimmed {
 	case string(session.SpotlightTypeGM):
@@ -116,7 +124,8 @@ func sessionSpotlightTypeToProto(value session.SpotlightType) campaignv1.Session
 	}
 }
 
-func sessionSpotlightTypeFromProto(value campaignv1.SessionSpotlightType) (session.SpotlightType, error) {
+// SpotlightTypeFromProto converts a protobuf spotlight type to the domain value.
+func SpotlightTypeFromProto(value campaignv1.SessionSpotlightType) (session.SpotlightType, error) {
 	switch value {
 	case campaignv1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_GM:
 		return session.SpotlightTypeGM, nil
@@ -125,4 +134,33 @@ func sessionSpotlightTypeFromProto(value campaignv1.SessionSpotlightType) (sessi
 	default:
 		return "", fmt.Errorf("spotlight type is required")
 	}
+}
+
+func timestampOrNil(value *time.Time) *timestamppb.Timestamp {
+	if value == nil {
+		return nil
+	}
+	return timestamppb.New(value.UTC())
+}
+
+func structFromMap(payload map[string]any) (*structpb.Struct, error) {
+	if len(payload) == 0 {
+		return nil, nil
+	}
+	values, err := session.JSONMapFromValue(payload)
+	if err != nil {
+		return nil, err
+	}
+	return structpb.NewStruct(values)
+}
+
+func structFromValue(payload any) (*structpb.Struct, error) {
+	if payload == nil {
+		return nil, nil
+	}
+	values, err := session.JSONMapFromValue(payload)
+	if err != nil {
+		return nil, err
+	}
+	return structFromMap(values)
 }

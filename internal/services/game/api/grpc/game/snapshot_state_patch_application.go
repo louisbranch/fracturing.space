@@ -29,7 +29,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 	if err != nil {
 		return "", storage.DaggerheartCharacterState{}, err
 	}
-	if _, err := requireCharacterMutationPolicy(ctx, a.auth, c, characterID); err != nil {
+	if _, err := requireCharacterMutationPolicyWithDependencies(ctx, a.auth, c, characterID); err != nil {
 		return "", storage.DaggerheartCharacterState{}, err
 	}
 

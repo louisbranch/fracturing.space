@@ -9,8 +9,9 @@ import (
 )
 
 type forkApplication struct {
-	auth        Stores
+	auth        policyDependencies
 	stores      forkApplicationStores
+	eventReplay forkEventReplay
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
 	clock       func() time.Time
@@ -27,13 +28,18 @@ type forkApplicationStores struct {
 
 func newForkApplication(service *ForkService) forkApplication {
 	app := forkApplication{
-		auth: service.stores,
+		auth: newPolicyDependencies(service.stores),
 		stores: forkApplicationStores{
 			Campaign:     service.stores.Campaign,
 			Participant:  service.stores.Participant,
 			Session:      service.stores.Session,
 			CampaignFork: service.stores.CampaignFork,
 			Event:        service.stores.Event,
+		},
+		eventReplay: forkEventReplay{
+			events:  service.stores.Event,
+			applier: service.stores.Applier(),
+			runtime: service.stores.Write.Runtime,
 		},
 		write:       service.stores.Write,
 		applier:     service.stores.Applier(),

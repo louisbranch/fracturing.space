@@ -4,12 +4,13 @@ import (
 	"testing"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 )
 
 func TestDaggerheartConditionsFromProto(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		result, err := daggerheartConditionsFromProto(nil)
+		result, err := charactertransport.DaggerheartConditionsFromProto(nil)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -19,7 +20,7 @@ func TestDaggerheartConditionsFromProto(t *testing.T) {
 	})
 
 	t.Run("unspecified", func(t *testing.T) {
-		_, err := daggerheartConditionsFromProto([]daggerheartv1.DaggerheartCondition{
+		_, err := charactertransport.DaggerheartConditionsFromProto([]daggerheartv1.DaggerheartCondition{
 			daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_UNSPECIFIED,
 		})
 		if err == nil {
@@ -28,7 +29,7 @@ func TestDaggerheartConditionsFromProto(t *testing.T) {
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		_, err := daggerheartConditionsFromProto([]daggerheartv1.DaggerheartCondition{
+		_, err := charactertransport.DaggerheartConditionsFromProto([]daggerheartv1.DaggerheartCondition{
 			daggerheartv1.DaggerheartCondition(99),
 		})
 		if err == nil {
@@ -37,7 +38,7 @@ func TestDaggerheartConditionsFromProto(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		result, err := daggerheartConditionsFromProto([]daggerheartv1.DaggerheartCondition{
+		result, err := charactertransport.DaggerheartConditionsFromProto([]daggerheartv1.DaggerheartCondition{
 			daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN,
 			daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED,
 			daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE,
@@ -56,14 +57,14 @@ func TestDaggerheartConditionsFromProto(t *testing.T) {
 
 func TestDaggerheartConditionsToProto(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
-		result := daggerheartConditionsToProto(nil)
+		result := charactertransport.DaggerheartConditionsToProto(nil)
 		if result != nil {
 			t.Fatalf("expected nil result, got %v", result)
 		}
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		result := daggerheartConditionsToProto([]string{
+		result := charactertransport.DaggerheartConditionsToProto([]string{
 			daggerheart.ConditionHidden,
 			"unknown",
 			daggerheart.ConditionVulnerable,
@@ -79,14 +80,14 @@ func TestDaggerheartConditionsToProto(t *testing.T) {
 
 func TestDaggerheartLifeStateFromProto(t *testing.T) {
 	t.Run("unspecified", func(t *testing.T) {
-		_, err := daggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED)
+		_, err := charactertransport.DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED)
 		if err == nil {
 			t.Fatal("expected error for unspecified life state")
 		}
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		_, err := daggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState(99))
+		_, err := charactertransport.DaggerheartLifeStateFromProto(daggerheartv1.DaggerheartLifeState(99))
 		if err == nil {
 			t.Fatal("expected error for invalid life state")
 		}
@@ -100,7 +101,7 @@ func TestDaggerheartLifeStateFromProto(t *testing.T) {
 			daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD:           daggerheart.LifeStateDead,
 		}
 		for input, expected := range cases {
-			result, err := daggerheartLifeStateFromProto(input)
+			result, err := charactertransport.DaggerheartLifeStateFromProto(input)
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
@@ -120,7 +121,7 @@ func TestDaggerheartLifeStateToProto(t *testing.T) {
 			daggerheart.LifeStateDead:         daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD,
 		}
 		for input, expected := range cases {
-			result := daggerheartLifeStateToProto(input)
+			result := charactertransport.DaggerheartLifeStateToProto(input)
 			if result != expected {
 				t.Fatalf("life state = %v, want %v", result, expected)
 			}
@@ -128,7 +129,7 @@ func TestDaggerheartLifeStateToProto(t *testing.T) {
 	})
 
 	t.Run("unknown", func(t *testing.T) {
-		result := daggerheartLifeStateToProto("mystery")
+		result := charactertransport.DaggerheartLifeStateToProto("mystery")
 		if result != daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED {
 			t.Fatalf("expected unspecified, got %v", result)
 		}

@@ -2,15 +2,12 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -22,7 +19,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -36,35 +33,17 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	}
 	sessionName := strings.TrimSpace(in.GetName())
 
-	actorID, actorType := resolveCommandActor(ctx)
-
 	payload := session.StartPayload{
 		SessionID:   ids.SessionID(sessionID),
 		SessionName: sessionName,
 	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.SessionRecord{}, grpcerror.Internal("encode payload", err)
-	}
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		a.write,
-		a.applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionStart,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session",
-			EntityID:     sessionID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents("session.start did not emit an event"),
-	)
-	if err != nil {
+	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
+		CommandType: commandTypeSessionStart,
+		CampaignID:  campaignID,
+		SessionID:   sessionID,
+		Payload:     payload,
+		Options:     domainwrite.RequireEvents("session.start did not emit an event"),
+	}); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -85,7 +64,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -97,32 +76,13 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 		return current, nil
 	}
 	payload := session.EndPayload{SessionID: ids.SessionID(sessionID)}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.SessionRecord{}, grpcerror.Internal("encode payload", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		a.write,
-		a.applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionEnd,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session",
-			EntityID:     sessionID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.RequireEvents("session.end did not emit an event"),
-	)
-	if err != nil {
+	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
+		CommandType: commandTypeSessionEnd,
+		CampaignID:  campaignID,
+		SessionID:   sessionID,
+		Payload:     payload,
+		Options:     domainwrite.RequireEvents("session.end did not emit an event"),
+	}); err != nil {
 		return storage.SessionRecord{}, err
 	}
 

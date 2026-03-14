@@ -2,15 +2,13 @@ package game
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/sessiontransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -25,7 +23,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	spotlightType, err := sessionSpotlightTypeFromProto(in.GetType())
+	spotlightType, err := sessiontransport.SpotlightTypeFromProto(in.GetType())
 	if err != nil {
 		return storage.SessionSpotlight{}, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -38,7 +36,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -55,36 +53,17 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 		SpotlightType: string(spotlightType),
 		CharacterID:   ids.CharacterID(characterID),
 	}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.SessionSpotlight{}, grpcerror.Internal("encode payload", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		a.write,
-		a.applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionSpotlightSet,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session",
-			EntityID:     sessionID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.Options{
+	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
+		CommandType: commandTypeSessionSpotlightSet,
+		CampaignID:  campaignID,
+		SessionID:   sessionID,
+		Payload:     payload,
+		Options: domainwrite.Options{
 			ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
 			RequireEvents:   true,
 			MissingEventMsg: "session.spotlight_set did not emit an event",
 		},
-	)
-	if err != nil {
+	}); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	spotlight, err := a.stores.SessionSpotlight.GetSessionSpotlight(ctx, campaignID, sessionID)
@@ -106,7 +85,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -118,36 +97,17 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 		return storage.SessionSpotlight{}, err
 	}
 	payload := session.SpotlightClearedPayload{Reason: reason}
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return storage.SessionSpotlight{}, grpcerror.Internal("encode payload", err)
-	}
-
-	actorID, actorType := resolveCommandActor(ctx)
-
-	_, err = executeAndApplyDomainCommand(
-		ctx,
-		a.write,
-		a.applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeSessionSpotlightClear,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			SessionID:    sessionID,
-			RequestID:    grpcmeta.RequestIDFromContext(ctx),
-			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
-			EntityType:   "session",
-			EntityID:     sessionID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.Options{
+	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
+		CommandType: commandTypeSessionSpotlightClear,
+		CampaignID:  campaignID,
+		SessionID:   sessionID,
+		Payload:     payload,
+		Options: domainwrite.Options{
 			ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
 			RequireEvents:   true,
 			MissingEventMsg: "session.spotlight_clear did not emit an event",
 		},
-	)
-	if err != nil {
+	}); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 

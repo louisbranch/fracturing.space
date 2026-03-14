@@ -2,6 +2,7 @@ package game
 
 import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -78,7 +79,7 @@ func buildDaggerheartCharacterStatePatch(
 	var normalizedConditions []string
 	conditionPatch := patch.Conditions != nil
 	if conditionPatch {
-		conditions, err := daggerheartConditionsFromProto(patch.Conditions)
+		conditions, err := charactertransport.DaggerheartConditionsFromProto(patch.Conditions)
 		if err != nil {
 			return daggerheartCharacterStatePatch{}, status.Error(codes.InvalidArgument, err.Error())
 		}
@@ -91,7 +92,7 @@ func buildDaggerheartCharacterStatePatch(
 	lifeState := current.LifeState
 	if patch.LifeState != daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED {
 		var err error
-		lifeState, err = daggerheartLifeStateFromProto(patch.LifeState)
+		lifeState, err = charactertransport.DaggerheartLifeStateFromProto(patch.LifeState)
 		if err != nil {
 			return daggerheartCharacterStatePatch{}, status.Error(codes.InvalidArgument, err.Error())
 		}

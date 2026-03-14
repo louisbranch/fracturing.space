@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -26,12 +27,30 @@ const (
 )
 
 type eventApplication struct {
-	write domainwriteexec.WritePath
-	clock func() time.Time
+	auth   policyDependencies
+	stores eventApplicationStores
+	write  domainwriteexec.WritePath
+	clock  func() time.Time
+}
+
+type eventApplicationStores struct {
+	Event       storage.EventStore
+	Campaign    storage.CampaignStore
+	Participant storage.ParticipantStore
+	Character   storage.CharacterStore
+	Session     storage.SessionStore
 }
 
 func newEventApplication(service *EventService) eventApplication {
 	return eventApplication{
+		auth: newPolicyDependencies(service.stores),
+		stores: eventApplicationStores{
+			Event:       service.stores.Event,
+			Campaign:    service.stores.Campaign,
+			Participant: service.stores.Participant,
+			Character:   service.stores.Character,
+			Session:     service.stores.Session,
+		},
 		write: service.stores.Write,
 		clock: time.Now,
 	}

@@ -55,8 +55,8 @@ INSERT INTO session_gates (
     campaign_id, session_id, gate_id, gate_type, status, reason,
     created_at, created_by_actor_type, created_by_actor_id,
     resolved_at, resolved_by_actor_type, resolved_by_actor_id,
-    metadata_json, progress_json, resolution_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    response_authority, metadata_extra_json, resolution_decision, resolution_extra_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     gate_type = excluded.gate_type,
     status = excluded.status,
@@ -67,19 +67,74 @@ ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     resolved_at = excluded.resolved_at,
     resolved_by_actor_type = excluded.resolved_by_actor_type,
     resolved_by_actor_id = excluded.resolved_by_actor_id,
-    metadata_json = excluded.metadata_json,
-    progress_json = excluded.progress_json,
-    resolution_json = excluded.resolution_json;
+    response_authority = excluded.response_authority,
+    metadata_extra_json = excluded.metadata_extra_json,
+    resolution_decision = excluded.resolution_decision,
+    resolution_extra_json = excluded.resolution_extra_json;
 
 -- name: GetSessionGate :one
-SELECT * FROM session_gates
+SELECT campaign_id, session_id, gate_id, gate_type, status, reason,
+       created_at, created_by_actor_type, created_by_actor_id,
+       resolved_at, resolved_by_actor_type, resolved_by_actor_id,
+       response_authority, metadata_extra_json, resolution_decision, resolution_extra_json
+FROM session_gates
 WHERE campaign_id = ? AND session_id = ? AND gate_id = ?;
 
 -- name: GetOpenSessionGate :one
-SELECT * FROM session_gates
+SELECT campaign_id, session_id, gate_id, gate_type, status, reason,
+       created_at, created_by_actor_type, created_by_actor_id,
+       resolved_at, resolved_by_actor_type, resolved_by_actor_id,
+       response_authority, metadata_extra_json, resolution_decision, resolution_extra_json
+FROM session_gates
 WHERE campaign_id = ? AND session_id = ? AND status = 'open'
 ORDER BY created_at DESC
 LIMIT 1;
+
+-- name: DeleteSessionGateEligibleParticipants :exec
+DELETE FROM session_gate_eligible_participants
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?;
+
+-- name: PutSessionGateEligibleParticipant :exec
+INSERT INTO session_gate_eligible_participants (
+    campaign_id, session_id, gate_id, position, participant_id
+) VALUES (?, ?, ?, ?, ?);
+
+-- name: ListSessionGateEligibleParticipants :many
+SELECT participant_id
+FROM session_gate_eligible_participants
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+ORDER BY position;
+
+-- name: DeleteSessionGateOptions :exec
+DELETE FROM session_gate_options
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?;
+
+-- name: PutSessionGateOption :exec
+INSERT INTO session_gate_options (
+    campaign_id, session_id, gate_id, position, option_value
+) VALUES (?, ?, ?, ?, ?);
+
+-- name: ListSessionGateOptions :many
+SELECT option_value
+FROM session_gate_options
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+ORDER BY position;
+
+-- name: DeleteSessionGateResponses :exec
+DELETE FROM session_gate_responses
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?;
+
+-- name: PutSessionGateResponse :exec
+INSERT INTO session_gate_responses (
+    campaign_id, session_id, gate_id, participant_id, decision,
+    response_json, recorded_at, actor_type, actor_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+-- name: ListSessionGateResponses :many
+SELECT participant_id, decision, response_json, recorded_at, actor_type, actor_id
+FROM session_gate_responses
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+ORDER BY participant_id;
 
 -- name: PutSessionSpotlight :exec
 INSERT INTO session_spotlight (

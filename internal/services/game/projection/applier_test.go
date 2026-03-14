@@ -1012,6 +1012,10 @@ func (s *fakeCharacterStore) CountCharacters(_ context.Context, campaignID strin
 	return count, nil
 }
 
+func (s *fakeCharacterStore) ListCharactersByOwnerParticipant(context.Context, string, string) ([]storage.CharacterRecord, error) {
+	return nil, nil
+}
+
 func (s *fakeCharacterStore) ListCharacters(context.Context, string, int, string) (storage.CharacterPage, error) {
 	return storage.CharacterPage{}, nil
 }
@@ -1814,24 +1818,21 @@ func TestApplySessionGateOpened_MissingGateID(t *testing.T) {
 func TestApplySessionGateResponseRecordedUpdatesProgress(t *testing.T) {
 	ctx := context.Background()
 	gateStore := newFakeSessionGateStore()
-	metadataJSON, err := json.Marshal(map[string]any{
+	metadata := map[string]any{
 		"eligible_participant_ids": []string{"p1", "p2"},
-	})
-	if err != nil {
-		t.Fatalf("marshal metadata: %v", err)
 	}
-	progressJSON, err := session.BuildInitialGateProgress(session.GateTypeReadyCheck, metadataJSON)
+	progress, err := session.BuildInitialGateProgressState(session.GateTypeReadyCheck, metadata)
 	if err != nil {
 		t.Fatalf("build progress: %v", err)
 	}
 	gateStore.gates["camp-1:sess-1:gate-1"] = storage.SessionGate{
-		CampaignID:   "camp-1",
-		SessionID:    "sess-1",
-		GateID:       "gate-1",
-		GateType:     session.GateTypeReadyCheck,
-		Status:       session.GateStatusOpen,
-		MetadataJSON: metadataJSON,
-		ProgressJSON: progressJSON,
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+		GateID:     "gate-1",
+		GateType:   session.GateTypeReadyCheck,
+		Status:     session.GateStatusOpen,
+		Metadata:   metadata,
+		Progress:   progress,
 	}
 	applier := Applier{SessionGate: gateStore}
 
@@ -1859,18 +1860,14 @@ func TestApplySessionGateResponseRecordedUpdatesProgress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get gate: %v", err)
 	}
-	if len(gate.ProgressJSON) == 0 {
-		t.Fatal("expected progress JSON to be updated")
+	if gate.Progress == nil {
+		t.Fatal("expected progress to be updated")
 	}
-	var progress session.GateProgress
-	if err := json.Unmarshal(gate.ProgressJSON, &progress); err != nil {
-		t.Fatalf("unmarshal progress: %v", err)
+	if gate.Progress.RespondedCount != 1 || gate.Progress.PendingCount != 1 {
+		t.Fatalf("progress counts = %#v", gate.Progress)
 	}
-	if progress.RespondedCount != 1 || progress.PendingCount != 1 {
-		t.Fatalf("progress counts = %#v", progress)
-	}
-	if len(progress.Responses) != 1 || progress.Responses[0].ParticipantID != "p1" || progress.Responses[0].Decision != "ready" {
-		t.Fatalf("responses = %#v", progress.Responses)
+	if len(gate.Progress.Responses) != 1 || gate.Progress.Responses[0].ParticipantID != "p1" || gate.Progress.Responses[0].Decision != "ready" {
+		t.Fatalf("responses = %#v", gate.Progress.Responses)
 	}
 }
 
@@ -3800,6 +3797,10 @@ func (s *fakeSceneStore) ListScenes(_ context.Context, _, _ string, _ int, _ str
 }
 
 func (s *fakeSceneStore) ListActiveScenes(_ context.Context, _ string) ([]storage.SceneRecord, error) {
+	return nil, nil
+}
+
+func (s *fakeSceneStore) ListVisibleActiveScenesForCharacters(context.Context, string, string, []string) ([]storage.SceneRecord, error) {
 	return nil, nil
 }
 

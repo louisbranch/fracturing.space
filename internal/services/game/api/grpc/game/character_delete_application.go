@@ -36,7 +36,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}
-	policyActor, err := requireCharacterMutationPolicy(
+	policyActor, err := requireCharacterMutationPolicyWithDependencies(
 		ctx,
 		c.auth,
 		campaignRecord,

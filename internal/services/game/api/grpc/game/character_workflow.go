@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -115,15 +116,15 @@ func (d *characterWorkflowDeps) ExecuteProfileDelete(ctx context.Context, campai
 }
 
 func (d *characterWorkflowDeps) RequireReadPolicy(ctx context.Context, campaignContext workflow.CampaignContext) error {
-	return requireReadPolicy(ctx, d.app.auth, storage.CampaignRecord{ID: campaignContext.ID})
+	return requireReadPolicyWithDependencies(ctx, d.app.auth, storage.CampaignRecord{ID: campaignContext.ID})
 }
 
 func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, profile storage.DaggerheartCharacterProfile) *campaignv1.CharacterProfile {
-	return daggerheartProfileToProto(campaignID, characterID, profile)
+	return charactertransport.DaggerheartProfileToProto(campaignID, characterID, profile)
 }
 
 func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext workflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {
-	policyActor, err := requireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
+	policyActor, err := requireCharacterMutationPolicyWithDependencies(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
 	}
@@ -171,7 +172,7 @@ func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Conte
 }
 
 func (c characterApplication) executeDaggerheartProfileDelete(ctx context.Context, campaignContext workflow.CampaignContext, characterID string) error {
-	policyActor, err := requireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
+	policyActor, err := requireCharacterMutationPolicyWithDependencies(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
 	}

@@ -33,6 +33,54 @@ func (q *Queries) ClearSessionSpotlight(ctx context.Context, arg ClearSessionSpo
 	return err
 }
 
+const deleteSessionGateEligibleParticipants = `-- name: DeleteSessionGateEligibleParticipants :exec
+DELETE FROM session_gate_eligible_participants
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+`
+
+type DeleteSessionGateEligibleParticipantsParams struct {
+	CampaignID string `json:"campaign_id"`
+	SessionID  string `json:"session_id"`
+	GateID     string `json:"gate_id"`
+}
+
+func (q *Queries) DeleteSessionGateEligibleParticipants(ctx context.Context, arg DeleteSessionGateEligibleParticipantsParams) error {
+	_, err := q.db.ExecContext(ctx, deleteSessionGateEligibleParticipants, arg.CampaignID, arg.SessionID, arg.GateID)
+	return err
+}
+
+const deleteSessionGateOptions = `-- name: DeleteSessionGateOptions :exec
+DELETE FROM session_gate_options
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+`
+
+type DeleteSessionGateOptionsParams struct {
+	CampaignID string `json:"campaign_id"`
+	SessionID  string `json:"session_id"`
+	GateID     string `json:"gate_id"`
+}
+
+func (q *Queries) DeleteSessionGateOptions(ctx context.Context, arg DeleteSessionGateOptionsParams) error {
+	_, err := q.db.ExecContext(ctx, deleteSessionGateOptions, arg.CampaignID, arg.SessionID, arg.GateID)
+	return err
+}
+
+const deleteSessionGateResponses = `-- name: DeleteSessionGateResponses :exec
+DELETE FROM session_gate_responses
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+`
+
+type DeleteSessionGateResponsesParams struct {
+	CampaignID string `json:"campaign_id"`
+	SessionID  string `json:"session_id"`
+	GateID     string `json:"gate_id"`
+}
+
+func (q *Queries) DeleteSessionGateResponses(ctx context.Context, arg DeleteSessionGateResponsesParams) error {
+	_, err := q.db.ExecContext(ctx, deleteSessionGateResponses, arg.CampaignID, arg.SessionID, arg.GateID)
+	return err
+}
+
 const getActiveSession = `-- name: GetActiveSession :one
 SELECT s.campaign_id, s.id, s.name, s.status, s.started_at, s.updated_at, s.ended_at FROM sessions s
 JOIN campaign_active_session cas ON s.campaign_id = cas.campaign_id AND s.id = cas.session_id
@@ -55,7 +103,11 @@ func (q *Queries) GetActiveSession(ctx context.Context, campaignID string) (Sess
 }
 
 const getOpenSessionGate = `-- name: GetOpenSessionGate :one
-SELECT campaign_id, session_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, progress_json, resolution_json FROM session_gates
+SELECT campaign_id, session_id, gate_id, gate_type, status, reason,
+       created_at, created_by_actor_type, created_by_actor_id,
+       resolved_at, resolved_by_actor_type, resolved_by_actor_id,
+       response_authority, metadata_extra_json, resolution_decision, resolution_extra_json
+FROM session_gates
 WHERE campaign_id = ? AND session_id = ? AND status = 'open'
 ORDER BY created_at DESC
 LIMIT 1
@@ -82,9 +134,10 @@ func (q *Queries) GetOpenSessionGate(ctx context.Context, arg GetOpenSessionGate
 		&i.ResolvedAt,
 		&i.ResolvedByActorType,
 		&i.ResolvedByActorID,
-		&i.MetadataJson,
-		&i.ProgressJson,
-		&i.ResolutionJson,
+		&i.ResponseAuthority,
+		&i.MetadataExtraJson,
+		&i.ResolutionDecision,
+		&i.ResolutionExtraJson,
 	)
 	return i, err
 }
@@ -114,7 +167,11 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (Session
 }
 
 const getSessionGate = `-- name: GetSessionGate :one
-SELECT campaign_id, session_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, progress_json, resolution_json FROM session_gates
+SELECT campaign_id, session_id, gate_id, gate_type, status, reason,
+       created_at, created_by_actor_type, created_by_actor_id,
+       resolved_at, resolved_by_actor_type, resolved_by_actor_id,
+       response_authority, metadata_extra_json, resolution_decision, resolution_extra_json
+FROM session_gates
 WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
 `
 
@@ -140,9 +197,10 @@ func (q *Queries) GetSessionGate(ctx context.Context, arg GetSessionGateParams) 
 		&i.ResolvedAt,
 		&i.ResolvedByActorType,
 		&i.ResolvedByActorID,
-		&i.MetadataJson,
-		&i.ProgressJson,
-		&i.ResolutionJson,
+		&i.ResponseAuthority,
+		&i.MetadataExtraJson,
+		&i.ResolutionDecision,
+		&i.ResolutionExtraJson,
 	)
 	return i, err
 }
@@ -181,6 +239,130 @@ func (q *Queries) HasActiveSession(ctx context.Context, campaignID string) (int6
 	var has_active int64
 	err := row.Scan(&has_active)
 	return has_active, err
+}
+
+const listSessionGateEligibleParticipants = `-- name: ListSessionGateEligibleParticipants :many
+SELECT participant_id
+FROM session_gate_eligible_participants
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+ORDER BY position
+`
+
+type ListSessionGateEligibleParticipantsParams struct {
+	CampaignID string `json:"campaign_id"`
+	SessionID  string `json:"session_id"`
+	GateID     string `json:"gate_id"`
+}
+
+func (q *Queries) ListSessionGateEligibleParticipants(ctx context.Context, arg ListSessionGateEligibleParticipantsParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionGateEligibleParticipants, arg.CampaignID, arg.SessionID, arg.GateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var participant_id string
+		if err := rows.Scan(&participant_id); err != nil {
+			return nil, err
+		}
+		items = append(items, participant_id)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSessionGateOptions = `-- name: ListSessionGateOptions :many
+SELECT option_value
+FROM session_gate_options
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+ORDER BY position
+`
+
+type ListSessionGateOptionsParams struct {
+	CampaignID string `json:"campaign_id"`
+	SessionID  string `json:"session_id"`
+	GateID     string `json:"gate_id"`
+}
+
+func (q *Queries) ListSessionGateOptions(ctx context.Context, arg ListSessionGateOptionsParams) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionGateOptions, arg.CampaignID, arg.SessionID, arg.GateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []string{}
+	for rows.Next() {
+		var option_value string
+		if err := rows.Scan(&option_value); err != nil {
+			return nil, err
+		}
+		items = append(items, option_value)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listSessionGateResponses = `-- name: ListSessionGateResponses :many
+SELECT participant_id, decision, response_json, recorded_at, actor_type, actor_id
+FROM session_gate_responses
+WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
+ORDER BY participant_id
+`
+
+type ListSessionGateResponsesParams struct {
+	CampaignID string `json:"campaign_id"`
+	SessionID  string `json:"session_id"`
+	GateID     string `json:"gate_id"`
+}
+
+type ListSessionGateResponsesRow struct {
+	ParticipantID string        `json:"participant_id"`
+	Decision      string        `json:"decision"`
+	ResponseJson  []byte        `json:"response_json"`
+	RecordedAt    sql.NullInt64 `json:"recorded_at"`
+	ActorType     string        `json:"actor_type"`
+	ActorID       string        `json:"actor_id"`
+}
+
+func (q *Queries) ListSessionGateResponses(ctx context.Context, arg ListSessionGateResponsesParams) ([]ListSessionGateResponsesRow, error) {
+	rows, err := q.db.QueryContext(ctx, listSessionGateResponses, arg.CampaignID, arg.SessionID, arg.GateID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ListSessionGateResponsesRow{}
+	for rows.Next() {
+		var i ListSessionGateResponsesRow
+		if err := rows.Scan(
+			&i.ParticipantID,
+			&i.Decision,
+			&i.ResponseJson,
+			&i.RecordedAt,
+			&i.ActorType,
+			&i.ActorID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listSessionsByCampaign = `-- name: ListSessionsByCampaign :many
@@ -346,8 +528,8 @@ INSERT INTO session_gates (
     campaign_id, session_id, gate_id, gate_type, status, reason,
     created_at, created_by_actor_type, created_by_actor_id,
     resolved_at, resolved_by_actor_type, resolved_by_actor_id,
-    metadata_json, progress_json, resolution_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    response_authority, metadata_extra_json, resolution_decision, resolution_extra_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     gate_type = excluded.gate_type,
     status = excluded.status,
@@ -358,9 +540,10 @@ ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     resolved_at = excluded.resolved_at,
     resolved_by_actor_type = excluded.resolved_by_actor_type,
     resolved_by_actor_id = excluded.resolved_by_actor_id,
-    metadata_json = excluded.metadata_json,
-    progress_json = excluded.progress_json,
-    resolution_json = excluded.resolution_json
+    response_authority = excluded.response_authority,
+    metadata_extra_json = excluded.metadata_extra_json,
+    resolution_decision = excluded.resolution_decision,
+    resolution_extra_json = excluded.resolution_extra_json
 `
 
 type PutSessionGateParams struct {
@@ -376,9 +559,10 @@ type PutSessionGateParams struct {
 	ResolvedAt          sql.NullInt64  `json:"resolved_at"`
 	ResolvedByActorType sql.NullString `json:"resolved_by_actor_type"`
 	ResolvedByActorID   sql.NullString `json:"resolved_by_actor_id"`
-	MetadataJson        []byte         `json:"metadata_json"`
-	ProgressJson        []byte         `json:"progress_json"`
-	ResolutionJson      []byte         `json:"resolution_json"`
+	ResponseAuthority   string         `json:"response_authority"`
+	MetadataExtraJson   []byte         `json:"metadata_extra_json"`
+	ResolutionDecision  string         `json:"resolution_decision"`
+	ResolutionExtraJson []byte         `json:"resolution_extra_json"`
 }
 
 func (q *Queries) PutSessionGate(ctx context.Context, arg PutSessionGateParams) error {
@@ -395,9 +579,94 @@ func (q *Queries) PutSessionGate(ctx context.Context, arg PutSessionGateParams) 
 		arg.ResolvedAt,
 		arg.ResolvedByActorType,
 		arg.ResolvedByActorID,
-		arg.MetadataJson,
-		arg.ProgressJson,
-		arg.ResolutionJson,
+		arg.ResponseAuthority,
+		arg.MetadataExtraJson,
+		arg.ResolutionDecision,
+		arg.ResolutionExtraJson,
+	)
+	return err
+}
+
+const putSessionGateEligibleParticipant = `-- name: PutSessionGateEligibleParticipant :exec
+INSERT INTO session_gate_eligible_participants (
+    campaign_id, session_id, gate_id, position, participant_id
+) VALUES (?, ?, ?, ?, ?)
+`
+
+type PutSessionGateEligibleParticipantParams struct {
+	CampaignID    string `json:"campaign_id"`
+	SessionID     string `json:"session_id"`
+	GateID        string `json:"gate_id"`
+	Position      int64  `json:"position"`
+	ParticipantID string `json:"participant_id"`
+}
+
+func (q *Queries) PutSessionGateEligibleParticipant(ctx context.Context, arg PutSessionGateEligibleParticipantParams) error {
+	_, err := q.db.ExecContext(ctx, putSessionGateEligibleParticipant,
+		arg.CampaignID,
+		arg.SessionID,
+		arg.GateID,
+		arg.Position,
+		arg.ParticipantID,
+	)
+	return err
+}
+
+const putSessionGateOption = `-- name: PutSessionGateOption :exec
+INSERT INTO session_gate_options (
+    campaign_id, session_id, gate_id, position, option_value
+) VALUES (?, ?, ?, ?, ?)
+`
+
+type PutSessionGateOptionParams struct {
+	CampaignID  string `json:"campaign_id"`
+	SessionID   string `json:"session_id"`
+	GateID      string `json:"gate_id"`
+	Position    int64  `json:"position"`
+	OptionValue string `json:"option_value"`
+}
+
+func (q *Queries) PutSessionGateOption(ctx context.Context, arg PutSessionGateOptionParams) error {
+	_, err := q.db.ExecContext(ctx, putSessionGateOption,
+		arg.CampaignID,
+		arg.SessionID,
+		arg.GateID,
+		arg.Position,
+		arg.OptionValue,
+	)
+	return err
+}
+
+const putSessionGateResponse = `-- name: PutSessionGateResponse :exec
+INSERT INTO session_gate_responses (
+    campaign_id, session_id, gate_id, participant_id, decision,
+    response_json, recorded_at, actor_type, actor_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+`
+
+type PutSessionGateResponseParams struct {
+	CampaignID    string        `json:"campaign_id"`
+	SessionID     string        `json:"session_id"`
+	GateID        string        `json:"gate_id"`
+	ParticipantID string        `json:"participant_id"`
+	Decision      string        `json:"decision"`
+	ResponseJson  []byte        `json:"response_json"`
+	RecordedAt    sql.NullInt64 `json:"recorded_at"`
+	ActorType     string        `json:"actor_type"`
+	ActorID       string        `json:"actor_id"`
+}
+
+func (q *Queries) PutSessionGateResponse(ctx context.Context, arg PutSessionGateResponseParams) error {
+	_, err := q.db.ExecContext(ctx, putSessionGateResponse,
+		arg.CampaignID,
+		arg.SessionID,
+		arg.GateID,
+		arg.ParticipantID,
+		arg.Decision,
+		arg.ResponseJson,
+		arg.RecordedAt,
+		arg.ActorType,
+		arg.ActorID,
 	)
 	return err
 }

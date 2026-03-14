@@ -17,6 +17,51 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type activeSessionGateControlState struct {
+	actor   storage.ParticipantRecord
+	session *storage.SessionRecord
+	gate    *storage.SessionGate
+}
+
+func (a sessionApplication) LoadActiveSessionGateControlState(
+	ctx context.Context,
+	campaignID string,
+	capability domainauthz.Capability,
+	requireSessionAction bool,
+) (activeSessionGateControlState, error) {
+	if a.stores.Campaign == nil {
+		return activeSessionGateControlState{}, status.Error(codes.Internal, "campaign store is not configured")
+	}
+
+	campaignRecord, err := a.stores.Campaign.Get(ctx, campaignID)
+	if err != nil {
+		return activeSessionGateControlState{}, err
+	}
+	actor, err := requirePolicyActorWithDependencies(ctx, a.auth, capability, campaignRecord)
+	if err != nil {
+		return activeSessionGateControlState{}, err
+	}
+	if requireSessionAction {
+		if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpSessionAction); err != nil {
+			return activeSessionGateControlState{}, err
+		}
+	}
+
+	activeSessionState, err := a.GetActiveSessionContext(ctx, campaignID)
+	if err != nil {
+		return activeSessionGateControlState{}, err
+	}
+	if activeSessionState.session == nil {
+		return activeSessionGateControlState{}, status.Error(codes.FailedPrecondition, "campaign has no active session")
+	}
+
+	return activeSessionGateControlState{
+		actor:   actor,
+		session: activeSessionState.session,
+		gate:    activeSessionState.gate,
+	}, nil
+}
+
 func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID string, in *campaignv1.OpenSessionGateRequest) (storage.SessionGate, error) {
 	sessionID, err := validate.RequiredID(in.GetSessionId(), "session id")
 	if err != nil {
@@ -31,7 +76,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -69,24 +114,22 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		Reason:   reason,
 		Metadata: metadata,
 	}
-	return executeSessionGateCommandAndLoad(
+	if err := a.gateCommands.Execute(
 		ctx,
-		a.write,
-		a.applier,
 		commandTypeSessionGateOpen,
 		campaignID,
 		sessionID,
 		gateID,
 		payload,
 		"session.gate_open",
-		func(ctx context.Context) (storage.SessionGate, error) {
-			gate, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
-			if err != nil {
-				return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
-			}
-			return gate, nil
-		},
-	)
+	); err != nil {
+		return storage.SessionGate{}, err
+	}
+	gate, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
+	if err != nil {
+		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
+	}
+	return gate, nil
 }
 
 func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID string, in *campaignv1.ResolveSessionGateRequest) (storage.SessionGate, error) {
@@ -103,7 +146,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -127,24 +170,22 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		Decision:   strings.TrimSpace(in.GetDecision()),
 		Resolution: resolution,
 	}
-	return executeSessionGateCommandAndLoad(
+	if err := a.gateCommands.Execute(
 		ctx,
-		a.write,
-		a.applier,
 		commandTypeSessionGateResolve,
 		campaignID,
 		sessionID,
 		gateID,
 		payload,
 		"session.gate_resolve",
-		func(ctx context.Context) (storage.SessionGate, error) {
-			updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
-			if err != nil {
-				return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
-			}
-			return updated, nil
-		},
-	)
+	); err != nil {
+		return storage.SessionGate{}, err
+	}
+	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
+	if err != nil {
+		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
+	}
+	return updated, nil
 }
 
 func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID string, in *campaignv1.AbandonSessionGateRequest) (storage.SessionGate, error) {
@@ -161,7 +202,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -179,22 +220,20 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 		GateID: ids.GateID(gateID),
 		Reason: session.NormalizeGateReason(in.GetReason()),
 	}
-	return executeSessionGateCommandAndLoad(
+	if err := a.gateCommands.Execute(
 		ctx,
-		a.write,
-		a.applier,
 		commandTypeSessionGateAbandon,
 		campaignID,
 		sessionID,
 		gateID,
 		payload,
 		"session.gate_abandon",
-		func(ctx context.Context) (storage.SessionGate, error) {
-			updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
-			if err != nil {
-				return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
-			}
-			return updated, nil
-		},
-	)
+	); err != nil {
+		return storage.SessionGate{}, err
+	}
+	updated, err := a.stores.SessionGate.GetSessionGate(ctx, campaignID, sessionID, gateID)
+	if err != nil {
+		return storage.SessionGate{}, grpcerror.Internal("load session gate", err)
+	}
+	return updated, nil
 }

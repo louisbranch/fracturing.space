@@ -443,14 +443,24 @@ func TestRespondToCommunicationGateUsesParticipantIdentityAndRecordsPayload(t *t
 		},
 	}
 	gateStore.gates["c1:s1:gate-1"] = storage.SessionGate{
-		CampaignID:   "c1",
-		SessionID:    "s1",
-		GateID:       "gate-1",
-		GateType:     session.GateTypeReadyCheck,
-		Status:       session.GateStatusOpen,
-		MetadataJSON: []byte(`{"eligible_participant_ids":["part-1"]}`),
-		ProgressJSON: []byte(`{"eligible_count":1,"responded_count":0,"pending_count":1,"all_responded":false}`),
-		CreatedAt:    now,
+		CampaignID: "c1",
+		SessionID:  "s1",
+		GateID:     "gate-1",
+		GateType:   session.GateTypeReadyCheck,
+		Status:     session.GateStatusOpen,
+		Metadata:   map[string]any{"eligible_participant_ids": []string{"part-1"}},
+		Progress: &session.GateProgress{
+			WorkflowType:           session.GateTypeReadyCheck,
+			ResponseAuthority:      session.GateResponseAuthorityParticipant,
+			EligibleParticipantIDs: []string{"part-1"},
+			Options:                []string{"ready", "wait"},
+			EligibleCount:          1,
+			PendingCount:           1,
+			PendingParticipantIDs:  []string{"part-1"},
+			ResolutionState:        session.GateResolutionStatePendingResponses,
+			ResolutionReason:       "waiting_on_participants",
+		},
+		CreatedAt: now,
 	}
 
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
@@ -582,6 +592,154 @@ func TestResolveGMHandoffUsesManagerAccessAndClearsActiveGate(t *testing.T) {
 	}
 	if resp.GetContext().GetActiveSessionGate() != nil {
 		t.Fatalf("expected active session gate to be cleared, got %+v", resp.GetContext().GetActiveSessionGate())
+	}
+	if domain.lastCommand.ActorType != command.ActorTypeParticipant {
+		t.Fatalf("command actor type = %q, want %q", domain.lastCommand.ActorType, command.ActorTypeParticipant)
+	}
+	if domain.lastCommand.ActorID != "manager-1" {
+		t.Fatalf("command actor id = %q, want %q", domain.lastCommand.ActorID, "manager-1")
+	}
+}
+
+func TestAbandonCommunicationGateUsesManagerAccessAndClearsActiveGate(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	characterStore := newFakeCharacterStore()
+	sessionStore := newFakeSessionStore()
+	gateStore := newFakeSessionGateStore()
+	sceneStore := newFakeCommunicationSceneStore()
+	sceneCharacterStore := newFakeCommunicationSceneCharacterStore()
+	participantStore := sessionManagerParticipantStore("c1")
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 3, 9, 16, 15, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
+	}
+	sessionStore.activeSession["c1"] = "s1"
+	gateStore.gates["c1:s1:gate-1"] = storage.SessionGate{
+		CampaignID: "c1",
+		SessionID:  "s1",
+		GateID:     "gate-1",
+		GateType:   "choice",
+		Status:     session.GateStatusOpen,
+		CreatedAt:  now,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("session.gate_abandoned"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "manager-1",
+			SessionID:   "s1",
+			EntityType:  "session_gate",
+			EntityID:    "gate-1",
+			PayloadJSON: []byte(`{"gate_id":"gate-1","reason":"hold for discussion"}`),
+		}),
+	}}
+
+	svc := &CommunicationService{
+		stores: Stores{
+			Campaign:       campaignStore,
+			Character:      characterStore,
+			Session:        sessionStore,
+			SessionGate:    gateStore,
+			Scene:          sceneStore,
+			SceneCharacter: sceneCharacterStore,
+			Participant:    participantStore,
+			Event:          eventStore,
+			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+	}
+
+	resp, err := svc.AbandonCommunicationGate(contextWithParticipantID("manager-1"), &campaignv1.AbandonCommunicationGateRequest{
+		CampaignId: "c1",
+		Reason:     "hold for discussion",
+	})
+	if err != nil {
+		t.Fatalf("AbandonCommunicationGate returned error: %v", err)
+	}
+	if resp.GetContext().GetActiveSessionGate() != nil {
+		t.Fatalf("expected active session gate to be cleared, got %+v", resp.GetContext().GetActiveSessionGate())
+	}
+	if domain.lastCommand.Type != commandTypeSessionGateAbandon {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandTypeSessionGateAbandon)
+	}
+	if domain.lastCommand.ActorType != command.ActorTypeParticipant {
+		t.Fatalf("command actor type = %q, want %q", domain.lastCommand.ActorType, command.ActorTypeParticipant)
+	}
+	if domain.lastCommand.ActorID != "manager-1" {
+		t.Fatalf("command actor id = %q, want %q", domain.lastCommand.ActorID, "manager-1")
+	}
+}
+
+func TestAbandonGMHandoffUsesManagerAccessAndClearsActiveGate(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	characterStore := newFakeCharacterStore()
+	sessionStore := newFakeSessionStore()
+	gateStore := newFakeSessionGateStore()
+	sceneStore := newFakeCommunicationSceneStore()
+	sceneCharacterStore := newFakeCommunicationSceneCharacterStore()
+	participantStore := sessionManagerParticipantStore("c1")
+	eventStore := newFakeEventStore()
+	now := time.Date(2026, 3, 9, 16, 20, 0, 0, time.UTC)
+
+	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
+	}
+	sessionStore.activeSession["c1"] = "s1"
+	gateStore.gates["c1:s1:gate-1"] = storage.SessionGate{
+		CampaignID: "c1",
+		SessionID:  "s1",
+		GateID:     "gate-1",
+		GateType:   communicationGMHandoffGateType,
+		Status:     session.GateStatusOpen,
+		CreatedAt:  now,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "c1",
+			Type:        event.Type("session.gate_abandoned"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "manager-1",
+			SessionID:   "s1",
+			EntityType:  "session_gate",
+			EntityID:    "gate-1",
+			PayloadJSON: []byte(`{"gate_id":"gate-1","reason":"gm unavailable"}`),
+		}),
+	}}
+
+	svc := &CommunicationService{
+		stores: Stores{
+			Campaign:       campaignStore,
+			Character:      characterStore,
+			Session:        sessionStore,
+			SessionGate:    gateStore,
+			Scene:          sceneStore,
+			SceneCharacter: sceneCharacterStore,
+			Participant:    participantStore,
+			Event:          eventStore,
+			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+	}
+
+	resp, err := svc.AbandonGMHandoff(contextWithParticipantID("manager-1"), &campaignv1.AbandonGMHandoffRequest{
+		CampaignId: "c1",
+		Reason:     "gm unavailable",
+	})
+	if err != nil {
+		t.Fatalf("AbandonGMHandoff returned error: %v", err)
+	}
+	if resp.GetContext().GetActiveSessionGate() != nil {
+		t.Fatalf("expected active session gate to be cleared, got %+v", resp.GetContext().GetActiveSessionGate())
+	}
+	if domain.lastCommand.Type != commandTypeSessionGateAbandon {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandTypeSessionGateAbandon)
 	}
 	if domain.lastCommand.ActorType != command.ActorTypeParticipant {
 		t.Fatalf("command actor type = %q, want %q", domain.lastCommand.ActorType, command.ActorTypeParticipant)

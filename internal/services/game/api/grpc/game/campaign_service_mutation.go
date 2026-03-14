@@ -6,6 +6,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -52,7 +53,7 @@ func (s *CampaignService) UpdateCampaign(ctx context.Context, in *campaignv1.Upd
 		return nil, err
 	}
 
-	return &campaignv1.UpdateCampaignResponse{Campaign: campaignToProto(updated)}, nil
+	return &campaignv1.UpdateCampaignResponse{Campaign: campaigntransport.CampaignToProto(updated)}, nil
 }
 
 // EndCampaign marks a campaign as completed.
@@ -71,7 +72,7 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 		return nil, err
 	}
 
-	return &campaignv1.EndCampaignResponse{Campaign: campaignToProto(updated)}, nil
+	return &campaignv1.EndCampaignResponse{Campaign: campaigntransport.CampaignToProto(updated)}, nil
 }
 
 // ArchiveCampaign archives a campaign.
@@ -90,7 +91,7 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 		return nil, err
 	}
 
-	return &campaignv1.ArchiveCampaignResponse{Campaign: campaignToProto(updated)}, nil
+	return &campaignv1.ArchiveCampaignResponse{Campaign: campaigntransport.CampaignToProto(updated)}, nil
 }
 
 // RestoreCampaign restores an archived campaign to draft state.
@@ -109,7 +110,7 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 		return nil, err
 	}
 
-	return &campaignv1.RestoreCampaignResponse{Campaign: campaignToProto(updated)}, nil
+	return &campaignv1.RestoreCampaignResponse{Campaign: campaigntransport.CampaignToProto(updated)}, nil
 }
 
 // SetCampaignCover updates the selected built-in campaign cover.
@@ -133,7 +134,7 @@ func (s *CampaignService) SetCampaignCover(ctx context.Context, in *campaignv1.S
 		return nil, err
 	}
 
-	return &campaignv1.SetCampaignCoverResponse{Campaign: campaignToProto(updated)}, nil
+	return &campaignv1.SetCampaignCoverResponse{Campaign: campaigntransport.CampaignToProto(updated)}, nil
 }
 
 // SetCampaignAIBinding binds an AI agent to a campaign.
@@ -155,7 +156,7 @@ func (s *CampaignService) SetCampaignAIBinding(ctx context.Context, in *campaign
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.SetCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
+	return &campaignv1.SetCampaignAIBindingResponse{Campaign: campaigntransport.CampaignToProto(updated)}, nil
 }
 
 // ClearCampaignAIBinding clears the AI agent binding from a campaign.
@@ -173,5 +174,5 @@ func (s *CampaignService) ClearCampaignAIBinding(ctx context.Context, in *campai
 	if err != nil {
 		return nil, err
 	}
-	return &campaignv1.ClearCampaignAIBindingResponse{Campaign: campaignToProto(updated)}, nil
+	return &campaignv1.ClearCampaignAIBindingResponse{Campaign: campaigntransport.CampaignToProto(updated)}, nil
 }

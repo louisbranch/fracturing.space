@@ -7,6 +7,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -30,7 +31,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := requirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
+	policyActor, err := requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
@@ -60,18 +61,18 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err := validate.MaxLength(name, "name", validate.MaxNameLen); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	role := participantRoleFromProto(in.GetRole())
+	role := participanttransport.RoleFromProto(in.GetRole())
 	if role == participant.RoleUnspecified {
 		return storage.ParticipantRecord{}, apperrors.New(apperrors.CodeParticipantInvalidRole, "participant role is required")
 	}
-	controller := controllerFromProto(in.GetController())
+	controller := participanttransport.ControllerFromProto(in.GetController())
 	if controller == participant.ControllerUnspecified {
 		controller = participant.ControllerHuman
 	}
 	if disallowsHumanGMForCampaignGMMode(campaignRecord.GmMode, role, controller) {
 		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "ai gm campaigns cannot create human gm participants")
 	}
-	access := campaignAccessFromProto(in.GetCampaignAccess())
+	access := participanttransport.CampaignAccessFromProto(in.GetCampaignAccess())
 	if access == participant.CampaignAccessUnspecified {
 		access = participant.CampaignAccessMember
 	} else {

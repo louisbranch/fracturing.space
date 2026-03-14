@@ -280,15 +280,25 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 		CampaignID:         "camp-gates",
 		SessionID:          "sess-1",
 		GateID:             "gate-1",
-		GateType:           "prompt",
+		GateType:           session.GateTypeReadyCheck,
 		Status:             session.GateStatusOpen,
 		Reason:             "Need consent",
 		CreatedAt:          now,
 		CreatedByActorType: "system",
 		CreatedByActorID:   "",
-		MetadataJSON:       []byte("{\"flag\":true}"),
-		ProgressJSON:       []byte("{\"responded_count\":1}"),
-		ResolutionJSON:     []byte("{}"),
+		Metadata:           map[string]any{"eligible_participant_ids": []string{"p1", "p2"}},
+		Progress: &session.GateProgress{
+			WorkflowType:           session.GateTypeReadyCheck,
+			ResponseAuthority:      session.GateResponseAuthorityParticipant,
+			EligibleParticipantIDs: []string{"p1", "p2"},
+			Options:                []string{"ready", "wait"},
+			EligibleCount:          2,
+			PendingCount:           2,
+			PendingParticipantIDs:  []string{"p1", "p2"},
+			ResolutionState:        session.GateResolutionStatePendingResponses,
+			ResolutionReason:       "waiting_on_participants",
+		},
+		Resolution: map[string]any{"decision": "pending"},
 	}
 
 	if err := store.PutSessionGate(context.Background(), gate); err != nil {
@@ -302,11 +312,12 @@ func TestSessionGateAndSpotlight(t *testing.T) {
 	if gotGate.GateType != gate.GateType || gotGate.Status != gate.Status {
 		t.Fatalf("expected session gate to match")
 	}
-	if string(gotGate.MetadataJSON) != string(gate.MetadataJSON) {
-		t.Fatalf("expected session gate metadata to match")
+	eligible, ok := gotGate.Metadata["eligible_participant_ids"].([]any)
+	if !ok || len(eligible) != 2 || eligible[0] != "p1" || eligible[1] != "p2" {
+		t.Fatalf("expected session gate metadata to match, got %#v", gotGate.Metadata)
 	}
-	if string(gotGate.ProgressJSON) != string(gate.ProgressJSON) {
-		t.Fatalf("expected session gate progress to match")
+	if gotGate.Progress == nil || gotGate.Progress.PendingCount != 2 || gotGate.Progress.EligibleCount != 2 {
+		t.Fatalf("expected session gate progress to match, got %#v", gotGate.Progress)
 	}
 
 	openGate, err := store.GetOpenSessionGate(context.Background(), gate.CampaignID, gate.SessionID)

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,7 +27,7 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 		return nil, err
 	}
 
-	return &campaignv1.CreateCharacterResponse{Character: characterToProto(created)}, nil
+	return &campaignv1.CreateCharacterResponse{Character: charactertransport.CharacterToProto(created)}, nil
 }
 
 // UpdateCharacter updates a character's metadata.
@@ -45,7 +46,7 @@ func (s *CharacterService) UpdateCharacter(ctx context.Context, in *campaignv1.U
 		return nil, err
 	}
 
-	return &campaignv1.UpdateCharacterResponse{Character: characterToProto(updated)}, nil
+	return &campaignv1.UpdateCharacterResponse{Character: charactertransport.CharacterToProto(updated)}, nil
 }
 
 // DeleteCharacter deletes a character.
@@ -64,7 +65,7 @@ func (s *CharacterService) DeleteCharacter(ctx context.Context, in *campaignv1.D
 		return nil, err
 	}
 
-	return &campaignv1.DeleteCharacterResponse{Character: characterToProto(ch)}, nil
+	return &campaignv1.DeleteCharacterResponse{Character: charactertransport.CharacterToProto(ch)}, nil
 }
 
 // SetDefaultControl assigns a campaign-scoped default controller for a character.
@@ -156,6 +157,6 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 	}
 
 	return &campaignv1.PatchCharacterProfileResponse{
-		Profile: daggerheartProfileToProto(campaignID, characterID, dhProfile),
+		Profile: charactertransport.DaggerheartProfileToProto(campaignID, characterID, dhProfile),
 	}, nil
 }

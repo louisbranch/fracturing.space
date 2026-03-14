@@ -263,6 +263,129 @@ func TestBuildInitialGateProgressRejectsInvalidMetadataJSON(t *testing.T) {
 	}
 }
 
+func TestMarshalGateMetadataJSONEncodesNormalizedWorkflowMetadata(t *testing.T) {
+	t.Parallel()
+
+	metadataJSON, err := MarshalGateMetadataJSON(GateTypeVote, map[string]any{
+		"eligible_participant_ids": []any{"p2", "p1", "p2"},
+		"options":                  []any{"south", "north", "south"},
+		"response_authority":       "",
+		"audience":                 "table",
+	})
+	if err != nil {
+		t.Fatalf("MarshalGateMetadataJSON() error = %v", err)
+	}
+
+	metadata, err := DecodeGateMetadataMap(GateTypeVote, metadataJSON)
+	if err != nil {
+		t.Fatalf("DecodeGateMetadataMap() error = %v", err)
+	}
+	if got := metadata["eligible_participant_ids"]; len(got.([]any)) != 2 || got.([]any)[0] != "p1" || got.([]any)[1] != "p2" {
+		t.Fatalf("eligible_participant_ids = %#v", got)
+	}
+	if got := metadata["options"]; len(got.([]any)) != 2 || got.([]any)[0] != "north" || got.([]any)[1] != "south" {
+		t.Fatalf("options = %#v", got)
+	}
+	if got := metadata["response_authority"]; got != GateResponseAuthorityParticipant {
+		t.Fatalf("response_authority = %#v, want %q", got, GateResponseAuthorityParticipant)
+	}
+	if got := metadata["audience"]; got != "table" {
+		t.Fatalf("audience = %#v, want table", got)
+	}
+}
+
+func TestDecodeGateProgressMapRecomputesDerivedWorkflowFields(t *testing.T) {
+	t.Parallel()
+
+	metadataJSON, err := MarshalGateMetadataJSON(GateTypeReadyCheck, map[string]any{
+		"eligible_participant_ids": []string{"p1", "p2"},
+	})
+	if err != nil {
+		t.Fatalf("MarshalGateMetadataJSON() error = %v", err)
+	}
+
+	progressJSON, err := BuildInitialGateProgress(GateTypeReadyCheck, metadataJSON)
+	if err != nil {
+		t.Fatalf("BuildInitialGateProgress() error = %v", err)
+	}
+	progressJSON, err = RecordGateResponseProgress(
+		GateTypeReadyCheck,
+		metadataJSON,
+		progressJSON,
+		GateResponseRecordedPayload{
+			GateID:        ids.GateID("gate-1"),
+			ParticipantID: ids.ParticipantID("p1"),
+			Decision:      "wait",
+		},
+		time.Date(2026, 3, 9, 12, 0, 0, 0, time.UTC),
+		"participant",
+		"p1",
+	)
+	if err != nil {
+		t.Fatalf("RecordGateResponseProgress() error = %v", err)
+	}
+
+	progressMap, err := DecodeGateProgressMap(GateTypeReadyCheck, metadataJSON, progressJSON)
+	if err != nil {
+		t.Fatalf("DecodeGateProgressMap() error = %v", err)
+	}
+	if got := progressMap["workflow_type"]; got != GateTypeReadyCheck {
+		t.Fatalf("workflow_type = %#v, want %q", got, GateTypeReadyCheck)
+	}
+	if got := progressMap["response_authority"]; got != GateResponseAuthorityParticipant {
+		t.Fatalf("response_authority = %#v, want %q", got, GateResponseAuthorityParticipant)
+	}
+	if got := progressMap["responded_count"]; got != float64(1) {
+		t.Fatalf("responded_count = %#v, want 1", got)
+	}
+	if got := progressMap["pending_count"]; got != float64(1) {
+		t.Fatalf("pending_count = %#v, want 1", got)
+	}
+	if got := progressMap["wait_count"]; got != float64(1) {
+		t.Fatalf("wait_count = %#v, want 1", got)
+	}
+	if got := progressMap["resolution_state"]; got != GateResolutionStateBlocked {
+		t.Fatalf("resolution_state = %#v, want %q", got, GateResolutionStateBlocked)
+	}
+	if got := progressMap["suggested_decision"]; got != "wait" {
+		t.Fatalf("suggested_decision = %#v, want wait", got)
+	}
+}
+
+func TestMarshalAndDecodeGateResolutionJSON(t *testing.T) {
+	t.Parallel()
+
+	resolutionJSON, err := MarshalGateResolutionJSON("ready", map[string]any{
+		"note":  "table agreed",
+		"count": 2,
+	})
+	if err != nil {
+		t.Fatalf("MarshalGateResolutionJSON() error = %v", err)
+	}
+
+	resolution, err := DecodeGateResolutionMap(resolutionJSON)
+	if err != nil {
+		t.Fatalf("DecodeGateResolutionMap() error = %v", err)
+	}
+	if got := resolution["decision"]; got != "ready" {
+		t.Fatalf("decision = %#v, want ready", got)
+	}
+	if got := resolution["note"]; got != "table agreed" {
+		t.Fatalf("note = %#v, want table agreed", got)
+	}
+	if got := resolution["count"]; got != float64(2) {
+		t.Fatalf("count = %#v, want 2", got)
+	}
+
+	emptyResolutionJSON, err := MarshalGateResolutionJSON(" ", nil)
+	if err != nil {
+		t.Fatalf("MarshalGateResolutionJSON(empty) error = %v", err)
+	}
+	if len(emptyResolutionJSON) != 0 {
+		t.Fatalf("empty resolution JSON = %s, want nil/empty", string(emptyResolutionJSON))
+	}
+}
+
 func TestRecordGateResponseProgressVoteTracksLeadingOptionsAndTieState(t *testing.T) {
 	t.Parallel()
 

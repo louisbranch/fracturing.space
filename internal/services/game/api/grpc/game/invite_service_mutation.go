@@ -4,6 +4,7 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -44,7 +45,7 @@ func (s *InviteService) ClaimInvite(ctx context.Context, in *campaignv1.ClaimInv
 
 	return &campaignv1.ClaimInviteResponse{
 		Invite:      inviteToProto(inv),
-		Participant: participantToProto(participantRecord),
+		Participant: participanttransport.ParticipantToProto(participantRecord),
 	}, nil
 }
 

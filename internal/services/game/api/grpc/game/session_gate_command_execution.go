@@ -13,33 +13,39 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 )
 
-// executeSessionGateCommandAndLoad centralizes the canonical session-gate write
-// path so communication and session transport do not drift in payload
-// marshalling, actor attribution, or post-write load behavior.
-func executeSessionGateCommandAndLoad[T any](
+// sessionGateCommandExecutor centralizes the canonical session-gate write path
+// so session- and communication-owned handlers share one orchestration seam.
+type sessionGateCommandExecutor struct {
+	write   domainwriteexec.WritePath
+	applier projection.Applier
+}
+
+func newSessionGateCommandExecutor(write domainwriteexec.WritePath, applier projection.Applier) sessionGateCommandExecutor {
+	return sessionGateCommandExecutor{
+		write:   write,
+		applier: applier,
+	}
+}
+
+func (e sessionGateCommandExecutor) Execute(
 	ctx context.Context,
-	write domainwriteexec.WritePath,
-	applier projection.Applier,
 	commandType command.Type,
 	campaignID string,
 	sessionID string,
 	gateID string,
 	payload any,
 	requireEventsLabel string,
-	load func(context.Context) (T, error),
-) (T, error) {
-	var zero T
-
+) error {
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return zero, grpcerror.Internal("encode payload", err)
+		return grpcerror.Internal("encode payload", err)
 	}
 
 	actorID, actorType := resolveCommandActor(ctx)
 	_, err = executeAndApplyDomainCommand(
 		ctx,
-		write,
-		applier,
+		e.write,
+		e.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
 			Type:         commandType,
@@ -54,7 +60,31 @@ func executeSessionGateCommandAndLoad[T any](
 		}),
 		domainwrite.RequireEvents(requireEventsLabel+" did not emit an event"),
 	)
-	if err != nil {
+	return err
+}
+
+func executeSessionGateCommandAndLoad[T any](
+	ctx context.Context,
+	executor sessionGateCommandExecutor,
+	commandType command.Type,
+	campaignID string,
+	sessionID string,
+	gateID string,
+	payload any,
+	requireEventsLabel string,
+	load func(context.Context) (T, error),
+) (T, error) {
+	var zero T
+
+	if err := executor.Execute(
+		ctx,
+		commandType,
+		campaignID,
+		sessionID,
+		gateID,
+		payload,
+		requireEventsLabel,
+	); err != nil {
 		return zero, err
 	}
 

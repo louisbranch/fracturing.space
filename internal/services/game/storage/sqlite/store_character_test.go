@@ -126,3 +126,56 @@ func TestCharacterListPaging(t *testing.T) {
 		t.Fatalf("expected empty next page token, got %s", second.NextPageToken)
 	}
 }
+
+func TestCharacterListByOwnerParticipant(t *testing.T) {
+	store := openTestStore(t)
+	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
+	seedCampaign(t, store, "camp-owned", now)
+	seedParticipant(t, store, "camp-owned", "part-1", "user-1", now)
+	seedParticipant(t, store, "camp-owned", "part-2", "user-2", now)
+
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
+		ID:                 "char-b",
+		CampaignID:         "camp-owned",
+		OwnerParticipantID: "part-1",
+		Name:               "Second",
+		Kind:               character.KindPC,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}); err != nil {
+		t.Fatalf("put character b: %v", err)
+	}
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
+		ID:                 "char-a",
+		CampaignID:         "camp-owned",
+		OwnerParticipantID: "part-1",
+		Name:               "First",
+		Kind:               character.KindPC,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}); err != nil {
+		t.Fatalf("put character a: %v", err)
+	}
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
+		ID:                 "char-c",
+		CampaignID:         "camp-owned",
+		OwnerParticipantID: "part-2",
+		Name:               "Other",
+		Kind:               character.KindPC,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}); err != nil {
+		t.Fatalf("put character c: %v", err)
+	}
+
+	characters, err := store.ListCharactersByOwnerParticipant(context.Background(), "camp-owned", "part-1")
+	if err != nil {
+		t.Fatalf("list characters by owner: %v", err)
+	}
+	if len(characters) != 2 {
+		t.Fatalf("expected 2 owned characters, got %d", len(characters))
+	}
+	if characters[0].ID != "char-a" || characters[1].ID != "char-b" {
+		t.Fatalf("unexpected owner character order: %#v", characters)
+	}
+}
