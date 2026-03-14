@@ -76,8 +76,15 @@ func TestManifest_AllRegisteredCommandsAreCoveredByManifest(t *testing.T) {
 			covered[ct] = struct{}{}
 		}
 	}
+	exempt := map[command.Type]struct{}{
+		commandTypeCharacterProfileReplace: {},
+		commandTypeCharacterProfileDelete:  {},
+	}
 
 	for _, def := range daggerheartCommandDefinitions {
+		if _, ok := exempt[def.Type]; ok {
+			continue
+		}
 		if _, ok := covered[def.Type]; !ok {
 			t.Errorf("command %s is registered but not referenced by any mechanic in the manifest", def.Type)
 		}

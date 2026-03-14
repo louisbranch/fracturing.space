@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -29,6 +30,10 @@ const (
 // Policy is intentionally namespace-driven so new command families must be
 // reviewed and classified once, then inherited by all commands in that family.
 func ActiveSessionPolicyForCommandType(cmdType command.Type) (ActiveSessionCommandPolicy, bool) {
+	switch cmdType {
+	case commandids.DaggerheartCharacterProfileReplace, commandids.DaggerheartCharacterProfileDelete:
+		return ActiveSessionCommandPolicyBlocked, true
+	}
 	switch commandNamespace(cmdType) {
 	case "campaign", "participant", "invite", "character":
 		return ActiveSessionCommandPolicyBlocked, true

@@ -31,6 +31,4 @@ type State struct {
 	OwnerParticipantID ids.ParticipantID
 	// ParticipantID stores controller assignment for operational gameplay control.
 	ParticipantID ids.ParticipantID
-	// SystemProfile carries system-specific structured data for mechanics systems.
-	SystemProfile map[string]any
 }

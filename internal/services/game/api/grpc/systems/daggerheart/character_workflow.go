@@ -44,7 +44,7 @@ func (CreationWorkflowProvider) GetProgress(ctx context.Context, deps workflow.C
 		profile = storage.DaggerheartCharacterProfile{CampaignID: campaignContext.ID, CharacterID: characterID}
 	}
 
-	progress := daggerheart.EvaluateCreationProgress(creationProfileFromStorage(profile))
+	progress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
 	return progressFromDaggerheart(progress), nil
 }
 
@@ -81,7 +81,7 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Cre
 		profile = ensureProfileDefaults(profile, characterRecord.Kind)
 	}
 
-	currentProgress := daggerheart.EvaluateCreationProgress(creationProfileFromStorage(profile))
+	currentProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
 	if currentProgress.Ready {
 		return nil, workflow.Progress{}, status.Error(codes.FailedPrecondition, "character creation workflow is already complete")
 	}
@@ -102,11 +102,11 @@ func (CreationWorkflowProvider) ApplyStep(ctx context.Context, deps workflow.Cre
 		return nil, workflow.Progress{}, err
 	}
 
-	if err := deps.ExecuteProfileUpdate(ctx, campaignContext, characterID, SystemProfileMap(profile)); err != nil {
+	if err := deps.ExecuteProfileReplace(ctx, campaignContext, characterID, daggerheart.CharacterProfileFromStorage(profile)); err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
-	nextProgress := daggerheart.EvaluateCreationProgress(creationProfileFromStorage(profile))
+	nextProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
 	return deps.ProfileToProto(campaignContext.ID, characterID, profile), progressFromDaggerheart(nextProgress), nil
 }
 
@@ -148,7 +148,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 
 	for idx, stepInput := range steps {
 		expectedStep := int32(idx + 1)
-		currentProgress := daggerheart.EvaluateCreationProgress(creationProfileFromStorage(profile))
+		currentProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
 		if currentProgress.Ready {
 			return nil, workflow.Progress{}, status.Error(codes.FailedPrecondition, "character creation workflow is already complete")
 		}
@@ -170,7 +170,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 		}
 	}
 
-	finalProgress := daggerheart.EvaluateCreationProgress(creationProfileFromStorage(profile))
+	finalProgress := daggerheart.EvaluateCreationProgress(daggerheart.CharacterProfileFromStorage(profile).CreationProfile())
 	if !finalProgress.Ready {
 		if len(finalProgress.UnmetReasons) > 0 {
 			return nil, workflow.Progress{}, status.Errorf(codes.FailedPrecondition, "character creation workflow is incomplete: %s", finalProgress.UnmetReasons[0])
@@ -178,7 +178,7 @@ func (CreationWorkflowProvider) ApplyWorkflow(ctx context.Context, deps workflow
 		return nil, workflow.Progress{}, status.Error(codes.FailedPrecondition, "character creation workflow is incomplete")
 	}
 
-	if err := deps.ExecuteProfileUpdate(ctx, campaignContext, characterID, SystemProfileMap(profile)); err != nil {
+	if err := deps.ExecuteProfileReplace(ctx, campaignContext, characterID, daggerheart.CharacterProfileFromStorage(profile)); err != nil {
 		return nil, workflow.Progress{}, err
 	}
 
@@ -194,9 +194,7 @@ func (CreationWorkflowProvider) Reset(ctx context.Context, deps workflow.Creatio
 		return workflow.Progress{}, err
 	}
 
-	if err := deps.ExecuteProfileUpdate(ctx, campaignContext, characterID, map[string]any{
-		"daggerheart": map[string]any{"reset": true},
-	}); err != nil {
+	if err := deps.ExecuteProfileDelete(ctx, campaignContext, characterID); err != nil {
 		return workflow.Progress{}, err
 	}
 
@@ -736,89 +734,4 @@ func ensureProfileDefaults(profile storage.DaggerheartCharacterProfile, kind cha
 		)
 	}
 	return profile
-}
-
-// SystemProfileMap converts a DaggerheartCharacterProfile to the map[string]any
-// encoding expected by the character profile update command payload.
-func SystemProfileMap(profile storage.DaggerheartCharacterProfile) map[string]any {
-	experiencesPayload := make([]map[string]any, 0, len(profile.Experiences))
-	for _, experience := range profile.Experiences {
-		experiencesPayload = append(experiencesPayload, map[string]any{
-			"name":     experience.Name,
-			"modifier": experience.Modifier,
-		})
-	}
-
-	return map[string]any{
-		"daggerheart": map[string]any{
-			"level":                   profile.Level,
-			"hp_max":                  profile.HpMax,
-			"stress_max":              profile.StressMax,
-			"evasion":                 profile.Evasion,
-			"major_threshold":         profile.MajorThreshold,
-			"severe_threshold":        profile.SevereThreshold,
-			"proficiency":             profile.Proficiency,
-			"armor_score":             profile.ArmorScore,
-			"armor_max":               profile.ArmorMax,
-			"agility":                 profile.Agility,
-			"strength":                profile.Strength,
-			"finesse":                 profile.Finesse,
-			"instinct":                profile.Instinct,
-			"presence":                profile.Presence,
-			"knowledge":               profile.Knowledge,
-			"experiences":             experiencesPayload,
-			"class_id":                profile.ClassID,
-			"subclass_id":             profile.SubclassID,
-			"ancestry_id":             profile.AncestryID,
-			"community_id":            profile.CommunityID,
-			"traits_assigned":         profile.TraitsAssigned,
-			"details_recorded":        profile.DetailsRecorded,
-			"starting_weapon_ids":     append([]string(nil), profile.StartingWeaponIDs...),
-			"starting_armor_id":       profile.StartingArmorID,
-			"starting_potion_item_id": profile.StartingPotionItemID,
-			"background":              profile.Background,
-			"description":             profile.Description,
-			"domain_card_ids":         append([]string(nil), profile.DomainCardIDs...),
-			"connections":             profile.Connections,
-		},
-	}
-}
-
-func creationProfileFromStorage(profile storage.DaggerheartCharacterProfile) daggerheart.CreationProfile {
-	experiences := make([]daggerheartprofile.Experience, 0, len(profile.Experiences))
-	for _, experience := range profile.Experiences {
-		experiences = append(experiences, daggerheartprofile.Experience{
-			Name:     experience.Name,
-			Modifier: experience.Modifier,
-		})
-	}
-
-	return daggerheart.CreationProfile{
-		ClassID:        profile.ClassID,
-		SubclassID:     profile.SubclassID,
-		AncestryID:     profile.AncestryID,
-		CommunityID:    profile.CommunityID,
-		TraitsAssigned: profile.TraitsAssigned,
-		Traits: daggerheartprofile.Traits{
-			Agility:   profile.Agility,
-			Strength:  profile.Strength,
-			Finesse:   profile.Finesse,
-			Instinct:  profile.Instinct,
-			Presence:  profile.Presence,
-			Knowledge: profile.Knowledge,
-		},
-		DetailsRecorded:      profile.DetailsRecorded,
-		Level:                profile.Level,
-		HpMax:                profile.HpMax,
-		StressMax:            profile.StressMax,
-		Evasion:              profile.Evasion,
-		StartingWeaponIDs:    append([]string(nil), profile.StartingWeaponIDs...),
-		StartingArmorID:      profile.StartingArmorID,
-		StartingPotionItemID: profile.StartingPotionItemID,
-		Background:           profile.Background,
-		Description:          profile.Description,
-		Experiences:          experiences,
-		DomainCardIDs:        append([]string(nil), profile.DomainCardIDs...),
-		Connections:          profile.Connections,
-	}
 }

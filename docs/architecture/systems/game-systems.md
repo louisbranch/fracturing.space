@@ -22,9 +22,7 @@ Canonical architecture for extending Fracturing.Space with a game system.
 
 ## Purpose
 
-Core campaign/session infrastructure stays system-agnostic while each ruleset owns
-its mechanics.
-This separation allows:
+Core campaign/session infrastructure stays system-agnostic while each ruleset owns its mechanics. This separation allows:
 
 - deterministic replay and projection behavior
 - independent system evolution by `system_id + system_version`
@@ -110,7 +108,6 @@ domain packages remain independent from generated API code.
 | Adapter missing for event | `system emittable events missing adapter handlers: <types>` |
 | Module without metadata | `metadata missing for module <id>@<version>` |
 | Metadata without adapter | `adapter missing for metadata <id>@<version>` |
-| `HasProfileSupport=true` without `ProfileAdapter` | `system module registry mismatch: <validation error>` |
 | Non-deterministic state factory | `state factory determinism check failed for <id>` |
 | Fold handler for audit-only event | `fold handlers registered for audit-only events (dead code): <types>` |
 
@@ -122,7 +119,7 @@ Reference layout for a system implementation:
 - `.../decider.go` (command decisions)
 - `.../folder.go` (replay fold)
 - `.../adapter.go` (projection apply)
-- `.../event_types.go` and `.../payload.go` (contracts)
+- `.../event_types.go` and typed payload/profile contract files (contracts)
 
 Keep handlers thin and avoid transport logic in domain packages.
 
@@ -131,6 +128,9 @@ Keep handlers thin and avoid transport logic in domain packages.
 - Deciders and folders must be deterministic.
 - Adapter `Apply` behavior must be idempotent under replay.
 - Event payloads should capture resulting state (absolute values), not deltas.
+- System-specific character profiles belong to the system module. Prefer typed
+  system-owned commands/events such as `sys.<system>.character_profile.replace`
+  over core `map[string]any` envelopes.
 - Rejection codes should be stable, machine-readable constants.
 - Multi-consequence mechanics should prefer single-command atomic emission patterns.
 

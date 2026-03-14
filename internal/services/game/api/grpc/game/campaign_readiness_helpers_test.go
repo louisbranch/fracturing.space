@@ -8,8 +8,10 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -197,11 +199,15 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) 
 		t.Fatalf("character name = %q, want %q", characterState.Name, "Aria")
 	}
 
-	systemProfile, ok := characterState.SystemProfile["daggerheart"].(map[string]any)
+	systemState, ok := state.Systems[module.Key{ID: daggerheartdomain.SystemID, Version: daggerheartdomain.SystemVersion}]
 	if !ok {
-		t.Fatalf("character system profile type = %T, want map[string]any", characterState.SystemProfile["daggerheart"])
+		t.Fatal("daggerheart system state not found")
 	}
-	if got := systemProfile["level"]; got != 2 {
+	snapshot, ok := systemState.(daggerheartdomain.SnapshotState)
+	if !ok {
+		t.Fatalf("daggerheart system state type = %T, want SnapshotState", systemState)
+	}
+	if got := snapshot.CharacterProfiles["char-1"].Level; got != 2 {
 		t.Fatalf("system profile level = %v, want 2", got)
 	}
 }

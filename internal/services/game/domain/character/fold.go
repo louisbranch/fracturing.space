@@ -60,7 +60,6 @@ func FoldHandledTypes() []event.Type {
 		EventTypeCreated,
 		EventTypeUpdated,
 		EventTypeDeleted,
-		EventTypeProfileUpdated,
 	}
 }
 
@@ -74,8 +73,6 @@ func Fold(state State, evt event.Event) (State, error) {
 		return foldUpdated(state, evt)
 	case EventTypeDeleted:
 		return foldDeleted(state, evt)
-	case EventTypeProfileUpdated:
-		return foldProfileUpdated(state, evt)
 	}
 	// Unknown event types are silently ignored so that replay remains
 	// forward-compatible when new events are added before the fold is updated.
@@ -126,22 +123,6 @@ func foldDeleted(state State, evt event.Event) (State, error) {
 	}
 	if payload.CharacterID != "" {
 		state.CharacterID = ids.CharacterID(payload.CharacterID)
-	}
-	return state, nil
-}
-
-func foldProfileUpdated(state State, evt event.Event) (State, error) {
-	var payload ProfileUpdatePayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		return state, fmt.Errorf("character fold %s: %w", evt.Type, err)
-	}
-	if payload.CharacterID != "" {
-		state.CharacterID = ids.CharacterID(payload.CharacterID)
-	}
-	if payload.SystemProfile == nil {
-		state.SystemProfile = make(map[string]any)
-	} else {
-		state.SystemProfile = payload.SystemProfile
 	}
 	return state, nil
 }

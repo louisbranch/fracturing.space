@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -87,5 +88,12 @@ func (l sessionLifecycle) systemReadiness(current aggregate.State) readiness.Cha
 	if !ok {
 		return nil
 	}
-	return checker.CharacterReady
+	systemState := current.Systems[module.Key{ID: mod.ID(), Version: mod.Version()}]
+	return func(characterID string) (bool, string) {
+		ch, ok := current.Characters[ids.CharacterID(characterID)]
+		if !ok {
+			return false, "character is missing"
+		}
+		return checker.CharacterReady(systemState, ch)
+	}
 }

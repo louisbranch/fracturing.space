@@ -21,9 +21,7 @@ const (
 	commandTypeCampaignRestore                command.Type = commandids.CampaignRestore
 	commandTypeCampaignUpdate                 command.Type = commandids.CampaignUpdate
 	commandTypeCharacterCreate                command.Type = commandids.CharacterCreate
-	commandTypeCharacterCreateWithProfile     command.Type = commandids.CharacterCreateWithProfile
 	commandTypeCharacterDelete                command.Type = commandids.CharacterDelete
-	commandTypeCharacterProfileUpdate         command.Type = commandids.CharacterProfileUpdate
 	commandTypeCharacterUpdate                command.Type = commandids.CharacterUpdate
 	commandTypeInviteClaim                    command.Type = commandids.InviteClaim
 	commandTypeInviteCreate                   command.Type = commandids.InviteCreate
@@ -54,9 +52,11 @@ const (
 	commandTypeSceneSpotlightSet              command.Type = commandids.SceneSpotlightSet
 	commandTypeSceneSpotlightClear            command.Type = commandids.SceneSpotlightClear
 
-	commandTypeDaggerheartCharacterStatePatch command.Type = commandids.DaggerheartCharacterStatePatch
-	commandTypeDaggerheartConditionChange     command.Type = commandids.DaggerheartConditionChange
-	commandTypeDaggerheartGMFearSet           command.Type = commandids.DaggerheartGMFearSet
+	commandTypeDaggerheartCharacterStatePatch     command.Type = commandids.DaggerheartCharacterStatePatch
+	commandTypeDaggerheartCharacterProfileReplace command.Type = commandids.DaggerheartCharacterProfileReplace
+	commandTypeDaggerheartCharacterProfileDelete  command.Type = commandids.DaggerheartCharacterProfileDelete
+	commandTypeDaggerheartConditionChange         command.Type = commandids.DaggerheartConditionChange
+	commandTypeDaggerheartGMFearSet               command.Type = commandids.DaggerheartGMFearSet
 )
 
 const (

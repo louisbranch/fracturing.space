@@ -16,13 +16,6 @@ type CreatePayload struct {
 	Aliases            []string          `json:"aliases,omitempty"`
 }
 
-// CreateWithProfilePayload captures workflow payload for atomic character bootstrap.
-// It emits character.created and character.profile_updated from one command.
-type CreateWithProfilePayload struct {
-	Create        CreatePayload  `json:"create"`
-	SystemProfile map[string]any `json:"system_profile,omitempty"`
-}
-
 // UpdatePayload captures the payload for character.update commands and character.updated events.
 type UpdatePayload struct {
 	CharacterID ids.CharacterID   `json:"character_id"`
@@ -33,10 +26,4 @@ type UpdatePayload struct {
 type DeletePayload struct {
 	CharacterID ids.CharacterID `json:"character_id"`
 	Reason      string          `json:"reason,omitempty"`
-}
-
-// ProfileUpdatePayload captures the payload for character.profile_update commands and character.profile_updated events.
-type ProfileUpdatePayload struct {
-	CharacterID   ids.CharacterID `json:"character_id"`
-	SystemProfile map[string]any  `json:"system_profile,omitempty"`
 }

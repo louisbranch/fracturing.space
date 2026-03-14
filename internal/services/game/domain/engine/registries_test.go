@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -41,7 +42,7 @@ func (fakeModule) EmittableEventTypes() []event.Type {
 func (fakeModule) Decider() module.Decider           { return nil }
 func (fakeModule) Folder() module.Folder             { return nil }
 func (fakeModule) StateFactory() module.StateFactory { return nil }
-func (fakeModule) CharacterReady(map[string]any) (bool, string) {
+func (fakeModule) CharacterReady(any, character.State) (bool, string) {
 	return true, ""
 }
 
@@ -73,7 +74,7 @@ func (m syntheticModule) EmittableEventTypes() []event.Type {
 func (m syntheticModule) Decider() module.Decider           { return nil }
 func (m syntheticModule) Folder() module.Folder             { return nil }
 func (m syntheticModule) StateFactory() module.StateFactory { return nil }
-func (m syntheticModule) CharacterReady(map[string]any) (bool, string) {
+func (m syntheticModule) CharacterReady(any, character.State) (bool, string) {
 	return true, ""
 }
 
@@ -1381,7 +1382,7 @@ func (m *noValidatorModule) EmittableEventTypes() []event.Type {
 func (m *noValidatorModule) Decider() module.Decider           { return nil }
 func (m *noValidatorModule) Folder() module.Folder             { return nil }
 func (m *noValidatorModule) StateFactory() module.StateFactory { return nil }
-func (m *noValidatorModule) CharacterReady(map[string]any) (bool, string) {
+func (m *noValidatorModule) CharacterReady(any, character.State) (bool, string) {
 	return true, ""
 }
 

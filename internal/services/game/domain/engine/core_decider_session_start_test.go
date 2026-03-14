@@ -198,8 +198,10 @@ func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessChecker(t *testing.
 					CharacterID:   "char-1",
 					Created:       true,
 					ParticipantID: "player-1",
-					SystemProfile: map[string]any{"stub": map[string]any{"class": ""}},
 				},
+			},
+			Systems: map[module.Key]any{
+				{ID: "stub", Version: "1.0.0"}: struct{}{},
 			},
 		},
 		command.Command{
@@ -232,12 +234,14 @@ type stubReadinessModule struct {
 	reason string
 }
 
-func (m stubReadinessModule) ID() string                                   { return "stub" }
-func (m stubReadinessModule) Version() string                              { return "1.0.0" }
-func (m stubReadinessModule) RegisterCommands(*command.Registry) error     { return nil }
-func (m stubReadinessModule) RegisterEvents(*event.Registry) error         { return nil }
-func (m stubReadinessModule) EmittableEventTypes() []event.Type            { return nil }
-func (m stubReadinessModule) Decider() module.Decider                      { return nil }
-func (m stubReadinessModule) Folder() module.Folder                        { return nil }
-func (m stubReadinessModule) StateFactory() module.StateFactory            { return nil }
-func (m stubReadinessModule) CharacterReady(map[string]any) (bool, string) { return m.ready, m.reason }
+func (m stubReadinessModule) ID() string                               { return "stub" }
+func (m stubReadinessModule) Version() string                          { return "1.0.0" }
+func (m stubReadinessModule) RegisterCommands(*command.Registry) error { return nil }
+func (m stubReadinessModule) RegisterEvents(*event.Registry) error     { return nil }
+func (m stubReadinessModule) EmittableEventTypes() []event.Type        { return nil }
+func (m stubReadinessModule) Decider() module.Decider                  { return nil }
+func (m stubReadinessModule) Folder() module.Folder                    { return nil }
+func (m stubReadinessModule) StateFactory() module.StateFactory        { return nil }
+func (m stubReadinessModule) CharacterReady(any, character.State) (bool, string) {
+	return m.ready, m.reason
+}

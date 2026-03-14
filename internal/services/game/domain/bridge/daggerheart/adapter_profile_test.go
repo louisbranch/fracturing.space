@@ -5,66 +5,97 @@ import (
 	"encoding/json"
 	"testing"
 
+	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func TestApplyProfile_GuardsAndReset(t *testing.T) {
+func TestApplyCharacterProfileEvents_GuardsAndDelete(t *testing.T) {
 	adapter := NewAdapter(nil)
-	if err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", json.RawMessage(`{}`)); err == nil {
+	if err := adapter.Apply(context.Background(), event.Event{}); err == nil {
 		t.Fatal("expected store-not-configured error")
 	}
 
 	store := newParityDaggerheartStore()
 	adapter = NewAdapter(store)
 
-	if err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", json.RawMessage(`{`)); err == nil {
+	if err := adapter.Apply(context.Background(), event.Event{
+		CampaignID:    ids.CampaignID("camp-1"),
+		EntityID:      "char-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		Type:          EventTypeCharacterProfileReplaced,
+		PayloadJSON:   []byte(`{`),
+	}); err == nil {
 		t.Fatal("expected decode error")
 	}
 
-	err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", json.RawMessage(`{"reset":true}`))
+	err := adapter.Apply(context.Background(), event.Event{
+		CampaignID:    ids.CampaignID("camp-1"),
+		EntityID:      "char-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		Type:          EventTypeCharacterProfileDeleted,
+		PayloadJSON:   []byte(`{"character_id":"char-1"}`),
+	})
 	if err != nil {
-		t.Fatalf("reset apply profile: %v", err)
+		t.Fatalf("delete apply profile: %v", err)
 	}
 }
 
-func TestApplyProfile_PersistsValidatedProfile(t *testing.T) {
+func TestApplyCharacterProfileReplaced_PersistsValidatedProfile(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	payload := json.RawMessage(`{
-		"level": 1,
-		"hp_max": 6,
-		"stress_max": 6,
-		"evasion": 10,
-		"major_threshold": 3,
-		"severe_threshold": 6,
-		"proficiency": 1,
-		"armor_score": 0,
-		"armor_max": 2,
-		"agility": 1,
-		"strength": 0,
-		"finesse": 0,
-		"instinct": 0,
-		"presence": 0,
-		"knowledge": 0,
-		"experiences": [{"name":"Scout","modifier":1}],
-		"class_id":"class-1",
-		"subclass_id":"sub-1",
-		"ancestry_id":"anc-1",
-		"community_id":"com-1",
-		"traits_assigned": true,
-		"details_recorded": true,
-		"starting_weapon_ids":["w-1"],
-		"starting_armor_id":"a-1",
-		"starting_potion_item_id":"p-1",
-		"background":"bg",
-		"description":"Tall, patient, and heavily armored.",
-		"domain_card_ids":["d-1"],
-		"connections":"conn"
-	}`)
+	profilePayload, err := json.Marshal(CharacterProfileReplacedPayload{
+		CharacterID: ids.CharacterID("char-1"),
+		Profile: CharacterProfile{
+			Level:           1,
+			HpMax:           6,
+			StressMax:       6,
+			Evasion:         10,
+			MajorThreshold:  3,
+			SevereThreshold: 6,
+			Proficiency:     1,
+			ArmorScore:      0,
+			ArmorMax:        2,
+			Agility:         1,
+			Strength:        0,
+			Finesse:         0,
+			Instinct:        0,
+			Presence:        0,
+			Knowledge:       0,
+			Experiences: []CharacterProfileExperience{
+				{Name: "Scout", Modifier: 1},
+			},
+			ClassID:              "class-1",
+			SubclassID:           "sub-1",
+			AncestryID:           "anc-1",
+			CommunityID:          "com-1",
+			TraitsAssigned:       true,
+			DetailsRecorded:      true,
+			StartingWeaponIDs:    []string{"w-1"},
+			StartingArmorID:      "a-1",
+			StartingPotionItemID: "p-1",
+			Background:           "bg",
+			Description:          "Tall, patient, and heavily armored.",
+			DomainCardIDs:        []string{"d-1"},
+			Connections:          "conn",
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
 
-	if err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", payload); err != nil {
-		t.Fatalf("ApplyProfile: %v", err)
+	if err := adapter.Apply(context.Background(), event.Event{
+		CampaignID:    ids.CampaignID("camp-1"),
+		EntityID:      "char-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		Type:          EventTypeCharacterProfileReplaced,
+		PayloadJSON:   profilePayload,
+	}); err != nil {
+		t.Fatalf("Apply: %v", err)
 	}
 
 	profile, err := store.GetDaggerheartCharacterProfile(context.Background(), "camp-1", "char-1")
@@ -90,23 +121,36 @@ func TestApplyProfile_PersistsValidatedProfile(t *testing.T) {
 	}
 }
 
-func TestApplyProfile_DefaultsLevelWhenZero(t *testing.T) {
+func TestApplyCharacterProfileReplaced_DefaultsLevelWhenZero(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	payload := json.RawMessage(`{
-		"level": 0,
-		"hp_max": 6,
-		"stress_max": 6,
-		"evasion": 10,
-		"major_threshold": 3,
-		"severe_threshold": 6,
-		"proficiency": 1,
-		"armor_score": 0,
-		"armor_max": 2
-	}`)
-	if err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", payload); err != nil {
-		t.Fatalf("ApplyProfile: %v", err)
+	profilePayload, err := json.Marshal(CharacterProfileReplacedPayload{
+		CharacterID: ids.CharacterID("char-1"),
+		Profile: CharacterProfile{
+			Level:           0,
+			HpMax:           6,
+			StressMax:       6,
+			Evasion:         10,
+			MajorThreshold:  3,
+			SevereThreshold: 6,
+			Proficiency:     1,
+			ArmorScore:      0,
+			ArmorMax:        2,
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	if err := adapter.Apply(context.Background(), event.Event{
+		CampaignID:    ids.CampaignID("camp-1"),
+		EntityID:      "char-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		Type:          EventTypeCharacterProfileReplaced,
+		PayloadJSON:   profilePayload,
+	}); err != nil {
+		t.Fatalf("Apply: %v", err)
 	}
 	profile, err := store.GetDaggerheartCharacterProfile(context.Background(), "camp-1", "char-1")
 	if err != nil {
@@ -117,7 +161,7 @@ func TestApplyProfile_DefaultsLevelWhenZero(t *testing.T) {
 	}
 }
 
-func TestApplyProfile_DoesNotOverwriteExistingState(t *testing.T) {
+func TestApplyCharacterProfileReplaced_DoesNotOverwriteExistingState(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
@@ -134,19 +178,32 @@ func TestApplyProfile_DoesNotOverwriteExistingState(t *testing.T) {
 		t.Fatalf("seed state: %v", err)
 	}
 
-	payload := json.RawMessage(`{
-		"level": 1,
-		"hp_max": 6,
-		"stress_max": 6,
-		"evasion": 10,
-		"major_threshold": 3,
-		"severe_threshold": 6,
-		"proficiency": 1,
-		"armor_score": 0,
-		"armor_max": 2
-	}`)
-	if err := adapter.ApplyProfile(context.Background(), "camp-1", "char-1", payload); err != nil {
-		t.Fatalf("ApplyProfile: %v", err)
+	profilePayload, err := json.Marshal(CharacterProfileReplacedPayload{
+		CharacterID: ids.CharacterID("char-1"),
+		Profile: CharacterProfile{
+			Level:           1,
+			HpMax:           6,
+			StressMax:       6,
+			Evasion:         10,
+			MajorThreshold:  3,
+			SevereThreshold: 6,
+			Proficiency:     1,
+			ArmorScore:      0,
+			ArmorMax:        2,
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+	if err := adapter.Apply(context.Background(), event.Event{
+		CampaignID:    ids.CampaignID("camp-1"),
+		EntityID:      "char-1",
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		Type:          EventTypeCharacterProfileReplaced,
+		PayloadJSON:   profilePayload,
+	}); err != nil {
+		t.Fatalf("Apply: %v", err)
 	}
 
 	state, err := store.GetDaggerheartCharacterState(context.Background(), "camp-1", "char-1")

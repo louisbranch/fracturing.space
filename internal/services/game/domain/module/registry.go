@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -49,14 +50,14 @@ type Folder interface {
 // CharacterReadinessChecker is an optional module extension point used by
 // session-start readiness evaluation.
 //
-// Implementations validate system-specific character readiness from the
-// character's system profile projection payload. Returning false blocks
+// Implementations validate system-specific character readiness from typed
+// system state plus the core character snapshot. Returning false blocks
 // session.start and the reason is surfaced in the command rejection message.
 //
 // Modules that do not implement this interface fall back to core readiness
 // rules only (for example, controller assignment).
 type CharacterReadinessChecker interface {
-	CharacterReady(systemProfile map[string]any) (ready bool, reason string)
+	CharacterReady(systemState any, ch character.State) (ready bool, reason string)
 }
 
 // CommandTyper must be implemented by deciders whose modules register system

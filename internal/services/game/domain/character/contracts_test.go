@@ -14,7 +14,6 @@ func TestFoldHandledTypes_ReturnsCharacterEventContract(t *testing.T) {
 		EventTypeCreated,
 		EventTypeUpdated,
 		EventTypeDeleted,
-		EventTypeProfileUpdated,
 	}
 
 	if got := FoldHandledTypes(); !testcontracts.EqualSlices(got, want) {
@@ -35,10 +34,8 @@ func TestRegistryEventTypeHelpers_StayAlignedWithFoldContract(t *testing.T) {
 func TestDeciderHandledCommands_ReturnsCharacterCommandContract(t *testing.T) {
 	want := []command.Type{
 		CommandTypeCreate,
-		CommandTypeCreateWithProfile,
 		CommandTypeUpdate,
 		CommandTypeDelete,
-		CommandTypeProfileUpdate,
 	}
 
 	if got := DeciderHandledCommands(); !testcontracts.EqualSlices(got, want) {

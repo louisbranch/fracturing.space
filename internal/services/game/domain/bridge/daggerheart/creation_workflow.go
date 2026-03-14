@@ -1,7 +1,6 @@
 package daggerheart
 
 import (
-	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -188,28 +187,10 @@ func IsValidStartingPotionItemID(potionItemID string) bool {
 	}
 }
 
-// EvaluateCreationReadinessFromSystemProfile evaluates readiness directly from
-// a core aggregate system_profile map.
-func EvaluateCreationReadinessFromSystemProfile(systemProfile map[string]any) (bool, string) {
-	rawProfile, ok := systemProfile[SystemID]
-	if !ok || rawProfile == nil {
-		return false, "daggerheart profile is missing"
-	}
-
-	payloadJSON, err := json.Marshal(rawProfile)
-	if err != nil {
-		return false, "daggerheart profile is invalid"
-	}
-
-	var payload profilePayload
-	if err := json.Unmarshal(payloadJSON, &payload); err != nil {
-		return false, "daggerheart profile is invalid"
-	}
-	if payload.Reset {
-		return false, "character creation workflow is reset"
-	}
-
-	progress := EvaluateCreationProgress(creationProfileFromPayload(payload))
+// EvaluateCreationReadiness evaluates readiness directly from a typed
+// Daggerheart character profile.
+func EvaluateCreationReadiness(profile CharacterProfile) (bool, string) {
+	progress := EvaluateCreationProgress(profile.CreationProfile())
 	if progress.Ready {
 		return true, ""
 	}
@@ -217,44 +198,6 @@ func EvaluateCreationReadinessFromSystemProfile(systemProfile map[string]any) (b
 		return false, "character creation workflow is incomplete"
 	}
 	return false, progress.UnmetReasons[0]
-}
-
-func creationProfileFromPayload(payload profilePayload) CreationProfile {
-	experiences := make([]daggerheartprofile.Experience, 0, len(payload.Experiences))
-	for _, exp := range payload.Experiences {
-		experiences = append(experiences, daggerheartprofile.Experience{
-			Name:     exp.Name,
-			Modifier: exp.Modifier,
-		})
-	}
-	return CreationProfile{
-		ClassID:        payload.ClassID,
-		SubclassID:     payload.SubclassID,
-		AncestryID:     payload.AncestryID,
-		CommunityID:    payload.CommunityID,
-		TraitsAssigned: payload.TraitsAssigned,
-		Traits: daggerheartprofile.Traits{
-			Agility:   payload.Agility,
-			Strength:  payload.Strength,
-			Finesse:   payload.Finesse,
-			Instinct:  payload.Instinct,
-			Presence:  payload.Presence,
-			Knowledge: payload.Knowledge,
-		},
-		DetailsRecorded:      payload.DetailsRecorded,
-		Level:                payload.Level,
-		HpMax:                payload.HpMax,
-		StressMax:            payload.StressMax,
-		Evasion:              payload.Evasion,
-		StartingWeaponIDs:    append([]string(nil), payload.StartingWeaponIDs...),
-		StartingArmorID:      payload.StartingArmorID,
-		StartingPotionItemID: payload.StartingPotionItemID,
-		Background:           payload.Background,
-		Description:          payload.Description,
-		Experiences:          experiences,
-		DomainCardIDs:        append([]string(nil), payload.DomainCardIDs...),
-		Connections:          payload.Connections,
-	}
 }
 
 func hasClassAndSubclass(profile CreationProfile) bool {

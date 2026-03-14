@@ -32,10 +32,10 @@ const (
 
 // Character events.
 const (
-	TypeCharacterCreated Type = "character.created"
-	TypeCharacterDeleted Type = "character.deleted"
-	TypeCharacterUpdated Type = "character.updated"
-	TypeProfileUpdated   Type = "character.profile_updated"
+	TypeCharacterCreated                    Type = "character.created"
+	TypeCharacterDeleted                    Type = "character.deleted"
+	TypeCharacterUpdated                    Type = "character.updated"
+	TypeDaggerheartCharacterProfileReplaced Type = "sys.daggerheart.character_profile_replaced"
 )
 
 // Session events.
@@ -192,9 +192,9 @@ type CharacterDeletedPayload struct {
 	Reason      string `json:"reason,omitempty"`
 }
 
-type ProfileUpdatedPayload struct {
-	CharacterID   string         `json:"character_id"`
-	SystemProfile map[string]any `json:"system_profile,omitempty"`
+type DaggerheartCharacterProfileReplacedPayload struct {
+	CharacterID string         `json:"character_id"`
+	Profile     map[string]any `json:"profile,omitempty"`
 }
 
 // Session payloads.

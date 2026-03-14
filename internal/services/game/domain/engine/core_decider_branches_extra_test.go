@@ -229,6 +229,9 @@ func (acceptingSystemModule) EmittableEventTypes() []event.Type { return nil }
 func (acceptingSystemModule) Decider() module.Decider           { return acceptingSystemDecider{} }
 func (acceptingSystemModule) Folder() module.Folder             { return nil }
 func (acceptingSystemModule) StateFactory() module.StateFactory { return nil }
+func (acceptingSystemModule) CharacterReady(any, character.State) (bool, string) {
+	return true, ""
+}
 
 type acceptingSystemDecider struct{}
 

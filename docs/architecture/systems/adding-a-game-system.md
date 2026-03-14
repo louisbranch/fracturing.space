@@ -9,8 +9,7 @@ last_reviewed: "2026-03-07"
 
 # Adding a Game System
 
-Step-by-step guide for registering a new game system in the game service.
-Use Daggerheart as the reference implementation for manifest/module/adapter
+Step-by-step guide for registering a new game system in the game service. Use Daggerheart as the reference implementation for manifest/module/adapter
 shape (`internal/services/game/domain/bridge/daggerheart/`), but do not copy
 its intentionally-nil metadata hooks unless your system truly lacks those
 surfaces too.
@@ -101,7 +100,9 @@ func (a *Adapter) Apply(ctx context.Context, evt event.Event) error { ... }
 func (a *Adapter) HandledTypes() []event.Type { ... }
 ```
 
-If your system supports character profiles, implement `bridge.ProfileAdapter`.
+If your system supports character profiles, model them as typed system-owned
+commands/events and handle them in your normal module adapter/folder. Do not
+route profile writes through a core `map[string]any` envelope.
 
 ## Step 5: Add the Manifest Entry
 
@@ -118,7 +119,6 @@ In `internal/services/game/domain/bridge/manifest/manifest.go`, add a
         if stores.<System> == nil { return nil }
         return <system>.NewAdapter(stores.<System>)
     },
-    HasProfileSupport: true, // if ProfileAdapter is implemented
 },
 ```
 
@@ -146,5 +146,5 @@ Startup parity validation will fail if:
 - Module is registered but metadata system is missing (or vice versa)
 - Module version doesn't match metadata or adapter version
 - Adapter handles event types not declared as emittable
-- Module declares profile support without implementing ProfileAdapter
+- System-owned profile events are registered but missing folder or adapter coverage
 - Events lack payload validation

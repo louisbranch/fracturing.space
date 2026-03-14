@@ -26,6 +26,7 @@ func TestStartUsesTLSListenerWhenConfigured(t *testing.T) {
 	tcpCalled := false
 	tlsCalled := false
 	listenDone := make(chan struct{}, 1)
+	tlsDone := make(chan struct{}, 1)
 
 	listenTCP = func(network, address string) (net.Listener, error) {
 		tcpCalled = true
@@ -37,6 +38,7 @@ func TestStartUsesTLSListenerWhenConfigured(t *testing.T) {
 	}
 	newTLSListener = func(l net.Listener, cfg *tls.Config) net.Listener {
 		tlsCalled = true
+		tlsDone <- struct{}{}
 		return origNewTLSListener(l, cfg)
 	}
 
@@ -52,6 +54,13 @@ func TestStartUsesTLSListenerWhenConfigured(t *testing.T) {
 		// listener created and wrapped as expected
 	case <-time.After(500 * time.Millisecond):
 		t.Fatalf("expected transport start to open listener")
+	}
+
+	select {
+	case <-tlsDone:
+		// TLS wrapper created as expected
+	case <-time.After(500 * time.Millisecond):
+		t.Fatalf("expected TLS listener to be used when TLS config is configured")
 	}
 
 	cancel()

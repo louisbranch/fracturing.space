@@ -2,7 +2,6 @@ package bridge
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -21,14 +20,6 @@ type Adapter interface {
 	// Used by startup validation to ensure every emittable event type
 	// declared by the system module has a projection handler.
 	HandledTypes() []event.Type
-}
-
-// ProfileAdapter is an optional interface for adapters that handle
-// character profile updates. When a character.profile_updated event arrives,
-// the projection applier iterates the system_profile map and delegates each
-// key's data to the corresponding adapter if it implements ProfileAdapter.
-type ProfileAdapter interface {
-	ApplyProfile(ctx context.Context, campaignID, characterID string, profileData json.RawMessage) error
 }
 
 // AdapterRegistry routes system adapters by system ID + version.

@@ -1566,42 +1566,48 @@ func TestApplyCharacterDeleted_MissingEntityID(t *testing.T) {
 	}
 }
 
-// --- applyProfileUpdated tests ---
+// --- applyDaggerheartCharacterProfileReplaced tests ---
 
-func TestApplyProfileUpdated(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	ctx := context.Background()
 	dhStore := newProjectionDaggerheartStore()
 	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(dhStore))
 	applier := Applier{Adapters: adapters}
 
-	payload := testevent.ProfileUpdatedPayload{
-		SystemProfile: map[string]any{
-			"daggerheart": map[string]any{
-				"level":            1,
-				"hp_max":           6,
-				"stress_max":       6,
-				"evasion":          10,
-				"major_threshold":  4,
-				"severe_threshold": 8,
-				"proficiency":      1,
-				"armor_score":      0,
-				"armor_max":        0,
-				"agility":          1,
-				"strength":         0,
-				"finesse":          2,
-				"instinct":         1,
-				"presence":         0,
-				"knowledge":        -1,
-				"experiences": []map[string]any{
-					{"name": "Ranger", "modifier": 2},
-				},
-				"description": "Tall, patient, and heavily armored.",
+	payload := daggerheartsys.CharacterProfileReplacedPayload{
+		CharacterID: "char-1",
+		Profile: daggerheartsys.CharacterProfile{
+			Level:           1,
+			HpMax:           6,
+			StressMax:       6,
+			Evasion:         10,
+			MajorThreshold:  4,
+			SevereThreshold: 8,
+			Proficiency:     1,
+			ArmorScore:      0,
+			ArmorMax:        0,
+			Agility:         1,
+			Strength:        0,
+			Finesse:         2,
+			Instinct:        1,
+			Presence:        0,
+			Knowledge:       -1,
+			Experiences: []daggerheartsys.CharacterProfileExperience{
+				{Name: "Ranger", Modifier: 2},
 			},
+			Description: "Tall, patient, and heavily armored.",
 		},
 	}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
+	evt := testevent.Event{
+		CampaignID:    "camp-1",
+		EntityID:      "char-1",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   data,
+	}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
@@ -1621,35 +1627,7 @@ func TestApplyProfileUpdated(t *testing.T) {
 	}
 }
 
-func TestApplyProfileUpdated_NilSystemProfile(t *testing.T) {
-	ctx := context.Background()
-	adapters := bridge.NewAdapterRegistry()
-	applier := Applier{Adapters: adapters}
-
-	payload := testevent.ProfileUpdatedPayload{SystemProfile: nil}
-	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
-
-	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
-		t.Fatalf("apply with nil system profile should succeed: %v", err)
-	}
-}
-
-func TestApplyProfileUpdated_UnknownSystemSkipped(t *testing.T) {
-	ctx := context.Background()
-	adapters := bridge.NewAdapterRegistry()
-	applier := Applier{Adapters: adapters}
-
-	payload := testevent.ProfileUpdatedPayload{SystemProfile: map[string]any{"other": "data"}}
-	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
-
-	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
-		t.Fatalf("apply with unrecognized system key should succeed: %v", err)
-	}
-}
-
-func TestApplyProfileUpdated_RoutedThroughAdapter(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced_RoutedThroughAdapter(t *testing.T) {
 	ctx := context.Background()
 	dhStore := newProjectionDaggerheartStore()
 	adapters := bridge.NewAdapterRegistry()
@@ -1658,32 +1636,38 @@ func TestApplyProfileUpdated_RoutedThroughAdapter(t *testing.T) {
 	}
 	applier := Applier{Adapters: adapters}
 
-	payload := testevent.ProfileUpdatedPayload{
-		SystemProfile: map[string]any{
-			"daggerheart": map[string]any{
-				"level":            1,
-				"hp_max":           6,
-				"stress_max":       6,
-				"evasion":          10,
-				"major_threshold":  4,
-				"severe_threshold": 8,
-				"proficiency":      1,
-				"armor_score":      0,
-				"armor_max":        0,
-				"agility":          1,
-				"strength":         0,
-				"finesse":          2,
-				"instinct":         1,
-				"presence":         0,
-				"knowledge":        -1,
-				"experiences": []map[string]any{
-					{"name": "Ranger", "modifier": 2},
-				},
+	payload := daggerheartsys.CharacterProfileReplacedPayload{
+		CharacterID: "char-1",
+		Profile: daggerheartsys.CharacterProfile{
+			Level:           1,
+			HpMax:           6,
+			StressMax:       6,
+			Evasion:         10,
+			MajorThreshold:  4,
+			SevereThreshold: 8,
+			Proficiency:     1,
+			ArmorScore:      0,
+			ArmorMax:        0,
+			Agility:         1,
+			Strength:        0,
+			Finesse:         2,
+			Instinct:        1,
+			Presence:        0,
+			Knowledge:       -1,
+			Experiences: []daggerheartsys.CharacterProfileExperience{
+				{Name: "Ranger", Modifier: 2},
 			},
 		},
 	}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
+	evt := testevent.Event{
+		CampaignID:    "camp-1",
+		EntityID:      "char-1",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   data,
+	}
 
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply via adapter: %v", err)
@@ -1697,19 +1681,39 @@ func TestApplyProfileUpdated_RoutedThroughAdapter(t *testing.T) {
 	}
 }
 
-func TestApplyProfileUpdated_MissingStore(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced_MissingStore(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(testevent.ProfileUpdatedPayload{SystemProfile: map[string]any{"daggerheart": map[string]any{}}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
+	data, _ := json.Marshal(daggerheartsys.CharacterProfileReplacedPayload{
+		CharacterID: "char-1",
+		Profile:     daggerheartsys.CharacterProfile{},
+	})
+	evt := testevent.Event{
+		CampaignID:    "camp-1",
+		EntityID:      "char-1",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   data,
+	}
 	if err := (Applier{}).Apply(ctx, eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing store")
 	}
 }
 
-func TestApplyProfileUpdated_MissingEntityID(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced_MissingEntityID(t *testing.T) {
 	ctx := context.Background()
-	data, _ := json.Marshal(testevent.ProfileUpdatedPayload{SystemProfile: map[string]any{"daggerheart": map[string]any{}}})
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
+	data, _ := json.Marshal(daggerheartsys.CharacterProfileReplacedPayload{
+		CharacterID: "char-1",
+		Profile:     daggerheartsys.CharacterProfile{},
+	})
+	evt := testevent.Event{
+		CampaignID:    "camp-1",
+		EntityID:      "",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   data,
+	}
 	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
@@ -2901,23 +2905,37 @@ func TestApplyCharacterDeleted_ZeroCount(t *testing.T) {
 	}
 }
 
-// --- applyProfileUpdated missing branches ---
+// --- applyDaggerheartCharacterProfileReplaced missing branches ---
 
-func TestApplyProfileUpdated_MissingCampaignID(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced_MissingCampaignID(t *testing.T) {
 	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
-	evt := testevent.Event{CampaignID: "  ", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: []byte("{}")}
+	evt := testevent.Event{
+		CampaignID:    "  ",
+		EntityID:      "char-1",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   []byte("{}"),
+	}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for missing campaign id")
 	}
 }
 
-func TestApplyProfileUpdated_InvalidJSON(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced_InvalidJSON(t *testing.T) {
 	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: []byte("{")}
+	evt := testevent.Event{
+		CampaignID:    "camp-1",
+		EntityID:      "char-1",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   []byte("{"),
+	}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid JSON")
 	}
@@ -3422,49 +3440,62 @@ func TestApplyParticipantUnbound_WithClaimIndex(t *testing.T) {
 	}
 }
 
-// --- applyProfileUpdated validation profile branch ---
+// --- applyDaggerheartCharacterProfileReplaced validation branches ---
 
-func TestApplyProfileUpdated_InvalidProfileData(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced_InvalidProfileData(t *testing.T) {
 	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(newProjectionDaggerheartStore()))
 	applier := Applier{Adapters: adapters}
-	payload := map[string]any{"system_profile": map[string]any{"daggerheart": "not-an-object"}}
+	payload := map[string]any{"character_id": "char-1", "profile": "not-an-object"}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
+	evt := testevent.Event{
+		CampaignID:    "camp-1",
+		EntityID:      "char-1",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   data,
+	}
 	if err := applier.Apply(context.Background(), eventToEvent(evt)); err == nil {
 		t.Fatal("expected error for invalid profile data")
 	}
 }
 
-func TestApplyProfileUpdated_DefaultLevel(t *testing.T) {
+func TestApplyDaggerheartCharacterProfileReplaced_DefaultLevel(t *testing.T) {
 	ctx := context.Background()
 	daggerheartStore := newProjectionDaggerheartStore()
 	adapters := bridge.NewAdapterRegistry()
 	_ = adapters.Register(daggerheartsys.NewAdapter(daggerheartStore))
 	applier := Applier{Adapters: adapters}
 	payload := map[string]any{
-		"system_profile": map[string]any{
-			"daggerheart": map[string]any{
-				"hp_max":           float64(6),
-				"stress_max":       float64(6),
-				"evasion":          float64(10),
-				"major_threshold":  float64(5),
-				"severe_threshold": float64(10),
-				"proficiency":      float64(0),
-				"armor_score":      float64(0),
-				"armor_max":        float64(0),
-				"agility":          float64(1),
-				"strength":         float64(0),
-				"finesse":          float64(0),
-				"instinct":         float64(0),
-				"presence":         float64(0),
-				"knowledge":        float64(0),
-				"experiences":      []any{},
-			},
+		"character_id": "char-1",
+		"profile": map[string]any{
+			"hp_max":           float64(6),
+			"stress_max":       float64(6),
+			"evasion":          float64(10),
+			"major_threshold":  float64(5),
+			"severe_threshold": float64(10),
+			"proficiency":      float64(0),
+			"armor_score":      float64(0),
+			"armor_max":        float64(0),
+			"agility":          float64(1),
+			"strength":         float64(0),
+			"finesse":          float64(0),
+			"instinct":         float64(0),
+			"presence":         float64(0),
+			"knowledge":        float64(0),
+			"experiences":      []any{},
 		},
 	}
 	data, _ := json.Marshal(payload)
-	evt := testevent.Event{CampaignID: "camp-1", EntityID: "char-1", Type: testevent.TypeProfileUpdated, PayloadJSON: data}
+	evt := testevent.Event{
+		CampaignID:    "camp-1",
+		EntityID:      "char-1",
+		Type:          testevent.TypeDaggerheartCharacterProfileReplaced,
+		SystemID:      daggerheartsys.SystemID,
+		SystemVersion: daggerheartsys.SystemVersion,
+		PayloadJSON:   data,
+	}
 	if err := applier.Apply(ctx, eventToEvent(evt)); err != nil {
 		t.Fatalf("apply: %v", err)
 	}

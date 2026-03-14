@@ -13,9 +13,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
-	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -107,26 +105,21 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		avatarAssetID = ""
 	}
 
-	systemProfile := defaultDaggerheartSystemProfile(kind)
-
-	workflowPayload := character.CreateWithProfilePayload{
-		Create: character.CreatePayload{
-			CharacterID:        ids.CharacterID(characterID),
-			OwnerParticipantID: ids.ParticipantID(strings.TrimSpace(policyActor.ID)),
-			Name:               name,
-			Kind:               in.GetKind().String(),
-			Notes:              notes,
-			AvatarSetID:        avatarSetID,
-			AvatarAssetID:      avatarAssetID,
-			ParticipantID:      ids.ParticipantID(defaultParticipantID),
-			Pronouns:           pronouns,
-			Aliases:            append([]string(nil), in.GetAliases()...),
-		},
-		SystemProfile: systemProfile,
+	createPayload := character.CreatePayload{
+		CharacterID:        ids.CharacterID(characterID),
+		OwnerParticipantID: ids.ParticipantID(strings.TrimSpace(policyActor.ID)),
+		Name:               name,
+		Kind:               in.GetKind().String(),
+		Notes:              notes,
+		AvatarSetID:        avatarSetID,
+		AvatarAssetID:      avatarAssetID,
+		ParticipantID:      ids.ParticipantID(defaultParticipantID),
+		Pronouns:           pronouns,
+		Aliases:            append([]string(nil), in.GetAliases()...),
 	}
-	workflowPayloadJSON, err := json.Marshal(workflowPayload)
+	createPayloadJSON, err := json.Marshal(createPayload)
 	if err != nil {
-		return storage.CharacterRecord{}, grpcerror.Internal("encode create workflow payload", err)
+		return storage.CharacterRecord{}, grpcerror.Internal("encode create character payload", err)
 	}
 
 	actorType := command.ActorTypeSystem
@@ -139,14 +132,14 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCharacterCreateWithProfile,
+			Type:         commandTypeCharacterCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
 			EntityType:   "character",
 			EntityID:     characterID,
-			PayloadJSON:  workflowPayloadJSON,
+			PayloadJSON:  createPayloadJSON,
 		}),
 		domainwrite.Options{},
 	)
@@ -159,45 +152,6 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 		return storage.CharacterRecord{}, grpcerror.Internal("load character", err)
 	}
 	return created, nil
-}
-
-// defaultDaggerheartSystemProfile builds the canonical default system_profile
-// payload used by character creation.
-func defaultDaggerheartSystemProfile(kind character.Kind) map[string]any {
-	kindLabel := "PC"
-	if kind == character.KindNPC {
-		kindLabel = "NPC"
-	}
-	dhDefaults := daggerheartprofile.GetDefaults(kindLabel)
-
-	experiences := make([]storage.DaggerheartExperience, 0, len(dhDefaults.Experiences))
-	for _, experience := range dhDefaults.Experiences {
-		experiences = append(experiences, storage.DaggerheartExperience{
-			Name:     experience.Name,
-			Modifier: experience.Modifier,
-		})
-	}
-
-	return daggerheartgrpc.SystemProfileMap(storage.DaggerheartCharacterProfile{
-		Level:             dhDefaults.Level,
-		HpMax:             dhDefaults.HpMax,
-		StressMax:         dhDefaults.StressMax,
-		Evasion:           dhDefaults.Evasion,
-		MajorThreshold:    dhDefaults.MajorThreshold,
-		SevereThreshold:   dhDefaults.SevereThreshold,
-		Proficiency:       dhDefaults.Proficiency,
-		ArmorScore:        dhDefaults.ArmorScore,
-		ArmorMax:          dhDefaults.ArmorMax,
-		Agility:           dhDefaults.Traits.Agility,
-		Strength:          dhDefaults.Traits.Strength,
-		Finesse:           dhDefaults.Traits.Finesse,
-		Instinct:          dhDefaults.Traits.Instinct,
-		Presence:          dhDefaults.Traits.Presence,
-		Knowledge:         dhDefaults.Traits.Knowledge,
-		Experiences:       experiences,
-		StartingWeaponIDs: []string{},
-		DomainCardIDs:     []string{},
-	})
 }
 
 // resolveCharacterIdentitySnapshot returns character identity defaults for one

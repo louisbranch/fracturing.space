@@ -103,37 +103,11 @@ func TestFoldCharacterCreatedClearsDeleted(t *testing.T) {
 	}
 }
 
-func TestFoldProfileUpdatedSetsSystemProfile(t *testing.T) {
-	state := State{Created: true}
-	updated, err := Fold(state, event.Event{
-		Type:        event.Type("character.profile_updated"),
-		PayloadJSON: []byte(`{"character_id":"char-1","system_profile":{"daggerheart":{"level":2}}}`),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if updated.SystemProfile == nil {
-		t.Fatal("expected system profile to be set")
-	}
-	profile, ok := updated.SystemProfile["daggerheart"].(map[string]any)
-	if !ok {
-		t.Fatalf("expected daggerheart profile to be map, got %T", updated.SystemProfile["daggerheart"])
-	}
-	level, ok := profile["level"].(float64)
-	if !ok {
-		t.Fatalf("expected level to be float64, got %T", profile["level"])
-	}
-	if level != 2 {
-		t.Fatalf("level = %v, want %v", level, 2)
-	}
-}
-
 func TestFoldCharacterRecognizedEvents_InvalidPayloadReturnsError(t *testing.T) {
 	eventTypes := []event.Type{
 		EventTypeCreated,
 		EventTypeUpdated,
 		EventTypeDeleted,
-		EventTypeProfileUpdated,
 	}
 
 	for _, eventType := range eventTypes {

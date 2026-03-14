@@ -43,10 +43,10 @@ var blockedMethodCommandTypes = map[string]command.Type{
 	campaignv1.CharacterService_SetDefaultControl_FullMethodName:              commandids.CharacterUpdate,
 	campaignv1.CharacterService_ClaimCharacterControl_FullMethodName:          commandids.CharacterUpdate,
 	campaignv1.CharacterService_ReleaseCharacterControl_FullMethodName:        commandids.CharacterUpdate,
-	campaignv1.CharacterService_PatchCharacterProfile_FullMethodName:          commandids.CharacterProfileUpdate,
-	campaignv1.CharacterService_ApplyCharacterCreationStep_FullMethodName:     commandids.CharacterProfileUpdate,
-	campaignv1.CharacterService_ApplyCharacterCreationWorkflow_FullMethodName: commandids.CharacterProfileUpdate,
-	campaignv1.CharacterService_ResetCharacterCreationWorkflow_FullMethodName: commandids.CharacterProfileUpdate,
+	campaignv1.CharacterService_PatchCharacterProfile_FullMethodName:          commandids.DaggerheartCharacterProfileReplace,
+	campaignv1.CharacterService_ApplyCharacterCreationStep_FullMethodName:     commandids.DaggerheartCharacterProfileReplace,
+	campaignv1.CharacterService_ApplyCharacterCreationWorkflow_FullMethodName: commandids.DaggerheartCharacterProfileReplace,
+	campaignv1.CharacterService_ResetCharacterCreationWorkflow_FullMethodName: commandids.DaggerheartCharacterProfileDelete,
 
 	campaignv1.ForkService_ForkCampaign_FullMethodName: commandids.CampaignFork,
 }

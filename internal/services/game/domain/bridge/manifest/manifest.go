@@ -42,10 +42,6 @@ type SystemDescriptor struct {
 	// the store it needs. Return nil to skip adapter registration (e.g. when the
 	// required store is absent).
 	BuildAdapter func(ProjectionStores) domainbridge.Adapter
-	// HasProfileSupport declares that this system participates in character
-	// profile updates. When true, ValidateProfileAdapterCoverage asserts
-	// the adapter implements bridge.ProfileAdapter at startup.
-	HasProfileSupport bool
 }
 
 var builtInSystems = []SystemDescriptor{
@@ -60,7 +56,6 @@ var builtInSystems = []SystemDescriptor{
 			}
 			return daggerheart.NewAdapter(stores.Daggerheart)
 		},
-		HasProfileSupport: true,
 	},
 }
 
@@ -140,27 +135,6 @@ func RebindAdapterRegistry(base *domainbridge.AdapterRegistry, stores Projection
 		return nil, fmt.Errorf("base adapter registry is required for rebinding")
 	}
 	return buildAdapterRegistry(stores)
-}
-
-// ValidateProfileAdapterCoverage checks that every system descriptor declaring
-// HasProfileSupport has an adapter that implements bridge.ProfileAdapter. This
-// catches wiring bugs at startup instead of at the first profile update, where
-// the missing interface would silently skip the system's profile projection.
-func ValidateProfileAdapterCoverage(registry *domainbridge.AdapterRegistry) error {
-	for _, d := range builtInSystems {
-		if !d.HasProfileSupport {
-			continue
-		}
-		adapter, ok := registry.GetOptional(d.ID, d.Version)
-		if !ok {
-			// Adapter not registered (e.g. store missing) — skip.
-			continue
-		}
-		if _, ok := adapter.(domainbridge.ProfileAdapter); !ok {
-			return fmt.Errorf("system %s@%s declares profile support but its adapter does not implement ProfileAdapter", d.ID, d.Version)
-		}
-	}
-	return nil
 }
 
 // buildAdapterRegistry constructs an adapter registry from system descriptors.

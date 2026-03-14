@@ -152,7 +152,7 @@ type LevelUpResult struct {
 	SlotsConsumed  int
 	MarkedTraits   []string // Updated marked traits after this level-up.
 	ClearMarks     bool     // Whether marked traits should be cleared (tier entry at 5, 8).
-	ThresholdDelta int      // Damage thresholds increase by 1 per level.
+	ThresholdDelta int      // Baseline threshold increase per level; replay/projection derive severe scaling from this.
 }
 
 // ── Validation ──────────────────────────────────────────────────────────

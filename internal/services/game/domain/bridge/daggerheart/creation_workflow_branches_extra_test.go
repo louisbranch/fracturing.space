@@ -1,54 +1,29 @@
 package daggerheart
 
 import (
-	"math"
 	"testing"
 
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 )
 
-func TestEvaluateCreationReadinessFromSystemProfile_ErrorBranches(t *testing.T) {
-	t.Run("marshal failure", func(t *testing.T) {
-		ready, reason := EvaluateCreationReadinessFromSystemProfile(map[string]any{
-			SystemID: map[string]any{
-				"level": math.NaN(),
-			},
-		})
-		if ready {
-			t.Fatal("ready = true, want false")
-		}
-		if reason != "daggerheart profile is invalid" {
-			t.Fatalf("reason = %q, want %q", reason, "daggerheart profile is invalid")
-		}
+func TestEvaluateCreationReadiness_ErrorBranches(t *testing.T) {
+	ready, reason := EvaluateCreationReadiness(CharacterProfile{
+		Level:           0,
+		HpMax:           -1,
+		StressMax:       0,
+		Evasion:         0,
+		MajorThreshold:  0,
+		SevereThreshold: 0,
+		Proficiency:     0,
+		ArmorScore:      0,
+		ArmorMax:        0,
 	})
-
-	t.Run("unmarshal failure", func(t *testing.T) {
-		ready, reason := EvaluateCreationReadinessFromSystemProfile(map[string]any{
-			SystemID: map[string]any{
-				"level": []int{1},
-			},
-		})
-		if ready {
-			t.Fatal("ready = true, want false")
-		}
-		if reason != "daggerheart profile is invalid" {
-			t.Fatalf("reason = %q, want %q", reason, "daggerheart profile is invalid")
-		}
-	})
-
-	t.Run("reset profile", func(t *testing.T) {
-		ready, reason := EvaluateCreationReadinessFromSystemProfile(map[string]any{
-			SystemID: map[string]any{
-				"reset": true,
-			},
-		})
-		if ready {
-			t.Fatal("ready = true, want false")
-		}
-		if reason != "character creation workflow is reset" {
-			t.Fatalf("reason = %q, want %q", reason, "character creation workflow is reset")
-		}
-	})
+	if ready {
+		t.Fatal("ready = true, want false")
+	}
+	if reason != "class and subclass selection is required" {
+		t.Fatalf("reason = %q, want %q", reason, "class and subclass selection is required")
+	}
 }
 
 func TestHasStartingEquipment_Branches(t *testing.T) {

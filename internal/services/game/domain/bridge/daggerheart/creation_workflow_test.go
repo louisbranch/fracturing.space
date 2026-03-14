@@ -53,8 +53,8 @@ func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 	}
 }
 
-func TestEvaluateCreationReadinessFromSystemProfile_RequiresDaggerheartProfile(t *testing.T) {
-	ready, reason := EvaluateCreationReadinessFromSystemProfile(map[string]any{})
+func TestEvaluateCreationReadiness_RequiresDaggerheartProfile(t *testing.T) {
+	ready, reason := EvaluateCreationReadiness(CharacterProfile{})
 	if ready {
 		t.Fatal("ready = true, want false")
 	}

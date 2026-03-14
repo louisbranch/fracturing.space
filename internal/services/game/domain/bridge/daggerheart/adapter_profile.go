@@ -2,154 +2,44 @@ package daggerheart
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"strings"
 
-	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
+	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-// profilePayload is the system-specific profile schema carried inside
-// character.profile_updated events under the "daggerheart" key.
-type profilePayload struct {
-	Level                int                        `json:"level"`
-	HpMax                int                        `json:"hp_max"`
-	StressMax            int                        `json:"stress_max"`
-	Evasion              int                        `json:"evasion"`
-	MajorThreshold       int                        `json:"major_threshold"`
-	SevereThreshold      int                        `json:"severe_threshold"`
-	Proficiency          int                        `json:"proficiency"`
-	ArmorScore           int                        `json:"armor_score"`
-	ArmorMax             int                        `json:"armor_max"`
-	Experiences          []experienceProfilePayload `json:"experiences"`
-	Agility              int                        `json:"agility"`
-	Strength             int                        `json:"strength"`
-	Finesse              int                        `json:"finesse"`
-	Instinct             int                        `json:"instinct"`
-	Presence             int                        `json:"presence"`
-	Knowledge            int                        `json:"knowledge"`
-	ClassID              string                     `json:"class_id"`
-	SubclassID           string                     `json:"subclass_id"`
-	AncestryID           string                     `json:"ancestry_id"`
-	CommunityID          string                     `json:"community_id"`
-	TraitsAssigned       bool                       `json:"traits_assigned"`
-	DetailsRecorded      bool                       `json:"details_recorded"`
-	StartingWeaponIDs    []string                   `json:"starting_weapon_ids"`
-	StartingArmorID      string                     `json:"starting_armor_id"`
-	StartingPotionItemID string                     `json:"starting_potion_item_id"`
-	Background           string                     `json:"background"`
-	Description          string                     `json:"description"`
-	DomainCardIDs        []string                   `json:"domain_card_ids"`
-	Connections          string                     `json:"connections"`
-	Reset                bool                       `json:"reset,omitempty"`
+func (a *Adapter) handleCharacterProfileReplaced(ctx context.Context, evt event.Event, payload CharacterProfileReplacedPayload) error {
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	if characterID == "" {
+		characterID = strings.TrimSpace(evt.EntityID)
+	}
+	return a.putCharacterProfile(ctx, string(evt.CampaignID), characterID, payload.Profile)
 }
 
-type experienceProfilePayload struct {
-	Name     string `json:"name"`
-	Modifier int    `json:"modifier"`
+func (a *Adapter) handleCharacterProfileDeleted(ctx context.Context, evt event.Event, payload CharacterProfileDeletedPayload) error {
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	if characterID == "" {
+		characterID = strings.TrimSpace(evt.EntityID)
+	}
+	if err := a.store.DeleteDaggerheartCharacterProfile(ctx, string(evt.CampaignID), characterID); err != nil {
+		return fmt.Errorf("delete daggerheart profile: %w", err)
+	}
+	return nil
 }
 
-// ApplyProfile applies a daggerheart character profile update. The raw JSON is
-// the value from the system_profile map keyed by "daggerheart".
-func (a *Adapter) ApplyProfile(ctx context.Context, campaignID, characterID string, profileData json.RawMessage) error {
+func (a *Adapter) putCharacterProfile(ctx context.Context, campaignID, characterID string, profile CharacterProfile) error {
 	if a == nil || a.store == nil {
 		return fmt.Errorf("daggerheart store is not configured")
 	}
-
-	var profile profilePayload
-	if err := json.Unmarshal(profileData, &profile); err != nil {
-		return fmt.Errorf("decode daggerheart profile payload: %w", err)
+	profile = profile.Normalized()
+	if err := profile.Validate(); err != nil {
+		return err
 	}
-	if profile.Reset {
-		if err := a.store.DeleteDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
-			return fmt.Errorf("delete daggerheart profile: %w", err)
-		}
-		return nil
-	}
-
-	experiences := make([]daggerheartprofile.Experience, 0, len(profile.Experiences))
-	for _, exp := range profile.Experiences {
-		experiences = append(experiences, daggerheartprofile.Experience{
-			Name:     exp.Name,
-			Modifier: exp.Modifier,
-		})
-	}
-
-	level := profile.Level
-	if level == 0 {
-		level = daggerheartprofile.PCLevelDefault
-	}
-
-	if err := daggerheartprofile.Validate(
-		level,
-		profile.HpMax,
-		profile.StressMax,
-		profile.Evasion,
-		profile.MajorThreshold,
-		profile.SevereThreshold,
-		profile.Proficiency,
-		profile.ArmorScore,
-		profile.ArmorMax,
-		daggerheartprofile.Traits{
-			Agility:   profile.Agility,
-			Strength:  profile.Strength,
-			Finesse:   profile.Finesse,
-			Instinct:  profile.Instinct,
-			Presence:  profile.Presence,
-			Knowledge: profile.Knowledge,
-		},
-		experiences,
-	); err != nil {
-		return fmt.Errorf("validate daggerheart profile payload: %w", err)
-	}
-
-	experienceStorage := make([]storage.DaggerheartExperience, 0, len(profile.Experiences))
-	for _, exp := range profile.Experiences {
-		experienceStorage = append(experienceStorage, storage.DaggerheartExperience{
-			Name:     exp.Name,
-			Modifier: exp.Modifier,
-		})
-	}
-
-	if err := a.store.PutDaggerheartCharacterProfile(ctx, storage.DaggerheartCharacterProfile{
-		CampaignID:           campaignID,
-		CharacterID:          characterID,
-		Level:                level,
-		HpMax:                profile.HpMax,
-		StressMax:            profile.StressMax,
-		Evasion:              profile.Evasion,
-		MajorThreshold:       profile.MajorThreshold,
-		SevereThreshold:      profile.SevereThreshold,
-		Proficiency:          profile.Proficiency,
-		ArmorScore:           profile.ArmorScore,
-		ArmorMax:             profile.ArmorMax,
-		Experiences:          experienceStorage,
-		ClassID:              profile.ClassID,
-		SubclassID:           profile.SubclassID,
-		AncestryID:           profile.AncestryID,
-		CommunityID:          profile.CommunityID,
-		TraitsAssigned:       profile.TraitsAssigned,
-		DetailsRecorded:      profile.DetailsRecorded,
-		StartingWeaponIDs:    append([]string(nil), profile.StartingWeaponIDs...),
-		StartingArmorID:      profile.StartingArmorID,
-		StartingPotionItemID: profile.StartingPotionItemID,
-		Background:           profile.Background,
-		Description:          profile.Description,
-		DomainCardIDs:        append([]string(nil), profile.DomainCardIDs...),
-		Connections:          profile.Connections,
-		Agility:              profile.Agility,
-		Strength:             profile.Strength,
-		Finesse:              profile.Finesse,
-		Instinct:             profile.Instinct,
-		Presence:             profile.Presence,
-		Knowledge:            profile.Knowledge,
-	}); err != nil {
+	if err := a.store.PutDaggerheartCharacterProfile(ctx, profile.ToStorage(campaignID, characterID)); err != nil {
 		return err
 	}
 
-	// Character creation now emits a single workflow command that carries both
-	// create and profile events. Seed state on first profile apply so Daggerheart
-	// action flows can run immediately without requiring an extra state command.
 	_, exists, err := a.getCharacterStateIfExists(ctx, campaignID, characterID)
 	if err != nil {
 		return err

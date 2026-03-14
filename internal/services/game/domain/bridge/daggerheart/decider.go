@@ -9,6 +9,8 @@ import (
 
 const (
 	commandTypeGMFearSet                    command.Type = commandids.DaggerheartGMFearSet
+	commandTypeCharacterProfileReplace      command.Type = commandids.DaggerheartCharacterProfileReplace
+	commandTypeCharacterProfileDelete       command.Type = commandids.DaggerheartCharacterProfileDelete
 	commandTypeCharacterStatePatch          command.Type = commandids.DaggerheartCharacterStatePatch
 	commandTypeConditionChange              command.Type = commandids.DaggerheartConditionChange
 	commandTypeHopeSpend                    command.Type = commandids.DaggerheartHopeSpend
@@ -59,6 +61,8 @@ type daggerheartDecisionHandler func(SnapshotState, bool, command.Command, func(
 
 var daggerheartDecisionHandlers = map[command.Type]daggerheartDecisionHandler{
 	commandTypeGMFearSet:                    decideGMFearSet,
+	commandTypeCharacterProfileReplace:      wrapDaggerheartDecisionWithoutState(decideCharacterProfileReplace),
+	commandTypeCharacterProfileDelete:       wrapDaggerheartDecisionWithoutState(decideCharacterProfileDelete),
 	commandTypeCharacterStatePatch:          decideCharacterStatePatch,
 	commandTypeConditionChange:              decideConditionChange,
 	commandTypeHopeSpend:                    decideHopeSpend,

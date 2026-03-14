@@ -3,6 +3,7 @@ package daggerheart
 import (
 	"errors"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
@@ -36,6 +37,8 @@ func (m *Module) Version() string {
 
 var daggerheartCommandDefinitions = []command.Definition{
 	{Type: commandTypeGMFearSet, Owner: command.OwnerSystem, ValidatePayload: validateGMFearSetPayload},
+	{Type: commandTypeCharacterProfileReplace, Owner: command.OwnerSystem, ValidatePayload: validateCharacterProfileReplacePayload},
+	{Type: commandTypeCharacterProfileDelete, Owner: command.OwnerSystem, ValidatePayload: validateCharacterProfileDeletePayload},
 	{Type: commandTypeCharacterStatePatch, Owner: command.OwnerSystem, ValidatePayload: validateCharacterStatePatchPayload},
 	{Type: commandTypeConditionChange, Owner: command.OwnerSystem, ValidatePayload: validateConditionChangePayload},
 	{Type: commandTypeHopeSpend, Owner: command.OwnerSystem, ValidatePayload: validateHopeSpendPayload},
@@ -64,6 +67,8 @@ var daggerheartCommandDefinitions = []command.Definition{
 
 var daggerheartEventDefinitions = []event.Definition{
 	{Type: EventTypeGMFearChanged, Owner: event.OwnerSystem, ValidatePayload: validateGMFearChangedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: EventTypeCharacterProfileReplaced, Owner: event.OwnerSystem, ValidatePayload: validateCharacterProfileReplacedPayload, Intent: event.IntentProjectionAndReplay},
+	{Type: EventTypeCharacterProfileDeleted, Owner: event.OwnerSystem, ValidatePayload: validateCharacterProfileDeletedPayload, Intent: event.IntentProjectionAndReplay},
 	{Type: EventTypeCharacterStatePatched, Owner: event.OwnerSystem, ValidatePayload: validateCharacterStatePatchedPayload, Intent: event.IntentProjectionAndReplay},
 	{Type: EventTypeConditionChanged, Owner: event.OwnerSystem, ValidatePayload: validateConditionChangedPayload, Intent: event.IntentProjectionAndReplay},
 	{Type: EventTypeLoadoutSwapped, Owner: event.OwnerSystem, ValidatePayload: validateLoadoutSwappedPayload, Intent: event.IntentProjectionAndReplay},
@@ -150,8 +155,16 @@ func (m *Module) StateFactory() module.StateFactory {
 
 // CharacterReady evaluates Daggerheart-specific character readiness gates used
 // by session.start.
-func (m *Module) CharacterReady(systemProfile map[string]any) (bool, string) {
-	return EvaluateCreationReadinessFromSystemProfile(systemProfile)
+func (m *Module) CharacterReady(systemState any, ch character.State) (bool, string) {
+	snapshot, err := assertSnapshotState(systemState)
+	if err != nil {
+		return false, "daggerheart state is invalid"
+	}
+	profile, ok := snapshot.CharacterProfiles[ch.CharacterID]
+	if !ok {
+		return false, "daggerheart profile is missing"
+	}
+	return EvaluateCreationReadiness(profile)
 }
 
 var _ module.Module = (*Module)(nil)
