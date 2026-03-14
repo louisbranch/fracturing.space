@@ -30,7 +30,7 @@ func (g GRPCGateway) ListAIKeys(ctx context.Context, userID string) ([]settingsa
 		statusValue := credential.GetStatus()
 		safeCredentialID := credentialID
 		canRevoke := credentialID != "" && statusValue == aiv1.CredentialStatus_CREDENTIAL_STATUS_ACTIVE
-		if !isSafeCredentialPathID(credentialID) {
+		if !settingsapp.IsSafePathID(credentialID) {
 			safeCredentialID = ""
 			canRevoke = false
 		}
@@ -233,15 +233,6 @@ func formatProtoTimestamp(value *timestamppb.Timestamp) string {
 		return "-"
 	}
 	return value.AsTime().UTC().Format("2006-01-02 15:04 UTC")
-}
-
-// isSafeCredentialPathID reports whether this package condition is satisfied.
-func isSafeCredentialPathID(value string) bool {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return false
-	}
-	return !strings.Contains(value, "/") && !strings.Contains(value, "\\")
 }
 
 // mapAIKeyMutationError converts transport-level key mutation conflicts into web errors.

@@ -27,7 +27,8 @@ Canonical path: `internal/services/web/`.
 - `modules/`: module registry builder, dependency bundles, and area modules (`campaigns`, `dashboard`, `settings`, etc.).
 - `routepath/`: canonical route constants, split by owned surface.
 - `templates/`: shared layout and templ primitives; area-owned page sets should
-  move out once cross-area ownership becomes unclear.
+  move out once cross-area ownership becomes unclear. If a feature still uses
+  shared template internals, put a module-owned render seam in front first.
 
 For module internals, areas may be either:
 
@@ -46,6 +47,8 @@ Required properties:
 3. Gateway adapters encapsulate backend protocol mapping.
 4. Missing required dependencies fail closed.
 5. Composition dependencies are module-owned bundles (`modules.Dependencies.Campaigns`, `Settings`, `PublicAuth`, etc.), not one flat cross-area field bag.
+6. Production gateway wiring belongs to the owning area package. The registry may
+   assemble shared cross-cutting inputs and module order, but not feature-local graphs.
 
 ## Routing strategy
 
@@ -85,6 +88,8 @@ Required properties:
 - Chat/game UI routes must consume game-owned communication context for stream
   visibility, persona selection, and scene/session awareness; browser code must
   not derive those rules from transcript bodies.
+- Campaign detail pages should render through the area-owned
+  `internal/services/web/modules/campaigns/render` seam, not new page-specific `templates` models.
 - Browser controls must treat persona selection as message presentation state;
   participant-scoped controls such as gate responses still come from
   authoritative game workflow state.
@@ -122,6 +127,7 @@ composition.
   - `discovery`: public discovery and future public people-browsing surface
   - `userhub`: dashboard and dashboard-sync freshness
   - `notifications`: principal unread badge and notifications module
+  - `status`: dashboard service-health surface and reporter flush target
 - This policy is owned by `internal/cmd/web/dependency_graph.go`; when startup
   requirements change, update both the policy table and this architecture note.
 - Runtime dependency assembly is owned by `internal/cmd/web/runtime_dependencies.go`.

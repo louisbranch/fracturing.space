@@ -41,9 +41,13 @@ Canonical implementation path: `internal/services/web/`.
 - `internal/services/web/modules/<area>`: route owner for one area.
 - `internal/services/web/modules/<area>/app`: area-local orchestration and input validation.
 - `internal/services/web/modules/<area>/gateway`: backend protocol mapping.
+- `internal/services/web/modules/<area>/render`: area-owned render/view-model
+  seams when a page set has outgrown shared `templates/`.
 - `internal/services/web/modules/<area>/workflow`: transport-owned
   system-specific workflow contracts and implementations when one area has
   multiple workflow adapters.
+- `internal/services/web/modules/notifications/render`: notifications-module-owned
+  copy/rendering seam; keep inbox copy local to the notifications area.
 - `internal/services/web/platform/*`: shared transport helpers only; feature-specific behavior should not accumulate here.
 - `internal/services/web/templates`: shared layout and templ primitives. If one
   area's page set becomes a contributor hotspot, move that set under the
@@ -53,7 +57,9 @@ Canonical implementation path: `internal/services/web/`.
 
 - New route or changed route contract: owning module `routes.go`, `module.go`,
   and the matching owned file in `routepath/`.
-- Changed page behavior with the same backend shape: owning module handlers/view mapping first, then templates.
+- Changed page behavior with the same backend shape: owning module
+  handlers/view mapping first, then the area-owned render seam if one exists,
+  and shared `templates` only for shell-level primitives.
 - Changed web-only workflow or validation: owning module `app/`.
 - Changed backend transport mapping or proto normalization: owning module `gateway/`.
 - Shared auth, request, session, or page shell behavior: `internal/services/web/principal`, `internal/services/web/platform/`, or root composition packages, but only after confirming it is truly cross-cutting.
@@ -63,8 +69,9 @@ Canonical implementation path: `internal/services/web/`.
 - `campaigns`: still the largest area; the root gateway/service shims,
   duplicate app-owned workflow registry, root-owned workflow contract,
   production alias wall, and broad flat gateway client bag are gone, and the
-  campaign detail handlers are now split by owned surface, but contributors
-  still have to navigate a very large route surface.
+  campaign detail handlers and module-owned markup now live under
+  `campaigns/render`, but contributors still have to navigate a very large
+  route surface.
 - `templates`: still centralize too much area-owned knowledge.
 
 ## Guardrails To Trust
@@ -73,6 +80,7 @@ Canonical implementation path: `internal/services/web/`.
 - `internal/services/web/modules/boundary_guardrails_test.go`
 - `internal/services/web/modules/constructor_guardrails_test.go`
 - `internal/services/web/routepath_guardrails_test.go`
+- `internal/services/web/templates/routes_guardrails_test.go`
 - per-module `routes_test.go` files
 
 When changing boundaries, update docs and guardrails in the same slice so the

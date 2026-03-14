@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -47,7 +48,7 @@ func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 }
 
 // campaignSessionBreadcrumbLabel resolves the selected session breadcrumb label.
-func campaignSessionBreadcrumbLabel(loc webtemplates.Localizer, view webtemplates.CampaignDetailView) string {
+func campaignSessionBreadcrumbLabel(loc webtemplates.Localizer, view campaignrender.DetailView) string {
 	selectedSessionID := strings.TrimSpace(view.SessionID)
 	if selectedSessionID == "" {
 		return webtemplates.T(loc, "game.sessions.title")

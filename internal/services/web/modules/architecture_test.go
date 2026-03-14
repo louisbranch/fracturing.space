@@ -302,7 +302,7 @@ func TestProtectedModuleHandlersDoNotImportProtoPackages(t *testing.T) {
 func TestSelectedModuleHandlersDoNotReadRawPathValues(t *testing.T) {
 	t.Parallel()
 
-	modulesUsingSharedRouteParamHelper := []string{"notifications", "settings", "profile"}
+	modulesUsingSharedRouteParamHelper := []string{"campaigns", "notifications", "settings", "profile"}
 	for _, mod := range modulesUsingSharedRouteParamHelper {
 		for _, file := range moduleHandlerFiles(t, mod) {
 			parsed := parseFile(t, file)

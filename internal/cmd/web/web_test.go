@@ -4,10 +4,13 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"net"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
+	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
@@ -15,6 +18,8 @@ import (
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	grpcHealth "google.golang.org/grpc/health"
+	grpcHealthV1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 func stubManagedConn(t *testing.T) {
@@ -167,7 +172,7 @@ func testDependencyConfig() Config {
 func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	t.Parallel()
 
-	requirements := dependencyRequirements(testDependencyConfig())
+	requirements := dependencyRequirements(testDependencyConfig(), nil)
 	requiredNames := make([]string, 0, len(requirements))
 	for _, dep := range requirements {
 		if dep.policy == startupDependencyRequired {
@@ -184,7 +189,7 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 	t.Parallel()
 
-	requirements := dependencyRequirements(testDependencyConfig())
+	requirements := dependencyRequirements(testDependencyConfig(), nil)
 	got := map[string][]string{}
 	for _, dep := range requirements {
 		if len(dep.surfaces) == 0 {
@@ -201,6 +206,7 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 		dependencyNameDiscovery:     {"discovery"},
 		dependencyNameUserHub:       {"dashboard", "dashboard-sync"},
 		dependencyNameNotifications: {"principal", "notifications"},
+		dependencyNameStatus:        {"dashboard.health"},
 	}
 	for name, want := range tests {
 		if !slices.Equal(got[name], want) {
@@ -212,7 +218,7 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 func TestDependencyRequirementsCapabilitiesAreUnique(t *testing.T) {
 	t.Parallel()
 
-	requirements := dependencyRequirements(testDependencyConfig())
+	requirements := dependencyRequirements(testDependencyConfig(), nil)
 	seen := map[string]struct{}{}
 	for _, dep := range requirements {
 		if strings.TrimSpace(dep.capability) == "" {
@@ -244,7 +250,7 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 
 	cfg := testDependencyConfig()
 	cfg.AssetBaseURL = "https://cdn.example.com/assets"
-	requirements := dependencyRequirements(cfg)
+	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, reporter)
@@ -301,7 +307,7 @@ func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
 	stubManagedConn(t)
 
 	cfg := testDependencyConfig()
-	requirements := dependencyRequirements(cfg)
+	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
@@ -361,7 +367,7 @@ func TestBootstrapDependenciesErrorClosesConns(t *testing.T) {
 	})
 
 	cfg := testDependencyConfig()
-	requirements := dependencyRequirements(cfg)
+	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	_, _, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
@@ -383,7 +389,7 @@ func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
 	cfg := testDependencyConfig()
 	cfg.AIAddr = ""
 	cfg.DiscoveryAddr = "  "
-	requirements := dependencyRequirements(cfg)
+	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	_, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
@@ -392,7 +398,7 @@ func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
 	}
 	defer closeManagedConns(conns)
 
-	// 7 requirements - 2 empty addresses = 5 connections.
+	// 8 requirements - 3 empty addresses = 5 connections.
 	if len(conns) != 5 {
 		t.Fatalf("managed conns = %d, want 5", len(conns))
 	}
@@ -416,9 +422,90 @@ func TestBootstrapRuntimeDependenciesWiresStatusClientIntoDashboard(t *testing.T
 	if runtimeDeps.bundle.Modules.Dashboard.StatusClient == nil {
 		t.Fatal("expected dashboard status client")
 	}
-	if runtimeDeps.statusConn == nil {
-		t.Fatal("expected status managed conn")
+	if len(runtimeDeps.depsConns) != 8 {
+		t.Fatalf("managed conns = %d, want %d", len(runtimeDeps.depsConns), 8)
 	}
+}
+
+func TestBindStatusReporterSetsClientAfterConnReady(t *testing.T) {
+	t.Parallel()
+
+	server := &recordingStatusServer{reports: make(chan *statusv1.ReportStatusRequest, 1)}
+	grpcServer := grpc.NewServer()
+	statusv1.RegisterStatusServiceServer(grpcServer, server)
+	healthServer := grpcHealth.NewServer()
+	healthServer.SetServingStatus("", grpcHealthV1.HealthCheckResponse_SERVING)
+	grpcHealthV1.RegisterHealthServer(grpcServer, healthServer)
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	defer listener.Close()
+
+	go func() {
+		_ = grpcServer.Serve(listener)
+	}()
+	defer grpcServer.Stop()
+
+	reporter := platformstatus.NewReporter(
+		"web",
+		nil,
+		platformstatus.WithPushInterval(time.Hour),
+		platformstatus.WithLogFunc(func(string, ...any) {}),
+	)
+	reporter.Register("web.status.integration", platformstatus.Operational)
+	reporter.SetDegraded("web.status.integration", "waiting")
+
+	reporterCtx, cancelReporter := context.WithCancel(context.Background())
+	stopReporter := reporter.Start(reporterCtx)
+	defer func() {
+		cancelReporter()
+		stopReporter()
+	}()
+
+	connCtx, cancelConn := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelConn()
+	mc, err := platformgrpc.NewManagedConn(connCtx, platformgrpc.ManagedConnConfig{
+		Name: "status",
+		Addr: listener.Addr().String(),
+		Mode: platformgrpc.ModeOptional,
+		DialOpts: []grpc.DialOption{
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		},
+		Logf: func(string, ...any) {},
+	})
+	if err != nil {
+		t.Fatalf("NewManagedConn() error = %v", err)
+	}
+	defer func() { _ = mc.Close() }()
+
+	bindStatusReporter(reporter)(connCtx, mc)
+
+	select {
+	case req := <-server.reports:
+		if req.GetReport().GetService() != "web" {
+			t.Fatalf("reported service = %q, want %q", req.GetReport().GetService(), "web")
+		}
+		if len(req.GetReport().GetCapabilities()) != 1 {
+			t.Fatalf("capability count = %d, want 1", len(req.GetReport().GetCapabilities()))
+		}
+		if req.GetReport().GetCapabilities()[0].GetName() != "web.status.integration" {
+			t.Fatalf("capability name = %q, want %q", req.GetReport().GetCapabilities()[0].GetName(), "web.status.integration")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for reporter to flush after status connection became ready")
+	}
+}
+
+type recordingStatusServer struct {
+	statusv1.UnimplementedStatusServiceServer
+	reports chan *statusv1.ReportStatusRequest
+}
+
+func (s *recordingStatusServer) ReportStatus(_ context.Context, req *statusv1.ReportStatusRequest) (*statusv1.ReportStatusResponse, error) {
+	s.reports <- req
+	return &statusv1.ReportStatusResponse{}, nil
 }
 
 func TestConfigServerConfigMapsRuntimeDependencies(t *testing.T) {

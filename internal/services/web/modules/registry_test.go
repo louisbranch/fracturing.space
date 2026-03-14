@@ -6,6 +6,7 @@ import (
 
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
 	"google.golang.org/grpc"
 )
@@ -191,7 +192,7 @@ func (s *stubStatusClient) GetSystemStatus(_ context.Context, _ *statusv1.GetSys
 func TestStatusHealthProviderNilClient(t *testing.T) {
 	t.Parallel()
 
-	provider := statusHealthProvider(nil)
+	provider := dashboard.StatusHealthProvider(nil)
 	if provider != nil {
 		t.Fatal("expected nil provider for nil client")
 	}
@@ -216,7 +217,7 @@ func TestStatusHealthProviderReturnsEntries(t *testing.T) {
 		},
 	}
 
-	provider := statusHealthProvider(client)
+	provider := dashboard.StatusHealthProvider(client)
 	if provider == nil {
 		t.Fatal("expected non-nil provider")
 	}
@@ -246,7 +247,7 @@ func TestStatusHealthProviderErrorReturnsNil(t *testing.T) {
 	client := &stubStatusClient{
 		err: context.DeadlineExceeded,
 	}
-	provider := statusHealthProvider(client)
+	provider := dashboard.StatusHealthProvider(client)
 	entries := provider(context.Background())
 	if entries != nil {
 		t.Fatalf("expected nil entries on error, got %d", len(entries))
@@ -259,7 +260,7 @@ func TestStatusHealthProviderEmptyServicesReturnsNil(t *testing.T) {
 	client := &stubStatusClient{
 		resp: &statusv1.GetSystemStatusResponse{},
 	}
-	provider := statusHealthProvider(client)
+	provider := dashboard.StatusHealthProvider(client)
 	entries := provider(context.Background())
 	if entries != nil {
 		t.Fatalf("expected nil entries for empty services, got %d", len(entries))

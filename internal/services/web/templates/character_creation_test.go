@@ -369,3 +369,46 @@ func TestCharacterCreationPageRendersNextStepImagePrefetchHints(t *testing.T) {
 		}
 	}
 }
+
+func TestCampaignCharacterCreationSummaryBodyRendersSharedSummary(t *testing.T) {
+	t.Parallel()
+
+	creation := CampaignCharacterCreationView{
+		Ready:       true,
+		NextStep:    9,
+		ClassID:     "class.rogue",
+		SubclassID:  "subclass.night",
+		AncestryID:  "ancestry.human",
+		CommunityID: "community.warden",
+		Classes: []CampaignCreationClassView{
+			{ID: "class.rogue", Name: "Rogue"},
+		},
+		Subclasses: []CampaignCreationSubclassView{
+			{ID: "subclass.night", Name: "Night"},
+		},
+		Ancestries: []CampaignCreationHeritageView{
+			{ID: "ancestry.human", Name: "Human"},
+		},
+		Communities: []CampaignCreationHeritageView{
+			{ID: "community.warden", Name: "Warden"},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := CampaignCharacterCreationSummaryBody(creation, nil).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render CampaignCharacterCreationSummaryBody: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`game.character_creation.step.class_subclass`,
+		`Rogue`,
+		`Night`,
+		`Human`,
+		`Warden`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("CampaignCharacterCreationSummaryBody output missing marker %q: %q", marker, got)
+		}
+	}
+}

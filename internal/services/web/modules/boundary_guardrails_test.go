@@ -182,11 +182,27 @@ func TestRegistryWiresSplitSocialContracts(t *testing.T) {
 	}
 	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 0, "Profile", "AuthClient")
 	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 1, "Profile", "SocialClient")
-	assertRegistryGatewayCallUsesNestedDepField(t, "registry_protected.go", "settingsgateway", "NewGRPCGateway", 0, "Settings", "SocialClient")
-	assertRegistryUsesGatewayDepsLiteral(t, "registry_protected.go", "campaigngateway", "NewGRPCGateway")
+	assertFileContains(t, "registry_protected.go", "dashboard.Compose(dashboard.CompositionConfig{")
+	assertFileContains(t, "registry_protected.go", "notifications.Compose(notifications.CompositionConfig{")
+	assertFileContains(t, "registry_protected.go", "settings.Compose(settings.CompositionConfig{")
+	assertFileContains(t, "registry_protected.go", "campaigns.Compose(campaigns.CompositionConfig{")
+	assertFileDoesNotContain(t, "registry_protected.go", "dashboardgateway.NewGRPCGateway")
+	assertFileDoesNotContain(t, "registry_protected.go", "notificationsgateway.NewGRPCGateway")
+	assertFileDoesNotContain(t, "registry_protected.go", "settingsgateway.NewGRPCGateway")
+	assertFileDoesNotContain(t, "registry_protected.go", "campaigngateway.NewGRPCGateway")
 	assertFileDoesNotContain(t, "registry_protected.go", "campaigns.GameSystem")
 	assertFileDoesNotContain(t, "registry_protected.go", "campaigns.CharacterCreationWorkflow")
 	assertFileDoesNotContain(t, "registry_protected.go", "campaigns.CampaignGateway")
+}
+
+func TestCampaignDetailRenderSeamIsAreaOwned(t *testing.T) {
+	t.Parallel()
+
+	assertFileContains(t, "campaigns/handlers_detail_scaffold.go", "campaignrender.Fragment(")
+	assertFileDoesNotContain(t, "campaigns/handlers_detail_scaffold.go", "webtemplates.CampaignDetailFragment(")
+	assertFileContains(t, "campaigns/handlers_detail_context.go", "campaignrender.DetailView")
+	assertFileContains(t, "campaigns/view_participants.go", "campaignrender.ParticipantView")
+	assertFileContains(t, "campaigns/view_sessions.go", "campaignrender.SessionView")
 }
 
 func TestModulesPackageDoesNotReexportModuleContractAliases(t *testing.T) {
@@ -246,6 +262,18 @@ func assertMountCallsSelector(t *testing.T, path, pkgName, methodName string) {
 	}
 
 	t.Fatalf("%s missing Mount function", path)
+}
+
+func assertFileContains(t *testing.T, path, substring string) {
+	t.Helper()
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile(%q) error = %v", path, err)
+	}
+	if !strings.Contains(string(content), substring) {
+		t.Fatalf("%s does not contain %q", path, substring)
+	}
 }
 
 func dependenciesStructFields(t *testing.T, path string) map[string]struct{} {
