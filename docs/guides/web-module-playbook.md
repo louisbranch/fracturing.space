@@ -253,11 +253,11 @@ Run at minimum:
 - `make test`
 - `make smoke`
 - `make check`
-- `make cover`
 
 Use `make web-architecture-check` and focused web package tests when you need
 web-specific diagnostics during iteration. `make check` automatically runs the
-web architecture gate when web paths changed.
+web architecture gate when web paths changed. Use `make cover` only when you
+need standalone coverage output separate from `make check`.
 
 ## Definition of Done
 

@@ -24,19 +24,16 @@ Canonical testing and coverage policy for production behavior changes.
 3. Implement the minimum change to pass.
 4. Refactor while keeping tests green.
 
-Expected verification commands:
+Use the canonical [Verification commands](../../running/verification.md)
+workflow:
 
-- `make test`
-- `make smoke`
-- `make check`
-
-For game-domain behavior changes, also run:
-
-- `make cover-critical-domain`
+- `make test` during normal implementation
+- `make smoke` when runtime paths need quick feedback
+- `make check` before push, PR open, or PR update
 
 Focused diagnostics remain available via `make cover`, `make docs-check`, and
-the architecture-specific checks. The canonical workflow is documented in
-[Verification commands](../../running/verification.md).
+`make cover-critical-domain` when you need standalone coverage output separate
+from `make check`.
 
 If a change is intentionally test-neutral (docs-only or no-behavior refactor),
 call that out explicitly in the PR.
