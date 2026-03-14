@@ -49,6 +49,11 @@ commands share artifact paths and are guarded to fail fast on overlap.
 3. `make check-runtime`
 4. `make check-coverage`
 
+`make check-runtime` now covers runtime shape checks plus the scenario suite.
+`make check-coverage` owns the full unit+integration repository run as part of
+the coverage lane, so `make check` no longer repeats a separate non-coverage
+`go test -tags=integration ./...` pass.
+
 Focused gates are selected from the branch diff against the local
 `origin/main` merge-base when available. If `origin/main` is unavailable,
 selection falls back to the working tree plus untracked files.
@@ -58,6 +63,22 @@ Override the diff base with:
 ```bash
 CHECK_BASE_REF=<ref> make check
 ```
+
+## Live status artifacts
+
+Public verification commands now write live status under `.tmp/test-status/`:
+
+- `make test` updates `.tmp/test-status/test/`
+- `make smoke` updates `.tmp/test-status/smoke/`
+- `make check` updates `.tmp/test-status/check/`
+
+Long-running `go test -json` lanes also write per-lane status files beneath
+those directories, such as scenario or coverage shard runs. Status JSON is
+meant to help humans and agents tell whether a lane is still running, which
+stage is active, and which package/test is currently hot.
+
+For `make smoke` and `make check`, the top-level `status.json` reports aggregate
+stage progress while nested files report lane-specific test activity.
 
 ## Internal-only commands
 

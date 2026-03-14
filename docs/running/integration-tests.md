@@ -158,8 +158,10 @@ CI target guidance:
 ## Runtime Reporting
 
 Runtime reports are generated from `go test -json` output by CI/internal
-automation. Treat report scripts and shard-specific invocations as internal
-workflow details rather than the public contributor command surface.
+automation, and the public local verification commands now also emit live status
+artifacts under `.tmp/test-status/`. Treat the shard scripts and report
+generation helpers as internal plumbing; the supported public surface remains
+`make test`, `make smoke`, and `make check`.
 
 ## Checklist
 
