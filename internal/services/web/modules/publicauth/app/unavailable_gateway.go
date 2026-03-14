@@ -7,52 +7,47 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
-const authServiceUnavailableMessage = "auth service is not configured"
+const authServiceUnavailableMessage = "Auth service is not configured."
 
-// unavailableGateway defines an internal contract used at this web package boundary.
+// unavailableGateway preserves consistent unavailable errors when auth is not wired.
 type unavailableGateway struct{}
 
-// NewUnavailableGateway returns a fail-closed publicauth gateway.
+// NewUnavailableGateway provides a gateway fallback for startup and tests.
 func NewUnavailableGateway() Gateway {
 	return unavailableGateway{}
 }
 
-// CreateUser executes package-scoped creation behavior for this flow.
-func (unavailableGateway) CreateUser(context.Context, string) (string, error) {
-	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
-}
-
-// BeginPasskeyRegistration centralizes this web behavior in one helper seam.
-func (unavailableGateway) BeginPasskeyRegistration(context.Context, string) (PasskeyChallenge, error) {
+// BeginAccountRegistration fails fast because signup cannot run without auth.
+func (unavailableGateway) BeginAccountRegistration(context.Context, string) (PasskeyChallenge, error) {
 	return PasskeyChallenge{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-// FinishPasskeyRegistration centralizes this web behavior in one helper seam.
-func (unavailableGateway) FinishPasskeyRegistration(context.Context, string, json.RawMessage) (string, error) {
-	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+// FinishAccountRegistration fails fast because signup cannot complete without auth.
+func (unavailableGateway) FinishAccountRegistration(context.Context, string, json.RawMessage) (PasskeyFinish, error) {
+	return PasskeyFinish{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-// BeginPasskeyLogin centralizes this web behavior in one helper seam.
-func (unavailableGateway) BeginPasskeyLogin(context.Context) (PasskeyChallenge, error) {
+// BeginPasskeyLogin fails fast because login cannot start without auth.
+func (unavailableGateway) BeginPasskeyLogin(context.Context, string) (PasskeyChallenge, error) {
 	return PasskeyChallenge{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-// FinishPasskeyLogin centralizes this web behavior in one helper seam.
+// FinishPasskeyLogin fails fast because login cannot complete without auth.
 func (unavailableGateway) FinishPasskeyLogin(context.Context, string, json.RawMessage) (string, error) {
 	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-// CreateWebSession executes package-scoped creation behavior for this flow.
+// CreateWebSession fails fast because there is no auth service to mint sessions.
 func (unavailableGateway) CreateWebSession(context.Context, string) (string, error) {
 	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-// HasValidWebSession reports whether this package condition is satisfied.
+// HasValidWebSession reports false because unavailable auth cannot validate sessions.
 func (unavailableGateway) HasValidWebSession(context.Context, string) bool {
 	return false
 }
 
-// RevokeWebSession applies this package workflow transition.
+// RevokeWebSession fails fast so callers can surface missing auth wiring.
 func (unavailableGateway) RevokeWebSession(context.Context, string) error {
 	return apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }

@@ -142,7 +142,8 @@ func TestRegistryWiresSplitSocialContracts(t *testing.T) {
 			t.Fatalf("%s uses deps.SocialClient; expected split social contract fields", path)
 		}
 	}
-	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 0, "Profile", "SocialClient")
+	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 0, "Profile", "AuthClient")
+	assertRegistryGatewayCallUsesNestedDepField(t, "registry_public.go", "profilegateway", "NewGRPCGateway", 1, "Profile", "SocialClient")
 	assertRegistryGatewayCallUsesNestedDepField(t, "registry_protected.go", "settingsgateway", "NewGRPCGateway", 0, "Settings", "SocialClient")
 }
 

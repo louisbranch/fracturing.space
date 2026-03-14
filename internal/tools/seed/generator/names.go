@@ -68,3 +68,11 @@ func (g *Generator) seedEmail(displayName string) string {
 	}
 	return local + "@" + seedEmailDomain
 }
+
+func (g *Generator) syntheticUserID(displayName string) string {
+	local := strings.TrimSuffix(g.seedEmail(displayName), "@"+seedEmailDomain)
+	if local == "" {
+		local = "seed-user"
+	}
+	return "seed-user-" + local
+}

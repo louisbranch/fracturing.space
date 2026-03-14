@@ -23,9 +23,8 @@ func (fn loopRunnerFunc) Run(ctx context.Context) error {
 
 func TestNormalizeRuntimeConfigDefaults(t *testing.T) {
 	cfg, err := normalizeRuntimeConfig(RuntimeConfig{
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		NotificationsAddr: "notifications:8088",
+		AuthAddr:   "auth:8083",
+		SocialAddr: "social:8090",
 	})
 	if err != nil {
 		t.Fatalf("normalizeRuntimeConfig: %v", err)
@@ -40,10 +39,9 @@ func TestNormalizeRuntimeConfigDefaults(t *testing.T) {
 
 func TestNewRuntimeRequiresContext(t *testing.T) {
 	_, err := NewRuntime(nil, RuntimeConfig{
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		NotificationsAddr: "notifications:8088",
-		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
+		AuthAddr:   "auth:8083",
+		SocialAddr: "social:8090",
+		DBPath:     filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err == nil || !strings.Contains(err.Error(), "context is required") {
 		t.Fatalf("NewRuntime error = %v, want context is required", err)
@@ -52,10 +50,9 @@ func TestNewRuntimeRequiresContext(t *testing.T) {
 
 func TestRunRequiresContext(t *testing.T) {
 	err := Run(nil, RuntimeConfig{
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		NotificationsAddr: "notifications:8088",
-		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
+		AuthAddr:   "auth:8083",
+		SocialAddr: "social:8090",
+		DBPath:     filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err == nil || !strings.Contains(err.Error(), "context is required") {
 		t.Fatalf("Run error = %v, want context is required", err)
@@ -71,24 +68,14 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 		{
 			name: "missing auth",
 			cfg: RuntimeConfig{
-				SocialAddr:        "social:8090",
-				NotificationsAddr: "notifications:8088",
+				SocialAddr: "social:8090",
 			},
 			wantErr: "auth address is required",
 		},
 		{
-			name: "missing notifications",
-			cfg: RuntimeConfig{
-				AuthAddr:   "auth:8083",
-				SocialAddr: "social:8090",
-			},
-			wantErr: "notifications address is required",
-		},
-		{
 			name: "missing social",
 			cfg: RuntimeConfig{
-				AuthAddr:          "auth:8083",
-				NotificationsAddr: "notifications:8088",
+				AuthAddr: "auth:8083",
 			},
 			wantErr: "social address is required",
 		},
@@ -122,11 +109,10 @@ func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 	stubManagedConn(t)
 
 	srv, err := NewRuntime(context.Background(), RuntimeConfig{
-		Port:              freeWorkerTCPPort(t),
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		NotificationsAddr: "notifications:8088",
-		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
+		Port:       freeWorkerTCPPort(t),
+		AuthAddr:   "auth:8083",
+		SocialAddr: "social:8090",
+		DBPath:     filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err != nil {
 		t.Fatalf("NewRuntime: %v", err)
@@ -183,11 +169,10 @@ func TestRuntimeServeRequiresContext(t *testing.T) {
 	stubManagedConn(t)
 
 	runtime, err := NewRuntime(context.Background(), RuntimeConfig{
-		Port:              freeWorkerTCPPort(t),
-		AuthAddr:          "auth:8083",
-		SocialAddr:        "social:8090",
-		NotificationsAddr: "notifications:8088",
-		DBPath:            filepath.Join(t.TempDir(), "worker.db"),
+		Port:       freeWorkerTCPPort(t),
+		AuthAddr:   "auth:8083",
+		SocialAddr: "social:8090",
+		DBPath:     filepath.Join(t.TempDir(), "worker.db"),
 	})
 	if err != nil {
 		t.Fatalf("NewRuntime: %v", err)

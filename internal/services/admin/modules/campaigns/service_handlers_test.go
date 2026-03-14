@@ -278,7 +278,7 @@ func TestCampaignServiceHandlersWithFakeClients(t *testing.T) {
 		},
 	}
 	authClient := &fakeAuthClient{
-		getUserResp: &authv1.GetUserResponse{User: &authv1.User{Id: "user-1", Email: "alice@example.com"}},
+		getUserResp: &authv1.GetUserResponse{User: &authv1.User{Id: "user-1", Username: "alice"}},
 	}
 
 	svcIface := NewHandlers(

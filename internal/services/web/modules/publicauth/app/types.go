@@ -7,14 +7,12 @@ import (
 
 // Gateway abstracts authentication operations behind domain types.
 type Gateway interface {
-	// CreateUser creates a new user account, returning the user ID.
-	CreateUser(ctx context.Context, email string) (string, error)
-	// BeginPasskeyRegistration starts passkey registration for a user.
-	BeginPasskeyRegistration(ctx context.Context, userID string) (PasskeyChallenge, error)
-	// FinishPasskeyRegistration completes registration and returns the user ID.
-	FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (string, error)
-	// BeginPasskeyLogin starts a passkey login flow.
-	BeginPasskeyLogin(ctx context.Context) (PasskeyChallenge, error)
+	// BeginAccountRegistration starts account creation and first-passkey enrollment.
+	BeginAccountRegistration(ctx context.Context, username string) (PasskeyChallenge, error)
+	// FinishAccountRegistration completes account creation and returns the signed-in session.
+	FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
+	// BeginPasskeyLogin starts a username-scoped passkey login flow.
+	BeginPasskeyLogin(ctx context.Context, username string) (PasskeyChallenge, error)
 	// FinishPasskeyLogin completes login and returns the user ID.
 	FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage) (string, error)
 	// CreateWebSession creates a session for the given user, returning the session ID.
@@ -28,9 +26,9 @@ type Gateway interface {
 // Service exposes publicauth orchestration methods used by transport handlers.
 type Service interface {
 	HealthBody() string
-	PasskeyLoginStart(ctx context.Context) (PasskeyChallenge, error)
+	PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error)
 	PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
-	PasskeyRegisterStart(ctx context.Context, email string) (PasskeyRegisterResult, error)
+	PasskeyRegisterStart(ctx context.Context, username string) (PasskeyRegisterResult, error)
 	PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
 	HasValidWebSession(ctx context.Context, sessionID string) bool
 	RevokeWebSession(ctx context.Context, sessionID string) error
@@ -45,12 +43,12 @@ type PasskeyChallenge struct {
 // PasskeyRegisterResult stores passkey registration start data.
 type PasskeyRegisterResult struct {
 	SessionID string
-	UserID    string
 	PublicKey json.RawMessage
 }
 
 // PasskeyFinish stores passkey finish results.
 type PasskeyFinish struct {
-	SessionID string
-	UserID    string
+	SessionID    string
+	UserID       string
+	RecoveryCode string
 }

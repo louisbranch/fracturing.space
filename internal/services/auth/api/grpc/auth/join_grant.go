@@ -37,7 +37,7 @@ type joinGrantConfig struct {
 func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
 	var raw joinGrantEnv
 	if err := env.Parse(&raw); err != nil {
-		return joinGrantConfig{}, fmt.Errorf("parse join grant env: %w", err)
+		return joinGrantConfig{}, fmt.Errorf("Parse join grant env: %w", err)
 	}
 	issuer := strings.TrimSpace(raw.Issuer)
 	audience := strings.TrimSpace(raw.Audience)
@@ -53,13 +53,13 @@ func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
 	}
 	keyBytes, err := decodeBase64(privateKey)
 	if err != nil {
-		return joinGrantConfig{}, fmt.Errorf("decode join grant private key: %w", err)
+		return joinGrantConfig{}, fmt.Errorf("Decode join grant private key: %w", err)
 	}
 	if len(keyBytes) != ed25519.PrivateKeySize {
-		return joinGrantConfig{}, fmt.Errorf("join grant private key must be %d bytes", ed25519.PrivateKeySize)
+		return joinGrantConfig{}, fmt.Errorf("Join grant private key must be %d bytes.", ed25519.PrivateKeySize)
 	}
 	if raw.TTL <= 0 {
-		return joinGrantConfig{}, fmt.Errorf("join grant ttl must be positive")
+		return joinGrantConfig{}, fmt.Errorf("Join grant TTL must be positive.")
 	}
 
 	return joinGrantConfig{
@@ -75,19 +75,19 @@ func loadJoinGrantConfigFromEnv() (joinGrantConfig, error) {
 // maintaining token state in storage.
 func encodeJoinGrant(cfg joinGrantConfig, payload map[string]any) (string, error) {
 	if cfg.issuer == "" || cfg.audience == "" || len(cfg.key) != ed25519.PrivateKeySize {
-		return "", errors.New("join grant signer is not configured")
+		return "", errors.New("Join grant signer is not configured.")
 	}
 	headerJSON, err := json.Marshal(map[string]string{
 		"alg": "EdDSA",
 		"typ": "JWT",
 	})
 	if err != nil {
-		return "", fmt.Errorf("encode join grant header: %w", err)
+		return "", fmt.Errorf("Encode join grant header: %w", err)
 	}
 
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("encode join grant payload: %w", err)
+		return "", fmt.Errorf("Encode join grant payload: %w", err)
 	}
 
 	encodedHeader := base64.RawURLEncoding.EncodeToString(headerJSON)
@@ -102,7 +102,7 @@ func encodeJoinGrant(cfg joinGrantConfig, payload map[string]any) (string, error
 // providers can be flexible without blocking bootstrapping.
 func decodeBase64(value string) ([]byte, error) {
 	if value == "" {
-		return nil, errors.New("empty base64 value")
+		return nil, errors.New("Empty base64 value.")
 	}
 	decoded, err := base64.RawStdEncoding.DecodeString(value)
 	if err == nil {

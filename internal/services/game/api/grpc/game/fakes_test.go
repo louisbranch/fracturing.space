@@ -1080,11 +1080,15 @@ type fakeSocialClient struct {
 	getUserProfileCalls   int
 }
 
-func (f *fakeAuthClient) CreateUser(ctx context.Context, req *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+func (f *fakeAuthClient) IssueJoinGrant(ctx context.Context, req *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
-func (f *fakeAuthClient) IssueJoinGrant(ctx context.Context, req *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
+func (f *fakeAuthClient) BeginAccountRegistration(ctx context.Context, req *authv1.BeginAccountRegistrationRequest, opts ...grpc.CallOption) (*authv1.BeginAccountRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) FinishAccountRegistration(ctx context.Context, req *authv1.FinishAccountRegistrationRequest, opts ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
@@ -1124,6 +1128,18 @@ func (f *fakeAuthClient) FinishPasskeyLogin(ctx context.Context, req *authv1.Fin
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
+func (f *fakeAuthClient) BeginAccountRecovery(ctx context.Context, req *authv1.BeginAccountRecoveryRequest, opts ...grpc.CallOption) (*authv1.BeginAccountRecoveryResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) BeginRecoveryPasskeyRegistration(ctx context.Context, req *authv1.BeginRecoveryPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
+func (f *fakeAuthClient) FinishRecoveryPasskeyRegistration(ctx context.Context, req *authv1.FinishRecoveryPasskeyRegistrationRequest, opts ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
 func (f *fakeAuthClient) CreateWebSession(ctx context.Context, req *authv1.CreateWebSessionRequest, opts ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
@@ -1136,15 +1152,11 @@ func (f *fakeAuthClient) RevokeWebSession(ctx context.Context, req *authv1.Revok
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
-func (f *fakeAuthClient) GenerateMagicLink(ctx context.Context, req *authv1.GenerateMagicLinkRequest, opts ...grpc.CallOption) (*authv1.GenerateMagicLinkResponse, error) {
+func (f *fakeAuthClient) ListPasskeys(ctx context.Context, req *authv1.ListPasskeysRequest, opts ...grpc.CallOption) (*authv1.ListPasskeysResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
-func (f *fakeAuthClient) ConsumeMagicLink(ctx context.Context, req *authv1.ConsumeMagicLinkRequest, opts ...grpc.CallOption) (*authv1.ConsumeMagicLinkResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
-}
-
-func (f *fakeAuthClient) ListUserEmails(ctx context.Context, req *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
+func (f *fakeAuthClient) LookupUserByUsername(ctx context.Context, req *authv1.LookupUserByUsernameRequest, opts ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
@@ -1174,10 +1186,6 @@ func (f *fakeSocialClient) GetUserProfile(_ context.Context, req *socialv1.GetUs
 		return &socialv1.GetUserProfileResponse{}, nil
 	}
 	return &socialv1.GetUserProfileResponse{UserProfile: f.profile}, nil
-}
-
-func (f *fakeSocialClient) LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented in fake social client")
 }
 
 type fakeStatisticsStore struct {

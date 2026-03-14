@@ -1,7 +1,6 @@
 package oauth
 
 import (
-	"reflect"
 	"testing"
 	"time"
 )
@@ -11,14 +10,7 @@ func clearOAuthEnv(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_OAUTH_ISSUER", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_RESOURCE_SECRET", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_CLIENTS", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_LOGIN_REDIRECTS", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_LOGIN_UI_URL", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_SECRET", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_REDIRECT_URI", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_ID", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_SECRET", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GITHUB_REDIRECT_URI", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID", "")
 	t.Setenv("FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI", "")
 }
@@ -45,30 +37,8 @@ func TestLoadConfigFromEnvDefaults(t *testing.T) {
 	if config.Clients != nil {
 		t.Fatal("expected Clients to be nil")
 	}
-	if config.LoginRedirectAllowlist != nil {
-		t.Fatal("expected LoginRedirectAllowlist to be nil")
-	}
 	if config.LoginUIURL != "" {
 		t.Fatalf("LoginUIURL = %q, want empty", config.LoginUIURL)
-	}
-	if config.Providers != nil {
-		t.Fatal("expected Providers to be nil")
-	}
-}
-
-func TestTrimCSV(t *testing.T) {
-	got := trimCSV([]string{" a", " ", "b ", "c "})
-	want := []string{"a", "b", "c"}
-	if !reflect.DeepEqual(got, want) {
-		t.Fatalf("trimCSV() = %v, want %v", got, want)
-	}
-
-	if got := trimCSV(nil); got != nil {
-		t.Fatalf("trimCSV(nil) = %v, want nil", got)
-	}
-
-	if got := trimCSV([]string{"", " "}); got != nil {
-		t.Fatalf("trimCSV(empty) = %v, want nil", got)
 	}
 }
 
@@ -85,32 +55,6 @@ func TestLoadConfigFromEnvParsesClientsAndLoginUIURL(t *testing.T) {
 	}
 	if config.LoginUIURL != "https://web.example.com/login" {
 		t.Fatalf("LoginUIURL = %q, want %q", config.LoginUIURL, "https://web.example.com/login")
-	}
-}
-
-func TestLoadConfigFromEnvProviders(t *testing.T) {
-	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID", "gid")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_SECRET", "gsecret")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_REDIRECT_URI", "https://example.com/google")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GOOGLE_SCOPES", "openid,email")
-	// Partial GitHub config should be ignored.
-	t.Setenv("FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_ID", "hid")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_SECRET", "")
-	t.Setenv("FRACTURING_SPACE_OAUTH_GITHUB_REDIRECT_URI", "https://example.com/github")
-
-	config := LoadConfigFromEnv()
-	if len(config.Providers) != 1 {
-		t.Fatalf("Providers len = %d, want 1", len(config.Providers))
-	}
-	google, ok := config.Providers["google"]
-	if !ok {
-		t.Fatal("expected google provider")
-	}
-	if google.ClientID != "gid" {
-		t.Fatalf("google.ClientID = %q, want %q", google.ClientID, "gid")
-	}
-	if !reflect.DeepEqual(google.Scopes, []string{"openid", "email"}) {
-		t.Fatalf("google.Scopes = %v, want %v", google.Scopes, []string{"openid", "email"})
 	}
 }
 

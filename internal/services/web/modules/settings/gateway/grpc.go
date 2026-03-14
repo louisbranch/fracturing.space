@@ -20,7 +20,6 @@ import (
 // SocialClient exposes profile lookup and mutation operations.
 type SocialClient interface {
 	GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error)
-	LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error)
 	SetUserProfile(context.Context, *socialv1.SetUserProfileRequest, ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error)
 }
 
@@ -75,22 +74,31 @@ func (g GRPCGateway) LoadProfile(ctx context.Context, userID string) (settingsap
 	resp, err := g.SocialClient.GetUserProfile(ctx, &socialv1.GetUserProfileRequest{UserId: userID})
 	if err != nil {
 		if status.Code(err) == codes.NotFound {
-			return settingsapp.SettingsProfile{}, nil
+			resp = nil
+		} else {
+			return settingsapp.SettingsProfile{}, err
 		}
-		return settingsapp.SettingsProfile{}, err
+	}
+	result := settingsapp.SettingsProfile{}
+	if g.AccountClient != nil {
+		accountResp, err := g.AccountClient.GetProfile(ctx, &authv1.GetProfileRequest{UserId: userID})
+		if err != nil {
+			return settingsapp.SettingsProfile{}, err
+		}
+		if accountResp != nil && accountResp.GetProfile() != nil {
+			result.Username = strings.TrimSpace(accountResp.GetProfile().GetUsername())
+		}
 	}
 	if resp == nil || resp.GetUserProfile() == nil {
-		return settingsapp.SettingsProfile{}, nil
+		return result, nil
 	}
 	profile := resp.GetUserProfile()
-	return settingsapp.SettingsProfile{
-		Username:      strings.TrimSpace(profile.GetUsername()),
-		Name:          strings.TrimSpace(profile.GetName()),
-		Pronouns:      pronouns.FromProto(profile.GetPronouns()),
-		Bio:           strings.TrimSpace(profile.GetBio()),
-		AvatarSetID:   strings.TrimSpace(profile.GetAvatarSetId()),
-		AvatarAssetID: strings.TrimSpace(profile.GetAvatarAssetId()),
-	}, nil
+	result.Name = strings.TrimSpace(profile.GetName())
+	result.Pronouns = pronouns.FromProto(profile.GetPronouns())
+	result.Bio = strings.TrimSpace(profile.GetBio())
+	result.AvatarSetID = strings.TrimSpace(profile.GetAvatarSetId())
+	result.AvatarAssetID = strings.TrimSpace(profile.GetAvatarAssetId())
+	return result, nil
 }
 
 // SaveProfile centralizes this web behavior in one helper seam.
@@ -100,7 +108,6 @@ func (g GRPCGateway) SaveProfile(ctx context.Context, userID string, profile set
 	}
 	_, err := g.SocialClient.SetUserProfile(ctx, &socialv1.SetUserProfileRequest{
 		UserId:        userID,
-		Username:      profile.Username,
 		Name:          profile.Name,
 		Pronouns:      pronouns.ToProto(profile.Pronouns),
 		Bio:           profile.Bio,

@@ -60,7 +60,7 @@ func New(port int, httpAddr string) (*Server, error) {
 	srvEnv := loadAuthServerEnv()
 	listener, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		return nil, fmt.Errorf("listen on port %d: %w", port, err)
+		return nil, fmt.Errorf("Listen on port %d: %w", port, err)
 	}
 	store, err := openAuthStore(srvEnv.DBPath)
 	if err != nil {
@@ -81,7 +81,7 @@ func New(port int, httpAddr string) (*Server, error) {
 		if err != nil {
 			_ = listener.Close()
 			_ = store.Close()
-			return nil, fmt.Errorf("listen on http addr %s: %w", httpAddr, err)
+			return nil, fmt.Errorf("Listen on HTTP address %s: %w", httpAddr, err)
 		}
 		mux := http.NewServeMux()
 		oauthServer = oauth.NewServer(oauthConfig, oauthStore, store)
@@ -89,7 +89,7 @@ func New(port int, httpAddr string) (*Server, error) {
 			_ = httpListener.Close()
 			_ = listener.Close()
 			_ = store.Close()
-			return nil, fmt.Errorf("register oauth routes: %w", err)
+			return nil, fmt.Errorf("Register OAuth routes: %w", err)
 		}
 		httpServer = &http.Server{Handler: mux}
 	}
@@ -133,7 +133,7 @@ func (s *Server) Addr() string {
 // Run creates and serves an auth server until the context ends.
 func Run(ctx context.Context, port int, httpAddr string) error {
 	if ctx == nil {
-		return errors.New("context is required")
+		return errors.New("Context is required.")
 	}
 	grpcServer, err := New(port, httpAddr)
 	if err != nil {
@@ -148,10 +148,10 @@ func Run(ctx context.Context, port int, httpAddr string) error {
 // transport shutdown are coordinated together.
 func (s *Server) Serve(ctx context.Context) error {
 	if s == nil {
-		return errors.New("server is nil")
+		return errors.New("Server is nil.")
 	}
 	if ctx == nil {
-		return errors.New("context is required")
+		return errors.New("Context is required.")
 	}
 	serverCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -179,7 +179,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		if err == nil || errors.Is(err, grpc.ErrServerStopped) {
 			return nil
 		}
-		return fmt.Errorf("serve gRPC: %w", err)
+		return fmt.Errorf("Serve gRPC: %w", err)
 	}
 
 	shutdownGRPC := func() {
@@ -214,7 +214,7 @@ func (s *Server) Serve(ctx context.Context) error {
 		if handled := handleErr(grpcErr); handled != nil {
 			return handled
 		}
-		return fmt.Errorf("serve HTTP: %w", err)
+		return fmt.Errorf("Serve HTTP: %w", err)
 	}
 }
 
@@ -222,13 +222,13 @@ func (s *Server) Serve(ctx context.Context) error {
 func openAuthStore(path string) (*authsqlite.Store, error) {
 	if dir := filepath.Dir(path); dir != "." {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return nil, fmt.Errorf("create storage dir: %w", err)
+			return nil, fmt.Errorf("Create storage directory: %w", err)
 		}
 	}
 
 	store, err := authsqlite.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open auth sqlite store: %w", err)
+		return nil, fmt.Errorf("Open auth SQLite store: %w", err)
 	}
 	return store, nil
 }

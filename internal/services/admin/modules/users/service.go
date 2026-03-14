@@ -43,6 +43,11 @@ func (s *handlers) HandleUsersPage(w http.ResponseWriter, r *http.Request) {
 		view.Message = message
 	}
 
+	if username := strings.TrimSpace(r.URL.Query().Get("username")); username != "" {
+		s.redirectToUsernameDetail(w, r, username, loc)
+		return
+	}
+
 	if userID := strings.TrimSpace(r.URL.Query().Get("user_id")); userID != "" {
 		s.redirectToUserDetail(w, r, userID)
 		return
@@ -92,8 +97,9 @@ func (s *handlers) HandleUserLookup(w http.ResponseWriter, r *http.Request) {
 	pageCtx := s.base.PageContext(lang, loc, r)
 	view := templates.UsersPageView{}
 
+	username := strings.TrimSpace(r.URL.Query().Get("username"))
 	userID := strings.TrimSpace(r.URL.Query().Get("user_id"))
-	if userID == "" {
+	if username == "" && userID == "" {
 		view.Message = loc.Sprintf("error.user_id_required")
 		s.base.RenderPage(
 			w,
@@ -105,6 +111,10 @@ func (s *handlers) HandleUserLookup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if username != "" {
+		s.redirectToUsernameDetail(w, r, username, loc)
+		return
+	}
 	s.redirectToUserDetail(w, r, userID)
 }
 
@@ -166,6 +176,34 @@ func (s *handlers) redirectToUserDetail(w http.ResponseWriter, r *http.Request, 
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
+func (s *handlers) redirectToUsernameDetail(w http.ResponseWriter, r *http.Request, username string, loc *message.Printer) {
+	username = strings.TrimSpace(username)
+	if username == "" {
+		http.NotFound(w, r)
+		return
+	}
+
+	ctx, cancel := s.base.GameGRPCCallContext(r.Context())
+	defer cancel()
+
+	response, err := s.authClient.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: username})
+	if err != nil || response.GetUser() == nil {
+		adminerrors.LogError(r, "lookup user by username: %v", err)
+		redirectURL := routepath.Users
+		redirectURL = templates.AppendQueryParam(redirectURL, "message", loc.Sprintf("error.user_not_found"))
+		if s.base.IsHTMXRequest(r) {
+			w.Header().Set("Location", redirectURL)
+			w.Header().Set("HX-Redirect", redirectURL)
+			w.WriteHeader(http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+		return
+	}
+
+	s.redirectToUserDetail(w, r, response.GetUser().GetId())
+}
+
 func (s *handlers) loadUserDetail(r *http.Request, ctx context.Context, userID string, loc *message.Printer) (*templates.UserDetail, string) {
 	userID = strings.TrimSpace(userID)
 	if userID == "" {
@@ -177,14 +215,6 @@ func (s *handlers) loadUserDetail(r *http.Request, ctx context.Context, userID s
 		return nil, loc.Sprintf("error.user_not_found")
 	}
 	detail := buildUserDetail(response.GetUser())
-	if detail != nil {
-		emails, err := s.authClient.ListUserEmails(ctx, &authv1.ListUserEmailsRequest{UserId: userID})
-		if err != nil {
-			adminerrors.LogError(r, "list user emails: %v", err)
-		} else {
-			detail.Emails = buildUserEmailRows(emails.GetEmails(), loc)
-		}
-	}
 	return detail, ""
 }
 

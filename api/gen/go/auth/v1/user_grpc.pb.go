@@ -20,54 +20,63 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	AuthService_CreateUser_FullMethodName                   = "/auth.v1.AuthService/CreateUser"
-	AuthService_BeginPasskeyRegistration_FullMethodName     = "/auth.v1.AuthService/BeginPasskeyRegistration"
-	AuthService_FinishPasskeyRegistration_FullMethodName    = "/auth.v1.AuthService/FinishPasskeyRegistration"
-	AuthService_BeginPasskeyLogin_FullMethodName            = "/auth.v1.AuthService/BeginPasskeyLogin"
-	AuthService_FinishPasskeyLogin_FullMethodName           = "/auth.v1.AuthService/FinishPasskeyLogin"
-	AuthService_CreateWebSession_FullMethodName             = "/auth.v1.AuthService/CreateWebSession"
-	AuthService_GetWebSession_FullMethodName                = "/auth.v1.AuthService/GetWebSession"
-	AuthService_RevokeWebSession_FullMethodName             = "/auth.v1.AuthService/RevokeWebSession"
-	AuthService_GenerateMagicLink_FullMethodName            = "/auth.v1.AuthService/GenerateMagicLink"
-	AuthService_ConsumeMagicLink_FullMethodName             = "/auth.v1.AuthService/ConsumeMagicLink"
-	AuthService_ListUserEmails_FullMethodName               = "/auth.v1.AuthService/ListUserEmails"
-	AuthService_IssueJoinGrant_FullMethodName               = "/auth.v1.AuthService/IssueJoinGrant"
-	AuthService_GetUser_FullMethodName                      = "/auth.v1.AuthService/GetUser"
-	AuthService_ListUsers_FullMethodName                    = "/auth.v1.AuthService/ListUsers"
-	AuthService_LeaseIntegrationOutboxEvents_FullMethodName = "/auth.v1.AuthService/LeaseIntegrationOutboxEvents"
-	AuthService_AckIntegrationOutboxEvent_FullMethodName    = "/auth.v1.AuthService/AckIntegrationOutboxEvent"
+	AuthService_BeginAccountRegistration_FullMethodName          = "/auth.v1.AuthService/BeginAccountRegistration"
+	AuthService_FinishAccountRegistration_FullMethodName         = "/auth.v1.AuthService/FinishAccountRegistration"
+	AuthService_BeginPasskeyRegistration_FullMethodName          = "/auth.v1.AuthService/BeginPasskeyRegistration"
+	AuthService_FinishPasskeyRegistration_FullMethodName         = "/auth.v1.AuthService/FinishPasskeyRegistration"
+	AuthService_BeginPasskeyLogin_FullMethodName                 = "/auth.v1.AuthService/BeginPasskeyLogin"
+	AuthService_FinishPasskeyLogin_FullMethodName                = "/auth.v1.AuthService/FinishPasskeyLogin"
+	AuthService_BeginAccountRecovery_FullMethodName              = "/auth.v1.AuthService/BeginAccountRecovery"
+	AuthService_BeginRecoveryPasskeyRegistration_FullMethodName  = "/auth.v1.AuthService/BeginRecoveryPasskeyRegistration"
+	AuthService_FinishRecoveryPasskeyRegistration_FullMethodName = "/auth.v1.AuthService/FinishRecoveryPasskeyRegistration"
+	AuthService_CreateWebSession_FullMethodName                  = "/auth.v1.AuthService/CreateWebSession"
+	AuthService_GetWebSession_FullMethodName                     = "/auth.v1.AuthService/GetWebSession"
+	AuthService_RevokeWebSession_FullMethodName                  = "/auth.v1.AuthService/RevokeWebSession"
+	AuthService_ListPasskeys_FullMethodName                      = "/auth.v1.AuthService/ListPasskeys"
+	AuthService_IssueJoinGrant_FullMethodName                    = "/auth.v1.AuthService/IssueJoinGrant"
+	AuthService_LookupUserByUsername_FullMethodName              = "/auth.v1.AuthService/LookupUserByUsername"
+	AuthService_GetUser_FullMethodName                           = "/auth.v1.AuthService/GetUser"
+	AuthService_ListUsers_FullMethodName                         = "/auth.v1.AuthService/ListUsers"
+	AuthService_LeaseIntegrationOutboxEvents_FullMethodName      = "/auth.v1.AuthService/LeaseIntegrationOutboxEvents"
+	AuthService_AckIntegrationOutboxEvent_FullMethodName         = "/auth.v1.AuthService/AckIntegrationOutboxEvent"
 )
 
 // AuthServiceClient is the client API for AuthService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// AuthService provides minimal auth user operations.
+// AuthService provides account, passkey, and session operations.
 type AuthServiceClient interface {
-	// Create a new user record.
-	CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error)
-	// Begin a passkey registration ceremony.
+	// Begin a username-backed account registration ceremony.
+	BeginAccountRegistration(ctx context.Context, in *BeginAccountRegistrationRequest, opts ...grpc.CallOption) (*BeginAccountRegistrationResponse, error)
+	// Finish account registration, create the first passkey, and issue the recovery code.
+	FinishAccountRegistration(ctx context.Context, in *FinishAccountRegistrationRequest, opts ...grpc.CallOption) (*FinishAccountRegistrationResponse, error)
+	// Begin an authenticated passkey registration ceremony for an existing user.
 	BeginPasskeyRegistration(ctx context.Context, in *BeginPasskeyRegistrationRequest, opts ...grpc.CallOption) (*BeginPasskeyRegistrationResponse, error)
-	// Finish a passkey registration ceremony.
+	// Finish an authenticated passkey registration ceremony.
 	FinishPasskeyRegistration(ctx context.Context, in *FinishPasskeyRegistrationRequest, opts ...grpc.CallOption) (*FinishPasskeyRegistrationResponse, error)
-	// Begin a passkey login ceremony.
+	// Begin a passkey login ceremony for a username.
 	BeginPasskeyLogin(ctx context.Context, in *BeginPasskeyLoginRequest, opts ...grpc.CallOption) (*BeginPasskeyLoginResponse, error)
 	// Finish a passkey login ceremony.
 	FinishPasskeyLogin(ctx context.Context, in *FinishPasskeyLoginRequest, opts ...grpc.CallOption) (*FinishPasskeyLoginResponse, error)
+	// Verify a recovery code and create a narrow recovery session.
+	BeginAccountRecovery(ctx context.Context, in *BeginAccountRecoveryRequest, opts ...grpc.CallOption) (*BeginAccountRecoveryResponse, error)
+	// Begin replacement passkey registration for a recovery session.
+	BeginRecoveryPasskeyRegistration(ctx context.Context, in *BeginRecoveryPasskeyRegistrationRequest, opts ...grpc.CallOption) (*BeginPasskeyRegistrationResponse, error)
+	// Finish replacement passkey registration, rotate recovery state, and issue a web session.
+	FinishRecoveryPasskeyRegistration(ctx context.Context, in *FinishRecoveryPasskeyRegistrationRequest, opts ...grpc.CallOption) (*FinishAccountRegistrationResponse, error)
 	// Create a durable web session for an authenticated user.
 	CreateWebSession(ctx context.Context, in *CreateWebSessionRequest, opts ...grpc.CallOption) (*CreateWebSessionResponse, error)
 	// Resolve a durable web session by ID.
 	GetWebSession(ctx context.Context, in *GetWebSessionRequest, opts ...grpc.CallOption) (*GetWebSessionResponse, error)
 	// Revoke a durable web session by ID.
 	RevokeWebSession(ctx context.Context, in *RevokeWebSessionRequest, opts ...grpc.CallOption) (*RevokeWebSessionResponse, error)
-	// Generate a magic link token for email recovery.
-	GenerateMagicLink(ctx context.Context, in *GenerateMagicLinkRequest, opts ...grpc.CallOption) (*GenerateMagicLinkResponse, error)
-	// Consume a magic link token.
-	ConsumeMagicLink(ctx context.Context, in *ConsumeMagicLinkRequest, opts ...grpc.CallOption) (*ConsumeMagicLinkResponse, error)
-	// List email addresses for a user.
-	ListUserEmails(ctx context.Context, in *ListUserEmailsRequest, opts ...grpc.CallOption) (*ListUserEmailsResponse, error)
+	// List registered passkeys for a user.
+	ListPasskeys(ctx context.Context, in *ListPasskeysRequest, opts ...grpc.CallOption) (*ListPasskeysResponse, error)
 	// Issue a join grant for a campaign invite.
 	IssueJoinGrant(ctx context.Context, in *IssueJoinGrantRequest, opts ...grpc.CallOption) (*IssueJoinGrantResponse, error)
+	// Resolve a user by username.
+	LookupUserByUsername(ctx context.Context, in *LookupUserByUsernameRequest, opts ...grpc.CallOption) (*LookupUserByUsernameResponse, error)
 	// Get a user record by ID.
 	GetUser(ctx context.Context, in *GetUserRequest, opts ...grpc.CallOption) (*GetUserResponse, error)
 	// List user records.
@@ -86,10 +95,20 @@ func NewAuthServiceClient(cc grpc.ClientConnInterface) AuthServiceClient {
 	return &authServiceClient{cc}
 }
 
-func (c *authServiceClient) CreateUser(ctx context.Context, in *CreateUserRequest, opts ...grpc.CallOption) (*CreateUserResponse, error) {
+func (c *authServiceClient) BeginAccountRegistration(ctx context.Context, in *BeginAccountRegistrationRequest, opts ...grpc.CallOption) (*BeginAccountRegistrationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(CreateUserResponse)
-	err := c.cc.Invoke(ctx, AuthService_CreateUser_FullMethodName, in, out, cOpts...)
+	out := new(BeginAccountRegistrationResponse)
+	err := c.cc.Invoke(ctx, AuthService_BeginAccountRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) FinishAccountRegistration(ctx context.Context, in *FinishAccountRegistrationRequest, opts ...grpc.CallOption) (*FinishAccountRegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FinishAccountRegistrationResponse)
+	err := c.cc.Invoke(ctx, AuthService_FinishAccountRegistration_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -136,6 +155,36 @@ func (c *authServiceClient) FinishPasskeyLogin(ctx context.Context, in *FinishPa
 	return out, nil
 }
 
+func (c *authServiceClient) BeginAccountRecovery(ctx context.Context, in *BeginAccountRecoveryRequest, opts ...grpc.CallOption) (*BeginAccountRecoveryResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BeginAccountRecoveryResponse)
+	err := c.cc.Invoke(ctx, AuthService_BeginAccountRecovery_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) BeginRecoveryPasskeyRegistration(ctx context.Context, in *BeginRecoveryPasskeyRegistrationRequest, opts ...grpc.CallOption) (*BeginPasskeyRegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(BeginPasskeyRegistrationResponse)
+	err := c.cc.Invoke(ctx, AuthService_BeginRecoveryPasskeyRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) FinishRecoveryPasskeyRegistration(ctx context.Context, in *FinishRecoveryPasskeyRegistrationRequest, opts ...grpc.CallOption) (*FinishAccountRegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(FinishAccountRegistrationResponse)
+	err := c.cc.Invoke(ctx, AuthService_FinishRecoveryPasskeyRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *authServiceClient) CreateWebSession(ctx context.Context, in *CreateWebSessionRequest, opts ...grpc.CallOption) (*CreateWebSessionResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(CreateWebSessionResponse)
@@ -166,30 +215,10 @@ func (c *authServiceClient) RevokeWebSession(ctx context.Context, in *RevokeWebS
 	return out, nil
 }
 
-func (c *authServiceClient) GenerateMagicLink(ctx context.Context, in *GenerateMagicLinkRequest, opts ...grpc.CallOption) (*GenerateMagicLinkResponse, error) {
+func (c *authServiceClient) ListPasskeys(ctx context.Context, in *ListPasskeysRequest, opts ...grpc.CallOption) (*ListPasskeysResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GenerateMagicLinkResponse)
-	err := c.cc.Invoke(ctx, AuthService_GenerateMagicLink_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) ConsumeMagicLink(ctx context.Context, in *ConsumeMagicLinkRequest, opts ...grpc.CallOption) (*ConsumeMagicLinkResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ConsumeMagicLinkResponse)
-	err := c.cc.Invoke(ctx, AuthService_ConsumeMagicLink_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *authServiceClient) ListUserEmails(ctx context.Context, in *ListUserEmailsRequest, opts ...grpc.CallOption) (*ListUserEmailsResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(ListUserEmailsResponse)
-	err := c.cc.Invoke(ctx, AuthService_ListUserEmails_FullMethodName, in, out, cOpts...)
+	out := new(ListPasskeysResponse)
+	err := c.cc.Invoke(ctx, AuthService_ListPasskeys_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -200,6 +229,16 @@ func (c *authServiceClient) IssueJoinGrant(ctx context.Context, in *IssueJoinGra
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(IssueJoinGrantResponse)
 	err := c.cc.Invoke(ctx, AuthService_IssueJoinGrant_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) LookupUserByUsername(ctx context.Context, in *LookupUserByUsernameRequest, opts ...grpc.CallOption) (*LookupUserByUsernameResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(LookupUserByUsernameResponse)
+	err := c.cc.Invoke(ctx, AuthService_LookupUserByUsername_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -250,32 +289,38 @@ func (c *authServiceClient) AckIntegrationOutboxEvent(ctx context.Context, in *A
 // All implementations must embed UnimplementedAuthServiceServer
 // for forward compatibility.
 //
-// AuthService provides minimal auth user operations.
+// AuthService provides account, passkey, and session operations.
 type AuthServiceServer interface {
-	// Create a new user record.
-	CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error)
-	// Begin a passkey registration ceremony.
+	// Begin a username-backed account registration ceremony.
+	BeginAccountRegistration(context.Context, *BeginAccountRegistrationRequest) (*BeginAccountRegistrationResponse, error)
+	// Finish account registration, create the first passkey, and issue the recovery code.
+	FinishAccountRegistration(context.Context, *FinishAccountRegistrationRequest) (*FinishAccountRegistrationResponse, error)
+	// Begin an authenticated passkey registration ceremony for an existing user.
 	BeginPasskeyRegistration(context.Context, *BeginPasskeyRegistrationRequest) (*BeginPasskeyRegistrationResponse, error)
-	// Finish a passkey registration ceremony.
+	// Finish an authenticated passkey registration ceremony.
 	FinishPasskeyRegistration(context.Context, *FinishPasskeyRegistrationRequest) (*FinishPasskeyRegistrationResponse, error)
-	// Begin a passkey login ceremony.
+	// Begin a passkey login ceremony for a username.
 	BeginPasskeyLogin(context.Context, *BeginPasskeyLoginRequest) (*BeginPasskeyLoginResponse, error)
 	// Finish a passkey login ceremony.
 	FinishPasskeyLogin(context.Context, *FinishPasskeyLoginRequest) (*FinishPasskeyLoginResponse, error)
+	// Verify a recovery code and create a narrow recovery session.
+	BeginAccountRecovery(context.Context, *BeginAccountRecoveryRequest) (*BeginAccountRecoveryResponse, error)
+	// Begin replacement passkey registration for a recovery session.
+	BeginRecoveryPasskeyRegistration(context.Context, *BeginRecoveryPasskeyRegistrationRequest) (*BeginPasskeyRegistrationResponse, error)
+	// Finish replacement passkey registration, rotate recovery state, and issue a web session.
+	FinishRecoveryPasskeyRegistration(context.Context, *FinishRecoveryPasskeyRegistrationRequest) (*FinishAccountRegistrationResponse, error)
 	// Create a durable web session for an authenticated user.
 	CreateWebSession(context.Context, *CreateWebSessionRequest) (*CreateWebSessionResponse, error)
 	// Resolve a durable web session by ID.
 	GetWebSession(context.Context, *GetWebSessionRequest) (*GetWebSessionResponse, error)
 	// Revoke a durable web session by ID.
 	RevokeWebSession(context.Context, *RevokeWebSessionRequest) (*RevokeWebSessionResponse, error)
-	// Generate a magic link token for email recovery.
-	GenerateMagicLink(context.Context, *GenerateMagicLinkRequest) (*GenerateMagicLinkResponse, error)
-	// Consume a magic link token.
-	ConsumeMagicLink(context.Context, *ConsumeMagicLinkRequest) (*ConsumeMagicLinkResponse, error)
-	// List email addresses for a user.
-	ListUserEmails(context.Context, *ListUserEmailsRequest) (*ListUserEmailsResponse, error)
+	// List registered passkeys for a user.
+	ListPasskeys(context.Context, *ListPasskeysRequest) (*ListPasskeysResponse, error)
 	// Issue a join grant for a campaign invite.
 	IssueJoinGrant(context.Context, *IssueJoinGrantRequest) (*IssueJoinGrantResponse, error)
+	// Resolve a user by username.
+	LookupUserByUsername(context.Context, *LookupUserByUsernameRequest) (*LookupUserByUsernameResponse, error)
 	// Get a user record by ID.
 	GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error)
 	// List user records.
@@ -294,8 +339,11 @@ type AuthServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedAuthServiceServer struct{}
 
-func (UnimplementedAuthServiceServer) CreateUser(context.Context, *CreateUserRequest) (*CreateUserResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method CreateUser not implemented")
+func (UnimplementedAuthServiceServer) BeginAccountRegistration(context.Context, *BeginAccountRegistrationRequest) (*BeginAccountRegistrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BeginAccountRegistration not implemented")
+}
+func (UnimplementedAuthServiceServer) FinishAccountRegistration(context.Context, *FinishAccountRegistrationRequest) (*FinishAccountRegistrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FinishAccountRegistration not implemented")
 }
 func (UnimplementedAuthServiceServer) BeginPasskeyRegistration(context.Context, *BeginPasskeyRegistrationRequest) (*BeginPasskeyRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BeginPasskeyRegistration not implemented")
@@ -309,6 +357,15 @@ func (UnimplementedAuthServiceServer) BeginPasskeyLogin(context.Context, *BeginP
 func (UnimplementedAuthServiceServer) FinishPasskeyLogin(context.Context, *FinishPasskeyLoginRequest) (*FinishPasskeyLoginResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinishPasskeyLogin not implemented")
 }
+func (UnimplementedAuthServiceServer) BeginAccountRecovery(context.Context, *BeginAccountRecoveryRequest) (*BeginAccountRecoveryResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BeginAccountRecovery not implemented")
+}
+func (UnimplementedAuthServiceServer) BeginRecoveryPasskeyRegistration(context.Context, *BeginRecoveryPasskeyRegistrationRequest) (*BeginPasskeyRegistrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BeginRecoveryPasskeyRegistration not implemented")
+}
+func (UnimplementedAuthServiceServer) FinishRecoveryPasskeyRegistration(context.Context, *FinishRecoveryPasskeyRegistrationRequest) (*FinishAccountRegistrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FinishRecoveryPasskeyRegistration not implemented")
+}
 func (UnimplementedAuthServiceServer) CreateWebSession(context.Context, *CreateWebSessionRequest) (*CreateWebSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateWebSession not implemented")
 }
@@ -318,17 +375,14 @@ func (UnimplementedAuthServiceServer) GetWebSession(context.Context, *GetWebSess
 func (UnimplementedAuthServiceServer) RevokeWebSession(context.Context, *RevokeWebSessionRequest) (*RevokeWebSessionResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RevokeWebSession not implemented")
 }
-func (UnimplementedAuthServiceServer) GenerateMagicLink(context.Context, *GenerateMagicLinkRequest) (*GenerateMagicLinkResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GenerateMagicLink not implemented")
-}
-func (UnimplementedAuthServiceServer) ConsumeMagicLink(context.Context, *ConsumeMagicLinkRequest) (*ConsumeMagicLinkResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ConsumeMagicLink not implemented")
-}
-func (UnimplementedAuthServiceServer) ListUserEmails(context.Context, *ListUserEmailsRequest) (*ListUserEmailsResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ListUserEmails not implemented")
+func (UnimplementedAuthServiceServer) ListPasskeys(context.Context, *ListPasskeysRequest) (*ListPasskeysResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListPasskeys not implemented")
 }
 func (UnimplementedAuthServiceServer) IssueJoinGrant(context.Context, *IssueJoinGrantRequest) (*IssueJoinGrantResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method IssueJoinGrant not implemented")
+}
+func (UnimplementedAuthServiceServer) LookupUserByUsername(context.Context, *LookupUserByUsernameRequest) (*LookupUserByUsernameResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method LookupUserByUsername not implemented")
 }
 func (UnimplementedAuthServiceServer) GetUser(context.Context, *GetUserRequest) (*GetUserResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUser not implemented")
@@ -363,20 +417,38 @@ func RegisterAuthServiceServer(s grpc.ServiceRegistrar, srv AuthServiceServer) {
 	s.RegisterService(&AuthService_ServiceDesc, srv)
 }
 
-func _AuthService_CreateUser_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(CreateUserRequest)
+func _AuthService_BeginAccountRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BeginAccountRegistrationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).CreateUser(ctx, in)
+		return srv.(AuthServiceServer).BeginAccountRegistration(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_CreateUser_FullMethodName,
+		FullMethod: AuthService_BeginAccountRegistration_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).CreateUser(ctx, req.(*CreateUserRequest))
+		return srv.(AuthServiceServer).BeginAccountRegistration(ctx, req.(*BeginAccountRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_FinishAccountRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishAccountRegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).FinishAccountRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_FinishAccountRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).FinishAccountRegistration(ctx, req.(*FinishAccountRegistrationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -453,6 +525,60 @@ func _AuthService_FinishPasskeyLogin_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _AuthService_BeginAccountRecovery_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BeginAccountRecoveryRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).BeginAccountRecovery(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_BeginAccountRecovery_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).BeginAccountRecovery(ctx, req.(*BeginAccountRecoveryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_BeginRecoveryPasskeyRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BeginRecoveryPasskeyRegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).BeginRecoveryPasskeyRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_BeginRecoveryPasskeyRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).BeginRecoveryPasskeyRegistration(ctx, req.(*BeginRecoveryPasskeyRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_FinishRecoveryPasskeyRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(FinishRecoveryPasskeyRegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).FinishRecoveryPasskeyRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_FinishRecoveryPasskeyRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).FinishRecoveryPasskeyRegistration(ctx, req.(*FinishRecoveryPasskeyRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _AuthService_CreateWebSession_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CreateWebSessionRequest)
 	if err := dec(in); err != nil {
@@ -507,56 +633,20 @@ func _AuthService_RevokeWebSession_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _AuthService_GenerateMagicLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GenerateMagicLinkRequest)
+func _AuthService_ListPasskeys_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListPasskeysRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(AuthServiceServer).GenerateMagicLink(ctx, in)
+		return srv.(AuthServiceServer).ListPasskeys(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: AuthService_GenerateMagicLink_FullMethodName,
+		FullMethod: AuthService_ListPasskeys_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).GenerateMagicLink(ctx, req.(*GenerateMagicLinkRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_ConsumeMagicLink_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ConsumeMagicLinkRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).ConsumeMagicLink(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_ConsumeMagicLink_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ConsumeMagicLink(ctx, req.(*ConsumeMagicLinkRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _AuthService_ListUserEmails_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ListUserEmailsRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(AuthServiceServer).ListUserEmails(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: AuthService_ListUserEmails_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(AuthServiceServer).ListUserEmails(ctx, req.(*ListUserEmailsRequest))
+		return srv.(AuthServiceServer).ListPasskeys(ctx, req.(*ListPasskeysRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -575,6 +665,24 @@ func _AuthService_IssueJoinGrant_Handler(srv interface{}, ctx context.Context, d
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).IssueJoinGrant(ctx, req.(*IssueJoinGrantRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_LookupUserByUsername_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LookupUserByUsernameRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).LookupUserByUsername(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_LookupUserByUsername_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).LookupUserByUsername(ctx, req.(*LookupUserByUsernameRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -659,8 +767,12 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*AuthServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "CreateUser",
-			Handler:    _AuthService_CreateUser_Handler,
+			MethodName: "BeginAccountRegistration",
+			Handler:    _AuthService_BeginAccountRegistration_Handler,
+		},
+		{
+			MethodName: "FinishAccountRegistration",
+			Handler:    _AuthService_FinishAccountRegistration_Handler,
 		},
 		{
 			MethodName: "BeginPasskeyRegistration",
@@ -679,6 +791,18 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_FinishPasskeyLogin_Handler,
 		},
 		{
+			MethodName: "BeginAccountRecovery",
+			Handler:    _AuthService_BeginAccountRecovery_Handler,
+		},
+		{
+			MethodName: "BeginRecoveryPasskeyRegistration",
+			Handler:    _AuthService_BeginRecoveryPasskeyRegistration_Handler,
+		},
+		{
+			MethodName: "FinishRecoveryPasskeyRegistration",
+			Handler:    _AuthService_FinishRecoveryPasskeyRegistration_Handler,
+		},
+		{
 			MethodName: "CreateWebSession",
 			Handler:    _AuthService_CreateWebSession_Handler,
 		},
@@ -691,20 +815,16 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _AuthService_RevokeWebSession_Handler,
 		},
 		{
-			MethodName: "GenerateMagicLink",
-			Handler:    _AuthService_GenerateMagicLink_Handler,
-		},
-		{
-			MethodName: "ConsumeMagicLink",
-			Handler:    _AuthService_ConsumeMagicLink_Handler,
-		},
-		{
-			MethodName: "ListUserEmails",
-			Handler:    _AuthService_ListUserEmails_Handler,
+			MethodName: "ListPasskeys",
+			Handler:    _AuthService_ListPasskeys_Handler,
 		},
 		{
 			MethodName: "IssueJoinGrant",
 			Handler:    _AuthService_IssueJoinGrant_Handler,
+		},
+		{
+			MethodName: "LookupUserByUsername",
+			Handler:    _AuthService_LookupUserByUsername_Handler,
 		},
 		{
 			MethodName: "GetUser",

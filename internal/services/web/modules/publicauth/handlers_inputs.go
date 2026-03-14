@@ -21,7 +21,12 @@ type passkeyCredentialInput struct {
 
 // passkeyRegisterStartInput carries parsed register-start fields.
 type passkeyRegisterStartInput struct {
-	Email string `json:"email"`
+	Username string `json:"username"`
+}
+
+// passkeyLoginStartInput carries parsed login-start fields.
+type passkeyLoginStartInput struct {
+	Username string `json:"username"`
 }
 
 // parsePasskeyCredentialInput parses and normalizes passkey credential payloads.
@@ -42,7 +47,16 @@ func parsePasskeyRegisterStartInput(r *http.Request) (passkeyRegisterStartInput,
 	if err := decodeJSONBodyStrict(r, &payload); err != nil {
 		return passkeyRegisterStartInput{}, err
 	}
-	return passkeyRegisterStartInput{Email: strings.TrimSpace(payload.Email)}, nil
+	return passkeyRegisterStartInput{Username: strings.TrimSpace(payload.Username)}, nil
+}
+
+// parsePasskeyLoginStartInput parses and normalizes passkey login-start input.
+func parsePasskeyLoginStartInput(r *http.Request) (passkeyLoginStartInput, error) {
+	var payload passkeyLoginStartInput
+	if err := decodeJSONBodyStrict(r, &payload); err != nil {
+		return passkeyLoginStartInput{}, err
+	}
+	return passkeyLoginStartInput{Username: strings.TrimSpace(payload.Username)}, nil
 }
 
 // decodeJSONBodyStrict decodes one JSON object with strict field/size constraints.
@@ -72,5 +86,5 @@ func decodeJSONBodyStrict(r *http.Request, target any) error {
 
 // invalidJSONBodyError returns a stable invalid-input error for malformed JSON.
 func invalidJSONBodyError() error {
-	return apperrors.E(apperrors.KindInvalidInput, "invalid json body")
+	return apperrors.E(apperrors.KindInvalidInput, "Invalid JSON body.")
 }

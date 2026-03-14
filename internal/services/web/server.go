@@ -44,7 +44,7 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	}
 
 	session := newSessionResolver(deps.Principal.SessionClient)
-	viewer := newViewerResolver(deps.Principal.SocialClient, deps.Principal.NotificationClient, deps.Principal.AssetBaseURL, session.resolveRequestUserID)
+	viewer := newViewerResolver(deps.Principal.AccountClient, deps.Principal.SocialClient, deps.Principal.NotificationClient, deps.Principal.AssetBaseURL, session.resolveRequestUserID)
 	lang := newLanguageResolver(deps.Principal.AccountClient, session.resolveRequestUserID)
 	h, err := composition.ComposeAppHandler(composition.ComposeInput{
 		Principal: composition.PrincipalResolvers{

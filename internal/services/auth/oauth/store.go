@@ -10,10 +10,11 @@ import (
 
 const oauthTimeFormat = time.RFC3339Nano
 
-// Store persists short-lived OAuth material in the same auth database.
+// Store persists short-lived first-party OAuth material in the auth database.
 //
-// Keeping authorization codes, access tokens, and provider identities here keeps
-// all OAuth lifecycle state near the identity service that owns it.
+// Keeping authorization codes, access tokens, and pending authorization state
+// here keeps the authorization-server lifecycle near the identity service that
+// owns it.
 type Store struct {
 	db *sql.DB
 }
@@ -25,7 +26,7 @@ func NewStore(db *sql.DB) *Store {
 
 func (s *Store) ensureDB() error {
 	if s == nil || s.db == nil {
-		return errors.New("oauth store is not configured")
+		return errors.New("OAuth store is not configured.")
 	}
 	return nil
 }
@@ -273,120 +274,6 @@ func (s *Store) DeletePendingAuthorization(id string) {
 	_, _ = s.db.Exec(`DELETE FROM oauth_pending_authorizations WHERE id = ?`, id)
 }
 
-// CreateProviderState stores a provider state for external OAuth flows.
-func (s *Store) CreateProviderState(provider, redirectURI, codeVerifier string, ttl time.Duration) (*ProviderState, error) {
-	if err := s.ensureDB(); err != nil {
-		return nil, err
-	}
-	state, err := generateToken(16)
-	if err != nil {
-		return nil, err
-	}
-	expiresAt := time.Now().UTC().Add(ttl)
-	_, err = s.db.Exec(
-		`INSERT INTO oauth_provider_states (state, provider, redirect_uri, code_verifier, expires_at)
-		VALUES (?, ?, ?, ?, ?)`,
-		state, provider, redirectURI, codeVerifier, expiresAt.Format(oauthTimeFormat),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &ProviderState{State: state, Provider: provider, RedirectURI: redirectURI, CodeVerifier: codeVerifier, ExpiresAt: expiresAt}, nil
-}
-
-// GetProviderState retrieves a provider state.
-func (s *Store) GetProviderState(state string) (*ProviderState, error) {
-	if err := s.ensureDB(); err != nil {
-		return nil, err
-	}
-	var stored ProviderState
-	var expiresAt string
-	err := s.db.QueryRow(
-		`SELECT state, provider, redirect_uri, code_verifier, expires_at FROM oauth_provider_states WHERE state = ?`,
-		state,
-	).Scan(&stored.State, &stored.Provider, &stored.RedirectURI, &stored.CodeVerifier, &expiresAt)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	expiry, err := time.Parse(oauthTimeFormat, expiresAt)
-	if err != nil {
-		return nil, err
-	}
-	stored.ExpiresAt = expiry
-	return &stored, nil
-}
-
-// DeleteProviderState deletes a provider state.
-func (s *Store) DeleteProviderState(state string) {
-	if s == nil || s.db == nil {
-		return
-	}
-	_, _ = s.db.Exec(`DELETE FROM oauth_provider_states WHERE state = ?`, state)
-}
-
-// UpsertExternalIdentity stores an external identity.
-func (s *Store) UpsertExternalIdentity(identity ExternalIdentity) error {
-	if err := s.ensureDB(); err != nil {
-		return err
-	}
-	_, err := s.db.Exec(
-		`INSERT INTO oauth_external_identities
-		(id, provider, provider_user_id, user_id, access_token, refresh_token, scope, expires_at, id_token, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(provider, provider_user_id) DO UPDATE SET
-			user_id = excluded.user_id,
-			access_token = excluded.access_token,
-			refresh_token = excluded.refresh_token,
-			scope = excluded.scope,
-			expires_at = excluded.expires_at,
-			id_token = excluded.id_token,
-			updated_at = excluded.updated_at`,
-		identity.ID, identity.Provider, identity.ProviderUserID, identity.UserID,
-		identity.AccessToken, identity.RefreshToken, identity.Scope,
-		identity.ExpiresAt.Format(oauthTimeFormat), identity.IDToken,
-		identity.UpdatedAt.Format(oauthTimeFormat),
-	)
-	return err
-}
-
-// GetExternalIdentity retrieves an external identity by provider + provider user ID.
-func (s *Store) GetExternalIdentity(provider, providerUserID string) (*ExternalIdentity, error) {
-	if err := s.ensureDB(); err != nil {
-		return nil, err
-	}
-	var identity ExternalIdentity
-	var expiresAt string
-	var updatedAt string
-	err := s.db.QueryRow(
-		`SELECT id, provider, provider_user_id, user_id, access_token, refresh_token, scope, expires_at, id_token, updated_at
-		FROM oauth_external_identities WHERE provider = ? AND provider_user_id = ?`,
-		provider, providerUserID,
-	).Scan(
-		&identity.ID, &identity.Provider, &identity.ProviderUserID, &identity.UserID,
-		&identity.AccessToken, &identity.RefreshToken, &identity.Scope, &expiresAt, &identity.IDToken, &updatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	expiry, err := time.Parse(oauthTimeFormat, expiresAt)
-	if err != nil {
-		return nil, err
-	}
-	updated, err := time.Parse(oauthTimeFormat, updatedAt)
-	if err != nil {
-		return nil, err
-	}
-	identity.ExpiresAt = expiry
-	identity.UpdatedAt = updated
-	return &identity, nil
-}
-
 // CleanupExpired deletes expired rows.
 func (s *Store) CleanupExpired(now time.Time) {
 	if s == nil || s.db == nil {
@@ -396,5 +283,4 @@ func (s *Store) CleanupExpired(now time.Time) {
 	_, _ = s.db.Exec(`DELETE FROM oauth_authorization_codes WHERE expires_at <= ?`, now.Format(oauthTimeFormat))
 	_, _ = s.db.Exec(`DELETE FROM oauth_access_tokens WHERE expires_at <= ?`, now.Format(oauthTimeFormat))
 	_, _ = s.db.Exec(`DELETE FROM oauth_pending_authorizations WHERE expires_at <= ?`, now.Format(oauthTimeFormat))
-	_, _ = s.db.Exec(`DELETE FROM oauth_provider_states WHERE expires_at <= ?`, now.Format(oauthTimeFormat))
 }

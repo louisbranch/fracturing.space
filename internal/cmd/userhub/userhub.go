@@ -4,6 +4,8 @@ package userhub
 import (
 	"context"
 	"flag"
+	"os"
+	"strings"
 	"time"
 
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
@@ -14,6 +16,7 @@ import (
 // Config holds userhub command configuration.
 type Config struct {
 	Port              int           `env:"FRACTURING_SPACE_USERHUB_PORT" envDefault:"8092"`
+	AuthAddr          string        `env:"FRACTURING_SPACE_USERHUB_AUTH_ADDR"`
 	GameAddr          string        `env:"FRACTURING_SPACE_USERHUB_GAME_ADDR"`
 	SocialAddr        string        `env:"FRACTURING_SPACE_USERHUB_SOCIAL_ADDR"`
 	NotificationsAddr string        `env:"FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR"`
@@ -28,12 +31,17 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
+	if strings.TrimSpace(cfg.AuthAddr) == "" {
+		cfg.AuthAddr = strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AUTH_ADDR"))
+	}
+	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
 	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
 	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
 	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
 	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The userhub gRPC server port")
+	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "The auth gRPC server address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "The game gRPC server address")
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "The social gRPC server address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "The notifications gRPC server address")
@@ -51,6 +59,7 @@ func Run(ctx context.Context, cfg Config) error {
 	return entrypoint.RunWithTelemetry(ctx, entrypoint.ServiceUserHub, func(context.Context) error {
 		return userhubserver.Run(ctx, userhubserver.RuntimeConfig{
 			Port:              cfg.Port,
+			AuthAddr:          cfg.AuthAddr,
 			GameAddr:          cfg.GameAddr,
 			SocialAddr:        cfg.SocialAddr,
 			NotificationsAddr: cfg.NotificationsAddr,

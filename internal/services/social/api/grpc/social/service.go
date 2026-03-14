@@ -11,7 +11,6 @@ import (
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	profileutil "github.com/louisbranch/fracturing.space/internal/services/social/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
-	usernameutil "github.com/louisbranch/fracturing.space/internal/services/social/username"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -143,7 +142,7 @@ func (s *Service) ListContacts(ctx context.Context, in *socialv1.ListContactsReq
 	return resp, nil
 }
 
-// SetUserProfile claims or updates one social/discovery profile for a user.
+// SetUserProfile updates one social/discovery profile for a user.
 func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfileRequest) (*socialv1.SetUserProfileResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "set user profile request is required")
@@ -156,10 +155,6 @@ func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfil
 		return nil, status.Error(codes.InvalidArgument, "user id is required")
 	}
 
-	canonicalUsername, err := canonicalizeOptionalUsername(in.GetUsername())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
-	}
 	normalized, err := profileutil.Normalize(userID, in.GetName(), in.GetAvatarSetId(), in.GetAvatarAssetId(), in.GetBio(), sharedpronouns.FromProto(in.GetPronouns()))
 	if err != nil {
 		return nil, status.Errorf(codes.InvalidArgument, "user profile is invalid: %v", err)
@@ -171,7 +166,6 @@ func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfil
 	}
 	if err := s.store.PutUserProfile(ctx, storage.UserProfile{
 		UserID:        userID,
-		Username:      canonicalUsername,
 		Name:          normalized.Name,
 		AvatarSetID:   normalized.AvatarSetID,
 		AvatarAssetID: normalized.AvatarAssetID,
@@ -180,9 +174,6 @@ func (s *Service) SetUserProfile(ctx context.Context, in *socialv1.SetUserProfil
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}); err != nil {
-		if errors.Is(err, storage.ErrAlreadyExists) {
-			return nil, status.Error(codes.AlreadyExists, "username is already claimed")
-		}
 		return nil, status.Errorf(codes.Internal, "set user profile: %v", err)
 	}
 	record, err := s.store.GetUserProfileByUserID(ctx, userID)
@@ -221,30 +212,6 @@ func (s *Service) GetUserProfile(ctx context.Context, in *socialv1.GetUserProfil
 	}, nil
 }
 
-// LookupUserProfile resolves one canonical username to its profile record.
-func (s *Service) LookupUserProfile(ctx context.Context, in *socialv1.LookupUserProfileRequest) (*socialv1.LookupUserProfileResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "lookup user profile request is required")
-	}
-	if s == nil || s.store == nil {
-		return nil, status.Error(codes.Internal, "contact store is not configured")
-	}
-	canonicalUsername, err := usernameutil.Canonicalize(in.GetUsername())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "username is invalid: %v", err)
-	}
-	record, err := s.store.GetUserProfileByUsername(ctx, canonicalUsername)
-	if err != nil {
-		if errors.Is(err, storage.ErrNotFound) {
-			return nil, status.Error(codes.NotFound, "username not found")
-		}
-		return nil, status.Errorf(codes.Internal, "lookup user profile: %v", err)
-	}
-	return &socialv1.LookupUserProfileResponse{
-		UserProfile: userProfileToProto(record),
-	}, nil
-}
-
 func contactToProto(contact storage.Contact) *socialv1.Contact {
 	return &socialv1.Contact{
 		OwnerUserId:   contact.OwnerUserID,
@@ -257,7 +224,6 @@ func contactToProto(contact storage.Contact) *socialv1.Contact {
 func userProfileToProto(profile storage.UserProfile) *socialv1.UserProfile {
 	return &socialv1.UserProfile{
 		UserId:        profile.UserID,
-		Username:      profile.Username,
 		Name:          profile.Name,
 		AvatarSetId:   profile.AvatarSetID,
 		AvatarAssetId: profile.AvatarAssetID,
@@ -266,12 +232,4 @@ func userProfileToProto(profile storage.UserProfile) *socialv1.UserProfile {
 		CreatedAt:     timestamppb.New(profile.CreatedAt),
 		UpdatedAt:     timestamppb.New(profile.UpdatedAt),
 	}
-}
-
-func canonicalizeOptionalUsername(value string) (string, error) {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "", nil
-	}
-	return usernameutil.Canonicalize(value)
 }

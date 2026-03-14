@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc/metadata"
@@ -28,15 +27,7 @@ func (g *Generator) pickGmMode(vary bool, index int) statev1.GmMode {
 // createCampaign creates a new campaign with the given GM mode.
 func (g *Generator) createCampaign(ctx context.Context, gmMode statev1.GmMode) (*statev1.Campaign, string, error) {
 	creatorName := g.uniqueDisplayName(g.wb.ParticipantName())
-	creatorEmail := g.seedEmail(creatorName)
-	userResp, err := g.authClient.CreateUser(ctx, &authv1.CreateUserRequest{Email: creatorEmail})
-	if err != nil {
-		return nil, "", fmt.Errorf("CreateUser: %w", err)
-	}
-	userID := userResp.GetUser().GetId()
-	if userID == "" {
-		return nil, "", fmt.Errorf("CreateUser: missing user id in response")
-	}
+	userID := g.syntheticUserID(creatorName)
 	callCtx := metadata.NewOutgoingContext(ctx, metadata.Pairs(grpcmeta.UserIDHeader, userID))
 	resp, err := g.campaigns.CreateCampaign(callCtx, &statev1.CreateCampaignRequest{
 		Name:        g.wb.CampaignName(),

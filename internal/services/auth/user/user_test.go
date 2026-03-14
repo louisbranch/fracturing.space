@@ -9,7 +9,7 @@ import (
 )
 
 func TestCreateUserDefaults(t *testing.T) {
-	input := CreateUserInput{Email: "alice@example.com"}
+	input := CreateUserInput{Username: "Alice"}
 	_, err := CreateUser(input, nil, nil)
 	if err != nil {
 		t.Fatalf("create user: %v", err)
@@ -22,6 +22,9 @@ func TestCreateUserDefaults(t *testing.T) {
 	if created.ID != "user-1" {
 		t.Fatalf("expected id user-1, got %q", created.ID)
 	}
+	if created.Username != "alice" {
+		t.Fatalf("expected canonical username, got %q", created.Username)
+	}
 
 	_, err = CreateUser(input, nil, func() (string, error) { return "", errors.New("id generator error") })
 	if err == nil {
@@ -32,7 +35,7 @@ func TestCreateUserDefaults(t *testing.T) {
 func TestCreateUserNormalizesInput(t *testing.T) {
 	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
 	input := CreateUserInput{
-		Email: "  ALICE@example.com  ",
+		Username: "  ALICE  ",
 	}
 
 	created, err := CreateUser(input, func() time.Time { return fixedTime }, func() (string, error) {
@@ -45,8 +48,8 @@ func TestCreateUserNormalizesInput(t *testing.T) {
 	if created.ID != "user-123" {
 		t.Fatalf("expected id user-123, got %q", created.ID)
 	}
-	if created.Email != "alice@example.com" {
-		t.Fatalf("expected lowercased trimmed email, got %q", created.Email)
+	if created.Username != "alice" {
+		t.Fatalf("expected canonical username, got %q", created.Username)
 	}
 	if created.Locale != commonv1.Locale_LOCALE_EN_US {
 		t.Fatalf("expected normalized default locale, got %v", created.Locale)
@@ -54,12 +57,15 @@ func TestCreateUserNormalizesInput(t *testing.T) {
 	if !created.CreatedAt.Equal(fixedTime) || !created.UpdatedAt.Equal(fixedTime) {
 		t.Fatalf("expected timestamps to match fixed time")
 	}
+	if !created.RecoveryCodeUpdatedAt.Equal(fixedTime) {
+		t.Fatalf("expected recovery code timestamp to match fixed time")
+	}
 }
 
 func TestNormalizeCreateUserInputNormalizesLocale(t *testing.T) {
 	normalized, err := NormalizeCreateUserInput(CreateUserInput{
-		Email:  "alice@example.com",
-		Locale: commonv1.Locale_LOCALE_UNSPECIFIED,
+		Username: "alice",
+		Locale:   commonv1.Locale_LOCALE_UNSPECIFIED,
 	})
 	if err != nil {
 		t.Fatalf("normalize: %v", err)
@@ -70,30 +76,29 @@ func TestNormalizeCreateUserInputNormalizesLocale(t *testing.T) {
 }
 
 func TestNormalizeCreateUserInputValidation(t *testing.T) {
-	_, err := NormalizeCreateUserInput(CreateUserInput{Email: "   "})
-	if !errors.Is(err, ErrEmptyEmail) {
-		t.Fatalf("expected error %v, got %v", ErrEmptyEmail, err)
+	_, err := NormalizeCreateUserInput(CreateUserInput{Username: ""})
+	if !errors.Is(err, ErrEmptyUsername) {
+		t.Fatalf("expected error %v, got %v", ErrEmptyUsername, err)
 	}
 }
 
-func TestValidateEmailFormat(t *testing.T) {
+func TestValidateUsernameFormat(t *testing.T) {
 	tests := []struct {
 		name    string
 		input   string
 		wantErr error
 	}{
-		{name: "valid email", input: "alice@example.com", wantErr: nil},
-		{name: "valid mixed case email", input: "AlIcE@Example.Com", wantErr: nil},
-		{name: "missing domain", input: "alice@", wantErr: ErrInvalidEmail},
-		{name: "display name email", input: "Alice <alice@example.com>", wantErr: ErrInvalidEmail},
-		{name: "spaces", input: "alice @example.com", wantErr: ErrInvalidEmail},
-		{name: "no at sign", input: "alice.example.com", wantErr: ErrInvalidEmail},
-		{name: "empty", input: "", wantErr: ErrInvalidEmail},
+		{name: "valid username", input: "alice", wantErr: nil},
+		{name: "valid mixed case username", input: "AlIcE_123", wantErr: nil},
+		{name: "too short", input: "ab", wantErr: ErrInvalidUsername},
+		{name: "starts with number", input: "1alice", wantErr: ErrInvalidUsername},
+		{name: "space", input: "alice smith", wantErr: ErrInvalidUsername},
+		{name: "empty", input: "", wantErr: ErrInvalidUsername},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateEmail(tt.input)
+			err := ValidateUsername(tt.input)
 			if tt.wantErr == nil {
 				if err != nil {
 					t.Fatalf("expected no error, got %v", err)
@@ -107,26 +112,19 @@ func TestValidateEmailFormat(t *testing.T) {
 	}
 }
 
-func TestNormalizeCreateUserInputLowercases(t *testing.T) {
-	normalized, err := NormalizeCreateUserInput(CreateUserInput{Email: "  ALICE@Example.COM  "})
+func TestNormalizeCreateUserInputCanonicalizesUsername(t *testing.T) {
+	normalized, err := NormalizeCreateUserInput(CreateUserInput{Username: "  ALICE.Example  "})
 	if err != nil {
 		t.Fatalf("normalize: %v", err)
 	}
-	if normalized.Email != "alice@example.com" {
-		t.Fatalf("expected lowercased email, got %q", normalized.Email)
+	if normalized.Username != "alice.example" {
+		t.Fatalf("expected canonical username, got %q", normalized.Username)
 	}
 }
 
-func TestNormalizeCreateUserInputRejectsInvalid(t *testing.T) {
-	_, err := NormalizeCreateUserInput(CreateUserInput{Email: "not-an-email"})
-	if !errors.Is(err, ErrInvalidEmail) {
-		t.Fatalf("expected ErrInvalidEmail, got %v", err)
-	}
-}
-
-func TestNormalizeCreateUserInputAcceptsEmailAddress(t *testing.T) {
-	_, err := NormalizeCreateUserInput(CreateUserInput{Email: "ALICE@EXAMPLE.COM"})
-	if err != nil {
-		t.Fatalf("expected email address to be accepted, got %v", err)
+func TestNormalizeCreateUserInputRejectsInvalidUsername(t *testing.T) {
+	_, err := NormalizeCreateUserInput(CreateUserInput{Username: "not valid"})
+	if !errors.Is(err, ErrInvalidUsername) {
+		t.Fatalf("expected ErrInvalidUsername, got %v", err)
 	}
 }

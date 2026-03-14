@@ -18,18 +18,19 @@ type AuthCopy struct {
 	LandingGitHub       string
 	LoginTitle          string
 	LoginHeading        string
-	LoginCardTitle      string
-	LoginCardSubtitle   string
-	LoginEmail          string
+	LoginUsername       string
+	LoginJoinTitle      string
 	LoginCreatePasskey  string
 	LoginDivider        string
+	LoginLogInTitle     string
 	LoginSignInPasskey  string
 	JSLoginStartError   string
 	JSLoginFinishError  string
 	JSRegisterStartErr  string
 	JSRegisterFinishErr string
 	JSPasskeyFailed     string
-	JSEmailRequired     string
+	JSLoginUsernameReq  string
+	JSRegisterUserReq   string
 	JSPasskeyCreated    string
 	JSRegisterFailed    string
 }
@@ -52,21 +53,22 @@ func Auth(tag language.Tag) AuthCopy {
 		LandingDocs:         localizeWithFallback(loc, "landing.docs", "Docs"),
 		LandingGitHub:       localizeWithFallback(loc, "landing.github", "GitHub"),
 		LoginTitle:          withProductSuffix(loginTitle),
-		LoginHeading:        localizeWithFallback(loc, "login.heading", "Sign in to %s", authAppDisplayName),
-		LoginCardTitle:      localizeWithFallback(loc, "login.card_title", "Account Access"),
-		LoginCardSubtitle:   localizeWithFallback(loc, "login.card_subtitle", "Create an account or sign in with a passkey."),
-		LoginEmail:          localizeWithFallback(loc, "login.email", "Email"),
+		LoginHeading:        localizeWithFallback(loc, "login.heading", "Welcome to %s", authAppDisplayName),
+		LoginUsername:       localizeWithFallback(loc, "login.username", "Username"),
+		LoginJoinTitle:      localizeWithFallback(loc, "login.join_title", "Join"),
 		LoginCreatePasskey:  localizeWithFallback(loc, "login.create_passkey", "Create Account With Passkey"),
-		LoginDivider:        localizeWithFallback(loc, "login.divider", "returning?"),
-		LoginSignInPasskey:  localizeWithFallback(loc, "login.sign_in_passkey", "Sign In With Passkey"),
-		JSLoginStartError:   localizeWithFallback(loc, "login.js.login_start_error", "failed to start passkey login"),
-		JSLoginFinishError:  localizeWithFallback(loc, "login.js.login_finish_error", "failed to finish passkey login"),
-		JSRegisterStartErr:  localizeWithFallback(loc, "login.js.register_start_error", "failed to start passkey registration"),
-		JSRegisterFinishErr: localizeWithFallback(loc, "login.js.register_finish_error", "failed to finish passkey registration"),
-		JSPasskeyFailed:     localizeWithFallback(loc, "login.js.passkey_failed", "failed to sign in with passkey"),
-		JSEmailRequired:     localizeWithFallback(loc, "login.js.email_required", "email is required"),
-		JSPasskeyCreated:    localizeWithFallback(loc, "login.js.passkey_created", "Passkey created; signing you in"),
-		JSRegisterFailed:    localizeWithFallback(loc, "login.js.register_failed", "failed to create passkey"),
+		LoginDivider:        localizeWithFallback(loc, "login.divider", "Or"),
+		LoginLogInTitle:     localizeWithFallback(loc, "login.log_in_title", "Log in"),
+		LoginSignInPasskey:  localizeWithFallback(loc, "login.sign_in_passkey", "Log In With Passkey"),
+		JSLoginStartError:   localizeWithFallback(loc, "login.js.login_start_error", "Unable to start passkey login."),
+		JSLoginFinishError:  localizeWithFallback(loc, "login.js.login_finish_error", "Unable to finish passkey login."),
+		JSRegisterStartErr:  localizeWithFallback(loc, "login.js.register_start_error", "Unable to start passkey registration."),
+		JSRegisterFinishErr: localizeWithFallback(loc, "login.js.register_finish_error", "Unable to finish passkey registration."),
+		JSPasskeyFailed:     localizeWithFallback(loc, "login.js.passkey_failed", "Passkey login failed."),
+		JSLoginUsernameReq:  localizeWithFallback(loc, "login.js.login_username_required", "Username is required to log in."),
+		JSRegisterUserReq:   localizeWithFallback(loc, "login.js.register_username_required", "Username is required to create an account."),
+		JSPasskeyCreated:    localizeWithFallback(loc, "login.js.passkey_created", "Passkey created; signing you in."),
+		JSRegisterFailed:    localizeWithFallback(loc, "login.js.register_failed", "Passkey registration failed."),
 	}
 }
 

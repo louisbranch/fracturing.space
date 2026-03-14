@@ -20,12 +20,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	SocialService_AddContact_FullMethodName        = "/social.v1.SocialService/AddContact"
-	SocialService_RemoveContact_FullMethodName     = "/social.v1.SocialService/RemoveContact"
-	SocialService_ListContacts_FullMethodName      = "/social.v1.SocialService/ListContacts"
-	SocialService_SetUserProfile_FullMethodName    = "/social.v1.SocialService/SetUserProfile"
-	SocialService_GetUserProfile_FullMethodName    = "/social.v1.SocialService/GetUserProfile"
-	SocialService_LookupUserProfile_FullMethodName = "/social.v1.SocialService/LookupUserProfile"
+	SocialService_AddContact_FullMethodName     = "/social.v1.SocialService/AddContact"
+	SocialService_RemoveContact_FullMethodName  = "/social.v1.SocialService/RemoveContact"
+	SocialService_ListContacts_FullMethodName   = "/social.v1.SocialService/ListContacts"
+	SocialService_SetUserProfile_FullMethodName = "/social.v1.SocialService/SetUserProfile"
+	SocialService_GetUserProfile_FullMethodName = "/social.v1.SocialService/GetUserProfile"
 )
 
 // SocialServiceClient is the client API for SocialService service.
@@ -39,7 +38,6 @@ type SocialServiceClient interface {
 	ListContacts(ctx context.Context, in *ListContactsRequest, opts ...grpc.CallOption) (*ListContactsResponse, error)
 	SetUserProfile(ctx context.Context, in *SetUserProfileRequest, opts ...grpc.CallOption) (*SetUserProfileResponse, error)
 	GetUserProfile(ctx context.Context, in *GetUserProfileRequest, opts ...grpc.CallOption) (*GetUserProfileResponse, error)
-	LookupUserProfile(ctx context.Context, in *LookupUserProfileRequest, opts ...grpc.CallOption) (*LookupUserProfileResponse, error)
 }
 
 type socialServiceClient struct {
@@ -100,16 +98,6 @@ func (c *socialServiceClient) GetUserProfile(ctx context.Context, in *GetUserPro
 	return out, nil
 }
 
-func (c *socialServiceClient) LookupUserProfile(ctx context.Context, in *LookupUserProfileRequest, opts ...grpc.CallOption) (*LookupUserProfileResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(LookupUserProfileResponse)
-	err := c.cc.Invoke(ctx, SocialService_LookupUserProfile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // SocialServiceServer is the server API for SocialService service.
 // All implementations must embed UnimplementedSocialServiceServer
 // for forward compatibility.
@@ -121,7 +109,6 @@ type SocialServiceServer interface {
 	ListContacts(context.Context, *ListContactsRequest) (*ListContactsResponse, error)
 	SetUserProfile(context.Context, *SetUserProfileRequest) (*SetUserProfileResponse, error)
 	GetUserProfile(context.Context, *GetUserProfileRequest) (*GetUserProfileResponse, error)
-	LookupUserProfile(context.Context, *LookupUserProfileRequest) (*LookupUserProfileResponse, error)
 	mustEmbedUnimplementedSocialServiceServer()
 }
 
@@ -146,9 +133,6 @@ func (UnimplementedSocialServiceServer) SetUserProfile(context.Context, *SetUser
 }
 func (UnimplementedSocialServiceServer) GetUserProfile(context.Context, *GetUserProfileRequest) (*GetUserProfileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetUserProfile not implemented")
-}
-func (UnimplementedSocialServiceServer) LookupUserProfile(context.Context, *LookupUserProfileRequest) (*LookupUserProfileResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LookupUserProfile not implemented")
 }
 func (UnimplementedSocialServiceServer) mustEmbedUnimplementedSocialServiceServer() {}
 func (UnimplementedSocialServiceServer) testEmbeddedByValue()                       {}
@@ -261,24 +245,6 @@ func _SocialService_GetUserProfile_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _SocialService_LookupUserProfile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(LookupUserProfileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(SocialServiceServer).LookupUserProfile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: SocialService_LookupUserProfile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(SocialServiceServer).LookupUserProfile(ctx, req.(*LookupUserProfileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // SocialService_ServiceDesc is the grpc.ServiceDesc for SocialService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -305,10 +271,6 @@ var SocialService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUserProfile",
 			Handler:    _SocialService_GetUserProfile_Handler,
-		},
-		{
-			MethodName: "LookupUserProfile",
-			Handler:    _SocialService_LookupUserProfile_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

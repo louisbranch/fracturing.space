@@ -6,7 +6,7 @@ type ConsentPageParams struct {
 	AppName    string
 	PendingID  string
 	ClientName string
-	Email      string
+	Username   string
 	Scopes     []string
 }
 
@@ -21,7 +21,7 @@ templ ConsentPage(params ConsentPageParams) {
 			<div class="card oauth-card bg-base-200 border border-base-300 shadow-xl">
 				<div class="card-body">
 					<h2 class="card-title justify-center text-xl">Authorize Application</h2>
-					<div class="oauth-client">Signed in as <strong>{ params.Email }</strong></div>
+					<div class="oauth-client">Signed in as <strong>{ params.Username }</strong></div>
 					<div class="oauth-client">
 						<div><strong>{ params.ClientName }</strong></div>
 						<p class="opacity-70">This application will be able to:</p>

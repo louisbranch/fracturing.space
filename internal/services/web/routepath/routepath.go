@@ -185,9 +185,6 @@ func AppNotificationOpen(notificationID string) string {
 // AppSettingsProfile returns the public profile settings route.
 const AppSettingsProfile = "/app/settings/profile"
 
-// AppSettingsProfileRequired returns the profile-required notice redirect route.
-const AppSettingsProfileRequired = "/app/settings/profile/required"
-
 // AppSettingsLocale returns the locale settings route.
 const AppSettingsLocale = "/app/settings/locale"
 

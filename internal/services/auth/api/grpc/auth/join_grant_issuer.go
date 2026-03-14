@@ -27,20 +27,20 @@ func newJoinGrantIssuer(service *AuthService) joinGrantIssuer {
 
 func (j joinGrantIssuer) issue(ctx context.Context, in *authv1.IssueJoinGrantRequest) (joinGrantResult, error) {
 	if j.store == nil {
-		return joinGrantResult{}, status.Error(codes.Internal, "user store is not configured")
+		return joinGrantResult{}, status.Error(codes.Internal, "User store is not configured.")
 	}
 
 	userID := strings.TrimSpace(in.GetUserId())
 	if userID == "" {
-		return joinGrantResult{}, status.Error(codes.InvalidArgument, "user id is required")
+		return joinGrantResult{}, status.Error(codes.InvalidArgument, "User ID is required.")
 	}
 	campaignID := strings.TrimSpace(in.GetCampaignId())
 	if campaignID == "" {
-		return joinGrantResult{}, status.Error(codes.InvalidArgument, "campaign id is required")
+		return joinGrantResult{}, status.Error(codes.InvalidArgument, "Campaign ID is required.")
 	}
 	inviteID := strings.TrimSpace(in.GetInviteId())
 	if inviteID == "" {
-		return joinGrantResult{}, status.Error(codes.InvalidArgument, "invite id is required")
+		return joinGrantResult{}, status.Error(codes.InvalidArgument, "Invite ID is required.")
 	}
 	participantID := strings.TrimSpace(in.GetParticipantId())
 
@@ -50,14 +50,14 @@ func (j joinGrantIssuer) issue(ctx context.Context, in *authv1.IssueJoinGrantReq
 
 	config, err := loadJoinGrantConfigFromEnv()
 	if err != nil {
-		return joinGrantResult{}, status.Errorf(codes.Internal, "join grant config: %v", err)
+		return joinGrantResult{}, status.Errorf(codes.Internal, "Join grant config: %v", err)
 	}
 
 	issuedAt := j.clock().UTC()
 	expiresAt := issuedAt.Add(config.ttl)
 	jti, err := id.NewID()
 	if err != nil {
-		return joinGrantResult{}, status.Errorf(codes.Internal, "generate join grant id: %v", err)
+		return joinGrantResult{}, status.Errorf(codes.Internal, "Generate join grant ID: %v", err)
 	}
 
 	payload := map[string]any{
@@ -77,7 +77,7 @@ func (j joinGrantIssuer) issue(ctx context.Context, in *authv1.IssueJoinGrantReq
 
 	grant, err := encodeJoinGrant(config, payload)
 	if err != nil {
-		return joinGrantResult{}, status.Errorf(codes.Internal, "sign join grant: %v", err)
+		return joinGrantResult{}, status.Errorf(codes.Internal, "Sign join grant: %v", err)
 	}
 
 	return joinGrantResult{

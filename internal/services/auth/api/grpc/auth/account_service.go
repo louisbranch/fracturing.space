@@ -32,15 +32,15 @@ func NewAccountService(userStore storage.UserStore) *AccountService {
 // GetProfile returns account profile metadata for a specific user ID.
 func (s *AccountService) GetProfile(ctx context.Context, in *authv1.GetProfileRequest) (*authv1.GetProfileResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "get profile request is required")
+		return nil, status.Error(codes.InvalidArgument, "Get profile request is required.")
 	}
 	if s.userStore == nil {
-		return nil, status.Error(codes.Internal, "account store is not configured")
+		return nil, status.Error(codes.Internal, "Account store is not configured.")
 	}
 
 	userID := strings.TrimSpace(in.GetUserId())
 	if userID == "" {
-		return nil, status.Error(codes.InvalidArgument, "user id is required")
+		return nil, status.Error(codes.InvalidArgument, "User ID is required.")
 	}
 
 	baseUser, err := s.userStore.GetUser(ctx, userID)
@@ -54,10 +54,10 @@ func (s *AccountService) GetProfile(ctx context.Context, in *authv1.GetProfileRe
 // UpdateProfile creates or updates profile metadata for a user.
 func (s *AccountService) UpdateProfile(ctx context.Context, in *authv1.UpdateProfileRequest) (*authv1.UpdateProfileResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "update profile request is required")
+		return nil, status.Error(codes.InvalidArgument, "Update profile request is required.")
 	}
 	if s.userStore == nil {
-		return nil, status.Error(codes.Internal, "account store is not configured")
+		return nil, status.Error(codes.Internal, "Account store is not configured.")
 	}
 	now := time.Now
 	if s.clock != nil {
@@ -66,7 +66,7 @@ func (s *AccountService) UpdateProfile(ctx context.Context, in *authv1.UpdatePro
 
 	userID := strings.TrimSpace(in.GetUserId())
 	if userID == "" {
-		return nil, status.Error(codes.InvalidArgument, "user id is required")
+		return nil, status.Error(codes.InvalidArgument, "User ID is required.")
 	}
 
 	baseUser, err := s.userStore.GetUser(ctx, userID)
@@ -90,6 +90,7 @@ func (s *AccountService) UpdateProfile(ctx context.Context, in *authv1.UpdatePro
 func accountProfileToProto(profile user.User) *authv1.AccountProfile {
 	return &authv1.AccountProfile{
 		UserId:    profile.ID,
+		Username:  profile.Username,
 		Locale:    platformi18n.NormalizeLocale(profile.Locale),
 		CreatedAt: timestamppb.New(profile.CreatedAt),
 		UpdatedAt: timestamppb.New(profile.UpdatedAt),

@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"strings"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/worldbuilder"
@@ -31,7 +29,6 @@ func newGenerator(cfg Config, rng *rand.Rand, wb *worldbuilder.WorldBuilder, dep
 		characters:   deps.characters,
 		sessions:     deps.sessions,
 		events:       deps.events,
-		authClient:   deps.authClient,
 	}
 }
 
@@ -43,7 +40,6 @@ type generatorDeps struct {
 	characters   characterCreator
 	sessions     sessionManager
 	events       eventAppender
-	authClient   authProvider
 }
 
 // Config holds configuration for the generator.
@@ -74,7 +70,6 @@ type Generator struct {
 	wb           *worldbuilder.WorldBuilder
 	nameRegistry *nameRegistry
 	conn         *grpc.ClientConn
-	authConn     *grpc.ClientConn
 
 	// Service dependencies (satisfied by gRPC clients in production,
 	// fakes in tests).
@@ -84,7 +79,6 @@ type Generator struct {
 	characters   characterCreator
 	sessions     sessionManager
 	events       eventAppender
-	authClient   authProvider
 }
 
 // New creates a new Generator with the given configuration.
@@ -108,35 +102,18 @@ func New(ctx context.Context, cfg Config) (*Generator, error) {
 		fmt.Fprintf(os.Stderr, "Connected to game server\n")
 	}
 
-	authAddr := strings.TrimSpace(cfg.AuthAddr)
-	if authAddr == "" {
-		_ = conn.Close()
-		return nil, fmt.Errorf("auth server address is required")
-	}
-	authConn, err := grpc.NewClient(
-		authAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
-	)
-	if err != nil {
-		_ = conn.Close()
-		return nil, fmt.Errorf("connect to auth server: %w", err)
-	}
-
 	return &Generator{
 		config:       cfg,
 		rng:          rng,
 		wb:           worldbuilder.New(rng),
 		nameRegistry: newNameRegistry(),
 		conn:         conn,
-		authConn:     authConn,
 		campaigns:    statev1.NewCampaignServiceClient(conn),
 		participants: statev1.NewParticipantServiceClient(conn),
 		invites:      statev1.NewInviteServiceClient(conn),
 		characters:   statev1.NewCharacterServiceClient(conn),
 		sessions:     statev1.NewSessionServiceClient(conn),
 		events:       statev1.NewEventServiceClient(conn),
-		authClient:   authv1.NewAuthServiceClient(authConn),
 	}, nil
 }
 
@@ -146,9 +123,6 @@ func (g *Generator) Close() error {
 		if err := g.conn.Close(); err != nil {
 			return err
 		}
-	}
-	if g.authConn != nil {
-		return g.authConn.Close()
 	}
 	return nil
 }

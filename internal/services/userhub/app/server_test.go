@@ -14,6 +14,7 @@ import (
 
 func validRuntimeConfig() RuntimeConfig {
 	return RuntimeConfig{
+		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
@@ -46,6 +47,7 @@ func TestRunRequiresGameAddress(t *testing.T) {
 	t.Parallel()
 
 	err := Run(context.Background(), RuntimeConfig{
+		AuthAddr:          "auth:8083",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
 	})
@@ -76,6 +78,7 @@ func TestRunRequiresSocialAddress(t *testing.T) {
 	t.Parallel()
 
 	err := Run(context.Background(), RuntimeConfig{
+		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
 		NotificationsAddr: "notifications:8088",
 	})
@@ -88,6 +91,7 @@ func TestRunRequiresNotificationsAddress(t *testing.T) {
 	t.Parallel()
 
 	err := Run(context.Background(), RuntimeConfig{
+		AuthAddr:   "auth:8083",
 		GameAddr:   "game:8082",
 		SocialAddr: "social:8090",
 	})
@@ -102,6 +106,7 @@ func TestNewAndServeLifecycle(t *testing.T) {
 	port := freeTCPPort(t)
 	srv, err := New(context.Background(), RuntimeConfig{
 		Port:              port,
+		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",
@@ -136,6 +141,7 @@ func TestServeRequiresContext(t *testing.T) {
 
 	srv, err := New(context.Background(), RuntimeConfig{
 		Port:              freeTCPPort(t),
+		AuthAddr:          "auth:8083",
 		GameAddr:          "game:8082",
 		SocialAddr:        "social:8090",
 		NotificationsAddr: "notifications:8088",

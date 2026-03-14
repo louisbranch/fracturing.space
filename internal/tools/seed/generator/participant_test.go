@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"testing"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/worldbuilder"
 	"google.golang.org/grpc"
@@ -27,18 +26,7 @@ func TestCreateParticipants_CountLessThanOne(t *testing.T) {
 			}, nil
 		},
 	}
-	auth := happyAuthCreator()
-	inv := &fakeInviteManager{
-		createInvite: func(_ context.Context, in *statev1.CreateInviteRequest, _ ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-			return &statev1.CreateInviteResponse{
-				Invite: &statev1.Invite{Id: "inv-1"},
-			}, nil
-		},
-		claimInvite: func(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
-			return &statev1.ClaimInviteResponse{}, nil
-		},
-	}
-	g := newTestGen(1, testDeps(nil, part, inv, nil, nil, nil, auth))
+	g := newTestGen(1, testDeps(nil, part, nil, nil, nil, nil))
 
 	// count=0 should normalize to 1
 	participants, err := g.createParticipants(context.Background(), "camp-1", "owner-1", 0)
@@ -64,16 +52,7 @@ func TestCreateParticipants_FirstGmRestPlayer(t *testing.T) {
 			}, nil
 		},
 	}
-	auth := happyAuthCreator()
-	inv := &fakeInviteManager{
-		createInvite: func(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-			return &statev1.CreateInviteResponse{Invite: &statev1.Invite{Id: "inv-1"}}, nil
-		},
-		claimInvite: func(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
-			return &statev1.ClaimInviteResponse{}, nil
-		},
-	}
-	g := newTestGen(1, testDeps(nil, part, inv, nil, nil, nil, auth))
+	g := newTestGen(1, testDeps(nil, part, nil, nil, nil, nil))
 
 	participants, err := g.createParticipants(context.Background(), "camp-1", "", 3)
 	if err != nil {
@@ -106,19 +85,9 @@ func TestCreateParticipants_ControllerVariation(t *testing.T) {
 			}, nil
 		},
 	}
-	auth := happyAuthCreator()
-	inv := &fakeInviteManager{
-		createInvite: func(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-			return &statev1.CreateInviteResponse{Invite: &statev1.Invite{Id: "inv-1"}}, nil
-		},
-		claimInvite: func(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
-			return &statev1.ClaimInviteResponse{}, nil
-		},
-	}
-
 	// Use seed 42 and enough participants to exercise the 20% AI branch.
 	rng := rand.New(rand.NewSource(42))
-	g := newGenerator(Config{Seed: 42}, rng, worldbuilder.New(rng), testDeps(nil, part, inv, nil, nil, nil, auth))
+	g := newGenerator(Config{Seed: 42}, rng, worldbuilder.New(rng), testDeps(nil, part, nil, nil, nil, nil))
 
 	_, err := g.createParticipants(context.Background(), "camp-1", "", 10)
 	if err != nil {
@@ -142,9 +111,7 @@ func TestCreateParticipants_ControllerVariation(t *testing.T) {
 	}
 }
 
-func TestCreateParticipants_InviteCreateClaimFlow(t *testing.T) {
-	// Use seed that exercises claimInvite=true branch (rng.Intn(4)==1 or 3).
-	var inviteCreated, inviteClaimed bool
+func TestCreateParticipants_HumanParticipantsDoNotRequireInviteFlow(t *testing.T) {
 	part := &fakeParticipantCreator{
 		create: func(_ context.Context, in *statev1.CreateParticipantRequest, _ ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
 			return &statev1.CreateParticipantResponse{
@@ -155,36 +122,11 @@ func TestCreateParticipants_InviteCreateClaimFlow(t *testing.T) {
 			}, nil
 		},
 	}
-	auth := &fakeAuthProvider{
-		createUser: func(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-			return &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}}, nil
-		},
-		issueJoinGrant: func(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
-			return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
-		},
-	}
-	inv := &fakeInviteManager{
-		createInvite: func(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-			inviteCreated = true
-			return &statev1.CreateInviteResponse{Invite: &statev1.Invite{Id: "inv-1"}}, nil
-		},
-		claimInvite: func(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
-			inviteClaimed = true
-			return &statev1.ClaimInviteResponse{}, nil
-		},
-	}
-
-	// Seed 0 deterministically exercises the claimInvite=true branch.
-	const seed int64 = 0
-	rng := rand.New(rand.NewSource(seed))
-	g := newGenerator(Config{}, rng, worldbuilder.New(rng), testDeps(nil, part, inv, nil, nil, nil, auth))
+	g := newGenerator(Config{}, rand.New(rand.NewSource(0)), worldbuilder.New(rand.New(rand.NewSource(0))), testDeps(nil, part, nil, nil, nil, nil))
 
 	_, err := g.createParticipants(context.Background(), "camp-1", "", 1)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
-	}
-	if !inviteCreated || !inviteClaimed {
-		t.Fatal("seed 0 did not exercise the invite claim path")
 	}
 }
 
@@ -213,16 +155,10 @@ func TestCreateParticipants_CreateInviteError(t *testing.T) {
 			}, nil
 		},
 	}
-	auth := happyAuthCreator()
-	inv := &fakeInviteManager{
-		createInvite: func(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-			return nil, fmt.Errorf("invite failed")
-		},
-	}
-	g := newTestGen(1, testDeps(nil, part, inv, nil, nil, nil, auth))
+	g := newTestGen(1, testDeps(nil, part, nil, nil, nil, nil))
 
 	_, err := g.createParticipants(context.Background(), "camp-1", "", 1)
-	if err == nil {
-		t.Fatal("expected error from CreateInvite failure")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }

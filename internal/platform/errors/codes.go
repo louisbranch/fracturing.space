@@ -25,8 +25,8 @@ const (
 	CodeParticipantUserAlreadyClaimed Code = "PARTICIPANT_USER_ALREADY_CLAIMED"
 
 	// User errors
-	CodeUserEmptyEmail   Code = "USER_EMPTY_EMAIL"
-	CodeUserInvalidEmail Code = "USER_INVALID_EMAIL"
+	CodeUserEmptyUsername   Code = "USER_EMPTY_USERNAME"
+	CodeUserInvalidUsername Code = "USER_INVALID_USERNAME"
 
 	// Invite errors
 	CodeInviteEmptyCampaignID      Code = "INVITE_EMPTY_CAMPAIGN_ID"
@@ -104,8 +104,8 @@ func (c Code) GRPCCode() codes.Code {
 		CodeParticipantEmptyDisplayName,
 		CodeParticipantInvalidRole,
 		CodeParticipantEmptyCampaignID,
-		CodeUserEmptyEmail,
-		CodeUserInvalidEmail,
+		CodeUserEmptyUsername,
+		CodeUserInvalidUsername,
 		CodeInviteEmptyCampaignID,
 		CodeInviteEmptyParticipantID,
 		CodeInviteRecipientUserMissing,

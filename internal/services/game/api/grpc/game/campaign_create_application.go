@@ -82,7 +82,15 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
 	creatorDisplayName := strings.TrimSpace(profile.Name)
 	if creatorDisplayName == "" {
-		creatorDisplayName = defaultUnknownParticipantName(defaultLocale)
+		creatorDisplayName, err = authUsername(
+			ctx,
+			c.authClient,
+			userID,
+			apperrors.New(apperrors.CodeCampaignCreatorUserMissing, "creator user not found"),
+		)
+		if err != nil {
+			return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
+		}
 	}
 	creatorPronouns := strings.TrimSpace(profile.Pronouns)
 	if creatorPronouns == "" && userID != "" {

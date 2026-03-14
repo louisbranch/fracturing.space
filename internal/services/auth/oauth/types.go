@@ -43,26 +43,3 @@ type PendingAuthorization struct {
 	UserID    string
 	ExpiresAt time.Time
 }
-
-// ProviderState tracks an external OAuth login flow.
-type ProviderState struct {
-	State        string
-	Provider     string
-	RedirectURI  string
-	CodeVerifier string
-	ExpiresAt    time.Time
-}
-
-// ExternalIdentity represents a linked external provider identity.
-type ExternalIdentity struct {
-	ID             string
-	Provider       string
-	ProviderUserID string
-	UserID         string
-	AccessToken    string
-	RefreshToken   string
-	Scope          string
-	ExpiresAt      time.Time
-	IDToken        string
-	UpdatedAt      time.Time
-}

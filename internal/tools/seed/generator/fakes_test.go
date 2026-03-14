@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"google.golang.org/grpc"
 )
@@ -129,26 +128,6 @@ func (f *fakeEventAppender) AppendEvent(ctx context.Context, in *statev1.AppendE
 	return nil, fmt.Errorf("AppendEvent: not implemented")
 }
 
-// fakeAuthProvider implements authProvider with injectable functions.
-type fakeAuthProvider struct {
-	createUser     func(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error)
-	issueJoinGrant func(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error)
-}
-
-func (f *fakeAuthProvider) CreateUser(ctx context.Context, in *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-	if f.createUser != nil {
-		return f.createUser(ctx, in, opts...)
-	}
-	return nil, fmt.Errorf("CreateUser: not implemented")
-}
-
-func (f *fakeAuthProvider) IssueJoinGrant(ctx context.Context, in *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
-	if f.issueJoinGrant != nil {
-		return f.issueJoinGrant(ctx, in, opts...)
-	}
-	return nil, fmt.Errorf("IssueJoinGrant: not implemented")
-}
-
 // testDeps returns a generatorDeps wired to the given fakes.
 func testDeps(
 	camp *fakeCampaignCreator,
@@ -157,7 +136,7 @@ func testDeps(
 	char *fakeCharacterCreator,
 	sess *fakeSessionManager,
 	evt *fakeEventAppender,
-	auth *fakeAuthProvider,
+	_ ...any,
 ) generatorDeps {
 	return generatorDeps{
 		campaigns:    camp,
@@ -166,6 +145,5 @@ func testDeps(
 		characters:   char,
 		sessions:     sess,
 		events:       evt,
-		authClient:   auth,
 	}
 }

@@ -14,9 +14,13 @@ func buildUserRows(users []*authv1.User) []templates.UserRow {
 		if user == nil {
 			continue
 		}
+		username := user.GetUsername()
+		if username == "" {
+			username = user.GetId()
+		}
 		rows = append(rows, templates.UserRow{
 			ID:        user.GetId(),
-			Email:     user.GetEmail(),
+			Username:  username,
 			CreatedAt: eventview.FormatTimestamp(user.GetCreatedAt()),
 			UpdatedAt: eventview.FormatTimestamp(user.GetUpdatedAt()),
 		})
@@ -28,35 +32,16 @@ func buildUserDetail(user *authv1.User) *templates.UserDetail {
 	if user == nil {
 		return nil
 	}
+	username := user.GetUsername()
+	if username == "" {
+		username = user.GetId()
+	}
 	return &templates.UserDetail{
 		ID:        user.GetId(),
-		Email:     user.GetEmail(),
+		Username:  username,
 		CreatedAt: eventview.FormatTimestamp(user.GetCreatedAt()),
 		UpdatedAt: eventview.FormatTimestamp(user.GetUpdatedAt()),
 	}
-}
-
-func buildUserEmailRows(emails []*authv1.UserEmail, loc *message.Printer) []templates.UserEmailRow {
-	rows := make([]templates.UserEmailRow, 0, len(emails))
-	for _, email := range emails {
-		if email == nil {
-			continue
-		}
-		verified := "-"
-		if email.GetVerifiedAt() != nil {
-			verified = eventview.FormatTimestamp(email.GetVerifiedAt())
-		}
-		rows = append(rows, templates.UserEmailRow{
-			Email:      email.GetEmail(),
-			VerifiedAt: verified,
-			CreatedAt:  eventview.FormatTimestamp(email.GetCreatedAt()),
-			UpdatedAt:  eventview.FormatTimestamp(email.GetUpdatedAt()),
-		})
-	}
-	if len(rows) == 0 {
-		return nil
-	}
-	return rows
 }
 
 func formatInviteStatus(status statev1.InviteStatus, loc *message.Printer) (string, string) {

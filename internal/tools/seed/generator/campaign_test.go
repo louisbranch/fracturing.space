@@ -2,11 +2,9 @@ package generator
 
 import (
 	"context"
-	"fmt"
 	"math/rand"
 	"testing"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/worldbuilder"
 	"google.golang.org/grpc"
@@ -42,24 +40,7 @@ func newTestGen(seed int64, deps generatorDeps) *Generator {
 	return newGenerator(Config{Seed: seed}, rng, worldbuilder.New(rng), deps)
 }
 
-// happyAuthCreator returns a fakeAuthProvider that assigns sequential user IDs.
-func happyAuthCreator() *fakeAuthProvider {
-	seq := 0
-	return &fakeAuthProvider{
-		createUser: func(_ context.Context, in *authv1.CreateUserRequest, _ ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-			seq++
-			return &authv1.CreateUserResponse{
-				User: &authv1.User{Id: fmt.Sprintf("user-%d", seq)},
-			}, nil
-		},
-		issueJoinGrant: func(_ context.Context, in *authv1.IssueJoinGrantRequest, _ ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
-			return &authv1.IssueJoinGrantResponse{JoinGrant: "grant-token"}, nil
-		},
-	}
-}
-
 func TestCreateCampaign_HappyPath(t *testing.T) {
-	auth := happyAuthCreator()
 	camp := &fakeCampaignCreator{
 		createCampaign: func(_ context.Context, in *statev1.CreateCampaignRequest, _ ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
 			return &statev1.CreateCampaignResponse{
@@ -68,7 +49,7 @@ func TestCreateCampaign_HappyPath(t *testing.T) {
 			}, nil
 		},
 	}
-	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil, auth))
+	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil))
 
 	campaign, ownerID, err := g.createCampaign(context.Background(), statev1.GmMode_HUMAN)
 	if err != nil {
@@ -82,42 +63,13 @@ func TestCreateCampaign_HappyPath(t *testing.T) {
 	}
 }
 
-func TestCreateCampaign_AuthError(t *testing.T) {
-	auth := &fakeAuthProvider{
-		createUser: func(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-			return nil, fmt.Errorf("auth unavailable")
-		},
-	}
-	g := newTestGen(1, testDeps(nil, nil, nil, nil, nil, nil, auth))
-
-	_, _, err := g.createCampaign(context.Background(), statev1.GmMode_HUMAN)
-	if err == nil {
-		t.Fatal("expected error from auth failure")
-	}
-}
-
-func TestCreateCampaign_EmptyUserID(t *testing.T) {
-	auth := &fakeAuthProvider{
-		createUser: func(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-			return &authv1.CreateUserResponse{User: &authv1.User{Id: ""}}, nil
-		},
-	}
-	g := newTestGen(1, testDeps(nil, nil, nil, nil, nil, nil, auth))
-
-	_, _, err := g.createCampaign(context.Background(), statev1.GmMode_HUMAN)
-	if err == nil {
-		t.Fatal("expected error for empty user ID")
-	}
-}
-
 func TestCreateCampaign_NilResponse(t *testing.T) {
-	auth := happyAuthCreator()
 	camp := &fakeCampaignCreator{
 		createCampaign: func(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
 			return nil, nil
 		},
 	}
-	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil, auth))
+	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil))
 
 	_, _, err := g.createCampaign(context.Background(), statev1.GmMode_HUMAN)
 	if err == nil {
@@ -126,7 +78,6 @@ func TestCreateCampaign_NilResponse(t *testing.T) {
 }
 
 func TestCreateCampaign_NilOwnerParticipant(t *testing.T) {
-	auth := happyAuthCreator()
 	camp := &fakeCampaignCreator{
 		createCampaign: func(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
 			return &statev1.CreateCampaignResponse{
@@ -134,7 +85,7 @@ func TestCreateCampaign_NilOwnerParticipant(t *testing.T) {
 			}, nil
 		},
 	}
-	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil, auth))
+	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil))
 
 	_, _, err := g.createCampaign(context.Background(), statev1.GmMode_HUMAN)
 	if err == nil {
@@ -143,7 +94,6 @@ func TestCreateCampaign_NilOwnerParticipant(t *testing.T) {
 }
 
 func TestCreateCampaign_EmptyOwnerID(t *testing.T) {
-	auth := happyAuthCreator()
 	camp := &fakeCampaignCreator{
 		createCampaign: func(context.Context, *statev1.CreateCampaignRequest, ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
 			return &statev1.CreateCampaignResponse{
@@ -152,7 +102,7 @@ func TestCreateCampaign_EmptyOwnerID(t *testing.T) {
 			}, nil
 		},
 	}
-	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil, auth))
+	g := newTestGen(1, testDeps(camp, nil, nil, nil, nil, nil))
 
 	_, _, err := g.createCampaign(context.Background(), statev1.GmMode_HUMAN)
 	if err == nil {
@@ -161,14 +111,14 @@ func TestCreateCampaign_EmptyOwnerID(t *testing.T) {
 }
 
 func TestTransitionCampaignStatus_DraftNoOp(t *testing.T) {
-	g := newTestGen(1, testDeps(&fakeCampaignCreator{}, nil, nil, nil, nil, nil, nil))
+	g := newTestGen(1, testDeps(&fakeCampaignCreator{}, nil, nil, nil, nil, nil))
 	if err := g.transitionCampaignStatus(context.Background(), "camp-1", 0); err != nil {
 		t.Fatalf("index 0 (DRAFT): unexpected error: %v", err)
 	}
 }
 
 func TestTransitionCampaignStatus_ActiveNoOp(t *testing.T) {
-	g := newTestGen(1, testDeps(&fakeCampaignCreator{}, nil, nil, nil, nil, nil, nil))
+	g := newTestGen(1, testDeps(&fakeCampaignCreator{}, nil, nil, nil, nil, nil))
 	if err := g.transitionCampaignStatus(context.Background(), "camp-1", 1); err != nil {
 		t.Fatalf("index 1 (ACTIVE): unexpected error: %v", err)
 	}
@@ -197,7 +147,7 @@ func TestTransitionCampaignStatus_CompletedEndsAndEnds(t *testing.T) {
 			return &statev1.EndCampaignResponse{}, nil
 		},
 	}
-	g := newTestGen(1, testDeps(camp, nil, nil, nil, sess, nil, nil))
+	g := newTestGen(1, testDeps(camp, nil, nil, nil, sess, nil))
 
 	if err := g.transitionCampaignStatus(context.Background(), "camp-1", 2); err != nil {
 		t.Fatalf("unexpected error: %v", err)

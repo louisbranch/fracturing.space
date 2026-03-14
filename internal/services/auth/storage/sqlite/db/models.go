@@ -24,16 +24,6 @@ type AuthIntegrationOutbox struct {
 	UpdatedAt      int64         `json:"updated_at"`
 }
 
-type MagicLink struct {
-	Token     string         `json:"token"`
-	UserID    string         `json:"user_id"`
-	Email     string         `json:"email"`
-	PendingID sql.NullString `json:"pending_id"`
-	CreatedAt int64          `json:"created_at"`
-	ExpiresAt int64          `json:"expires_at"`
-	UsedAt    sql.NullInt64  `json:"used_at"`
-}
-
 type OauthAccessToken struct {
 	Token     string `json:"token"`
 	ClientID  string `json:"client_id"`
@@ -55,19 +45,6 @@ type OauthAuthorizationCode struct {
 	Used                int64  `json:"used"`
 }
 
-type OauthExternalIdentity struct {
-	ID             string `json:"id"`
-	Provider       string `json:"provider"`
-	ProviderUserID string `json:"provider_user_id"`
-	UserID         string `json:"user_id"`
-	AccessToken    string `json:"access_token"`
-	RefreshToken   string `json:"refresh_token"`
-	Scope          string `json:"scope"`
-	ExpiresAt      string `json:"expires_at"`
-	IDToken        string `json:"id_token"`
-	UpdatedAt      string `json:"updated_at"`
-}
-
 type OauthPendingAuthorization struct {
 	ID                  string `json:"id"`
 	ResponseType        string `json:"response_type"`
@@ -79,22 +56,6 @@ type OauthPendingAuthorization struct {
 	CodeChallengeMethod string `json:"code_challenge_method"`
 	UserID              string `json:"user_id"`
 	ExpiresAt           string `json:"expires_at"`
-}
-
-type OauthProviderState struct {
-	State        string `json:"state"`
-	Provider     string `json:"provider"`
-	RedirectUri  string `json:"redirect_uri"`
-	CodeVerifier string `json:"code_verifier"`
-	ExpiresAt    string `json:"expires_at"`
-}
-
-type OauthUserCredential struct {
-	UserID       string `json:"user_id"`
-	Email        string `json:"email"`
-	PasswordHash string `json:"password_hash"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
 }
 
 type Passkey struct {
@@ -114,21 +75,34 @@ type PasskeySession struct {
 	ExpiresAt   int64          `json:"expires_at"`
 }
 
-type User struct {
+type RecoverySession struct {
 	ID        string `json:"id"`
-	Locale    string `json:"locale"`
+	UserID    string `json:"user_id"`
+	ExpiresAt int64  `json:"expires_at"`
 	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
 }
 
-type UserEmail struct {
-	ID         string        `json:"id"`
-	UserID     string        `json:"user_id"`
-	Email      string        `json:"email"`
-	IsPrimary  int64         `json:"is_primary"`
-	VerifiedAt sql.NullInt64 `json:"verified_at"`
-	CreatedAt  int64         `json:"created_at"`
-	UpdatedAt  int64         `json:"updated_at"`
+type RegistrationSession struct {
+	ID               string `json:"id"`
+	UserID           string `json:"user_id"`
+	Username         string `json:"username"`
+	Locale           string `json:"locale"`
+	RecoveryCodeHash string `json:"recovery_code_hash"`
+	ExpiresAt        int64  `json:"expires_at"`
+	CreatedAt        int64  `json:"created_at"`
+	UpdatedAt        int64  `json:"updated_at"`
+}
+
+type User struct {
+	ID                        string        `json:"id"`
+	Username                  string        `json:"username"`
+	Locale                    string        `json:"locale"`
+	RecoveryCodeHash          string        `json:"recovery_code_hash"`
+	RecoveryReservedSessionID string        `json:"recovery_reserved_session_id"`
+	RecoveryReservedUntil     sql.NullInt64 `json:"recovery_reserved_until"`
+	RecoveryCodeUpdatedAt     int64         `json:"recovery_code_updated_at"`
+	CreatedAt                 int64         `json:"created_at"`
+	UpdatedAt                 int64         `json:"updated_at"`
 }
 
 type WebSession struct {

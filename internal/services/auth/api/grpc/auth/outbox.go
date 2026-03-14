@@ -33,18 +33,18 @@ func (s *AuthService) signupCompletedOutboxEvent(baseUser user.User, signupMetho
 	}
 	eventID, err := newID()
 	if err != nil {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("generate signup completed event id: %w", err)
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Generate signup completed event ID: %w", err)
 	}
 
 	payload, err := json.Marshal(map[string]string{
 		"user_id":        baseUser.ID,
-		"email":          baseUser.Email,
+		"username":       baseUser.Username,
 		"signup_method":  signupMethod,
 		"signup_at":      now.Format(time.RFC3339Nano),
 		"notification_v": "v1",
 	})
 	if err != nil {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("marshal signup completed payload: %w", err)
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Marshal signup completed payload: %w", err)
 	}
 
 	return storage.IntegrationOutboxEvent{
@@ -74,14 +74,14 @@ func (s *AuthService) persistUserWithSignupCompletedOutbox(ctx context.Context, 
 	}
 
 	if err := s.store.PutUser(ctx, baseUser); err != nil {
-		return fmt.Errorf("put user: %w", err)
+		return fmt.Errorf("Put user: %w", err)
 	}
 	outboxStore, ok := s.store.(signupOutboxEnqueuer)
 	if !ok {
 		return nil
 	}
 	if err := outboxStore.EnqueueIntegrationOutboxEvent(ctx, event); err != nil {
-		return fmt.Errorf("enqueue signup completed outbox: %w", err)
+		return fmt.Errorf("Enqueue signup completed outbox: %w", err)
 	}
 	return nil
 }

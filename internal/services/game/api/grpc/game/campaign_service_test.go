@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
@@ -174,6 +175,7 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
 	}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -268,6 +270,7 @@ func TestCreateCampaign_Success(t *testing.T) {
 		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
 	}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -364,6 +367,7 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
 	}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -475,6 +479,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 				stores:      ts.withDomain(domain).build(),
 				clock:       fixedClock(now),
 				idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+				authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
 			}
 
 			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
@@ -701,7 +706,7 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 	}
 }
 
-func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAuth(t *testing.T) {
+func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameWithoutSocialProfile(t *testing.T) {
 	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -724,16 +729,18 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAut
 					ActorType:   event.ActorTypeSystem,
 					EntityType:  "participant",
 					EntityID:    "participant-123",
-					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Mysterious Person","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"owner-handle","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
 				},
 			),
 		},
 	}}
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner-handle"}}
 
 	svc := &CampaignService{
 		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		authClient:  authClient,
 	}
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
@@ -756,8 +763,8 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAut
 		t.Fatalf("participant payload count = %d, want %d", len(payload.Participants), 1)
 	}
 	ownerPayload := payload.Participants[0]
-	if ownerPayload.Name != "Mysterious Person" {
-		t.Fatalf("payload name = %q, want %q", ownerPayload.Name, "Mysterious Person")
+	if ownerPayload.Name != "owner-handle" {
+		t.Fatalf("payload name = %q, want %q", ownerPayload.Name, "owner-handle")
 	}
 	if ownerPayload.AvatarSetID != "" {
 		t.Fatalf("payload avatar_set_id = %q, want empty", ownerPayload.AvatarSetID)
@@ -768,9 +775,12 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameWithoutSocialOrAut
 	if ownerPayload.Pronouns != "they/them" {
 		t.Fatalf("payload pronouns = %q, want %q", ownerPayload.Pronouns, "they/them")
 	}
+	if authClient.lastGetUserRequest == nil || authClient.lastGetUserRequest.GetUserId() != "user-123" {
+		t.Fatalf("GetUser request = %#v, want user-123", authClient.lastGetUserRequest)
+	}
 }
 
-func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testing.T) {
+func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameForLocale(t *testing.T) {
 	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -793,16 +803,18 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testi
 					ActorType:   event.ActorTypeSystem,
 					EntityType:  "participant",
 					EntityID:    "participant-123",
-					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Pessoa Misteriosa","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
+					PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"apelido","role":"GM","controller":"HUMAN","campaign_access":"OWNER"}`),
 				},
 			),
 		},
 	}}
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "apelido"}}
 
 	svc := &CampaignService{
 		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		authClient:  authClient,
 	}
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
@@ -825,12 +837,15 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultNameForLocale(t *testi
 	if len(payload.Participants) != 1 {
 		t.Fatalf("participant payload count = %d, want %d", len(payload.Participants), 1)
 	}
-	if payload.Participants[0].Name != "Pessoa Misteriosa" {
-		t.Fatalf("payload name = %q, want %q", payload.Participants[0].Name, "Pessoa Misteriosa")
+	if payload.Participants[0].Name != "apelido" {
+		t.Fatalf("payload name = %q, want %q", payload.Participants[0].Name, "apelido")
+	}
+	if authClient.lastGetUserRequest == nil || authClient.lastGetUserRequest.GetUserId() != "user-123" {
+		t.Fatalf("GetUser request = %#v, want user-123", authClient.lastGetUserRequest)
 	}
 }
 
-func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T) {
+func TestCreateCampaign_AIUsesLocalizedNameAndOwnerFallsBackToAuthUsernameForLocale(t *testing.T) {
 	ts := newTestStores()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -853,7 +868,7 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 					ActorType:   event.ActorTypeSystem,
 					EntityType:  "participant",
 					EntityID:    "participant-owner",
-					PayloadJSON: []byte(`{"participant_id":"participant-owner","user_id":"user-123","name":"Pessoa Misteriosa","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER","pronouns":"they/them"}`),
+					PayloadJSON: []byte(`{"participant_id":"participant-owner","user_id":"user-123","name":"apelido","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER","pronouns":"they/them"}`),
 				},
 				event.Event{
 					CampaignID:  "campaign-123",
@@ -867,11 +882,13 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 			),
 		},
 	}}
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "apelido"}}
 
 	svc := &CampaignService{
 		stores:      ts.withDomain(domain).build(),
 		clock:       fixedClock(now),
 		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		authClient:  authClient,
 	}
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
@@ -896,8 +913,8 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 		t.Fatalf("participant payload count = %d, want %d", len(workflowPayload.Participants), 2)
 	}
 	ownerPayload := workflowPayload.Participants[0]
-	if ownerPayload.Name != "Pessoa Misteriosa" {
-		t.Fatalf("owner payload name = %q, want %q", ownerPayload.Name, "Pessoa Misteriosa")
+	if ownerPayload.Name != "apelido" {
+		t.Fatalf("owner payload name = %q, want %q", ownerPayload.Name, "apelido")
 	}
 	if ownerPayload.Role != "PLAYER" {
 		t.Fatalf("owner payload role = %q, want %q", ownerPayload.Role, "PLAYER")
@@ -909,6 +926,9 @@ func TestCreateCampaign_AIAndOwnerFallbackToLocalizedNamesForLocale(t *testing.T
 	}
 	if aiPayload.Controller != "AI" {
 		t.Fatalf("ai payload controller = %q, want %q", aiPayload.Controller, "AI")
+	}
+	if authClient.lastGetUserRequest == nil || authClient.lastGetUserRequest.GetUserId() != "user-123" {
+		t.Fatalf("GetUser request = %#v, want user-123", authClient.lastGetUserRequest)
 	}
 }
 

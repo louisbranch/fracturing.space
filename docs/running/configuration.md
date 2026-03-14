@@ -46,16 +46,6 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_OAUTH_PENDING_TTL`: pending authorization TTL for browser login handoff. Default: `15m`.
 - `FRACTURING_SPACE_OAUTH_FIRST_PARTY_CLIENT_ID`: client ID for the first-party web login client. When set (along with redirect URI), registers a trusted OAuth client that skips the consent screen. Default: unset.
 - `FRACTURING_SPACE_OAUTH_FIRST_PARTY_REDIRECT_URI`: redirect URI for the first-party web login client. Required together with the client ID.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_ID`: Google OAuth client ID.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_CLIENT_SECRET`: Google OAuth client secret.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_REDIRECT_URI`: Google OAuth redirect URI.
-- `FRACTURING_SPACE_OAUTH_GOOGLE_SCOPES`: comma-separated Google scopes. Default when provider is configured but unset: `openid,email,profile`.
-- `FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_ID`: GitHub OAuth client ID.
-- `FRACTURING_SPACE_OAUTH_GITHUB_CLIENT_SECRET`: GitHub OAuth client secret.
-- `FRACTURING_SPACE_OAUTH_GITHUB_REDIRECT_URI`: GitHub OAuth redirect URI.
-- `FRACTURING_SPACE_OAUTH_GITHUB_SCOPES`: comma-separated GitHub scopes. Default when provider is configured but unset: `read:user,user:email`.
-- `FRACTURING_SPACE_MAGIC_LINK_BASE_URL`: magic-link base URL. Default: `http://localhost:8086/magic`.
-- `FRACTURING_SPACE_MAGIC_LINK_TTL`: magic-link TTL. Default: `15m`.
 
 ### AI
 
@@ -76,12 +66,12 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_NOTIFICATIONS_EMAIL_DELIVERY_WORKER_POLL_INTERVAL`: poll cadence for pending email delivery checks. Default: `5s`.
 
 Notifications channel routing is service-owned by `message_type`; callers only create intents.
-The onboarding welcome message type (`auth.onboarding.welcome`) is email-only and does not surface in in-app inbox reads.
 User-configurable per-message-type delivery preferences are planned but not yet available.
 
 ### User hub
 
 - `FRACTURING_SPACE_USERHUB_PORT`: gRPC port for userhub service. Default: `8092`.
+- `FRACTURING_SPACE_USERHUB_AUTH_ADDR`: auth gRPC dependency address. Falls back to `FRACTURING_SPACE_AUTH_ADDR`, then `auth:8083`.
 - `FRACTURING_SPACE_USERHUB_GAME_ADDR`: game gRPC dependency address. Default: `game:8082`.
 - `FRACTURING_SPACE_USERHUB_SOCIAL_ADDR`: social gRPC dependency address. Default: `social:8090`.
 - `FRACTURING_SPACE_USERHUB_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `notifications:8088`.
@@ -94,7 +84,6 @@ User-configurable per-message-type delivery preferences are planned but not yet 
 - `FRACTURING_SPACE_WORKER_PORT`: gRPC port for worker health endpoint. Default: `8089`.
 - `FRACTURING_SPACE_WORKER_AUTH_ADDR`: auth gRPC dependency address. Default: `auth:8083`.
 - `FRACTURING_SPACE_WORKER_SOCIAL_ADDR`: social gRPC dependency address. Default: `social:8090`.
-- `FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR`: notifications gRPC dependency address. Default: `notifications:8088`.
 - `FRACTURING_SPACE_WORKER_DB_PATH`: worker SQLite path for durable attempt logs. Default: `data/worker.db`.
 - `FRACTURING_SPACE_WORKER_CONSUMER`: auth outbox consumer identifier. Default: `worker-onboarding`.
 - `FRACTURING_SPACE_WORKER_POLL_INTERVAL`: auth outbox poll interval. Default: `2s`.
@@ -304,7 +293,6 @@ The worker service (`cmd/worker`) accepts the following flags:
 
 - `-port`: worker health gRPC server port. Default: `8089`
 - `-auth-addr`: auth gRPC dependency address. Default: `auth:8083`
-- `-notifications-addr`: notifications gRPC dependency address. Default: `notifications:8088`
 - `-db-path`: worker SQLite path. Default: `data/worker.db`
 - `-consumer`: auth outbox consumer identifier. Default: `worker-onboarding`
 - `-poll-interval`: auth outbox poll interval. Default: `2s`

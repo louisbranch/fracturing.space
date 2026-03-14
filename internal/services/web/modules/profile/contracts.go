@@ -17,6 +17,9 @@ type LookupUserProfileResponse = profileapp.LookupUserProfileResponse
 // ProfileGateway is the transport-facing alias for profile app gateway contract.
 type ProfileGateway = profileapp.Gateway
 
+// AuthClient aliases keep module constructors and tests on narrow contracts.
+type AuthClient = profilegateway.AuthClient
+
 // SocialClient aliases keep module constructors and tests on narrow contracts.
 type SocialClient = profilegateway.SocialClient
 

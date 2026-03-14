@@ -42,7 +42,6 @@ func TestMountServesSettingsProfileGet(t *testing.T) {
 	for _, marker := range []string{
 		`id="settings-profile"`,
 		`<form method="post" action="/app/settings/profile"`,
-		`name="username"`,
 		`value="rhea"`,
 		`name="name"`,
 		`value="Rhea Vale"`,
@@ -58,45 +57,13 @@ func TestMountServesSettingsProfileGet(t *testing.T) {
 	if strings.Contains(body, `<option value="it/its"></option>`) {
 		t.Fatalf("body should hide it/its from pronoun selection: %q", body)
 	}
+	// Invariant: username is auth-owned and display-only in settings.
+	if strings.Contains(body, `name="username"`) {
+		t.Fatalf("profile settings body unexpectedly exposes editable username input: %q", body)
+	}
 	// Invariant: avatar catalog ids are not user-editable until catalog access is available.
 	if strings.Contains(body, `name="avatar_set_id"`) || strings.Contains(body, `name="avatar_asset_id"`) {
 		t.Fatalf("profile settings body unexpectedly exposes avatar catalog id inputs: %q", body)
-	}
-}
-
-func TestMountSettingsProfileRequiredRedirectWritesToastFlash(t *testing.T) {
-	t.Parallel()
-
-	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
-	}
-	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileRequired, nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusFound {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
-	}
-	if got := rr.Header().Get("Location"); got != routepath.AppSettingsProfile {
-		t.Fatalf("Location = %q, want %q", got, routepath.AppSettingsProfile)
-	}
-	cookie := responseCookieByName(rr, flashnotice.CookieName)
-	if cookie == nil {
-		t.Fatalf("expected %q cookie", flashnotice.CookieName)
-	}
-	flashReq := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfile, nil)
-	flashReq.AddCookie(cookie)
-	flashRR := httptest.NewRecorder()
-	notice, ok := flashnotice.ReadAndClear(flashRR, flashReq)
-	if !ok {
-		t.Fatalf("ReadAndClear() ok = false, want true")
-	}
-	if notice.Key != "web.settings.user_profile.notice_public_profile_required" {
-		t.Fatalf("notice.Key = %q", notice.Key)
-	}
-	if notice.Kind != flashnotice.KindInfo {
-		t.Fatalf("notice.Kind = %q, want %q", notice.Kind, flashnotice.KindInfo)
 	}
 }
 
@@ -162,7 +129,7 @@ func TestMountSettingsProfileGetRendersPortugueseCopyWhenLanguageResolved(t *tes
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`<h1 class="mb-0">Configurações</h1>`,
-		`<h2 class="card-title">Perfil público</h2>`,
+		`<h2 class="card-title">Perfil</h2>`,
 		`<span class="label-text">Nome de usuário</span>`,
 		`<button class="btn btn-primary" type="submit">Salvar perfil</button>`,
 	} {
@@ -187,8 +154,8 @@ func TestMountSettingsProfileMenuUsesPublicProfileLabelInEnglish(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `>Public Profile`) {
-		t.Fatalf("body missing English public profile menu label: %q", body)
+	if !strings.Contains(body, `>Profile`) {
+		t.Fatalf("body missing English profile menu label: %q", body)
 	}
 }
 
@@ -233,29 +200,6 @@ func TestMountSettingsRootHTMXUsesHXRedirect(t *testing.T) {
 	}
 }
 
-func TestMountSettingsProfileRequiredHTMXUsesHXRedirectAndFlash(t *testing.T) {
-	t.Parallel()
-
-	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase()})
-	mount, err := m.Mount()
-	if err != nil {
-		t.Fatalf("Mount() error = %v", err)
-	}
-	req := httptest.NewRequest(http.MethodGet, routepath.AppSettingsProfileRequired, nil)
-	req.Header.Set("HX-Request", "true")
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppSettingsProfile {
-		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppSettingsProfile)
-	}
-	if !responseHasCookieName(rr, flashnotice.CookieName) {
-		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
-	}
-}
-
 func TestModuleIDReturnsSettings(t *testing.T) {
 	t.Parallel()
 
@@ -286,12 +230,11 @@ func TestMountUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
-		UserId:   "user-1",
-		Username: "remote-user",
-		Name:     "Remote Name",
-		Bio:      "From dependencies",
+		UserId: "user-1",
+		Name:   "Remote Name",
+		Bio:    "From dependencies",
 	}}}
-	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
+	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
@@ -334,7 +277,7 @@ func TestMountSettingsProfileFailsClosedWhenSocialClientMissing(t *testing.T) {
 func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 	t.Parallel()
 
-	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
+	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Name: "Remote Name"}}}
 	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
@@ -354,7 +297,7 @@ func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T) {
 	t.Parallel()
 
-	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "remote-user", Name: "Remote Name"}}}
+	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Name: "Remote Name"}}}
 	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, nil, nil, nil), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
@@ -581,7 +524,7 @@ func TestMountProfilePostSavesAndRedirects(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 	form := url.Values{
-		"username":        {"rhea"},
+		"username":        {"updated-user"},
 		"name":            {"Rhea Vale"},
 		"avatar_set_id":   {"catalog-hack-set"},
 		"avatar_asset_id": {"catalog-hack-asset"},
@@ -601,7 +544,7 @@ func TestMountProfilePostSavesAndRedirects(t *testing.T) {
 		t.Fatalf("response missing %q cookie", flashnotice.CookieName)
 	}
 	if gateway.lastSavedProfile.Username != "rhea" {
-		t.Fatalf("saved username = %q, want %q", gateway.lastSavedProfile.Username, "rhea")
+		t.Fatalf("saved username = %q, want existing auth username %q", gateway.lastSavedProfile.Username, "rhea")
 	}
 	if gateway.lastSavedProfile.AvatarSetID != "set-a" {
 		t.Fatalf("saved avatar set id = %q, want existing value %q", gateway.lastSavedProfile.AvatarSetID, "set-a")
@@ -616,20 +559,18 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
 		UserId:        "user-1",
-		Username:      "remote-user",
 		Name:          "Remote Name",
 		AvatarSetId:   "set-a",
 		AvatarAssetId: "asset-1",
 		Bio:           "Before",
 	}}}
-	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
+	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
 	form := url.Values{
-		"username":        {"updated-user"},
 		"name":            {"Updated Name"},
 		"avatar_set_id":   {"catalog-hack-set"},
 		"avatar_asset_id": {"catalog-hack-asset"},
@@ -651,9 +592,6 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 	if social.lastSetReq == nil {
 		t.Fatalf("expected SetUserProfile to be called")
 	}
-	if social.lastSetReq.GetUsername() != "updated-user" {
-		t.Fatalf("username = %q, want %q", social.lastSetReq.GetUsername(), "updated-user")
-	}
 	if social.lastSetReq.GetName() != "Updated Name" {
 		t.Fatalf("name = %q, want %q", social.lastSetReq.GetName(), "Updated Name")
 	}
@@ -673,13 +611,12 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
 		UserId:        "user-1",
-		Username:      "remote-user",
 		Name:          "Remote Name",
 		AvatarSetId:   "set-a",
 		AvatarAssetId: "asset-1",
 		Bio:           "Before",
 	}}}
-	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
+	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	m := New(Config{Gateway: settingsgateway.NewGRPCGateway(social, account, &credentialClientStub{}, &agentClientStub{}), Base: settingsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
@@ -687,7 +624,6 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 	}
 
 	form := url.Values{
-		"username":        {"updated-user"},
 		"name":            {"Updated Name"},
 		"pronouns":        {"   "},
 		"avatar_set_id":   {"catalog-hack-set"},

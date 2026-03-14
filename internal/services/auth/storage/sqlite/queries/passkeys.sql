@@ -17,6 +17,12 @@ SELECT * FROM passkeys WHERE user_id = ? ORDER BY credential_id;
 -- name: DeletePasskey :exec
 DELETE FROM passkeys WHERE credential_id = ?;
 
+-- name: DeletePasskeysByUser :exec
+DELETE FROM passkeys WHERE user_id = ?;
+
+-- name: DeletePasskeysByUserExcept :exec
+DELETE FROM passkeys WHERE user_id = ? AND credential_id <> ?;
+
 -- name: PutPasskeySession :exec
 INSERT INTO passkey_sessions (
     id, kind, user_id, session_json, expires_at
@@ -35,3 +41,42 @@ DELETE FROM passkey_sessions WHERE id = ?;
 
 -- name: DeleteExpiredPasskeySessions :exec
 DELETE FROM passkey_sessions WHERE expires_at <= ?;
+
+-- name: PutRegistrationSession :exec
+INSERT INTO registration_sessions (
+    id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    user_id = excluded.user_id,
+    username = excluded.username,
+    locale = excluded.locale,
+    recovery_code_hash = excluded.recovery_code_hash,
+    expires_at = excluded.expires_at,
+    updated_at = excluded.updated_at;
+
+-- name: GetRegistrationSession :one
+SELECT * FROM registration_sessions WHERE id = ?;
+
+-- name: DeleteRegistrationSession :exec
+DELETE FROM registration_sessions WHERE id = ?;
+
+-- name: DeleteExpiredRegistrationSessions :exec
+DELETE FROM registration_sessions WHERE expires_at <= ?;
+
+-- name: PutRecoverySession :exec
+INSERT INTO recovery_sessions (
+    id, user_id, expires_at, created_at
+) VALUES (?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    user_id = excluded.user_id,
+    expires_at = excluded.expires_at,
+    created_at = excluded.created_at;
+
+-- name: GetRecoverySession :one
+SELECT * FROM recovery_sessions WHERE id = ?;
+
+-- name: DeleteRecoverySession :exec
+DELETE FROM recovery_sessions WHERE id = ?;
+
+-- name: DeleteExpiredRecoverySessions :exec
+DELETE FROM recovery_sessions WHERE expires_at <= ?;

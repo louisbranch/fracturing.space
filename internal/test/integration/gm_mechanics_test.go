@@ -18,7 +18,6 @@ import (
 )
 
 type gmFearChangedPayload struct {
-	Before int    `json:"before"`
 	After  int    `json:"after"`
 	Reason string `json:"reason"`
 }
@@ -132,7 +131,7 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 		t.Fatalf("gm fear = %d -> %d, want 3 -> 1", moveResp.GetGmFearBefore(), moveResp.GetGmFearAfter())
 	}
 
-	if err := findGMFearChanged(ctx, eventClient, campaignID, sessionID, 3, 1); err != nil {
+	if err := findGMFearChanged(ctx, eventClient, campaignID, sessionID, 1); err != nil {
 		t.Fatalf("find gm fear changed: %v", err)
 	}
 }
@@ -341,7 +340,7 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 	}
 }
 
-func findGMFearChanged(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID string, before, after int) error {
+func findGMFearChanged(ctx context.Context, client gamev1.EventServiceClient, campaignID, sessionID string, after int) error {
 	response, err := client.ListEvents(ctx, &gamev1.ListEventsRequest{
 		CampaignId: campaignID,
 		PageSize:   200,
@@ -356,7 +355,7 @@ func findGMFearChanged(ctx context.Context, client gamev1.EventServiceClient, ca
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return err
 		}
-		if payload.Before == before && payload.After == after {
+		if payload.After == after {
 			return nil
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"strings"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
@@ -13,6 +14,31 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// grpcAuthGateway adapts auth.v1 clients to domain identity lookups.
+type grpcAuthGateway struct {
+	users authv1.AuthServiceClient
+}
+
+// newGRPCAuthGateway constructs an auth gateway from a gRPC client.
+func newGRPCAuthGateway(users authv1.AuthServiceClient) *grpcAuthGateway {
+	return &grpcAuthGateway{users: users}
+}
+
+// GetUserIdentity resolves auth-owned identity data by user ID.
+func (g *grpcAuthGateway) GetUserIdentity(ctx context.Context, userID string) (domain.UserIdentity, error) {
+	if g == nil || g.users == nil {
+		return domain.UserIdentity{}, errors.New("auth client is not configured")
+	}
+	resp, err := g.users.GetUser(grpcauthctx.WithUserID(ctx, userID), &authv1.GetUserRequest{UserId: userID})
+	if err != nil {
+		return domain.UserIdentity{}, err
+	}
+	if resp == nil || resp.GetUser() == nil {
+		return domain.UserIdentity{}, errors.New("auth user not found")
+	}
+	return domain.UserIdentity{Username: strings.TrimSpace(resp.GetUser().GetUsername())}, nil
+}
 
 // grpcGameGateway adapts game.v1 clients to domain game gateway behavior.
 type grpcGameGateway struct {
@@ -115,8 +141,7 @@ func (g *grpcSocialGateway) GetUserProfile(ctx context.Context, userID string) (
 		return domain.UserProfile{}, domain.ErrProfileNotFound
 	}
 	return domain.UserProfile{
-		Username: profile.GetUsername(),
-		Name:     profile.GetName(),
+		Name: strings.TrimSpace(profile.GetName()),
 	}, nil
 }
 
@@ -165,6 +190,7 @@ func campaignStatusFromProto(value gamev1.CampaignStatus) domain.CampaignStatus 
 }
 
 var (
+	_ domain.AuthGateway          = (*grpcAuthGateway)(nil)
 	_ domain.GameGateway          = (*grpcGameGateway)(nil)
 	_ domain.SocialGateway        = (*grpcSocialGateway)(nil)
 	_ domain.NotificationsGateway = (*grpcNotificationsGateway)(nil)

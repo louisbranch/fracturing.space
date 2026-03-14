@@ -257,8 +257,6 @@ func (s *Server) ack(ctx context.Context, event *authv1.IntegrationOutboxEvent, 
 	switch outcome {
 	case authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY:
 		req.NextAttemptAt = timestamppb.New(nextAttemptAt)
-	default:
-		req.ProcessedAt = timestamppb.New(now)
 	}
 	if _, err := s.authClient.AckIntegrationOutboxEvent(ctx, req); err != nil {
 		return err

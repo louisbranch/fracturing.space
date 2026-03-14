@@ -15,6 +15,7 @@ const (
 	defaultCacheFreshTTL = 15 * time.Second
 	defaultCacheStaleTTL = 2 * time.Minute
 
+	dependencyAuthUser          = "auth.user"
 	dependencyGameCampaigns     = "game.campaigns"
 	dependencyGameInvites       = "game.invites"
 	dependencySocialProfile     = "social.profile"
@@ -26,6 +27,8 @@ var (
 	ErrServiceNotConfigured = errors.New("userhub service is not configured")
 	// ErrUserIDRequired indicates caller identity is required.
 	ErrUserIDRequired = errors.New("user id is required")
+	// ErrAuthGatewayNotConfigured indicates the auth dependency is missing.
+	ErrAuthGatewayNotConfigured = errors.New("auth gateway is not configured")
 	// ErrGameGatewayNotConfigured indicates the game dependency is missing.
 	ErrGameGatewayNotConfigured = errors.New("game gateway is not configured")
 	// ErrSocialGatewayNotConfigured indicates the social dependency is missing.
@@ -229,8 +232,12 @@ const (
 
 // UserProfile stores profile state resolved from social.
 type UserProfile struct {
+	Name string
+}
+
+// UserIdentity stores auth-owned account identity resolved for a user.
+type UserIdentity struct {
 	Username string
-	Name     string
 }
 
 // UnreadStatus stores unread-notification status resolved from notifications.
@@ -251,6 +258,11 @@ type InvitePage struct {
 	HasMore bool
 }
 
+// AuthGateway resolves auth-owned account identity summaries.
+type AuthGateway interface {
+	GetUserIdentity(ctx context.Context, userID string) (UserIdentity, error)
+}
+
 // GameGateway resolves user-scoped campaign and invite summaries.
 type GameGateway interface {
 	ListCampaignPreviews(ctx context.Context, userID string, limit int) (CampaignPage, error)
@@ -269,6 +281,7 @@ type NotificationsGateway interface {
 
 // Service orchestrates userhub dashboard aggregation and cache behavior.
 type Service struct {
+	auth          AuthGateway
 	game          GameGateway
 	social        SocialGateway
 	notifications NotificationsGateway
@@ -277,13 +290,14 @@ type Service struct {
 }
 
 // NewService builds a userhub service from upstream read gateways.
-func NewService(game GameGateway, social SocialGateway, notifications NotificationsGateway, cfg Config) *Service {
+func NewService(auth AuthGateway, game GameGateway, social SocialGateway, notifications NotificationsGateway, cfg Config) *Service {
 	clock := cfg.Clock
 	if clock == nil {
 		clock = time.Now
 	}
 	cache := newDashboardCache(cfg.CacheFreshTTL, cfg.CacheStaleTTL, cfg.CampaignDependencyObserver)
 	return &Service{
+		auth:          auth,
 		game:          game,
 		social:        social,
 		notifications: notifications,
@@ -296,6 +310,9 @@ func NewService(game GameGateway, social SocialGateway, notifications Notificati
 func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Dashboard, error) {
 	if s == nil {
 		return Dashboard{}, ErrServiceNotConfigured
+	}
+	if s.auth == nil {
+		return Dashboard{}, ErrAuthGatewayNotConfigured
 	}
 	if s.game == nil {
 		return Dashboard{}, ErrGameGatewayNotConfigured
@@ -359,7 +376,17 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 		}
 	}
 
-	degradedDependencies := make([]string, 0, 3)
+	degradedDependencies := make([]string, 0, 4)
+
+	identity, err := s.auth.GetUserIdentity(ctx, userID)
+	if err != nil {
+		if staleOK {
+			return staleFallback(staleDashboard, []string{dependencyAuthUser}), nil
+		}
+		return Dashboard{}, &DependencyUnavailableError{Dependency: dependencyAuthUser, Err: err}
+	}
+	result.User.Username = strings.TrimSpace(identity.Username)
+	result.User.Discoverable = strings.TrimSpace(result.User.Username) != ""
 
 	invitePage, err := s.game.ListPendingInvitePreviews(ctx, userID, inviteLimit)
 	if err != nil {
@@ -378,7 +405,6 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 	switch {
 	case err == nil:
 		result.User.ProfileAvailable = true
-		result.User.Username = strings.TrimSpace(profile.Username)
 		result.User.Name = strings.TrimSpace(profile.Name)
 	case errors.Is(err, ErrProfileNotFound):
 		result.User.ProfileAvailable = false
@@ -389,8 +415,7 @@ func (s *Service) GetDashboard(ctx context.Context, input GetDashboardInput) (Da
 		result.User.ProfileAvailable = false
 		degradedDependencies = append(degradedDependencies, dependencySocialProfile)
 	}
-	result.User.Discoverable = strings.TrimSpace(result.User.Username) != ""
-	result.User.NeedsProfileCompletion = !result.User.Discoverable
+	result.User.NeedsProfileCompletion = !result.User.ProfileAvailable || strings.TrimSpace(result.User.Name) == ""
 
 	unreadStatus, err := s.notifications.GetUnreadStatus(ctx, userID)
 	if err != nil {

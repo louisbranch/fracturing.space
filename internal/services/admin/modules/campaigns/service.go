@@ -374,7 +374,7 @@ func (s *handlers) HandleInvitesTable(w http.ResponseWriter, r *http.Request, ca
 			continue
 		}
 		if user := userResp.GetUser(); user != nil {
-			recipientNames[recipientID] = user.GetEmail()
+			recipientNames[recipientID] = strings.TrimSpace(user.GetUsername())
 		}
 	}
 

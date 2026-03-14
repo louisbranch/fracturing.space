@@ -117,10 +117,9 @@ func TestAckIntegrationOutboxEvent_RetryAndSucceeded(t *testing.T) {
 	}
 
 	if _, err := svc.AckIntegrationOutboxEvent(context.Background(), &authv1.AckIntegrationOutboxEventRequest{
-		EventId:     "evt-1",
-		Consumer:    "worker-1",
-		Outcome:     authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED,
-		ProcessedAt: timestamppb.New(retryAt.Add(time.Minute)),
+		EventId:  "evt-1",
+		Consumer: "worker-1",
+		Outcome:  authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED,
 	}); err != nil {
 		t.Fatalf("ack succeeded: %v", err)
 	}

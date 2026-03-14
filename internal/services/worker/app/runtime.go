@@ -13,7 +13,6 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	workerdomain "github.com/louisbranch/fracturing.space/internal/services/worker/domain"
@@ -27,17 +26,16 @@ import (
 
 // RuntimeConfig controls worker startup, dependencies, and loop behavior.
 type RuntimeConfig struct {
-	Port              int
-	AuthAddr          string
-	SocialAddr        string
-	NotificationsAddr string
-	DBPath            string
-	Consumer          string
-	PollInterval      time.Duration
-	LeaseTTL          time.Duration
-	MaxAttempts       int
-	RetryBackoff      time.Duration
-	RetryMaxDelay     time.Duration
+	Port          int
+	AuthAddr      string
+	SocialAddr    string
+	DBPath        string
+	Consumer      string
+	PollInterval  time.Duration
+	LeaseTTL      time.Duration
+	MaxAttempts   int
+	RetryBackoff  time.Duration
+	RetryMaxDelay time.Duration
 }
 
 const (
@@ -63,10 +61,9 @@ type Runtime struct {
 
 	loop workerLoop
 
-	store           *workersqlite.Store
-	authMc          *platformgrpc.ManagedConn
-	notificationsMc *platformgrpc.ManagedConn
-	socialMc        *platformgrpc.ManagedConn
+	store    *workersqlite.Store
+	authMc   *platformgrpc.ManagedConn
+	socialMc *platformgrpc.ManagedConn
 
 	closeOnce sync.Once
 }
@@ -121,20 +118,6 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		return nil, fmt.Errorf("worker: managed conn auth: %w", err)
 	}
 
-	notificationsMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
-		Name: "notifications",
-		Addr: normalized.NotificationsAddr,
-		Mode: platformgrpc.ModeRequired,
-		Logf: logf,
-	})
-	if err != nil {
-		closeManagedConn(authMc, "auth")
-		if closeErr := workerStore.Close(); closeErr != nil {
-			log.Printf("close worker sqlite store: %v", closeErr)
-		}
-		return nil, fmt.Errorf("worker: managed conn notifications: %w", err)
-	}
-
 	socialMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "social",
 		Addr: normalized.SocialAddr,
@@ -142,7 +125,6 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		Logf: logf,
 	})
 	if err != nil {
-		closeManagedConn(notificationsMc, "notifications")
 		closeManagedConn(authMc, "auth")
 		if closeErr := workerStore.Close(); closeErr != nil {
 			log.Printf("close worker sqlite store: %v", closeErr)
@@ -151,11 +133,9 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	}
 
 	authClient := authv1.NewAuthServiceClient(authMc.Conn())
-	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsMc.Conn())
 	socialClient := socialv1.NewSocialServiceClient(socialMc.Conn())
 	profileHandler := workerdomain.NewSignupSocialProfileHandler(socialClient)
-	welcomeHandler := workerdomain.NewOnboardingWelcomeHandler(notificationsClient, nil)
-	handler := fanoutEventHandlers(profileHandler, welcomeHandler)
+	handler := fanoutEventHandlers(profileHandler)
 	loopConfig := Config{
 		Consumer:      normalized.Consumer,
 		PollInterval:  normalized.PollInterval,
@@ -179,7 +159,6 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
 		closeManagedConn(socialMc, "social")
-		closeManagedConn(notificationsMc, "notifications")
 		closeManagedConn(authMc, "auth")
 		if closeErr := workerStore.Close(); closeErr != nil {
 			log.Printf("close worker sqlite store: %v", closeErr)
@@ -194,14 +173,13 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	healthServer.SetServingStatus("worker.runtime", grpc_health_v1.HealthCheckResponse_SERVING)
 
 	return &Runtime{
-		listener:        listener,
-		grpcServer:      grpcServer,
-		health:          healthServer,
-		loop:            workerLoop,
-		store:           workerStore,
-		authMc:          authMc,
-		notificationsMc: notificationsMc,
-		socialMc:        socialMc,
+		listener:   listener,
+		grpcServer: grpcServer,
+		health:     healthServer,
+		loop:       workerLoop,
+		store:      workerStore,
+		authMc:     authMc,
+		socialMc:   socialMc,
 	}, nil
 }
 
@@ -291,7 +269,6 @@ func (r *Runtime) Close() {
 			}
 		}
 		closeManagedConn(r.socialMc, "social")
-		closeManagedConn(r.notificationsMc, "notifications")
 		closeManagedConn(r.authMc, "auth")
 		if r.store != nil {
 			if err := r.store.Close(); err != nil {
@@ -303,13 +280,9 @@ func (r *Runtime) Close() {
 
 func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
 	cfg.AuthAddr = strings.TrimSpace(cfg.AuthAddr)
-	cfg.NotificationsAddr = strings.TrimSpace(cfg.NotificationsAddr)
 	cfg.SocialAddr = strings.TrimSpace(cfg.SocialAddr)
 	if cfg.AuthAddr == "" {
 		return RuntimeConfig{}, fmt.Errorf("auth address is required")
-	}
-	if cfg.NotificationsAddr == "" {
-		return RuntimeConfig{}, fmt.Errorf("notifications address is required")
 	}
 	if cfg.SocialAddr == "" {
 		return RuntimeConfig{}, fmt.Errorf("social address is required")

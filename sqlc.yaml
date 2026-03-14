@@ -21,12 +21,3 @@ sql:
         out: "internal/services/auth/storage/sqlite/db"
         emit_json_tags: true
         emit_empty_slices: true
-  - engine: "sqlite"
-    queries: "internal/services/admin/storage/sqlite/queries"
-    schema: "internal/services/admin/storage/sqlite/migrations"
-    gen:
-      go:
-        package: "db"
-        out: "internal/services/admin/storage/sqlite/db"
-        emit_json_tags: true
-        emit_empty_slices: true

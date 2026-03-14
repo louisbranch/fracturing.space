@@ -9,12 +9,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 )
 
-// service defines an internal contract used at this web package boundary.
+// service centralizes public auth orchestration so handlers stay transport-focused.
 type service struct {
 	auth Gateway
 }
 
-// NewService constructs a publicauth service with fail-closed gateway defaults.
+// NewService wires auth-backed public auth flows behind input validation.
 func NewService(gateway Gateway) Service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
@@ -22,17 +22,21 @@ func NewService(gateway Gateway) Service {
 	return service{auth: gateway}
 }
 
-// HealthBody centralizes this web behavior in one helper seam.
+// HealthBody returns the plain-text health response expected by the endpoint.
 func (service) HealthBody() string {
 	return "ok"
 }
 
-// PasskeyLoginStart centralizes this web behavior in one helper seam.
-func (s service) PasskeyLoginStart(ctx context.Context) (PasskeyChallenge, error) {
-	return s.auth.BeginPasskeyLogin(ctx)
+// PasskeyLoginStart normalizes the username before asking auth to begin login.
+func (s service) PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error) {
+	resolvedUsername, err := requireUsername(username)
+	if err != nil {
+		return PasskeyChallenge{}, err
+	}
+	return s.auth.BeginPasskeyLogin(ctx, resolvedUsername)
 }
 
-// PasskeyLoginFinish centralizes this web behavior in one helper seam.
+// PasskeyLoginFinish validates the ceremony response, then creates a web session.
 func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error) {
 	resolvedSessionID, err := requireSessionID(sessionID)
 	if err != nil {
@@ -57,27 +61,16 @@ func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, crede
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
-	return PasskeyFinish{
-		SessionID: resolvedWebSessionID,
-		UserID:    resolvedUserID,
-	}, nil
+	return PasskeyFinish{SessionID: resolvedWebSessionID, UserID: resolvedUserID}, nil
 }
 
-// PasskeyRegisterStart centralizes this web behavior in one helper seam.
-func (s service) PasskeyRegisterStart(ctx context.Context, email string) (PasskeyRegisterResult, error) {
-	resolvedEmail, err := requireEmail(email)
+// PasskeyRegisterStart validates the requested username before starting signup.
+func (s service) PasskeyRegisterStart(ctx context.Context, username string) (PasskeyRegisterResult, error) {
+	resolvedUsername, err := requireUsername(username)
 	if err != nil {
 		return PasskeyRegisterResult{}, err
 	}
-	userID, err := s.auth.CreateUser(ctx, resolvedEmail)
-	if err != nil {
-		return PasskeyRegisterResult{}, err
-	}
-	resolvedUserID, err := requireGatewayUserID(userID)
-	if err != nil {
-		return PasskeyRegisterResult{}, err
-	}
-	challenge, err := s.auth.BeginPasskeyRegistration(ctx, resolvedUserID)
+	challenge, err := s.auth.BeginAccountRegistration(ctx, resolvedUsername)
 	if err != nil {
 		return PasskeyRegisterResult{}, err
 	}
@@ -85,14 +78,10 @@ func (s service) PasskeyRegisterStart(ctx context.Context, email string) (Passke
 	if err != nil {
 		return PasskeyRegisterResult{}, err
 	}
-	return PasskeyRegisterResult{
-		SessionID: resolvedChallengeSessionID,
-		UserID:    resolvedUserID,
-		PublicKey: challenge.PublicKey,
-	}, nil
+	return PasskeyRegisterResult{SessionID: resolvedChallengeSessionID, PublicKey: challenge.PublicKey}, nil
 }
 
-// PasskeyRegisterFinish centralizes this web behavior in one helper seam.
+// PasskeyRegisterFinish completes signup and normalizes returned identity fields.
 func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error) {
 	resolvedSessionID, err := requireSessionID(sessionID)
 	if err != nil {
@@ -101,18 +90,22 @@ func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, cr
 	if err := requireCredential(credential); err != nil {
 		return PasskeyFinish{}, err
 	}
-	userID, err := s.auth.FinishPasskeyRegistration(ctx, resolvedSessionID, credential)
+	finished, err := s.auth.FinishAccountRegistration(ctx, resolvedSessionID, credential)
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
-	resolvedUserID, err := requireGatewayUserID(userID)
+	finished.UserID, err = requireGatewayUserID(finished.UserID)
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
-	return PasskeyFinish{UserID: resolvedUserID}, nil
+	finished.SessionID, err = requireGatewaySessionID(finished.SessionID)
+	if err != nil {
+		return PasskeyFinish{}, err
+	}
+	return finished, nil
 }
 
-// HasValidWebSession reports whether this package condition is satisfied.
+// HasValidWebSession trims cookie input before delegating to auth session checks.
 func (s service) HasValidWebSession(ctx context.Context, sessionID string) bool {
 	resolvedSessionID := strings.TrimSpace(sessionID)
 	if resolvedSessionID == "" {
@@ -121,7 +114,7 @@ func (s service) HasValidWebSession(ctx context.Context, sessionID string) bool 
 	return s.auth.HasValidWebSession(ctx, resolvedSessionID)
 }
 
-// RevokeWebSession applies this package workflow transition.
+// RevokeWebSession treats blank cookie values as already-cleared sessions.
 func (s service) RevokeWebSession(ctx context.Context, sessionID string) error {
 	resolvedSessionID := strings.TrimSpace(sessionID)
 	if resolvedSessionID == "" {
@@ -130,46 +123,46 @@ func (s service) RevokeWebSession(ctx context.Context, sessionID string) error {
 	return s.auth.RevokeWebSession(ctx, resolvedSessionID)
 }
 
-// requireSessionID validates inbound session ids for passkey completion flows.
+// requireSessionID rejects empty ceremony and cookie session identifiers early.
 func requireSessionID(sessionID string) (string, error) {
 	resolvedSessionID := strings.TrimSpace(sessionID)
 	if resolvedSessionID == "" {
-		return "", apperrors.E(apperrors.KindInvalidInput, "session_id is required")
+		return "", apperrors.E(apperrors.KindInvalidInput, "Session ID is required.")
 	}
 	return resolvedSessionID, nil
 }
 
-// requireCredential validates passkey credential payloads for finish operations.
+// requireCredential ensures the browser supplied a WebAuthn response payload.
 func requireCredential(credential json.RawMessage) error {
 	if len(credential) == 0 {
-		return apperrors.E(apperrors.KindInvalidInput, "credential is required")
+		return apperrors.E(apperrors.KindInvalidInput, "Credential is required.")
 	}
 	return nil
 }
 
-// requireEmail validates inbound registration email payloads.
-func requireEmail(email string) (string, error) {
-	resolvedEmail := strings.TrimSpace(email)
-	if resolvedEmail == "" {
-		return "", apperrors.E(apperrors.KindInvalidInput, "email is required")
+// requireUsername rejects blank account locators before calling auth.
+func requireUsername(username string) (string, error) {
+	resolvedUsername := strings.TrimSpace(username)
+	if resolvedUsername == "" {
+		return "", apperrors.E(apperrors.KindInvalidInput, "Username is required.")
 	}
-	return resolvedEmail, nil
+	return resolvedUsername, nil
 }
 
-// requireGatewayUserID validates gateway-returned user IDs for auth workflows.
+// requireGatewayUserID protects the web tier from empty auth responses.
 func requireGatewayUserID(userID string) (string, error) {
 	resolvedUserID := userid.Normalize(userID)
 	if resolvedUserID == "" {
-		return "", apperrors.E(apperrors.KindUnavailable, "auth gateway user id unavailable")
+		return "", apperrors.E(apperrors.KindUnavailable, "Auth gateway user ID is unavailable.")
 	}
 	return resolvedUserID, nil
 }
 
-// requireGatewaySessionID validates gateway-returned session IDs for auth workflows.
+// requireGatewaySessionID protects the web tier from empty auth session output.
 func requireGatewaySessionID(sessionID string) (string, error) {
 	resolvedSessionID := strings.TrimSpace(sessionID)
 	if resolvedSessionID == "" {
-		return "", apperrors.E(apperrors.KindUnavailable, "auth gateway session id unavailable")
+		return "", apperrors.E(apperrors.KindUnavailable, "Auth gateway session ID is unavailable.")
 	}
 	return resolvedSessionID, nil
 }

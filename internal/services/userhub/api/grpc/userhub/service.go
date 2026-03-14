@@ -81,6 +81,8 @@ func mapDomainError(err error) error {
 		return status.Error(codes.PermissionDenied, domain.ErrUserIDRequired.Error())
 	case errors.Is(err, domain.ErrServiceNotConfigured):
 		return status.Error(codes.Internal, domain.ErrServiceNotConfigured.Error())
+	case errors.Is(err, domain.ErrAuthGatewayNotConfigured):
+		return status.Error(codes.Internal, domain.ErrAuthGatewayNotConfigured.Error())
 	case errors.Is(err, domain.ErrGameGatewayNotConfigured):
 		return status.Error(codes.Internal, domain.ErrGameGatewayNotConfigured.Error())
 	case errors.Is(err, domain.ErrSocialGatewayNotConfigured):

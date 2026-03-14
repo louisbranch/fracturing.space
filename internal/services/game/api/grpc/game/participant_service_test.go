@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
@@ -506,7 +507,7 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 	}
 }
 
-func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *testing.T) {
+func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsername(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
@@ -526,10 +527,11 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *t
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Mysterious Person","role":"player","controller":"human","campaign_access":"member"}`),
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"user-handle","role":"player","controller":"human","campaign_access":"member"}`),
 			}),
 		},
 	}}
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "user-handle"}}
 
 	svc := &ParticipantService{
 		stores: Stores{
@@ -540,6 +542,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *t
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
+		authClient:  authClient,
 	}
 
 	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
@@ -556,8 +559,8 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *t
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
-	if payload.Name != "Mysterious Person" {
-		t.Fatalf("payload name = %q, want %q", payload.Name, "Mysterious Person")
+	if payload.Name != "user-handle" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "user-handle")
 	}
 	if payload.AvatarSetID != "" {
 		t.Fatalf("payload avatar_set_id = %q, want empty", payload.AvatarSetID)
@@ -567,6 +570,9 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToMysteriousPerson(t *t
 	}
 	if payload.Pronouns != "they/them" {
 		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	}
+	if authClient.lastGetUserRequest == nil || authClient.lastGetUserRequest.GetUserId() != "user-123" {
+		t.Fatalf("GetUser request = %#v, want user-123", authClient.lastGetUserRequest)
 	}
 }
 
@@ -641,7 +647,7 @@ func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testi
 	}
 }
 
-func TestCreateParticipant_UserLinkedMissingNameFallsBackToLocalizedNameForLocale(t *testing.T) {
+func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsernameForLocale(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	participantStore := newFakeParticipantStore()
 	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
@@ -665,10 +671,11 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToLocalizedNameForLocal
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Pessoa Misteriosa","role":"player","controller":"human","campaign_access":"member"}`),
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"apelido","role":"player","controller":"human","campaign_access":"member"}`),
 			}),
 		},
 	}}
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "apelido"}}
 
 	svc := &ParticipantService{
 		stores: Stores{
@@ -679,6 +686,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToLocalizedNameForLocal
 		},
 		clock:       fixedClock(now),
 		idGenerator: fixedIDGenerator("participant-123"),
+		authClient:  authClient,
 	}
 
 	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
@@ -695,11 +703,14 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToLocalizedNameForLocal
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
-	if payload.Name != "Pessoa Misteriosa" {
-		t.Fatalf("payload name = %q, want %q", payload.Name, "Pessoa Misteriosa")
+	if payload.Name != "apelido" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "apelido")
 	}
 	if payload.Pronouns != "they/them" {
 		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	}
+	if authClient.lastGetUserRequest == nil || authClient.lastGetUserRequest.GetUserId() != "user-123" {
+		t.Fatalf("GetUser request = %#v, want user-123", authClient.lastGetUserRequest)
 	}
 }
 

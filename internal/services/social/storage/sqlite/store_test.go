@@ -7,36 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
-	msqlite "modernc.org/sqlite"
 )
-
-type opaqueWrapError struct {
-	cause error
-}
-
-func (e opaqueWrapError) Error() string {
-	return "wrapped database error"
-}
-
-func (e opaqueWrapError) Unwrap() error {
-	return e.cause
-}
-
-type asSQLiteErrorWithUniqueMessage struct{}
-
-func (e asSQLiteErrorWithUniqueMessage) Error() string {
-	return "UNIQUE constraint failed: user_profiles.username"
-}
-
-func (e asSQLiteErrorWithUniqueMessage) As(target any) bool {
-	sqliteErrPtr, ok := target.(**msqlite.Error)
-	if !ok {
-		return false
-	}
-	// Zero value mimics an unexpected/non-unique code while preserving typed matching.
-	*sqliteErrPtr = &msqlite.Error{}
-	return true
-}
 
 func TestContactRoundTripAndOwnerScoping(t *testing.T) {
 	store, err := Open(t.TempDir() + "/social.db")
@@ -85,7 +56,7 @@ func TestContactRoundTripAndOwnerScoping(t *testing.T) {
 	}
 }
 
-func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
+func TestUserProfileRoundTripAndUpdate(t *testing.T) {
 	store, err := Open(t.TempDir() + "/social.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
@@ -96,7 +67,6 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 	updatedAt := createdAt.Add(2 * time.Hour)
 	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
-		Username:      "Alice_One",
 		Name:          "Alice",
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "001",
@@ -108,29 +78,19 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 		t.Fatalf("put user profile: %v", err)
 	}
 
-	gotByUser, err := store.GetUserProfileByUserID(context.Background(), "user-1")
+	got, err := store.GetUserProfileByUserID(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("get user profile by user: %v", err)
 	}
-	if gotByUser.UserID != "user-1" {
-		t.Fatalf("user_id = %q, want user-1", gotByUser.UserID)
+	if got.UserID != "user-1" || got.Name != "Alice" || got.Pronouns != "she/her" {
+		t.Fatalf("unexpected profile: %+v", got)
 	}
-	if gotByUser.Username != "alice_one" {
-		t.Fatalf("username = %q, want alice_one", gotByUser.Username)
-	}
-	if gotByUser.Name != "Alice" {
-		t.Fatalf("name = %q, want Alice", gotByUser.Name)
-	}
-	if gotByUser.Pronouns != "she/her" {
-		t.Fatalf("pronouns = %q, want she/her", gotByUser.Pronouns)
-	}
-	if !gotByUser.CreatedAt.Equal(createdAt) {
-		t.Fatalf("created_at = %v, want %v", gotByUser.CreatedAt, createdAt)
+	if !got.CreatedAt.Equal(createdAt) {
+		t.Fatalf("created_at = %v, want %v", got.CreatedAt, createdAt)
 	}
 
 	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
-		Username:      "Alice-Two",
 		Name:          "Alice Two",
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "002",
@@ -142,28 +102,12 @@ func TestUserProfileRoundTripUpdateAndLookup(t *testing.T) {
 		t.Fatalf("update user profile: %v", err)
 	}
 
-	gotByLookup, err := store.GetUserProfileByUsername(context.Background(), "ALICE-two")
+	got, err = store.GetUserProfileByUserID(context.Background(), "user-1")
 	if err != nil {
-		t.Fatalf("lookup user profile: %v", err)
+		t.Fatalf("get updated user profile: %v", err)
 	}
-	if gotByLookup.UserID != "user-1" {
-		t.Fatalf("lookup user_id = %q, want user-1", gotByLookup.UserID)
-	}
-	if gotByLookup.Username != "alice-two" {
-		t.Fatalf("lookup username = %q, want alice-two", gotByLookup.Username)
-	}
-	if gotByLookup.Name != "Alice Two" {
-		t.Fatalf("lookup name = %q, want Alice Two", gotByLookup.Name)
-	}
-	if gotByLookup.Bio != "Updated" {
-		t.Fatalf("lookup bio = %q, want Updated", gotByLookup.Bio)
-	}
-	if gotByLookup.Pronouns != "they/them" {
-		t.Fatalf("lookup pronouns = %q, want they/them", gotByLookup.Pronouns)
-	}
-
-	if _, err := store.GetUserProfileByUsername(context.Background(), "alice_one"); !errors.Is(err, storage.ErrNotFound) {
-		t.Fatalf("old username lookup err = %v, want %v", err, storage.ErrNotFound)
+	if got.Name != "Alice Two" || got.Bio != "Updated" || got.Pronouns != "they/them" {
+		t.Fatalf("unexpected updated profile: %+v", got)
 	}
 }
 
@@ -177,7 +121,6 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 	initial := time.Date(2026, time.February, 22, 17, 0, 0, 0, time.UTC)
 	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
-		Username:      "Alice_One",
 		Name:          "Alice",
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "001",
@@ -192,7 +135,6 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 	retryAt := initial.Add(2 * time.Hour)
 	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
 		UserID:        "user-1",
-		Username:      "ALICE_ONE",
 		Name:          "Alice",
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "001",
@@ -208,9 +150,6 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user profile by user: %v", err)
 	}
-	if got.Username != "alice_one" {
-		t.Fatalf("username = %q, want alice_one", got.Username)
-	}
 	if !got.CreatedAt.Equal(initial) {
 		t.Fatalf("created_at = %v, want %v", got.CreatedAt, initial)
 	}
@@ -219,136 +158,7 @@ func TestUserProfileSameValueUpdateIsNoOp(t *testing.T) {
 	}
 }
 
-func TestUserProfileConflictAcrossUsers(t *testing.T) {
-	store, err := Open(t.TempDir() + "/social.db")
-	if err != nil {
-		t.Fatalf("open store: %v", err)
-	}
-	defer store.Close()
-
-	now := time.Date(2026, time.February, 22, 16, 0, 0, 0, time.UTC)
-	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
-		UserID:    "user-1",
-		Username:  "conflict",
-		Name:      "Alice",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user profile user-1: %v", err)
-	}
-
-	err = store.PutUserProfile(context.Background(), storage.UserProfile{
-		UserID:    "user-2",
-		Username:  "Conflict",
-		Name:      "Bob",
-		CreatedAt: now,
-		UpdatedAt: now,
-	})
-	if !errors.Is(err, storage.ErrAlreadyExists) {
-		t.Fatalf("put user profile user-2 err = %v, want %v", err, storage.ErrAlreadyExists)
-	}
-}
-
-func TestUserProfile_AllowsEmptyUsernameAcrossUsers(t *testing.T) {
-	store, err := Open(t.TempDir() + "/social.db")
-	if err != nil {
-		t.Fatalf("open store: %v", err)
-	}
-	defer store.Close()
-
-	now := time.Date(2026, time.February, 22, 16, 30, 0, 0, time.UTC)
-	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
-		UserID:        "user-1",
-		Username:      "",
-		Name:          "",
-		AvatarSetID:   "avatar_set_v1",
-		AvatarAssetID: "001",
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}); err != nil {
-		t.Fatalf("put user profile user-1: %v", err)
-	}
-
-	if err := store.PutUserProfile(context.Background(), storage.UserProfile{
-		UserID:        "user-2",
-		Username:      "",
-		Name:          "",
-		AvatarSetID:   "avatar_set_v1",
-		AvatarAssetID: "002",
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	}); err != nil {
-		t.Fatalf("put user profile user-2: %v", err)
-	}
-
-	for _, userID := range []string{"user-1", "user-2"} {
-		record, err := store.GetUserProfileByUserID(context.Background(), userID)
-		if err != nil {
-			t.Fatalf("get user profile by user id %s: %v", userID, err)
-		}
-		if record.Username != "" {
-			t.Fatalf("username(%s) = %q, want empty", userID, record.Username)
-		}
-		if record.Name != "" {
-			t.Fatalf("name(%s) = %q, want empty", userID, record.Name)
-		}
-	}
-}
-
-func TestIsUserProfileUsernameUniqueViolationUsesSQLiteErrorCode(t *testing.T) {
-	store, err := Open(t.TempDir() + "/social.db")
-	if err != nil {
-		t.Fatalf("open store: %v", err)
-	}
-	defer store.Close()
-
-	now := time.Date(2026, time.February, 22, 18, 0, 0, 0, time.UTC).UnixMilli()
-	if _, err := store.sqlDB.ExecContext(
-		context.Background(),
-		`INSERT INTO user_profiles (user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		"user-1",
-		"alice",
-		"Alice",
-		"",
-		"",
-		"",
-		now,
-		now,
-	); err != nil {
-		t.Fatalf("seed user profile: %v", err)
-	}
-	_, err = store.sqlDB.ExecContext(
-		context.Background(),
-		`INSERT INTO user_profiles (user_id, username, name, avatar_set_id, avatar_asset_id, bio, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		"user-2",
-		"alice",
-		"Alice Two",
-		"",
-		"",
-		"",
-		now,
-		now,
-	)
-	if err == nil {
-		t.Fatal("expected unique constraint error")
-	}
-
-	wrapped := opaqueWrapError{cause: err}
-	if !isUserProfileUsernameUniqueViolation(wrapped) {
-		t.Fatalf("isUserProfileUsernameUniqueViolation(%T) = false, want true", wrapped)
-	}
-}
-
-func TestIsUserProfileUsernameUniqueViolationFallsBackToMessageWhenSQLiteCodeIsUnexpected(t *testing.T) {
-	err := asSQLiteErrorWithUniqueMessage{}
-	if !isUserProfileUsernameUniqueViolation(err) {
-		t.Fatalf("isUserProfileUsernameUniqueViolation(%T) = false, want true", err)
-	}
-}
-
-func TestUserProfileGetNotFound(t *testing.T) {
+func TestUserProfileNotFound(t *testing.T) {
 	store, err := Open(t.TempDir() + "/social.db")
 	if err != nil {
 		t.Fatalf("open store: %v", err)
@@ -356,9 +166,6 @@ func TestUserProfileGetNotFound(t *testing.T) {
 	defer store.Close()
 
 	if _, err := store.GetUserProfileByUserID(context.Background(), "missing-user"); !errors.Is(err, storage.ErrNotFound) {
-		t.Fatalf("get by user err = %v, want %v", err, storage.ErrNotFound)
-	}
-	if _, err := store.GetUserProfileByUsername(context.Background(), "missing-username"); !errors.Is(err, storage.ErrNotFound) {
-		t.Fatalf("get by username err = %v, want %v", err, storage.ErrNotFound)
+		t.Fatalf("get user profile err = %v, want %v", err, storage.ErrNotFound)
 	}
 }

@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-03"
+last_reviewed: "2026-03-08"
 ---
 
 # Domain Language
@@ -14,9 +14,14 @@ Canonical terminology for packages, APIs, and docs.
 ## Identity and account terms
 
 - **User**: core identity record keyed by user ID.
-- **Primary email**: recovery/contact identity in current auth model.
+- **Username**: immutable auth-owned account locator and public handle.
 - **Passkey**: primary authentication credential (multiple per user allowed).
-- **Magic link**: single-use recovery/login token.
+- **Recovery code**: single-use offline emergency credential returned once at
+  signup completion and rotated after successful recovery.
+- **Recovery session**: narrow auth-owned state that permits only replacement
+  passkey registration after recovery-code verification.
+- **Web session**: durable authenticated browser session created only after
+  successful passkey login or successful recovery completion.
 - **Contact**: owner-scoped social/discovery quick-access relationship.
 
 Identity/auth boundaries: [Identity and OAuth](../platform/identity-and-oauth.md).

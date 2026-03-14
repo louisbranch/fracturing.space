@@ -85,9 +85,9 @@ type DaggerheartAdversary struct {
 	MajorThreshold  int64          `json:"major_threshold"`
 	SevereThreshold int64          `json:"severe_threshold"`
 	Armor           int64          `json:"armor"`
-	ConditionsJson  string         `json:"conditions_json"`
 	CreatedAt       int64          `json:"created_at"`
 	UpdatedAt       int64          `json:"updated_at"`
+	ConditionsJson  string         `json:"conditions_json"`
 }
 
 type DaggerheartAdversaryEntry struct {
@@ -354,16 +354,16 @@ type Event struct {
 	SystemID       string `json:"system_id"`
 	SystemVersion  string `json:"system_version"`
 	SessionID      string `json:"session_id"`
-	SceneID        string `json:"scene_id"`
 	RequestID      string `json:"request_id"`
 	InvocationID   string `json:"invocation_id"`
 	ActorType      string `json:"actor_type"`
 	ActorID        string `json:"actor_id"`
 	EntityType     string `json:"entity_type"`
 	EntityID       string `json:"entity_id"`
+	PayloadJson    []byte `json:"payload_json"`
+	SceneID        string `json:"scene_id"`
 	CorrelationID  string `json:"correlation_id"`
 	CausationID    string `json:"causation_id"`
-	PayloadJson    []byte `json:"payload_json"`
 }
 
 type EventSeq struct {
@@ -431,8 +431,54 @@ type ProjectionApplyOutbox struct {
 type ProjectionWatermark struct {
 	CampaignID      string `json:"campaign_id"`
 	AppliedSeq      int64  `json:"applied_seq"`
-	ExpectedNextSeq int64  `json:"expected_next_seq"`
 	UpdatedAt       int64  `json:"updated_at"`
+	ExpectedNextSeq int64  `json:"expected_next_seq"`
+}
+
+type Scene struct {
+	CampaignID  string        `json:"campaign_id"`
+	SceneID     string        `json:"scene_id"`
+	SessionID   string        `json:"session_id"`
+	Name        string        `json:"name"`
+	Description string        `json:"description"`
+	Active      int64         `json:"active"`
+	CreatedAt   int64         `json:"created_at"`
+	UpdatedAt   int64         `json:"updated_at"`
+	EndedAt     sql.NullInt64 `json:"ended_at"`
+}
+
+type SceneCharacter struct {
+	CampaignID  string `json:"campaign_id"`
+	SceneID     string `json:"scene_id"`
+	CharacterID string `json:"character_id"`
+	AddedAt     int64  `json:"added_at"`
+}
+
+type SceneGate struct {
+	CampaignID          string         `json:"campaign_id"`
+	SceneID             string         `json:"scene_id"`
+	GateID              string         `json:"gate_id"`
+	GateType            string         `json:"gate_type"`
+	Status              string         `json:"status"`
+	Reason              string         `json:"reason"`
+	CreatedAt           int64          `json:"created_at"`
+	CreatedByActorType  string         `json:"created_by_actor_type"`
+	CreatedByActorID    string         `json:"created_by_actor_id"`
+	ResolvedAt          sql.NullInt64  `json:"resolved_at"`
+	ResolvedByActorType sql.NullString `json:"resolved_by_actor_type"`
+	ResolvedByActorID   sql.NullString `json:"resolved_by_actor_id"`
+	MetadataJson        []byte         `json:"metadata_json"`
+	ResolutionJson      []byte         `json:"resolution_json"`
+}
+
+type SceneSpotlight struct {
+	CampaignID         string `json:"campaign_id"`
+	SceneID            string `json:"scene_id"`
+	SpotlightType      string `json:"spotlight_type"`
+	CharacterID        string `json:"character_id"`
+	UpdatedAt          int64  `json:"updated_at"`
+	UpdatedByActorType string `json:"updated_by_actor_type"`
+	UpdatedByActorID   string `json:"updated_by_actor_id"`
 }
 
 type Session struct {
