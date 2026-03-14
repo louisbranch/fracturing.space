@@ -57,6 +57,34 @@ type CampaignChatView struct {
 	CampaignName      string
 	BackURL           string
 	ChatFallbackPort  string
+	BootstrapJSON     string
+	ParticipantName   string
+	ParticipantRole   string
+	SessionName       string
+	DefaultStreamID   string
+	DefaultPersonaID  string
+	GateSummary       string
+	SpotlightSummary  string
+	ActiveGateType    string
+	ActiveGateStatus  string
+	Streams           []CampaignChatStreamView
+	Personas          []CampaignChatPersonaView
+}
+
+type CampaignChatStreamView struct {
+	StreamID      string
+	Label         string
+	Kind          string
+	Scope         string
+	SecondaryText string
+	Active        bool
+}
+
+type CampaignChatPersonaView struct {
+	PersonaID    string
+	DisplayName  string
+	KindLabel    string
+	Active       bool
 }
 
 type CampaignParticipantView struct {
@@ -405,6 +433,41 @@ func campaignListItemURL(item CampaignListItem) string {
 
 func campaignChatFallbackPort(view CampaignChatView) string {
 	return strings.TrimSpace(view.ChatFallbackPort)
+}
+
+func campaignChatParticipantLabel(view CampaignChatView) string {
+	if strings.TrimSpace(view.ParticipantName) != "" {
+		return strings.TrimSpace(view.ParticipantName)
+	}
+	return "Participant"
+}
+
+func campaignChatSessionLabel(view CampaignChatView) string {
+	if strings.TrimSpace(view.SessionName) != "" {
+		return strings.TrimSpace(view.SessionName)
+	}
+	return "No active session"
+}
+
+func campaignChatGateSummary(view CampaignChatView) string {
+	if strings.TrimSpace(view.GateSummary) != "" {
+		return strings.TrimSpace(view.GateSummary)
+	}
+	return "No active gate"
+}
+
+func campaignChatSpotlightSummary(view CampaignChatView) string {
+	if strings.TrimSpace(view.SpotlightSummary) != "" {
+		return strings.TrimSpace(view.SpotlightSummary)
+	}
+	return "No active spotlight"
+}
+
+func campaignChatStreamButtonClass(stream CampaignChatStreamView) string {
+	if stream.Active {
+		return "btn btn-sm btn-primary w-full justify-between"
+	}
+	return "btn btn-sm btn-ghost w-full justify-between"
 }
 
 func campaignSystemLabel(loc Localizer, value string) string {

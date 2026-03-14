@@ -94,6 +94,7 @@ func buildServiceDescriptors(
 	systemService := gamegrpc.NewSystemService(systemRegistry)
 	authorizationService := gamegrpc.NewAuthorizationService(stores)
 	campaignAIService := gamegrpc.NewCampaignAIService(stores, sessionGrantConfig)
+	communicationService := gamegrpc.NewCommunicationService(stores)
 
 	descriptors := []grpcServiceDescriptor{
 		{
@@ -190,6 +191,12 @@ func buildServiceDescriptors(
 			healthService: "game.v1.AuthorizationService",
 			register: func(server *grpc.Server) {
 				statev1.RegisterAuthorizationServiceServer(server, authorizationService)
+			},
+		},
+		{
+			healthService: "game.v1.CommunicationService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterCommunicationServiceServer(server, communicationService)
 			},
 		},
 	}

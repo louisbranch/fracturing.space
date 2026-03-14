@@ -20,6 +20,54 @@ type fakeCampaignClient struct {
 	createErr     error
 }
 
+type fakeWebCommunicationClient struct {
+	response *statev1.GetCommunicationContextResponse
+	err      error
+}
+
+func (f fakeWebCommunicationClient) GetCommunicationContext(context.Context, *statev1.GetCommunicationContextRequest, ...grpc.CallOption) (*statev1.GetCommunicationContextResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &statev1.GetCommunicationContextResponse{
+		Context: &statev1.CommunicationContext{
+			CampaignId:       "c1",
+			CampaignName:     "Campaign",
+			DefaultStreamId:  "campaign:c1:table",
+			DefaultPersonaId: "participant:p1",
+			Participant: &statev1.CommunicationParticipant{
+				ParticipantId: "p1",
+				Name:          "Owner",
+				Role:          statev1.ParticipantRole_PLAYER,
+			},
+			ActiveSession: &statev1.CommunicationSession{
+				SessionId: "sess-1",
+				Name:      "Session One",
+			},
+			Streams: []*statev1.CommunicationStream{
+				{
+					StreamId:  "campaign:c1:table",
+					Kind:      statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_TABLE,
+					Scope:     statev1.CommunicationStreamScope_COMMUNICATION_STREAM_SCOPE_SESSION,
+					SessionId: "sess-1",
+					Label:     "Table",
+				},
+			},
+			Personas: []*statev1.CommunicationPersona{
+				{
+					PersonaId:     "participant:p1",
+					Kind:          statev1.CommunicationPersonaKind_COMMUNICATION_PERSONA_KIND_PARTICIPANT,
+					ParticipantId: "p1",
+					DisplayName:   "Owner",
+				},
+			},
+		},
+	}, nil
+}
+
 func (f fakeCampaignClient) ListCampaigns(context.Context, *statev1.ListCampaignsRequest, ...grpc.CallOption) (*statev1.ListCampaignsResponse, error) {
 	if f.err != nil {
 		return nil, f.err

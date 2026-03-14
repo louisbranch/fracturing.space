@@ -122,6 +122,7 @@ func statusHealthProvider(client statusv1.StatusServiceClient) dashboardapp.Heal
 func newCampaignGateway(deps Dependencies) campaigns.CampaignGateway {
 	return campaigns.NewGRPCGateway(campaigns.GRPCGatewayDeps{
 		CampaignClient:           deps.Campaigns.CampaignClient,
+		CommunicationClient:      deps.Campaigns.CommunicationClient,
 		AgentClient:              deps.Campaigns.AgentClient,
 		ParticipantClient:        deps.Campaigns.ParticipantClient,
 		CharacterClient:          deps.Campaigns.CharacterClient,

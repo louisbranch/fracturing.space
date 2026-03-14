@@ -45,6 +45,17 @@ var sessionCommandContracts = []commandContract{
 	},
 	{
 		definition: command.Definition{
+			Type:            CommandTypeGateRespond,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateGateResponseRecordedPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeSession,
+				AllowWhenOpen: true,
+			},
+		},
+	},
+	{
+		definition: command.Definition{
 			Type:            CommandTypeGateResolve,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateGateResolvedPayload,
@@ -118,6 +129,17 @@ var sessionEventContracts = []eventProjectionContract{
 			Owner:           event.OwnerCore,
 			Addressing:      event.AddressingPolicyEntityTarget,
 			ValidatePayload: validateGateOpenedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeGateResponseRecorded,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateGateResponseRecordedPayload,
 			Intent:          event.IntentProjectionAndReplay,
 		},
 		emittable:  true,
@@ -259,6 +281,15 @@ func validateGateOpenedPayload(raw json.RawMessage) error {
 // validateGateResolvedPayload ensures gate resolved payloads match the gate resolve shape.
 func validateGateResolvedPayload(raw json.RawMessage) error {
 	var payload GateResolvedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	return nil
+}
+
+// validateGateResponseRecordedPayload ensures gate response payloads match the response shape.
+func validateGateResponseRecordedPayload(raw json.RawMessage) error {
+	var payload GateResponseRecordedPayload
 	if err := json.Unmarshal(raw, &payload); err != nil {
 		return err
 	}

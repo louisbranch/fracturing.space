@@ -233,6 +233,7 @@ CREATE TABLE IF NOT EXISTS session_gates (
     resolved_by_actor_type TEXT,
     resolved_by_actor_id TEXT,
     metadata_json BLOB,
+    progress_json BLOB,
     resolution_json BLOB,
     PRIMARY KEY (campaign_id, session_id, gate_id)
 );

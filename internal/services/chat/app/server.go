@@ -34,8 +34,10 @@ const (
 	maxFramesPerSecond     = 40
 	maxDecodeErrorsPerConn = 3
 
-	maxMessageBodyRunes     = 2000
+	maxMessageBodyRunes     = 12000
 	maxClientMessageIDRunes = 128
+	maxAITurnMessages       = 20
+	maxAITurnBodyBytes      = 12 * 1024
 
 	maxRoomMessages      = 1000
 	maxIdempotencyRecord = 4000
@@ -106,20 +108,39 @@ type joinPayload struct {
 }
 
 type joinedPayload struct {
-	CampaignID       string `json:"campaign_id"`
-	SessionID        string `json:"session_id"`
-	LatestSequenceID int64  `json:"latest_sequence_id"`
-	ServerTime       string `json:"server_time"`
+	CampaignID             string                `json:"campaign_id"`
+	SessionID              string                `json:"session_id"`
+	LatestSequenceID       int64                 `json:"latest_sequence_id"`
+	ServerTime             string                `json:"server_time"`
+	DefaultStreamID        string                `json:"default_stream_id,omitempty"`
+	DefaultPersonaID       string                `json:"default_persona_id,omitempty"`
+	ActiveSessionGate      *chatSessionGate      `json:"active_session_gate,omitempty"`
+	ActiveSessionSpotlight *chatSessionSpotlight `json:"active_session_spotlight,omitempty"`
+	Streams                []chatStream          `json:"streams,omitempty"`
+	Personas               []chatPersona         `json:"personas,omitempty"`
 }
 
 type sendPayload struct {
 	ClientMessageID string `json:"client_message_id"`
 	Body            string `json:"body"`
+	StreamID        string `json:"stream_id,omitempty"`
+	PersonaID       string `json:"persona_id,omitempty"`
+}
+
+type controlPayload struct {
+	Action     string         `json:"action"`
+	GateType   string         `json:"gate_type,omitempty"`
+	Reason     string         `json:"reason,omitempty"`
+	Decision   string         `json:"decision,omitempty"`
+	Metadata   map[string]any `json:"metadata,omitempty"`
+	Response   map[string]any `json:"response,omitempty"`
+	Resolution map[string]any `json:"resolution,omitempty"`
 }
 
 type historyBeforePayload struct {
-	BeforeSequenceID int64 `json:"before_sequence_id"`
-	Limit            int   `json:"limit"`
+	BeforeSequenceID int64  `json:"before_sequence_id"`
+	Limit            int    `json:"limit"`
+	StreamID         string `json:"stream_id,omitempty"`
 }
 
 type messageEnvelope struct {
@@ -133,6 +154,7 @@ type chatMessage struct {
 	SequenceID      int64        `json:"sequence_id"`
 	SentAt          string       `json:"sent_at"`
 	Kind            string       `json:"kind"`
+	StreamID        string       `json:"stream_id,omitempty"`
 	Actor           messageActor `json:"actor"`
 	Body            string       `json:"body"`
 	ClientMessageID string       `json:"client_message_id,omitempty"`
@@ -140,7 +162,27 @@ type chatMessage struct {
 
 type messageActor struct {
 	ParticipantID string `json:"participant_id"`
+	CharacterID   string `json:"character_id,omitempty"`
+	PersonaID     string `json:"persona_id,omitempty"`
+	Mode          string `json:"mode,omitempty"`
 	Name          string `json:"name"`
+}
+
+type chatStream struct {
+	StreamID  string `json:"stream_id"`
+	Kind      string `json:"kind"`
+	Scope     string `json:"scope"`
+	SessionID string `json:"session_id,omitempty"`
+	SceneID   string `json:"scene_id,omitempty"`
+	Label     string `json:"label"`
+}
+
+type chatPersona struct {
+	PersonaID     string `json:"persona_id"`
+	Kind          string `json:"kind"`
+	ParticipantID string `json:"participant_id,omitempty"`
+	CharacterID   string `json:"character_id,omitempty"`
+	DisplayName   string `json:"display_name"`
 }
 
 type ackEnvelope struct {
@@ -154,11 +196,19 @@ type ackResult struct {
 	Count      int    `json:"count,omitempty"`
 }
 
+type statePayload struct {
+	CampaignID             string                `json:"campaign_id"`
+	SessionID              string                `json:"session_id"`
+	ActiveSessionGate      *chatSessionGate      `json:"active_session_gate,omitempty"`
+	ActiveSessionSpotlight *chatSessionSpotlight `json:"active_session_spotlight,omitempty"`
+}
+
 type wsSession struct {
 	mu     sync.Mutex
 	userID string
 	room   *campaignRoom
 	peer   *wsPeer
+	state  wsCommunicationState
 }
 
 type wsAuthorizer interface {
@@ -168,6 +218,20 @@ type wsAuthorizer interface {
 
 type wsJoinWelcomeProvider interface {
 	ResolveJoinWelcome(ctx context.Context, campaignID string, userID string) (joinWelcome, error)
+}
+
+type wsCommunicationContextProvider interface {
+	ResolveCommunicationContext(ctx context.Context, campaignID string, userID string) (communicationContext, error)
+}
+
+type wsCommunicationControlProvider interface {
+	OpenCommunicationGate(ctx context.Context, campaignID string, participantID string, gateType string, reason string, metadata map[string]any) (communicationContext, error)
+	ResolveCommunicationGate(ctx context.Context, campaignID string, participantID string, decision string, resolution map[string]any) (communicationContext, error)
+	RespondToCommunicationGate(ctx context.Context, campaignID string, participantID string, decision string, response map[string]any) (communicationContext, error)
+	AbandonCommunicationGate(ctx context.Context, campaignID string, participantID string, reason string) (communicationContext, error)
+	RequestGMHandoff(ctx context.Context, campaignID string, participantID string, reason string, metadata map[string]any) (communicationContext, error)
+	ResolveGMHandoff(ctx context.Context, campaignID string, participantID string, decision string, resolution map[string]any) (communicationContext, error)
+	AbandonGMHandoff(ctx context.Context, campaignID string, participantID string, reason string) (communicationContext, error)
 }
 
 type joinWelcome struct {
@@ -180,11 +244,45 @@ type joinWelcome struct {
 	Locale          commonv1.Locale
 }
 
+type communicationContext struct {
+	Welcome                joinWelcome
+	ParticipantID          string
+	DefaultStreamID        string
+	DefaultPersonaID       string
+	ActiveSessionGate      *chatSessionGate
+	ActiveSessionSpotlight *chatSessionSpotlight
+	Streams                []chatStream
+	Personas               []chatPersona
+}
+
+type chatSessionGate struct {
+	GateID   string         `json:"gate_id"`
+	GateType string         `json:"gate_type"`
+	Status   string         `json:"status"`
+	Reason   string         `json:"reason,omitempty"`
+	Metadata map[string]any `json:"metadata,omitempty"`
+	Progress map[string]any `json:"progress,omitempty"`
+}
+
+type chatSessionSpotlight struct {
+	Type        string `json:"type"`
+	CharacterID string `json:"character_id,omitempty"`
+}
+
+type wsCommunicationState struct {
+	participantID    string
+	defaultStreamID  string
+	defaultPersonaID string
+	streamsByID      map[string]chatStream
+	personasByID     map[string]chatPersona
+}
+
 type campaignAuthorizer struct {
 	authBaseURL         string
 	oauthResourceSecret string
 	httpClient          *http.Client
 	authSessionClient   webSessionAuthClient
+	communicationClient statev1.CommunicationServiceClient
 	participantClient   statev1.ParticipantServiceClient
 	sessionClient       statev1.SessionServiceClient
 	campaignClient      statev1.CampaignServiceClient
@@ -222,6 +320,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	}
 
 	var gameMc *platformgrpc.ManagedConn
+	var communicationClient statev1.CommunicationServiceClient
 	var participantClient statev1.ParticipantServiceClient
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
@@ -248,6 +347,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		} else {
 			gameMc = mc
 			conn := mc.Conn()
+			communicationClient = statev1.NewCommunicationServiceClient(conn)
 			participantClient = statev1.NewParticipantServiceClient(conn)
 			sessionClient = statev1.NewSessionServiceClient(conn)
 			campaignClient = statev1.NewCampaignServiceClient(conn)
@@ -284,7 +384,7 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		}
 	}
 
-	authorizer := newCampaignAuthorizer(config, participantClient, sessionClient, campaignClient, authSessionClient)
+	authorizer := newCampaignAuthorizer(config, communicationClient, participantClient, sessionClient, campaignClient, authSessionClient)
 	roomHub := newRoomHub()
 	issueAISessionGrant := func(callCtx context.Context, room *campaignRoom, userID string) error {
 		return issueAISessionGrantForRoom(callCtx, campaignAIClient, room, userID)

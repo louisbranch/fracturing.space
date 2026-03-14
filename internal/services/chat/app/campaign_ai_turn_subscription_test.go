@@ -17,6 +17,9 @@ import (
 )
 
 type testInvocationClient struct {
+	submitFn       func(context.Context, *aiv1.SubmitCampaignTurnRequest) (*aiv1.SubmitCampaignTurnResponse, error)
+	submitCalls    int
+	submitReqs     []*aiv1.SubmitCampaignTurnRequest
 	subscribeFn    func(context.Context, *aiv1.SubscribeCampaignTurnEventsRequest) (grpc.ServerStreamingClient[aiv1.CampaignTurnEvent], error)
 	subscribeCalls int
 	subscribeReqs  []*aiv1.SubscribeCampaignTurnEventsRequest
@@ -26,7 +29,12 @@ func (c *testInvocationClient) InvokeAgent(context.Context, *aiv1.InvokeAgentReq
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (c *testInvocationClient) SubmitCampaignTurn(context.Context, *aiv1.SubmitCampaignTurnRequest, ...grpc.CallOption) (*aiv1.SubmitCampaignTurnResponse, error) {
+func (c *testInvocationClient) SubmitCampaignTurn(ctx context.Context, req *aiv1.SubmitCampaignTurnRequest, _ ...grpc.CallOption) (*aiv1.SubmitCampaignTurnResponse, error) {
+	c.submitCalls++
+	c.submitReqs = append(c.submitReqs, req)
+	if c.submitFn != nil {
+		return c.submitFn(ctx, req)
+	}
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
@@ -139,7 +147,7 @@ func TestConsumeCampaignAITurnUpdatesPublishesVisibleMessages(t *testing.T) {
 
 	buf := &bytes.Buffer{}
 	peer := newWSPeer(json.NewEncoder(buf))
-	room.join(peer)
+	room.join(peer, []string{chatDefaultStreamID("camp-1")})
 
 	client := &testInvocationClient{}
 	client.subscribeFn = func(ctx context.Context, req *aiv1.SubscribeCampaignTurnEventsRequest) (grpc.ServerStreamingClient[aiv1.CampaignTurnEvent], error) {
@@ -168,11 +176,12 @@ func TestConsumeCampaignAITurnUpdatesPublishesVisibleMessages(t *testing.T) {
 	if req := client.subscribeReqs[0]; req.GetCampaignId() != "camp-1" || req.GetAfterSequenceId() != 0 || req.GetSessionGrant() != "grant-token" {
 		t.Fatalf("unexpected subscribe request: %+v", req)
 	}
-	if len(room.messages) != 1 {
-		t.Fatalf("room messages = %d, want %d", len(room.messages), 1)
+	messages := room.messagesByStream[chatDefaultStreamID("camp-1")]
+	if len(messages) != 1 {
+		t.Fatalf("room messages = %d, want %d", len(messages), 1)
 	}
-	if room.messages[0].Kind != "ai" || room.messages[0].Body != "AI says hi" {
-		t.Fatalf("unexpected ai message: %+v", room.messages[0])
+	if messages[0].Kind != "ai" || messages[0].Body != "AI says hi" {
+		t.Fatalf("unexpected ai message: %+v", messages[0])
 	}
 	if buf.Len() == 0 {
 		t.Fatal("expected subscriber frame output")

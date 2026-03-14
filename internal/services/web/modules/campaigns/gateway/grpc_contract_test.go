@@ -33,6 +33,7 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 
 	ready := NewGRPCGateway(GRPCGatewayDeps{
 		CampaignClient:           &contractCampaignClient{},
+		CommunicationClient:      &contractCommunicationClient{},
 		ParticipantClient:        &contractParticipantClient{},
 		CharacterClient:          &fakeCharacterWorkflowClient{},
 		DaggerheartContentClient: &fakeDaggerheartContentClient{},
@@ -44,6 +45,65 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 	})
 	if _, ok := ready.(GRPCGateway); !ok {
 		t.Fatalf("expected complete dependency set to return grpc gateway")
+	}
+}
+
+func TestCampaignGameSurfaceMapsCommunicationContext(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{
+		CommunicationClient: &contractCommunicationClient{
+			getResp: &statev1.GetCommunicationContextResponse{
+				Context: &statev1.CommunicationContext{
+					Participant:      &statev1.CommunicationParticipant{ParticipantId: "p1", Name: "Rhea", Role: statev1.ParticipantRole_PLAYER},
+					ActiveSession:    &statev1.CommunicationSession{SessionId: "sess-1", Name: "Session One"},
+					DefaultStreamId:  "stream-table",
+					DefaultPersonaId: "persona-player",
+					Streams: []*statev1.CommunicationStream{
+						{StreamId: "stream-table", Kind: statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_TABLE, Scope: statev1.CommunicationStreamScope_COMMUNICATION_STREAM_SCOPE_SESSION, SessionId: "sess-1", Label: "Table"},
+					},
+					Personas: []*statev1.CommunicationPersona{
+						{PersonaId: "persona-player", Kind: statev1.CommunicationPersonaKind_COMMUNICATION_PERSONA_KIND_PARTICIPANT, ParticipantId: "p1", DisplayName: "Rhea"},
+					},
+					ActiveSessionGate: &statev1.SessionGate{
+						Id:     "gate-1",
+						Type:   "vote",
+						Status: statev1.SessionGateStatus_SESSION_GATE_OPEN,
+						Reason: "Choose a route",
+					},
+					ActiveSessionSpotlight: &statev1.SessionSpotlight{
+						Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
+						CharacterId: "char-1",
+					},
+				},
+			},
+		},
+	}
+
+	surface, err := gateway.CampaignGameSurface(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("CampaignGameSurface() error = %v", err)
+	}
+	if surface.Participant.Name != "Rhea" || surface.Participant.Role != "Player" {
+		t.Fatalf("participant = %#v", surface.Participant)
+	}
+	if surface.SessionID != "sess-1" || surface.SessionName != "Session One" {
+		t.Fatalf("session = %#v", surface)
+	}
+	if surface.DefaultStreamID != "stream-table" || surface.DefaultPersonaID != "persona-player" {
+		t.Fatalf("defaults = %#v", surface)
+	}
+	if len(surface.Streams) != 1 || surface.Streams[0].Kind != "table" || surface.Streams[0].Scope != "session" {
+		t.Fatalf("streams = %#v", surface.Streams)
+	}
+	if len(surface.Personas) != 1 || surface.Personas[0].Kind != "participant" {
+		t.Fatalf("personas = %#v", surface.Personas)
+	}
+	if surface.ActiveSessionGate == nil || surface.ActiveSessionGate.Status != "open" {
+		t.Fatalf("gate = %#v", surface.ActiveSessionGate)
+	}
+	if surface.ActiveSessionSpotlight == nil || surface.ActiveSessionSpotlight.Type != "character" {
+		t.Fatalf("spotlight = %#v", surface.ActiveSessionSpotlight)
 	}
 }
 
@@ -1051,6 +1111,23 @@ func (c *contractCampaignClient) ClearCampaignAIBinding(_ context.Context, req *
 		return c.clearAIBindingResp, nil
 	}
 	return &statev1.ClearCampaignAIBindingResponse{}, nil
+}
+
+type contractCommunicationClient struct {
+	getResp    *statev1.GetCommunicationContextResponse
+	getErr     error
+	lastGetReq *statev1.GetCommunicationContextRequest
+}
+
+func (c *contractCommunicationClient) GetCommunicationContext(_ context.Context, req *statev1.GetCommunicationContextRequest, _ ...grpc.CallOption) (*statev1.GetCommunicationContextResponse, error) {
+	c.lastGetReq = req
+	if c.getErr != nil {
+		return nil, c.getErr
+	}
+	if c.getResp != nil {
+		return c.getResp, nil
+	}
+	return &statev1.GetCommunicationContextResponse{}, nil
 }
 
 type contractParticipantClient struct {

@@ -26,6 +26,7 @@ credentials, campaign state authority, and chat relay behavior.
   - Source of truth for `ai_auth_epoch` revocation state.
   - Issues signed campaign AI session grants.
 - Chat service:
+  - Consumes game-owned communication context to know which streams/personas are available to each participant connection.
   - Filters participant traffic into AI relay flow.
   - Filters AI responses back to campaign participants.
   - Maintains room AI relay context and refreshes grants.
@@ -46,6 +47,11 @@ Game exposes internal-only AI authorization methods via
 This surface is not a public end-user API. Calls are restricted by
 `x-fracturing-space-service-id` and the game-side allowlist
 (`FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST`).
+
+Game also exposes `game.v1.CommunicationService` for transport/UI surfaces that
+need caller-specific stream visibility and persona eligibility. AI grant flow
+and communication context remain separate contracts: the former authorizes AI
+execution, the latter authorizes participant-facing communication routing.
 
 ## Session Grant Model
 
@@ -83,10 +89,22 @@ Epoch does not rotate for unrelated campaign mutations (name/theme/cover/etc.).
 1. Owner binds an `ai_agent_id` to a campaign.
 2. Game persists binding and advances auth epoch.
 3. Chat joins/syncs room AI context from game and requests a session grant.
-4. Chat forwards participant turn requests to AI with `session_grant`.
-5. AI validates token signature/claims and checks auth state (`agent/session/epoch`).
-6. AI executes provider turn and streams results.
-7. Chat forwards AI outputs to campaign participants.
+4. Chat buffers ordinary participant transcript locally; it does not submit every
+   chat message to AI.
+5. A new GM handoff request is the default pacing trigger. When chat opens a new
+   `gm_handoff` control gate in an AI-enabled room, it submits one buffered turn
+   payload to AI with `session_grant`.
+6. AI validates token signature/claims and checks auth state (`agent/session/epoch`).
+7. AI executes provider turn and streams results.
+8. Chat forwards AI outputs to campaign participants.
+
+Current pacing note:
+
+- The buffered handoff payload is a chat-owned aggregate of recent participant
+  transcript plus optional handoff reason text.
+- This is a transitional transport contract. The long-term authority seam is
+  still an explicit game-owned control workflow plus a richer AI input contract,
+  not per-message relay.
 
 ## Failure Behavior
 

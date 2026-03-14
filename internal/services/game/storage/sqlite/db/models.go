@@ -505,6 +505,7 @@ type SessionGate struct {
 	ResolvedByActorType sql.NullString `json:"resolved_by_actor_type"`
 	ResolvedByActorID   sql.NullString `json:"resolved_by_actor_id"`
 	MetadataJson        []byte         `json:"metadata_json"`
+	ProgressJson        []byte         `json:"progress_json"`
 	ResolutionJson      []byte         `json:"resolution_json"`
 }
 

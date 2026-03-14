@@ -28,6 +28,11 @@ type CampaignClient interface {
 	ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error)
 }
 
+// CommunicationClient exposes game-owned communication context for the web game surface.
+type CommunicationClient interface {
+	GetCommunicationContext(context.Context, *statev1.GetCommunicationContextRequest, ...grpc.CallOption) (*statev1.GetCommunicationContextResponse, error)
+}
+
 // AgentClient exposes AI agent listing used for owner-only campaign binding UX.
 type AgentClient interface {
 	ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error)
@@ -94,6 +99,7 @@ type AuthorizationClient interface {
 // GRPCGatewayDeps carries the explicit client dependencies for the campaigns gRPC gateway.
 type GRPCGatewayDeps struct {
 	CampaignClient           CampaignClient
+	CommunicationClient      CommunicationClient
 	AgentClient              AgentClient
 	ParticipantClient        ParticipantClient
 	CharacterClient          CharacterClient
@@ -110,13 +116,14 @@ type GRPCGatewayDeps struct {
 // All required clients must be present — a partial set would report healthy while
 // individual campaign operations fail.
 func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
-	if deps.CampaignClient == nil || deps.ParticipantClient == nil || deps.CharacterClient == nil ||
+	if deps.CampaignClient == nil || deps.CommunicationClient == nil || deps.ParticipantClient == nil || deps.CharacterClient == nil ||
 		deps.DaggerheartContentClient == nil || deps.DaggerheartAssetClient == nil ||
 		deps.SessionClient == nil || deps.InviteClient == nil || deps.AuthClient == nil || deps.AuthorizationClient == nil {
 		return campaignapp.NewUnavailableGateway()
 	}
 	return GRPCGateway{
 		Client:              deps.CampaignClient,
+		CommunicationClient: deps.CommunicationClient,
 		AgentClient:         deps.AgentClient,
 		ParticipantClient:   deps.ParticipantClient,
 		CharacterClient:     deps.CharacterClient,
@@ -133,6 +140,7 @@ func NewGRPCGateway(deps GRPCGatewayDeps) campaignapp.CampaignGateway {
 // GRPCGateway defines an internal contract used at this web package boundary.
 type GRPCGateway struct {
 	Client              CampaignClient
+	CommunicationClient CommunicationClient
 	AgentClient         AgentClient
 	ParticipantClient   ParticipantClient
 	CharacterClient     CharacterClient

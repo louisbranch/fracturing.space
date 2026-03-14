@@ -1,6 +1,7 @@
 package session
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -14,6 +15,7 @@ func TestFoldHandledTypes_ReturnsSessionEventContract(t *testing.T) {
 		EventTypeStarted,
 		EventTypeEnded,
 		EventTypeGateOpened,
+		EventTypeGateResponseRecorded,
 		EventTypeGateResolved,
 		EventTypeGateAbandoned,
 		EventTypeSpotlightSet,
@@ -40,6 +42,7 @@ func TestDeciderHandledCommands_ReturnsSessionCommandContract(t *testing.T) {
 		CommandTypeStart,
 		CommandTypeEnd,
 		CommandTypeGateOpen,
+		CommandTypeGateRespond,
 		CommandTypeGateResolve,
 		CommandTypeGateAbandon,
 		CommandTypeSpotlightSet,
@@ -143,5 +146,23 @@ func TestFold_IgnoresUnknownEventType(t *testing.T) {
 	}
 	if !reflect.DeepEqual(updated, original) {
 		t.Fatalf("fold updated state for unknown event: got %+v, want %+v", updated, original)
+	}
+}
+
+func TestValidateGateResponseRecordedPayload_MatchesShape(t *testing.T) {
+	raw, err := json.Marshal(GateResponseRecordedPayload{
+		GateID:        "gate-1",
+		ParticipantID: "part-1",
+		Decision:      "ready",
+		Response:      map[string]any{"note": "locked in"},
+	})
+	if err != nil {
+		t.Fatalf("Marshal() error = %v", err)
+	}
+	if err := validateGateResponseRecordedPayload(raw); err != nil {
+		t.Fatalf("validateGateResponseRecordedPayload() error = %v", err)
+	}
+	if err := validateGateResponseRecordedPayload(json.RawMessage("{")); err == nil {
+		t.Fatal("expected invalid payload error")
 	}
 }

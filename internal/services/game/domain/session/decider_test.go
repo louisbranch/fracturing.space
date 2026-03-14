@@ -391,6 +391,65 @@ func TestDecideSessionGateResolve_MissingGateIDRejected(t *testing.T) {
 	}
 }
 
+func TestDecideSessionGateRespond_EmitsGateResponseRecordedEvent(t *testing.T) {
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("session.gate_record_response"),
+		ActorType:   command.ActorTypeSystem,
+		SessionID:   "sess-1",
+		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":" part-1 ","decision":" ready ","response":{"note":"set"}}`),
+	}
+
+	decision := Decide(State{}, cmd, func() time.Time { return now })
+	if len(decision.Rejections) != 0 {
+		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
+	}
+	if len(decision.Events) != 1 {
+		t.Fatalf("expected 1 event, got %d", len(decision.Events))
+	}
+
+	evt := decision.Events[0]
+	if evt.Type != event.Type("session.gate_response_recorded") {
+		t.Fatalf("event type = %s, want %s", evt.Type, "session.gate_response_recorded")
+	}
+	if evt.EntityID != "gate-1" {
+		t.Fatalf("event entity id = %s, want %s", evt.EntityID, "gate-1")
+	}
+
+	var payload GateResponseRecordedPayload
+	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if payload.GateID != "gate-1" || payload.ParticipantID != "part-1" || payload.Decision != "ready" {
+		t.Fatalf("payload = %#v", payload)
+	}
+	if payload.Response["note"] != "set" {
+		t.Fatalf("response payload = %#v", payload.Response)
+	}
+}
+
+func TestDecideSessionGateRespond_MissingParticipantRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("session.gate_record_response"),
+		ActorType:   command.ActorTypeSystem,
+		SessionID:   "sess-1",
+		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":" ","decision":"ready"}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeSessionGateParticipantRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeSessionGateParticipantRequired)
+	}
+}
+
 func TestDecideSessionGateAbandon_MissingGateIDRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",

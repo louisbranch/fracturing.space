@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-09"
 ---
 
 # Web Architecture
@@ -73,6 +73,16 @@ Required properties:
   mutation gateway calls.
 - Batch authorization should be used for per-row action visibility.
 - Transport layers must not approximate permissions from UI fallback logic.
+- Chat/game UI routes must consume game-owned communication context for stream
+  visibility, persona selection, and scene/session awareness; browser code must
+  not derive those rules from transcript bodies.
+- Browser controls must treat persona selection as message presentation state;
+  participant-scoped controls such as gate responses still come from
+  authoritative game workflow state.
+- The canonical campaign game route (`/app/campaigns/{campaign_id}/game`) is a
+  server-rendered game surface that bootstraps `CampaignGameSurface` metadata
+  from the game communication service and uses chat websocket delivery only for
+  transcript and realtime state updates.
 
 ## Principal identity seam
 

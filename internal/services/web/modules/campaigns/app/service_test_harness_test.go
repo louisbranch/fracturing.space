@@ -34,6 +34,8 @@ type campaignGatewayStub struct {
 	campaignNameErr                         error
 	campaignWorkspace                       CampaignWorkspace
 	campaignWorkspaceErr                    error
+	campaignGameSurface                     CampaignGameSurface
+	campaignGameSurfaceErr                  error
 	campaignAIAgents                        []CampaignAIAgentOption
 	campaignAIAgentsErr                     error
 	campaignParticipants                    []CampaignParticipant
@@ -130,6 +132,41 @@ func (f *campaignGatewayStub) CampaignWorkspace(_ context.Context, campaignID st
 		workspace.ID = campaignID
 	}
 	return workspace, nil
+}
+
+func (f *campaignGatewayStub) CampaignGameSurface(_ context.Context, campaignID string) (CampaignGameSurface, error) {
+	if f.campaignGameSurfaceErr != nil {
+		return CampaignGameSurface{}, f.campaignGameSurfaceErr
+	}
+	surface := f.campaignGameSurface
+	if strings.TrimSpace(surface.SessionID) == "" {
+		surface.SessionID = "sess-1"
+	}
+	if strings.TrimSpace(surface.SessionName) == "" {
+		surface.SessionName = surface.SessionID
+	}
+	if strings.TrimSpace(surface.Participant.ID) == "" {
+		surface.Participant.ID = "p1"
+	}
+	if strings.TrimSpace(surface.Participant.Name) == "" {
+		surface.Participant.Name = "Owner"
+	}
+	if strings.TrimSpace(surface.Participant.Role) == "" {
+		surface.Participant.Role = "Player"
+	}
+	if len(surface.Streams) == 0 {
+		surface.Streams = []CampaignGameStream{{ID: "campaign:" + campaignID + ":table", Kind: "table", Scope: "session", SessionID: surface.SessionID, Label: "Table"}}
+	}
+	if len(surface.Personas) == 0 {
+		surface.Personas = []CampaignGamePersona{{ID: "participant:" + surface.Participant.ID, Kind: "participant", ParticipantID: surface.Participant.ID, DisplayName: surface.Participant.Name}}
+	}
+	if strings.TrimSpace(surface.DefaultStreamID) == "" {
+		surface.DefaultStreamID = surface.Streams[0].ID
+	}
+	if strings.TrimSpace(surface.DefaultPersonaID) == "" {
+		surface.DefaultPersonaID = surface.Personas[0].ID
+	}
+	return surface, nil
 }
 
 func (f *campaignGatewayStub) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {

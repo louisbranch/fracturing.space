@@ -13,27 +13,30 @@ import (
 )
 
 const (
-	CommandTypeStart          command.Type = "session.start"
-	CommandTypeEnd            command.Type = "session.end"
-	CommandTypeGateOpen       command.Type = "session.gate_open"
-	CommandTypeGateResolve    command.Type = "session.gate_resolve"
-	CommandTypeGateAbandon    command.Type = "session.gate_abandon"
-	CommandTypeSpotlightSet   command.Type = "session.spotlight_set"
-	CommandTypeSpotlightClear command.Type = "session.spotlight_clear"
-	EventTypeStarted          event.Type   = "session.started"
-	EventTypeEnded            event.Type   = "session.ended"
-	EventTypeGateOpened       event.Type   = "session.gate_opened"
-	EventTypeGateResolved     event.Type   = "session.gate_resolved"
-	EventTypeGateAbandoned    event.Type   = "session.gate_abandoned"
-	EventTypeSpotlightSet     event.Type   = "session.spotlight_set"
-	EventTypeSpotlightCleared event.Type   = "session.spotlight_cleared"
+	CommandTypeStart              command.Type = "session.start"
+	CommandTypeEnd                command.Type = "session.end"
+	CommandTypeGateOpen           command.Type = "session.gate_open"
+	CommandTypeGateRespond        command.Type = "session.gate_record_response"
+	CommandTypeGateResolve        command.Type = "session.gate_resolve"
+	CommandTypeGateAbandon        command.Type = "session.gate_abandon"
+	CommandTypeSpotlightSet       command.Type = "session.spotlight_set"
+	CommandTypeSpotlightClear     command.Type = "session.spotlight_clear"
+	EventTypeStarted              event.Type   = "session.started"
+	EventTypeEnded                event.Type   = "session.ended"
+	EventTypeGateOpened           event.Type   = "session.gate_opened"
+	EventTypeGateResponseRecorded event.Type   = "session.gate_response_recorded"
+	EventTypeGateResolved         event.Type   = "session.gate_resolved"
+	EventTypeGateAbandoned        event.Type   = "session.gate_abandoned"
+	EventTypeSpotlightSet         event.Type   = "session.spotlight_set"
+	EventTypeSpotlightCleared     event.Type   = "session.spotlight_cleared"
 
-	rejectionCodeSessionIDRequired            = "SESSION_ID_REQUIRED"
-	rejectionCodeSessionAlreadyStarted        = "SESSION_ALREADY_STARTED"
-	rejectionCodeSessionNotStarted            = "SESSION_NOT_STARTED"
-	rejectionCodeSessionGateIDRequired        = "SESSION_GATE_ID_REQUIRED"
-	rejectionCodeSessionGateTypeRequired      = "SESSION_GATE_TYPE_REQUIRED"
-	rejectionCodeSessionSpotlightTypeRequired = "SESSION_SPOTLIGHT_TYPE_REQUIRED"
+	rejectionCodeSessionIDRequired              = "SESSION_ID_REQUIRED"
+	rejectionCodeSessionAlreadyStarted          = "SESSION_ALREADY_STARTED"
+	rejectionCodeSessionNotStarted              = "SESSION_NOT_STARTED"
+	rejectionCodeSessionGateIDRequired          = "SESSION_GATE_ID_REQUIRED"
+	rejectionCodeSessionGateTypeRequired        = "SESSION_GATE_TYPE_REQUIRED"
+	rejectionCodeSessionGateParticipantRequired = "SESSION_GATE_PARTICIPANT_REQUIRED"
+	rejectionCodeSessionSpotlightTypeRequired   = "SESSION_SPOTLIGHT_TYPE_REQUIRED"
 )
 
 // Decide returns the decision for a session command against current state.
@@ -140,6 +143,35 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 					return &command.Rejection{
 						Code:    rejectionCodeSessionGateIDRequired,
 						Message: "gate id is required",
+					}
+				}
+				return nil
+			},
+			now,
+		)
+
+	case CommandTypeGateRespond:
+		return module.DecideFunc(
+			cmd,
+			EventTypeGateResponseRecorded,
+			"session_gate",
+			func(payload *GateResponseRecordedPayload) string {
+				return payload.GateID.String()
+			},
+			func(payload *GateResponseRecordedPayload, _ func() time.Time) *command.Rejection {
+				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
+				payload.ParticipantID = ids.ParticipantID(strings.TrimSpace(payload.ParticipantID.String()))
+				payload.Decision = strings.TrimSpace(payload.Decision)
+				if payload.GateID == "" {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateIDRequired,
+						Message: "gate id is required",
+					}
+				}
+				if payload.ParticipantID == "" {
+					return &command.Rejection{
+						Code:    rejectionCodeSessionGateParticipantRequired,
+						Message: "participant id is required",
 					}
 				}
 				return nil

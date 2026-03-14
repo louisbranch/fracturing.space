@@ -1,0 +1,178 @@
+syntax = "proto3";
+
+package game.v1;
+
+import "common/v1/locale.proto";
+import "game/v1/campaign.proto";
+import "game/v1/participant.proto";
+import "game/v1/session.proto";
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
+
+// CommunicationService exposes game-owned communication context for chat and
+// other UI/transport surfaces. It defines who the caller is, which streams are
+// visible, and which personas the caller may speak as.
+service CommunicationService {
+  // Returns the caller's communication context for one campaign.
+  rpc GetCommunicationContext(GetCommunicationContextRequest) returns (GetCommunicationContextResponse);
+  // Opens a new active-session communication gate for GM-managed control
+  // workflows.
+  rpc OpenCommunicationGate(OpenCommunicationGateRequest) returns (OpenCommunicationGateResponse);
+  // Resolves the active session's current communication gate.
+  rpc ResolveCommunicationGate(ResolveCommunicationGateRequest) returns (ResolveCommunicationGateResponse);
+  // Records one participant response against the active session communication gate.
+  rpc RespondToCommunicationGate(RespondToCommunicationGateRequest) returns (RespondToCommunicationGateResponse);
+  // Abandons the active session's current communication gate.
+  rpc AbandonCommunicationGate(AbandonCommunicationGateRequest) returns (AbandonCommunicationGateResponse);
+  // Opens or reuses the active session's GM handoff gate for participant-driven
+  // "pass to GM" flows.
+  rpc RequestGMHandoff(RequestGMHandoffRequest) returns (RequestGMHandoffResponse);
+  // Resolves the active session's GM handoff gate once the GM has responded.
+  rpc ResolveGMHandoff(ResolveGMHandoffRequest) returns (ResolveGMHandoffResponse);
+  // Abandons the active session's GM handoff gate without a GM resolution.
+  rpc AbandonGMHandoff(AbandonGMHandoffRequest) returns (AbandonGMHandoffResponse);
+}
+
+message CommunicationContext {
+  string campaign_id = 1;
+  string campaign_name = 2;
+  common.v1.Locale locale = 3;
+  GmMode gm_mode = 4;
+  string ai_agent_id = 5;
+  CommunicationSession active_session = 6;
+  CommunicationParticipant participant = 7;
+  repeated CommunicationStream streams = 8;
+  repeated CommunicationPersona personas = 9;
+  string default_stream_id = 10;
+  string default_persona_id = 11;
+  SessionGate active_session_gate = 12;
+  SessionSpotlight active_session_spotlight = 13;
+}
+
+message CommunicationSession {
+  string session_id = 1;
+  string name = 2;
+}
+
+message CommunicationParticipant {
+  string participant_id = 1;
+  string name = 2;
+  ParticipantRole role = 3;
+}
+
+enum CommunicationStreamKind {
+  COMMUNICATION_STREAM_KIND_UNSPECIFIED = 0;
+  COMMUNICATION_STREAM_KIND_SYSTEM = 1;
+  COMMUNICATION_STREAM_KIND_TABLE = 2;
+  COMMUNICATION_STREAM_KIND_CHARACTER = 3;
+  COMMUNICATION_STREAM_KIND_CONTROL = 4;
+}
+
+enum CommunicationStreamScope {
+  COMMUNICATION_STREAM_SCOPE_UNSPECIFIED = 0;
+  COMMUNICATION_STREAM_SCOPE_CAMPAIGN = 1;
+  COMMUNICATION_STREAM_SCOPE_SESSION = 2;
+  COMMUNICATION_STREAM_SCOPE_SCENE = 3;
+}
+
+message CommunicationStream {
+  string stream_id = 1;
+  CommunicationStreamKind kind = 2;
+  CommunicationStreamScope scope = 3;
+  string campaign_id = 4;
+  string session_id = 5;
+  string scene_id = 6;
+  string label = 7;
+}
+
+enum CommunicationPersonaKind {
+  COMMUNICATION_PERSONA_KIND_UNSPECIFIED = 0;
+  COMMUNICATION_PERSONA_KIND_PARTICIPANT = 1;
+  COMMUNICATION_PERSONA_KIND_CHARACTER = 2;
+}
+
+message CommunicationPersona {
+  string persona_id = 1;
+  CommunicationPersonaKind kind = 2;
+  string participant_id = 3;
+  string character_id = 4;
+  string display_name = 5;
+}
+
+message GetCommunicationContextRequest {
+  string campaign_id = 1;
+}
+
+message GetCommunicationContextResponse {
+  CommunicationContext context = 1;
+}
+
+message OpenCommunicationGateRequest {
+  string campaign_id = 1;
+  string gate_type = 2;
+  string reason = 3;
+  google.protobuf.Struct metadata = 4;
+}
+
+message OpenCommunicationGateResponse {
+  CommunicationContext context = 1;
+}
+
+message ResolveCommunicationGateRequest {
+  string campaign_id = 1;
+  string decision = 2;
+  google.protobuf.Struct resolution = 3;
+}
+
+message ResolveCommunicationGateResponse {
+  CommunicationContext context = 1;
+}
+
+message RespondToCommunicationGateRequest {
+  string campaign_id = 1;
+  string decision = 2;
+  google.protobuf.Struct response = 3;
+}
+
+message RespondToCommunicationGateResponse {
+  CommunicationContext context = 1;
+}
+
+message AbandonCommunicationGateRequest {
+  string campaign_id = 1;
+  string reason = 2;
+}
+
+message AbandonCommunicationGateResponse {
+  CommunicationContext context = 1;
+}
+
+message RequestGMHandoffRequest {
+  string campaign_id = 1;
+  string reason = 2;
+  google.protobuf.Struct metadata = 3;
+}
+
+message RequestGMHandoffResponse {
+  CommunicationContext context = 1;
+}
+
+message ResolveGMHandoffRequest {
+  string campaign_id = 1;
+  string decision = 2;
+  google.protobuf.Struct resolution = 3;
+}
+
+message ResolveGMHandoffResponse {
+  CommunicationContext context = 1;
+}
+
+message AbandonGMHandoffRequest {
+  string campaign_id = 1;
+  string reason = 2;
+}
+
+message AbandonGMHandoffResponse {
+  CommunicationContext context = 1;
+}

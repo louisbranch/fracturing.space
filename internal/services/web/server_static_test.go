@@ -205,6 +205,7 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
+					CommunicationClient:      defaultCommunicationClient(),
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),
 					DaggerheartContentClient: defaultDaggerheartContentClient(),

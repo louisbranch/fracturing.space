@@ -65,6 +65,7 @@ type SessionGate struct {
 	ResolvedByActorType string
 	ResolvedByActorID   string
 	MetadataJSON        []byte
+	ProgressJSON        []byte
 	ResolutionJSON      []byte
 }
 

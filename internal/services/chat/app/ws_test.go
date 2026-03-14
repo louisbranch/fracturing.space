@@ -10,8 +10,11 @@ import (
 	"testing"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"golang.org/x/net/websocket"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type wsTestFrame struct {
@@ -31,9 +34,39 @@ type wsTestAckPayload struct {
 
 type wsTestMessagePayload struct {
 	Message struct {
+		MessageID  string `json:"message_id"`
 		SequenceID int64  `json:"sequence_id"`
 		Body       string `json:"body"`
+		StreamID   string `json:"stream_id"`
+		Actor      struct {
+			PersonaID   string `json:"persona_id"`
+			CharacterID string `json:"character_id"`
+			Mode        string `json:"mode"`
+			Name        string `json:"name"`
+		} `json:"actor"`
 	} `json:"message"`
+}
+
+type wsTestJoinedPayload struct {
+	ActiveSessionGate struct {
+		GateID string `json:"gate_id"`
+		Status string `json:"status"`
+	} `json:"active_session_gate"`
+	ActiveSessionSpotlight struct {
+		Type        string `json:"type"`
+		CharacterID string `json:"character_id"`
+	} `json:"active_session_spotlight"`
+}
+
+type wsTestStatePayload struct {
+	CampaignID        string `json:"campaign_id"`
+	SessionID         string `json:"session_id"`
+	ActiveSessionGate struct {
+		GateID   string         `json:"gate_id"`
+		GateType string         `json:"gate_type"`
+		Status   string         `json:"status"`
+		Progress map[string]any `json:"progress"`
+	} `json:"active_session_gate"`
 }
 
 type fakeWSAuthorizer struct {
@@ -73,6 +106,30 @@ type fakeWSWelcomeAuthorizer struct {
 	resolveErr         error
 }
 
+type fakeWSCommunicationAuthorizer struct {
+	tokenToUser              map[string]string
+	contextByUserID          map[string]communicationContext
+	participantErr           error
+	participantByUser        map[string]bool
+	openGateContext          communicationContext
+	openGateErr              error
+	resolveGateContext       communicationContext
+	resolveGateErr           error
+	respondGateContext       communicationContext
+	respondGateErr           error
+	abandonGateContext       communicationContext
+	abandonGateErr           error
+	requestGMHandoffContext  communicationContext
+	requestGMHandoffErr      error
+	resolveGMHandoffContext  communicationContext
+	resolveGMHandoffErr      error
+	abandonGMHandoffContext  communicationContext
+	abandonGMHandoffErr      error
+	lastControlParticipantID string
+	lastControlAction        string
+	lastControlGateType      string
+}
+
 func (f *fakeWSWelcomeAuthorizer) Authenticate(_ context.Context, _ string) (string, error) {
 	if f.authErr != nil {
 		return "", f.authErr
@@ -103,6 +160,103 @@ func (f *fakeWSWelcomeAuthorizer) ResolveJoinWelcome(_ context.Context, campaign
 		welcome.Locale = commonv1.Locale_LOCALE_EN_US
 	}
 	return welcome, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) Authenticate(_ context.Context, accessToken string) (string, error) {
+	userID := strings.TrimSpace(f.tokenToUser[strings.TrimSpace(accessToken)])
+	if userID == "" {
+		return "", errors.New("missing user id")
+	}
+	return userID, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) IsCampaignParticipant(_ context.Context, _ string, userID string) (bool, error) {
+	if f.participantErr != nil {
+		return false, f.participantErr
+	}
+	if f.participantByUser == nil {
+		return true, nil
+	}
+	return f.participantByUser[userID], nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) ResolveCommunicationContext(_ context.Context, campaignID string, userID string) (communicationContext, error) {
+	contextState, ok := f.contextByUserID[userID]
+	if !ok {
+		return communicationContext{}, errCampaignParticipantRequired
+	}
+	if strings.TrimSpace(contextState.Welcome.CampaignName) == "" {
+		contextState.Welcome.CampaignName = campaignID
+	}
+	if contextState.Welcome.Locale == commonv1.Locale_LOCALE_UNSPECIFIED {
+		contextState.Welcome.Locale = commonv1.Locale_LOCALE_EN_US
+	}
+	return contextState, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) OpenCommunicationGate(_ context.Context, _ string, participantID string, gateType string, _ string, _ map[string]any) (communicationContext, error) {
+	f.lastControlParticipantID = participantID
+	f.lastControlAction = "gate.open"
+	f.lastControlGateType = gateType
+	if f.openGateErr != nil {
+		return communicationContext{}, f.openGateErr
+	}
+	return f.openGateContext, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) ResolveCommunicationGate(_ context.Context, _ string, participantID string, _ string, _ map[string]any) (communicationContext, error) {
+	f.lastControlParticipantID = participantID
+	f.lastControlAction = "gate.resolve"
+	if f.resolveGateErr != nil {
+		return communicationContext{}, f.resolveGateErr
+	}
+	return f.resolveGateContext, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) RespondToCommunicationGate(_ context.Context, _ string, participantID string, decision string, _ map[string]any) (communicationContext, error) {
+	f.lastControlParticipantID = participantID
+	f.lastControlAction = "gate.respond"
+	f.lastControlGateType = decision
+	if f.respondGateErr != nil {
+		return communicationContext{}, f.respondGateErr
+	}
+	return f.respondGateContext, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) AbandonCommunicationGate(_ context.Context, _ string, participantID string, _ string) (communicationContext, error) {
+	f.lastControlParticipantID = participantID
+	f.lastControlAction = "gate.abandon"
+	if f.abandonGateErr != nil {
+		return communicationContext{}, f.abandonGateErr
+	}
+	return f.abandonGateContext, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) RequestGMHandoff(_ context.Context, _ string, participantID string, _ string, _ map[string]any) (communicationContext, error) {
+	f.lastControlParticipantID = participantID
+	f.lastControlAction = "gm_handoff.request"
+	if f.requestGMHandoffErr != nil {
+		return communicationContext{}, f.requestGMHandoffErr
+	}
+	return f.requestGMHandoffContext, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) ResolveGMHandoff(_ context.Context, _ string, participantID string, _ string, _ map[string]any) (communicationContext, error) {
+	f.lastControlParticipantID = participantID
+	f.lastControlAction = "gm_handoff.resolve"
+	if f.resolveGMHandoffErr != nil {
+		return communicationContext{}, f.resolveGMHandoffErr
+	}
+	return f.resolveGMHandoffContext, nil
+}
+
+func (f *fakeWSCommunicationAuthorizer) AbandonGMHandoff(_ context.Context, _ string, participantID string, _ string) (communicationContext, error) {
+	f.lastControlParticipantID = participantID
+	f.lastControlAction = "gm_handoff.abandon"
+	if f.abandonGMHandoffErr != nil {
+		return communicationContext{}, f.abandonGMHandoffErr
+	}
+	return f.abandonGMHandoffContext, nil
 }
 
 func dialWS(t *testing.T, path string) *websocket.Conn {
@@ -550,6 +704,576 @@ func TestWebSocketJoinWithWelcomeProviderSkipsParticipantCheck(t *testing.T) {
 	}
 }
 
+func TestWebSocketJoinIncludesCommunicationControlState(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{"token-1": "user-1"},
+		contextByUserID: map[string]communicationContext{
+			"user-1": {
+				Welcome: joinWelcome{
+					ParticipantName: "Ari",
+					CampaignName:    "Camp One",
+					SessionID:       "sess-1",
+					SessionName:     "Session One",
+					Locale:          commonv1.Locale_LOCALE_EN_US,
+				},
+				ParticipantID:    "part-1",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-1",
+				ActiveSessionGate: &chatSessionGate{
+					GateID:   "gate-1",
+					Status:   "open",
+					GateType: "choice",
+				},
+				ActiveSessionSpotlight: &chatSessionSpotlight{
+					Type:        "character",
+					CharacterID: "char-1",
+				},
+			},
+		},
+	}
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(authorizer), "/ws", "fs_token=token-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.join",
+		"request_id": "req-join-1",
+		"payload": map[string]any{
+			"campaign_id": "camp-1",
+		},
+	})
+
+	joined := readFrame(t, conn)
+	if joined.Type != "chat.joined" {
+		t.Fatalf("frame type = %q, want %q", joined.Type, "chat.joined")
+	}
+
+	var payload wsTestJoinedPayload
+	if err := json.Unmarshal(joined.Payload, &payload); err != nil {
+		t.Fatalf("unmarshal joined payload: %v", err)
+	}
+	if payload.ActiveSessionGate.GateID != "gate-1" || payload.ActiveSessionGate.Status != "open" {
+		t.Fatalf("unexpected active gate payload: %+v", payload.ActiveSessionGate)
+	}
+	if payload.ActiveSessionSpotlight.Type != "character" || payload.ActiveSessionSpotlight.CharacterID != "char-1" {
+		t.Fatalf("unexpected active spotlight payload: %+v", payload.ActiveSessionSpotlight)
+	}
+}
+
+func TestWebSocketControlGMHandoffBroadcastsState(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+			"token-b": "user-b",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-1", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-1", Label: "Table"},
+					{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-1", Label: "Control"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+				},
+			},
+			"user-b": {
+				Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-b",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-b",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-1", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-1", Label: "Table"},
+					{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-1", Label: "Control"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-b", Kind: "participant", ParticipantID: "part-b", DisplayName: "B"},
+				},
+			},
+		},
+		requestGMHandoffContext: communicationContext{
+			Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+			ParticipantID:    "part-a",
+			DefaultStreamID:  "campaign:camp-1:table",
+			DefaultPersonaID: "participant:part-a",
+			ActiveSessionGate: &chatSessionGate{
+				GateID:   "gate-1",
+				GateType: "gm_handoff",
+				Status:   "open",
+			},
+		},
+	}
+	srv := httptest.NewServer(NewHandlerWithAuthorizer(authorizer))
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-a")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-b")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	writeFrame(t, connA, map[string]any{
+		"type":       "chat.control",
+		"request_id": "req-control-1",
+		"payload": map[string]any{
+			"action": "gm_handoff.request",
+			"reason": "party ready",
+		},
+	})
+
+	ack := readFrame(t, connA)
+	if ack.Type != "chat.ack" {
+		t.Fatalf("ack frame type = %q, want chat.ack", ack.Type)
+	}
+	stateA := readFrame(t, connA)
+	if stateA.Type != "chat.state" {
+		t.Fatalf("sender frame type = %q, want chat.state", stateA.Type)
+	}
+	stateB := readFrame(t, connB)
+	if stateB.Type != "chat.state" {
+		t.Fatalf("subscriber frame type = %q, want chat.state", stateB.Type)
+	}
+
+	var senderState wsTestStatePayload
+	if err := json.Unmarshal(stateA.Payload, &senderState); err != nil {
+		t.Fatalf("decode sender state: %v", err)
+	}
+	if senderState.ActiveSessionGate.GateID != "gate-1" || senderState.ActiveSessionGate.GateType != "gm_handoff" {
+		t.Fatalf("unexpected sender state payload: %+v", senderState.ActiveSessionGate)
+	}
+	if authorizer.lastControlParticipantID != "part-a" {
+		t.Fatalf("control participant id = %q, want %q", authorizer.lastControlParticipantID, "part-a")
+	}
+	if authorizer.lastControlAction != "gm_handoff.request" {
+		t.Fatalf("control action = %q, want %q", authorizer.lastControlAction, "gm_handoff.request")
+	}
+}
+
+func TestWebSocketControlGateOpenBroadcastsState(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+			"token-b": "user-b",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+			},
+			"user-b": {
+				Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-b",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-b",
+			},
+		},
+		openGateContext: communicationContext{
+			Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+			ParticipantID:    "part-a",
+			DefaultStreamID:  "campaign:camp-1:table",
+			DefaultPersonaID: "participant:part-a",
+			ActiveSessionGate: &chatSessionGate{
+				GateID:   "gate-choice-1",
+				GateType: "choice",
+				Status:   "open",
+			},
+		},
+	}
+	srv := httptest.NewServer(NewHandlerWithAuthorizer(authorizer))
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-a")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-b")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	writeFrame(t, connA, map[string]any{
+		"type":       "chat.control",
+		"request_id": "req-control-open-gate",
+		"payload": map[string]any{
+			"action":    "gate.open",
+			"gate_type": "choice",
+			"reason":    "choose a route",
+		},
+	})
+
+	ack := readFrame(t, connA)
+	if ack.Type != "chat.ack" {
+		t.Fatalf("ack frame type = %q, want chat.ack", ack.Type)
+	}
+	stateA := readFrame(t, connA)
+	if stateA.Type != "chat.state" {
+		t.Fatalf("sender frame type = %q, want chat.state", stateA.Type)
+	}
+	stateB := readFrame(t, connB)
+	if stateB.Type != "chat.state" {
+		t.Fatalf("subscriber frame type = %q, want chat.state", stateB.Type)
+	}
+
+	var senderState wsTestStatePayload
+	if err := json.Unmarshal(stateA.Payload, &senderState); err != nil {
+		t.Fatalf("decode sender state: %v", err)
+	}
+	if senderState.ActiveSessionGate.GateID != "gate-choice-1" || senderState.ActiveSessionGate.GateType != "choice" {
+		t.Fatalf("unexpected sender state payload: %+v", senderState.ActiveSessionGate)
+	}
+	if authorizer.lastControlParticipantID != "part-a" {
+		t.Fatalf("control participant id = %q, want %q", authorizer.lastControlParticipantID, "part-a")
+	}
+	if authorizer.lastControlAction != "gate.open" {
+		t.Fatalf("control action = %q, want %q", authorizer.lastControlAction, "gate.open")
+	}
+	if authorizer.lastControlGateType != "choice" {
+		t.Fatalf("control gate type = %q, want %q", authorizer.lastControlGateType, "choice")
+	}
+}
+
+func TestWebSocketControlGateRespondBroadcastsState(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+			"token-b": "user-b",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+			},
+			"user-b": {
+				Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-b",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-b",
+			},
+		},
+		respondGateContext: communicationContext{
+			Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", SessionName: "Session One", Locale: commonv1.Locale_LOCALE_EN_US},
+			ParticipantID:    "part-a",
+			DefaultStreamID:  "campaign:camp-1:table",
+			DefaultPersonaID: "participant:part-a",
+			ActiveSessionGate: &chatSessionGate{
+				GateID:   "gate-ready-1",
+				GateType: "ready_check",
+				Status:   "open",
+				Progress: map[string]any{
+					"eligible_count":  float64(2),
+					"responded_count": float64(1),
+					"pending_count":   float64(1),
+					"all_responded":   false,
+				},
+			},
+		},
+	}
+	srv := httptest.NewServer(NewHandlerWithAuthorizer(authorizer))
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-a")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-b")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	writeFrame(t, connA, map[string]any{
+		"type":       "chat.control",
+		"request_id": "req-control-respond-gate",
+		"payload": map[string]any{
+			"action":   "gate.respond",
+			"decision": "ready",
+			"response": map[string]any{"note": "ready to proceed"},
+		},
+	})
+
+	ack := readFrame(t, connA)
+	if ack.Type != "chat.ack" {
+		t.Fatalf("ack frame type = %q, want chat.ack", ack.Type)
+	}
+	stateA := readFrame(t, connA)
+	if stateA.Type != "chat.state" {
+		t.Fatalf("sender frame type = %q, want chat.state", stateA.Type)
+	}
+	stateB := readFrame(t, connB)
+	if stateB.Type != "chat.state" {
+		t.Fatalf("subscriber frame type = %q, want chat.state", stateB.Type)
+	}
+
+	var senderState wsTestStatePayload
+	if err := json.Unmarshal(stateA.Payload, &senderState); err != nil {
+		t.Fatalf("decode sender state: %v", err)
+	}
+	if senderState.ActiveSessionGate.GateID != "gate-ready-1" || senderState.ActiveSessionGate.GateType != "ready_check" {
+		t.Fatalf("unexpected sender state payload: %+v", senderState.ActiveSessionGate)
+	}
+	if got := senderState.ActiveSessionGate.Progress["responded_count"]; got != float64(1) {
+		t.Fatalf("progress responded_count = %v, want 1", got)
+	}
+	if authorizer.lastControlParticipantID != "part-a" {
+		t.Fatalf("control participant id = %q, want %q", authorizer.lastControlParticipantID, "part-a")
+	}
+	if authorizer.lastControlAction != "gate.respond" {
+		t.Fatalf("control action = %q, want %q", authorizer.lastControlAction, "gate.respond")
+	}
+	if authorizer.lastControlGateType != "ready" {
+		t.Fatalf("control decision = %q, want %q", authorizer.lastControlGateType, "ready")
+	}
+}
+
+func TestWebSocketControlPropagatesRPCError(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{"token-a": "user-a"},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", SessionID: "sess-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+			},
+		},
+		requestGMHandoffErr: status.Error(codes.FailedPrecondition, "another session gate is already open"),
+	}
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(authorizer), "/ws", "fs_token=token-a")
+	joinCampaign(t, conn, "camp-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.control",
+		"request_id": "req-control-error",
+		"payload": map[string]any{
+			"action": "gm_handoff.request",
+		},
+	})
+
+	got := readFrame(t, conn)
+	if got.Type != "chat.error" {
+		t.Fatalf("frame type = %q, want chat.error", got.Type)
+	}
+	if !strings.Contains(string(got.Payload), "FAILED_PRECONDITION") {
+		t.Fatalf("error payload = %s, expected FAILED_PRECONDITION", string(got.Payload))
+	}
+}
+
+func TestWebSocketSendDoesNotSubmitAITurnImmediately(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{"token-a": "user-a"},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome: joinWelcome{
+					ParticipantName: "Ari",
+					CampaignName:    "Camp One",
+					SessionID:       "sess-1",
+					SessionName:     "Session One",
+					GmMode:          "AI",
+					AIAgentID:       "agent-1",
+					Locale:          commonv1.Locale_LOCALE_EN_US,
+				},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-1", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-1", Label: "Table"},
+					{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-1", Label: "Control"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "Ari"},
+				},
+			},
+		},
+	}
+	invocationClient := &testInvocationClient{
+		submitFn: func(context.Context, *aiv1.SubmitCampaignTurnRequest) (*aiv1.SubmitCampaignTurnResponse, error) {
+			return &aiv1.SubmitCampaignTurnResponse{TurnId: "turn-1"}, nil
+		},
+	}
+	handler := newHandler(
+		authorizer,
+		true,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		func(_ context.Context, room *campaignRoom, _ string) error {
+			room.setAISessionGrant("grant-token", 1, time.Now().UTC().Add(time.Minute))
+			return nil
+		},
+		invocationClient,
+	)
+	conn := dialWSWithHandler(t, handler, "/ws", "fs_token=token-a")
+	joinCampaign(t, conn, "camp-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.send",
+		"request_id": "req-send-ai-buffer",
+		"payload": map[string]any{
+			"client_message_id": "cli-ai-buffer-1",
+			"body":              "we inspect the chamber first",
+		},
+	})
+
+	ack := readFrame(t, conn)
+	if ack.Type != "chat.ack" {
+		t.Fatalf("ack frame type = %q, want chat.ack", ack.Type)
+	}
+	msg := readFrame(t, conn)
+	if msg.Type != "chat.message" {
+		t.Fatalf("message frame type = %q, want chat.message", msg.Type)
+	}
+	if invocationClient.submitCalls != 0 {
+		t.Fatalf("submit calls = %d, want 0", invocationClient.submitCalls)
+	}
+}
+
+func TestWebSocketControlGMHandoffRequestSubmitsBufferedTranscriptToAI(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{"token-a": "user-a"},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome: joinWelcome{
+					ParticipantName: "Ari",
+					CampaignName:    "Camp One",
+					SessionID:       "sess-1",
+					SessionName:     "Session One",
+					GmMode:          "AI",
+					AIAgentID:       "agent-1",
+					Locale:          commonv1.Locale_LOCALE_EN_US,
+				},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", SessionID: "sess-1", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", SessionID: "sess-1", Label: "Table"},
+					{StreamID: "scene:scene-1:character", Kind: "character", Scope: "scene", SessionID: "sess-1", SceneID: "scene-1", Label: "Ruined Hall"},
+					{StreamID: "campaign:camp-1:control", Kind: "control", Scope: "session", SessionID: "sess-1", Label: "Control"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "Ari"},
+					{PersonaID: "character:char-1", Kind: "character", ParticipantID: "part-a", CharacterID: "char-1", DisplayName: "Vera"},
+				},
+			},
+		},
+		requestGMHandoffContext: communicationContext{
+			Welcome: joinWelcome{
+				ParticipantName: "Ari",
+				CampaignName:    "Camp One",
+				SessionID:       "sess-1",
+				SessionName:     "Session One",
+				GmMode:          "AI",
+				AIAgentID:       "agent-1",
+				Locale:          commonv1.Locale_LOCALE_EN_US,
+			},
+			ParticipantID:    "part-a",
+			DefaultStreamID:  "campaign:camp-1:table",
+			DefaultPersonaID: "participant:part-a",
+			ActiveSessionGate: &chatSessionGate{
+				GateID:   "gate-1",
+				GateType: "gm_handoff",
+				Status:   "open",
+			},
+		},
+	}
+	invocationClient := &testInvocationClient{
+		submitFn: func(context.Context, *aiv1.SubmitCampaignTurnRequest) (*aiv1.SubmitCampaignTurnResponse, error) {
+			return &aiv1.SubmitCampaignTurnResponse{TurnId: "turn-1"}, nil
+		},
+	}
+	handler := newHandler(
+		authorizer,
+		true,
+		nil,
+		nil,
+		nil,
+		nil,
+		nil,
+		func(_ context.Context, room *campaignRoom, _ string) error {
+			room.setAISessionGrant("grant-token", 1, time.Now().UTC().Add(time.Minute))
+			return nil
+		},
+		invocationClient,
+	)
+	conn := dialWSWithHandler(t, handler, "/ws", "fs_token=token-a")
+	joinCampaign(t, conn, "camp-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.send",
+		"request_id": "req-send-ai-1",
+		"payload": map[string]any{
+			"client_message_id": "cli-ai-1",
+			"body":              "we inspect the chamber first",
+		},
+	})
+	sendAck := readFrame(t, conn)
+	if sendAck.Type != "chat.ack" {
+		t.Fatalf("send ack frame type = %q, want chat.ack", sendAck.Type)
+	}
+	firstMessage := readFrame(t, conn)
+	firstPayload := decodeMessagePayload(t, firstMessage.Payload)
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.send",
+		"request_id": "req-send-ai-2",
+		"payload": map[string]any{
+			"client_message_id": "cli-ai-2",
+			"stream_id":         "scene:scene-1:character",
+			"persona_id":        "character:char-1",
+			"body":              "Vera checks the door for traps",
+		},
+	})
+	sendAck = readFrame(t, conn)
+	if sendAck.Type != "chat.ack" {
+		t.Fatalf("second send ack frame type = %q, want chat.ack", sendAck.Type)
+	}
+	secondMessage := readFrame(t, conn)
+	secondPayload := decodeMessagePayload(t, secondMessage.Payload)
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.control",
+		"request_id": "req-control-ai",
+		"payload": map[string]any{
+			"action": "gm_handoff.request",
+			"reason": "party is ready for a ruling",
+		},
+	})
+
+	controlAck := readFrame(t, conn)
+	if controlAck.Type != "chat.ack" {
+		t.Fatalf("control ack frame type = %q, want chat.ack", controlAck.Type)
+	}
+	state := readFrame(t, conn)
+	if state.Type != "chat.state" {
+		t.Fatalf("state frame type = %q, want chat.state", state.Type)
+	}
+	if invocationClient.submitCalls != 1 {
+		t.Fatalf("submit calls = %d, want 1", invocationClient.submitCalls)
+	}
+	req := invocationClient.submitReqs[0]
+	if req.GetCampaignId() != "camp-1" || req.GetSessionId() != "sess-1" || req.GetAgentId() != "agent-1" {
+		t.Fatalf("unexpected submit routing: %+v", req)
+	}
+	if req.GetParticipantId() != "part-a" {
+		t.Fatalf("submit participant id = %q, want %q", req.GetParticipantId(), "part-a")
+	}
+	if req.GetSessionGrant() != "grant-token" {
+		t.Fatalf("submit grant = %q, want %q", req.GetSessionGrant(), "grant-token")
+	}
+	if req.GetMessageId() != secondPayload.Message.MessageID {
+		t.Fatalf("submit correlation message id = %q, want %q", req.GetMessageId(), secondPayload.Message.MessageID)
+	}
+	if !strings.Contains(req.GetBody(), firstPayload.Message.Body) {
+		t.Fatalf("submit body = %q, expected first message content", req.GetBody())
+	}
+	if !strings.Contains(req.GetBody(), secondPayload.Message.Body) {
+		t.Fatalf("submit body = %q, expected second message content", req.GetBody())
+	}
+	if !strings.Contains(req.GetBody(), "party is ready for a ruling") {
+		t.Fatalf("submit body = %q, expected handoff reason", req.GetBody())
+	}
+}
+
 func TestLocalizedJoinWelcomeBodyUsesCampaignLocale(t *testing.T) {
 	body := localizedJoinWelcomeBody(joinWelcome{
 		ParticipantName: "Ari",
@@ -644,5 +1368,129 @@ func TestWebSocketDisconnectDoesNotReleaseUntilLastSubscriberLeaves(t *testing.T
 		}
 	case <-time.After(time.Second):
 		t.Fatal("expected release after last subscriber leaves")
+	}
+}
+
+func TestWebSocketSendOnlyBroadcastsToSubscribersWithStreamAccess(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+			"token-b": "user-b",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", Label: "Table"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+				},
+			},
+			"user-b": {
+				Welcome:          joinWelcome{ParticipantName: "B", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-b",
+				DefaultStreamID:  "campaign:camp-1:system",
+				DefaultPersonaID: "participant:part-b",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-b", Kind: "participant", ParticipantID: "part-b", DisplayName: "B"},
+				},
+			},
+		},
+	}
+	srv := httptest.NewServer(NewHandlerWithAuthorizer(authorizer))
+	t.Cleanup(srv.Close)
+
+	connA := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-a")
+	connB := dialWSWithExistingServer(t, srv, "/ws", "fs_token=token-b")
+	joinCampaign(t, connA, "camp-1")
+	joinCampaign(t, connB, "camp-1")
+
+	writeFrame(t, connA, map[string]any{
+		"type":       "chat.send",
+		"request_id": "req-send-stream",
+		"payload": map[string]any{
+			"client_message_id": "cli-stream-1",
+			"stream_id":         "campaign:camp-1:table",
+			"body":              "table-only",
+		},
+	})
+
+	ack := readFrame(t, connA)
+	if ack.Type != "chat.ack" {
+		t.Fatalf("sender frame type = %q, want chat.ack", ack.Type)
+	}
+	senderMessage := readFrame(t, connA)
+	if senderMessage.Type != "chat.message" {
+		t.Fatalf("sender frame type = %q, want chat.message", senderMessage.Type)
+	}
+
+	_ = connB.SetDeadline(time.Now().Add(250 * time.Millisecond))
+	var got wsTestFrame
+	err := json.NewDecoder(connB).Decode(&got)
+	if err == nil {
+		t.Fatalf("unexpected frame for subscriber without stream access: %+v", got)
+	}
+}
+
+func TestWebSocketSendUsesRequestedPersonaWhenAvailable(t *testing.T) {
+	authorizer := &fakeWSCommunicationAuthorizer{
+		tokenToUser: map[string]string{
+			"token-a": "user-a",
+		},
+		contextByUserID: map[string]communicationContext{
+			"user-a": {
+				Welcome:          joinWelcome{ParticipantName: "A", CampaignName: "camp-1", Locale: commonv1.Locale_LOCALE_EN_US},
+				ParticipantID:    "part-a",
+				DefaultStreamID:  "campaign:camp-1:table",
+				DefaultPersonaID: "participant:part-a",
+				Streams: []chatStream{
+					{StreamID: "campaign:camp-1:system", Kind: "system", Scope: "session", Label: "System"},
+					{StreamID: "campaign:camp-1:table", Kind: "table", Scope: "session", Label: "Table"},
+				},
+				Personas: []chatPersona{
+					{PersonaID: "participant:part-a", Kind: "participant", ParticipantID: "part-a", DisplayName: "A"},
+					{PersonaID: "character:char-1", Kind: "character", ParticipantID: "part-a", CharacterID: "char-1", DisplayName: "Vera"},
+				},
+			},
+		},
+	}
+	conn := dialWSWithHandler(t, NewHandlerWithAuthorizer(authorizer), "/ws", "fs_token=token-a")
+	joinCampaign(t, conn, "camp-1")
+
+	writeFrame(t, conn, map[string]any{
+		"type":       "chat.send",
+		"request_id": "req-send-persona",
+		"payload": map[string]any{
+			"client_message_id": "cli-persona-1",
+			"persona_id":        "character:char-1",
+			"body":              "speaking in character",
+		},
+	})
+
+	ack := readFrame(t, conn)
+	if ack.Type != "chat.ack" {
+		t.Fatalf("ack frame type = %q, want chat.ack", ack.Type)
+	}
+	messageFrame := readFrame(t, conn)
+	payload := decodeMessagePayload(t, messageFrame.Payload)
+	if payload.Message.Actor.PersonaID != "character:char-1" {
+		t.Fatalf("persona id = %q, want %q", payload.Message.Actor.PersonaID, "character:char-1")
+	}
+	if payload.Message.Actor.CharacterID != "char-1" {
+		t.Fatalf("character id = %q, want %q", payload.Message.Actor.CharacterID, "char-1")
+	}
+	if payload.Message.Actor.Mode != "character" {
+		t.Fatalf("actor mode = %q, want character", payload.Message.Actor.Mode)
+	}
+	if payload.Message.Actor.Name != "Vera" {
+		t.Fatalf("actor name = %q, want Vera", payload.Message.Actor.Name)
 	}
 }

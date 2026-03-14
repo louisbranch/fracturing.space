@@ -56,6 +56,10 @@ func sessionGateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, erro
 	if err != nil {
 		return nil, err
 	}
+	progress, err := structFromJSON(gate.ProgressJSON)
+	if err != nil {
+		return nil, err
+	}
 	return &campaignv1.SessionGate{
 		Id:                  gate.GateID,
 		CampaignId:          gate.CampaignID,
@@ -70,6 +74,7 @@ func sessionGateToProto(gate storage.SessionGate) (*campaignv1.SessionGate, erro
 		ResolvedByActorType: gate.ResolvedByActorType,
 		ResolvedByActorId:   gate.ResolvedByActorID,
 		Metadata:            metadata,
+		Progress:            progress,
 		Resolution:          resolution,
 	}, nil
 }

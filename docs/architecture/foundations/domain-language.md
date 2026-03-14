@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-08"
+last_reviewed: "2026-03-09"
 ---
 
 # Domain Language
@@ -61,6 +61,15 @@ Examples: note additions, canonized facts, scene start/end, reveals.
 ## Session governance terms
 
 - **Session gate**: temporary checkpoint blocking action flow until resolved.
+- **Gate response authority**: the domain unit whose response counts toward a
+  gate workflow. Current communication gates count participant responses, not
+  persona responses.
+- **Ready check**: session gate workflow with fixed `ready` / `wait` responses.
+- **Vote**: session gate workflow where responses are explicit option choices,
+  optionally constrained by workflow metadata.
+- **Gate resolution state**: derived workflow summary that indicates whether a
+  gate is still collecting responses, is blocked, is ready to resolve, or
+  requires manual review.
 - **Session start readiness**: invariant evaluated before `session.start` is
   accepted.
 - **Session readiness blocker**: one unmet readiness invariant surfaced with a
@@ -71,6 +80,20 @@ Readiness is true when core participant/controller invariants and
 system-specific readiness invariants are both satisfied. Reports may include
 boundary blockers (campaign status, active session) in addition to core
 participant/character blockers.
+
+## Communication terms
+
+- **Communication stream**: game-owned routed channel for transcript delivery
+  and system/control output.
+- **Persona**: speaking identity available to one participant in communication
+  context. A persona changes who a message is presented as, not which
+  participant seat owns rules-affecting decisions.
+- **Participant persona**: the participant speaking as themselves.
+- **Character persona**: the participant speaking as one controlled character.
+
+Current persona scope is intentionally narrow: participant-self plus eligible
+controlled characters. GM/NPC/temporary-mask personas are future extensions,
+not current core vocabulary.
 
 ## Operational read-model terms
 

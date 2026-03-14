@@ -55,7 +55,7 @@ func (q *Queries) GetActiveSession(ctx context.Context, campaignID string) (Sess
 }
 
 const getOpenSessionGate = `-- name: GetOpenSessionGate :one
-SELECT campaign_id, session_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, resolution_json FROM session_gates
+SELECT campaign_id, session_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, progress_json, resolution_json FROM session_gates
 WHERE campaign_id = ? AND session_id = ? AND status = 'open'
 ORDER BY created_at DESC
 LIMIT 1
@@ -83,6 +83,7 @@ func (q *Queries) GetOpenSessionGate(ctx context.Context, arg GetOpenSessionGate
 		&i.ResolvedByActorType,
 		&i.ResolvedByActorID,
 		&i.MetadataJson,
+		&i.ProgressJson,
 		&i.ResolutionJson,
 	)
 	return i, err
@@ -113,7 +114,7 @@ func (q *Queries) GetSession(ctx context.Context, arg GetSessionParams) (Session
 }
 
 const getSessionGate = `-- name: GetSessionGate :one
-SELECT campaign_id, session_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, resolution_json FROM session_gates
+SELECT campaign_id, session_id, gate_id, gate_type, status, reason, created_at, created_by_actor_type, created_by_actor_id, resolved_at, resolved_by_actor_type, resolved_by_actor_id, metadata_json, progress_json, resolution_json FROM session_gates
 WHERE campaign_id = ? AND session_id = ? AND gate_id = ?
 `
 
@@ -140,6 +141,7 @@ func (q *Queries) GetSessionGate(ctx context.Context, arg GetSessionGateParams) 
 		&i.ResolvedByActorType,
 		&i.ResolvedByActorID,
 		&i.MetadataJson,
+		&i.ProgressJson,
 		&i.ResolutionJson,
 	)
 	return i, err
@@ -344,8 +346,8 @@ INSERT INTO session_gates (
     campaign_id, session_id, gate_id, gate_type, status, reason,
     created_at, created_by_actor_type, created_by_actor_id,
     resolved_at, resolved_by_actor_type, resolved_by_actor_id,
-    metadata_json, resolution_json
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    metadata_json, progress_json, resolution_json
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     gate_type = excluded.gate_type,
     status = excluded.status,
@@ -357,6 +359,7 @@ ON CONFLICT(campaign_id, session_id, gate_id) DO UPDATE SET
     resolved_by_actor_type = excluded.resolved_by_actor_type,
     resolved_by_actor_id = excluded.resolved_by_actor_id,
     metadata_json = excluded.metadata_json,
+    progress_json = excluded.progress_json,
     resolution_json = excluded.resolution_json
 `
 
@@ -374,6 +377,7 @@ type PutSessionGateParams struct {
 	ResolvedByActorType sql.NullString `json:"resolved_by_actor_type"`
 	ResolvedByActorID   sql.NullString `json:"resolved_by_actor_id"`
 	MetadataJson        []byte         `json:"metadata_json"`
+	ProgressJson        []byte         `json:"progress_json"`
 	ResolutionJson      []byte         `json:"resolution_json"`
 }
 
@@ -392,6 +396,7 @@ func (q *Queries) PutSessionGate(ctx context.Context, arg PutSessionGateParams) 
 		arg.ResolvedByActorType,
 		arg.ResolvedByActorID,
 		arg.MetadataJson,
+		arg.ProgressJson,
 		arg.ResolutionJson,
 	)
 	return err

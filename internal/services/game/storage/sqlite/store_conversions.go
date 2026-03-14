@@ -347,6 +347,7 @@ func dbSessionGateToStorage(row db.SessionGate) storage.SessionGate {
 		CreatedByActorType: row.CreatedByActorType,
 		CreatedByActorID:   row.CreatedByActorID,
 		MetadataJSON:       row.MetadataJson,
+		ProgressJSON:       row.ProgressJson,
 		ResolutionJSON:     row.ResolutionJson,
 	}
 	gate.ResolvedAt = fromNullMillis(row.ResolvedAt)
