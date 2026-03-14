@@ -5,19 +5,24 @@ package integration
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/tools/seed"
 )
 
-// TestMCPStdioBlackbox validates the stdio MCP surface with per-fixture session isolation.
+var stdioBlackboxFixtureFiles = []string{
+	"blackbox_00_context_flow.json",
+	"blackbox_campaign_flow.json",
+}
+
+// TestMCPStdioBlackbox validates a small stdio fixture set so transport-process
+// boundaries stay covered without replaying the full blackbox matrix.
 func TestMCPStdioBlackbox(t *testing.T) {
 	fixture := newSuiteFixture(t)
 	binaryPath := mcpBinaryForTests(t)
 
-	fixtures := loadBlackboxFixtures(t, filepath.Join(repoRoot(t), blackboxFixtureGlob))
+	fixtures := loadBlackboxFixtureFiles(t, stdioBlackboxFixtureFiles)
 	for _, blackboxFixture := range fixtures {
 		func(blackboxFixture seed.BlackboxFixture) {
 			userID := fixture.newUserID(t, uniqueTestUsername(t, "blackbox-creator", blackboxFixture.Name))

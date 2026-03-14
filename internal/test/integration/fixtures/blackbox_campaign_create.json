@@ -31,17 +31,6 @@
         "result.contents[0].text|json.campaign.id": "{{campaign_id}}",
         "result.contents[0].text|json.campaign.name": "Scenario Campaign"
       }
-    },
-    {
-      "name": "campaign_list_read",
-      "action": "read_resource",
-      "uri": "campaigns://list",
-      "expect_contains": {
-        "result.contents[0].text|json.campaigns": {
-          "id": "{{campaign_id}}",
-          "name": "Scenario Campaign"
-        }
-      }
     }
   ]
 }

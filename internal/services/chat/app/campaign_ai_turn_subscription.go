@@ -9,7 +9,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 )
 
-const campaignAITurnSubscriptionRetryDelay = time.Second
+var campaignAITurnSubscriptionRetryDelay = time.Second
 
 type campaignAITurnSubscriptionWorker struct {
 	ctx              context.Context

@@ -15,6 +15,8 @@ import (
 )
 
 func TestWaitForHealthServing(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
 	defer stop()
 
@@ -24,12 +26,14 @@ func TestWaitForHealthServing(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := WaitForHealth(ctx, conn, "", nil); err != nil {
+	if err := waitForHealthWithBackoff(ctx, conn, "", nil, 5*time.Millisecond, 20*time.Millisecond, 50*time.Millisecond); err != nil {
 		t.Fatalf("wait for health: %v", err)
 	}
 }
 
 func TestWaitForHealthNilConn(t *testing.T) {
+	t.Parallel()
+
 	err := WaitForHealth(context.Background(), nil, "", nil)
 	if err == nil {
 		t.Fatal("expected error for nil connection")
@@ -40,18 +44,22 @@ func TestWaitForHealthNilConn(t *testing.T) {
 }
 
 func TestWaitForHealthNilContext(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
 	defer stop()
 
 	conn := dialHealthServer(t, addr)
 	defer conn.Close()
 
-	if err := WaitForHealth(nil, conn, "", nil); err != nil {
+	if err := waitForHealthWithBackoff(nil, conn, "", nil, 5*time.Millisecond, 20*time.Millisecond, 50*time.Millisecond); err != nil {
 		t.Fatalf("wait for health with nil context: %v", err)
 	}
 }
 
 func TestWaitForHealthLogsServing(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
 	defer stop()
 
@@ -66,7 +74,7 @@ func TestWaitForHealthLogsServing(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := WaitForHealth(ctx, conn, "", logf); err != nil {
+	if err := waitForHealthWithBackoff(ctx, conn, "", logf, 5*time.Millisecond, 20*time.Millisecond, 50*time.Millisecond); err != nil {
 		t.Fatalf("wait for health: %v", err)
 	}
 	if len(logs) == 0 {
@@ -78,6 +86,8 @@ func TestWaitForHealthLogsServing(t *testing.T) {
 }
 
 func TestWaitForHealthTransitionsToServing(t *testing.T) {
+	t.Parallel()
+
 	addr, setStatus, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 	defer stop()
 
@@ -85,29 +95,31 @@ func TestWaitForHealthTransitionsToServing(t *testing.T) {
 	defer conn.Close()
 
 	go func() {
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(15 * time.Millisecond)
 		setStatus(grpc_health_v1.HealthCheckResponse_SERVING)
 	}()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	if err := WaitForHealth(ctx, conn, "", nil); err != nil {
+	if err := waitForHealthWithBackoff(ctx, conn, "", nil, 5*time.Millisecond, 20*time.Millisecond, 50*time.Millisecond); err != nil {
 		t.Fatalf("wait for health after transition: %v", err)
 	}
 }
 
 func TestWaitForHealthRespectsContext(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_NOT_SERVING)
 	defer stop()
 
 	conn := dialHealthServer(t, addr)
 	defer conn.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Millisecond)
 	defer cancel()
 
-	if err := WaitForHealth(ctx, conn, "", nil); err == nil {
+	if err := waitForHealthWithBackoff(ctx, conn, "", nil, 5*time.Millisecond, 20*time.Millisecond, 20*time.Millisecond); err == nil {
 		t.Fatal("expected context error, got nil")
 	}
 }

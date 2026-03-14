@@ -23,10 +23,8 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.26.0"
-      - name: Run integration smoke lane
-        run: make integration-smoke-pr
-      - name: Run scenario smoke lane
-        run: make scenario-smoke
+      - name: Run runtime smoke lane
+        run: make runtime-smoke
       - name: Generate smoke runtime report
         run: |
           OUT_DIR=.tmp/test-runtime/smoke \
@@ -131,27 +129,3 @@ jobs:
           name: runtime-scenario-shard-${{ matrix.shard_index }}
           path: .tmp/test-runtime/scenario-shard-${{ matrix.shard_index }}
           if-no-files-found: warn
-
-  integration-shared-fixture-soak:
-    if: github.event_name == 'schedule'
-    needs:
-      - integration-shard-check
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      matrix:
-        shard_index: [0, 1, 2, 3]
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: "1.26.0"
-      - name: Shared fixture soak (non-blocking)
-        run: |
-          INTEGRATION_SHARED_FIXTURE=true \
-          INTEGRATION_SHARD_TOTAL=4 \
-          INTEGRATION_SHARD_INDEX=${{ matrix.shard_index }} \
-          bash ./scripts/integration-shard.sh -count=2

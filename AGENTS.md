@@ -59,36 +59,37 @@ Rules:
   - integration tests for component seams and workflows,
   - end-to-end coverage only for critical user/system paths.
 - Prefer test-first when it improves design or confidence; avoid ceremonial red/green scripts.
-- If behavior is intentionally removed, remove stale tests instead of preserving historical expectations.
+- If behavior is intentionally removed, delete stale tests instead of preserving historical expectations.
+- Tombstone tests that exist only to remember removed behavior are discouraged.
 - Avoid brittle tests that lock internal implementation details.
+- Negative assertions require an explicit `Invariant:` rationale adjacent to the assertion.
 - Coverage is a guardrail, not a target to game.
 
 Verification expectations after code changes:
 
 ```bash
 make test
-make integration
+make runtime
 ```
 
 PR/PR-update prerequisite (required before opening or updating a PR):
 
 ```bash
-make ci-go-tests-local
+make verify-pr
 ```
 
 Command guidance for agents:
 
 - Fast feedback during implementation:
-  - `make integration-smoke`
-  - `make scenario-smoke`
+  - `make test`
+  - `make runtime-smoke`
 - Full verification before declaring runtime test changes done:
-  - `make integration`
-  - `make scenario-full` (or shard-equivalent when validating CI fanout behavior)
-- CI parity checks for integration sharding:
-  - `INTEGRATION_VERIFY_SHARDS_TOTAL=4 make integration-shard-check`
-  - `INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=<n> make integration-shard`
+  - `make runtime`
+- PR/update verification:
+  - `make verify-pr`
 
 Run `make cover` when production behavior changes and report notable coverage impact.
+Run `make cover-critical-domain` for game-domain behavior changes.
 
 ## Documentation and Knowledge Durability
 

@@ -2,7 +2,6 @@
 title: "Icon Catalog"
 parent: "Reference"
 nav_order: 11
-last_reviewed: "2026-03-07"
 ---
 
 # Icon Catalog

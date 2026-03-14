@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 7
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-10"
 ---
 
 # Integration Tests
@@ -14,6 +14,8 @@ last_reviewed: "2026-03-07"
 Integration tests exercise the full request path through the game server, MCP
 bridge, and SQLite storage using real processes and transports. These tests are
 meant to increase trust in end-to-end behavior and backward compatibility.
+Contributors should use the public runtime Make targets rather than the older
+integration/scenario-specific aliases.
 
 ## Goals
 
@@ -129,96 +131,49 @@ go test -tags=integration ./...
 
 ## Command Matrix
 
-Use these commands by audience and intent:
+Use the supported public command surface:
 
-| Audience | Command | Use case | When to run |
-| --- | --- | --- | --- |
-| Users | `make integration-smoke` | Fast local confidence check | During active feature work before commit |
-| Users | `make integration` | Full deterministic integration verification | Before opening/merging runtime-impacting changes |
-| Agents | `make integration-smoke` | Short feedback loop in implementation | After each meaningful iteration |
-| Agents | `make integration` | Completion gate for integration behavior | Before reporting task done |
-| CI (PR) | `make integration-smoke-pr` | Fast PR gate with stdio + HTTP smoke | Every pull request |
-| CI (main/nightly) | `INTEGRATION_VERIFY_SHARDS_TOTAL=4 make integration-shard-check` | Ensure shard coverage is complete/non-overlapping | Before shard matrix execution |
-| CI (main/nightly) | `INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=<n> make integration-shard` | Parallel full integration fanout | Matrix jobs on non-PR workflows |
+| Command | Use case | When to run |
+| --- | --- | --- |
+| `make test` | Fast unit/domain verification | During active implementation |
+| `make runtime-smoke` | Fast runtime confidence across integration and scenario smoke coverage | During active runtime work before commit |
+| `make runtime` | Full deterministic runtime verification | Before declaring runtime-impacting work done |
+| `make verify-pr` | PR/update gate using the repository's supported verification bundle | Before opening or updating a PR |
+| `make cover` | Coverage non-regression check for production behavior changes | When behavior changes |
+| `make cover-critical-domain` | Extra coverage guardrail for game-domain behavior changes | When game-domain behavior changes |
 
-Alias behavior:
-
-- `make integration-smoke` routes to `integration-smoke-pr`.
-- `make integration` routes to `integration-full` by default.
-- If `INTEGRATION_SHARD_TOTAL` and `INTEGRATION_SHARD_INDEX` are set,
-  `make integration` routes to `integration-shard`.
-
-Advanced explicit targets:
-
-```sh
-make integration-smoke-pr
-make integration-smoke-full
-make integration-full
-make integration-shard
-make integration-shard-check
-```
-
-- Scenario companion lanes (for game flow contracts):
-
-```sh
-make scenario-smoke
-make scenario-full
-```
-
-- Make targets:
-
-```sh
-make test
-make integration
-make cover
-```
+Raw `go test -tags=integration ./...` remains useful for low-level debugging,
+but the public contributor interface is the Make surface above.
 
 ## Scenario Sharding
 
-Scenario tests support deterministic sharding for CI fanout:
-
-```sh
-SCENARIO_SHARD_TOTAL=6 SCENARIO_SHARD_INDEX=0 make scenario-shard
-SCENARIO_VERIFY_SHARDS_TOTAL=6 make scenario-shard-check
-```
-
-Each scenario file is assigned by stable hash of its relative path.
+Scenario tests support deterministic sharding for CI fanout. Treat shard entry
+points as internal CI plumbing; contributors should use `make runtime-smoke`,
+`make runtime`, and `make verify-pr`.
 
 ## Integration Sharding
 
 Integration tests support deterministic top-level test sharding for CI fanout
-and CI should use explicit shard targets:
-
-```sh
-INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=0 make integration-shard
-INTEGRATION_VERIFY_SHARDS_TOTAL=4 make integration-shard-check
-```
+and CI may invoke shard-specific targets internally.
 
 Top-level `Test...` names are assigned by stable hash modulo shard total.
 
 CI target guidance:
 
-- Pull requests: `make integration-smoke-pr` + `make scenario-smoke`.
-- Main/nightly: `make integration-shard-check` + shard matrix `make integration-shard`.
-- Nightly soak: shard runs with `INTEGRATION_SHARED_FIXTURE=true` (non-blocking until promoted).
+- Pull requests should run the `make verify-pr` surface.
+- Main/nightly workflows may shard `make runtime` internally for fanout.
+- Nightly soak runs may enable shared-fixture variants as internal workflow detail.
 
 ## Runtime Reporting
 
-Generate runtime artifacts (JSON + CSV) from `go test -json` output:
-
-```sh
-bash ./scripts/test-runtime-report.sh smoke
-bash ./scripts/test-runtime-report.sh smoke-pr
-bash ./scripts/test-runtime-report.sh integration-full
-INTEGRATION_SHARD_TOTAL=4 INTEGRATION_SHARD_INDEX=0 bash ./scripts/test-runtime-report.sh integration-shard
-SCENARIO_SHARD_TOTAL=6 SCENARIO_SHARD_INDEX=0 bash ./scripts/test-runtime-report.sh scenario-shard
-```
-
-Budget thresholds live in `.github/test-runtime-budgets.json`. By default, budget checks emit warnings. Set `RUNTIME_BUDGET_ENFORCE=true` to fail on regressions.
+Runtime reports are generated from `go test -json` output by CI/internal
+automation. Treat report scripts and shard-specific invocations as internal
+workflow details rather than the public contributor command surface.
 
 ## Checklist
 
 - If event definitions changed, run `go run ./internal/tools/eventdocgen`
   and confirm the [event catalog](../events/event-catalog.md) is updated in the diff.
 
-- CI should run the integration tag via make (for example: make cover).
+- Use the public Make verification surface above; avoid depending on retired
+  `make integration*` or `make scenario*` aliases in contributor-facing docs.

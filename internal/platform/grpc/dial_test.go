@@ -9,6 +9,8 @@ import (
 )
 
 func TestDialLenientReturnsConnOnSuccess(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
 	defer stop()
 
@@ -22,6 +24,8 @@ func TestDialLenientReturnsConnOnSuccess(t *testing.T) {
 }
 
 func TestDialLenientWithTimeoutReturnsConnOnSuccess(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
 	defer stop()
 
@@ -35,6 +39,8 @@ func TestDialLenientWithTimeoutReturnsConnOnSuccess(t *testing.T) {
 }
 
 func TestDialLenientWithTimeoutUsesDefaultForNonPositiveTimeout(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
 	defer stop()
 
@@ -46,7 +52,9 @@ func TestDialLenientWithTimeoutUsesDefaultForNonPositiveTimeout(t *testing.T) {
 }
 
 func TestDialLenientReturnsNilOnBadAddress(t *testing.T) {
-	conn := DialLenient(context.Background(), "127.0.0.1:1", nil)
+	t.Parallel()
+
+	conn := DialLenientWithTimeout(context.Background(), "127.0.0.1:1", 25*time.Millisecond, nil)
 	// DialLenient uses non-blocking dial, so it may still return a conn
 	// that will fail on first RPC. The health check may fail or not depending
 	// on timing. Either nil or a conn is acceptable since the dial is lenient.
@@ -56,6 +64,8 @@ func TestDialLenientReturnsNilOnBadAddress(t *testing.T) {
 }
 
 func TestDialLenientNilContextUsesBackground(t *testing.T) {
+	t.Parallel()
+
 	addr, _, stop := startHealthServer(t, grpc_health_v1.HealthCheckResponse_SERVING)
 	defer stop()
 
@@ -67,6 +77,8 @@ func TestDialLenientNilContextUsesBackground(t *testing.T) {
 }
 
 func TestDialLenientLogsOnFailure(t *testing.T) {
+	t.Parallel()
+
 	var logged bool
 	logf := func(format string, args ...any) {
 		logged = true
@@ -87,6 +99,8 @@ func TestDialLenientLogsOnFailure(t *testing.T) {
 }
 
 func TestLenientDialOptionsDoNotBlock(t *testing.T) {
+	t.Parallel()
+
 	opts := LenientDialOptions()
 	if len(opts) == 0 {
 		t.Fatal("expected at least one dial option")

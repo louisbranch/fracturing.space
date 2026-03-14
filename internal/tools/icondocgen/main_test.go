@@ -66,7 +66,12 @@ func TestRunResolvesRootFromWorkingDirectory(t *testing.T) {
 }
 
 func TestRunReturnsErrorWhenRootMissing(t *testing.T) {
-	root := t.TempDir()
+	root, err := os.MkdirTemp("", "icondocgen-root-missing-*")
+	if err != nil {
+		t.Fatalf("mkdir temp: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
+
 	oldWd, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("get wd: %v", err)

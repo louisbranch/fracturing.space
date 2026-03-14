@@ -88,6 +88,8 @@ func (s *testCampaignTurnStream) SendMsg(any) error { return nil }
 func (s *testCampaignTurnStream) RecvMsg(any) error { return nil }
 
 func TestStartCampaignAITurnSubscriptionWorkerRequiresDependencies(t *testing.T) {
+	t.Parallel()
+
 	if ensure, release, stop, done := startCampaignAITurnSubscriptionWorker(nil, &testInvocationClient{}, newRoomHub()); ensure != nil || release != nil || stop != nil || done != nil {
 		t.Fatal("expected nil worker hooks when context is nil")
 	}
@@ -100,6 +102,8 @@ func TestStartCampaignAITurnSubscriptionWorkerRequiresDependencies(t *testing.T)
 }
 
 func TestCampaignAITurnSubscriptionWorkerLifecycle(t *testing.T) {
+	t.Parallel()
+
 	ctx, rootCancel := context.WithCancel(context.Background())
 	defer rootCancel()
 
@@ -120,10 +124,7 @@ func TestCampaignAITurnSubscriptionWorkerLifecycle(t *testing.T) {
 
 	worker.ensureCampaignSubscription(" camp-1 ", "", "")
 	worker.ensureCampaignSubscription("camp-1", "", "")
-	time.Sleep(20 * time.Millisecond)
-	if client.subscribeCalls != 1 {
-		t.Fatalf("subscribe calls = %d, want %d", client.subscribeCalls, 1)
-	}
+	waitForCampaignTurnSubscribeCalls(t, client, 1, 200*time.Millisecond)
 	if len(worker.subscribers) != 1 {
 		t.Fatalf("subscriber count = %d, want %d", len(worker.subscribers), 1)
 	}
@@ -136,6 +137,8 @@ func TestCampaignAITurnSubscriptionWorkerLifecycle(t *testing.T) {
 }
 
 func TestConsumeCampaignAITurnUpdatesPublishesVisibleMessages(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -189,6 +192,8 @@ func TestConsumeCampaignAITurnUpdatesPublishesVisibleMessages(t *testing.T) {
 }
 
 func TestConsumeCampaignAITurnUpdatesRetriesOnSubscribeError(t *testing.T) {
+	setCampaignAITurnRetryDelay(t, 5*time.Millisecond)
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -215,6 +220,8 @@ func TestConsumeCampaignAITurnUpdatesRetriesOnSubscribeError(t *testing.T) {
 }
 
 func TestWaitCampaignAITurnSubscriptionRetry(t *testing.T) {
+	t.Parallel()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	if waitCampaignAITurnSubscriptionRetry(ctx, 50*time.Millisecond) {
@@ -224,4 +231,27 @@ func TestWaitCampaignAITurnSubscriptionRetry(t *testing.T) {
 	if !waitCampaignAITurnSubscriptionRetry(context.Background(), time.Millisecond) {
 		t.Fatal("expected retry wait to return true when timer elapses")
 	}
+}
+
+func setCampaignAITurnRetryDelay(t *testing.T, delay time.Duration) {
+	t.Helper()
+
+	previous := campaignAITurnSubscriptionRetryDelay
+	campaignAITurnSubscriptionRetryDelay = delay
+	t.Cleanup(func() {
+		campaignAITurnSubscriptionRetryDelay = previous
+	})
+}
+
+func waitForCampaignTurnSubscribeCalls(t *testing.T, client *testInvocationClient, want int, timeout time.Duration) {
+	t.Helper()
+
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if client.subscribeCalls >= want {
+			return
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	t.Fatalf("subscribe calls = %d, want at least %d", client.subscribeCalls, want)
 }

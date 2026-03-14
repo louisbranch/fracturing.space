@@ -22,6 +22,7 @@ type sceneApplication struct {
 
 type sceneApplicationStores struct {
 	Campaign storage.CampaignStore
+	Scene    storage.SceneStore
 }
 
 func newSceneApplication(service *SceneService) sceneApplication {
@@ -29,6 +30,7 @@ func newSceneApplication(service *SceneService) sceneApplication {
 		auth: service.stores,
 		stores: sceneApplicationStores{
 			Campaign: service.stores.Campaign,
+			Scene:    service.stores.Scene,
 		},
 		write:       service.stores.Write,
 		applier:     service.stores.Applier(),

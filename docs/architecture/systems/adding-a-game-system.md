@@ -138,7 +138,7 @@ After all steps:
 
 ```bash
 make test                       # Unit tests pass
-make integration                # Component seams work
+make runtime                    # Component seams work
 make game-architecture-check    # Parity validation passes
 ```
 

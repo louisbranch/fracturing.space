@@ -62,7 +62,7 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 		return nil, fmt.Errorf("dial gRPC: %w", err)
 	}
 
-	auth := NewMockAuth()
+	auth := newRunnerAuthProvider()
 	env := scenarioEnv{
 		campaignClient:    gamev1.NewCampaignServiceClient(conn),
 		participantClient: gamev1.NewParticipantServiceClient(conn),
@@ -96,7 +96,10 @@ func newRunnerWithDeps(cfg Config, deps runnerDeps) (*Runner, error) {
 		timeout = 10 * time.Second
 	}
 
-	userID := deps.auth.CreateUser("Scenario Runner")
+	userID, err := deps.auth.CreateUser("Scenario Runner")
+	if err != nil {
+		return nil, fmt.Errorf("create scenario auth user: %w", err)
+	}
 	if userID == "" {
 		return nil, errors.New("auth returned empty user id")
 	}

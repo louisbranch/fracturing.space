@@ -43,14 +43,25 @@ Example:
 ## Coverage Guardrails
 
 - When production behavior changes, run `make cover` and report notable impact.
+- Run `make cover-critical-domain` for game-domain behavior changes.
 - If coverage drops, explain whether risk changed and add targeted tests when needed.
 - If you introduce generated outputs, update `COVER_EXCLUDE_REGEX` in `Makefile` so coverage reflects hand-written code.
 
 ## Verification
 
-- Run the project verification commands in `AGENTS.md` after code changes.
+- Use the public verification surface from `AGENTS.md` after code changes:
+  - `make test`
+  - `make runtime-smoke` for fast runtime feedback
+  - `make runtime` before declaring runtime-impacting work done
+  - `make verify-pr` before opening or updating a PR
 - If a command cannot run locally, report why and what risk remains.
+
+## Removal Policy
+
+- Do not preserve tests that only assert a removed feature, path, or section stays gone.
+- If no durable invariant remains after a removal, delete the stale test.
+- If a negative assertion must remain, add an adjacent `Invariant:` rationale.
 
 ## Testability
 
-See [Testability Practices](../../../docs/architecture/testability.md) for constructor, dependency injection, and fake patterns.
+See `docs/architecture/policy/testing-policy.md` for constructor, dependency injection, and fake-oriented testability guidance.

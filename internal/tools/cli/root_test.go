@@ -27,9 +27,13 @@ func TestFindModuleRoot(t *testing.T) {
 }
 
 func TestFindModuleRootMissing(t *testing.T) {
-	root := t.TempDir()
+	root, err := os.MkdirTemp("", "find-module-root-missing-*")
+	if err != nil {
+		t.Fatalf("mkdir temp: %v", err)
+	}
+	t.Cleanup(func() { _ = os.RemoveAll(root) })
 
-	_, err := FindModuleRoot(root)
+	_, err = FindModuleRoot(root)
 	if err == nil {
 		t.Fatal("expected error when go.mod is missing")
 	}

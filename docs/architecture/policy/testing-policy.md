@@ -4,7 +4,7 @@ parent: "Policy and quality"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-10"
 ---
 
 # Testing policy
@@ -19,22 +19,38 @@ Canonical testing and coverage policy for production behavior changes.
 
 ## Required workflow for behavior changes
 
-1. Start with a failing test that captures the intended behavior.
-2. Implement the minimum change to pass.
-3. Refactor while keeping tests green.
+1. Start with a failing test when introducing or changing durable behavior.
+2. If behavior is intentionally removed, delete stale tests instead of preserving the historical path.
+3. Implement the minimum change to pass.
+4. Refactor while keeping tests green.
 
 Expected verification commands:
 
 - `make test`
-- `make integration`
+- `make runtime`
 - `make cover`
 
 For game-domain behavior changes, also run:
 
 - `make cover-critical-domain`
 
+For fast feedback during implementation, prefer:
+
+- `make runtime-smoke`
+
+Before opening or updating a PR, run:
+
+- `make verify-pr`
+
 If a change is intentionally test-neutral (docs-only or no-behavior refactor),
 call that out explicitly in the PR.
+
+## Assertion policy
+
+- Prefer positive assertions against durable contracts, outputs, and state transitions.
+- Use negative assertions only for explicit invariants such as security, privacy, protocol framing, or mutual exclusion.
+- Every negative assertion must include an adjacent `Invariant:` rationale explaining why the absence matters.
+- Tombstone tests that only memorialize removed behavior are discouraged. If no durable invariant remains, delete the stale test.
 
 ## CI non-regression gates
 

@@ -16,12 +16,12 @@ func NewMockAuth() *MockAuth {
 	return &MockAuth{}
 }
 
-// CreateUser returns a synthetic user id for the scenario run.
-func (m *MockAuth) CreateUser(_ string) string {
+// CreateUser returns a synthetic user id for standalone scenario runs.
+func (m *MockAuth) CreateUser(_ string) (string, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.next++
-	return fmt.Sprintf("user_mock_%d", m.next)
+	return fmt.Sprintf("user_mock_%d", m.next), nil
 }
 
 // IssueJoinGrant returns a synthetic join grant token.

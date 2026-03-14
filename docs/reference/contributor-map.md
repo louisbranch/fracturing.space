@@ -48,7 +48,7 @@ Use this map to find the best first edit point for common contribution types.
 Run targeted tests first, then full checks:
 
 - `go test ./internal/services/game/...`
-- `make integration`
+- `make runtime`
 - `make game-architecture-check` (when changing `internal/services/game/**`)
 - `make docs-check`
 

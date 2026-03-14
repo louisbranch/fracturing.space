@@ -36,9 +36,15 @@ Daggerheart reference implementation.
 
 5. **Run full verification**:
    ```bash
-   make test         # unit tests
-   make integration  # gRPC + MCP + storage + event-catalog-check
+   make test          # unit tests
+   make runtime       # full gRPC + MCP + scenario + storage verification
+   make verify-pr     # required before opening or updating a PR
    ```
+
+## Testing guardrails
+
+- Prefer contract tests for new system behavior; avoid preserving tests that only assert removed mechanics stay absent.
+- Negative assertions require an adjacent `Invariant:` rationale.
 
 ## Startup validator troubleshooting
 

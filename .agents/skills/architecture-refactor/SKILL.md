@@ -45,6 +45,7 @@ spreading, or compatibility glue is piling up.
    - Move behavior behind stable seams.
    - Add/adjust tests at those seams (unit/integration as appropriate).
    - Prefer durable assertions over implementation-detail checks.
+   - Delete stale tombstone tests when the old behavior is intentionally removed.
 
 5. Cut over callers
    - Switch callers to the new path in coherent slices.
@@ -73,7 +74,9 @@ spreading, or compatibility glue is piling up.
 
 ## Verification
 
-- Run `make test` and `make integration` after code changes.
+- Run `make test` and `make runtime` after code changes.
+- Use `make runtime-smoke` for faster runtime feedback during the cutover.
+- Run `make verify-pr` before opening or updating a PR.
 - Run `make cover` when production behavior changes and report notable impact.
 
 ## Completion Checklist

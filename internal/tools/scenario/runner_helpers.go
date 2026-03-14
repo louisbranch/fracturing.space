@@ -547,16 +547,56 @@ func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scen
 	if !hasDaggerheartProfileOverrides(args) {
 		return nil
 	}
+
+	profile := &daggerheartv1.DaggerheartProfile{
+		Level:           1,
+		HpMax:           6,
+		StressMax:       wrapperspb.Int32(6),
+		Evasion:         wrapperspb.Int32(10),
+		MajorThreshold:  wrapperspb.Int32(3),
+		SevereThreshold: wrapperspb.Int32(6),
+	}
+	if r.env.characterClient != nil {
+		response, err := r.env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: characterID,
+		})
+		if err != nil {
+			if status.Code(err) != codes.Unimplemented {
+				return fmt.Errorf("get character sheet: %w", err)
+			}
+		} else if current := response.GetProfile().GetDaggerheart(); current != nil {
+			profile.Level = current.GetLevel()
+			profile.HpMax = current.GetHpMax()
+			if current.GetStressMax() != nil {
+				profile.StressMax = wrapperspb.Int32(current.GetStressMax().GetValue())
+			}
+			if current.GetEvasion() != nil {
+				profile.Evasion = wrapperspb.Int32(current.GetEvasion().GetValue())
+			}
+			if current.GetMajorThreshold() != nil {
+				profile.MajorThreshold = wrapperspb.Int32(current.GetMajorThreshold().GetValue())
+			}
+			if current.GetSevereThreshold() != nil {
+				profile.SevereThreshold = wrapperspb.Int32(current.GetSevereThreshold().GetValue())
+			}
+			if current.GetArmorMax() != nil {
+				profile.ArmorMax = wrapperspb.Int32(current.GetArmorMax().GetValue())
+			}
+			if current.GetArmorScore() != nil {
+				profile.ArmorScore = wrapperspb.Int32(current.GetArmorScore().GetValue())
+			}
+		}
+	}
+
 	armorValue := optionalInt(args, "armor", 0)
 	armorMaxValue := optionalInt(args, "armor_max", 0)
-	profile := &daggerheartv1.DaggerheartProfile{
-		Level:           int32(optionalInt(args, "level", 1)),
-		HpMax:           int32(optionalInt(args, "hp_max", 6)),
-		StressMax:       wrapperspb.Int32(int32(optionalInt(args, "stress_max", 6))),
-		Evasion:         wrapperspb.Int32(int32(optionalInt(args, "evasion", 10))),
-		MajorThreshold:  wrapperspb.Int32(int32(optionalInt(args, "major_threshold", 3))),
-		SevereThreshold: wrapperspb.Int32(int32(optionalInt(args, "severe_threshold", 6))),
-	}
+	profile.Level = int32(optionalInt(args, "level", int(profile.GetLevel())))
+	profile.HpMax = int32(optionalInt(args, "hp_max", int(profile.GetHpMax())))
+	profile.StressMax = wrapperspb.Int32(int32(optionalInt(args, "stress_max", int(profile.GetStressMax().GetValue()))))
+	profile.Evasion = wrapperspb.Int32(int32(optionalInt(args, "evasion", int(profile.GetEvasion().GetValue()))))
+	profile.MajorThreshold = wrapperspb.Int32(int32(optionalInt(args, "major_threshold", int(profile.GetMajorThreshold().GetValue()))))
+	profile.SevereThreshold = wrapperspb.Int32(int32(optionalInt(args, "severe_threshold", int(profile.GetSevereThreshold().GetValue()))))
 	if armorMaxValue > 0 {
 		profile.ArmorMax = wrapperspb.Int32(int32(armorMaxValue))
 	} else if armorValue > 0 {
@@ -565,12 +605,6 @@ func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scen
 	if value := optionalInt(args, "armor_score", 0); value > 0 {
 		profile.ArmorScore = wrapperspb.Int32(int32(value))
 	}
-	applyTraitValue(profile, "agility", args)
-	applyTraitValue(profile, "strength", args)
-	applyTraitValue(profile, "finesse", args)
-	applyTraitValue(profile, "instinct", args)
-	applyTraitValue(profile, "presence", args)
-	applyTraitValue(profile, "knowledge", args)
 
 	_, err := r.env.characterClient.PatchCharacterProfile(ctx, &gamev1.PatchCharacterProfileRequest{
 		CampaignId:  state.campaignID,
@@ -599,12 +633,6 @@ func hasDaggerheartProfileOverrides(args map[string]any) bool {
 		"armor",
 		"armor_max",
 		"armor_score",
-		"agility",
-		"strength",
-		"finesse",
-		"instinct",
-		"presence",
-		"knowledge",
 	}
 	for _, key := range keys {
 		if _, ok := args[key]; ok {

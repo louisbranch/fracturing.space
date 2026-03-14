@@ -3,6 +3,7 @@ package game
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -201,6 +202,9 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	if err != nil {
 		return "", err
 	}
+	if a.stores.Scene == nil {
+		return "", grpcerror.Internal("transition scene source lookup", errors.New("scene store is not configured"))
+	}
 
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
@@ -216,6 +220,14 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 		return "", err
 	}
 	if err := validate.MaxLength(in.GetDescription(), "description", validate.MaxDescriptionLen); err != nil {
+		return "", err
+	}
+	sourceScene, err := a.stores.Scene.GetScene(ctx, campaignID, sourceSceneID)
+	if err != nil {
+		return "", err
+	}
+	sessionID, err := validate.RequiredID(sourceScene.SessionID, "session id")
+	if err != nil {
 		return "", err
 	}
 
@@ -246,6 +258,7 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 			Type:         commandTypeSceneTransition,
 			ActorType:    actorType,
 			ActorID:      actorID,
+			SessionID:    sessionID,
 			SceneID:      sourceSceneID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
 			InvocationID: grpcmeta.InvocationIDFromContext(ctx),
