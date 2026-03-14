@@ -85,7 +85,7 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if _, err := svc.CampaignParticipantEditor(ctx, "c1", "p1"); err != nil {
 		t.Fatalf("CampaignParticipantEditor() error = %v", err)
 	}
-	if _, err := svc.CampaignCharacters(ctx, "c1"); err != nil {
+	if _, err := svc.CampaignCharacters(ctx, "c1", CampaignCharactersReadOptions{}); err != nil {
 		t.Fatalf("CampaignCharacters() error = %v", err)
 	}
 	if _, err := svc.CampaignSessions(ctx, "c1"); err != nil {
@@ -179,7 +179,7 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	if _, err := gw.CampaignParticipant(ctx, "c1", "p1"); err != nil {
 		assertUnavailable(t, err, "CampaignParticipant")
 	}
-	if _, err := gw.CampaignCharacters(ctx, "c1"); err != nil {
+	if _, err := gw.CampaignCharacters(ctx, "c1", CampaignCharactersReadOptions{}); err != nil {
 		assertUnavailable(t, err, "CampaignCharacters")
 	}
 	if _, err := gw.CampaignSessions(ctx, "c1"); err != nil {

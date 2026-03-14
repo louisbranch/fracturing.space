@@ -112,6 +112,77 @@ func (s *Store) GetDaggerheartCharacterProfile(ctx context.Context, campaignID, 
 		return storage.DaggerheartCharacterProfile{}, fmt.Errorf("get daggerheart character profile: %w", err)
 	}
 
+	return dbDaggerheartCharacterProfileToDomain(row)
+}
+
+// ListDaggerheartCharacterProfiles retrieves a page of Daggerheart character profiles.
+func (s *Store) ListDaggerheartCharacterProfiles(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.DaggerheartCharacterProfilePage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.DaggerheartCharacterProfilePage{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("campaign id is required")
+	}
+	if pageSize <= 0 {
+		return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	var rows []db.DaggerheartCharacterProfile
+	var err error
+	if pageToken == "" {
+		rows, err = s.q.ListDaggerheartCharacterProfilesPagedFirst(ctx, db.ListDaggerheartCharacterProfilesPagedFirstParams{
+			CampaignID: campaignID,
+			Limit:      int64(pageSize + 1),
+		})
+	} else {
+		rows, err = s.q.ListDaggerheartCharacterProfilesPaged(ctx, db.ListDaggerheartCharacterProfilesPagedParams{
+			CampaignID:  campaignID,
+			CharacterID: pageToken,
+			Limit:       int64(pageSize + 1),
+		})
+	}
+	if err != nil {
+		return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("list daggerheart character profiles: %w", err)
+	}
+
+	profiles, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.DaggerheartCharacterProfile) string {
+		return row.CharacterID
+	}, dbDaggerheartCharacterProfileToDomain)
+	if err != nil {
+		return storage.DaggerheartCharacterProfilePage{}, err
+	}
+
+	return storage.DaggerheartCharacterProfilePage{
+		Profiles:      profiles,
+		NextPageToken: nextPageToken,
+	}, nil
+}
+
+// DeleteDaggerheartCharacterProfile deletes a Daggerheart character profile extension.
+func (s *Store) DeleteDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(characterID) == "" {
+		return fmt.Errorf("character id is required")
+	}
+
+	return s.q.DeleteDaggerheartCharacterProfile(ctx, db.DeleteDaggerheartCharacterProfileParams{
+		CampaignID:  campaignID,
+		CharacterID: characterID,
+	})
+}
+
+func dbDaggerheartCharacterProfileToDomain(row db.DaggerheartCharacterProfile) (storage.DaggerheartCharacterProfile, error) {
 	profile := storage.DaggerheartCharacterProfile{
 		CampaignID:           row.CampaignID,
 		CharacterID:          row.CharacterID,
@@ -158,27 +229,6 @@ func (s *Store) GetDaggerheartCharacterProfile(ctx context.Context, campaignID, 
 		}
 	}
 	return profile, nil
-}
-
-// DeleteDaggerheartCharacterProfile deletes a Daggerheart character profile extension.
-func (s *Store) DeleteDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	if strings.TrimSpace(campaignID) == "" {
-		return fmt.Errorf("campaign id is required")
-	}
-	if strings.TrimSpace(characterID) == "" {
-		return fmt.Errorf("character id is required")
-	}
-
-	return s.q.DeleteDaggerheartCharacterProfile(ctx, db.DeleteDaggerheartCharacterProfileParams{
-		CampaignID:  campaignID,
-		CharacterID: characterID,
-	})
 }
 
 // PutDaggerheartCharacterState persists a Daggerheart character state extension.

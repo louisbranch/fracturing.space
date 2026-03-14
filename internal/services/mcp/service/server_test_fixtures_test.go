@@ -272,6 +272,10 @@ func (f *fakeCharacterClient) ListCharacters(ctx context.Context, req *statev1.L
 	return f.listCharactersResponse, f.listCharactersErr
 }
 
+func (f *fakeCharacterClient) ListCharacterProfiles(_ context.Context, _ *statev1.ListCharacterProfilesRequest, _ ...grpc.CallOption) (*statev1.ListCharacterProfilesResponse, error) {
+	return &statev1.ListCharacterProfilesResponse{}, nil
+}
+
 // SetDefaultControl records the request and returns the configured response.
 func (f *fakeCharacterClient) SetDefaultControl(ctx context.Context, req *statev1.SetDefaultControlRequest, opts ...grpc.CallOption) (*statev1.SetDefaultControlResponse, error) {
 	f.lastSetDefaultControlRequest = req

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -15,7 +16,10 @@ func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campa
 	if !ok {
 		return
 	}
-	items, err := h.service.CampaignCharacters(ctx, campaignID)
+	items, err := h.service.CampaignCharacters(ctx, campaignID, campaignapp.CampaignCharactersReadOptions{
+		System: page.workspace.System,
+		Locale: page.locale,
+	})
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -99,7 +103,10 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 	if !ok {
 		return
 	}
-	characterItems, err := h.service.CampaignCharacters(ctx, campaignID)
+	characterItems, err := h.service.CampaignCharacters(ctx, campaignID, campaignapp.CampaignCharactersReadOptions{
+		System: page.workspace.System,
+		Locale: page.locale,
+	})
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

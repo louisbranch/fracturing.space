@@ -68,6 +68,18 @@ func (s *DaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, cam
 	return p, nil
 }
 
+func (s *DaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (storage.DaggerheartCharacterProfilePage, error) {
+	page := storage.DaggerheartCharacterProfilePage{
+		Profiles: make([]storage.DaggerheartCharacterProfile, 0),
+	}
+	for key, profile := range s.Profiles {
+		if len(key) > len(campaignID) && strings.HasPrefix(key, campaignID+":") {
+			page.Profiles = append(page.Profiles, profile)
+		}
+	}
+	return page, nil
+}
+
 func (s *DaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
 	delete(s.Profiles, campaignID+":"+characterID)
 	return nil

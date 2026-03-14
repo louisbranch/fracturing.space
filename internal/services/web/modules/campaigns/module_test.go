@@ -894,7 +894,7 @@ func (f fakeGateway) CampaignParticipant(context.Context, string, string) (campa
 	return campaignapp.CampaignParticipant{}, nil
 }
 
-func (f fakeGateway) CampaignCharacters(context.Context, string) ([]campaignapp.CampaignCharacter, error) {
+func (f fakeGateway) CampaignCharacters(context.Context, string, campaignapp.CampaignCharactersReadOptions) ([]campaignapp.CampaignCharacter, error) {
 	if f.charactersErr != nil {
 		return nil, f.charactersErr
 	}

@@ -60,6 +60,21 @@ func (m *memDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, 
 	return p, nil
 }
 
+func (m *memDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (storage.DaggerheartCharacterProfilePage, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	page := storage.DaggerheartCharacterProfilePage{
+		Profiles: make([]storage.DaggerheartCharacterProfile, 0),
+	}
+	prefix := campaignID + "/"
+	for key, profile := range m.profiles {
+		if len(key) > len(prefix) && key[:len(prefix)] == prefix {
+			page.Profiles = append(page.Profiles, profile)
+		}
+	}
+	return page, nil
+}
+
 func (m *memDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

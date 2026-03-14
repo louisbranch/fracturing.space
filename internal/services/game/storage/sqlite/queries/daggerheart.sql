@@ -6,6 +6,18 @@
 SELECT * FROM daggerheart_character_profiles
 WHERE campaign_id = ? AND character_id = ?;
 
+-- name: ListDaggerheartCharacterProfilesPaged :many
+SELECT * FROM daggerheart_character_profiles
+WHERE campaign_id = ? AND character_id > ?
+ORDER BY character_id
+LIMIT ?;
+
+-- name: ListDaggerheartCharacterProfilesPagedFirst :many
+SELECT * FROM daggerheart_character_profiles
+WHERE campaign_id = ?
+ORDER BY character_id
+LIMIT ?;
+
 -- name: PutDaggerheartCharacterProfile :exec
 INSERT INTO daggerheart_character_profiles (
     campaign_id, character_id, level, hp_max, stress_max, evasion, major_threshold, severe_threshold,

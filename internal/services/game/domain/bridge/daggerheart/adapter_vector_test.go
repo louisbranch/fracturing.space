@@ -331,6 +331,21 @@ func (m *parityDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Contex
 	return cloneCharacterProfile(profile), nil
 }
 
+func (m *parityDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (storage.DaggerheartCharacterProfilePage, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	page := storage.DaggerheartCharacterProfilePage{
+		Profiles: make([]storage.DaggerheartCharacterProfile, 0),
+	}
+	prefix := campaignID + ":"
+	for key, profile := range m.profiles {
+		if len(key) > len(prefix) && key[:len(prefix)] == prefix {
+			page.Profiles = append(page.Profiles, cloneCharacterProfile(profile))
+		}
+	}
+	return page, nil
+}
+
 func (m *parityDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

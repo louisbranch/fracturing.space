@@ -288,9 +288,25 @@ func mapCharactersView(items []campaignapp.CampaignCharacter) []webtemplates.Cam
 			AvatarURL:               c.AvatarURL,
 			CanEdit:                 c.CanEdit,
 			EditReasonCode:          c.EditReasonCode,
+			Daggerheart:             mapCharacterDaggerheartSummaryView(c.Daggerheart),
 		})
 	}
 	return result
+}
+
+// mapCharacterDaggerheartSummaryView copies the optional Daggerheart card
+// summary into the template-facing view model.
+func mapCharacterDaggerheartSummaryView(summary *campaignapp.CampaignCharacterDaggerheartSummary) *webtemplates.CampaignCharacterDaggerheartSummaryView {
+	if summary == nil {
+		return nil
+	}
+	return &webtemplates.CampaignCharacterDaggerheartSummaryView{
+		Level:         summary.Level,
+		ClassName:     summary.ClassName,
+		SubclassName:  summary.SubclassName,
+		AncestryName:  summary.AncestryName,
+		CommunityName: summary.CommunityName,
+	}
 }
 
 // mapCharacterEditorView converts domain character editor state to template view state.

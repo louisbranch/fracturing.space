@@ -391,6 +391,19 @@ templ CampaignDetailFragment(view CampaignDetailView, loc Localizer) {
 										<dt class="opacity-70">{ T(loc, "web.settings.user_profile.field_pronouns") }:</dt>
 									<dd>{ participantPronounsLabel(loc, character.Pronouns) }</dd>
 									</div>
+									if campaignCharacterHasDaggerheartSummary(character) {
+										<div class="flex items-center gap-2">
+											<dt class="sr-only">{ T(loc, "game.character_creation.label_level") }</dt>
+											<dd>
+												<span class="badge badge-outline badge-sm" data-campaign-character-daggerheart-level={ campaignCharacterDaggerheartLevelAttr(character) }>{ T(loc, "game.character_creation.label_level") } { character.Daggerheart.Level }</span>
+											</dd>
+											<dd class="truncate" data-campaign-character-daggerheart-class-summary={ character.Daggerheart.ClassName + " / " + character.Daggerheart.SubclassName }>{ character.Daggerheart.ClassName } / { character.Daggerheart.SubclassName }</dd>
+										</div>
+										<div class="flex gap-2">
+											<dt class="sr-only">Daggerheart ancestry and community</dt>
+											<dd data-campaign-character-daggerheart-heritage-summary={ character.Daggerheart.AncestryName + " / " + character.Daggerheart.CommunityName }>{ character.Daggerheart.AncestryName } / { character.Daggerheart.CommunityName }</dd>
+										</div>
+									}
 									if campaignCharacterAliases(character.Aliases) != "" {
 										<div class="flex gap-2">
 											<dt class="opacity-70">Aliases:</dt>

@@ -6,13 +6,13 @@ import (
 )
 
 // campaignCharacters centralizes this web behavior in one helper seam.
-func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]CampaignCharacter, error) {
+func (s service) campaignCharacters(ctx context.Context, campaignID string, options CampaignCharactersReadOptions) ([]CampaignCharacter, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return []CampaignCharacter{}, nil
 	}
 
-	characters, err := s.readGateway.CampaignCharacters(ctx, campaignID)
+	characters, err := s.readGateway.CampaignCharacters(ctx, campaignID, options)
 	if err != nil {
 		return nil, err
 	}
@@ -48,6 +48,7 @@ func (s service) campaignCharacters(ctx context.Context, campaignID string) ([]C
 			Pronouns:                strings.TrimSpace(character.Pronouns),
 			Aliases:                 append([]string(nil), character.Aliases...),
 			AvatarURL:               strings.TrimSpace(character.AvatarURL),
+			Daggerheart:             normalizeCampaignCharacterDaggerheartSummary(character.Daggerheart),
 		})
 	}
 
@@ -66,7 +67,7 @@ func (s service) campaignCharacter(ctx context.Context, campaignID string, chara
 		return CampaignCharacter{}, nil
 	}
 
-	characters, err := s.campaignCharacters(ctx, campaignID)
+	characters, err := s.campaignCharacters(ctx, campaignID, CampaignCharactersReadOptions{})
 	if err != nil {
 		return CampaignCharacter{}, err
 	}
@@ -137,4 +138,26 @@ func (s service) hydrateCharacterEditability(ctx context.Context, campaignID str
 			characters[characterIndex].CanEdit = true
 		}
 	})
+}
+
+// normalizeCampaignCharacterDaggerheartSummary drops partial Daggerheart card
+// summaries so transport and templates never render unresolved catalog IDs.
+func normalizeCampaignCharacterDaggerheartSummary(summary *CampaignCharacterDaggerheartSummary) *CampaignCharacterDaggerheartSummary {
+	if summary == nil {
+		return nil
+	}
+	if summary.Level <= 0 {
+		return nil
+	}
+	normalized := &CampaignCharacterDaggerheartSummary{
+		Level:         summary.Level,
+		ClassName:     strings.TrimSpace(summary.ClassName),
+		SubclassName:  strings.TrimSpace(summary.SubclassName),
+		AncestryName:  strings.TrimSpace(summary.AncestryName),
+		CommunityName: strings.TrimSpace(summary.CommunityName),
+	}
+	if normalized.ClassName == "" || normalized.SubclassName == "" || normalized.AncestryName == "" || normalized.CommunityName == "" {
+		return nil
+	}
+	return normalized
 }

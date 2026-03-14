@@ -1684,6 +1684,93 @@ func TestMountCampaignCharactersEmptyStateStillShowsCreateEntry(t *testing.T) {
 	}
 }
 
+func TestMountCampaignCharactersRendersDaggerheartSummaryRows(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		characters: []campaignapp.CampaignCharacter{{
+			ID:         "ch-a",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+			Daggerheart: &campaignapp.CampaignCharacterDaggerheartSummary{
+				Level:         2,
+				ClassName:     "Warrior",
+				SubclassName:  "Guardian",
+				AncestryName:  "Drakona",
+				CommunityName: "Wanderborne",
+			},
+		}},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-daggerheart-level="2"`,
+		`data-campaign-character-daggerheart-class-summary="Warrior / Guardian"`,
+		`data-campaign-character-daggerheart-heritage-summary="Drakona / Wanderborne"`,
+		`L 2`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing daggerheart summary marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignCharactersHidesIncompleteDaggerheartSummaryRows(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		characters: []campaignapp.CampaignCharacter{{
+			ID:         "ch-a",
+			Name:       "Aria",
+			Kind:       "PC",
+			Controller: "Ariadne",
+			Daggerheart: &campaignapp.CampaignCharacterDaggerheartSummary{
+				Level:         2,
+				ClassName:     "Warrior",
+				SubclassName:  "Guardian",
+				AncestryName:  "Drakona",
+				CommunityName: "",
+			},
+		}},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignCharacters("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-character-daggerheart-level=`,
+		`data-campaign-character-daggerheart-class-summary=`,
+		`data-campaign-character-daggerheart-heritage-summary=`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body should hide incomplete daggerheart summary marker %q: %q", marker, body)
+		}
+	}
+}
+
 func TestMountCampaignCharactersUsesViewCharacterCTAForEditableCharacters(t *testing.T) {
 	t.Parallel()
 

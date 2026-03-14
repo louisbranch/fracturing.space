@@ -200,7 +200,7 @@ func (f *campaignGatewayStub) CampaignParticipant(_ context.Context, _ string, p
 	return CampaignParticipant{ID: strings.TrimSpace(participantID)}, nil
 }
 
-func (f *campaignGatewayStub) CampaignCharacters(context.Context, string) ([]CampaignCharacter, error) {
+func (f *campaignGatewayStub) CampaignCharacters(context.Context, string, CampaignCharactersReadOptions) ([]CampaignCharacter, error) {
 	if f.campaignCharactersErr != nil {
 		return nil, f.campaignCharactersErr
 	}

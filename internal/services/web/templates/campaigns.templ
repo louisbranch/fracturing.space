@@ -4,6 +4,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	"strconv"
 	"strings"
 )
 
@@ -151,6 +152,15 @@ type CampaignCharacterView struct {
 	AvatarURL               string
 	CanEdit                 bool
 	EditReasonCode          string
+	Daggerheart             *CampaignCharacterDaggerheartSummaryView
+}
+
+type CampaignCharacterDaggerheartSummaryView struct {
+	Level         int32
+	ClassName     string
+	SubclassName  string
+	AncestryName  string
+	CommunityName string
 }
 
 type CampaignCharacterEditorView struct {
@@ -225,6 +235,24 @@ func campaignCharacterCanEditAttr(character CampaignCharacterView) string {
 		return "true"
 	}
 	return "false"
+}
+
+func campaignCharacterHasDaggerheartSummary(character CampaignCharacterView) bool {
+	if character.Daggerheart == nil {
+		return false
+	}
+	return strings.TrimSpace(character.Daggerheart.ClassName) != "" &&
+		strings.TrimSpace(character.Daggerheart.SubclassName) != "" &&
+		strings.TrimSpace(character.Daggerheart.AncestryName) != "" &&
+		strings.TrimSpace(character.Daggerheart.CommunityName) != "" &&
+		character.Daggerheart.Level > 0
+}
+
+func campaignCharacterDaggerheartLevelAttr(character CampaignCharacterView) string {
+	if !campaignCharacterHasDaggerheartSummary(character) {
+		return ""
+	}
+	return strconv.FormatInt(int64(character.Daggerheart.Level), 10)
 }
 
 func campaignCharacterControlOptionLabel(loc Localizer, option CampaignCharacterControlOptionView) string {

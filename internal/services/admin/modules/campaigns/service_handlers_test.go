@@ -155,6 +155,10 @@ func (c *fakeCharacterClient) ListCharacters(context.Context, *statev1.ListChara
 	return c.listResp, nil
 }
 
+func (c *fakeCharacterClient) ListCharacterProfiles(context.Context, *statev1.ListCharacterProfilesRequest, ...grpc.CallOption) (*statev1.ListCharacterProfilesResponse, error) {
+	return &statev1.ListCharacterProfilesResponse{}, nil
+}
+
 func (c *fakeCharacterClient) GetCharacterSheet(context.Context, *statev1.GetCharacterSheetRequest, ...grpc.CallOption) (*statev1.GetCharacterSheetResponse, error) {
 	return c.sheetResp, nil
 }

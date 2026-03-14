@@ -59,6 +59,9 @@ service CharacterService {
   // List characters for a campaign.
   rpc ListCharacters(ListCharactersRequest) returns (ListCharactersResponse);
 
+  // List character profiles for a campaign.
+  rpc ListCharacterProfiles(ListCharacterProfilesRequest) returns (ListCharacterProfilesResponse);
+
   // Assign a campaign-scoped default controller for a character.
   rpc SetDefaultControl(SetDefaultControlRequest) returns (SetDefaultControlResponse);
 
@@ -182,6 +185,23 @@ message ListCharactersRequest {
 
 message ListCharactersResponse {
   repeated Character characters = 1;
+  string next_page_token = 2;
+}
+
+message ListCharacterProfilesRequest {
+  // The campaign ID to list character profiles for.
+  string campaign_id = 1;
+
+  // The maximum number of character profiles to return.
+  // If zero, the server defaults to 10. The server clamps values above 10 to 10.
+  int32 page_size = 2;
+
+  // A page token received from a prior ListCharacterProfilesResponse.
+  string page_token = 3;
+}
+
+message ListCharacterProfilesResponse {
+  repeated CharacterProfile profiles = 1;
   string next_page_token = 2;
 }
 

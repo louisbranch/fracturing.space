@@ -17,8 +17,16 @@ type fakeDaggerheartStore struct {
 	storage.DaggerheartStore
 }
 
+func (fakeDaggerheartStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (storage.DaggerheartCharacterProfilePage, error) {
+	return storage.DaggerheartCharacterProfilePage{}, nil
+}
+
 type anotherFakeDaggerheartStore struct {
 	storage.DaggerheartStore
+}
+
+func (anotherFakeDaggerheartStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (storage.DaggerheartCharacterProfilePage, error) {
+	return storage.DaggerheartCharacterProfilePage{}, nil
 }
 
 func TestRebindAdapterRegistrySwapsStores(t *testing.T) {

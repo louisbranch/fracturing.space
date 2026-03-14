@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -473,6 +474,39 @@ func (s *fakeDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context,
 		return storage.DaggerheartCharacterProfile{}, storage.ErrNotFound
 	}
 	return p, nil
+}
+
+func (s *fakeDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.DaggerheartCharacterProfilePage, error) {
+	if s.getErr != nil {
+		return storage.DaggerheartCharacterProfilePage{}, s.getErr
+	}
+	if pageSize <= 0 {
+		return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("page size must be greater than zero")
+	}
+	byID, ok := s.profiles[campaignID]
+	if !ok {
+		return storage.DaggerheartCharacterProfilePage{}, nil
+	}
+	ids := make([]string, 0, len(byID))
+	for characterID := range byID {
+		if pageToken != "" && characterID <= pageToken {
+			continue
+		}
+		ids = append(ids, characterID)
+	}
+	sort.Strings(ids)
+
+	page := storage.DaggerheartCharacterProfilePage{
+		Profiles: make([]storage.DaggerheartCharacterProfile, 0, min(pageSize, len(ids))),
+	}
+	for index, characterID := range ids {
+		if index >= pageSize {
+			page.NextPageToken = ids[pageSize-1]
+			break
+		}
+		page.Profiles = append(page.Profiles, byID[characterID])
+	}
+	return page, nil
 }
 
 func (s *fakeDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) error {

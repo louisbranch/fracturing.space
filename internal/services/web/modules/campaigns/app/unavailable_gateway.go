@@ -51,7 +51,7 @@ func (unavailableGateway) CampaignParticipant(context.Context, string, string) (
 }
 
 // CampaignCharacters centralizes this web behavior in one helper seam.
-func (unavailableGateway) CampaignCharacters(context.Context, string) ([]CampaignCharacter, error) {
+func (unavailableGateway) CampaignCharacters(context.Context, string, CampaignCharactersReadOptions) ([]CampaignCharacter, error) {
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
