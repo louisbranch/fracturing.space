@@ -14,17 +14,18 @@ import (
 
 // Detail view markers. The template uses these to select which section to render.
 const (
-	markerOverview        = "campaign-overview"
-	markerCampaignEdit    = "campaign-edit"
-	markerSessions        = "campaign-sessions"
-	markerSessionDetail   = "campaign-session-detail"
-	markerParticipants    = "campaign-participants"
-	markerParticipantEdit = "campaign-participant-edit"
-	markerCharacters      = "campaign-characters"
-	markerCharacterCreate = "campaign-character-create"
-	markerCharacterEdit   = "campaign-character-edit"
-	markerCharacterDetail = "campaign-character-detail"
-	markerInvites         = "campaign-invites"
+	markerOverview          = "campaign-overview"
+	markerCampaignEdit      = "campaign-edit"
+	markerSessions          = "campaign-sessions"
+	markerSessionDetail     = "campaign-session-detail"
+	markerParticipants      = "campaign-participants"
+	markerParticipantCreate = "campaign-participant-create"
+	markerParticipantEdit   = "campaign-participant-edit"
+	markerCharacters        = "campaign-characters"
+	markerCharacterCreate   = "campaign-character-create"
+	markerCharacterEdit     = "campaign-character-edit"
+	markerCharacterDetail   = "campaign-character-detail"
+	markerInvites           = "campaign-invites"
 )
 
 // --- Breadcrumbs and layout ---

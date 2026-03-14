@@ -54,6 +54,29 @@ func (s service) campaignParticipant(ctx context.Context, campaignID string, par
 	return normalized, nil
 }
 
+// campaignParticipantCreator centralizes this web behavior in one helper seam.
+func (s service) campaignParticipantCreator(ctx context.Context, campaignID string) (CampaignParticipantCreator, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	if campaignID == "" {
+		return CampaignParticipantCreator{}, nil
+	}
+	if err := s.requireManageParticipants(ctx, campaignID); err != nil {
+		return CampaignParticipantCreator{}, err
+	}
+
+	workspace, err := s.campaignWorkspace(ctx, campaignID)
+	if err != nil {
+		return CampaignParticipantCreator{}, err
+	}
+
+	return CampaignParticipantCreator{
+		Role:           participantRolePlayerValue,
+		CampaignAccess: participantAccessMember,
+		AllowGMRole:    !campaignDisallowsHumanGMParticipants(workspace.GMMode),
+		AccessOptions:  s.participantAccessOptions(ctx, campaignID, "", ""),
+	}, nil
+}
+
 // campaignParticipantEditor centralizes this web behavior in one helper seam.
 func (s service) campaignParticipantEditor(ctx context.Context, campaignID string, participantID string) (CampaignParticipantEditor, error) {
 	campaignID = strings.TrimSpace(campaignID)
@@ -63,6 +86,10 @@ func (s service) campaignParticipantEditor(ctx context.Context, campaignID strin
 	}
 
 	participant, err := s.campaignParticipant(ctx, campaignID, participantID)
+	if err != nil {
+		return CampaignParticipantEditor{}, err
+	}
+	workspace, err := s.campaignWorkspace(ctx, campaignID)
 	if err != nil {
 		return CampaignParticipantEditor{}, err
 	}
@@ -95,6 +122,7 @@ func (s service) campaignParticipantEditor(ctx context.Context, campaignID strin
 	}
 	editor := CampaignParticipantEditor{
 		Participant:    participant,
+		AllowGMRole:    !campaignDisallowsHumanGMParticipants(workspace.GMMode),
 		AccessOptions:  options,
 		AccessReadOnly: accessReadOnly,
 	}

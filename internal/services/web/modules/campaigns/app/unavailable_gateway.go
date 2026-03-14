@@ -135,6 +135,11 @@ func (unavailableGateway) ReleaseCharacterControl(context.Context, string, strin
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
+// CreateParticipant executes package-scoped creation behavior for this flow.
+func (unavailableGateway) CreateParticipant(context.Context, string, CreateParticipantInput) (CreateParticipantResult, error) {
+	return CreateParticipantResult{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
+}
+
 // UpdateParticipant applies this package workflow transition.
 func (unavailableGateway) UpdateParticipant(context.Context, string, UpdateParticipantInput) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")

@@ -312,6 +312,51 @@ func TestCampaignParticipantMapsSingleResponse(t *testing.T) {
 	}
 }
 
+func TestCreateParticipantMapsInputAndErrors(t *testing.T) {
+	t.Parallel()
+
+	participantClient := &contractParticipantClient{}
+	gateway := GRPCGateway{ParticipantClient: participantClient}
+
+	created, err := gateway.CreateParticipant(context.Background(), "c1", campaignapp.CreateParticipantInput{
+		Name:           "Pending Seat",
+		Role:           "player",
+		CampaignAccess: "manager",
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant() error = %v", err)
+	}
+	if created.ParticipantID != "participant-created" {
+		t.Fatalf("created.ParticipantID = %q, want %q", created.ParticipantID, "participant-created")
+	}
+	if participantClient.createReq == nil {
+		t.Fatalf("expected CreateParticipant request")
+	}
+	if participantClient.createReq.GetCampaignId() != "c1" {
+		t.Fatalf("create campaign id = %q, want %q", participantClient.createReq.GetCampaignId(), "c1")
+	}
+	if participantClient.createReq.GetController() != statev1.Controller_CONTROLLER_HUMAN {
+		t.Fatalf("create controller = %v, want %v", participantClient.createReq.GetController(), statev1.Controller_CONTROLLER_HUMAN)
+	}
+	if participantClient.createReq.GetCampaignAccess() != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Fatalf("create access = %v, want %v", participantClient.createReq.GetCampaignAccess(), statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
+	}
+
+	if _, err := gateway.CreateParticipant(context.Background(), "c1", campaignapp.CreateParticipantInput{Name: "Pending Seat", Role: "bad", CampaignAccess: "member"}); err == nil {
+		t.Fatalf("expected role validation error")
+	}
+	if _, err := gateway.CreateParticipant(context.Background(), "c1", campaignapp.CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "bad"}); err == nil {
+		t.Fatalf("expected access validation error")
+	}
+
+	participantClient.createErr = status.Error(codes.InvalidArgument, "invalid create")
+	if _, err := gateway.CreateParticipant(context.Background(), "c1", campaignapp.CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"}); err == nil {
+		t.Fatalf("expected create transport error")
+	} else if got := apperrors.LocalizationKey(err); got != "error.web.message.failed_to_create_participant" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.failed_to_create_participant")
+	}
+}
+
 func TestUpdateParticipantMapsInputAndErrors(t *testing.T) {
 	t.Parallel()
 
@@ -1013,6 +1058,8 @@ type contractParticipantClient struct {
 	listErr   error
 	getResp   *statev1.GetParticipantResponse
 	getErr    error
+	createReq *statev1.CreateParticipantRequest
+	createErr error
 	updateReq *statev1.UpdateParticipantRequest
 	updateErr error
 }
@@ -1052,6 +1099,14 @@ func (c *contractParticipantClient) GetParticipant(context.Context, *statev1.Get
 		return c.getResp, nil
 	}
 	return &statev1.GetParticipantResponse{}, nil
+}
+
+func (c *contractParticipantClient) CreateParticipant(_ context.Context, req *statev1.CreateParticipantRequest, _ ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
+	c.createReq = req
+	if c.createErr != nil {
+		return nil, c.createErr
+	}
+	return &statev1.CreateParticipantResponse{Participant: &statev1.Participant{Id: "participant-created"}}, nil
 }
 
 func (c *contractParticipantClient) UpdateParticipant(_ context.Context, req *statev1.UpdateParticipantRequest, _ ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {

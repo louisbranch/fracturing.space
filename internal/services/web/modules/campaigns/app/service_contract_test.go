@@ -91,6 +91,9 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if _, err := svc.CampaignParticipants(ctx, "c1"); err != nil {
 		t.Fatalf("CampaignParticipants() error = %v", err)
 	}
+	if _, err := svc.CampaignParticipantCreator(ctx, "c1"); err != nil {
+		t.Fatalf("CampaignParticipantCreator() error = %v", err)
+	}
 	if _, err := svc.CampaignParticipantEditor(ctx, "c1", "p1"); err != nil {
 		t.Fatalf("CampaignParticipantEditor() error = %v", err)
 	}
@@ -127,6 +130,9 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	}
 	if _, err := svc.CreateCharacter(ctx, "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC}); err != nil {
 		t.Fatalf("CreateCharacter() error = %v", err)
+	}
+	if _, err := svc.CreateParticipant(ctx, "c1", CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"}); err != nil {
+		t.Fatalf("CreateParticipant() error = %v", err)
 	}
 	if err := svc.UpdateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p1", Name: "Owner Prime", Role: "gm", Pronouns: "they/them"}); err != nil {
 		t.Fatalf("UpdateParticipant() error = %v", err)
@@ -213,6 +219,9 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 		assertUnavailable(t, err, "CreateCharacter")
 	}
 	assertUnavailable(t, gw.UpdateCharacter(ctx, "c1", "char-1", UpdateCharacterInput{}), "UpdateCharacter")
+	if _, err := gw.CreateParticipant(ctx, "c1", CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"}); err != nil {
+		assertUnavailable(t, err, "CreateParticipant")
+	}
 	assertUnavailable(t, gw.UpdateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p1"}), "UpdateParticipant")
 	assertUnavailable(t, gw.CreateInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p1", RecipientUsername: "alice"}), "CreateInvite")
 	assertUnavailable(t, gw.RevokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}), "RevokeInvite")

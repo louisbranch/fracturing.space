@@ -34,6 +34,7 @@ type campaignMutationGateway interface {
 	SetCharacterController(context.Context, string, string, string) error
 	ClaimCharacterControl(context.Context, string, string) error
 	ReleaseCharacterControl(context.Context, string, string) error
+	CreateParticipant(context.Context, string, CreateParticipantInput) (CreateParticipantResult, error)
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	StartSession(context.Context, string, StartSessionInput) error
 	EndSession(context.Context, string, EndSessionInput) error
@@ -56,6 +57,7 @@ type Service interface {
 	CampaignName(context.Context, string) string
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)
+	CampaignParticipantCreator(context.Context, string) (CampaignParticipantCreator, error)
 	CampaignParticipantEditor(context.Context, string, string) (CampaignParticipantEditor, error)
 	CampaignAIBindingEditor(context.Context, string, string) (CampaignAIBindingEditor, error)
 	CampaignCharacters(context.Context, string) ([]CampaignCharacter, error)
@@ -78,6 +80,7 @@ type Service interface {
 	SetCharacterController(context.Context, string, string, string) error
 	ClaimCharacterControl(context.Context, string, string, string) error
 	ReleaseCharacterControl(context.Context, string, string, string) error
+	CreateParticipant(context.Context, string, CreateParticipantInput) (CreateParticipantResult, error)
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	CreateInvite(context.Context, string, CreateInviteInput) error
 	RevokeInvite(context.Context, string, RevokeInviteInput) error

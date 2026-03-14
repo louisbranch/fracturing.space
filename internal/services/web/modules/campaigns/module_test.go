@@ -435,6 +435,10 @@ func TestGRPCGatewayMutationMethodsReturnUnavailable(t *testing.T) {
 			_, err := g.CreateCharacter(context.Background(), "c1", CreateCharacterInput{Name: "Hero", Kind: CharacterKindPC})
 			return err
 		}()},
+		{name: "create participant", err: func() error {
+			_, err := g.CreateParticipant(context.Background(), "c1", CreateParticipantInput{Name: "Pending Seat", Role: "player", CampaignAccess: "member"})
+			return err
+		}()},
 		{name: "apply character creation step", err: g.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", &CampaignCharacterCreationStepInput{Details: &CampaignCharacterCreationStepDetails{}})},
 		{name: "reset character creation workflow", err: g.ResetCharacterCreationWorkflow(context.Background(), "c1", "char-1")},
 		{name: "create invite", err: g.CreateInvite(context.Background(), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})},
@@ -670,6 +674,7 @@ func defaultTestWorkflows() map[GameSystem]CharacterCreationWorkflow {
 type fakeGateway struct {
 	items                             []CampaignSummary
 	workspaceSystem                   string
+	workspaceGMMode                   string
 	workspaceStatus                   string
 	workspaceLocale                   string
 	workspaceIntent                   string
@@ -709,6 +714,9 @@ type fakeGateway struct {
 	releaseCharacterControlErr        error
 	updateCampaignErr                 error
 	updateCampaignAIBindingErr        error
+	createParticipantErr              error
+	createdParticipantID              string
+	lastCreateParticipantInput        CreateParticipantInput
 	updateParticipantErr              error
 	err                               error
 	createErr                         error
@@ -767,6 +775,10 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 		if system == "" {
 			system = "Daggerheart"
 		}
+		gmMode := strings.TrimSpace(f.workspaceGMMode)
+		if gmMode == "" {
+			gmMode = "Human"
+		}
 		status := strings.TrimSpace(f.workspaceStatus)
 		if status == "" {
 			status = "Active"
@@ -788,7 +800,7 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (Ca
 			Name:             name,
 			Theme:            strings.TrimSpace(item.Theme),
 			System:           system,
-			GMMode:           "Human",
+			GMMode:           gmMode,
 			AIAgentID:        strings.TrimSpace(f.workspaceAIAgentID),
 			Status:           status,
 			Locale:           locale,
@@ -911,6 +923,17 @@ func (f fakeGateway) CreateCharacter(context.Context, string, CreateCharacterInp
 		createdCharacterID = "char-created"
 	}
 	return CreateCharacterResult{CharacterID: createdCharacterID}, nil
+}
+func (f fakeGateway) CreateParticipant(_ context.Context, _ string, input CreateParticipantInput) (CreateParticipantResult, error) {
+	if f.createParticipantErr != nil {
+		return CreateParticipantResult{}, f.createParticipantErr
+	}
+	f.lastCreateParticipantInput = input
+	createdParticipantID := strings.TrimSpace(f.createdParticipantID)
+	if createdParticipantID == "" {
+		createdParticipantID = "participant-created"
+	}
+	return CreateParticipantResult{ParticipantID: createdParticipantID}, nil
 }
 func (fakeGateway) UpdateCharacter(context.Context, string, string, UpdateCharacterInput) error {
 	return nil

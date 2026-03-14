@@ -52,9 +52,19 @@ type CampaignParticipantAccessOption struct {
 // CampaignParticipantEditor stores participant edit page data.
 type CampaignParticipantEditor struct {
 	Participant    CampaignParticipant               `json:"participant"`
+	AllowGMRole    bool                              `json:"allowGMRole"`
 	RoleReadOnly   bool                              `json:"roleReadOnly"`
 	AccessOptions  []CampaignParticipantAccessOption `json:"accessOptions"`
 	AccessReadOnly bool                              `json:"accessReadOnly"`
+}
+
+// CampaignParticipantCreator stores participant create page data.
+type CampaignParticipantCreator struct {
+	Name           string                            `json:"name"`
+	Role           string                            `json:"role"`
+	CampaignAccess string                            `json:"campaignAccess"`
+	AllowGMRole    bool                              `json:"allowGMRole"`
+	AccessOptions  []CampaignParticipantAccessOption `json:"accessOptions"`
 }
 
 // CampaignAIAgentOption stores one AI binding option state.

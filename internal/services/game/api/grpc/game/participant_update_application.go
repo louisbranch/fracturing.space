@@ -140,6 +140,9 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		current.Pronouns = sharedpronouns.FromProto(pronouns)
 		fields["pronouns"] = current.Pronouns
 	}
+	if disallowsHumanGMForCampaignGMMode(campaignRecord.GmMode, current.Role, current.Controller) {
+		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "ai gm campaigns cannot assign human gm participants")
+	}
 	if len(fields) == 0 {
 		return storage.ParticipantRecord{}, status.Error(codes.InvalidArgument, "at least one field must be provided")
 	}

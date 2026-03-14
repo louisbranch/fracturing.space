@@ -38,6 +38,7 @@ type CampaignDetailView struct {
 	CanManageInvites         bool
 	CanCreateCharacter       bool
 	Participants             []CampaignParticipantView
+	ParticipantCreator       CampaignParticipantCreatorView
 	ParticipantEditor        CampaignParticipantEditorView
 	AIBindingEditor          CampaignAIBindingEditorView
 	Characters               []CampaignCharacterView
@@ -97,9 +98,18 @@ type CampaignParticipantEditorView struct {
 	Controller     string
 	Pronouns       string
 	CampaignAccess string
+	AllowGMRole    bool
 	RoleReadOnly   bool
 	AccessOptions  []CampaignParticipantAccessOptionView
 	AccessReadOnly bool
+}
+
+type CampaignParticipantCreatorView struct {
+	Name           string
+	Role           string
+	CampaignAccess string
+	AllowGMRole    bool
+	AccessOptions  []CampaignParticipantAccessOptionView
 }
 
 type CampaignCharacterView struct {
