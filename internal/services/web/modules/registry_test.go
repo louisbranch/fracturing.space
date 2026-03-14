@@ -195,7 +195,7 @@ func (s *stubStatusClient) GetSystemStatus(_ context.Context, _ *statusv1.GetSys
 func TestStatusHealthProviderNilClient(t *testing.T) {
 	t.Parallel()
 
-	provider := dashboard.StatusHealthProvider(nil)
+	provider := dashboard.StatusHealthProvider(nil, nil)
 	if provider != nil {
 		t.Fatal("expected nil provider for nil client")
 	}
@@ -220,7 +220,7 @@ func TestStatusHealthProviderReturnsEntries(t *testing.T) {
 		},
 	}
 
-	provider := dashboard.StatusHealthProvider(client)
+	provider := dashboard.StatusHealthProvider(client, nil)
 	if provider == nil {
 		t.Fatal("expected non-nil provider")
 	}
@@ -250,7 +250,7 @@ func TestStatusHealthProviderErrorReturnsNil(t *testing.T) {
 	client := &stubStatusClient{
 		err: context.DeadlineExceeded,
 	}
-	provider := dashboard.StatusHealthProvider(client)
+	provider := dashboard.StatusHealthProvider(client, nil)
 	entries := provider(context.Background())
 	if entries != nil {
 		t.Fatalf("expected nil entries on error, got %d", len(entries))
@@ -263,7 +263,7 @@ func TestStatusHealthProviderEmptyServicesReturnsNil(t *testing.T) {
 	client := &stubStatusClient{
 		resp: &statusv1.GetSystemStatusResponse{},
 	}
-	provider := dashboard.StatusHealthProvider(client)
+	provider := dashboard.StatusHealthProvider(client, nil)
 	entries := provider(context.Background())
 	if entries != nil {
 		t.Fatalf("expected nil entries for empty services, got %d", len(entries))

@@ -21,8 +21,8 @@ type DashboardSync interface {
 type handlers struct {
 	modulehandler.Base
 	service          campaignapp.Service
+	creation         campaignworkflow.Service
 	chatFallbackPort string
-	workflows        campaignworkflow.Registry
 	nowFunc          func() time.Time
 	sync             DashboardSync
 }
@@ -36,7 +36,7 @@ func newHandlers(
 	workflows ...campaignworkflow.Registry,
 ) handlers {
 	if s == nil {
-		s = campaignapp.NewService(nil)
+		s = campaignapp.NewService(campaignapp.ServiceConfig{})
 	}
 	var workflowMap campaignworkflow.Registry
 	if len(workflows) > 0 {
@@ -45,8 +45,8 @@ func newHandlers(
 	return handlers{
 		Base:             base,
 		service:          s,
+		creation:         campaignworkflow.NewService(s, workflowMap),
 		chatFallbackPort: chatFallbackPort,
-		workflows:        workflowMap,
 		nowFunc:          time.Now,
 		sync:             sync,
 	}
@@ -58,16 +58,4 @@ func (h handlers) now() time.Time {
 		return h.nowFunc()
 	}
 	return time.Now()
-}
-
-// resolveWorkflow resolves request-scoped values needed by this package.
-func (h handlers) resolveWorkflow(system string) campaignworkflow.CharacterCreation {
-	if h.workflows == nil {
-		return nil
-	}
-	resolvedSystem, ok := parseAppGameSystem(system)
-	if !ok {
-		return nil
-	}
-	return h.workflows[resolvedSystem]
 }

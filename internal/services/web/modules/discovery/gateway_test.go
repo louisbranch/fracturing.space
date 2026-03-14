@@ -6,16 +6,17 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-// stubGateway implements Gateway for tests that only need a healthy module.
+// stubGateway implements discoveryapp.Gateway for tests that only need a healthy module.
 type stubGateway struct{}
 
-func (stubGateway) ListStarterEntries(context.Context) ([]StarterEntry, error) {
+func (stubGateway) ListStarterEntries(context.Context) ([]discoveryapp.StarterEntry, error) {
 	return nil, nil
 }
 

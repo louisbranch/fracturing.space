@@ -1,5 +1,5 @@
-// Package daggerheart implements the Daggerheart-specific character creation
-// workflow behind the CharacterCreationWorkflow interface.
+// Package daggerheart implements the Daggerheart-specific character-creation
+// workflow behind the workflow.CharacterCreation contract.
 package daggerheart
 
 import (

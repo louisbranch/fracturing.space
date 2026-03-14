@@ -17,20 +17,14 @@ type DiscoveryClient interface {
 	ListDiscoveryEntries(ctx context.Context, in *discoveryv1.ListDiscoveryEntriesRequest, opts ...grpc.CallOption) (*discoveryv1.ListDiscoveryEntriesResponse, error)
 }
 
-// StarterEntry is the transport-facing alias for discovery page entries.
-type StarterEntry = discoveryapp.StarterEntry
-
-// Gateway abstracts discovery-entry data access for the discovery module.
-type Gateway = discoveryapp.Gateway
-
-// GRPCGateway implements Gateway backed by the discovery gRPC service.
+// GRPCGateway implements discoveryapp.Gateway backed by the discovery gRPC service.
 type GRPCGateway struct {
 	client DiscoveryClient
 }
 
-// NewGRPCGateway returns a Gateway backed by the given discovery client.
+// NewGRPCGateway returns a discoveryapp.Gateway backed by the given discovery client.
 // Returns an unavailable gateway when client is nil (fail-closed).
-func NewGRPCGateway(client DiscoveryClient) Gateway {
+func NewGRPCGateway(client DiscoveryClient) discoveryapp.Gateway {
 	if client == nil {
 		return discoveryapp.NewUnavailableGateway()
 	}
@@ -38,12 +32,12 @@ func NewGRPCGateway(client DiscoveryClient) Gateway {
 }
 
 // IsGatewayHealthy reports whether a discovery gateway is configured and usable.
-func IsGatewayHealthy(gw Gateway) bool {
+func IsGatewayHealthy(gw discoveryapp.Gateway) bool {
 	return discoveryapp.IsGatewayHealthy(gw)
 }
 
 // ListStarterEntries fetches discovery entries and filters to starter intent.
-func (g GRPCGateway) ListStarterEntries(ctx context.Context) ([]StarterEntry, error) {
+func (g GRPCGateway) ListStarterEntries(ctx context.Context) ([]discoveryapp.StarterEntry, error) {
 	resp, err := g.client.ListDiscoveryEntries(ctx, &discoveryv1.ListDiscoveryEntriesRequest{
 		PageSize: 50,
 		Kind:     discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
@@ -58,7 +52,7 @@ func (g GRPCGateway) ListStarterEntries(ctx context.Context) ([]StarterEntry, er
 		return nil, nil
 	}
 
-	var results []StarterEntry
+	var results []discoveryapp.StarterEntry
 	for _, entry := range resp.GetEntries() {
 		if entry.GetIntent() != discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_STARTER {
 			continue
@@ -69,12 +63,12 @@ func (g GRPCGateway) ListStarterEntries(ctx context.Context) ([]StarterEntry, er
 }
 
 // mapProtoToStarterEntry converts a proto DiscoveryEntry to a presentation-ready StarterEntry.
-func mapProtoToStarterEntry(l *discoveryv1.DiscoveryEntry) StarterEntry {
+func mapProtoToStarterEntry(l *discoveryv1.DiscoveryEntry) discoveryapp.StarterEntry {
 	campaignID := strings.TrimSpace(l.GetSourceId())
 	if campaignID == "" {
 		campaignID = strings.TrimSpace(l.GetEntryId())
 	}
-	return StarterEntry{
+	return discoveryapp.StarterEntry{
 		CampaignID:  campaignID,
 		Title:       strings.TrimSpace(l.GetTitle()),
 		Description: strings.TrimSpace(l.GetDescription()),

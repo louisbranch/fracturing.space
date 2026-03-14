@@ -1,11 +1,15 @@
 package discovery
 
-import "testing"
+import (
+	"testing"
+
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
+)
 
 func TestMapEntriesToView(t *testing.T) {
 	t.Parallel()
 
-	views := mapEntriesToView([]StarterEntry{{
+	views := mapEntriesToView([]discoveryapp.StarterEntry{{
 		CampaignID:  "c1",
 		Title:       "Starter One",
 		Description: "A first step",

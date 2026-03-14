@@ -59,7 +59,6 @@ func TestProtectedModuleRootsWireAppServicesDirectly(t *testing.T) {
 		method string
 	}{
 		{path: "campaigns/module.go", pkg: "campaignapp", method: "NewService"},
-		{path: "settings/module.go", pkg: "settingsapp", method: "NewService"},
 		{path: "notifications/module.go", pkg: "notificationsapp", method: "NewService"},
 		{path: "dashboard/module.go", pkg: "dashboardapp", method: "NewService"},
 	}
@@ -71,6 +70,17 @@ func TestProtectedModuleRootsWireAppServicesDirectly(t *testing.T) {
 			assertMountCallsSelector(t, tc.path, tc.pkg, tc.method)
 		})
 	}
+}
+
+func TestSettingsModuleWiresAccountAndAIAppServicesDirectly(t *testing.T) {
+	t.Parallel()
+
+	assertMountCallsSelector(t, "settings/module.go", "settingsapp", "NewAccountService")
+	assertMountCallsSelector(t, "settings/module.go", "settingsapp", "NewAIService")
+	assertFileDoesNotContain(t, "settings/module.go", "settingsapp.NewService(m.gateway)")
+	assertFileDoesNotContain(t, "settings/module.go", "newHandlers(svc, svc, svc, svc, svc")
+	assertFileContains(t, "settings/app/service.go", "type AccountServiceConfig struct")
+	assertFileContains(t, "settings/app/service.go", "type AIServiceConfig struct")
 }
 
 func TestProfileCompatibilityShimsAreRemoved(t *testing.T) {
@@ -153,6 +163,19 @@ func TestPublicAuthRootWiresAppServiceDirectly(t *testing.T) {
 	assertMountCallsSelector(t, "publicauth/module.go", "publicauthapp", "NewService")
 }
 
+func TestPublicAuthUsesSharedRedirectPathSanitizer(t *testing.T) {
+	t.Parallel()
+
+	assertFileContains(t, "publicauth/handlers_pages.go", "redirectpath.ResolveSafe(")
+	assertFileContains(t, "publicauth/app/service.go", "redirectpath.ResolveSafe(")
+	assertFileDoesNotContain(t, "publicauth/handlers_session.go", "func resolveSafeRedirectPath(")
+	assertFileContains(t, "publicauth/module.go", "ResolveSignedIn module.ResolveSignedIn")
+	assertFileContains(t, "publicauth/handlers_session.go", "h.IsViewerSignedIn(r)")
+	assertFileDoesNotContain(t, "publicauth/app/types.go", "HasValidWebSession")
+	assertFileDoesNotContain(t, "publicauth/handlers_session.go", "HasValidWebSession(")
+	assertFileDoesNotContain(t, "publicauth/gateway/grpc.go", "GetWebSession")
+}
+
 func TestModuleDependenciesSocialContractsAreSplit(t *testing.T) {
 	t.Parallel()
 
@@ -203,6 +226,81 @@ func TestCampaignDetailRenderSeamIsAreaOwned(t *testing.T) {
 	assertFileContains(t, "campaigns/handlers_detail_context.go", "campaignrender.DetailView")
 	assertFileContains(t, "campaigns/view_participants.go", "campaignrender.ParticipantView")
 	assertFileContains(t, "campaigns/view_sessions.go", "campaignrender.SessionView")
+}
+
+func TestCampaignListCreateTemplatesAreAreaOwned(t *testing.T) {
+	t.Parallel()
+
+	assertFileContains(t, "campaigns/handlers_list_create.go", "CampaignListFragment(")
+	assertFileContains(t, "campaigns/handlers_list_create.go", "CampaignStartFragment(")
+	assertFileContains(t, "campaigns/handlers_list_create.go", "CampaignCreateFragment(")
+	assertFileDoesNotContain(t, "campaigns/handlers_list_create.go", "webtemplates.CampaignListFragment(")
+	assertFileDoesNotContain(t, "campaigns/handlers_list_create.go", "webtemplates.CampaignStartFragment(")
+	assertFileDoesNotContain(t, "campaigns/handlers_list_create.go", "webtemplates.CampaignCreateFragment(")
+	assertFileContains(t, "campaigns/page.templ", "type CampaignListItem struct")
+	assertFileContains(t, "campaigns/page.templ", "type CampaignCreateFormValues struct")
+	assertFileContains(t, "campaigns/page.templ", "templ CampaignListFragment(")
+	assertFileMissing(t, "../templates/campaigns.templ")
+}
+
+func TestCampaignChatAndCreationTemplatesAreAreaOwned(t *testing.T) {
+	t.Parallel()
+
+	assertFileContains(t, "campaigns/handlers_chat.go", "CampaignChatPage(")
+	assertFileDoesNotContain(t, "campaigns/handlers_chat.go", "webtemplates.CampaignChatPage(")
+	assertFileContains(t, "campaigns/chat_page.templ", "templ CampaignChatPage(")
+	assertFileContains(t, "campaigns/handlers_creation_page.go", "campaignrender.CharacterCreationPage(")
+	assertFileDoesNotContain(t, "campaigns/handlers_creation_page.go", "webtemplates.CharacterCreationPage(")
+	assertFileContains(t, "campaigns/render/character_creation.templ", "templ CharacterCreationPage(")
+	assertFileMissing(t, "../templates/campaigns_chat.templ")
+	assertFileMissing(t, "../templates/character_creation.templ")
+}
+
+func TestCampaignServiceConstructorUsesExplicitCapabilityConfig(t *testing.T) {
+	t.Parallel()
+
+	assertFileContains(t, "campaigns/module.go", "campaignapp.ServiceConfig{")
+	assertFileContains(t, "campaigns/module.go", "readGateway")
+	assertFileContains(t, "campaigns/module.go", "mutationGateway")
+	assertFileContains(t, "campaigns/module.go", "authzGateway")
+	assertFileContains(t, "campaigns/module.go", "ReadGateway:")
+	assertFileContains(t, "campaigns/module.go", "MutationGateway:")
+	assertFileContains(t, "campaigns/module.go", "AuthzGateway:")
+	assertFileDoesNotContain(t, "campaigns/module.go", "m.gateway")
+	assertFileDoesNotContain(t, "campaigns/module.go", "Gateway          campaignapp.CampaignGateway")
+	assertFileDoesNotContain(t, "campaigns/module.go", "campaignapp.NewService(m.gateway)")
+	assertFileContains(t, "campaigns/composition.go", "ReadGateway:      gateway")
+	assertFileContains(t, "campaigns/composition.go", "MutationGateway:  gateway")
+	assertFileContains(t, "campaigns/composition.go", "AuthzGateway:     gateway")
+	assertFileContains(t, "campaigns/app/service_contracts.go", "type ServiceConfig struct")
+	assertFileDoesNotContain(t, "campaigns/app/service_contracts.go", "func NewService(gateway CampaignGateway)")
+}
+
+func TestCampaignCharacterCreationWorkflowOwnershipStaysOutOfApp(t *testing.T) {
+	t.Parallel()
+
+	assertFileContains(t, "campaigns/workflow/service.go", "type AppService interface")
+	assertFileContains(t, "campaigns/workflow/service.go", "func (s Service) LoadPage(")
+	assertFileContains(t, "campaigns/workflow/service.go", "func (s Service) ApplyStep(")
+	assertFileDoesNotContain(t, "campaigns/app/service_contracts.go", "CampaignCharacterCreation(context.Context, string, string, language.Tag")
+	assertFileDoesNotContain(t, "campaigns/handlers_workflow.go", "workflow.ParseStepInput(")
+	assertFileDoesNotContain(t, "campaigns/handlers_creation_page.go", "CampaignCharacterCreation(")
+	assertFileMissing(t, "campaigns/app/workflow.go")
+}
+
+func TestSelectedModuleRootsDoNotUseAliasWalls(t *testing.T) {
+	t.Parallel()
+
+	assertFileDoesNotContain(t, "dashboard/handlers.go", "type dashboardService =")
+	assertFileDoesNotContain(t, "notifications/handlers.go", "type notificationService =")
+	assertFileDoesNotContain(t, "profile/handlers.go", "type profileService =")
+	assertFileDoesNotContain(t, "settings/handlers.go", "type settingsProfileService =")
+	assertFileDoesNotContain(t, "settings/handlers.go", "type settingsLocaleService =")
+	assertFileDoesNotContain(t, "settings/handlers.go", "type settingsSecurityService =")
+	assertFileDoesNotContain(t, "settings/handlers.go", "type settingsAIKeyService =")
+	assertFileDoesNotContain(t, "settings/handlers.go", "type settingsAIAgentService =")
+	assertFileDoesNotContain(t, "discovery/gateway.go", "type StarterEntry =")
+	assertFileDoesNotContain(t, "discovery/gateway.go", "type Gateway =")
 }
 
 func TestModulesPackageDoesNotReexportModuleContractAliases(t *testing.T) {
@@ -464,5 +562,17 @@ func assertFileDoesNotContain(t *testing.T, path, fragment string) {
 	}
 	if strings.Contains(string(data), fragment) {
 		t.Fatalf("%s still contains %q", path, fragment)
+	}
+}
+
+func assertFileMissing(t *testing.T, path string) {
+	t.Helper()
+
+	_, err := os.Stat(path)
+	if err == nil {
+		t.Fatalf("%s exists; expected legacy file to be removed", path)
+	}
+	if !os.IsNotExist(err) {
+		t.Fatalf("Stat(%q) error = %v", path, err)
 	}
 }

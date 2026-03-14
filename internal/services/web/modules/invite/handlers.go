@@ -117,7 +117,7 @@ func (h handlers) renderInvitePage(w http.ResponseWriter, r *http.Request, page 
 		webtemplates.T(loc, "layout.meta_description"),
 		lang,
 		http.StatusOK,
-		webtemplates.PublicInvitePage(mapPublicInviteView(page), loc),
+		PublicInvitePage(mapPublicInviteView(page), loc),
 	)
 }
 

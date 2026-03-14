@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 )
 
 // CharacterCreation combines system-specific domain assembly with transport
@@ -16,7 +16,7 @@ type CharacterCreation interface {
 		catalog campaignapp.CampaignCharacterCreationCatalog,
 		profile campaignapp.CampaignCharacterCreationProfile,
 	) campaignapp.CampaignCharacterCreation
-	CreationView(campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView
+	CreationView(campaignapp.CampaignCharacterCreation) campaignrender.CampaignCharacterCreationView
 	ParseStepInput(form url.Values, nextStep int32) (*campaignapp.CampaignCharacterCreationStepInput, error)
 }
 

@@ -66,7 +66,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteRedirect(w, r, routepath.AppCampaignsNew)
 		return
 	}
-	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.CampaignListFragment(mapCampaignListItems(items, h.now(), loc), loc))
+	h.WritePage(w, r, webtemplates.T(loc, "game.campaigns.title"), http.StatusOK, campaignsListHeader(loc), webtemplates.AppMainLayoutOptions{}, CampaignListFragment(mapCampaignListItems(items, h.now(), loc), loc))
 }
 
 // handleStartNewCampaign handles this route in the module transport layer.
@@ -76,7 +76,7 @@ func (h handlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request)
 		webtemplates.T(loc, "game.campaigns.new.title"), http.StatusOK,
 		campaignStartHeader(loc),
 		webtemplates.AppMainLayoutOptions{},
-		webtemplates.CampaignStartFragment(loc),
+		CampaignStartFragment(loc),
 	)
 }
 
@@ -87,7 +87,7 @@ func (h handlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 		webtemplates.T(loc, "game.create.title"), http.StatusOK,
 		campaignCreateHeader(loc),
 		webtemplates.AppMainLayoutOptions{},
-		webtemplates.CampaignCreateFragment(webtemplates.CampaignCreateFormValues{}, loc),
+		CampaignCreateFragment(CampaignCreateFormValues{}, loc),
 	)
 }
 

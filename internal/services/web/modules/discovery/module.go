@@ -11,12 +11,12 @@ import (
 
 // Module provides public discovery routes.
 type Module struct {
-	gateway Gateway
+	gateway discoveryapp.Gateway
 }
 
 // Config defines constructor dependencies for a discovery module.
 type Config struct {
-	Gateway Gateway
+	Gateway discoveryapp.Gateway
 }
 
 // New returns a discovery module with explicit dependencies.

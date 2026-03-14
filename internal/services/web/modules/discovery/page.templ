@@ -1,0 +1,61 @@
+package discovery
+
+// StarterEntryView holds template data for a single starter discovery-entry card.
+type StarterEntryView struct {
+	CampaignID  string
+	Title       string
+	Description string
+	Tags        []string
+	Difficulty  string
+	Duration    string
+	GmMode      string
+	System      string
+	Level       int32
+	Players     string
+}
+
+templ DiscoveryFragment(entries []StarterEntryView, loc Localizer) {
+	<div id="discover-root">
+		<section class="container py-8">
+			<h1 class="text-2xl font-bold">{ T(loc, "web.discovery.title") }</h1>
+			<p class="mt-1 opacity-70">{ T(loc, "web.discovery.subtitle") }</p>
+			<div class="mt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+				if len(entries) == 0 {
+					<p class="col-span-full opacity-60">{ T(loc, "web.discovery.empty") }</p>
+				}
+				for _, item := range entries {
+					<article class="card bg-base-100 border border-base-300 shadow-sm" data-entry-id={ item.CampaignID }>
+						<div class="card-body gap-2">
+							<h2 class="card-title text-lg">{ item.Title }</h2>
+							if item.Description != "" {
+								<p class="text-sm opacity-80">{ item.Description }</p>
+							}
+							<div class="flex flex-wrap gap-1 mt-1">
+								for _, tag := range item.Tags {
+									<span class="badge badge-sm badge-outline">{ tag }</span>
+								}
+							</div>
+							<div class="flex flex-wrap gap-2 mt-2 text-xs opacity-70">
+								if item.System != "" {
+									<span>{ T(loc, "web.discovery.label.system") }: { item.System }</span>
+								}
+								if item.Difficulty != "" {
+									<span>{ T(loc, "web.discovery.label.difficulty") }: { item.Difficulty }</span>
+								}
+								if item.Duration != "" {
+									<span>{ T(loc, "web.discovery.label.duration") }: { item.Duration }</span>
+								}
+								if item.GmMode != "" {
+									<span>{ T(loc, "web.discovery.label.gm_mode") }: { item.GmMode }</span>
+								}
+								if item.Players != "" {
+									<span>{ T(loc, "web.discovery.label.players") }: { item.Players }</span>
+								}
+							</div>
+						</div>
+					</article>
+				}
+			</div>
+		</section>
+	</div>
+}

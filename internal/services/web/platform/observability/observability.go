@@ -2,7 +2,7 @@
 package observability
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -42,13 +42,13 @@ func (w *responseMetricsWriter) StatusCode() int {
 }
 
 // RequestLogger logs method, path, and latency for each request.
-func RequestLogger(logger *log.Logger) func(http.Handler) http.Handler {
+func RequestLogger(logger *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		if next == nil {
 			next = http.NotFoundHandler()
 		}
 		if logger == nil {
-			logger = log.Default()
+			logger = slog.Default()
 		}
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := strings.TrimSpace(r.Header.Get("X-Request-ID"))
@@ -58,14 +58,14 @@ func RequestLogger(logger *log.Logger) func(http.Handler) http.Handler {
 			writer := &responseMetricsWriter{ResponseWriter: w}
 			start := time.Now()
 			next.ServeHTTP(writer, r)
-			logger.Printf(
-				"method=%s path=%s status=%d bytes=%d request_id=%s latency=%s",
-				r.Method,
-				r.URL.Path,
-				writer.StatusCode(),
-				writer.bytes,
-				requestID,
-				time.Since(start).String(),
+			logger.Info(
+				"http_request",
+				"method", r.Method,
+				"path", r.URL.Path,
+				"status", writer.StatusCode(),
+				"bytes", writer.bytes,
+				"request_id", requestID,
+				"latency", time.Since(start),
 			)
 		})
 	}

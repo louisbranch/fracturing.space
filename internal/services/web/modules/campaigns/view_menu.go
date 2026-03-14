@@ -170,10 +170,10 @@ func campaignWorkspaceLocaleFormValue(value string) string {
 }
 
 // mapCampaignListItems converts domain summaries to template list items.
-func mapCampaignListItems(items []campaignapp.CampaignSummary, now time.Time, loc webtemplates.Localizer) []webtemplates.CampaignListItem {
-	result := make([]webtemplates.CampaignListItem, 0, len(items))
+func mapCampaignListItems(items []campaignapp.CampaignSummary, now time.Time, loc webtemplates.Localizer) []CampaignListItem {
+	result := make([]CampaignListItem, 0, len(items))
 	for _, item := range items {
-		result = append(result, webtemplates.CampaignListItem{
+		result = append(result, CampaignListItem{
 			ID:               item.ID,
 			Name:             item.Name,
 			Theme:            item.Theme,

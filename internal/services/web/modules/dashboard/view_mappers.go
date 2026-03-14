@@ -2,35 +2,34 @@ package dashboard
 
 import (
 	dashboardapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard/app"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // mapDashboardTemplateView maps values across transport and domain boundaries.
-func mapDashboardTemplateView(view dashboardapp.DashboardView) webtemplates.DashboardPageView {
-	health := make([]webtemplates.DashboardServiceHealthEntry, len(view.ServiceHealth))
+func mapDashboardTemplateView(view dashboardapp.DashboardView) DashboardPageView {
+	health := make([]DashboardServiceHealthEntry, len(view.ServiceHealth))
 	for i, e := range view.ServiceHealth {
-		health[i] = webtemplates.DashboardServiceHealthEntry{Label: e.Label, Available: e.Available}
+		health[i] = DashboardServiceHealthEntry{Label: e.Label, Available: e.Available}
 	}
-	activeSessions := make([]webtemplates.DashboardActiveSessionEntry, len(view.ActiveSessions))
+	activeSessions := make([]DashboardActiveSessionEntry, len(view.ActiveSessions))
 	for i, session := range view.ActiveSessions {
-		activeSessions[i] = webtemplates.DashboardActiveSessionEntry{
+		activeSessions[i] = DashboardActiveSessionEntry{
 			CampaignID:   session.CampaignID,
 			CampaignName: session.CampaignName,
 			SessionID:    session.SessionID,
 			SessionName:  session.SessionName,
 		}
 	}
-	pendingInvites := make([]webtemplates.DashboardPendingInviteEntry, len(view.PendingInvites))
+	pendingInvites := make([]DashboardPendingInviteEntry, len(view.PendingInvites))
 	for i, invite := range view.PendingInvites {
-		pendingInvites[i] = webtemplates.DashboardPendingInviteEntry{
+		pendingInvites[i] = DashboardPendingInviteEntry{
 			InviteID:        invite.InviteID,
 			CampaignName:    invite.CampaignName,
 			ParticipantName: invite.ParticipantName,
 		}
 	}
-	startNudges := make([]webtemplates.DashboardCampaignStartNudgeEntry, len(view.CampaignStartNudges))
+	startNudges := make([]DashboardCampaignStartNudgeEntry, len(view.CampaignStartNudges))
 	for i, nudge := range view.CampaignStartNudges {
-		startNudges[i] = webtemplates.DashboardCampaignStartNudgeEntry{
+		startNudges[i] = DashboardCampaignStartNudgeEntry{
 			CampaignID:          nudge.CampaignID,
 			CampaignName:        nudge.CampaignName,
 			Message:             nudge.BlockerMessage,
@@ -40,27 +39,27 @@ func mapDashboardTemplateView(view dashboardapp.DashboardView) webtemplates.Dash
 		}
 	}
 
-	statusNotice := webtemplates.DashboardStatusNotice{}
+	statusNotice := DashboardStatusNotice{}
 	switch view.DataStatus {
 	case dashboardapp.DashboardDataStatusDegraded:
-		statusNotice = webtemplates.DashboardStatusNotice{Visible: true, Degraded: true}
+		statusNotice = DashboardStatusNotice{Visible: true, Degraded: true}
 	case dashboardapp.DashboardDataStatusUnavailable:
-		statusNotice = webtemplates.DashboardStatusNotice{Visible: true}
+		statusNotice = DashboardStatusNotice{Visible: true}
 	}
-	return webtemplates.DashboardPageView{
+	return DashboardPageView{
 		StatusNotice:   statusNotice,
-		ProfilePending: webtemplates.DashboardProfilePendingBlock{Visible: view.ShowPendingProfileBlock},
-		PendingInvites: webtemplates.DashboardPendingInvitesBlock{
+		ProfilePending: DashboardProfilePendingBlock{Visible: view.ShowPendingProfileBlock},
+		PendingInvites: DashboardPendingInvitesBlock{
 			Visible: len(pendingInvites) > 0,
 			Invites: pendingInvites,
 		},
-		CampaignStartNudges: webtemplates.DashboardCampaignStartNudgesBlock{
+		CampaignStartNudges: DashboardCampaignStartNudgesBlock{
 			Visible: len(startNudges) > 0,
 			HasMore: view.CampaignStartNudgesMore,
 			Nudges:  startNudges,
 		},
-		Adventure: webtemplates.DashboardAdventureBlock{Visible: view.ShowAdventureBlock},
-		ActiveSessions: webtemplates.DashboardActiveSessionsBlock{
+		Adventure: DashboardAdventureBlock{Visible: view.ShowAdventureBlock},
+		ActiveSessions: DashboardActiveSessionsBlock{
 			Visible:  len(activeSessions) > 0,
 			Sessions: activeSessions,
 		},

@@ -5,7 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -22,6 +22,8 @@ import (
 type Config struct {
 	HTTPAddr     string
 	ChatHTTPAddr string
+	// Logger receives request and lifecycle logs. Nil uses slog.Default().
+	Logger *slog.Logger
 
 	// RequestSchemePolicy controls scheme resolution for proxy headers.
 	RequestSchemePolicy requestmeta.SchemePolicy
@@ -35,6 +37,7 @@ type Config struct {
 type Server struct {
 	httpAddr   string
 	httpServer *http.Server
+	logger     *slog.Logger
 }
 
 // NewHandler builds a root handler from default module registry groups.
@@ -42,6 +45,10 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	deps := DependencyBundle{}
 	if cfg.Dependencies != nil {
 		deps = *cfg.Dependencies
+	}
+	logger := cfg.Logger
+	if logger == nil {
+		logger = slog.Default()
 	}
 
 	principalResolver := principal.New(deps.Principal)
@@ -67,7 +74,7 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		sharedhttpx.RecoverPanic(),
 		sharedhttpx.RequestID("web"),
 		principalResolver.Middleware(),
-		observability.RequestLogger(log.Default()),
+		observability.RequestLogger(logger),
 	), nil
 }
 
@@ -88,7 +95,16 @@ func NewServer(_ context.Context, cfg Config) (*Server, error) {
 			Handler:           handler,
 			ReadHeaderTimeout: timeouts.ReadHeader,
 		},
+		logger: loggerOrDefault(cfg.Logger),
 	}, nil
+}
+
+// loggerOrDefault normalizes nil logger inputs to the process default logger.
+func loggerOrDefault(logger *slog.Logger) *slog.Logger {
+	if logger == nil {
+		return slog.Default()
+	}
+	return logger
 }
 
 // ListenAndServe serves HTTP traffic until context cancellation or server stop.
@@ -101,7 +117,8 @@ func (s *Server) ListenAndServe(ctx context.Context) error {
 	}
 
 	serveErr := make(chan error, 1)
-	log.Printf("web server listening on %s", s.httpAddr)
+	logger := loggerOrDefault(s.logger)
+	logger.Info("web server listening", "addr", s.httpAddr)
 	go func() {
 		serveErr <- s.httpServer.ListenAndServe()
 	}()

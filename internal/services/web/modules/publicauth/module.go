@@ -12,12 +12,13 @@ import (
 
 // Module provides unauthenticated root/auth routes.
 type Module struct {
-	gateway        publicauthapp.Gateway
-	authBaseURL    string
-	requestMeta    requestmeta.SchemePolicy
-	id             string
-	prefix         string
-	registerRoutes func(*http.ServeMux, handlers)
+	gateway         publicauthapp.Gateway
+	resolveSignedIn module.ResolveSignedIn
+	authBaseURL     string
+	requestMeta     requestmeta.SchemePolicy
+	id              string
+	prefix          string
+	registerRoutes  func(*http.ServeMux, handlers)
 }
 
 // Surface classifies which route subset this module instance mounts.
@@ -34,22 +35,24 @@ const (
 
 // Config defines constructor dependencies for a publicauth module.
 type Config struct {
-	Gateway     publicauthapp.Gateway
-	RequestMeta requestmeta.SchemePolicy
-	AuthBaseURL string
-	Surface     Surface
+	Gateway         publicauthapp.Gateway
+	ResolveSignedIn module.ResolveSignedIn
+	RequestMeta     requestmeta.SchemePolicy
+	AuthBaseURL     string
+	Surface         Surface
 }
 
 // New returns a publicauth module with explicit dependencies.
 func New(config Config) Module {
 	id, prefix, register := resolveSurface(config.Surface)
 	return Module{
-		gateway:        config.Gateway,
-		authBaseURL:    config.AuthBaseURL,
-		requestMeta:    config.RequestMeta,
-		id:             id,
-		prefix:         prefix,
-		registerRoutes: register,
+		gateway:         config.Gateway,
+		resolveSignedIn: config.ResolveSignedIn,
+		authBaseURL:     config.AuthBaseURL,
+		requestMeta:     config.RequestMeta,
+		id:              id,
+		prefix:          prefix,
+		registerRoutes:  register,
 	}
 }
 
@@ -82,7 +85,7 @@ func (m Module) ID() string {
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	svc := publicauthapp.NewService(m.gateway, m.authBaseURL)
-	h := newHandlers(svc, m.requestMeta)
+	h := newHandlers(svc, m.requestMeta, m.resolveSignedIn)
 	if m.registerRoutes != nil {
 		m.registerRoutes(mux, h)
 	} else {

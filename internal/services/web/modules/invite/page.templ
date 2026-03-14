@@ -1,0 +1,69 @@
+package invite
+
+type PublicInvitePageView struct {
+	Heading           string
+	Body              string
+	CampaignName      string
+	ParticipantName   string
+	StatusLabel       string
+	InviterUsername   string
+	InviterProfileURL string
+	AcceptLabel       string
+	AcceptURL         string
+	DeclineLabel      string
+	DeclineURL        string
+	LoginLabel        string
+	LoginURL          string
+	DashboardLabel    string
+	DashboardURL      string
+}
+
+templ PublicInvitePage(view PublicInvitePageView, loc Localizer) {
+	<section id="public-invite-page" class="mx-auto grid w-full max-w-3xl gap-8">
+		<header class="grid gap-2">
+			<p class="text-sm uppercase tracking-[0.18em] opacity-60">Campaign Invitation</p>
+			<h1 class="text-3xl font-bold">{ view.Heading }</h1>
+			<p class="opacity-80">{ view.Body }</p>
+		</header>
+		<div class="card border border-base-300 bg-base-200 shadow-xl">
+			<div class="card-body gap-4">
+				<div class="grid gap-1">
+					<p class="text-sm opacity-60">Campaign</p>
+					<p class="text-lg font-medium">{ view.CampaignName }</p>
+				</div>
+				<div class="grid gap-1">
+					<p class="text-sm opacity-60">Seat</p>
+					<p class="text-lg font-medium">{ view.ParticipantName }</p>
+				</div>
+				if view.InviterUsername != "" && view.InviterProfileURL != "" {
+					<div class="grid gap-1">
+						<p class="text-sm opacity-60">Invited by</p>
+						<p class="text-lg font-medium"><a class="link link-hover" href={ view.InviterProfileURL }>{ "@" + view.InviterUsername }</a></p>
+					</div>
+				}
+				<div class="grid gap-1">
+					<p class="text-sm opacity-60">Status</p>
+					<p class="text-lg font-medium">{ view.StatusLabel }</p>
+				</div>
+				<div class="card-actions justify-end gap-3">
+					if view.LoginLabel != "" && view.LoginURL != "" {
+						<a class="btn btn-primary" href={ view.LoginURL }>{ view.LoginLabel }</a>
+					}
+					if view.DashboardLabel != "" && view.DashboardURL != "" {
+						<a class="btn btn-outline" href={ view.DashboardURL }>{ view.DashboardLabel }</a>
+					}
+					if view.DeclineLabel != "" && view.DeclineURL != "" {
+						<form method="post" action={ view.DeclineURL }>
+							<button class="btn btn-outline" type="submit">{ view.DeclineLabel }</button>
+						</form>
+					}
+					if view.AcceptLabel != "" && view.AcceptURL != "" {
+						<form method="post" action={ view.AcceptURL }>
+							<button class="btn btn-primary" type="submit">{ view.AcceptLabel }</button>
+						</form>
+					}
+				</div>
+			</div>
+		</div>
+	</section>
+}

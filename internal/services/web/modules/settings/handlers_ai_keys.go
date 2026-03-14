@@ -72,7 +72,7 @@ func (h handlers) renderAIKeysPage(w http.ResponseWriter, r *http.Request, ctx c
 		statusCode,
 		routepath.AppSettingsAIKeys,
 		webtemplates.T(loc, "web.settings.page_ai_keys_title"),
-		webtemplates.SettingsAIKeysFragment(webtemplates.SettingsAIKeysForm{
+		SettingsAIKeysFragment(SettingsAIKeysForm{
 			Label:        label,
 			Provider:     "OpenAI",
 			ErrorMessage: errorMessage,

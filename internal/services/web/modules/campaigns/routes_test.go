@@ -11,13 +11,21 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
+func newRouteTestService(gw fakeGateway) campaignapp.Service {
+	return campaignapp.NewService(campaignapp.ServiceConfig{
+		ReadGateway:     gw,
+		MutationGateway: gw,
+		AuthzGateway:    gw,
+	})
+}
+
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
 	registerStableRoutes(
 		nil,
 		newHandlers(
-			campaignapp.NewService(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
+			newRouteTestService(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
 			modulehandler.NewTestBase(),
 			"",
 			nil,
@@ -59,7 +67,7 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 	registerStableRoutes(
 		mux,
 		newHandlers(
-			campaignapp.NewService(fakeGateway{
+			newRouteTestService(fakeGateway{
 				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 				participants: []campaignapp.CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
 				characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
@@ -127,7 +135,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 	registerStableRoutes(
 		mux,
 		newHandlers(
-			campaignapp.NewService(fakeGateway{
+			newRouteTestService(fakeGateway{
 				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 				participants: []campaignapp.CampaignParticipant{{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"}},
 				participant:  campaignapp.CampaignParticipant{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},

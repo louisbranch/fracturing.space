@@ -5,6 +5,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"log/slog"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
@@ -96,6 +97,7 @@ func (cfg Config) serverConfig(deps web.DependencyBundle) web.Config {
 	return web.Config{
 		HTTPAddr:            cfg.HTTPAddr,
 		ChatHTTPAddr:        cfg.ChatHTTPAddr,
+		Logger:              slog.Default(),
 		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
 		Dependencies:        &deps,
 	}

@@ -2,7 +2,7 @@ package dashboard
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -29,7 +29,7 @@ func Compose(config CompositionConfig) module.Module {
 	return New(Config{
 		Gateway:        dashboardgateway.NewGRPCGateway(config.UserHubClient),
 		Base:           config.Base,
-		HealthProvider: StatusHealthProvider(config.StatusClient),
+		HealthProvider: StatusHealthProvider(config.StatusClient, nil),
 	})
 }
 
@@ -38,16 +38,20 @@ const statusHealthTimeout = 3 * time.Second
 
 // StatusHealthProvider returns a HealthProvider that queries the status service
 // on each dashboard load. Returns nil when no status client is available.
-func StatusHealthProvider(client statusv1.StatusServiceClient) dashboardapp.HealthProvider {
+// Nil logger uses slog.Default().
+func StatusHealthProvider(client statusv1.StatusServiceClient, logger *slog.Logger) dashboardapp.HealthProvider {
 	if client == nil {
 		return nil
+	}
+	if logger == nil {
+		logger = slog.Default()
 	}
 	return func(ctx context.Context) []dashboardapp.ServiceHealthEntry {
 		ctx, cancel := context.WithTimeout(ctx, statusHealthTimeout)
 		defer cancel()
 		resp, err := client.GetSystemStatus(ctx, &statusv1.GetSystemStatusRequest{})
 		if err != nil {
-			log.Printf("web: status service health query failed: %v", err)
+			logger.Warn("dashboard status health query failed", "error", err)
 			return nil
 		}
 		services := resp.GetServices()

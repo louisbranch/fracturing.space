@@ -9,20 +9,6 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-type testCreationWorkflow struct{}
-
-func (testCreationWorkflow) AssembleCatalog(
-	progress CampaignCharacterCreationProgress,
-	catalog CampaignCharacterCreationCatalog,
-	profile CampaignCharacterCreationProfile,
-) CampaignCharacterCreation {
-	return CampaignCharacterCreation{
-		Progress: progress,
-		Profile:  profile,
-		Classes:  append([]CatalogClass(nil), catalog.Classes...),
-	}
-}
-
 func contextWithResolvedUserID(userID string) context.Context {
 	return metadata.NewOutgoingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, userID))
 }

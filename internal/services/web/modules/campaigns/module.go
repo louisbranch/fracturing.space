@@ -12,7 +12,9 @@ import (
 
 // Module provides authenticated campaign workspace routes.
 type Module struct {
-	gateway          campaignapp.CampaignGateway
+	readGateway      campaignapp.ReadGateway
+	mutationGateway  campaignapp.MutationGateway
+	authzGateway     campaignapp.AuthzGateway
 	base             modulehandler.Base
 	chatFallbackPort string
 	workflows        campaignworkflow.Registry
@@ -21,7 +23,9 @@ type Module struct {
 
 // Config defines constructor dependencies for a campaigns module.
 type Config struct {
-	Gateway          campaignapp.CampaignGateway
+	ReadGateway      campaignapp.ReadGateway
+	MutationGateway  campaignapp.MutationGateway
+	AuthzGateway     campaignapp.AuthzGateway
 	Base             modulehandler.Base
 	ChatFallbackPort string
 	Workflows        campaignworkflow.Registry
@@ -31,7 +35,9 @@ type Config struct {
 // New returns a campaigns module with explicit dependencies.
 func New(config Config) Module {
 	return Module{
-		gateway:          config.Gateway,
+		readGateway:      config.ReadGateway,
+		mutationGateway:  config.MutationGateway,
+		authzGateway:     config.AuthzGateway,
 		base:             config.Base,
 		chatFallbackPort: config.ChatFallbackPort,
 		workflows:        config.Workflows,
@@ -44,13 +50,17 @@ func (Module) ID() string { return "campaigns" }
 
 // Healthy reports whether the campaigns module has an operational gateway.
 func (m Module) Healthy() bool {
-	return campaignapp.IsGatewayHealthy(m.gateway)
+	return campaignapp.IsGatewayHealthy(m.readGateway)
 }
 
 // Mount wires campaign route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := campaignapp.NewService(m.gateway)
+	svc := campaignapp.NewService(campaignapp.ServiceConfig{
+		ReadGateway:     m.readGateway,
+		MutationGateway: m.mutationGateway,
+		AuthzGateway:    m.authzGateway,
+	})
 	h := newHandlers(svc, m.base, m.chatFallbackPort, m.sync, m.workflows)
 	registerStableRoutes(mux, h)
 	return module.Mount{Prefix: routepath.CampaignsPrefix, Handler: mux}, nil

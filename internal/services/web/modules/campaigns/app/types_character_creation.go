@@ -173,6 +173,14 @@ type CampaignCharacterCreationProfile struct {
 	Connections       string                                `json:"connections"`
 }
 
+// CampaignCharacterCreationData stores the generic read-side inputs needed to
+// assemble one system-specific character-creation workflow view.
+type CampaignCharacterCreationData struct {
+	Progress CampaignCharacterCreationProgress `json:"progress"`
+	Catalog  CampaignCharacterCreationCatalog  `json:"catalog"`
+	Profile  CampaignCharacterCreationProfile  `json:"profile"`
+}
+
 // CampaignCharacterCreationStepInput stores one character creation step in domain form.
 type CampaignCharacterCreationStepInput struct {
 	ClassSubclass *CampaignCharacterCreationStepClassSubclass `json:"classSubclass,omitempty"`

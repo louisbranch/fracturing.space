@@ -72,7 +72,7 @@ func (h handlers) writeSettingsPage(
 }
 
 // loadAIKeyRows resolves settings AI key rows for template rendering.
-func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]webtemplates.SettingsAIKeyRow, error) {
+func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]SettingsAIKeyRow, error) {
 	keys, err := h.aiKeys.ListAIKeys(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (h handlers) loadAIKeyRows(ctx context.Context, userID string) ([]webtempla
 }
 
 // loadAIAgentCredentialOptions resolves active credential options for template rendering.
-func (h handlers) loadAIAgentCredentialOptions(ctx context.Context, userID string) ([]webtemplates.SettingsAICredentialOption, error) {
+func (h handlers) loadAIAgentCredentialOptions(ctx context.Context, userID string) ([]SettingsAICredentialOption, error) {
 	options, err := h.aiAgents.ListAIAgentCredentials(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -90,7 +90,7 @@ func (h handlers) loadAIAgentCredentialOptions(ctx context.Context, userID strin
 }
 
 // loadAIAgentRows resolves settings AI agent rows for template rendering.
-func (h handlers) loadAIAgentRows(ctx context.Context, userID string) ([]webtemplates.SettingsAIAgentRow, error) {
+func (h handlers) loadAIAgentRows(ctx context.Context, userID string) ([]SettingsAIAgentRow, error) {
 	agents, err := h.aiAgents.ListAIAgents(ctx, userID)
 	if err != nil {
 		return nil, err

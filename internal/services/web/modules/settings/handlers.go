@@ -9,21 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-// settingsProfileService defines the profile contract used by settings handlers.
-type settingsProfileService = settingsapp.ProfileService
-
-// settingsLocaleService defines the locale contract used by settings handlers.
-type settingsLocaleService = settingsapp.LocaleService
-
-// settingsSecurityService defines the security contract used by settings handlers.
-type settingsSecurityService = settingsapp.SecurityService
-
-// settingsAIKeyService defines the AI credential contract used by settings handlers.
-type settingsAIKeyService = settingsapp.AIKeyService
-
-// settingsAIAgentService defines the AI agent contract used by settings handlers.
-type settingsAIAgentService = settingsapp.AIAgentService
-
 // DashboardSync exposes dashboard cache refresh hooks needed by settings mutations.
 type DashboardSync interface {
 	ProfileSaved(context.Context, string)
@@ -64,11 +49,11 @@ func (a settingsSurfaceAvailability) defaultPath() string {
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
-	profile      settingsProfileService
-	locale       settingsLocaleService
-	security     settingsSecurityService
-	aiKeys       settingsAIKeyService
-	aiAgents     settingsAIAgentService
+	profile      settingsapp.ProfileService
+	locale       settingsapp.LocaleService
+	security     settingsapp.SecurityService
+	aiKeys       settingsapp.AIKeyService
+	aiAgents     settingsapp.AIAgentService
 	availability settingsSurfaceAvailability
 	flashMeta    requestmeta.SchemePolicy
 	sync         DashboardSync
@@ -76,11 +61,11 @@ type handlers struct {
 
 // newHandlers builds package wiring for this web seam.
 func newHandlers(
-	profile settingsProfileService,
-	locale settingsLocaleService,
-	security settingsSecurityService,
-	aiKeys settingsAIKeyService,
-	aiAgents settingsAIAgentService,
+	profile settingsapp.ProfileService,
+	locale settingsapp.LocaleService,
+	security settingsapp.SecurityService,
+	aiKeys settingsapp.AIKeyService,
+	aiAgents settingsapp.AIAgentService,
 	availability settingsSurfaceAvailability,
 	base modulehandler.Base,
 	policy requestmeta.SchemePolicy,

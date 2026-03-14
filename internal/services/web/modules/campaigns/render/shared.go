@@ -35,7 +35,7 @@ func FormatDateTimeNow(timestamp string, loc Localizer) DateTimeDisplay {
 	return webtemplates.FormatDateTimeNow(timestamp, loc)
 }
 
-// characterCreationSummaryBody reuses the shared character-creation summary panel.
-func characterCreationSummaryBody(creation webtemplates.CampaignCharacterCreationView, loc Localizer) templ.Component {
-	return webtemplates.CampaignCharacterCreationSummaryBody(creation, loc)
+// characterCreationSummaryBody keeps campaign detail rendering on the render-owned summary component.
+func characterCreationSummaryBody(creation CampaignCharacterCreationView, loc Localizer) templ.Component {
+	return CampaignCharacterCreationSummaryBody(creation, loc)
 }

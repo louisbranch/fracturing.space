@@ -2,9 +2,6 @@ package publicauth
 
 import (
 	"net/http"
-	"net/url"
-	"path"
-	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -31,11 +28,7 @@ func (h handlers) redirectAuthenticatedToApp(w http.ResponseWriter, r *http.Requ
 	if r == nil {
 		return false
 	}
-	sessionID, ok := sessioncookie.Read(r)
-	if !ok {
-		return false
-	}
-	if !h.service.HasValidWebSession(r.Context(), sessionID) {
+	if !h.IsViewerSignedIn(r) {
 		return false
 	}
 	httpx.WriteRedirect(w, r, h.service.ResolvePostAuthRedirect(h.pendingID(r), h.nextPath(r)))
@@ -55,70 +48,4 @@ func (h handlers) clearSessionCookie(w http.ResponseWriter, r *http.Request) {
 // hasSameOriginProof reports whether this package condition is satisfied.
 func (h handlers) hasSameOriginProof(r *http.Request) bool {
 	return requestmeta.HasSameOriginProofWithPolicy(r, h.requestMeta)
-}
-
-// resolveSafeRedirectPath resolves validated in-app or public invite continuation paths.
-func resolveSafeRedirectPath(raw string) string {
-	next := strings.TrimSpace(raw)
-	if next == "" {
-		return ""
-	}
-	parsed, err := url.Parse(next)
-	if err != nil || parsed.Scheme != "" || parsed.Host != "" || parsed.Opaque != "" {
-		return ""
-	}
-	rawPath := strings.TrimSpace(parsed.EscapedPath())
-	if hasEncodedSlash(rawPath) {
-		return ""
-	}
-	decodedPath, err := url.PathUnescape(strings.TrimSpace(parsed.Path))
-	if err != nil {
-		return ""
-	}
-	if hasDotSegment(decodedPath) {
-		return ""
-	}
-	canonicalPath := path.Clean(decodedPath)
-	if strings.TrimSpace(canonicalPath) == "." {
-		canonicalPath = "/"
-	}
-	canonicalPath = ensureLeadingSlash(canonicalPath)
-	if canonicalPath == routepath.AppPrefix || canonicalPath == strings.TrimRight(routepath.InvitePrefix, "/") {
-		return ""
-	}
-	if !strings.HasPrefix(canonicalPath, routepath.AppPrefix) && !strings.HasPrefix(canonicalPath, routepath.InvitePrefix) {
-		return ""
-	}
-	if parsed.RawQuery != "" {
-		return canonicalPath + "?" + parsed.RawQuery
-	}
-	return canonicalPath
-}
-
-// hasDotSegment reports whether this package condition is satisfied.
-func hasDotSegment(rawPath string) bool {
-	for _, part := range strings.Split(rawPath, "/") {
-		if part == "." || part == ".." {
-			return true
-		}
-	}
-	return false
-}
-
-// hasEncodedSlash reports whether this package condition is satisfied.
-func hasEncodedSlash(rawPath string) bool {
-	lower := strings.ToLower(rawPath)
-	return strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c")
-}
-
-// ensureLeadingSlash centralizes this web behavior in one helper seam.
-func ensureLeadingSlash(pathValue string) string {
-	pathValue = strings.TrimSpace(pathValue)
-	if pathValue == "" {
-		return "/"
-	}
-	if strings.HasPrefix(pathValue, "/") {
-		return pathValue
-	}
-	return "/" + pathValue
 }

@@ -17,6 +17,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
@@ -45,7 +46,7 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	if New(Config{}).Healthy() {
 		t.Fatalf("New().Healthy() = true, want false for degraded module")
 	}
-	if !New(Config{Gateway: fakeGateway{}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil}).Healthy() {
+	if !New(configWithGateway(fakeGateway{}, modulehandler.NewTestBase(), nil)).Healthy() {
 		t.Fatalf("New(Config{...}).Healthy() = false, want true")
 	}
 }
@@ -68,7 +69,7 @@ func TestMapCampaignCharacterCreationStepToProtoGatewayExport(t *testing.T) {
 func TestMountServesCampaignsGet(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}, {ID: "c2", Name: "Second"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}, {ID: "c2", Name: "Second"}}}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -131,7 +132,7 @@ func TestMountRejectsCampaignsNonGet(t *testing.T) {
 func TestMountMapsCampaignGatewayErrorToHTTPStatus(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{err: apperrors.E(apperrors.KindUnauthorized, "missing session")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{err: apperrors.E(apperrors.KindUnauthorized, "missing session")}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -147,7 +148,7 @@ func TestMountMapsCampaignGatewayErrorToHTTPStatus(t *testing.T) {
 func TestMountCampaignsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -171,7 +172,7 @@ func TestMountCampaignsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 func TestMountCampaignsInternalErrorRendersServerErrorPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{err: errors.New("boom")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{err: errors.New("boom")}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -190,7 +191,7 @@ func TestMountCampaignsInternalErrorRendersServerErrorPage(t *testing.T) {
 func TestMountCampaignsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{err: status.Error(codes.NotFound, "campaign not found")}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -215,7 +216,7 @@ func TestMountCampaignsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 func TestMountCampaignDetailMissingCampaignReturnsNotFound(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -239,7 +240,7 @@ func TestMountCampaignDetailMissingCampaignReturnsNotFound(t *testing.T) {
 func TestMountCampaignsUnknownSubpathRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -263,7 +264,7 @@ func TestMountCampaignsUnknownSubpathRendersNotFoundPage(t *testing.T) {
 func TestMountCampaignsLegacyChatSubpathRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -290,7 +291,7 @@ func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T)
 			},
 		},
 	})
-	m := New(Config{Gateway: campaigngateway.NewGRPCGateway(deps), Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(campaigngateway.NewGRPCGateway(deps), modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -309,7 +310,7 @@ func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T)
 func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{}}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -345,7 +346,7 @@ func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 func TestMountCampaignsGetWithEmptyListUsesHXRedirect(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{items: []campaignapp.CampaignSummary{}}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{}}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -380,7 +381,11 @@ func TestCampaignBreadcrumbsFallbackToCampaignID(t *testing.T) {
 func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(campaignapp.NewService(fakeGateway{}), modulehandler.NewTestBase(), "", nil)
+	h := newHandlers(campaignapp.NewService(campaignapp.ServiceConfig{
+		ReadGateway:     fakeGateway{},
+		MutationGateway: fakeGateway{},
+		AuthzGateway:    fakeGateway{},
+	}), modulehandler.NewTestBase(), "", nil)
 	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
 	rr := httptest.NewRecorder()
 
@@ -596,8 +601,8 @@ func (testCreationWorkflow) AssembleCatalog(
 	return creation
 }
 
-func (testCreationWorkflow) CreationView(creation campaignapp.CampaignCharacterCreation) webtemplates.CampaignCharacterCreationView {
-	view := webtemplates.CampaignCharacterCreationView{
+func (testCreationWorkflow) CreationView(creation campaignapp.CampaignCharacterCreation) campaignrender.CampaignCharacterCreationView {
+	view := campaignrender.CampaignCharacterCreationView{
 		Ready:             creation.Progress.Ready,
 		NextStep:          creation.Progress.NextStep,
 		UnmetReasons:      append([]string(nil), creation.Progress.UnmetReasons...),
@@ -618,46 +623,46 @@ func (testCreationWorkflow) CreationView(creation campaignapp.CampaignCharacterC
 		Background:        creation.Profile.Background,
 		DomainCardIDs:     append([]string(nil), creation.Profile.DomainCardIDs...),
 		Connections:       creation.Profile.Connections,
-		Steps:             make([]webtemplates.CampaignCharacterCreationStepView, 0, len(creation.Progress.Steps)),
-		Classes:           make([]webtemplates.CampaignCreationClassView, 0, len(creation.Classes)),
-		Subclasses:        make([]webtemplates.CampaignCreationSubclassView, 0, len(creation.Subclasses)),
-		Ancestries:        make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Ancestries)),
-		Communities:       make([]webtemplates.CampaignCreationHeritageView, 0, len(creation.Communities)),
-		PrimaryWeapons:    make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.PrimaryWeapons)),
-		SecondaryWeapons:  make([]webtemplates.CampaignCreationWeaponView, 0, len(creation.SecondaryWeapons)),
-		Armor:             make([]webtemplates.CampaignCreationArmorView, 0, len(creation.Armor)),
-		PotionItems:       make([]webtemplates.CampaignCreationItemView, 0, len(creation.PotionItems)),
-		DomainCards:       make([]webtemplates.CampaignCreationDomainCardView, 0, len(creation.DomainCards)),
+		Steps:             make([]campaignrender.CampaignCharacterCreationStepView, 0, len(creation.Progress.Steps)),
+		Classes:           make([]campaignrender.CampaignCreationClassView, 0, len(creation.Classes)),
+		Subclasses:        make([]campaignrender.CampaignCreationSubclassView, 0, len(creation.Subclasses)),
+		Ancestries:        make([]campaignrender.CampaignCreationHeritageView, 0, len(creation.Ancestries)),
+		Communities:       make([]campaignrender.CampaignCreationHeritageView, 0, len(creation.Communities)),
+		PrimaryWeapons:    make([]campaignrender.CampaignCreationWeaponView, 0, len(creation.PrimaryWeapons)),
+		SecondaryWeapons:  make([]campaignrender.CampaignCreationWeaponView, 0, len(creation.SecondaryWeapons)),
+		Armor:             make([]campaignrender.CampaignCreationArmorView, 0, len(creation.Armor)),
+		PotionItems:       make([]campaignrender.CampaignCreationItemView, 0, len(creation.PotionItems)),
+		DomainCards:       make([]campaignrender.CampaignCreationDomainCardView, 0, len(creation.DomainCards)),
 	}
 	for _, step := range creation.Progress.Steps {
-		view.Steps = append(view.Steps, webtemplates.CampaignCharacterCreationStepView{Step: step.Step, Key: step.Key, Complete: step.Complete})
+		view.Steps = append(view.Steps, campaignrender.CampaignCharacterCreationStepView{Step: step.Step, Key: step.Key, Complete: step.Complete})
 	}
 	for _, class := range creation.Classes {
-		view.Classes = append(view.Classes, webtemplates.CampaignCreationClassView{ID: class.ID, Name: class.Name})
+		view.Classes = append(view.Classes, campaignrender.CampaignCreationClassView{ID: class.ID, Name: class.Name})
 	}
 	for _, subclass := range creation.Subclasses {
-		view.Subclasses = append(view.Subclasses, webtemplates.CampaignCreationSubclassView{ID: subclass.ID, Name: subclass.Name, ClassID: subclass.ClassID})
+		view.Subclasses = append(view.Subclasses, campaignrender.CampaignCreationSubclassView{ID: subclass.ID, Name: subclass.Name, ClassID: subclass.ClassID})
 	}
 	for _, ancestry := range creation.Ancestries {
-		view.Ancestries = append(view.Ancestries, webtemplates.CampaignCreationHeritageView{ID: ancestry.ID, Name: ancestry.Name})
+		view.Ancestries = append(view.Ancestries, campaignrender.CampaignCreationHeritageView{ID: ancestry.ID, Name: ancestry.Name})
 	}
 	for _, community := range creation.Communities {
-		view.Communities = append(view.Communities, webtemplates.CampaignCreationHeritageView{ID: community.ID, Name: community.Name})
+		view.Communities = append(view.Communities, campaignrender.CampaignCreationHeritageView{ID: community.ID, Name: community.Name})
 	}
 	for _, weapon := range creation.PrimaryWeapons {
-		view.PrimaryWeapons = append(view.PrimaryWeapons, webtemplates.CampaignCreationWeaponView{ID: weapon.ID, Name: weapon.Name})
+		view.PrimaryWeapons = append(view.PrimaryWeapons, campaignrender.CampaignCreationWeaponView{ID: weapon.ID, Name: weapon.Name})
 	}
 	for _, weapon := range creation.SecondaryWeapons {
-		view.SecondaryWeapons = append(view.SecondaryWeapons, webtemplates.CampaignCreationWeaponView{ID: weapon.ID, Name: weapon.Name})
+		view.SecondaryWeapons = append(view.SecondaryWeapons, campaignrender.CampaignCreationWeaponView{ID: weapon.ID, Name: weapon.Name})
 	}
 	for _, armor := range creation.Armor {
-		view.Armor = append(view.Armor, webtemplates.CampaignCreationArmorView{ID: armor.ID, Name: armor.Name})
+		view.Armor = append(view.Armor, campaignrender.CampaignCreationArmorView{ID: armor.ID, Name: armor.Name})
 	}
 	for _, item := range creation.PotionItems {
-		view.PotionItems = append(view.PotionItems, webtemplates.CampaignCreationItemView{ID: item.ID, Name: item.Name})
+		view.PotionItems = append(view.PotionItems, campaignrender.CampaignCreationItemView{ID: item.ID, Name: item.Name})
 	}
 	for _, card := range creation.DomainCards {
-		view.DomainCards = append(view.DomainCards, webtemplates.CampaignCreationDomainCardView{ID: card.ID, Name: card.Name, DomainID: card.DomainID, Level: card.Level})
+		view.DomainCards = append(view.DomainCards, campaignrender.CampaignCreationDomainCardView{ID: card.ID, Name: card.Name, DomainID: card.DomainID, Level: card.Level})
 	}
 	return view
 }

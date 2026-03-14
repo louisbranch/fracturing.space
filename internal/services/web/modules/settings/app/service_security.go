@@ -14,7 +14,7 @@ func (s service) ListPasskeys(ctx context.Context, userID string) ([]SettingsPas
 	if err != nil {
 		return nil, err
 	}
-	passkeys, err := s.gateway.ListPasskeys(ctx, resolvedUserID)
+	passkeys, err := s.securityGateway.ListPasskeys(ctx, resolvedUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -34,7 +34,7 @@ func (s service) BeginPasskeyRegistration(ctx context.Context, userID string) (P
 	if err != nil {
 		return PasskeyChallenge{}, err
 	}
-	challenge, err := s.gateway.BeginPasskeyRegistration(ctx, resolvedUserID)
+	challenge, err := s.securityGateway.BeginPasskeyRegistration(ctx, resolvedUserID)
 	if err != nil {
 		return PasskeyChallenge{}, err
 	}
@@ -54,7 +54,7 @@ func (s service) FinishPasskeyRegistration(ctx context.Context, sessionID string
 	if len(credential) == 0 {
 		return apperrors.E(apperrors.KindInvalidInput, "credential is required")
 	}
-	return s.gateway.FinishPasskeyRegistration(ctx, sessionID, credential)
+	return s.securityGateway.FinishPasskeyRegistration(ctx, sessionID, credential)
 }
 
 // normalizeSettingsPasskey normalizes one passkey row for stable rendering.

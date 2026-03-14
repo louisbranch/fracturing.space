@@ -13,7 +13,7 @@ import (
 func TestNewServiceAndWorkflowResolverContracts(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(nil)
+	svc := NewService(ServiceConfig{})
 	if IsGatewayHealthy(nil) {
 		t.Fatalf("IsGatewayHealthy(nil) = true, want false")
 	}
@@ -61,7 +61,11 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 		characterCreationCatalog:  CampaignCharacterCreationCatalog{},
 		characterCreationProfile:  CampaignCharacterCreationProfile{},
 	}
-	svc := NewService(gateway)
+	svc := NewService(ServiceConfig{
+		ReadGateway:     gateway,
+		MutationGateway: gateway,
+		AuthzGateway:    gateway,
+	})
 	ctx := contextWithResolvedUserID("user-1")
 
 	if _, err := svc.ListCampaigns(ctx); err != nil {
@@ -134,8 +138,8 @@ func TestServiceExportedMethodContracts(t *testing.T) {
 	if err := svc.RevokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}); err != nil {
 		t.Fatalf("RevokeInvite() error = %v", err)
 	}
-	if _, err := svc.CampaignCharacterCreation(ctx, "c1", "char-1", language.AmericanEnglish, testCreationWorkflow{}); err != nil {
-		t.Fatalf("CampaignCharacterCreation() error = %v", err)
+	if _, err := svc.CampaignCharacterCreationData(ctx, "c1", "char-1", language.AmericanEnglish); err != nil {
+		t.Fatalf("CampaignCharacterCreationData() error = %v", err)
 	}
 	if _, err := svc.CampaignCharacterCreationProgress(ctx, "c1", "char-1"); err != nil {
 		t.Fatalf("CampaignCharacterCreationProgress() error = %v", err)

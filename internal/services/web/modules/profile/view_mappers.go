@@ -5,19 +5,18 @@ import (
 
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 const publicProfileAvatarDeliveryWidthPX = 512
 
 // mapPublicProfileTemplateView maps values across transport and template boundaries.
-func mapPublicProfileTemplateView(profile profileapp.Profile, assetBaseURL string, viewerSignedIn bool) webtemplates.PublicProfileView {
+func mapPublicProfileTemplateView(profile profileapp.Profile, assetBaseURL string, viewerSignedIn bool) PublicProfileView {
 	entityID := strings.TrimSpace(profile.UserID)
 	if entityID == "" {
 		entityID = strings.TrimSpace(profile.Username)
 	}
 
-	return webtemplates.PublicProfileView{
+	return PublicProfileView{
 		Username: profile.Username,
 		Name:     profile.Name,
 		Pronouns: profile.Pronouns,

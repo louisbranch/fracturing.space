@@ -100,7 +100,9 @@ func Compose(config CompositionConfig) module.Module {
 		AssetBaseURL: config.AssetBaseURL,
 	})
 	return New(Config{
-		Gateway:          gateway,
+		ReadGateway:      gateway,
+		MutationGateway:  gateway,
+		AuthzGateway:     gateway,
 		Base:             config.Base,
 		ChatFallbackPort: config.ChatFallbackPort,
 		Workflows:        workflows,

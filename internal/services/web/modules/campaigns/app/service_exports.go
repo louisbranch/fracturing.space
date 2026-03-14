@@ -176,9 +176,10 @@ func (s service) RevokeInvite(ctx context.Context, campaignID string, input Revo
 	return s.revokeInvite(ctx, campaignID, input)
 }
 
-// CampaignCharacterCreation centralizes this web behavior in one helper seam.
-func (s service) CampaignCharacterCreation(ctx context.Context, campaignID string, characterID string, locale language.Tag, workflow CharacterCreationWorkflow) (CampaignCharacterCreation, error) {
-	return s.campaignCharacterCreation(ctx, campaignID, characterID, locale, workflow)
+// CampaignCharacterCreationData centralizes generic character-creation reads in
+// one helper seam.
+func (s service) CampaignCharacterCreationData(ctx context.Context, campaignID string, characterID string, locale language.Tag) (CampaignCharacterCreationData, error) {
+	return s.campaignCharacterCreationData(ctx, campaignID, characterID, locale)
 }
 
 // CampaignCharacterCreationProgress centralizes this web behavior in one helper seam.

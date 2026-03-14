@@ -25,7 +25,7 @@ func TestHandleCharacterCreationStepRouteAppliesStepAndRedirects(t *testing.T) {
 			},
 		},
 	}
-	m := New(Config{Gateway: gateway, Base: modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	m := New(configWithGateway(gateway, modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -77,7 +77,7 @@ func TestHandleCharacterCreationStepRouteUsesHXRedirect(t *testing.T) {
 			},
 		},
 	}
-	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -106,13 +106,13 @@ func TestHandleCharacterCreationStepRouteUsesHXRedirect(t *testing.T) {
 func TestHandleCharacterCreationStepRouteRedirectsWithFlashOnInvalidForm(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{
+	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
 			Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
 			NextStep: 1,
 		},
-	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	}, modulehandler.NewTestBase(), defaultTestWorkflows()))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -152,7 +152,7 @@ func TestHandleCharacterCreationStepRouteRedirectsWithFlashWhenWorkflowReady(t *
 			},
 		},
 	}
-	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -182,7 +182,7 @@ func TestHandleCharacterCreationResetRouteRedirectsAndCallsGateway(t *testing.T)
 			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		},
 	}
-	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -217,7 +217,7 @@ func TestHandleCharacterCreationResetRouteUsesHXRedirect(t *testing.T) {
 			items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 		},
 	}
-	m := New(Config{Gateway: gateway, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), defaultTestWorkflows()))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

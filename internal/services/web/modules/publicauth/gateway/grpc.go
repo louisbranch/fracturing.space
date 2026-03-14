@@ -22,7 +22,6 @@ type AuthClient interface {
 	BeginRecoveryPasskeyRegistration(context.Context, *authv1.BeginRecoveryPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error)
 	FinishRecoveryPasskeyRegistration(context.Context, *authv1.FinishRecoveryPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error)
 	CreateWebSession(context.Context, *authv1.CreateWebSessionRequest, ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error)
-	GetWebSession(context.Context, *authv1.GetWebSessionRequest, ...grpc.CallOption) (*authv1.GetWebSessionResponse, error)
 	RevokeWebSession(context.Context, *authv1.RevokeWebSessionRequest, ...grpc.CallOption) (*authv1.RevokeWebSessionResponse, error)
 }
 
@@ -205,15 +204,6 @@ func (g GRPCGateway) CreateWebSession(ctx context.Context, userID string) (strin
 		return "", apperrors.E(apperrors.KindUnknown, "Auth did not return a web session ID.")
 	}
 	return sessionID, nil
-}
-
-// HasValidWebSession reports whether this package condition is satisfied.
-func (g GRPCGateway) HasValidWebSession(ctx context.Context, sessionID string) bool {
-	resp, err := g.Client.GetWebSession(ctx, &authv1.GetWebSessionRequest{SessionId: sessionID})
-	if err != nil || resp == nil || resp.GetSession() == nil {
-		return false
-	}
-	return strings.TrimSpace(resp.GetSession().GetId()) != ""
 }
 
 // RevokeWebSession applies this package workflow transition.

@@ -69,12 +69,12 @@ func (h handlers) renderSecurityPage(w http.ResponseWriter, r *http.Request, ctx
 		statusCode,
 		routepath.AppSettingsSecurity,
 		webtemplates.T(loc, "web.settings.page_security_title"),
-		webtemplates.SettingsSecurityFragment(passkeys, loc),
+		SettingsSecurityFragment(passkeys, loc),
 	)
 }
 
 // loadPasskeyRows keeps the security page mapper separate from passkey gateway calls.
-func (h handlers) loadPasskeyRows(ctx context.Context, userID string) ([]webtemplates.SettingsPasskeyRow, error) {
+func (h handlers) loadPasskeyRows(ctx context.Context, userID string) ([]SettingsPasskeyRow, error) {
 	passkeys, err := h.security.ListPasskeys(ctx, userID)
 	if err != nil {
 		return nil, err

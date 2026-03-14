@@ -253,11 +253,11 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, reporter)
+	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, reporter, nil)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	defer closeManagedConns(conns)
+	defer closeManagedConns(conns, nil)
 
 	if len(conns) != 7 {
 		t.Fatalf("managed conns = %d, want 7", len(conns))
@@ -310,11 +310,11 @@ func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
+	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	defer closeManagedConns(conns)
+	defer closeManagedConns(conns, nil)
 
 	gateway := campaigngateway.NewGRPCGateway(campaigngateway.GRPCGatewayDeps{
 		Read: campaigngateway.GRPCGatewayReadDeps{
@@ -370,7 +370,7 @@ func TestBootstrapDependenciesErrorClosesConns(t *testing.T) {
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	_, _, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
+	_, _, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil)
 	if err == nil {
 		t.Fatal("expected error for game dependency failure")
 	}
@@ -392,11 +392,11 @@ func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	_, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter)
+	_, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil)
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
-	defer closeManagedConns(conns)
+	defer closeManagedConns(conns, nil)
 
 	// 8 requirements - 3 empty addresses = 5 connections.
 	if len(conns) != 5 {
@@ -530,5 +530,8 @@ func TestConfigServerConfigMapsRuntimeDependencies(t *testing.T) {
 	}
 	if serverCfg.Dependencies == nil {
 		t.Fatal("expected dependencies pointer")
+	}
+	if serverCfg.Logger == nil {
+		t.Fatal("expected logger")
 	}
 }

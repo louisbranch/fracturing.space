@@ -3,6 +3,7 @@ package web
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
@@ -19,7 +20,7 @@ type runtimeDependencies struct {
 // close releases all managed connections owned by the runtime dependency
 // assembly.
 func (r runtimeDependencies) close() {
-	closeManagedConns(r.depsConns)
+	closeManagedConns(r.depsConns, slog.Default())
 }
 
 // bootstrapRuntimeDependencies assembles the runtime dependency graph used by
@@ -31,7 +32,7 @@ func bootstrapRuntimeDependencies(
 	reporter *platformstatus.Reporter,
 ) (runtimeDependencies, error) {
 	requirements := dependencyRequirements(cfg, reporter)
-	bundle, conns, err := bootstrapDependencies(ctx, requirements, cfg.AssetBaseURL, reporter)
+	bundle, conns, err := bootstrapDependencies(ctx, requirements, cfg.AssetBaseURL, reporter, slog.Default())
 	if err != nil {
 		return runtimeDependencies{}, fmt.Errorf("init web dependency graph: %w", err)
 	}

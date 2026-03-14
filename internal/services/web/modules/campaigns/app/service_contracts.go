@@ -42,45 +42,69 @@ type Service interface {
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 	CreateInvite(context.Context, string, CreateInviteInput) error
 	RevokeInvite(context.Context, string, RevokeInviteInput) error
-	CampaignCharacterCreation(context.Context, string, string, language.Tag, CharacterCreationWorkflow) (CampaignCharacterCreation, error)
+	CampaignCharacterCreationData(context.Context, string, string, language.Tag) (CampaignCharacterCreationData, error)
 	CampaignCharacterCreationProgress(context.Context, string, string) (CampaignCharacterCreationProgress, error)
 	ApplyCharacterCreationStep(context.Context, string, string, *CampaignCharacterCreationStepInput) error
 	ResetCharacterCreationWorkflow(context.Context, string, string) error
 }
 
+// ServiceConfig keeps constructor dependencies explicit by capability.
+type ServiceConfig struct {
+	ReadGateway     ReadGateway
+	MutationGateway MutationGateway
+	AuthzGateway    AuthzGateway
+}
+
 // service defines an internal contract used at this web package boundary.
 type service struct {
-	readGateway     campaignReadGateway
-	mutationGateway campaignMutationGateway
+	readGateway     ReadGateway
+	mutationGateway MutationGateway
 	authzGateway    AuthzGateway
 }
 
-// NewService constructs a service with default workflows.
-func NewService(gateway CampaignGateway) Service {
-	return newService(gateway)
+// NewService constructs a service from explicit read, mutation, and authz seams.
+func NewService(config ServiceConfig) Service {
+	return newServiceWithConfig(config)
 }
 
-// IsGatewayHealthy reports whether the gateway is present and operational.
-func IsGatewayHealthy(gateway CampaignGateway) bool {
-	if gateway == nil {
+// IsGatewayHealthy reports whether the read gateway is present and operational.
+func IsGatewayHealthy(readGateway ReadGateway) bool {
+	if readGateway == nil {
 		return false
 	}
-	_, unavailable := gateway.(unavailableGateway)
+	_, unavailable := readGateway.(unavailableGateway)
 	return !unavailable
 }
 
-// newService builds package wiring for this web seam.
+// newService keeps package-local tests on a convenient combined-gateway seam.
 func newService(gateway CampaignGateway) service {
 	if gateway == nil {
-		gateway = unavailableGateway{}
+		return newServiceWithConfig(ServiceConfig{})
 	}
 	var authz AuthzGateway
 	if checker, ok := gateway.(AuthzGateway); ok {
 		authz = checker
 	}
+	return newServiceWithConfig(ServiceConfig{
+		ReadGateway:     gateway,
+		MutationGateway: gateway,
+		AuthzGateway:    authz,
+	})
+}
+
+// newServiceWithConfig builds package wiring for this web seam.
+func newServiceWithConfig(config ServiceConfig) service {
+	readGateway := config.ReadGateway
+	if readGateway == nil {
+		readGateway = unavailableGateway{}
+	}
+	mutationGateway := config.MutationGateway
+	if mutationGateway == nil {
+		mutationGateway = unavailableGateway{}
+	}
 	return service{
-		readGateway:     gateway,
-		mutationGateway: gateway,
-		authzGateway:    authz,
+		readGateway:     readGateway,
+		mutationGateway: mutationGateway,
+		authzGateway:    config.AuthzGateway,
 	}
 }

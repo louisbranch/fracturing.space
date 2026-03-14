@@ -24,28 +24,11 @@ func (h handlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Req
 		h.WriteError(w, r, err)
 		return
 	}
-	workflow := h.resolveWorkflow(workspace.System)
-	if workflow == nil {
+	if !h.creation.Enabled(workspace.System) {
 		h.WriteNotFound(w, r)
 		return
 	}
-
-	progress, err := h.service.CampaignCharacterCreationProgress(ctx, campaignID, characterID)
-	if err != nil {
-		h.WriteError(w, r, err)
-		return
-	}
-	if progress.Ready {
-		h.writeCreationStepError(w, r, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_already_complete", "character creation workflow is already complete"), campaignID, characterID)
-		return
-	}
-
-	stepInput, err := workflow.ParseStepInput(r.Form, progress.NextStep)
-	if err != nil {
-		h.writeCreationStepError(w, r, err, campaignID, characterID)
-		return
-	}
-	if err := h.service.ApplyCharacterCreationStep(ctx, campaignID, characterID, stepInput); err != nil {
+	if err := h.creation.ApplyStep(ctx, campaignID, characterID, workspace.System, r.Form); err != nil {
 		h.writeCreationStepError(w, r, err, campaignID, characterID)
 		return
 	}
@@ -67,7 +50,7 @@ func (h handlers) writeCreationStepError(w http.ResponseWriter, r *http.Request,
 // handleCharacterCreationReset handles this route in the module transport layer.
 func (h handlers) handleCharacterCreationReset(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.service.ResetCharacterCreationWorkflow(ctx, campaignID, characterID); err != nil {
+	if err := h.creation.Reset(ctx, campaignID, characterID); err != nil {
 		h.writeCreationStepError(w, r, err, campaignID, characterID)
 		return
 	}

@@ -14,12 +14,7 @@ func TestCreateCampaignTriggersDashboardSyncOnSuccess(t *testing.T) {
 	t.Parallel()
 
 	sync := &campaignDashboardSyncStub{}
-	m := New(Config{
-		Gateway:          fakeGateway{createdCampaignID: "camp-777"},
-		Base:             managerMutationBase(),
-		ChatFallbackPort: "",
-		DashboardSync:    sync,
-	})
+	m := New(configWithGatewayAndSync(fakeGateway{createdCampaignID: "camp-777"}, managerMutationBase(), nil, sync))
 	mount, _ := m.Mount()
 
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignsCreate, strings.NewReader("name=New+Campaign&system=daggerheart&gm_mode=human"))
@@ -36,7 +31,7 @@ func TestSessionMutationsTriggerDashboardSyncOnSuccess(t *testing.T) {
 	t.Parallel()
 
 	sync := &campaignDashboardSyncStub{}
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", DashboardSync: sync})
+	m := New(configWithGatewayAndSync(managerMutationGateway(), managerMutationBase(), nil, sync))
 	mount, _ := m.Mount()
 
 	startReq := httptest.NewRequest(http.MethodPost, routepath.AppCampaignSessionStart("c1"), strings.NewReader("name=Session+Two"))
@@ -61,7 +56,7 @@ func TestSessionMutationDoesNotTriggerDashboardSyncOnValidationError(t *testing.
 	t.Parallel()
 
 	sync := &campaignDashboardSyncStub{}
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", DashboardSync: sync})
+	m := New(configWithGatewayAndSync(managerMutationGateway(), managerMutationBase(), nil, sync))
 	mount, _ := m.Mount()
 
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignSessionEnd("c1"), strings.NewReader("session_id=   "))

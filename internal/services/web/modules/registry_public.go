@@ -20,22 +20,25 @@ func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicMod
 	dashboardSync := dashboardsync.New(deps.DashboardSync.UserHubControlClient, deps.DashboardSync.GameEventClient, nil)
 	return []module.Module{
 		publicauth.New(publicauth.Config{
-			Gateway:     authGateway,
-			RequestMeta: opts.RequestSchemePolicy,
-			AuthBaseURL: deps.PublicAuth.AuthBaseURL,
-			Surface:     publicauth.SurfaceShell,
+			Gateway:         authGateway,
+			ResolveSignedIn: res.ResolveSignedIn,
+			RequestMeta:     opts.RequestSchemePolicy,
+			AuthBaseURL:     deps.PublicAuth.AuthBaseURL,
+			Surface:         publicauth.SurfaceShell,
 		}),
 		publicauth.New(publicauth.Config{
-			Gateway:     authGateway,
-			RequestMeta: opts.RequestSchemePolicy,
-			AuthBaseURL: deps.PublicAuth.AuthBaseURL,
-			Surface:     publicauth.SurfacePasskeys,
+			Gateway:         authGateway,
+			ResolveSignedIn: res.ResolveSignedIn,
+			RequestMeta:     opts.RequestSchemePolicy,
+			AuthBaseURL:     deps.PublicAuth.AuthBaseURL,
+			Surface:         publicauth.SurfacePasskeys,
 		}),
 		publicauth.New(publicauth.Config{
-			Gateway:     authGateway,
-			RequestMeta: opts.RequestSchemePolicy,
-			AuthBaseURL: deps.PublicAuth.AuthBaseURL,
-			Surface:     publicauth.SurfaceAuthRedirect,
+			Gateway:         authGateway,
+			ResolveSignedIn: res.ResolveSignedIn,
+			RequestMeta:     opts.RequestSchemePolicy,
+			AuthBaseURL:     deps.PublicAuth.AuthBaseURL,
+			Surface:         publicauth.SurfaceAuthRedirect,
 		}),
 		discovery.New(discovery.Config{Gateway: discoveryGateway}),
 		profile.New(profile.Config{

@@ -37,7 +37,7 @@ func (h handlers) writeDiscoveryPage(
 	r *http.Request,
 	loc webtemplates.Localizer,
 	lang string,
-	entries []webtemplates.StarterEntryView,
+	entries []StarterEntryView,
 ) {
 	h.WritePublicPage(
 		w,
@@ -46,6 +46,6 @@ func (h handlers) writeDiscoveryPage(
 		webtemplates.T(loc, "layout.meta_description"),
 		lang,
 		http.StatusOK,
-		webtemplates.DiscoveryFragment(entries, loc),
+		DiscoveryFragment(entries, loc),
 	)
 }

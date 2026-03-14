@@ -1,0 +1,193 @@
+package campaigns
+
+import (
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	"strings"
+)
+
+type CampaignListItem struct {
+	ID               string
+	Name             string
+	Theme            string
+	CoverImageURL    string
+	ParticipantCount string
+	CharacterCount   string
+	UpdatedAt        string
+}
+
+type CampaignCreateFormValues struct {
+	Name        string
+	System      string
+	GMMode      string
+	ThemePrompt string
+}
+
+func campaignListItemURL(item CampaignListItem) string {
+	campaignID := strings.TrimSpace(item.ID)
+	if campaignID == "" {
+		return ""
+	}
+	return routepath.AppCampaign(campaignID)
+}
+
+func campaignCreateSystemValue(form CampaignCreateFormValues) string {
+	if strings.TrimSpace(form.System) != "" {
+		return strings.TrimSpace(form.System)
+	}
+	return "daggerheart"
+}
+
+func campaignCreateGMModeValue(form CampaignCreateFormValues) string {
+	if strings.TrimSpace(form.GMMode) != "" {
+		return strings.TrimSpace(form.GMMode)
+	}
+	return "ai"
+}
+
+templ CampaignStartFragment(loc Localizer) {
+	<section class="mx-auto flex min-h-[62vh] w-full max-w-6xl items-center justify-center">
+		<div class="w-full max-w-5xl rounded-box border border-base-300 bg-base-200/70 p-4 shadow-xl md:p-8">
+			<div class="mx-auto flex w-full max-w-4xl flex-col items-stretch justify-center lg:flex-row lg:items-center">
+				<article class="card flex-1 border border-base-300 bg-base-100 shadow-sm" data-campaign-start-option="browse">
+					<div class="card-body gap-3">
+						<h2 class="card-title">{ T(loc, "game.campaigns.new.browse.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.browse.description") }</p>
+						<div class="card-actions mt-2 justify-start">
+							<a class="btn btn-outline w-full sm:w-auto" href={ routepath.DiscoverPrefix }>{ T(loc, "game.campaigns.new.browse.action") }</a>
+						</div>
+					</div>
+				</article>
+				<div class="divider lg:divider-horizontal mx-4 text-xs font-semibold uppercase tracking-[0.28em] opacity-70" data-campaign-start-divider="or">{ T(loc, "game.campaigns.new.divider_or") }</div>
+				<article class="card flex-1 border border-primary/30 bg-base-100 shadow-sm" data-campaign-start-option="scratch">
+					<div class="card-body gap-3">
+						<h2 class="card-title">{ T(loc, "game.campaigns.new.scratch.title") }</h2>
+						<p class="text-sm opacity-80">{ T(loc, "game.campaigns.new.scratch.description") }</p>
+						<div class="card-actions mt-2 justify-start">
+							<a class="btn btn-primary w-full sm:w-auto" href={ routepath.AppCampaignsCreate }>{ T(loc, "game.campaigns.new.scratch.action") }</a>
+						</div>
+					</div>
+				</article>
+			</div>
+		</div>
+	</section>
+}
+
+templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
+	<section class="card bg-base-200">
+		<div class="card-body">
+			<form method="post" action={ routepath.AppCampaignsCreate } class="space-y-4">
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_name") }</span>
+					</label>
+					<input type="text" name="name" value={ form.Name } placeholder={ T(loc, "game.create.placeholder_name") } required class="input input-bordered w-full"/>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_system") }</span>
+					</label>
+					<select name="system" required class="select select-bordered w-full">
+						if campaignCreateSystemValue(form) == "daggerheart" {
+							<option value="daggerheart" selected>{ T(loc, "game.create.field_system_value_daggerheart") }</option>
+						} else {
+							<option value="daggerheart">{ T(loc, "game.create.field_system_value_daggerheart") }</option>
+						}
+					</select>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_gm_mode") }</span>
+					</label>
+					<select name="gm_mode" required class="select select-bordered w-full">
+						if campaignCreateGMModeValue(form) == "ai" {
+							<option value="ai" selected>{ T(loc, "game.create.field_gm_mode_ai") }</option>
+						} else {
+							<option value="ai">{ T(loc, "game.create.field_gm_mode_ai") }</option>
+						}
+						if campaignCreateGMModeValue(form) == "human" {
+							<option value="human" selected>{ T(loc, "game.create.field_gm_mode_human") }</option>
+						} else {
+							<option value="human">{ T(loc, "game.create.field_gm_mode_human") }</option>
+						}
+						if campaignCreateGMModeValue(form) == "hybrid" {
+							<option value="hybrid" selected>{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+						} else {
+							<option value="hybrid">{ T(loc, "game.create.field_gm_mode_hybrid") }</option>
+						}
+					</select>
+				</div>
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text">{ T(loc, "game.create.field_theme_prompt") }</span>
+					</label>
+					<textarea name="theme_prompt" rows="4" placeholder={ T(loc, "game.create.placeholder_theme_prompt") } class="textarea textarea-bordered w-full">{ form.ThemePrompt }</textarea>
+				</div>
+				<div class="card-actions justify-end">
+					<button class="btn btn-primary" type="submit">{ T(loc, "game.create.submit") }</button>
+				</div>
+			</form>
+		</div>
+	</section>
+}
+
+templ CampaignListFragment(items []CampaignListItem, loc Localizer) {
+	<div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4">
+		if len(items) == 0 {
+			<p>{ T(loc, "game.campaigns.empty") }</p>
+		}
+		for _, item := range items {
+			<div class="card border border-base-300 bg-base-100 shadow-sm" data-campaign-id={ item.ID }>
+				<figure class="w-full">
+					if campaignListItemURL(item) != "" {
+						<a href={ campaignListItemURL(item) } class="group block w-full">
+							@AppImage(AppImageView{
+								Src:        item.CoverImageURL,
+								Alt:        item.Name + " cover",
+								WidthPX:    16,
+								HeightPX:   9,
+								FrameClass: "w-full",
+								ImageClass: "h-full w-full object-cover",
+							})
+						</a>
+					} else {
+						@AppImage(AppImageView{
+							Src:        item.CoverImageURL,
+							Alt:        item.Name + " cover",
+							WidthPX:    16,
+							HeightPX:   9,
+							FrameClass: "w-full",
+							ImageClass: "h-full w-full object-cover",
+						})
+					}
+				</figure>
+				<div class="card-body">
+					<h2 class="card-title">
+						if campaignListItemURL(item) != "" {
+							<a href={ campaignListItemURL(item) }>{ item.Name }</a>
+						} else {
+							{ item.Name }
+						}
+					</h2>
+					if item.Theme != "" {
+						<p class="text-sm opacity-70">{ item.Theme }</p>
+					}
+					<div class="card-actions justify-start">
+						<div class="badge badge-outline">
+							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_PARTICIPANT, "size-4 me-1")
+							{ T(loc, "game.campaigns.table.participants") }: { item.ParticipantCount }
+						</div>
+						<div class="badge badge-outline">
+							@sharedtemplates.LucideIconID(commonv1.IconId_ICON_ID_CHARACTER, "size-4 me-1")
+							{ T(loc, "game.campaigns.table.characters") }: { item.CharacterCount }
+						</div>
+					</div>
+					if strings.TrimSpace(item.UpdatedAt) != "" {
+						<p class="mt-2 text-xs opacity-60">{ item.UpdatedAt }</p>
+					}
+				</div>
+			</div>
+		}
+	</div>
+}

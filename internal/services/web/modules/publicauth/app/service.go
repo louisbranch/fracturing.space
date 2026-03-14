@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/redirectpath"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -191,7 +192,7 @@ func (s service) RecoveryFinish(ctx context.Context, recoverySessionID string, s
 func (s service) ResolvePostAuthRedirect(pendingID string, nextPath string) string {
 	pendingID = strings.TrimSpace(pendingID)
 	if pendingID == "" {
-		if resolved := resolvePostAuthRedirectPath(nextPath); resolved != "" {
+		if resolved := redirectpath.ResolveSafe(nextPath); resolved != "" {
 			return resolved
 		}
 		return routepath.AppDashboard
@@ -212,82 +213,6 @@ func (s service) ResolvePostAuthRedirect(pendingID string, nextPath string) stri
 	query.Set("pending_id", pendingID)
 	parsed.RawQuery = query.Encode()
 	return parsed.String()
-}
-
-// resolvePostAuthRedirectPath only allows safe first-party app and invite URLs
-// to survive login, signup, and recovery flows.
-func resolvePostAuthRedirectPath(raw string) string {
-	next := strings.TrimSpace(raw)
-	if next == "" {
-		return ""
-	}
-	parsed, err := url.Parse(next)
-	if err != nil || parsed.Scheme != "" || parsed.Host != "" || parsed.Opaque != "" {
-		return ""
-	}
-	rawPath := strings.TrimSpace(parsed.EscapedPath())
-	if hasEncodedSlash(rawPath) {
-		return ""
-	}
-	decodedPath, err := url.PathUnescape(strings.TrimSpace(parsed.Path))
-	if err != nil {
-		return ""
-	}
-	if hasDotSegment(decodedPath) {
-		return ""
-	}
-	canonicalPath := path.Clean(decodedPath)
-	if strings.TrimSpace(canonicalPath) == "." {
-		canonicalPath = "/"
-	}
-	canonicalPath = ensureLeadingSlash(canonicalPath)
-	if canonicalPath == routepath.AppPrefix || canonicalPath == strings.TrimRight(routepath.InvitePrefix, "/") {
-		return ""
-	}
-	if !strings.HasPrefix(canonicalPath, routepath.AppPrefix) && !strings.HasPrefix(canonicalPath, routepath.InvitePrefix) {
-		return ""
-	}
-	if parsed.RawQuery != "" {
-		return canonicalPath + "?" + parsed.RawQuery
-	}
-	return canonicalPath
-}
-
-// hasDotSegment rejects traversal-style paths before redirect canonicalization.
-func hasDotSegment(rawPath string) bool {
-	for _, part := range strings.Split(rawPath, "/") {
-		if part == "." || part == ".." {
-			return true
-		}
-	}
-	return false
-}
-
-// hasEncodedSlash blocks encoded path separators that could bypass prefix checks.
-func hasEncodedSlash(rawPath string) bool {
-	lower := strings.ToLower(rawPath)
-	return strings.Contains(lower, "%2f") || strings.Contains(lower, "%5c")
-}
-
-// ensureLeadingSlash keeps accepted redirect targets path-absolute.
-func ensureLeadingSlash(pathValue string) string {
-	pathValue = strings.TrimSpace(pathValue)
-	if pathValue == "" {
-		return "/"
-	}
-	if strings.HasPrefix(pathValue, "/") {
-		return pathValue
-	}
-	return "/" + pathValue
-}
-
-// HasValidWebSession trims cookie input before delegating to auth session checks.
-func (s service) HasValidWebSession(ctx context.Context, sessionID string) bool {
-	resolvedSessionID := strings.TrimSpace(sessionID)
-	if resolvedSessionID == "" {
-		return false
-	}
-	return s.auth.HasValidWebSession(ctx, resolvedSessionID)
 }
 
 // RevokeWebSession treats blank cookie values as already-cleared sessions.

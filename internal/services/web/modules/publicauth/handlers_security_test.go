@@ -7,43 +7,19 @@ import (
 	"testing"
 
 	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/redirectpath"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
-
-func TestResolveSafeRedirectPathRejectsUnsafeTargets(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name  string
-		input string
-		want  string
-	}{
-		{name: "empty", input: "", want: ""},
-		{name: "external url", input: "https://evil.example/app/campaigns", want: ""},
-		{name: "app root", input: routepath.AppPrefix, want: ""},
-		{name: "invite root", input: strings.TrimRight(routepath.InvitePrefix, "/"), want: ""},
-		{name: "encoded slash", input: "/app/campaigns/%2fadmin", want: ""},
-		{name: "dot segment", input: "/app/../settings", want: ""},
-		{name: "valid app path", input: "/app/campaigns/camp-1?tab=people", want: "/app/campaigns/camp-1?tab=people"},
-		{name: "valid invite path", input: "/invite/inv-1", want: "/invite/inv-1"},
-	}
-
-	for _, tc := range tests {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			if got := resolveSafeRedirectPath(tc.input); got != tc.want {
-				t.Fatalf("resolveSafeRedirectPath(%q) = %q, want %q", tc.input, got, tc.want)
-			}
-		})
-	}
-}
 
 func TestHandleRecoveryCodeGetConsumesRevealCookie(t *testing.T) {
 	t.Parallel()
 
 	h := newHandlers(publicauthapp.NewService(nil, ""), requestmeta.SchemePolicy{})
+
+	if got := redirectpath.ResolveSafe("/app/dashboard"); got != "/app/dashboard" {
+		t.Fatalf("ResolveSafe sanity check = %q, want %q", got, "/app/dashboard")
+	}
 
 	seedReq := httptest.NewRequest(http.MethodGet, routepath.LoginRecoveryCode, nil)
 	seedResp := httptest.NewRecorder()

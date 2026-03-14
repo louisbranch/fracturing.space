@@ -342,5 +342,9 @@ func TestWithCampaignAndSessionIDReturnsNotFoundForMissingSessionID(t *testing.T
 // --- helpers ---
 
 func newTestHandlers(gw fakeGateway) handlers {
-	return newHandlers(campaignapp.NewService(gw), modulehandler.NewTestBase(), "", nil)
+	return newHandlers(campaignapp.NewService(campaignapp.ServiceConfig{
+		ReadGateway:     gw,
+		MutationGateway: gw,
+		AuthzGateway:    gw,
+	}), modulehandler.NewTestBase(), "", nil)
 }
