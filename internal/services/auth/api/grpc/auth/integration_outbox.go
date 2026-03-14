@@ -20,17 +20,17 @@ const (
 
 func (s *AuthService) LeaseIntegrationOutboxEvents(ctx context.Context, in *authv1.LeaseIntegrationOutboxEventsRequest) (*authv1.LeaseIntegrationOutboxEventsResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "lease integration outbox events request is required")
+		return nil, status.Error(codes.InvalidArgument, "Lease integration outbox events request is required.")
 	}
 
 	outboxStore, ok := s.store.(storage.IntegrationOutboxStore)
 	if s == nil || s.store == nil || !ok {
-		return nil, status.Error(codes.Internal, "integration outbox store is not configured")
+		return nil, status.Error(codes.Internal, "Integration outbox store is not configured.")
 	}
 
 	consumer := strings.TrimSpace(in.GetConsumer())
 	if consumer == "" {
-		return nil, status.Error(codes.InvalidArgument, "consumer is required")
+		return nil, status.Error(codes.InvalidArgument, "Consumer is required.")
 	}
 
 	limit := int(in.GetLimit())
@@ -48,7 +48,7 @@ func (s *AuthService) LeaseIntegrationOutboxEvents(ctx context.Context, in *auth
 
 	leased, err := outboxStore.LeaseIntegrationOutboxEvents(ctx, consumer, limit, now, leaseTTL)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "lease integration outbox events: %v", err)
+		return nil, status.Errorf(codes.Internal, "Lease integration outbox events: %v", err)
 	}
 
 	resp := &authv1.LeaseIntegrationOutboxEventsResponse{
@@ -62,53 +62,45 @@ func (s *AuthService) LeaseIntegrationOutboxEvents(ctx context.Context, in *auth
 
 func (s *AuthService) AckIntegrationOutboxEvent(ctx context.Context, in *authv1.AckIntegrationOutboxEventRequest) (*authv1.AckIntegrationOutboxEventResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "ack integration outbox event request is required")
+		return nil, status.Error(codes.InvalidArgument, "Ack integration outbox event request is required.")
 	}
 
 	outboxStore, ok := s.store.(storage.IntegrationOutboxStore)
 	if s == nil || s.store == nil || !ok {
-		return nil, status.Error(codes.Internal, "integration outbox store is not configured")
+		return nil, status.Error(codes.Internal, "Integration outbox store is not configured.")
 	}
 
 	eventID := strings.TrimSpace(in.GetEventId())
 	if eventID == "" {
-		return nil, status.Error(codes.InvalidArgument, "event id is required")
+		return nil, status.Error(codes.InvalidArgument, "Event ID is required.")
 	}
 	consumer := strings.TrimSpace(in.GetConsumer())
 	if consumer == "" {
-		return nil, status.Error(codes.InvalidArgument, "consumer is required")
+		return nil, status.Error(codes.InvalidArgument, "Consumer is required.")
 	}
 
 	now := nowUTC(s.clock)
 	var err error
 	switch in.GetOutcome() {
 	case authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED:
-		processedAt := now
-		if ts := in.GetProcessedAt(); ts != nil && ts.IsValid() {
-			processedAt = ts.AsTime().UTC()
-		}
-		err = outboxStore.MarkIntegrationOutboxSucceeded(ctx, eventID, consumer, processedAt)
+		err = outboxStore.MarkIntegrationOutboxSucceeded(ctx, eventID, consumer, now)
 	case authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY:
 		nextAttemptAt := in.GetNextAttemptAt()
 		if nextAttemptAt == nil || !nextAttemptAt.IsValid() {
-			return nil, status.Error(codes.InvalidArgument, "next attempt at is required for retry outcome")
+			return nil, status.Error(codes.InvalidArgument, "Next attempt at is required for retry outcome.")
 		}
 		err = outboxStore.MarkIntegrationOutboxRetry(ctx, eventID, consumer, nextAttemptAt.AsTime().UTC(), in.GetLastError())
 	case authv1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD:
-		processedAt := now
-		if ts := in.GetProcessedAt(); ts != nil && ts.IsValid() {
-			processedAt = ts.AsTime().UTC()
-		}
-		err = outboxStore.MarkIntegrationOutboxDead(ctx, eventID, consumer, in.GetLastError(), processedAt)
+		err = outboxStore.MarkIntegrationOutboxDead(ctx, eventID, consumer, in.GetLastError(), now)
 	default:
-		return nil, status.Error(codes.InvalidArgument, "ack outcome is required")
+		return nil, status.Error(codes.InvalidArgument, "Ack outcome is required.")
 	}
 
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, storage.ErrNotFound.Error())
 		}
-		return nil, status.Errorf(codes.Internal, "ack integration outbox event: %v", err)
+		return nil, status.Errorf(codes.Internal, "Ack integration outbox event: %v", err)
 	}
 	return &authv1.AckIntegrationOutboxEventResponse{}, nil
 }

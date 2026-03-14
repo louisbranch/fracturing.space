@@ -271,7 +271,7 @@ func TestHandleConsent(t *testing.T) {
 		server, oauthStore := testServer(t)
 		if err := server.userStore.PutUser(context.Background(), user.User{
 			ID:        "user-1",
-			Email:     "alice",
+			Username:  "alice",
 			CreatedAt: time.Now(),
 			UpdatedAt: time.Now(),
 		}); err != nil {
@@ -359,7 +359,7 @@ func TestHandleConsent_NonTrustedClientRendersConsentView(t *testing.T) {
 	// Ensure client is NOT trusted (default).
 	if err := server.userStore.PutUser(context.Background(), user.User{
 		ID:        "user-1",
-		Email:     "alice",
+		Username:  "alice",
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}); err != nil {
@@ -800,6 +800,21 @@ func TestRegisterRoutes(t *testing.T) {
 		}
 	})
 
+	t.Run("provider routes are not registered", func(t *testing.T) {
+		server, _ := testServer(t)
+		mux := http.NewServeMux()
+		if err := server.RegisterRoutes(mux); err != nil {
+			t.Fatalf("RegisterRoutes() returned error: %v", err)
+		}
+
+		req := httptest.NewRequest(http.MethodGet, "/oauth/providers/github/start", nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Errorf("expected 404, got %d", w.Code)
+		}
+	})
+
 	t.Run("static assets unavailable", func(t *testing.T) {
 		server, _ := testServer(t)
 		originalResolveStaticFS := resolveStaticFS
@@ -1053,5 +1068,32 @@ func TestHandleIntrospect_EmptyBearerToken(t *testing.T) {
 	server.handleIntrospect(w, req)
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("expected 400 for empty bearer token, got %d", w.Code)
+	}
+}
+
+func TestRenderConsentViewFallsBackToUserID(t *testing.T) {
+	server, oauthStore := testServer(t)
+	pendingID, err := oauthStore.CreatePendingAuthorization(AuthorizationRequest{
+		ResponseType:        "code",
+		ClientID:            "test-client",
+		RedirectURI:         "http://localhost:5555/callback",
+		CodeChallenge:       "test-challenge",
+		CodeChallengeMethod: "S256",
+	}, 15*time.Minute)
+	if err != nil {
+		t.Fatalf("create pending: %v", err)
+	}
+	if err := oauthStore.UpdatePendingAuthorizationUserID(pendingID, "user-42"); err != nil {
+		t.Fatalf("update pending: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/authorize/consent?pending_id="+pendingID, nil)
+	w := httptest.NewRecorder()
+	server.handleConsent(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	if !strings.Contains(w.Body.String(), "user-42") {
+		t.Fatalf("expected user id fallback in consent view, got %q", w.Body.String())
 	}
 }

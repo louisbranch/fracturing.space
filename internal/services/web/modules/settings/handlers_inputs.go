@@ -8,7 +8,7 @@ import (
 // parseProfileInput maps profile form values and preserves avatar catalog IDs.
 func parseProfileInput(form url.Values, existingProfile SettingsProfile) SettingsProfile {
 	return SettingsProfile{
-		Username:      strings.TrimSpace(form.Get("username")),
+		Username:      strings.TrimSpace(existingProfile.Username),
 		Name:          strings.TrimSpace(form.Get("name")),
 		AvatarSetID:   existingProfile.AvatarSetID,
 		AvatarAssetID: existingProfile.AvatarAssetID,

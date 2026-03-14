@@ -35,7 +35,7 @@ func TestSignupSocialProfileHandler_HandleCreatesMissingProfile(t *testing.T) {
 
 func TestSignupSocialProfileHandler_HandleNoOpWhenProfileExists(t *testing.T) {
 	social := &fakeSocialProfileClient{
-		getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Username: "existing"}},
+		getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Name: "Existing"}},
 	}
 	handler := NewSignupSocialProfileHandler(social)
 

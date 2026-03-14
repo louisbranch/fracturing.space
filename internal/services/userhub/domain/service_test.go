@@ -11,7 +11,7 @@ import (
 func TestGetDashboardRequiresUserID(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&fakeGameGateway{}, &fakeSocialGateway{}, &fakeNotificationsGateway{}, Config{})
+	svc := NewService(&fakeAuthGateway{}, &fakeGameGateway{}, &fakeSocialGateway{}, &fakeNotificationsGateway{}, Config{})
 	_, err := svc.GetDashboard(context.Background(), GetDashboardInput{})
 	if !errors.Is(err, ErrUserIDRequired) {
 		t.Fatalf("GetDashboard error = %v, want %v", err, ErrUserIDRequired)
@@ -23,6 +23,7 @@ func TestGetDashboardBuildsAggregateAndActions(t *testing.T) {
 
 	now := time.Date(2026, 2, 26, 4, 0, 0, 0, time.UTC)
 	clockNow := now
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "ari"}}
 	game := &fakeGameGateway{
 		campaignPage: CampaignPage{
 			Campaigns: []CampaignPreview{
@@ -47,13 +48,13 @@ func TestGetDashboardBuildsAggregateAndActions(t *testing.T) {
 		},
 	}
 	social := &fakeSocialGateway{
-		profile: UserProfile{Username: "", Name: "Ari"},
+		profile: UserProfile{Name: "Ari"},
 	}
 	notifications := &fakeNotificationsGateway{
 		status: UnreadStatus{HasUnread: true, UnreadCount: 2},
 	}
 
-	svc := NewService(game, social, notifications, Config{Clock: func() time.Time { return clockNow }})
+	svc := NewService(auth, game, social, notifications, Config{Clock: func() time.Time { return clockNow }})
 
 	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: " user-1 "})
 	if err != nil {
@@ -65,11 +66,11 @@ func TestGetDashboardBuildsAggregateAndActions(t *testing.T) {
 	if dashboard.Metadata.CacheHit {
 		t.Fatal("cache_hit = true, want false")
 	}
-	if dashboard.User.Discoverable {
-		t.Fatal("discoverable = true, want false")
+	if !dashboard.User.Discoverable {
+		t.Fatal("discoverable = false, want true")
 	}
-	if !dashboard.User.NeedsProfileCompletion {
-		t.Fatal("needs_profile_completion = false, want true")
+	if dashboard.User.NeedsProfileCompletion {
+		t.Fatal("needs_profile_completion = true, want false")
 	}
 	if dashboard.Campaigns.ActiveCount != 1 {
 		t.Fatalf("active_count = %d, want 1", dashboard.Campaigns.ActiveCount)
@@ -84,7 +85,6 @@ func TestGetDashboardBuildsAggregateAndActions(t *testing.T) {
 	}
 	wantIDs := []DashboardActionID{
 		DashboardActionReviewPendingInvites,
-		DashboardActionCompleteProfile,
 		DashboardActionContinueActiveCampaign,
 		DashboardActionReviewNotifications,
 	}
@@ -98,10 +98,11 @@ func TestGetDashboardUsesFreshCache(t *testing.T) {
 
 	now := time.Date(2026, 2, 26, 4, 10, 0, 0, time.UTC)
 	clockNow := now
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
 	game := &fakeGameGateway{campaignPage: CampaignPage{Campaigns: []CampaignPreview{{CampaignID: "camp-1", Status: CampaignStatusActive}}}, invitePage: InvitePage{}}
-	social := &fakeSocialGateway{profile: UserProfile{Username: "discoverable", Name: "Ari"}}
+	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
 	notifications := &fakeNotificationsGateway{status: UnreadStatus{HasUnread: false, UnreadCount: 0}}
-	svc := NewService(game, social, notifications, Config{
+	svc := NewService(auth, game, social, notifications, Config{
 		Clock:         func() time.Time { return clockNow },
 		CacheFreshTTL: 15 * time.Second,
 		CacheStaleTTL: time.Minute,
@@ -118,6 +119,9 @@ func TestGetDashboardUsesFreshCache(t *testing.T) {
 	if game.campaignCalls != 1 {
 		t.Fatalf("campaign calls = %d, want 1", game.campaignCalls)
 	}
+	if auth.calls != 1 {
+		t.Fatalf("auth calls = %d, want 1", auth.calls)
+	}
 	if social.calls != 1 {
 		t.Fatalf("social calls = %d, want 1", social.calls)
 	}
@@ -131,10 +135,11 @@ func TestGetDashboardFallsBackToStaleOnDependencyError(t *testing.T) {
 
 	now := time.Date(2026, 2, 26, 4, 20, 0, 0, time.UTC)
 	clockNow := now
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
 	game := &fakeGameGateway{campaignPage: CampaignPage{Campaigns: []CampaignPreview{{CampaignID: "camp-1", Status: CampaignStatusActive}}}, invitePage: InvitePage{}}
-	social := &fakeSocialGateway{profile: UserProfile{Username: "discoverable", Name: "Ari"}}
+	social := &fakeSocialGateway{profile: UserProfile{Name: "Ari"}}
 	notifications := &fakeNotificationsGateway{status: UnreadStatus{HasUnread: false, UnreadCount: 0}}
-	svc := NewService(game, social, notifications, Config{
+	svc := NewService(auth, game, social, notifications, Config{
 		Clock:         func() time.Time { return clockNow },
 		CacheFreshTTL: 10 * time.Second,
 		CacheStaleTTL: time.Minute,
@@ -172,7 +177,7 @@ func TestGetDashboardReturnsCriticalDependencyErrorWithoutStale(t *testing.T) {
 	t.Parallel()
 
 	game := &fakeGameGateway{campaignErr: errors.New("game unavailable")}
-	svc := NewService(game, &fakeSocialGateway{}, &fakeNotificationsGateway{}, Config{})
+	svc := NewService(&fakeAuthGateway{}, game, &fakeSocialGateway{}, &fakeNotificationsGateway{}, Config{})
 
 	_, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1"})
 	if err == nil {
@@ -190,10 +195,11 @@ func TestGetDashboardReturnsCriticalDependencyErrorWithoutStale(t *testing.T) {
 func TestGetDashboardHandlesProfileNotFoundWithoutDegrading(t *testing.T) {
 	t.Parallel()
 
+	auth := &fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}}
 	game := &fakeGameGateway{campaignPage: CampaignPage{}, invitePage: InvitePage{}}
 	social := &fakeSocialGateway{err: ErrProfileNotFound}
 	notifications := &fakeNotificationsGateway{}
-	svc := NewService(game, social, notifications, Config{})
+	svc := NewService(auth, game, social, notifications, Config{})
 
 	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1"})
 	if err != nil {
@@ -204,6 +210,29 @@ func TestGetDashboardHandlesProfileNotFoundWithoutDegrading(t *testing.T) {
 	}
 	if dashboard.User.ProfileAvailable {
 		t.Fatal("profile_available = true, want false")
+	}
+	if !dashboard.User.NeedsProfileCompletion {
+		t.Fatal("needs_profile_completion = false, want true")
+	}
+}
+
+func TestGetDashboardNeedsProfileCompletionWhenSocialNameBlank(t *testing.T) {
+	t.Parallel()
+
+	svc := NewService(
+		&fakeAuthGateway{identity: UserIdentity{Username: "discoverable"}},
+		&fakeGameGateway{campaignPage: CampaignPage{}, invitePage: InvitePage{}},
+		&fakeSocialGateway{profile: UserProfile{Name: "   "}},
+		&fakeNotificationsGateway{},
+		Config{},
+	)
+
+	dashboard, err := svc.GetDashboard(context.Background(), GetDashboardInput{UserID: "user-1"})
+	if err != nil {
+		t.Fatalf("GetDashboard error: %v", err)
+	}
+	if !dashboard.User.Discoverable {
+		t.Fatal("discoverable = false, want true")
 	}
 	if !dashboard.User.NeedsProfileCompletion {
 		t.Fatal("needs_profile_completion = false, want true")
@@ -234,6 +263,20 @@ func (f *fakeGameGateway) ListPendingInvitePreviews(_ context.Context, _ string,
 		return InvitePage{}, f.inviteErr
 	}
 	return f.invitePage, nil
+}
+
+type fakeAuthGateway struct {
+	identity UserIdentity
+	err      error
+	calls    int
+}
+
+func (f *fakeAuthGateway) GetUserIdentity(_ context.Context, _ string) (UserIdentity, error) {
+	f.calls++
+	if f.err != nil {
+		return UserIdentity{}, f.err
+	}
+	return f.identity, nil
 }
 
 type fakeSocialGateway struct {

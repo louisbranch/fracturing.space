@@ -1,6 +1,5 @@
-// Package oauth implements browser-facing OAuth endpoints and external provider flows.
+// Package oauth implements the auth service's first-party OAuth authorization server.
 //
-// It isolates redirect/state/token choreography from gRPC APIs so the auth
-// service can preserve a single identity contract even as provider integrations
-// evolve.
+// It isolates browser-facing authorization, consent, token, and introspection
+// flows from gRPC APIs while keeping identity ownership in auth.
 package oauth

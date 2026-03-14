@@ -15,6 +15,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [Campaign authorization model](campaign-authorization-model.md)
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Identity and OAuth](identity-and-oauth.md)
+- [Web passkey recovery and device enrollment](web-passkey-recovery-and-device-enrollment.md)
 - [Web architecture](web-architecture.md)
 - [Admin architecture](admin-architecture.md)
 - [I18n and l10n architecture](i18n-l10n-architecture.md)

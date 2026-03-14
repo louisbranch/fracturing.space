@@ -146,5 +146,5 @@ messages:
   "SNAPSHOT_INSUFFICIENT_GM_FEAR": "Insufficient GM Fear to spend"
   "SNAPSHOT_INVALID_GM_FEAR_AMOUNT": "GM Fear amount must be greater than zero"
   "SNAPSHOT_INVALID_HP": "HP {{.HP}} exceeds maximum {{.HPMax}}"
-  "USER_EMPTY_EMAIL": "Email cannot be empty"
-  "USER_INVALID_EMAIL": "Email must be a valid email address"
+  "USER_EMPTY_USERNAME": "Username cannot be empty"
+  "USER_INVALID_USERNAME": "Username must match the required format"

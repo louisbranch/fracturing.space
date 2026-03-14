@@ -26,8 +26,9 @@ Quick regression coverage for web route and shell contracts:
   - export `WEB_SMOKE_SESSION_ID` with a valid `web_session` value plus
     `WEB_SMOKE_RECIPIENT_USER_ID` (or legacy `WEB_SMOKE_USER_ID`) for invite
     mutation assertions, or
-  - export `WEB_SMOKE_AUTH_ADDR` so `scripts/playwright-web-smoke.sh` can mint
-    disposable actor + recipient users and a valid web session automatically.
+  - export `WEB_SMOKE_AUTH_ADDR` together with `WEB_SMOKE_AUTH_USERNAME` and
+    `WEB_SMOKE_AUTH_RECIPIENT_USERNAME` so `scripts/playwright-web-smoke.sh`
+    can resolve existing accounts and mint a valid web session automatically.
 - Auth coverage default:
   - `scripts/playwright-web-smoke.sh` now requires authenticated coverage by
     default (`WEB_SMOKE_REQUIRE_AUTH=1`); set `WEB_SMOKE_REQUIRE_AUTH=0` only

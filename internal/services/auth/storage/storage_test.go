@@ -8,7 +8,7 @@ import (
 )
 
 func TestErrNotFound(t *testing.T) {
-	if ErrNotFound.Error() != "record not found" {
+	if ErrNotFound.Error() != "Record not found." {
 		t.Fatalf("ErrNotFound.Error() = %q", ErrNotFound.Error())
 	}
 	if got := apperrors.GetCode(ErrNotFound); got != apperrors.CodeNotFound {

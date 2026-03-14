@@ -35,23 +35,21 @@ func withStaticMime(next http.Handler) http.Handler {
 	})
 }
 
-// Server hosts OAuth endpoints and external provider flows.
+// Server hosts first-party OAuth endpoints backed by auth-owned identity state.
 type Server struct {
-	config     Config
-	store      *Store
-	userStore  UserStore
-	clock      func() time.Time
-	httpClient *http.Client
+	config    Config
+	store     *Store
+	userStore UserStore
+	clock     func() time.Time
 }
 
 // NewServer builds an OAuth server bound to auth config and backing stores.
 func NewServer(config Config, store *Store, userStore UserStore) *Server {
 	return &Server{
-		config:     config,
-		store:      store,
-		userStore:  userStore,
-		clock:      time.Now,
-		httpClient: http.DefaultClient,
+		config:    config,
+		store:     store,
+		userStore: userStore,
+		clock:     time.Now,
 	}
 }
 
@@ -63,7 +61,7 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) error {
 
 	staticFS, err := resolveStaticFS()
 	if err != nil {
-		return fmt.Errorf("register static routes: %w", err)
+		return fmt.Errorf("Register static routes: %w", err)
 	}
 	mux.Handle(
 		"/static/",
@@ -75,7 +73,6 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) error {
 	mux.HandleFunc("/token", s.handleToken)
 	mux.HandleFunc("/introspect", s.handleIntrospect)
 	mux.HandleFunc("/.well-known/oauth-authorization-server", s.handleMetadata)
-	mux.HandleFunc("/oauth/providers/", s.handleProviderRoutes)
 	mux.HandleFunc("/up", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("OK"))

@@ -77,7 +77,12 @@ func (h handlers) handleLogout(w http.ResponseWriter, r *http.Request) {
 
 // handlePasskeyLoginStart handles this route in the module transport layer.
 func (h handlers) handlePasskeyLoginStart(w http.ResponseWriter, r *http.Request) {
-	start, err := h.service.PasskeyLoginStart(r.Context())
+	input, err := parsePasskeyLoginStartInput(r)
+	if err != nil {
+		h.writeJSONError(w, r, err)
+		return
+	}
+	start, err := h.service.PasskeyLoginStart(r.Context(), input.Username)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
@@ -108,12 +113,12 @@ func (h handlers) handlePasskeyRegisterStart(w http.ResponseWriter, r *http.Requ
 		h.writeJSONError(w, r, err)
 		return
 	}
-	start, err := h.service.PasskeyRegisterStart(r.Context(), input.Email)
+	start, err := h.service.PasskeyRegisterStart(r.Context(), input.Username)
 	if err != nil {
 		h.writeJSONError(w, r, err)
 		return
 	}
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey, "user_id": start.UserID})
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"session_id": start.SessionID, "public_key": start.PublicKey})
 }
 
 // handlePasskeyRegisterFinish handles this route in the module transport layer.
@@ -128,7 +133,12 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		h.writeJSONError(w, r, err)
 		return
 	}
-	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{"user_id": finished.UserID})
+	h.writeSessionCookie(w, r, finished.SessionID)
+	_ = httpx.WriteJSON(w, http.StatusOK, map[string]any{
+		"user_id":       finished.UserID,
+		"redirect_url":  routepath.AppDashboard,
+		"recovery_code": finished.RecoveryCode,
+	})
 }
 
 // handleHealth handles this route in the module transport layer.

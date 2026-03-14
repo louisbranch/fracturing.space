@@ -10,11 +10,14 @@ func TestAuthReturnsPortugueseCopyForPTBR(t *testing.T) {
 	t.Parallel()
 
 	copy := Auth(language.MustParse("pt-BR"))
-	if copy.LoginHeading != "Faça login em Fracturing.Space" {
+	if copy.LoginHeading != "Boas-vindas ao Fracturing.Space" {
 		t.Fatalf("LoginHeading = %q", copy.LoginHeading)
 	}
-	if copy.JSEmailRequired != "Email principal é obrigatório." {
-		t.Fatalf("JSEmailRequired = %q", copy.JSEmailRequired)
+	if copy.JSLoginUsernameReq != "Nome de usuário é obrigatório para entrar." {
+		t.Fatalf("JSLoginUsernameReq = %q", copy.JSLoginUsernameReq)
+	}
+	if copy.LoginJoinTitle != "Criar conta" {
+		t.Fatalf("LoginJoinTitle = %q", copy.LoginJoinTitle)
 	}
 }
 
@@ -33,6 +36,9 @@ func TestAuthFallsBackToEnglishForNonPortugueseLanguage(t *testing.T) {
 	copy := Auth(language.MustParse("en-US"))
 	if copy.LoginTitle != "Sign In | Fracturing.Space" {
 		t.Fatalf("LoginTitle = %q", copy.LoginTitle)
+	}
+	if copy.LoginHeading != "Welcome to Fracturing.Space" {
+		t.Fatalf("LoginHeading = %q", copy.LoginHeading)
 	}
 	if copy.JSRegisterFailed != "Passkey registration failed." {
 		t.Fatalf("JSRegisterFailed = %q", copy.JSRegisterFailed)

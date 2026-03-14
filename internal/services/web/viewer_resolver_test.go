@@ -3,12 +3,13 @@ package web
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -16,7 +17,7 @@ import (
 func TestViewerResolverAnonymousReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, "", func(*http.Request) string { return "" })
+	r := newViewerResolver(nil, nil, nil, "", func(*http.Request) string { return "" })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 
@@ -28,7 +29,7 @@ func TestViewerResolverAnonymousReturnsZeroViewer(t *testing.T) {
 func TestViewerResolverNilResolverReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, "", nil)
+	r := newViewerResolver(nil, nil, nil, "", nil)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 	if v != (module.Viewer{}) {
@@ -39,7 +40,7 @@ func TestViewerResolverNilResolverReturnsZeroViewer(t *testing.T) {
 func TestViewerResolverWhitespaceUserIDReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, "", func(*http.Request) string { return "   " })
+	r := newViewerResolver(nil, nil, nil, "", func(*http.Request) string { return "   " })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 	if v != (module.Viewer{}) {
@@ -50,37 +51,58 @@ func TestViewerResolverWhitespaceUserIDReturnsZeroViewer(t *testing.T) {
 func TestViewerResolverNilRequestReturnsZeroViewer(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, "", func(*http.Request) string { return "user-1" })
+	r := newViewerResolver(nil, nil, nil, "", func(*http.Request) string { return "user-1" })
 	v := r.resolveViewer(nil)
 	if v != (module.Viewer{}) {
 		t.Fatalf("resolveViewer(nil) = %+v, want zero viewer", v)
 	}
 }
 
-func TestViewerResolverNilSocialClientReturnsFallback(t *testing.T) {
+func TestViewerResolverNilSocialClientReturnsAuthBackedProfileLink(t *testing.T) {
 	t.Parallel()
 
-	r := newViewerResolver(nil, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	account := &fakeAccountClient{
+		getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "alice"}},
+	}
+	r := newViewerResolver(account, nil, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 
 	if v.DisplayName != "Adventurer" {
 		t.Fatalf("DisplayName = %q, want %q", v.DisplayName, "Adventurer")
 	}
-	if v.ProfileURL != "/app/settings/profile" {
-		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/app/settings/profile")
+	if v.ProfileURL != "/u/alice" {
+		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/u/alice")
+	}
+	if !strings.Contains(v.AvatarURL, "/avatar_set/v1/") {
+		t.Fatalf("AvatarURL = %q, want people-set path", v.AvatarURL)
+	}
+}
+
+func TestViewerResolverWithoutAccountProfileDoesNotFallBackToSettingsProfile(t *testing.T) {
+	t.Parallel()
+
+	r := newViewerResolver(nil, nil, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	v := r.resolveViewer(req)
+
+	if v.ProfileURL != "/app/dashboard" {
+		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/app/dashboard")
 	}
 }
 
 func TestViewerResolverWithSocialClientUsesProfileData(t *testing.T) {
 	t.Parallel()
 
+	account := &fakeAccountClient{
+		getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "alice"}},
+	}
 	social := &fakeSocialClient{
 		getUserProfileResp: &socialv1.GetUserProfileResponse{
-			UserProfile: &socialv1.UserProfile{Username: "alice", Name: "Alice"},
+			UserProfile: &socialv1.UserProfile{Name: "Alice"},
 		},
 	}
-	r := newViewerResolver(social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	r := newViewerResolver(account, social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 
@@ -92,35 +114,44 @@ func TestViewerResolverWithSocialClientUsesProfileData(t *testing.T) {
 	}
 }
 
-func TestViewerResolverWithSocialClientMissingUsernameUsesProfileRequiredRoute(t *testing.T) {
+func TestViewerResolverWithSocialClientKeepsAuthBackedProfileRouteWhenSocialRecordHasNoUsername(t *testing.T) {
 	t.Parallel()
 
+	account := &fakeAccountClient{
+		getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "alice"}},
+	}
 	social := &fakeSocialClient{
 		getUserProfileResp: &socialv1.GetUserProfileResponse{
 			UserProfile: &socialv1.UserProfile{Name: "Alice"},
 		},
 	}
-	r := newViewerResolver(social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	r := newViewerResolver(account, social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 
-	if v.ProfileURL != routepath.AppSettingsProfileRequired {
-		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, routepath.AppSettingsProfileRequired)
+	if v.ProfileURL != "/u/alice" {
+		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/u/alice")
 	}
 }
 
-func TestViewerResolverWithSocialClientNotFoundUsesProfileRequiredRoute(t *testing.T) {
+func TestViewerResolverWithSocialClientNotFoundKeepsAuthBackedProfileRoute(t *testing.T) {
 	t.Parallel()
 
+	account := &fakeAccountClient{
+		getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "alice"}},
+	}
 	social := &fakeSocialClient{
 		getUserProfileErr: status.Error(codes.NotFound, "profile not found"),
 	}
-	r := newViewerResolver(social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
+	r := newViewerResolver(account, social, nil, "https://cdn.example.com", func(*http.Request) string { return "user-1" })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 
-	if v.ProfileURL != routepath.AppSettingsProfileRequired {
-		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, routepath.AppSettingsProfileRequired)
+	if v.ProfileURL != "/u/alice" {
+		t.Fatalf("ProfileURL = %q, want %q", v.ProfileURL, "/u/alice")
+	}
+	if !strings.Contains(v.AvatarURL, "/avatar_set/v1/") {
+		t.Fatalf("AvatarURL = %q, want people-set path", v.AvatarURL)
 	}
 }
 
@@ -130,7 +161,7 @@ func TestViewerResolverUnreadNotifications(t *testing.T) {
 	notif := fakeWebNotificationClient{
 		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{HasUnread: true},
 	}
-	r := newViewerResolver(nil, notif, "", func(*http.Request) string { return "user-1" })
+	r := newViewerResolver(nil, nil, notif, "", func(*http.Request) string { return "user-1" })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 
@@ -145,7 +176,7 @@ func TestViewerResolverNoUnreadNotifications(t *testing.T) {
 	notif := fakeWebNotificationClient{
 		unreadResp: &notificationsv1.GetUnreadNotificationStatusResponse{HasUnread: false},
 	}
-	r := newViewerResolver(nil, notif, "", func(*http.Request) string { return "user-1" })
+	r := newViewerResolver(nil, nil, notif, "", func(*http.Request) string { return "user-1" })
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	v := r.resolveViewer(req)
 

@@ -6,7 +6,6 @@ package generator
 import (
 	"context"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"google.golang.org/grpc"
 )
@@ -45,10 +44,4 @@ type sessionManager interface {
 // eventAppender is the subset of EventServiceClient used by Generator.
 type eventAppender interface {
 	AppendEvent(ctx context.Context, in *statev1.AppendEventRequest, opts ...grpc.CallOption) (*statev1.AppendEventResponse, error)
-}
-
-// authProvider is the subset of AuthServiceClient used by Generator.
-type authProvider interface {
-	CreateUser(ctx context.Context, in *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error)
-	IssueJoinGrant(ctx context.Context, in *authv1.IssueJoinGrantRequest, opts ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error)
 }

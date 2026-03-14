@@ -18,14 +18,13 @@ message Contact {
 // UserProfile stores one social/discovery profile for a user.
 message UserProfile {
   string user_id = 1;
-  string username = 2;
-  string name = 3;
-  common.v1.Pronouns pronouns = 4;
-  string bio = 5;
-  string avatar_set_id = 6;
-  string avatar_asset_id = 7;
-  google.protobuf.Timestamp created_at = 8;
-  google.protobuf.Timestamp updated_at = 9;
+  string name = 2;
+  common.v1.Pronouns pronouns = 3;
+  string bio = 4;
+  string avatar_set_id = 5;
+  string avatar_asset_id = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
 }
 
 message AddContactRequest {
@@ -62,12 +61,11 @@ message ListContactsResponse {
 
 message SetUserProfileRequest {
   string user_id = 1;
-  string username = 2;
-  string name = 3;
-  common.v1.Pronouns pronouns = 4;
-  string bio = 5;
-  string avatar_set_id = 6;
-  string avatar_asset_id = 7;
+  string name = 2;
+  common.v1.Pronouns pronouns = 3;
+  string bio = 4;
+  string avatar_set_id = 5;
+  string avatar_asset_id = 6;
 }
 
 message SetUserProfileResponse {
@@ -82,14 +80,6 @@ message GetUserProfileResponse {
   UserProfile user_profile = 1;
 }
 
-message LookupUserProfileRequest {
-  string username = 1;
-}
-
-message LookupUserProfileResponse {
-  UserProfile user_profile = 1;
-}
-
 // SocialService manages user social profiles and directed contact relationships.
 service SocialService {
   rpc AddContact(AddContactRequest) returns (AddContactResponse);
@@ -97,5 +87,4 @@ service SocialService {
   rpc ListContacts(ListContactsRequest) returns (ListContactsResponse);
   rpc SetUserProfile(SetUserProfileRequest) returns (SetUserProfileResponse);
   rpc GetUserProfile(GetUserProfileRequest) returns (GetUserProfileResponse);
-  rpc LookupUserProfile(LookupUserProfileRequest) returns (LookupUserProfileResponse);
 }

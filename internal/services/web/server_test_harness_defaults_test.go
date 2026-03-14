@@ -11,7 +11,7 @@ import (
 
 func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
-		Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US},
+		Profile: &authv1.AccountProfile{Username: "adventurer", Locale: commonv1.Locale_LOCALE_EN_US},
 	}}
 	social := defaultSocialClient()
 	return Config{
@@ -42,6 +42,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 					AgentClient:      fakeAgentClient{},
 				},
 				Profile: modules.ProfileDependencies{
+					AuthClient:   auth,
 					SocialClient: social,
 				},
 			},
@@ -50,7 +51,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 }
 
 func defaultSocialClient() *fakeSocialClient {
-	return &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "adventurer", Name: "Adventurer"}}}
+	return &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Adventurer"}}}
 }
 
 func defaultCampaignClient() fakeCampaignClient {

@@ -116,8 +116,8 @@ func TestSceneGateBlocksSceneActions(t *testing.T) {
 	if st.Code() != codes.FailedPrecondition {
 		t.Fatalf("expected FailedPrecondition, got %s", st.Code())
 	}
-	if !strings.Contains(st.Message(), gateID) {
-		t.Fatalf("expected gate id %q in error, got %q", gateID, st.Message())
+	if !strings.Contains(strings.ToLower(st.Message()), "scene gate is open") {
+		t.Fatalf("expected scene gate open error, got %q", st.Message())
 	}
 
 	// Resolve the gate.

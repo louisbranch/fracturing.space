@@ -9,19 +9,23 @@
   var loginFinishPath = i18n.loginFinishPath || "";
   var registerStartPath = i18n.registerStartPath || "";
   var registerFinishPath = i18n.registerFinishPath || "";
-  var jsLoginStartError = i18n.loginStartError || "failed to start passkey login";
-  var jsLoginFinishError = i18n.loginFinishError || "failed to finish passkey login";
-  var jsRegisterStartError = i18n.registerStartError || "failed to start passkey registration";
-  var jsRegisterFinishError = i18n.registerFinishError || "failed to finish passkey registration";
-  var jsPasskeyFailed = i18n.passkeyFailed || "failed to sign in with passkey";
-  var jsEmailRequired = i18n.emailRequired || "email is required";
-  var jsPasskeyCreated = i18n.passkeyCreated || "Passkey created; signing you in";
-  var jsRegisterFailed = i18n.registerFailed || "failed to create passkey";
+  var jsLoginStartError = i18n.loginStartError || "Unable to start passkey login.";
+  var jsLoginFinishError = i18n.loginFinishError || "Unable to finish passkey login.";
+  var jsRegisterStartError = i18n.registerStartError || "Unable to start passkey registration.";
+  var jsRegisterFinishError = i18n.registerFinishError || "Unable to finish passkey registration.";
+  var jsPasskeyFailed = i18n.passkeyFailed || "Passkey login failed.";
+  var jsLoginUsernameRequired = i18n.loginUsernameRequired || "Username is required to log in.";
+  var jsRegisterUsernameRequired = i18n.registerUsernameRequired || "Username is required to create an account.";
+  var jsPasskeyCreated = i18n.passkeyCreated || "Passkey created; signing you in.";
+  var jsRegisterFailed = i18n.registerFailed || "Passkey registration failed.";
 
   var passkeyButton = document.getElementById("passkey-login");
   var passkeyError = document.getElementById("passkey-error");
+  var loginForm = document.getElementById("login-form");
+  var loginUsername = document.getElementById("login-username");
   var registerButton = document.getElementById("passkey-register");
-  var registerEmail = document.getElementById("email");
+  var registerForm = document.getElementById("register-form");
+  var registerUsername = document.getElementById("register-username");
   var registerError = document.getElementById("register-error");
   var registerSuccess = document.getElementById("register-success");
 
@@ -120,11 +124,11 @@
     return fallback;
   }
 
-  async function startPasskeyLogin() {
+  async function startPasskeyLogin(username) {
     var response = await fetch(loginStartPath, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({})
+      body: JSON.stringify({ username: username })
     });
     if (!response.ok) {
       throw new Error(await readErrorMessage(response, jsLoginStartError));
@@ -144,11 +148,11 @@
     return response.json();
   }
 
-  async function startPasskeyRegister(email) {
+  async function startPasskeyRegister(username) {
     var response = await fetch(registerStartPath, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email })
+      body: JSON.stringify({ username: username })
     });
     if (!response.ok) {
       throw new Error(await readErrorMessage(response, jsRegisterStartError));
@@ -168,8 +172,11 @@
     return response.json();
   }
 
-  async function performPasskeyLogin() {
-    var start = await startPasskeyLogin();
+  async function performPasskeyLogin(username) {
+    if (!username) {
+      throw new Error(jsLoginUsernameRequired);
+    }
+    var start = await startPasskeyLogin(username);
     var publicKey = normalizeRequestOptions(start.public_key.publicKey);
     var assertion = await navigator.credentials.get({ publicKey: publicKey });
     var credentialJSON = credentialToJSON(assertion);
@@ -179,20 +186,21 @@
     }
   }
 
-  if (passkeyButton && window.PublicKeyCredential) {
+  if (loginForm && passkeyButton && window.PublicKeyCredential) {
     passkeyButton.addEventListener("click", async function () {
       if (passkeyError) {
         passkeyError.hidden = true;
       }
       try {
-        await performPasskeyLogin();
+        var username = loginUsername ? loginUsername.value.trim() : "";
+        await performPasskeyLogin(username);
       } catch (err) {
         show(passkeyError, err.message || jsPasskeyFailed);
       }
     });
   }
 
-  if (registerButton && window.PublicKeyCredential) {
+  if (registerForm && registerButton && window.PublicKeyCredential) {
     registerButton.addEventListener("click", async function () {
       if (registerError) {
         registerError.hidden = true;
@@ -200,18 +208,24 @@
       if (registerSuccess) {
         registerSuccess.hidden = true;
       }
-      var email = registerEmail ? registerEmail.value.trim() : "";
-      if (!email) {
-        show(registerError, jsEmailRequired);
+      var username = registerUsername ? registerUsername.value.trim() : "";
+      if (!username) {
+        show(registerError, jsRegisterUsernameRequired);
         return;
       }
       try {
-        var start = await startPasskeyRegister(email);
+        var start = await startPasskeyRegister(username);
         var publicKey = normalizeCreationOptions(start.public_key.publicKey);
         var credential = await navigator.credentials.create({ publicKey: publicKey });
-        await finishPasskeyRegister(start.session_id, credentialToJSON(credential));
-        show(registerSuccess, jsPasskeyCreated);
-        await performPasskeyLogin();
+        var finish = await finishPasskeyRegister(start.session_id, credentialToJSON(credential));
+        var successMessage = jsPasskeyCreated;
+        if (finish.recovery_code) {
+          successMessage += " Recovery code: " + finish.recovery_code;
+        }
+        show(registerSuccess, successMessage);
+        if (finish.redirect_url) {
+          window.location = finish.redirect_url;
+        }
       } catch (err) {
         show(registerError, err.message || jsRegisterFailed);
       }

@@ -40,16 +40,16 @@ func newFakeWebAuthClient() *fakeWebAuthClient {
 	return &fakeWebAuthClient{sessions: map[string]string{}}
 }
 
-func (f *fakeWebAuthClient) CreateUser(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-	return &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}}, nil
+func (f *fakeWebAuthClient) BeginAccountRegistration(context.Context, *authv1.BeginAccountRegistrationRequest, ...grpc.CallOption) (*authv1.BeginAccountRegistrationResponse, error) {
+	return &authv1.BeginAccountRegistrationResponse{SessionId: "register-session", CredentialCreationOptionsJson: []byte(`{"publicKey":{"challenge":"ZmFrZQ","rp":{"name":"web"},"user":{"id":"dXNlcg","name":"louis","displayName":"louis"},"pubKeyCredParams":[{"type":"public-key","alg":-7}]}}`)}, nil
 }
 
-func (f *fakeWebAuthClient) BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error) {
-	return &authv1.BeginPasskeyRegistrationResponse{SessionId: "register-session", CredentialCreationOptionsJson: []byte(`{"publicKey":{"challenge":"ZmFrZQ","rp":{"name":"web"},"user":{"id":"dXNlcg","name":"new@example.com","displayName":"new@example.com"},"pubKeyCredParams":[{"type":"public-key","alg":-7}]}}`)}, nil
-}
-
-func (f *fakeWebAuthClient) FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error) {
-	return &authv1.FinishPasskeyRegistrationResponse{User: &authv1.User{Id: "user-1"}}, nil
+func (f *fakeWebAuthClient) FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
+	return &authv1.FinishAccountRegistrationResponse{
+		User:         &authv1.User{Id: "user-1", Username: "louis"},
+		Session:      &authv1.WebSession{Id: "ws-1", UserId: "user-1"},
+		RecoveryCode: "ABCD-EFGH",
+	}, nil
 }
 
 func (f *fakeWebAuthClient) BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {
@@ -57,7 +57,7 @@ func (f *fakeWebAuthClient) BeginPasskeyLogin(context.Context, *authv1.BeginPass
 }
 
 func (f *fakeWebAuthClient) FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest, ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error) {
-	return &authv1.FinishPasskeyLoginResponse{User: &authv1.User{Id: "user-1"}}, nil
+	return &authv1.FinishPasskeyLoginResponse{User: &authv1.User{Id: "user-1", Username: "louis"}}, nil
 }
 
 func (f *fakeWebAuthClient) CreateWebSession(_ context.Context, req *authv1.CreateWebSessionRequest, _ ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error) {
@@ -89,4 +89,14 @@ func (f *fakeWebAuthClient) RevokeWebSession(_ context.Context, req *authv1.Revo
 	defer f.mu.Unlock()
 	delete(f.sessions, req.GetSessionId())
 	return &authv1.RevokeWebSessionResponse{}, nil
+}
+
+func (f *fakeWebAuthClient) LookupUserByUsername(_ context.Context, req *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
+	username := req.GetUsername()
+	if username == "" {
+		username = "louis"
+	}
+	return &authv1.LookupUserByUsernameResponse{
+		User: &authv1.User{Id: "user-1", Username: username},
+	}, nil
 }

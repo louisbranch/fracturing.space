@@ -23,6 +23,8 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	authserver "github.com/louisbranch/fracturing.space/internal/services/auth/app"
+	authsqlite "github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
+	authuser "github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -405,33 +407,51 @@ func startMCPClientStdio(t *testing.T, grpcAddr string) (*mcp.ClientSession, fun
 func createAuthUser(t *testing.T, authAddr, username string) string {
 	t.Helper()
 
+	authDBPath := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AUTH_DB_PATH"))
+	if authDBPath == "" {
+		t.Fatal("FRACTURING_SPACE_AUTH_DB_PATH is required")
+	}
+	store, err := authsqlite.Open(authDBPath)
+	if err != nil {
+		t.Fatalf("open auth store: %v", err)
+	}
+	defer store.Close()
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	conn, err := grpc.NewClient(
-		authAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
-	)
-	if err != nil {
-		t.Fatalf("dial auth server: %v", err)
+	existing, err := store.GetUserByUsername(ctx, username)
+	if err == nil {
+		return existing.ID
 	}
-	defer conn.Close()
 
-	client := authv1.NewAuthServiceClient(conn)
-	email := username
-	if !strings.Contains(email, "@") {
-		email = email + "@example.com"
-	}
-	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Email: email})
+	created, err := authuser.CreateUser(authuser.CreateUserInput{Username: username}, nil, nil)
 	if err != nil {
-		t.Fatalf("create user: %v", err)
+		t.Fatalf("create auth user: %v", err)
 	}
-	userID := resp.GetUser().GetId()
-	if userID == "" {
+	err = store.PutUser(ctx, created)
+	if err != nil {
+		t.Fatalf("put auth user: %v", err)
+	}
+	if strings.TrimSpace(created.ID) == "" {
 		t.Fatal("create user: missing user id")
 	}
-	return userID
+	if strings.TrimSpace(authAddr) != "" {
+		conn, dialErr := grpc.NewClient(
+			authAddr,
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+		)
+		if dialErr != nil {
+			t.Fatalf("dial auth server: %v", dialErr)
+		}
+		defer conn.Close()
+		client := authv1.NewAuthServiceClient(conn)
+		if _, lookupErr := client.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: created.Username}); lookupErr != nil {
+			t.Fatalf("lookup created auth user: %v", lookupErr)
+		}
+	}
+	return created.ID
 }
 
 func withUserID(ctx context.Context, userID string) context.Context {

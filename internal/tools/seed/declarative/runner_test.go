@@ -140,8 +140,8 @@ func TestRunManifest_IdempotentSecondRun(t *testing.T) {
 		t.Fatalf("second run: %v", err)
 	}
 
-	if deps.auth.createUserCalls != 1 {
-		t.Fatalf("create user calls = %d, want 1", deps.auth.createUserCalls)
+	if deps.auth.lookupUserByUsernameCalls != 1 {
+		t.Fatalf("lookup user calls = %d, want 1", deps.auth.lookupUserByUsernameCalls)
 	}
 	if deps.game.createCampaignCalls != 1 {
 		t.Fatalf("create campaign calls = %d, want 1", deps.game.createCampaignCalls)
@@ -192,8 +192,8 @@ func TestRunManifest_IdempotentSecondRunPreservesStateEntries(t *testing.T) {
 		t.Fatalf("second run: %v", err)
 	}
 
-	if deps.auth.createUserCalls != 1 {
-		t.Fatalf("create user calls = %d, want 1", deps.auth.createUserCalls)
+	if deps.auth.lookupUserByUsernameCalls != 1 {
+		t.Fatalf("lookup user calls = %d, want 1", deps.auth.lookupUserByUsernameCalls)
 	}
 	if deps.game.createCampaignCalls != 1 {
 		t.Fatalf("create campaign calls = %d, want 1", deps.game.createCampaignCalls)
@@ -337,38 +337,38 @@ func newFakeDeps() fakeDeps {
 }
 
 type fakeAuthClient struct {
-	createUserCalls int
-	usersByID       map[string]*authv1.User
-	idsByEmail      map[string]string
+	lookupUserByUsernameCalls int
+	usersByID                 map[string]*authv1.User
+	idsByUsername             map[string]string
 }
 
 func (f *fakeAuthClient) ensure() {
 	if f.usersByID == nil {
 		f.usersByID = map[string]*authv1.User{}
 	}
-	if f.idsByEmail == nil {
-		f.idsByEmail = map[string]string{}
+	if f.idsByUsername == nil {
+		f.idsByUsername = map[string]string{}
 	}
 }
 
-func (f *fakeAuthClient) CreateUser(_ context.Context, in *authv1.CreateUserRequest, _ ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
+func (f *fakeAuthClient) LookupUserByUsername(_ context.Context, in *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
 	f.ensure()
-	email := strings.ToLower(strings.TrimSpace(in.GetEmail()))
-	if existingID, ok := f.idsByEmail[email]; ok {
-		return &authv1.CreateUserResponse{User: f.usersByID[existingID]}, nil
+	username := strings.TrimSpace(in.GetUsername())
+	if existingID, ok := f.idsByUsername[username]; ok {
+		return &authv1.LookupUserByUsernameResponse{User: f.usersByID[existingID]}, nil
 	}
-	f.createUserCalls++
-	id := "user-" + strings.TrimPrefix(email, "alice@")
+	f.lookupUserByUsernameCalls++
+	id := "user-" + username
 	user := &authv1.User{
 		Id:        id,
-		Email:     email,
-		Locale:    in.GetLocale(),
+		Username:  username,
+		Locale:    commonv1.Locale_LOCALE_EN_US,
 		CreatedAt: timestamppb.Now(),
 		UpdatedAt: timestamppb.Now(),
 	}
-	f.idsByEmail[email] = id
+	f.idsByUsername[username] = id
 	f.usersByID[id] = user
-	return &authv1.CreateUserResponse{User: user}, nil
+	return &authv1.LookupUserByUsernameResponse{User: user}, nil
 }
 
 func (f *fakeAuthClient) GetUser(_ context.Context, in *authv1.GetUserRequest, _ ...grpc.CallOption) (*authv1.GetUserResponse, error) {
@@ -378,26 +378,6 @@ func (f *fakeAuthClient) GetUser(_ context.Context, in *authv1.GetUserRequest, _
 		return &authv1.GetUserResponse{}, nil
 	}
 	return &authv1.GetUserResponse{User: user}, nil
-}
-
-func (f *fakeAuthClient) ListUsers(_ context.Context, _ *authv1.ListUsersRequest, _ ...grpc.CallOption) (*authv1.ListUsersResponse, error) {
-	f.ensure()
-	users := make([]*authv1.User, 0, len(f.usersByID))
-	for _, u := range f.usersByID {
-		users = append(users, u)
-	}
-	return &authv1.ListUsersResponse{Users: users}, nil
-}
-
-func (f *fakeAuthClient) ListUserEmails(_ context.Context, in *authv1.ListUserEmailsRequest, _ ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error) {
-	f.ensure()
-	user, ok := f.usersByID[in.GetUserId()]
-	if !ok {
-		return &authv1.ListUserEmailsResponse{}, nil
-	}
-	return &authv1.ListUserEmailsResponse{
-		Emails: []*authv1.UserEmail{{Email: user.GetEmail()}},
-	}, nil
 }
 
 type fakeSocialClient struct {

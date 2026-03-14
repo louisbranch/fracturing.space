@@ -19,6 +19,24 @@ func (q *Queries) DeleteExpiredPasskeySessions(ctx context.Context, expiresAt in
 	return err
 }
 
+const deleteExpiredRecoverySessions = `-- name: DeleteExpiredRecoverySessions :exec
+DELETE FROM recovery_sessions WHERE expires_at <= ?
+`
+
+func (q *Queries) DeleteExpiredRecoverySessions(ctx context.Context, expiresAt int64) error {
+	_, err := q.db.ExecContext(ctx, deleteExpiredRecoverySessions, expiresAt)
+	return err
+}
+
+const deleteExpiredRegistrationSessions = `-- name: DeleteExpiredRegistrationSessions :exec
+DELETE FROM registration_sessions WHERE expires_at <= ?
+`
+
+func (q *Queries) DeleteExpiredRegistrationSessions(ctx context.Context, expiresAt int64) error {
+	_, err := q.db.ExecContext(ctx, deleteExpiredRegistrationSessions, expiresAt)
+	return err
+}
+
 const deletePasskey = `-- name: DeletePasskey :exec
 DELETE FROM passkeys WHERE credential_id = ?
 `
@@ -34,6 +52,47 @@ DELETE FROM passkey_sessions WHERE id = ?
 
 func (q *Queries) DeletePasskeySession(ctx context.Context, id string) error {
 	_, err := q.db.ExecContext(ctx, deletePasskeySession, id)
+	return err
+}
+
+const deletePasskeysByUser = `-- name: DeletePasskeysByUser :exec
+DELETE FROM passkeys WHERE user_id = ?
+`
+
+func (q *Queries) DeletePasskeysByUser(ctx context.Context, userID string) error {
+	_, err := q.db.ExecContext(ctx, deletePasskeysByUser, userID)
+	return err
+}
+
+const deletePasskeysByUserExcept = `-- name: DeletePasskeysByUserExcept :exec
+DELETE FROM passkeys WHERE user_id = ? AND credential_id <> ?
+`
+
+type DeletePasskeysByUserExceptParams struct {
+	UserID       string `json:"user_id"`
+	CredentialID string `json:"credential_id"`
+}
+
+func (q *Queries) DeletePasskeysByUserExcept(ctx context.Context, arg DeletePasskeysByUserExceptParams) error {
+	_, err := q.db.ExecContext(ctx, deletePasskeysByUserExcept, arg.UserID, arg.CredentialID)
+	return err
+}
+
+const deleteRecoverySession = `-- name: DeleteRecoverySession :exec
+DELETE FROM recovery_sessions WHERE id = ?
+`
+
+func (q *Queries) DeleteRecoverySession(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteRecoverySession, id)
+	return err
+}
+
+const deleteRegistrationSession = `-- name: DeleteRegistrationSession :exec
+DELETE FROM registration_sessions WHERE id = ?
+`
+
+func (q *Queries) DeleteRegistrationSession(ctx context.Context, id string) error {
+	_, err := q.db.ExecContext(ctx, deleteRegistrationSession, id)
 	return err
 }
 
@@ -68,6 +127,42 @@ func (q *Queries) GetPasskeySession(ctx context.Context, id string) (PasskeySess
 		&i.UserID,
 		&i.SessionJson,
 		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const getRecoverySession = `-- name: GetRecoverySession :one
+SELECT id, user_id, expires_at, created_at FROM recovery_sessions WHERE id = ?
+`
+
+func (q *Queries) GetRecoverySession(ctx context.Context, id string) (RecoverySession, error) {
+	row := q.db.QueryRowContext(ctx, getRecoverySession, id)
+	var i RecoverySession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
+const getRegistrationSession = `-- name: GetRegistrationSession :one
+SELECT id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at FROM registration_sessions WHERE id = ?
+`
+
+func (q *Queries) GetRegistrationSession(ctx context.Context, id string) (RegistrationSession, error) {
+	row := q.db.QueryRowContext(ctx, getRegistrationSession, id)
+	var i RegistrationSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Username,
+		&i.Locale,
+		&i.RecoveryCodeHash,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
@@ -164,6 +259,71 @@ func (q *Queries) PutPasskeySession(ctx context.Context, arg PutPasskeySessionPa
 		arg.UserID,
 		arg.SessionJson,
 		arg.ExpiresAt,
+	)
+	return err
+}
+
+const putRecoverySession = `-- name: PutRecoverySession :exec
+INSERT INTO recovery_sessions (
+    id, user_id, expires_at, created_at
+) VALUES (?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    user_id = excluded.user_id,
+    expires_at = excluded.expires_at,
+    created_at = excluded.created_at
+`
+
+type PutRecoverySessionParams struct {
+	ID        string `json:"id"`
+	UserID    string `json:"user_id"`
+	ExpiresAt int64  `json:"expires_at"`
+	CreatedAt int64  `json:"created_at"`
+}
+
+func (q *Queries) PutRecoverySession(ctx context.Context, arg PutRecoverySessionParams) error {
+	_, err := q.db.ExecContext(ctx, putRecoverySession,
+		arg.ID,
+		arg.UserID,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+	)
+	return err
+}
+
+const putRegistrationSession = `-- name: PutRegistrationSession :exec
+INSERT INTO registration_sessions (
+    id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    user_id = excluded.user_id,
+    username = excluded.username,
+    locale = excluded.locale,
+    recovery_code_hash = excluded.recovery_code_hash,
+    expires_at = excluded.expires_at,
+    updated_at = excluded.updated_at
+`
+
+type PutRegistrationSessionParams struct {
+	ID               string `json:"id"`
+	UserID           string `json:"user_id"`
+	Username         string `json:"username"`
+	Locale           string `json:"locale"`
+	RecoveryCodeHash string `json:"recovery_code_hash"`
+	ExpiresAt        int64  `json:"expires_at"`
+	CreatedAt        int64  `json:"created_at"`
+	UpdatedAt        int64  `json:"updated_at"`
+}
+
+func (q *Queries) PutRegistrationSession(ctx context.Context, arg PutRegistrationSessionParams) error {
+	_, err := q.db.ExecContext(ctx, putRegistrationSession,
+		arg.ID,
+		arg.UserID,
+		arg.Username,
+		arg.Locale,
+		arg.RecoveryCodeHash,
+		arg.ExpiresAt,
+		arg.CreatedAt,
+		arg.UpdatedAt,
 	)
 	return err
 }

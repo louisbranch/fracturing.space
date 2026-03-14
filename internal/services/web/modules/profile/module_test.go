@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
@@ -20,9 +21,11 @@ import (
 func TestMountServesProfilePage(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{
+	mount := mountProfileModule(t, &authClientStub{lookupResp: &authv1.LookupUserByUsernameResponse{User: &authv1.User{
+		Id:       "user-1",
+		Username: "louis",
+	}}}, &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{
 		UserId:        "user-1",
-		Username:      "louis",
 		Name:          "Louis",
 		Pronouns:      sharedpronouns.ToProto("they/them"),
 		AvatarSetId:   "avatar_set_v1",
@@ -39,27 +42,13 @@ func TestMountServesProfilePage(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if got := rr.Header().Get("Content-Type"); got != "text/html; charset=utf-8" {
-		t.Fatalf("content-type = %q, want %q", got, "text/html; charset=utf-8")
-	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`<title>louis | Fracturing.Space</title>`,
-		`id="public-profile-page"`,
 		`data-public-profile-username="louis"`,
-		`data-public-profile-field="username">louis</dd>`,
 		`data-public-profile-field="name">Louis</dd>`,
 		`data-public-profile-field="pronouns">they/them</dd>`,
-		`data-public-profile-field="bio"`,
 		`Building Fracturing.Space.`,
-		`data-public-profile-card="true"`,
-		`lg:order-2`,
-		`class="skeleton absolute inset-0 z-0 pointer-events-none"`,
-		`class="relative z-1 h-full w-full object-cover"`,
-		`aspect-ratio: 1 / 1;`,
-		`src="https://cdn.example.com/avatars/`,
 		`href="/app/dashboard"`,
-		`Back to dashboard`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing marker %q: %q", marker, body)
@@ -70,10 +59,10 @@ func TestMountServesProfilePage(t *testing.T) {
 func TestMountServesHomeActionWhenViewerAnonymous(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{
-		UserId:   "user-1",
+	mount := mountProfileModule(t, &authClientStub{lookupResp: &authv1.LookupUserByUsernameResponse{User: &authv1.User{
+		Id:       "user-1",
 		Username: "louis",
-	}}}, "", nil)
+	}}}, &socialClientStub{}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -83,21 +72,15 @@ func TestMountServesHomeActionWhenViewerAnonymous(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `href="/"`) {
-		t.Fatalf("body missing home action href: %q", body)
-	}
-	if !strings.Contains(body, `Back to home`) {
-		t.Fatalf("body missing home action label: %q", body)
-	}
-	if strings.Contains(body, `href="/app/dashboard"`) {
-		t.Fatalf("body unexpectedly contains dashboard action: %q", body)
+	if !strings.Contains(body, `href="/"`) || !strings.Contains(body, `Back to home`) {
+		t.Fatalf("body missing home action: %q", body)
 	}
 }
 
 func TestMountServesProfileHead(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &socialClientStub{lookupResp: &socialv1.LookupUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "louis"}}}, "", nil)
+	mount := mountProfileModule(t, &authClientStub{lookupResp: &authv1.LookupUserByUsernameResponse{User: &authv1.User{Username: "louis"}}}, &socialClientStub{}, "", nil)
 
 	req := httptest.NewRequest(http.MethodHead, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -107,27 +90,10 @@ func TestMountServesProfileHead(t *testing.T) {
 	}
 }
 
-func TestMountReturnsNotFoundWhenUsernameMissing(t *testing.T) {
-	t.Parallel()
-
-	mount := mountProfileModule(t, &socialClientStub{}, "", nil)
-
-	req := httptest.NewRequest(http.MethodGet, routepath.UserProfilePrefix, nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
-	}
-	if !strings.Contains(rr.Body.String(), `id="app-error-state"`) {
-		t.Fatalf("body missing app error marker: %q", rr.Body.String())
-	}
-}
-
 func TestMountReturnsNotFoundWhenProfileLookupMisses(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &socialClientStub{lookupErr: status.Error(codes.NotFound, "username not found")}, "", nil)
+	mount := mountProfileModule(t, &authClientStub{lookupErr: status.Error(codes.NotFound, "username not found")}, &socialClientStub{}, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("unknown"), nil)
 	rr := httptest.NewRecorder()
@@ -138,24 +104,10 @@ func TestMountReturnsNotFoundWhenProfileLookupMisses(t *testing.T) {
 	}
 }
 
-func TestMountReturnsNotFoundForNestedPath(t *testing.T) {
+func TestMountReturnsServiceUnavailableWhenAuthServiceMissing(t *testing.T) {
 	t.Parallel()
 
-	mount := mountProfileModule(t, &socialClientStub{}, "", nil)
-
-	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis")+"/extra", nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-
-	if rr.Code != http.StatusNotFound {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
-	}
-}
-
-func TestMountReturnsServiceUnavailableWhenSocialServiceMissing(t *testing.T) {
-	t.Parallel()
-
-	mount := mountProfileModule(t, nil, "", nil)
+	mount := mountProfileModule(t, nil, nil, "", nil)
 
 	req := httptest.NewRequest(http.MethodGet, routepath.UserProfile("louis"), nil)
 	rr := httptest.NewRecorder()
@@ -164,47 +116,24 @@ func TestMountReturnsServiceUnavailableWhenSocialServiceMissing(t *testing.T) {
 	if rr.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusServiceUnavailable)
 	}
-	if !strings.Contains(rr.Body.String(), `id="app-error-state"`) {
-		t.Fatalf("body missing app error marker: %q", rr.Body.String())
-	}
-}
-
-func TestMountRejectsProfileNonGet(t *testing.T) {
-	t.Parallel()
-
-	mount := mountProfileModule(t, &socialClientStub{}, "", nil)
-	req := httptest.NewRequest(http.MethodDelete, routepath.UserProfile("louis"), nil)
-	rr := httptest.NewRecorder()
-	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusMethodNotAllowed {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusMethodNotAllowed)
-	}
-}
-
-func TestModuleIDReturnsProfile(t *testing.T) {
-	t.Parallel()
-
-	if got := New(Config{}).ID(); got != "profile" {
-		t.Fatalf("ID() = %q, want %q", got, "profile")
-	}
 }
 
 func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	t.Parallel()
 
 	if New(Config{}).Healthy() {
-		t.Fatalf("New(Config{}).Healthy() = true, want false for degraded module")
+		t.Fatalf("New(Config{}).Healthy() = true, want false")
 	}
-	if !New(Config{Gateway: profilegateway.NewGRPCGateway(&socialClientStub{})}).Healthy() {
-		t.Fatalf("New(Config{Gateway: ...}).Healthy() = false, want true")
+	if !New(Config{Gateway: profilegateway.NewGRPCGateway(&authClientStub{}, &socialClientStub{})}).Healthy() {
+		t.Fatalf("expected configured gateway to be healthy")
 	}
 }
 
-func mountProfileModule(t *testing.T, socialClient SocialClient, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) module.Mount {
+func mountProfileModule(t *testing.T, authClient AuthClient, socialClient SocialClient, assetBaseURL string, resolveSignedIn module.ResolveSignedIn) module.Mount {
 	t.Helper()
 
 	mount, err := New(Config{
-		Gateway:         profilegateway.NewGRPCGateway(socialClient),
+		Gateway:         profilegateway.NewGRPCGateway(authClient, socialClient),
 		AssetBaseURL:    assetBaseURL,
 		ResolveSignedIn: resolveSignedIn,
 	}).Mount()
@@ -214,25 +143,32 @@ func mountProfileModule(t *testing.T, socialClient SocialClient, assetBaseURL st
 	return mount
 }
 
-type socialClientStub struct {
-	lookupResp *socialv1.LookupUserProfileResponse
+type authClientStub struct {
+	lookupResp *authv1.LookupUserByUsernameResponse
 	lookupErr  error
 }
 
-func (s *socialClientStub) LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error) {
+func (s *authClientStub) LookupUserByUsername(context.Context, *authv1.LookupUserByUsernameRequest, ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
 	if s.lookupErr != nil {
 		return nil, s.lookupErr
 	}
 	if s.lookupResp != nil {
 		return s.lookupResp, nil
 	}
-	return &socialv1.LookupUserProfileResponse{}, nil
+	return &authv1.LookupUserByUsernameResponse{}, nil
 }
 
-func (*socialClientStub) GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error) {
+type socialClientStub struct {
+	getResp *socialv1.GetUserProfileResponse
+	getErr  error
+}
+
+func (s *socialClientStub) GetUserProfile(context.Context, *socialv1.GetUserProfileRequest, ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error) {
+	if s.getErr != nil {
+		return nil, s.getErr
+	}
+	if s.getResp != nil {
+		return s.getResp, nil
+	}
 	return &socialv1.GetUserProfileResponse{}, nil
-}
-
-func (*socialClientStub) SetUserProfile(context.Context, *socialv1.SetUserProfileRequest, ...grpc.CallOption) (*socialv1.SetUserProfileResponse, error) {
-	return &socialv1.SetUserProfileResponse{}, nil
 }

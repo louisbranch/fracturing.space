@@ -9,11 +9,11 @@ func TestParseProfileInputTrimsAndPreservesAvatarIDs(t *testing.T) {
 	t.Parallel()
 
 	existing := SettingsProfile{
+		Username:      "rhea",
 		AvatarSetID:   "set-a",
 		AvatarAssetID: "asset-1",
 	}
 	form := url.Values{
-		"username": {"  rhea  "},
 		"name":     {"  Rhea Vale  "},
 		"pronouns": {"  she/her  "},
 		"bio":      {"  Traveler  "},

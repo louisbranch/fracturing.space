@@ -124,7 +124,7 @@ func viewerName(viewer module.Viewer) string {
 func viewerProfileURL(viewer module.Viewer) string {
 	profileURL := strings.TrimSpace(viewer.ProfileURL)
 	if profileURL == "" {
-		return routepath.AppSettingsProfile
+		return routepath.AppDashboard
 	}
 	return profileURL
 }

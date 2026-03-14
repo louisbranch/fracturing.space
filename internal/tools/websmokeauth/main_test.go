@@ -55,7 +55,7 @@ func TestRunTTLMustBePositive(t *testing.T) {
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := run([]string{"-ttl-seconds", "0"}, &stdout, &stderr)
+	err := run([]string{"-ttl-seconds", "0", "-username", "alpha", "-recipient-username", "beta"}, &stdout, &stderr)
 	if got := exitCode(err); got != 1 {
 		t.Fatalf("exitCode(run) = %d, want 1 (err=%v)", got, err)
 	}
@@ -72,7 +72,7 @@ func TestRunTimeoutMustBePositive(t *testing.T) {
 
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
-	err := run([]string{"-timeout", "0s"}, &stdout, &stderr)
+	err := run([]string{"-timeout", "0s", "-username", "alpha", "-recipient-username", "beta"}, &stdout, &stderr)
 	if got := exitCode(err); got != 1 {
 		t.Fatalf("exitCode(run) = %d, want 1 (err=%v)", got, err)
 	}
@@ -98,5 +98,39 @@ func TestRunUnknownFlag(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "flag provided but not defined") {
 		t.Fatalf("stderr = %q, want flag parse error", stderr.String())
+	}
+}
+
+func TestRunUsernameRequired(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run([]string{"-username", "   ", "-recipient-username", "beta"}, &stdout, &stderr)
+	if got := exitCode(err); got != 1 {
+		t.Fatalf("exitCode(run) = %d, want 1 (err=%v)", got, err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "websmokeauth: username is required") {
+		t.Fatalf("stderr = %q, want username validation message", stderr.String())
+	}
+}
+
+func TestRunRecipientUsernameRequired(t *testing.T) {
+	t.Parallel()
+
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	err := run([]string{"-username", "alpha", "-recipient-username", "   "}, &stdout, &stderr)
+	if got := exitCode(err); got != 1 {
+		t.Fatalf("exitCode(run) = %d, want 1 (err=%v)", got, err)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "websmokeauth: recipient-username is required") {
+		t.Fatalf("stderr = %q, want recipient username validation message", stderr.String())
 	}
 }

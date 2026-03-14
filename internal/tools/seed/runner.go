@@ -8,10 +8,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 )
 
 type runDeps struct {
@@ -231,25 +227,12 @@ func createSeedUser(ctx context.Context, authAddr string) (string, error) {
 	if ctx == nil {
 		return "", errors.New("context is nil")
 	}
-	conn, err := grpc.NewClient(
-		authAddr,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
-	)
-	if err != nil {
-		return "", fmt.Errorf("connect auth server: %w", err)
+	if strings.TrimSpace(authAddr) == "" {
+		return "", fmt.Errorf("auth server address is required")
 	}
-	defer conn.Close()
-	client := authv1.NewAuthServiceClient(conn)
-	resp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Email: "seed.creator@example.com"})
-	if err != nil {
-		return "", fmt.Errorf("create seed user: %w", err)
-	}
-	userID := resp.GetUser().GetId()
-	if userID == "" {
-		return "", fmt.Errorf("create seed user: missing user id in response")
-	}
-	return userID, nil
+	// The legacy fixture runner is no longer responsible for provisioning auth
+	// accounts. It only needs a stable creator identity for MCP campaign calls.
+	return "seed-runner-user", nil
 }
 
 func injectCampaignCreatorUserID(request map[string]any, userID string) {

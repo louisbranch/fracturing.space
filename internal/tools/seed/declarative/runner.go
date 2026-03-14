@@ -24,10 +24,8 @@ const (
 )
 
 type authClient interface {
-	CreateUser(ctx context.Context, in *authv1.CreateUserRequest, opts ...grpc.CallOption) (*authv1.CreateUserResponse, error)
 	GetUser(ctx context.Context, in *authv1.GetUserRequest, opts ...grpc.CallOption) (*authv1.GetUserResponse, error)
-	ListUsers(ctx context.Context, in *authv1.ListUsersRequest, opts ...grpc.CallOption) (*authv1.ListUsersResponse, error)
-	ListUserEmails(ctx context.Context, in *authv1.ListUserEmailsRequest, opts ...grpc.CallOption) (*authv1.ListUserEmailsResponse, error)
+	LookupUserByUsername(ctx context.Context, in *authv1.LookupUserByUsernameRequest, opts ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error)
 }
 
 type socialClient interface {
@@ -228,28 +226,23 @@ func (r *Runner) resolveUserID(ctx context.Context, manifest Manifest, user Mani
 		}
 	}
 
-	foundID, err := r.findUserIDByEmail(ctx, user.Email)
-	if err != nil {
-		return "", err
+	username := strings.TrimSpace(user.PublicProfile.Username)
+	if username == "" {
+		return "", fmt.Errorf("user %q must declare public_profile.username to resolve an existing auth account", user.Key)
 	}
-	if foundID != "" {
-		state.Entries[entryKey] = foundID
-		return foundID, nil
-	}
-
-	resp, err := r.deps.auth.CreateUser(ctx, &authv1.CreateUserRequest{
-		Email:  user.Email,
-		Locale: parseLocale(user.Locale),
-	})
+	resp, err := r.deps.auth.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: username})
 	if err != nil {
-		return "", fmt.Errorf("create user %q: %w", user.Key, err)
+		if status.Code(err) == codes.NotFound {
+			return "", fmt.Errorf("resolve user %q by username %q: auth account not found", user.Key, username)
+		}
+		return "", fmt.Errorf("resolve user %q by username %q: %w", user.Key, username, err)
 	}
 	userID := strings.TrimSpace(resp.GetUser().GetId())
 	if userID == "" {
-		return "", fmt.Errorf("create user %q: missing user id", user.Key)
+		return "", fmt.Errorf("resolve user %q by username %q: missing user id", user.Key, username)
 	}
 	state.Entries[entryKey] = userID
-	r.logf("seed %s: created user %s (%s)", manifest.Name, user.Key, userID)
+	r.logf("seed %s: resolved user %s (%s)", manifest.Name, user.Key, userID)
 	return userID, nil
 }
 
@@ -264,42 +257,6 @@ func (r *Runner) userExists(ctx context.Context, userID string) (bool, error) {
 	return strings.TrimSpace(resp.GetUser().GetId()) != "", nil
 }
 
-func (r *Runner) findUserIDByEmail(ctx context.Context, email string) (string, error) {
-	target := normalizeEmail(email)
-	pageToken := ""
-	for {
-		resp, err := r.deps.auth.ListUsers(ctx, &authv1.ListUsersRequest{
-			PageSize:  defaultPageSize,
-			PageToken: pageToken,
-		})
-		if err != nil {
-			return "", fmt.Errorf("list users: %w", err)
-		}
-
-		for _, user := range resp.GetUsers() {
-			userID := strings.TrimSpace(user.GetId())
-			if userID == "" {
-				continue
-			}
-			emailsResp, err := r.deps.auth.ListUserEmails(ctx, &authv1.ListUserEmailsRequest{UserId: userID})
-			if err != nil {
-				return "", fmt.Errorf("list user emails for %s: %w", userID, err)
-			}
-			for _, candidate := range emailsResp.GetEmails() {
-				if normalizeEmail(candidate.GetEmail()) == target {
-					return userID, nil
-				}
-			}
-		}
-
-		pageToken = strings.TrimSpace(resp.GetNextPageToken())
-		if pageToken == "" {
-			break
-		}
-	}
-	return "", nil
-}
-
 func (r *Runner) applyPublicProfile(ctx context.Context, userID string, profile ManifestPublicProfile) error {
 	username := strings.TrimSpace(profile.Username)
 	name := strings.TrimSpace(profile.Name)
@@ -309,7 +266,6 @@ func (r *Runner) applyPublicProfile(ctx context.Context, userID string, profile 
 
 	_, err := r.deps.social.SetUserProfile(ctx, &socialv1.SetUserProfileRequest{
 		UserId:        userID,
-		Username:      username,
 		Name:          name,
 		AvatarSetId:   strings.TrimSpace(profile.AvatarSetID),
 		AvatarAssetId: strings.TrimSpace(profile.AvatarAssetID),

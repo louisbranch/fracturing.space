@@ -29,7 +29,7 @@ func defaultPublicModules(deps Dependencies, res ModuleResolvers, opts PublicMod
 		}),
 		discovery.New(discovery.Config{Gateway: discoveryGateway}),
 		profile.New(profile.Config{
-			Gateway:         profilegateway.NewGRPCGateway(deps.Profile.SocialClient),
+			Gateway:         profilegateway.NewGRPCGateway(deps.Profile.AuthClient, deps.Profile.SocialClient),
 			AssetBaseURL:    deps.AssetBaseURL,
 			ResolveSignedIn: res.ResolveSignedIn,
 		}),

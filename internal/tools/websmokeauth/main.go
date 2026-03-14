@@ -18,11 +18,11 @@ import (
 
 // config holds web-smoke auth bootstrap inputs.
 type config struct {
-	authAddr       string
-	email          string
-	emailPrefix    string
-	ttlSeconds     int64
-	requestTimeout time.Duration
+	authAddr          string
+	username          string
+	recipientUsername string
+	ttlSeconds        int64
+	requestTimeout    time.Duration
 }
 
 func main() {
@@ -48,10 +48,13 @@ func run(args []string, stdout, stderr io.Writer) error {
 	if cfg.requestTimeout <= 0 {
 		return failf(stderr, 1, "timeout must be > 0")
 	}
-
-	email := strings.TrimSpace(cfg.email)
-	if email == "" {
-		email = generatedEmail(sanitizeEmailPrefix(cfg.emailPrefix))
+	username := strings.TrimSpace(cfg.username)
+	if username == "" {
+		return failf(stderr, 1, "username is required")
+	}
+	recipientUsername := strings.TrimSpace(cfg.recipientUsername)
+	if recipientUsername == "" {
+		return failf(stderr, 1, "recipient-username is required")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.requestTimeout)
@@ -68,12 +71,11 @@ func run(args []string, stdout, stderr io.Writer) error {
 	defer conn.Close()
 
 	client := authv1.NewAuthServiceClient(conn)
-	userID, err := createUserID(ctx, client, email)
+	userID, err := lookupUserIDByUsername(ctx, client, username)
 	if err != nil {
 		return failf(stderr, 1, "%v", err)
 	}
-	recipientEmail := generatedEmail(sanitizeEmailPrefix(cfg.emailPrefix) + "-recipient")
-	recipientUserID, err := createUserID(ctx, client, recipientEmail)
+	recipientUserID, err := lookupUserIDByUsername(ctx, client, recipientUsername)
 	if err != nil {
 		return failf(stderr, 1, "%v", err)
 	}
@@ -91,9 +93,9 @@ func run(args []string, stdout, stderr io.Writer) error {
 		return failf(stderr, 1, "create web session for user %q: missing session id", userID)
 	}
 
-	fmt.Fprintf(stdout, "WEB_SMOKE_AUTH_EMAIL=%s\n", email)
+	fmt.Fprintf(stdout, "WEB_SMOKE_AUTH_USERNAME=%s\n", username)
 	fmt.Fprintf(stdout, "WEB_SMOKE_USER_ID=%s\n", userID)
-	fmt.Fprintf(stdout, "WEB_SMOKE_AUTH_RECIPIENT_EMAIL=%s\n", recipientEmail)
+	fmt.Fprintf(stdout, "WEB_SMOKE_AUTH_RECIPIENT_USERNAME=%s\n", recipientUsername)
 	fmt.Fprintf(stdout, "WEB_SMOKE_RECIPIENT_USER_ID=%s\n", recipientUserID)
 	fmt.Fprintf(stdout, "WEB_SMOKE_SESSION_ID=%s\n", sessionID)
 	return nil
@@ -105,8 +107,8 @@ func parseConfig(args []string, stderr io.Writer) (config, error) {
 	fs := flag.NewFlagSet("websmokeauth", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	fs.StringVar(&cfg.authAddr, "auth-addr", "127.0.0.1:8083", "auth gRPC address")
-	fs.StringVar(&cfg.email, "email", "", "explicit email to create (optional)")
-	fs.StringVar(&cfg.emailPrefix, "email-prefix", "web-smoke", "generated email prefix when -email is empty")
+	fs.StringVar(&cfg.username, "username", "", "existing username to create a session for")
+	fs.StringVar(&cfg.recipientUsername, "recipient-username", "", "existing invite recipient username")
 	fs.Int64Var(&cfg.ttlSeconds, "ttl-seconds", 3600, "web session ttl in seconds")
 	fs.DurationVar(&cfg.requestTimeout, "timeout", 10*time.Second, "request timeout for auth RPC calls")
 	if err := fs.Parse(args); err != nil {
@@ -143,18 +145,14 @@ func sanitizeEmailPrefix(value string) string {
 	return normalized
 }
 
-func generatedEmail(prefix string) string {
-	return fmt.Sprintf("%s-%d@example.com", prefix, time.Now().UTC().UnixNano())
-}
-
-func createUserID(ctx context.Context, client authv1.AuthServiceClient, email string) (string, error) {
-	createUserResp, err := client.CreateUser(ctx, &authv1.CreateUserRequest{Email: email})
+func lookupUserIDByUsername(ctx context.Context, client authv1.AuthServiceClient, username string) (string, error) {
+	resp, err := client.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: username})
 	if err != nil {
-		return "", fmt.Errorf("create auth user %q: %w", email, err)
+		return "", fmt.Errorf("lookup auth user %q: %w", username, err)
 	}
-	userID := strings.TrimSpace(createUserResp.GetUser().GetId())
+	userID := strings.TrimSpace(resp.GetUser().GetId())
 	if userID == "" {
-		return "", fmt.Errorf("create auth user %q: missing user id", email)
+		return "", fmt.Errorf("lookup auth user %q: missing user id", username)
 	}
 	return userID, nil
 }

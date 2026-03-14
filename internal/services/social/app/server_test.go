@@ -58,7 +58,6 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 
 	setResp, err := client.SetUserProfile(context.Background(), &socialv1.SetUserProfileRequest{
 		UserId:        "user-1",
-		Username:      "Alice_One",
 		Name:          "Alice",
 		AvatarSetId:   "avatar_set_v1",
 		AvatarAssetId: "apothecary_journeyman",
@@ -67,11 +66,8 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("set user profile: %v", err)
 	}
-	if setResp.GetUserProfile() == nil {
-		t.Fatal("expected user profile record from set user profile")
-	}
-	if got := setResp.GetUserProfile().GetUsername(); got != "alice_one" {
-		t.Fatalf("set username = %q, want alice_one", got)
+	if got := setResp.GetUserProfile().GetName(); got != "Alice" {
+		t.Fatalf("set name = %q, want Alice", got)
 	}
 
 	getResp, err := client.GetUserProfile(context.Background(), &socialv1.GetUserProfileRequest{
@@ -80,25 +76,12 @@ func TestServer_UserProfileRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user profile: %v", err)
 	}
-	if got := getResp.GetUserProfile().GetName(); got != "Alice" {
-		t.Fatalf("name = %q, want Alice", got)
-	}
-
-	lookupResp, err := client.LookupUserProfile(context.Background(), &socialv1.LookupUserProfileRequest{
-		Username: "ALICE_ONE",
-	})
-	if err != nil {
-		t.Fatalf("lookup user profile: %v", err)
-	}
-	if got := lookupResp.GetUserProfile().GetUserId(); got != "user-1" {
-		t.Fatalf("lookup user_id = %q, want user-1", got)
-	}
-	if got := lookupResp.GetUserProfile().GetBio(); got != "Campaign manager" {
-		t.Fatalf("lookup bio = %q, want Campaign manager", got)
+	if got := getResp.GetUserProfile().GetBio(); got != "Campaign manager" {
+		t.Fatalf("bio = %q, want Campaign manager", got)
 	}
 }
 
-func TestServer_UserProfileAllowsMissingUsernameAndName(t *testing.T) {
+func TestServer_UserProfileAllowsMissingName(t *testing.T) {
 	client := newSocialClientForTest(t)
 
 	setResp, err := client.SetUserProfile(context.Background(), &socialv1.SetUserProfileRequest{
@@ -107,41 +90,11 @@ func TestServer_UserProfileAllowsMissingUsernameAndName(t *testing.T) {
 	if err != nil {
 		t.Fatalf("set user profile: %v", err)
 	}
-	if setResp.GetUserProfile() == nil {
-		t.Fatal("expected user profile record from set user profile")
-	}
-	if got := setResp.GetUserProfile().GetUsername(); got != "" {
-		t.Fatalf("set username = %q, want empty", got)
-	}
 	if got := setResp.GetUserProfile().GetName(); got != "" {
 		t.Fatalf("set name = %q, want empty", got)
 	}
 	if got := setResp.GetUserProfile().GetAvatarSetId(); got != assetcatalog.AvatarSetPeopleV1 {
 		t.Fatalf("set avatar set id = %q, want %q", got, assetcatalog.AvatarSetPeopleV1)
-	}
-	if got := setResp.GetUserProfile().GetAvatarAssetId(); got == "" {
-		t.Fatal("set avatar asset id = empty, want deterministic people-set avatar")
-	}
-}
-
-func TestServer_UserProfileConflictReturnsAlreadyExists(t *testing.T) {
-	client := newSocialClientForTest(t)
-
-	if _, err := client.SetUserProfile(context.Background(), &socialv1.SetUserProfileRequest{
-		UserId:   "user-1",
-		Username: "taken",
-		Name:     "Alice",
-	}); err != nil {
-		t.Fatalf("set user profile user-1: %v", err)
-	}
-
-	_, err := client.SetUserProfile(context.Background(), &socialv1.SetUserProfileRequest{
-		UserId:   "user-2",
-		Username: "Taken",
-		Name:     "Bob",
-	})
-	if status.Code(err) != codes.AlreadyExists {
-		t.Fatalf("code = %v, want %v", status.Code(err), codes.AlreadyExists)
 	}
 }
 
@@ -153,13 +106,6 @@ func TestServer_UserProfileNotFoundReturnsNotFound(t *testing.T) {
 	})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("get user profile code = %v, want %v", status.Code(err), codes.NotFound)
-	}
-
-	_, err = client.LookupUserProfile(context.Background(), &socialv1.LookupUserProfileRequest{
-		Username: "missing-user",
-	})
-	if status.Code(err) != codes.NotFound {
-		t.Fatalf("lookup user profile code = %v, want %v", status.Code(err), codes.NotFound)
 	}
 }
 

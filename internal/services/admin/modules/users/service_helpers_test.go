@@ -18,6 +18,15 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+type fakeAuthClient struct {
+	authv1.AuthServiceClient
+	lookupResp *authv1.LookupUserByUsernameResponse
+}
+
+func (c *fakeAuthClient) LookupUserByUsername(context.Context, *authv1.LookupUserByUsernameRequest, ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
+	return c.lookupResp, nil
+}
+
 // testUnavailableConn implements grpc.ClientConnInterface and returns
 // codes.Unavailable for every RPC, simulating a disconnected backend.
 type testUnavailableConn struct{}
@@ -36,35 +45,23 @@ func TestUserHelpersBuildersAndFormatters(t *testing.T) {
 
 	rows := buildUserRows([]*authv1.User{
 		nil,
-		{Id: "user-1", Email: "alice@example.com", CreatedAt: now, UpdatedAt: now},
+		{Id: "user-1", Username: "alice", CreatedAt: now, UpdatedAt: now},
 	})
-	if len(rows) != 1 || rows[0].ID != "user-1" || rows[0].Email != "alice@example.com" {
+	if len(rows) != 1 || rows[0].ID != "user-1" || rows[0].Username != "alice" {
 		t.Fatalf("buildUserRows() = %#v", rows)
 	}
 
 	detail := buildUserDetail(&authv1.User{
 		Id:        "user-1",
-		Email:     "alice@example.com",
+		Username:  "alice",
 		CreatedAt: now,
 		UpdatedAt: now,
 	})
-	if detail == nil || detail.ID != "user-1" {
+	if detail == nil || detail.ID != "user-1" || detail.Username != "alice" {
 		t.Fatalf("buildUserDetail() = %#v", detail)
 	}
 	if got := buildUserDetail(nil); got != nil {
 		t.Fatalf("buildUserDetail(nil) = %#v", got)
-	}
-
-	emailRows := buildUserEmailRows([]*authv1.UserEmail{
-		nil,
-		{Email: "alice@example.com", CreatedAt: now, UpdatedAt: now},
-		{Email: "alice+verified@example.com", CreatedAt: now, UpdatedAt: now, VerifiedAt: now},
-	}, loc)
-	if len(emailRows) != 2 || emailRows[0].VerifiedAt != "-" || emailRows[1].VerifiedAt == "-" {
-		t.Fatalf("buildUserEmailRows() = %#v", emailRows)
-	}
-	if empty := buildUserEmailRows(nil, loc); empty != nil {
-		t.Fatalf("buildUserEmailRows(nil) = %#v", empty)
 	}
 
 	label, variant := formatInviteStatus(statev1.InviteStatus_PENDING, loc)
@@ -146,5 +143,46 @@ func TestUserServiceUnavailableClients(t *testing.T) {
 	rows, message = svc.listPendingInvitesForUser(stubReq, stubReq.Context(), "user-1", loc)
 	if rows != nil || message == "" {
 		t.Fatalf("listPendingInvitesForUser(nil client) = (%#v,%q)", rows, message)
+	}
+}
+
+func TestHandleUserLookupByUsernameRedirectsToResolvedUser(t *testing.T) {
+	svc := &handlers{
+		base: modulehandler.NewBase(),
+		authClient: &fakeAuthClient{
+			lookupResp: &authv1.LookupUserByUsernameResponse{
+				User: &authv1.User{Id: "user-1", Username: "alice"},
+			},
+		},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/app/users/lookup?username=alice", nil)
+	rec := httptest.NewRecorder()
+	svc.HandleUserLookup(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("HandleUserLookup(username) status = %d", rec.Code)
+	}
+	if got := rec.Header().Get("Location"); got != "/app/users/user-1" {
+		t.Fatalf("HandleUserLookup(username) location = %q", got)
+	}
+}
+
+func TestHandleUserLookupByUsernameRedirectsBackWhenMissing(t *testing.T) {
+	svc := &handlers{
+		base:       modulehandler.NewBase(),
+		authClient: &fakeAuthClient{},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/app/users/lookup?username=missing", nil)
+	rec := httptest.NewRecorder()
+	svc.HandleUserLookup(rec, req)
+
+	if rec.Code != http.StatusSeeOther {
+		t.Fatalf("HandleUserLookup(missing username) status = %d", rec.Code)
+	}
+	location := rec.Header().Get("Location")
+	if location == "" || location == "/app/users/user-1" {
+		t.Fatalf("HandleUserLookup(missing username) location = %q", location)
 	}
 }

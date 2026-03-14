@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"testing"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
@@ -14,10 +15,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestNewGRPCGatewayFailsClosedWhenClientMissing(t *testing.T) {
+func TestNewGRPCGatewayFailsClosedWhenAuthClientMissing(t *testing.T) {
 	t.Parallel()
 
-	gateway := NewGRPCGateway(nil)
+	gateway := NewGRPCGateway(nil, nil)
 	_, err := gateway.LookupUserProfile(context.Background(), profileapp.LookupUserProfileRequest{Username: "louis"})
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -30,10 +31,12 @@ func TestNewGRPCGatewayFailsClosedWhenClientMissing(t *testing.T) {
 func TestGRPCGatewayLookupMapsFields(t *testing.T) {
 	t.Parallel()
 
-	client := &socialClientStub{resp: &socialv1.LookupUserProfileResponse{
+	authClient := &authClientStub{resp: &authv1.LookupUserByUsernameResponse{
+		User: &authv1.User{Id: "  user-1  ", Username: "  louis  "},
+	}}
+	socialClient := &socialClientStub{resp: &socialv1.GetUserProfileResponse{
 		UserProfile: &socialv1.UserProfile{
 			UserId:        "  user-1  ",
-			Username:      "  louis  ",
 			Name:          "  Louis Branch  ",
 			Pronouns:      pronouns.ToProto("they/them"),
 			Bio:           "  Explorer  ",
@@ -41,49 +44,45 @@ func TestGRPCGatewayLookupMapsFields(t *testing.T) {
 			AvatarAssetId: "  001  ",
 		},
 	}}
-	gateway := GRPCGateway{Client: client}
+	gateway := GRPCGateway{AuthClient: authClient, SocialClient: socialClient}
 
 	resp, err := gateway.LookupUserProfile(context.Background(), profileapp.LookupUserProfileRequest{Username: "  louis  "})
 	if err != nil {
 		t.Fatalf("LookupUserProfile() error = %v", err)
 	}
-	if client.lastReq.GetUsername() != "louis" {
-		t.Fatalf("request username = %q, want %q", client.lastReq.GetUsername(), "louis")
+	if authClient.lastReq.GetUsername() != "louis" {
+		t.Fatalf("request username = %q, want %q", authClient.lastReq.GetUsername(), "louis")
 	}
-	if resp.UserID != "user-1" {
-		t.Fatalf("UserID = %q, want %q", resp.UserID, "user-1")
+	if socialClient.lastReq.GetUserId() != "user-1" {
+		t.Fatalf("social request user id = %q, want %q", socialClient.lastReq.GetUserId(), "user-1")
 	}
-	if resp.Username != "louis" {
-		t.Fatalf("Username = %q, want %q", resp.Username, "louis")
-	}
-	if resp.Name != "Louis Branch" {
-		t.Fatalf("Name = %q, want %q", resp.Name, "Louis Branch")
-	}
-	if resp.Pronouns != "they/them" {
-		t.Fatalf("Pronouns = %q, want %q", resp.Pronouns, "they/them")
-	}
-	if resp.Bio != "Explorer" {
-		t.Fatalf("Bio = %q, want %q", resp.Bio, "Explorer")
+	if resp.UserID != "user-1" || resp.Username != "louis" || resp.Name != "Louis Branch" || resp.Pronouns != "they/them" || resp.Bio != "Explorer" {
+		t.Fatalf("unexpected response: %+v", resp)
 	}
 }
 
-func TestGRPCGatewayLookupReturnsEmptyWhenPayloadMissing(t *testing.T) {
+func TestGRPCGatewayLookupReturnsBaselineWhenSocialProfileMissing(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{Client: &socialClientStub{resp: &socialv1.LookupUserProfileResponse{}}}
+	gateway := GRPCGateway{
+		AuthClient: &authClientStub{resp: &authv1.LookupUserByUsernameResponse{
+			User: &authv1.User{Id: "user-1", Username: "louis"},
+		}},
+		SocialClient: &socialClientStub{err: status.Error(codes.NotFound, "profile not found")},
+	}
 	resp, err := gateway.LookupUserProfile(context.Background(), profileapp.LookupUserProfileRequest{Username: "louis"})
 	if err != nil {
 		t.Fatalf("LookupUserProfile() error = %v", err)
 	}
-	if resp != (profileapp.LookupUserProfileResponse{}) {
-		t.Fatalf("response = %#v, want empty response", resp)
+	if resp.UserID != "user-1" || resp.Username != "louis" {
+		t.Fatalf("unexpected baseline response: %+v", resp)
 	}
 }
 
 func TestGRPCGatewayLookupMapsNotFoundError(t *testing.T) {
 	t.Parallel()
 
-	gateway := GRPCGateway{Client: &socialClientStub{err: status.Error(codes.NotFound, "profile not found")}}
+	gateway := GRPCGateway{AuthClient: &authClientStub{err: status.Error(codes.NotFound, "user not found")}}
 	_, err := gateway.LookupUserProfile(context.Background(), profileapp.LookupUserProfileRequest{Username: "missing"})
 	if err == nil {
 		t.Fatalf("expected not-found error")
@@ -93,13 +92,13 @@ func TestGRPCGatewayLookupMapsNotFoundError(t *testing.T) {
 	}
 }
 
-type socialClientStub struct {
-	resp    *socialv1.LookupUserProfileResponse
+type authClientStub struct {
+	resp    *authv1.LookupUserByUsernameResponse
 	err     error
-	lastReq *socialv1.LookupUserProfileRequest
+	lastReq *authv1.LookupUserByUsernameRequest
 }
 
-func (s *socialClientStub) LookupUserProfile(_ context.Context, req *socialv1.LookupUserProfileRequest, _ ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error) {
+func (s *authClientStub) LookupUserByUsername(_ context.Context, req *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
 	s.lastReq = req
 	if s.err != nil {
 		return nil, s.err
@@ -107,5 +106,22 @@ func (s *socialClientStub) LookupUserProfile(_ context.Context, req *socialv1.Lo
 	if s.resp != nil {
 		return s.resp, nil
 	}
-	return &socialv1.LookupUserProfileResponse{}, nil
+	return &authv1.LookupUserByUsernameResponse{}, nil
+}
+
+type socialClientStub struct {
+	resp    *socialv1.GetUserProfileResponse
+	err     error
+	lastReq *socialv1.GetUserProfileRequest
+}
+
+func (s *socialClientStub) GetUserProfile(_ context.Context, req *socialv1.GetUserProfileRequest, _ ...grpc.CallOption) (*socialv1.GetUserProfileResponse, error) {
+	s.lastReq = req
+	if s.err != nil {
+		return nil, s.err
+	}
+	if s.resp != nil {
+		return s.resp, nil
+	}
+	return &socialv1.GetUserProfileResponse{}, nil
 }

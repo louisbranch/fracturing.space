@@ -3,52 +3,50 @@ package user
 
 import (
 	"fmt"
-	"net/mail"
-	"strings"
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	authusername "github.com/louisbranch/fracturing.space/internal/services/auth/username"
 )
 
 var (
-	// ErrEmptyEmail indicates a missing email.
-	ErrEmptyEmail = apperrors.New(apperrors.CodeUserEmptyEmail, "email is required")
-	// ErrInvalidEmail indicates an email that does not match the required format.
-	ErrInvalidEmail = apperrors.New(apperrors.CodeUserInvalidEmail, "email must be a valid email address")
+	// ErrEmptyUsername indicates a missing username.
+	ErrEmptyUsername = apperrors.New(apperrors.CodeUserEmptyUsername, "Username is required.")
+	// ErrInvalidUsername indicates a username that does not match auth policy.
+	ErrInvalidUsername = apperrors.New(apperrors.CodeUserInvalidUsername, "Username must match the required format.")
 )
 
 // User represents an authenticated identity record.
 type User struct {
-	ID        string
-	Email     string
-	Locale    commonv1.Locale
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID                        string
+	Username                  string
+	Locale                    commonv1.Locale
+	RecoveryCodeHash          string
+	RecoveryReservedSessionID string
+	RecoveryReservedUntil     *time.Time
+	RecoveryCodeUpdatedAt     time.Time
+	CreatedAt                 time.Time
+	UpdatedAt                 time.Time
 }
 
 // CreateUserInput describes the metadata needed to create a user.
 type CreateUserInput struct {
-	Email  string
-	Locale commonv1.Locale
+	Username string
+	Locale   commonv1.Locale
 }
 
-// ValidateEmail enforces canonical email constraints used by joins, invites,
-// and chat display across services.
-func ValidateEmail(s string) error {
-	parsed, err := mail.ParseAddress(s)
-	if err != nil || parsed.Name != "" || !strings.EqualFold(strings.TrimSpace(parsed.Address), strings.TrimSpace(s)) {
-		return ErrInvalidEmail
+// ValidateUsername enforces canonical username constraints for auth identity.
+func ValidateUsername(s string) error {
+	if _, err := authusername.Canonicalize(s); err != nil {
+		return ErrInvalidUsername
 	}
 	return nil
 }
 
 // CreateUser creates a durable user identity from validated input.
-//
-// The service layer treats this as the canonical point where untrusted primary
-// email becomes a stable identity used by auth, admin, and game paths.
 func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() (string, error)) (User, error) {
 	if now == nil {
 		now = time.Now
@@ -64,28 +62,30 @@ func CreateUser(input CreateUserInput, now func() time.Time, idGenerator func() 
 
 	userID, err := idGenerator()
 	if err != nil {
-		return User{}, fmt.Errorf("generate user id: %w", err)
+		return User{}, fmt.Errorf("Generate user ID: %w", err)
 	}
 
 	createdAt := now().UTC()
 	return User{
-		ID:        userID,
-		Email:     normalized.Email,
-		Locale:    normalized.Locale,
-		CreatedAt: createdAt,
-		UpdatedAt: createdAt,
+		ID:                    userID,
+		Username:              normalized.Username,
+		Locale:                normalized.Locale,
+		RecoveryCodeUpdatedAt: createdAt,
+		CreatedAt:             createdAt,
+		UpdatedAt:             createdAt,
 	}, nil
 }
 
 // NormalizeCreateUserInput trims and normalizes input before validation.
 func NormalizeCreateUserInput(input CreateUserInput) (CreateUserInput, error) {
-	input.Email = strings.ToLower(strings.TrimSpace(input.Email))
-	if input.Email == "" {
-		return CreateUserInput{}, ErrEmptyEmail
+	if input.Username == "" {
+		return CreateUserInput{}, ErrEmptyUsername
 	}
-	if err := ValidateEmail(input.Email); err != nil {
-		return CreateUserInput{}, err
+	canonicalUsername, err := authusername.Canonicalize(input.Username)
+	if err != nil {
+		return CreateUserInput{}, ErrInvalidUsername
 	}
+	input.Username = canonicalUsername
 	input.Locale = platformi18n.NormalizeLocale(input.Locale)
 	return input, nil
 }

@@ -223,6 +223,9 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	if bundle.Modules.Settings.CredentialClient == nil {
 		t.Fatal("expected credential client")
 	}
+	if bundle.Modules.Profile.AuthClient == nil {
+		t.Fatalf("expected profile auth client")
+	}
 	if bundle.Modules.Profile.SocialClient == nil {
 		t.Fatal("expected profile social client")
 	}

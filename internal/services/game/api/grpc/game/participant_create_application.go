@@ -40,7 +40,15 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		if profile.Name != "" {
 			name = profile.Name
 		} else if userID != "" {
-			name = defaultUnknownParticipantName(campaignRecord.Locale)
+			name, err = authUsername(
+				ctx,
+				c.authClient,
+				userID,
+				status.Error(codes.InvalidArgument, "participant user not found"),
+			)
+			if err != nil {
+				return storage.ParticipantRecord{}, err
+			}
 		}
 	}
 	if name == "" {

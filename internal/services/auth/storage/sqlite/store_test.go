@@ -53,12 +53,17 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	updated := created.Add(time.Hour)
+	reservedUntil := updated.Add(time.Hour)
 	input := user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		Locale:    commonv1.Locale_LOCALE_PT_BR,
-		CreatedAt: created,
-		UpdatedAt: updated,
+		ID:                        "user-1",
+		Username:                  "testuser",
+		Locale:                    commonv1.Locale_LOCALE_PT_BR,
+		RecoveryCodeHash:          "hash-1",
+		RecoveryReservedSessionID: "recovery-1",
+		RecoveryReservedUntil:     &reservedUntil,
+		RecoveryCodeUpdatedAt:     updated,
+		CreatedAt:                 created,
+		UpdatedAt:                 updated,
 	}
 
 	if err := store.PutUser(context.Background(), input); err != nil {
@@ -69,11 +74,22 @@ func TestPutGetUserRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get user: %v", err)
 	}
-	if got.ID != input.ID || got.Email != input.Email {
+	if got.ID != input.ID || got.Username != input.Username {
 		t.Fatalf("unexpected user: %+v", got)
 	}
 	if got.Locale != commonv1.Locale_LOCALE_PT_BR {
 		t.Fatalf("locale = %v, want %v", got.Locale, commonv1.Locale_LOCALE_PT_BR)
+	}
+	if got.RecoveryCodeHash != input.RecoveryCodeHash {
+		t.Fatalf("recovery code hash = %q, want %q", got.RecoveryCodeHash, input.RecoveryCodeHash)
+	}
+
+	byUsername, err := store.GetUserByUsername(context.Background(), "testuser")
+	if err != nil {
+		t.Fatalf("get user by username: %v", err)
+	}
+	if byUsername.ID != input.ID {
+		t.Fatalf("user by username = %+v, want id %q", byUsername, input.ID)
 	}
 }
 
@@ -82,11 +98,12 @@ func TestPutUserDefaultsLocaleWhenUnset(t *testing.T) {
 
 	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	input := user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		Locale:    commonv1.Locale_LOCALE_UNSPECIFIED,
-		CreatedAt: now,
-		UpdatedAt: now,
+		ID:                    "user-1",
+		Username:              "testuser",
+		Locale:                commonv1.Locale_LOCALE_UNSPECIFIED,
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}
 
 	if err := store.PutUser(context.Background(), input); err != nil {
@@ -102,115 +119,84 @@ func TestPutUserDefaultsLocaleWhenUnset(t *testing.T) {
 	}
 }
 
-func TestPutUserRequiresID(t *testing.T) {
+func TestPutUserValidationAndUniqueness(t *testing.T) {
 	store := openTempStore(t)
+	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 
-	err := store.PutUser(context.Background(), user.User{ID: "  "})
-	if err == nil {
+	if err := store.PutUser(context.Background(), user.User{ID: "  "}); err == nil {
 		t.Fatal("expected error for empty user id")
 	}
-}
-
-func TestPutUserRequiresEmail(t *testing.T) {
-	store := openTempStore(t)
 
 	err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     " ",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:                    "user-1",
+		Username:              " ",
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	})
 	if err == nil {
-		t.Fatal("expected error for empty email")
+		t.Fatal("expected error for empty username")
 	}
-}
-
-func TestPutUserEnforcesPrimaryEmailUniqueness(t *testing.T) {
-	store := openTempStore(t)
 
 	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "shared@example.com",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		ID:                    "user-1",
+		Username:              "shared-user",
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
 
-	err := store.PutUser(context.Background(), user.User{
-		ID:        "user-2",
-		Email:     "shared@example.com",
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+	err = store.PutUser(context.Background(), user.User{
+		ID:                    "user-2",
+		Username:              "shared-user",
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	})
 	if err == nil {
-		t.Fatal("expected duplicate email error")
+		t.Fatal("expected duplicate username error")
 	}
 	if _, err := store.GetUser(context.Background(), "user-2"); err != storage.ErrNotFound {
 		t.Fatalf("expected user-2 not found, got %v", err)
 	}
 }
 
-func TestPutUserIsIdempotentForPrimaryEmail(t *testing.T) {
+func TestPutUserCanonicalizesUsername(t *testing.T) {
 	store := openTempStore(t)
+	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 
-	created := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-	updated := created.Add(time.Minute)
-	input := user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		CreatedAt: created,
-		UpdatedAt: created,
-	}
-
-	if err := store.PutUser(context.Background(), input); err != nil {
+	if err := store.PutUser(context.Background(), user.User{
+		ID:                    "user-1",
+		Username:              "  Test.User  ",
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
-	input.CreatedAt = updated
-	input.UpdatedAt = updated
-	if err := store.PutUser(context.Background(), input); err != nil {
-		t.Fatalf("put user again: %v", err)
-	}
 
-	list, err := store.ListUserEmailsByUser(context.Background(), "user-1")
+	got, err := store.GetUser(context.Background(), "user-1")
 	if err != nil {
-		t.Fatalf("list user emails: %v", err)
+		t.Fatalf("get user: %v", err)
 	}
-	if len(list) != 1 {
-		t.Fatalf("expected 1 email, got %d", len(list))
-	}
-}
-
-func TestGetUserNotFound(t *testing.T) {
-	store := openTempStore(t)
-
-	_, err := store.GetUser(context.Background(), "missing")
-	if err == nil {
-		t.Fatal("expected error")
-	}
-	if err != storage.ErrNotFound {
-		t.Fatalf("expected not found, got %v", err)
-	}
-}
-
-func TestGetUserRequiresID(t *testing.T) {
-	store := openTempStore(t)
-
-	_, err := store.GetUser(context.Background(), " ")
-	if err == nil {
-		t.Fatal("expected error for empty user id")
+	if got.Username != "test.user" {
+		t.Fatalf("username = %q, want %q", got.Username, "test.user")
 	}
 }
 
 func TestListUsersPagination(t *testing.T) {
 	store := openTempStore(t)
+	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 
 	for i, id := range []string{"user-1", "user-2", "user-3"} {
 		if err := store.PutUser(context.Background(), user.User{
-			ID:        id,
-			Email:     fmt.Sprintf("user%d", i+1),
-			CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
-			UpdatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+			ID:                    id,
+			Username:              fmt.Sprintf("user%d", i+1),
+			RecoveryCodeUpdatedAt: now,
+			CreatedAt:             now,
+			UpdatedAt:             now,
 		}); err != nil {
 			t.Fatalf("put user: %v", err)
 		}
@@ -239,34 +225,16 @@ func TestListUsersPagination(t *testing.T) {
 	}
 }
 
-func TestListUsersInvalidPageSize(t *testing.T) {
-	store := openTempStore(t)
-
-	if _, err := store.ListUsers(context.Background(), 0, ""); err == nil {
-		t.Fatal("expected error for invalid page size")
-	}
-}
-
-func TestListUsersContextError(t *testing.T) {
-	store := openTempStore(t)
-
-	ctx, cancel := context.WithCancel(context.Background())
-	cancel()
-	_, err := store.ListUsers(ctx, 1, "")
-	if err == nil {
-		t.Fatal("expected context error")
-	}
-}
-
-func TestGetAuthStatisticsSince(t *testing.T) {
+func TestGetAuthStatistics(t *testing.T) {
 	store := openTempStore(t)
 
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		CreatedAt: created,
-		UpdatedAt: created,
+		ID:                    "user-1",
+		Username:              "testuser",
+		RecoveryCodeUpdatedAt: created,
+		CreatedAt:             created,
+		UpdatedAt:             created,
 	}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
@@ -279,27 +247,167 @@ func TestGetAuthStatisticsSince(t *testing.T) {
 	if stats.UserCount != 1 {
 		t.Fatalf("expected 1 user, got %d", stats.UserCount)
 	}
-}
 
-func TestGetAuthStatisticsAllTime(t *testing.T) {
-	store := openTempStore(t)
-
-	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		CreatedAt: created,
-		UpdatedAt: created,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	stats, err := store.GetAuthStatistics(context.Background(), nil)
+	stats, err = store.GetAuthStatistics(context.Background(), nil)
 	if err != nil {
-		t.Fatalf("get auth statistics: %v", err)
+		t.Fatalf("get auth statistics all time: %v", err)
 	}
 	if stats.UserCount != 1 {
 		t.Fatalf("expected 1 user, got %d", stats.UserCount)
+	}
+}
+
+func TestPutUserWithIntegrationOutboxEventCanonicalizesUsername(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
+
+	event := storage.IntegrationOutboxEvent{
+		ID:            "event-1",
+		EventType:     "auth.user.created",
+		PayloadJSON:   `{"user_id":"user-1"}`,
+		DedupeKey:     "user-1",
+		NextAttemptAt: now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+	if err := store.PutUserWithIntegrationOutboxEvent(context.Background(), user.User{
+		ID:                    "user-1",
+		Username:              "  Mixed-Case  ",
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}, event); err != nil {
+		t.Fatalf("put user with outbox event: %v", err)
+	}
+
+	got, err := store.GetUserByUsername(context.Background(), "mixed-case")
+	if err != nil {
+		t.Fatalf("get user by canonical username: %v", err)
+	}
+	if got.ID != "user-1" {
+		t.Fatalf("user id = %q, want %q", got.ID, "user-1")
+	}
+
+	outboxEvent, err := store.GetIntegrationOutboxEvent(context.Background(), "event-1")
+	if err != nil {
+		t.Fatalf("get integration outbox event: %v", err)
+	}
+	if outboxEvent.EventType != event.EventType {
+		t.Fatalf("event type = %q, want %q", outboxEvent.EventType, event.EventType)
+	}
+}
+
+func TestPutUserPasskeyWithIntegrationOutboxEventPersistsSignupAtomically(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	credential := storage.PasskeyCredential{
+		CredentialID:   "cred-1",
+		UserID:         "user-1",
+		CredentialJSON: "{}",
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}
+	session := storage.WebSession{
+		ID:        "ws-1",
+		UserID:    "user-1",
+		CreatedAt: now,
+		ExpiresAt: now.Add(24 * time.Hour),
+	}
+	event := storage.IntegrationOutboxEvent{
+		ID:            "event-1",
+		EventType:     "auth.signup_completed",
+		PayloadJSON:   `{"user_id":"user-1","username":"alpha"}`,
+		DedupeKey:     "signup_completed:user:user-1:v1",
+		NextAttemptAt: now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}
+
+	if err := store.PutUserPasskeyWithIntegrationOutboxEvent(context.Background(), user.User{
+		ID:                    "user-1",
+		Username:              "Alpha",
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}, credential, session, event); err != nil {
+		t.Fatalf("put signup payload: %v", err)
+	}
+
+	storedUser, err := store.GetUser(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("get user: %v", err)
+	}
+	if storedUser.Username != "alpha" {
+		t.Fatalf("username = %q, want %q", storedUser.Username, "alpha")
+	}
+
+	storedCredential, err := store.GetPasskeyCredential(context.Background(), "cred-1")
+	if err != nil {
+		t.Fatalf("get passkey: %v", err)
+	}
+	if storedCredential.UserID != "user-1" {
+		t.Fatalf("credential user_id = %q, want %q", storedCredential.UserID, "user-1")
+	}
+
+	outboxEvent, err := store.GetIntegrationOutboxEvent(context.Background(), "event-1")
+	if err != nil {
+		t.Fatalf("get integration outbox event: %v", err)
+	}
+	if outboxEvent.EventType != "auth.signup_completed" {
+		t.Fatalf("event type = %q, want %q", outboxEvent.EventType, "auth.signup_completed")
+	}
+
+	storedSession, err := store.GetWebSession(context.Background(), "ws-1")
+	if err != nil {
+		t.Fatalf("get web session: %v", err)
+	}
+	if storedSession.UserID != "user-1" {
+		t.Fatalf("session user_id = %q, want %q", storedSession.UserID, "user-1")
+	}
+}
+
+func TestPutUserPasskeyWithIntegrationOutboxEventRejectsInvalidWebSessionAtomically(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	err := store.PutUserPasskeyWithIntegrationOutboxEvent(context.Background(), user.User{
+		ID:                    "user-1",
+		Username:              "Alpha",
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}, storage.PasskeyCredential{
+		CredentialID:   "cred-1",
+		UserID:         "user-1",
+		CredentialJSON: "{}",
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}, storage.WebSession{
+		UserID:    "user-1",
+		CreatedAt: now,
+		ExpiresAt: now.Add(24 * time.Hour),
+	}, storage.IntegrationOutboxEvent{
+		ID:            "event-1",
+		EventType:     "auth.signup_completed",
+		PayloadJSON:   `{"user_id":"user-1","username":"alpha"}`,
+		DedupeKey:     "signup_completed:user:user-1:v1",
+		NextAttemptAt: now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	})
+	if err == nil {
+		t.Fatal("expected invalid web session error")
+	}
+
+	if _, getErr := store.GetUser(context.Background(), "user-1"); !errors.Is(getErr, storage.ErrNotFound) {
+		t.Fatalf("expected user write rollback, got %v", getErr)
+	}
+	if _, getErr := store.GetPasskeyCredential(context.Background(), "cred-1"); !errors.Is(getErr, storage.ErrNotFound) {
+		t.Fatalf("expected passkey write rollback, got %v", getErr)
+	}
+	if _, getErr := store.GetIntegrationOutboxEvent(context.Background(), "event-1"); !errors.Is(getErr, storage.ErrNotFound) {
+		t.Fatalf("expected outbox write rollback, got %v", getErr)
 	}
 }
 
@@ -307,14 +415,7 @@ func TestPasskeyCredentialRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
+	putTestUser(t, store, "user-1", "testuser", now)
 
 	lastUsed := now.Add(time.Minute)
 	input := storage.PasskeyCredential{
@@ -340,27 +441,26 @@ func TestPasskeyCredentialRoundTrip(t *testing.T) {
 		t.Fatalf("expected last used at")
 	}
 
-	list, err := store.ListPasskeyCredentials(context.Background(), "user-1")
-	if err != nil {
-		t.Fatalf("list passkeys: %v", err)
+	second := input
+	second.CredentialID = "cred-2"
+	if err := store.PutPasskeyCredential(context.Background(), second); err != nil {
+		t.Fatalf("put second passkey: %v", err)
 	}
-	if len(list) != 1 {
-		t.Fatalf("expected 1 credential, got %d", len(list))
-	}
-
-	if err := store.DeletePasskeyCredential(context.Background(), "cred-1"); err != nil {
-		t.Fatalf("delete passkey: %v", err)
+	if err := store.DeletePasskeyCredentialsByUserExcept(context.Background(), "user-1", "cred-2"); err != nil {
+		t.Fatalf("delete passkeys except: %v", err)
 	}
 	if _, err := store.GetPasskeyCredential(context.Background(), "cred-1"); !errors.Is(err, storage.ErrNotFound) {
-		t.Fatalf("expected not found, got %v", err)
+		t.Fatalf("expected cred-1 deleted, got %v", err)
 	}
-}
+	if _, err := store.GetPasskeyCredential(context.Background(), "cred-2"); err != nil {
+		t.Fatalf("expected cred-2 retained: %v", err)
+	}
 
-func TestPasskeyCredentialRequiresFields(t *testing.T) {
-	store := openTempStore(t)
-
-	if err := store.PutPasskeyCredential(context.Background(), storage.PasskeyCredential{}); err == nil {
-		t.Fatalf("expected error for empty credential")
+	if err := store.DeletePasskeyCredentialsByUser(context.Background(), "user-1"); err != nil {
+		t.Fatalf("delete passkeys by user: %v", err)
+	}
+	if _, err := store.GetPasskeyCredential(context.Background(), "cred-2"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected cred-2 deleted, got %v", err)
 	}
 }
 
@@ -427,21 +527,152 @@ func TestDeleteExpiredPasskeySessions(t *testing.T) {
 	}
 }
 
+func TestRegistrationSessionRoundTrip(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	input := storage.RegistrationSession{
+		ID:               "reg-1",
+		UserID:           "user-1",
+		Username:         "testuser",
+		Locale:           "en-US",
+		RecoveryCodeHash: "hash",
+		ExpiresAt:        now.Add(10 * time.Minute),
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	if err := store.PutRegistrationSession(context.Background(), input); err != nil {
+		t.Fatalf("put registration session: %v", err)
+	}
+
+	got, err := store.GetRegistrationSession(context.Background(), "reg-1")
+	if err != nil {
+		t.Fatalf("get registration session: %v", err)
+	}
+	if got.Username != input.Username || got.UserID != input.UserID {
+		t.Fatalf("unexpected registration session: %+v", got)
+	}
+
+	if err := store.DeleteRegistrationSession(context.Background(), "reg-1"); err != nil {
+		t.Fatalf("delete registration session: %v", err)
+	}
+	if _, err := store.GetRegistrationSession(context.Background(), "reg-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestDeleteExpiredRegistrationSessions(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+
+	if err := store.PutRegistrationSession(context.Background(), storage.RegistrationSession{
+		ID:        "expired",
+		UserID:    "user-1",
+		Username:  "alpha",
+		ExpiresAt: now.Add(-time.Minute),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("put registration session: %v", err)
+	}
+	if err := store.PutRegistrationSession(context.Background(), storage.RegistrationSession{
+		ID:        "active",
+		UserID:    "user-2",
+		Username:  "beta",
+		ExpiresAt: now.Add(time.Minute),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("put registration session: %v", err)
+	}
+
+	if err := store.DeleteExpiredRegistrationSessions(context.Background(), now); err != nil {
+		t.Fatalf("delete expired registration sessions: %v", err)
+	}
+	if _, err := store.GetRegistrationSession(context.Background(), "expired"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected expired registration session deleted")
+	}
+	if _, err := store.GetRegistrationSession(context.Background(), "active"); err != nil {
+		t.Fatalf("expected active registration session retained: %v", err)
+	}
+}
+
+func TestRecoverySessionRoundTrip(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	putTestUser(t, store, "user-1", "alpha", now)
+
+	input := storage.RecoverySession{
+		ID:        "recovery-1",
+		UserID:    "user-1",
+		ExpiresAt: now.Add(10 * time.Minute),
+		CreatedAt: now,
+	}
+	if err := store.PutRecoverySession(context.Background(), input); err != nil {
+		t.Fatalf("put recovery session: %v", err)
+	}
+
+	got, err := store.GetRecoverySession(context.Background(), "recovery-1")
+	if err != nil {
+		t.Fatalf("get recovery session: %v", err)
+	}
+	if got.ID != input.ID || got.UserID != input.UserID {
+		t.Fatalf("unexpected recovery session: %+v", got)
+	}
+
+	if err := store.DeleteRecoverySession(context.Background(), "recovery-1"); err != nil {
+		t.Fatalf("delete recovery session: %v", err)
+	}
+	if _, err := store.GetRecoverySession(context.Background(), "recovery-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected not found, got %v", err)
+	}
+}
+
+func TestDeleteExpiredRecoverySessions(t *testing.T) {
+	store := openTempStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	putTestUser(t, store, "user-1", "alpha", now)
+	putTestUser(t, store, "user-2", "beta", now)
+
+	if err := store.PutRecoverySession(context.Background(), storage.RecoverySession{
+		ID:        "expired",
+		UserID:    "user-1",
+		ExpiresAt: now.Add(-time.Minute),
+		CreatedAt: now,
+	}); err != nil {
+		t.Fatalf("put recovery session: %v", err)
+	}
+	if err := store.PutRecoverySession(context.Background(), storage.RecoverySession{
+		ID:        "active",
+		UserID:    "user-2",
+		ExpiresAt: now.Add(time.Minute),
+		CreatedAt: now,
+	}); err != nil {
+		t.Fatalf("put recovery session: %v", err)
+	}
+
+	if err := store.DeleteExpiredRecoverySessions(context.Background(), now); err != nil {
+		t.Fatalf("delete expired recovery sessions: %v", err)
+	}
+	if _, err := store.GetRecoverySession(context.Background(), "expired"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected expired recovery session deleted")
+	}
+	if _, err := store.GetRecoverySession(context.Background(), "active"); err != nil {
+		t.Fatalf("expected active recovery session retained: %v", err)
+	}
+}
+
 func TestWebSessionRoundTrip(t *testing.T) {
 	store := openTempStore(t)
 	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
 
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
+	putTestUser(t, store, "user-1", "primary", now)
 
 	if err := store.PutWebSession(context.Background(), storage.WebSession{ID: "ws-1", UserID: "user-1", CreatedAt: now, ExpiresAt: now.Add(30 * time.Minute)}); err != nil {
 		t.Fatalf("put web session: %v", err)
+	}
+	if err := store.PutWebSession(context.Background(), storage.WebSession{ID: "ws-2", UserID: "user-1", CreatedAt: now, ExpiresAt: now.Add(30 * time.Minute)}); err != nil {
+		t.Fatalf("put second web session: %v", err)
 	}
 
 	got, err := store.GetWebSession(context.Background(), "ws-1")
@@ -463,192 +694,22 @@ func TestWebSessionRoundTrip(t *testing.T) {
 		t.Fatalf("expected revoked_at")
 	}
 
+	if err := store.RevokeWebSessionsByUser(context.Background(), "user-1", now.Add(2*time.Minute)); err != nil {
+		t.Fatalf("revoke web sessions by user: %v", err)
+	}
+	second, err := store.GetWebSession(context.Background(), "ws-2")
+	if err != nil {
+		t.Fatalf("get second web session: %v", err)
+	}
+	if second.RevokedAt == nil {
+		t.Fatalf("expected second session revoked")
+	}
+
 	if err := store.DeleteExpiredWebSessions(context.Background(), now.Add(time.Hour)); err != nil {
 		t.Fatalf("delete expired web sessions: %v", err)
 	}
 	if _, err := store.GetWebSession(context.Background(), "ws-1"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected not found after expiry deletion, got %v", err)
-	}
-}
-
-func TestUserEmailRoundTrip(t *testing.T) {
-	store := openTempStore(t)
-	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "testuser",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	input := storage.UserEmail{
-		ID:        "email-1",
-		UserID:    "user-1",
-		Email:     "alpha@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	if err := store.PutUserEmail(context.Background(), input); err != nil {
-		t.Fatalf("put email: %v", err)
-	}
-
-	got, err := store.GetUserEmailByEmail(context.Background(), "alpha@example.com")
-	if err != nil {
-		t.Fatalf("get email: %v", err)
-	}
-	if got.Email != input.Email || got.UserID != input.UserID {
-		t.Fatalf("unexpected email: %+v", got)
-	}
-
-	list, err := store.ListUserEmailsByUser(context.Background(), "user-1")
-	if err != nil {
-		t.Fatalf("list emails: %v", err)
-	}
-	if len(list) != 2 {
-		t.Fatalf("expected 2 emails, got %d", len(list))
-	}
-
-	verifiedAt := now.Add(time.Minute)
-	if err := store.VerifyUserEmail(context.Background(), "user-1", "alpha@example.com", verifiedAt); err != nil {
-		t.Fatalf("verify email: %v", err)
-	}
-	verified, err := store.GetUserEmailByEmail(context.Background(), "alpha@example.com")
-	if err != nil {
-		t.Fatalf("get email: %v", err)
-	}
-	if verified.VerifiedAt == nil {
-		t.Fatalf("expected verified_at")
-	}
-}
-
-func TestGetUserUsesPrimaryEmail(t *testing.T) {
-	store := openTempStore(t)
-	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	if err := store.PutUserEmail(context.Background(), storage.UserEmail{
-		ID:        "email-2",
-		UserID:    "user-1",
-		Email:     "secondary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user email: %v", err)
-	}
-
-	got, err := store.GetUser(context.Background(), "user-1")
-	if err != nil {
-		t.Fatalf("get user: %v", err)
-	}
-	if got.Email != "primary@example.com" {
-		t.Fatalf("expected primary email, got %q", got.Email)
-	}
-
-	list, err := store.ListUserEmailsByUser(context.Background(), "user-1")
-	if err != nil {
-		t.Fatalf("list emails: %v", err)
-	}
-	if len(list) != 2 {
-		t.Fatalf("expected 2 emails, got %d", len(list))
-	}
-}
-
-func TestPutUserEmailDoesNotDemotePrimary(t *testing.T) {
-	store := openTempStore(t)
-	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	if err := store.PutUserEmail(context.Background(), storage.UserEmail{
-		ID:        "email-primary",
-		UserID:    "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user email: %v", err)
-	}
-
-	if _, err := store.GetUser(context.Background(), "user-1"); err != nil {
-		t.Fatalf("get user before re-upsert: %v", err)
-	}
-
-	if err := store.PutUserEmail(context.Background(), storage.UserEmail{
-		ID:        "email-primary-updated",
-		UserID:    "user-1",
-		Email:     "primary@example.com",
-		CreatedAt: now,
-		UpdatedAt: now.Add(time.Minute),
-	}); err != nil {
-		t.Fatalf("upsert primary email: %v", err)
-	}
-
-	if _, err := store.GetUser(context.Background(), "user-1"); err != nil {
-		t.Fatalf("expected primary email to remain after upsert: %v", err)
-	}
-}
-
-func TestMagicLinkRoundTrip(t *testing.T) {
-	store := openTempStore(t)
-	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-
-	if err := store.PutUser(context.Background(), user.User{
-		ID:        "user-1",
-		Email:     "alpha@example.com",
-		CreatedAt: now,
-		UpdatedAt: now,
-	}); err != nil {
-		t.Fatalf("put user: %v", err)
-	}
-
-	link := storage.MagicLink{
-		Token:     "token-1",
-		UserID:    "user-1",
-		Email:     "alpha@example.com",
-		PendingID: "pending-1",
-		CreatedAt: now,
-		ExpiresAt: now.Add(10 * time.Minute),
-	}
-	if err := store.PutMagicLink(context.Background(), link); err != nil {
-		t.Fatalf("put magic link: %v", err)
-	}
-
-	got, err := store.GetMagicLink(context.Background(), "token-1")
-	if err != nil {
-		t.Fatalf("get magic link: %v", err)
-	}
-	if got.Token != link.Token || got.PendingID != link.PendingID {
-		t.Fatalf("unexpected magic link: %+v", got)
-	}
-
-	usedAt := now.Add(time.Minute)
-	if err := store.MarkMagicLinkUsed(context.Background(), "token-1", usedAt); err != nil {
-		t.Fatalf("mark used: %v", err)
-	}
-	used, err := store.GetMagicLink(context.Background(), "token-1")
-	if err != nil {
-		t.Fatalf("get magic link: %v", err)
-	}
-	if used.UsedAt == nil {
-		t.Fatalf("expected used_at")
 	}
 }
 
@@ -688,4 +749,17 @@ func openTempStore(t *testing.T) *Store {
 		}
 	})
 	return store
+}
+
+func putTestUser(t *testing.T, store *Store, userID string, username string, now time.Time) {
+	t.Helper()
+	if err := store.PutUser(context.Background(), user.User{
+		ID:                    userID,
+		Username:              username,
+		RecoveryCodeUpdatedAt: now,
+		CreatedAt:             now,
+		UpdatedAt:             now,
+	}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
 }

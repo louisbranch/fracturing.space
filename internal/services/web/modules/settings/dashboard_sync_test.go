@@ -21,7 +21,7 @@ func TestMountProfilePostTriggersDashboardSyncOnSuccess(t *testing.T) {
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	form := url.Values{"username": {"rhea"}, "name": {"Rhea Vale"}}
+	form := url.Values{"name": {"Rhea Vale"}}
 	req := httptest.NewRequest(http.MethodPost, routepath.AppSettingsProfile, strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()

@@ -43,10 +43,11 @@ func ResolveWebAvatarSelection(role, entityID, avatarSetID, avatarAssetID string
 		normalizedEntityID = "default"
 	}
 
+	defaultSetID := defaultWebAvatarSetID(normalizedRole, avatarSetID, avatarAssetID)
 	resolvedSetID, resolvedAssetID, err := catalog.AvatarManifest().ResolveSelection(catalog.SelectionInput{
 		EntityType: normalizedRole,
 		EntityID:   normalizedEntityID,
-		SetID:      avatarSetID,
+		SetID:      defaultSetID,
 		AssetID:    avatarAssetID,
 	})
 	if err == nil {
@@ -56,13 +57,23 @@ func ResolveWebAvatarSelection(role, entityID, avatarSetID, avatarAssetID string
 	fallbackSetID, fallbackAssetID, fallbackErr := catalog.AvatarManifest().ResolveSelection(catalog.SelectionInput{
 		EntityType: normalizedRole,
 		EntityID:   normalizedEntityID,
-		SetID:      "",
+		SetID:      defaultSetID,
 		AssetID:    "",
 	})
 	if fallbackErr == nil {
 		return fallbackSetID, fallbackAssetID
 	}
 	return catalog.AvatarSetBlankV1, defaultWebAvatarAssetID()
+}
+
+func defaultWebAvatarSetID(role, avatarSetID, avatarAssetID string) string {
+	if strings.TrimSpace(avatarSetID) != "" || strings.TrimSpace(avatarAssetID) != "" {
+		return avatarSetID
+	}
+	if strings.EqualFold(strings.TrimSpace(role), catalog.AvatarRoleUser) {
+		return catalog.AvatarSetPeopleV1
+	}
+	return avatarSetID
 }
 
 func defaultWebAvatarAssetID() string {

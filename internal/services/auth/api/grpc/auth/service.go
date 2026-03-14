@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"io"
 	"strings"
 	"time"
 
@@ -10,9 +12,9 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-	"github.com/louisbranch/fracturing.space/internal/services/auth/magiclink"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/passkey"
+	"github.com/louisbranch/fracturing.space/internal/services/auth/recoverycode"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	"google.golang.org/grpc/codes"
@@ -34,20 +36,19 @@ type AuthService struct {
 	store              storage.UserStore
 	passkeyStore       storage.PasskeyStore
 	webSessionStore    storage.WebSessionStore
-	emailStore         storage.EmailStore
-	magicLinkStore     storage.MagicLinkStore
 	oauthStore         *oauth.Store
 	passkeyConfig      passkey.Config
-	magicLinkConfig    magiclink.Config
 	passkeyWebAuthn    passkeyProvider
 	passkeyInitErr     error
 	passkeyParser      passkeyParser
 	clock              func() time.Time
 	idGenerator        func() (string, error)
 	passkeyIDGenerator func() (string, error)
+	randReader         io.Reader
 }
 
 const defaultWebSessionTTL = 24 * time.Hour
+const defaultRecoverySessionTTL = 10 * time.Minute
 
 // NewAuthService builds a service with defaults for the auth package.
 //
@@ -55,22 +56,13 @@ const defaultWebSessionTTL = 24 * time.Hour
 // as the canonical auth domain entrypoint.
 func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, oauthStore *oauth.Store) *AuthService {
 	config := passkey.LoadConfigFromEnv()
-	magicConfig := magiclink.LoadConfigFromEnv()
 	webAuthn, err := webauthn.New(&webauthn.Config{
 		RPDisplayName: config.RPDisplayName,
 		RPID:          config.RPID,
 		RPOrigins:     config.RPOrigins,
 	})
-	var emailStore storage.EmailStore
-	var magicLinkStore storage.MagicLinkStore
 	var webSessionStore storage.WebSessionStore
 	if store != nil {
-		if typed, ok := store.(storage.EmailStore); ok {
-			emailStore = typed
-		}
-		if typed, ok := store.(storage.MagicLinkStore); ok {
-			magicLinkStore = typed
-		}
 		if typed, ok := store.(storage.WebSessionStore); ok {
 			webSessionStore = typed
 		}
@@ -79,44 +71,22 @@ func NewAuthService(store storage.UserStore, passkeyStore storage.PasskeyStore, 
 		store:              store,
 		passkeyStore:       passkeyStore,
 		webSessionStore:    webSessionStore,
-		emailStore:         emailStore,
-		magicLinkStore:     magicLinkStore,
 		oauthStore:         oauthStore,
 		passkeyConfig:      config,
-		magicLinkConfig:    magicConfig,
 		passkeyWebAuthn:    webAuthn,
 		passkeyInitErr:     err,
 		passkeyParser:      defaultPasskeyParser{},
 		clock:              time.Now,
 		idGenerator:        id.NewID,
 		passkeyIDGenerator: id.NewID,
+		randReader:         rand.Reader,
 	}
-}
-
-// CreateUser creates a user and returns the canonical identity for campaign actions.
-func (s *AuthService) CreateUser(ctx context.Context, in *authv1.CreateUserRequest) (*authv1.CreateUserResponse, error) {
-	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "create user request is required")
-	}
-
-	created, err := newUserCreator(s).create(in)
-	if err != nil {
-		if apperrors.GetCode(err) != apperrors.CodeUnknown {
-			return nil, handleDomainError(err)
-		}
-		return nil, err
-	}
-	if err := s.persistUserWithSignupCompletedOutbox(ctx, created, "create_user"); err != nil {
-		return nil, status.Errorf(codes.Internal, "persist signup completion: %v", err)
-	}
-
-	return &authv1.CreateUserResponse{User: userToProto(created)}, nil
 }
 
 // IssueJoinGrant issues a one-time join grant for campaign invites.
 func (s *AuthService) IssueJoinGrant(ctx context.Context, in *authv1.IssueJoinGrantRequest) (*authv1.IssueJoinGrantResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "issue join grant request is required")
+		return nil, status.Error(codes.InvalidArgument, "Issue join grant request is required.")
 	}
 
 	issued, err := newJoinGrantIssuer(s).issue(ctx, in)
@@ -134,18 +104,37 @@ func (s *AuthService) IssueJoinGrant(ctx context.Context, in *authv1.IssueJoinGr
 	}, nil
 }
 
+// LookupUserByUsername resolves a username to its account record.
+func (s *AuthService) LookupUserByUsername(ctx context.Context, in *authv1.LookupUserByUsernameRequest) (*authv1.LookupUserByUsernameResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "Lookup user by username request is required.")
+	}
+	if s.store == nil {
+		return nil, status.Error(codes.Internal, "User store is not configured.")
+	}
+	username := strings.TrimSpace(in.GetUsername())
+	if username == "" {
+		return nil, status.Error(codes.InvalidArgument, "Username is required.")
+	}
+	found, err := s.store.GetUserByUsername(ctx, username)
+	if err != nil {
+		return nil, handleDomainError(err)
+	}
+	return &authv1.LookupUserByUsernameResponse{User: userToProto(found)}, nil
+}
+
 // GetUser resolves a user ID to an identity record for cross-service lookups.
 func (s *AuthService) GetUser(ctx context.Context, in *authv1.GetUserRequest) (*authv1.GetUserResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "get user request is required")
+		return nil, status.Error(codes.InvalidArgument, "Get user request is required.")
 	}
 	if s.store == nil {
-		return nil, status.Error(codes.Internal, "user store is not configured")
+		return nil, status.Error(codes.Internal, "User store is not configured.")
 	}
 
 	userID := strings.TrimSpace(in.GetUserId())
 	if userID == "" {
-		return nil, status.Error(codes.InvalidArgument, "user id is required")
+		return nil, status.Error(codes.InvalidArgument, "User ID is required.")
 	}
 
 	found, err := s.store.GetUser(ctx, userID)
@@ -159,10 +148,10 @@ func (s *AuthService) GetUser(ctx context.Context, in *authv1.GetUserRequest) (*
 // ListUsers returns a page of users for operator-facing views and audits.
 func (s *AuthService) ListUsers(ctx context.Context, in *authv1.ListUsersRequest) (*authv1.ListUsersResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "list users request is required")
+		return nil, status.Error(codes.InvalidArgument, "List users request is required.")
 	}
 	if s.store == nil {
-		return nil, status.Error(codes.Internal, "user store is not configured")
+		return nil, status.Error(codes.Internal, "User store is not configured.")
 	}
 
 	pageSize := pagination.ClampPageSize(in.GetPageSize(), pagination.PageSizeConfig{
@@ -172,7 +161,7 @@ func (s *AuthService) ListUsers(ctx context.Context, in *authv1.ListUsersRequest
 
 	page, err := s.store.ListUsers(ctx, pageSize, in.GetPageToken())
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "list users: %v", err)
+		return nil, status.Errorf(codes.Internal, "List users: %v", err)
 	}
 
 	response := &authv1.ListUsersResponse{NextPageToken: page.NextPageToken}
@@ -191,11 +180,18 @@ func (s *AuthService) ListUsers(ctx context.Context, in *authv1.ListUsersRequest
 func userToProto(u user.User) *authv1.User {
 	return &authv1.User{
 		Id:        u.ID,
-		Email:     u.Email,
+		Username:  u.Username,
 		Locale:    u.Locale,
 		CreatedAt: timestamppb.New(u.CreatedAt),
 		UpdatedAt: timestamppb.New(u.UpdatedAt),
 	}
+}
+
+func (s *AuthService) generateRecoveryCode() (string, string, error) {
+	if s == nil {
+		return "", "", status.Error(codes.Internal, "Auth service is required.")
+	}
+	return recoverycode.Generate(s.randReader)
 }
 
 // handleDomainError converts domain errors to gRPC status using the structured error system.

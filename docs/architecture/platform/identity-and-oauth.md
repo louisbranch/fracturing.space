@@ -4,33 +4,33 @@ parent: "Platform surfaces"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-08"
 ---
 
 # Identity and OAuth
 
-Canonical identity, recovery, and OAuth architecture for Fracturing.Space.
+Canonical identity, passkey, recovery, and OAuth architecture for Fracturing.Space.
 
 ## Purpose
 
 Define service ownership, security boundaries, and invariants for:
 
-- account identity (`user`, email, passkeys, locale)
-- account recovery (magic links)
-- OAuth authorization server behavior (first-party clients)
-- OAuth external provider login/linking (Google/GitHub)
+- account identity (`user`, username, passkeys, locale)
+- offline account recovery (single-use recovery code)
+- first-party OAuth authorization-server behavior
 - MCP protected-resource token validation
 
 ## Ownership boundaries
 
 - **Auth service** is source of truth for identity and access primitives:
-  users, emails, passkeys, magic links, sessions, OAuth issuance/introspection,
-  and external identity linking.
+  users, usernames, passkeys, recovery-code state, web sessions, and OAuth
+  issuance/introspection.
 - **MCP service** is a protected resource that validates bearer tokens through
   auth introspection and exposes OAuth protected-resource metadata.
-- **Web service** hosts login/recovery UX and delegates verification/storage to auth.
-- **Social service** owns discovery/profile metadata (display identity), not
-  authentication or authorization.
+- **Web service** hosts signup/login/settings UX and delegates passkey and
+  recovery verification/storage to auth.
+- **Social service** owns optional public profile metadata (display name,
+  pronouns, bio, avatar metadata), not authentication or authorization.
 
 Boundary rules:
 
@@ -41,22 +41,46 @@ Boundary rules:
 ## Identity model
 
 - **User**: canonical identity record keyed by user ID.
-- **Primary email**: required in this release for account creation and recovery.
-- **Passkeys**: primary authentication credential (multiple per user allowed).
+- **Username**: immutable auth-owned account locator and public handle.
+- **Passkeys**: primary authentication credential; multiple credentials may be
+  registered to one account.
 - **User locale**: private account preference on the user record.
-- **Additional emails**: planned extension; out of scope for current contract.
+- **Public profile**: baseline profile exists as soon as the account exists;
+  social metadata is optional enrichment, not a prerequisite for profile
+  routing.
 
-## Recovery model
+## Passkey and recovery model
 
-- **Magic links** are single-use tokens with expiration and used-at tracking.
-- Consuming a magic link verifies email and may attach to pending OAuth authorization.
-- Deny-by-default: expired/used/invalid tokens cannot establish authenticated state.
+Signup and login are username-first WebAuthn ceremonies:
+
+1. `BeginAccountRegistration(username, locale)` reserves the username and
+   returns WebAuthn creation options.
+2. `FinishAccountRegistration(session_id, credential_response)` creates the
+   user, stores the first passkey, creates the web session, and returns the
+   recovery code once.
+3. `BeginPasskeyLogin(username)` returns assertion options for the account’s
+   registered passkeys.
+4. `FinishPasskeyLogin(...)` verifies the assertion and attaches any pending
+   first-party OAuth authorization handoff.
+
+Recovery is offline and single use:
+
+1. `BeginAccountRecovery(username, recovery_code)` verifies the recovery code
+   hash and creates a narrow recovery session.
+2. `BeginRecoveryPasskeyRegistration(recovery_session_id)` starts replacement
+   passkey enrollment.
+3. `FinishRecoveryPasskeyRegistration(...)` stores the replacement passkey,
+   rotates the recovery code, revokes prior web sessions, and returns the new
+   recovery code once.
+
+Authenticated device enrollment uses `BeginPasskeyRegistration` and
+`FinishPasskeyRegistration` to add more passkeys to the same account.
 
 ## OAuth surfaces
 
 ### OAuth server (auth service)
 
-Auth service acts as authorization server for first-party clients.
+Auth service acts as the authorization server for first-party clients.
 
 Endpoints:
 
@@ -70,17 +94,6 @@ Token model:
 - Access tokens are opaque and persisted in auth storage.
 - Protected resources (for example MCP HTTP transport) validate via `/introspect`.
 
-### OAuth client (external providers)
-
-Auth service may act as OAuth client for provider login and account linking.
-
-Endpoints:
-
-- `GET /oauth/providers/{provider}/start`
-- `GET /oauth/providers/{provider}/callback`
-
-External identities are linked to internal users in auth storage.
-
 ### MCP protected resource
 
 Endpoint:
@@ -91,9 +104,19 @@ Endpoint:
 
 ## Operational invariants
 
-- Public auth pages treat users as authenticated only after auth-session validation.
+- No email, phone, password, or external social-login provider participates in
+  authentication or recovery.
+- Public auth pages treat users as authenticated only after passkey or
+  recovery-session completion plus web-session validation.
+- Username ownership and uniqueness are enforced in `auth`, not `social`.
+- A linked user-facing identity always has an auth username; downstream
+  services should fall back to that username before rendering anonymous
+  placeholders.
+- Recovery codes are stored only as hashes and are rotated after successful
+  recovery.
+- If all passkeys and the recovery code are lost, the account is unrecoverable
+  by design.
 - Protected resource token checks fail closed when introspection is unavailable.
-- OAuth override/privileged operations require explicit telemetry and reason codes.
 - Identity and OAuth docs should not duplicate environment default inventories.
 
 ## Configuration

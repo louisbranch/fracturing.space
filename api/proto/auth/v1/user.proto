@@ -7,31 +7,60 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1;authv1";
 
-// User represents an authenticated identity record.
+// User represents one authenticated pseudonymous account record.
 message User {
   string id = 1;
-  string email = 2;
+  string username = 2;
   common.v1.Locale locale = 3;
   google.protobuf.Timestamp created_at = 4;
   google.protobuf.Timestamp updated_at = 5;
 }
 
-// AuthService provides minimal auth user operations.
-service AuthService {
-  // Create a new user record.
-  rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+// WebSession stores durable authenticated browser session state.
+message WebSession {
+  string id = 1;
+  string user_id = 2;
+  google.protobuf.Timestamp created_at = 3;
+  google.protobuf.Timestamp expires_at = 4;
+  google.protobuf.Timestamp revoked_at = 5;
+}
 
-  // Begin a passkey registration ceremony.
+// PasskeyCredentialSummary stores one registered passkey summary.
+message PasskeyCredentialSummary {
+  string credential_id = 1;
+  google.protobuf.Timestamp created_at = 2;
+  google.protobuf.Timestamp updated_at = 3;
+  google.protobuf.Timestamp last_used_at = 4;
+}
+
+// AuthService provides account, passkey, and session operations.
+service AuthService {
+  // Begin a username-backed account registration ceremony.
+  rpc BeginAccountRegistration(BeginAccountRegistrationRequest) returns (BeginAccountRegistrationResponse);
+
+  // Finish account registration, create the first passkey, and issue the recovery code.
+  rpc FinishAccountRegistration(FinishAccountRegistrationRequest) returns (FinishAccountRegistrationResponse);
+
+  // Begin an authenticated passkey registration ceremony for an existing user.
   rpc BeginPasskeyRegistration(BeginPasskeyRegistrationRequest) returns (BeginPasskeyRegistrationResponse);
 
-  // Finish a passkey registration ceremony.
+  // Finish an authenticated passkey registration ceremony.
   rpc FinishPasskeyRegistration(FinishPasskeyRegistrationRequest) returns (FinishPasskeyRegistrationResponse);
 
-  // Begin a passkey login ceremony.
+  // Begin a passkey login ceremony for a username.
   rpc BeginPasskeyLogin(BeginPasskeyLoginRequest) returns (BeginPasskeyLoginResponse);
 
   // Finish a passkey login ceremony.
   rpc FinishPasskeyLogin(FinishPasskeyLoginRequest) returns (FinishPasskeyLoginResponse);
+
+  // Verify a recovery code and create a narrow recovery session.
+  rpc BeginAccountRecovery(BeginAccountRecoveryRequest) returns (BeginAccountRecoveryResponse);
+
+  // Begin replacement passkey registration for a recovery session.
+  rpc BeginRecoveryPasskeyRegistration(BeginRecoveryPasskeyRegistrationRequest) returns (BeginPasskeyRegistrationResponse);
+
+  // Finish replacement passkey registration, rotate recovery state, and issue a web session.
+  rpc FinishRecoveryPasskeyRegistration(FinishRecoveryPasskeyRegistrationRequest) returns (FinishAccountRegistrationResponse);
 
   // Create a durable web session for an authenticated user.
   rpc CreateWebSession(CreateWebSessionRequest) returns (CreateWebSessionResponse);
@@ -42,17 +71,14 @@ service AuthService {
   // Revoke a durable web session by ID.
   rpc RevokeWebSession(RevokeWebSessionRequest) returns (RevokeWebSessionResponse);
 
-  // Generate a magic link token for email recovery.
-  rpc GenerateMagicLink(GenerateMagicLinkRequest) returns (GenerateMagicLinkResponse);
-
-  // Consume a magic link token.
-  rpc ConsumeMagicLink(ConsumeMagicLinkRequest) returns (ConsumeMagicLinkResponse);
-
-  // List email addresses for a user.
-  rpc ListUserEmails(ListUserEmailsRequest) returns (ListUserEmailsResponse);
+  // List registered passkeys for a user.
+  rpc ListPasskeys(ListPasskeysRequest) returns (ListPasskeysResponse);
 
   // Issue a join grant for a campaign invite.
   rpc IssueJoinGrant(IssueJoinGrantRequest) returns (IssueJoinGrantResponse);
+
+  // Resolve a user by username.
+  rpc LookupUserByUsername(LookupUserByUsernameRequest) returns (LookupUserByUsernameResponse);
 
   // Get a user record by ID.
   rpc GetUser(GetUserRequest) returns (GetUserResponse);
@@ -67,13 +93,26 @@ service AuthService {
   rpc AckIntegrationOutboxEvent(AckIntegrationOutboxEventRequest) returns (AckIntegrationOutboxEventResponse);
 }
 
-message CreateUserRequest {
-  string email = 1;
+message BeginAccountRegistrationRequest {
+  string username = 1;
   common.v1.Locale locale = 2;
 }
 
-message CreateUserResponse {
+message BeginAccountRegistrationResponse {
+  string session_id = 1;
+  bytes credential_creation_options_json = 2;
+}
+
+message FinishAccountRegistrationRequest {
+  string session_id = 1;
+  bytes credential_response_json = 2;
+}
+
+message FinishAccountRegistrationResponse {
   User user = 1;
+  string credential_id = 2;
+  WebSession session = 3;
+  string recovery_code = 4;
 }
 
 message BeginPasskeyRegistrationRequest {
@@ -96,7 +135,7 @@ message FinishPasskeyRegistrationResponse {
 }
 
 message BeginPasskeyLoginRequest {
-  string user_id = 1;
+  string username = 1;
 }
 
 message BeginPasskeyLoginResponse {
@@ -115,12 +154,24 @@ message FinishPasskeyLoginResponse {
   string credential_id = 2;
 }
 
-message WebSession {
-  string id = 1;
-  string user_id = 2;
-  google.protobuf.Timestamp created_at = 3;
-  google.protobuf.Timestamp expires_at = 4;
-  google.protobuf.Timestamp revoked_at = 5;
+message BeginAccountRecoveryRequest {
+  string username = 1;
+  string recovery_code = 2;
+}
+
+message BeginAccountRecoveryResponse {
+  string recovery_session_id = 1;
+}
+
+message BeginRecoveryPasskeyRegistrationRequest {
+  string recovery_session_id = 1;
+}
+
+message FinishRecoveryPasskeyRegistrationRequest {
+  string recovery_session_id = 1;
+  string session_id = 2;
+  bytes credential_response_json = 3;
+  string pending_id = 4;
 }
 
 message CreateWebSessionRequest {
@@ -148,39 +199,12 @@ message RevokeWebSessionRequest {
 
 message RevokeWebSessionResponse {}
 
-message GenerateMagicLinkRequest {
-  string user_id = 1;
-  string email = 2;
-  string pending_id = 3;
-}
-
-message GenerateMagicLinkResponse {
-  string magic_link_url = 1;
-  google.protobuf.Timestamp expires_at = 2;
-}
-
-message ConsumeMagicLinkRequest {
-  string token = 1;
-}
-
-message ConsumeMagicLinkResponse {
-  User user = 1;
-  string pending_id = 2;
-}
-
-message ListUserEmailsRequest {
+message ListPasskeysRequest {
   string user_id = 1;
 }
 
-message ListUserEmailsResponse {
-  repeated UserEmail emails = 1;
-}
-
-message UserEmail {
-  string email = 1;
-  google.protobuf.Timestamp verified_at = 2;
-  google.protobuf.Timestamp created_at = 3;
-  google.protobuf.Timestamp updated_at = 4;
+message ListPasskeysResponse {
+  repeated PasskeyCredentialSummary passkeys = 1;
 }
 
 message IssueJoinGrantRequest {
@@ -194,6 +218,14 @@ message IssueJoinGrantResponse {
   string join_grant = 1;
   string jti = 2;
   google.protobuf.Timestamp expires_at = 3;
+}
+
+message LookupUserByUsernameRequest {
+  string username = 1;
+}
+
+message LookupUserByUsernameResponse {
+  User user = 1;
 }
 
 message GetUserRequest {
@@ -258,7 +290,6 @@ message AckIntegrationOutboxEventRequest {
   IntegrationOutboxAckOutcome outcome = 3;
   google.protobuf.Timestamp next_attempt_at = 4;
   string last_error = 5;
-  google.protobuf.Timestamp processed_at = 6;
 }
 
 message AckIntegrationOutboxEventResponse {}

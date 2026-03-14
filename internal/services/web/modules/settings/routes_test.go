@@ -32,7 +32,6 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 	}{
 		{name: "settings root", method: http.MethodGet, path: routepath.AppSettings, wantStatus: http.StatusFound},
 		{name: "settings slash root", method: http.MethodGet, path: routepath.SettingsPrefix, wantStatus: http.StatusFound},
-		{name: "profile required redirect", method: http.MethodGet, path: routepath.AppSettingsProfileRequired, wantStatus: http.StatusFound},
 		{name: "profile get", method: http.MethodGet, path: routepath.AppSettingsProfile, wantStatus: http.StatusOK},
 		{name: "profile head", method: http.MethodHead, path: routepath.AppSettingsProfile, wantStatus: http.StatusOK},
 		{name: "ai agents get", method: http.MethodGet, path: routepath.AppSettingsAIAgents, wantStatus: http.StatusOK},

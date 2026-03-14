@@ -143,6 +143,7 @@ func setDependencyAuth(p *web.PrincipalDependencies, m *modules.Dependencies, co
 	p.SessionClient = authClient
 	p.AccountClient = accountClient
 	m.PublicAuth.AuthClient = authClient
+	m.Profile.AuthClient = authClient
 	m.Settings.AccountClient = accountClient
 }
 

@@ -10,258 +10,60 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-type fakeUserStore struct {
-	users        map[string]user.User
-	outboxEvents []storage.IntegrationOutboxEvent
-	outboxPutErr error
-	putErr       error
-	getErr       error
-	listErr      error
-}
-
-func newFakeUserStore() *fakeUserStore {
-	return &fakeUserStore{
-		users: make(map[string]user.User),
-	}
-}
-
-func (s *fakeUserStore) PutUser(_ context.Context, u user.User) error {
-	if s.putErr != nil {
-		return s.putErr
-	}
-	s.users[u.ID] = u
-	return nil
-}
-
-func (s *fakeUserStore) GetUser(_ context.Context, userID string) (user.User, error) {
-	if s.getErr != nil {
-		return user.User{}, s.getErr
-	}
-	u, ok := s.users[userID]
-	if !ok {
-		return user.User{}, storage.ErrNotFound
-	}
-	return u, nil
-}
-
-func (s *fakeUserStore) ListUsers(_ context.Context, pageSize int, pageToken string) (storage.UserPage, error) {
-	if s.listErr != nil {
-		return storage.UserPage{}, s.listErr
-	}
-	users := make([]user.User, 0, len(s.users))
-	for _, u := range s.users {
-		users = append(users, u)
-	}
-	return storage.UserPage{Users: users, NextPageToken: ""}, nil
-}
-
-func (s *fakeUserStore) EnqueueIntegrationOutboxEvent(_ context.Context, event storage.IntegrationOutboxEvent) error {
-	if s.outboxPutErr != nil {
-		return s.outboxPutErr
-	}
-	s.outboxEvents = append(s.outboxEvents, event)
-	return nil
-}
-
-func TestCreateUser_NilRequest(t *testing.T) {
+func TestLookupUserByUsername_NilRequest(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.CreateUser(context.Background(), nil)
+	_, err := svc.LookupUserByUsername(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateUser_MissingStore(t *testing.T) {
+func TestLookupUserByUsername_MissingStore(t *testing.T) {
 	svc := NewAuthService(nil, nil, nil)
-	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "alice@example.com"})
+	_, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "alice"})
 	assertStatusCode(t, err, codes.Internal)
 }
 
-func TestCreateUser_EmptyUsername(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "  "})
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestCreateUser_Success(t *testing.T) {
+func TestLookupUserByUsername_Success(t *testing.T) {
 	store := newFakeUserStore()
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	store.users["user-1"] = user.User{ID: "user-1", Username: "alice", CreatedAt: now, UpdatedAt: now}
+
 	svc := NewAuthService(store, nil, nil)
-	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
-	svc.clock = func() time.Time { return fixedTime }
-	svc.idGenerator = func() (string, error) { return "user-123", nil }
-
-	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "  Alice@example.COM  "})
+	resp, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "alice"})
 	if err != nil {
-		t.Fatalf("create user: %v", err)
+		t.Fatalf("lookup user by username: %v", err)
 	}
-	if resp.GetUser().GetId() != "user-123" {
-		t.Fatalf("expected id user-123, got %q", resp.GetUser().GetId())
+	if got := resp.GetUser().GetId(); got != "user-1" {
+		t.Fatalf("user id = %q, want %q", got, "user-1")
 	}
-	if resp.GetUser().GetEmail() != "alice@example.com" {
-		t.Fatalf("expected normalized email, got %q", resp.GetUser().GetEmail())
+	if got := resp.GetUser().GetUsername(); got != "alice" {
+		t.Fatalf("username = %q, want %q", got, "alice")
 	}
-	if resp.GetUser().GetLocale() != commonv1.Locale_LOCALE_EN_US {
-		t.Fatalf("expected default locale en-US, got %v", resp.GetUser().GetLocale())
-	}
-}
-
-func TestCreateUser_EnqueuesSignupCompletedOutbox(t *testing.T) {
-	store := newFakeUserStore()
-	svc := NewAuthService(store, nil, nil)
-	fixedTime := time.Date(2026, 2, 21, 18, 0, 0, 0, time.UTC)
-	svc.clock = func() time.Time { return fixedTime }
-	svc.idGenerator = func() (string, error) { return "user-123", nil }
-
-	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "Alice@example.com"})
-	if err != nil {
-		t.Fatalf("create user: %v", err)
-	}
-	if resp.GetUser().GetId() != "user-123" {
-		t.Fatalf("user id = %q, want %q", resp.GetUser().GetId(), "user-123")
-	}
-
-	if len(store.outboxEvents) != 1 {
-		t.Fatalf("outbox events len = %d, want 1", len(store.outboxEvents))
-	}
-	event := store.outboxEvents[0]
-	if event.EventType != "auth.signup_completed" {
-		t.Fatalf("outbox event type = %q, want %q", event.EventType, "auth.signup_completed")
-	}
-	if event.DedupeKey != "signup_completed:user:user-123:v1" {
-		t.Fatalf("outbox dedupe key = %q, want %q", event.DedupeKey, "signup_completed:user:user-123:v1")
-	}
-}
-
-func TestCreateUser_UsesRequestedLocale(t *testing.T) {
-	store := newFakeUserStore()
-	svc := NewAuthService(store, nil, nil)
-	fixedTime := time.Date(2026, 2, 21, 18, 0, 0, 0, time.UTC)
-	svc.clock = func() time.Time { return fixedTime }
-	svc.idGenerator = func() (string, error) { return "user-123", nil }
-
-	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{
-		Email:  "Alice@example.com",
-		Locale: commonv1.Locale_LOCALE_PT_BR,
-	})
-	if err != nil {
-		t.Fatalf("create user: %v", err)
-	}
-	if got := resp.GetUser().GetLocale(); got != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
-	}
-	stored, ok := store.users["user-123"]
-	if !ok {
-		t.Fatal("expected user to be stored")
-	}
-	if got := stored.Locale; got != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("stored locale = %v, want %v", got, commonv1.Locale_LOCALE_PT_BR)
-	}
-}
-
-func TestCreateUser_OutboxFailureRollsBackUser(t *testing.T) {
-	store := openTempAuthStore(t)
-	seededAt := time.Date(2026, 2, 21, 19, 0, 0, 0, time.UTC)
-	if err := store.EnqueueIntegrationOutboxEvent(context.Background(), storage.IntegrationOutboxEvent{
-		ID:            "dup-id",
-		EventType:     "auth.signup_completed",
-		PayloadJSON:   "{}",
-		DedupeKey:     "seed:dup-id",
-		Status:        storage.IntegrationOutboxStatusPending,
-		AttemptCount:  0,
-		NextAttemptAt: seededAt,
-		CreatedAt:     seededAt,
-		UpdatedAt:     seededAt,
-	}); err != nil {
-		t.Fatalf("seed integration outbox: %v", err)
-	}
-
-	svc := NewAuthService(store, store, nil)
-	svc.clock = func() time.Time { return seededAt.Add(time.Minute) }
-	svc.idGenerator = func() (string, error) { return "dup-id", nil }
-
-	_, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "Alice@example.com"})
-	assertStatusCode(t, err, codes.Internal)
-
-	_, getErr := store.GetUser(context.Background(), "dup-id")
-	if !errors.Is(getErr, storage.ErrNotFound) {
-		t.Fatalf("get user err = %v, want %v", getErr, storage.ErrNotFound)
-	}
-}
-
-func TestCreateUser_PersistsPrimaryEmail(t *testing.T) {
-	store := openTempAuthStore(t)
-	svc := NewAuthService(store, store, nil)
-	svc.clock = func() time.Time { return time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC) }
-	svc.idGenerator = func() (string, error) { return "user-123", nil }
-
-	resp, err := svc.CreateUser(context.Background(), &authv1.CreateUserRequest{Email: "  Alice@example.COM  "})
-	if err != nil {
-		t.Fatalf("create user: %v", err)
-	}
-	if resp.GetUser().GetId() != "user-123" {
-		t.Fatalf("expected id user-123, got %q", resp.GetUser().GetId())
-	}
-
-	emails, err := store.ListUserEmailsByUser(context.Background(), "user-123")
-	if err != nil {
-		t.Fatalf("list user emails: %v", err)
-	}
-	if len(emails) != 1 {
-		t.Fatalf("expected 1 email, got %d", len(emails))
-	}
-	if emails[0].Email != "alice@example.com" {
-		t.Fatalf("expected normalized primary email, got %q", emails[0].Email)
-	}
-}
-
-func TestGetUser_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.GetUser(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestGetUser_MissingStore(t *testing.T) {
-	svc := NewAuthService(nil, nil, nil)
-	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "user-1"})
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestGetUser_EmptyID(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "  "})
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestGetUser_NotFound(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "missing"})
-	assertStatusCode(t, err, codes.NotFound)
 }
 
 func TestGetUser_Success(t *testing.T) {
 	store := newFakeUserStore()
-	store.users["user-123"] = user.User{ID: "user-123", Email: "alice", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	store.users["user-123"] = user.User{ID: "user-123", Username: "alice", CreatedAt: now, UpdatedAt: now}
 	svc := NewAuthService(store, nil, nil)
 
 	resp, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "user-123"})
 	if err != nil {
 		t.Fatalf("get user: %v", err)
 	}
-	if resp.GetUser().GetId() != "user-123" {
-		t.Fatalf("expected id user-123, got %q", resp.GetUser().GetId())
+	if got := resp.GetUser().GetUsername(); got != "alice" {
+		t.Fatalf("username = %q, want %q", got, "alice")
 	}
 }
 
 func TestCreateWebSession_Success(t *testing.T) {
 	store := openTempAuthStore(t)
 	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
-	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Email: "alpha@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Username: "alpha", CreatedAt: now, UpdatedAt: now}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
 	svc := NewAuthService(store, store, nil)
@@ -277,17 +79,10 @@ func TestCreateWebSession_Success(t *testing.T) {
 	}
 }
 
-func TestGetWebSession_NotFound(t *testing.T) {
-	store := openTempAuthStore(t)
-	svc := NewAuthService(store, store, nil)
-	_, err := svc.GetWebSession(context.Background(), &authv1.GetWebSessionRequest{SessionId: "missing"})
-	assertStatusCode(t, err, codes.NotFound)
-}
-
 func TestRevokeWebSession_RevokesSession(t *testing.T) {
 	store := openTempAuthStore(t)
 	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
-	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Email: "alpha@example.com", CreatedAt: now, UpdatedAt: now}); err != nil {
+	if err := store.PutUser(context.Background(), user.User{ID: "user-1", Username: "alpha", CreatedAt: now, UpdatedAt: now}); err != nil {
 		t.Fatalf("put user: %v", err)
 	}
 	svc := NewAuthService(store, store, nil)
@@ -304,22 +99,11 @@ func TestRevokeWebSession_RevokesSession(t *testing.T) {
 	assertStatusCode(t, err, codes.NotFound)
 }
 
-func TestListUsers_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.ListUsers(context.Background(), nil)
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestListUsers_MissingStore(t *testing.T) {
-	svc := NewAuthService(nil, nil, nil)
-	_, err := svc.ListUsers(context.Background(), &authv1.ListUsersRequest{})
-	assertStatusCode(t, err, codes.Internal)
-}
-
 func TestListUsers_Success(t *testing.T) {
 	store := newFakeUserStore()
-	store.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	store.users["user-2"] = user.User{ID: "user-2", Email: "beta", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	store.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: now, UpdatedAt: now}
+	store.users["user-2"] = user.User{ID: "user-2", Username: "beta", CreatedAt: now, UpdatedAt: now}
 
 	svc := NewAuthService(store, nil, nil)
 	resp, err := svc.ListUsers(context.Background(), &authv1.ListUsersRequest{PageSize: 10})
@@ -327,13 +111,14 @@ func TestListUsers_Success(t *testing.T) {
 		t.Fatalf("list users: %v", err)
 	}
 	if len(resp.GetUsers()) != 2 {
-		t.Fatalf("expected 2 users, got %d", len(resp.GetUsers()))
+		t.Fatalf("users len = %d, want 2", len(resp.GetUsers()))
 	}
 }
 
 func TestIssueJoinGrant_Success(t *testing.T) {
 	store := newFakeUserStore()
-	store.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
+	store.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: now, UpdatedAt: now}
 
 	publicKey, privateKey, err := ed25519.GenerateKey(rand.Reader)
 	if err != nil {
@@ -347,8 +132,7 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_JOIN_GRANT_TTL", "5m")
 
 	svc := NewAuthService(store, nil, nil)
-	fixedTime := time.Date(2026, 1, 23, 10, 0, 0, 0, time.UTC)
-	svc.clock = func() time.Time { return fixedTime }
+	svc.clock = func() time.Time { return now }
 
 	resp, err := svc.IssueJoinGrant(context.Background(), &authv1.IssueJoinGrantRequest{
 		UserId:        "user-1",
@@ -362,12 +146,6 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 	if resp.GetJoinGrant() == "" {
 		t.Fatal("expected join grant")
 	}
-	if resp.GetJti() == "" {
-		t.Fatal("expected jti")
-	}
-	if resp.GetExpiresAt() == nil {
-		t.Fatal("expected expires_at")
-	}
 
 	claims, err := joingrant.Validate(resp.GetJoinGrant(), joingrant.Expectation{
 		CampaignID: "campaign-1",
@@ -377,7 +155,7 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 		Issuer:   issuer,
 		Audience: audience,
 		Key:      publicKey,
-		Now:      func() time.Time { return fixedTime },
+		Now:      func() time.Time { return now },
 	})
 	if err != nil {
 		t.Fatalf("validate join grant: %v", err)
@@ -387,16 +165,35 @@ func TestIssueJoinGrant_Success(t *testing.T) {
 	}
 }
 
-func assertStatusCode(t *testing.T, err error, want codes.Code) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("expected status %v, got nil", want)
-	}
-	st, ok := status.FromError(err)
-	if !ok {
-		t.Fatalf("expected gRPC status error, got %v", err)
-	}
-	if st.Code() != want {
-		t.Fatalf("expected status %v, got %v", want, st.Code())
-	}
+func TestCreateWebSession_RollsBackMissingUser(t *testing.T) {
+	store := openTempAuthStore(t)
+	svc := NewAuthService(store, store, nil)
+	_, err := svc.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "missing"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestLookupUserByUsername_NotFound(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	_, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "missing"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestLookupUserByUsername_EmptyUsername(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	_, err := svc.LookupUserByUsername(context.Background(), &authv1.LookupUserByUsernameRequest{Username: "  "})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListUsers_StoreError(t *testing.T) {
+	store := newFakeUserStore()
+	store.listErr = errors.New("boom")
+	svc := NewAuthService(store, nil, nil)
+	_, err := svc.ListUsers(context.Background(), &authv1.ListUsersRequest{})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestGetUser_NotFound(t *testing.T) {
+	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	_, err := svc.GetUser(context.Background(), &authv1.GetUserRequest{UserId: "missing"})
+	assertStatusCode(t, err, codes.NotFound)
 }

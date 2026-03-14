@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strings"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -13,8 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 // PrincipalNotificationClient is the narrow notification surface needed by unread badge resolution.
@@ -29,6 +28,7 @@ type PrincipalSocialClient interface {
 
 // viewerResolver resolves authenticated viewer chrome (display name, avatar, profile link, unread notifications).
 type viewerResolver struct {
+	accountClient      PrincipalAccountClient
 	socialClient       PrincipalSocialClient
 	notificationClient PrincipalNotificationClient
 	assetBaseURL       string
@@ -37,6 +37,7 @@ type viewerResolver struct {
 
 // newViewerResolver builds package wiring for this web seam.
 func newViewerResolver(
+	accountClient PrincipalAccountClient,
 	socialClient PrincipalSocialClient,
 	notificationClient PrincipalNotificationClient,
 	assetBaseURL string,
@@ -46,6 +47,7 @@ func newViewerResolver(
 		resolveUserID = func(*http.Request) string { return "" }
 	}
 	return viewerResolver{
+		accountClient:      accountClient,
 		socialClient:       socialClient,
 		notificationClient: notificationClient,
 		assetBaseURL:       assetBaseURL,
@@ -63,6 +65,12 @@ func (r viewerResolver) resolveViewerUncached(request *http.Request) module.View
 		return module.Viewer{}
 	}
 	viewer := defaultViewer(r.assetBaseURL, contextFromRequest(request), userID, r.resolveHasUnreadNotifications)
+	if profile, err := r.loadAccountProfile(request.Context(), userID); err == nil && profile != nil {
+		username := strings.TrimSpace(profile.GetUsername())
+		if username != "" {
+			viewer.ProfileURL = routepath.UserProfile(username)
+		}
+	}
 	if r.socialClient == nil {
 		return viewer
 	}
@@ -113,12 +121,24 @@ func defaultViewer(
 	viewer := module.Viewer{
 		DisplayName: "Adventurer",
 		AvatarURL:   websupport.AvatarImageURL(assetBaseURL, "user", userID, "", ""),
-		ProfileURL:  routepath.AppSettingsProfile,
+		ProfileURL:  routepath.AppDashboard,
 	}
 	if resolveUnread != nil {
 		viewer.HasUnreadNotifications = resolveUnread(ctx, userID)
 	}
 	return viewer
+}
+
+// loadAccountProfile fetches auth-owned account data used by viewer chrome.
+func (r viewerResolver) loadAccountProfile(ctx context.Context, userID string) (*authv1.AccountProfile, error) {
+	if r.accountClient == nil {
+		return nil, nil
+	}
+	resp, err := r.accountClient.GetProfile(ctx, &authv1.GetProfileRequest{UserId: userID})
+	if err != nil || resp == nil {
+		return nil, err
+	}
+	return resp.GetProfile(), nil
 }
 
 // loadUserProfile fetches the profile record used to personalize viewer chrome.
@@ -140,24 +160,12 @@ func applyUserProfile(
 	err error,
 ) module.Viewer {
 	if record == nil {
-		if status.Code(err) == codes.NotFound {
-			viewer.ProfileURL = routepath.AppSettingsProfileRequired
-		}
 		return viewer
-	}
-
-	username := strings.TrimSpace(record.GetUsername())
-	if username != "" {
-		viewer.ProfileURL = routepath.UserProfile(username)
-	} else {
-		viewer.ProfileURL = routepath.AppSettingsProfileRequired
 	}
 
 	name := strings.TrimSpace(record.GetName())
 	if name != "" {
 		viewer.DisplayName = name
-	} else if username != "" {
-		viewer.DisplayName = username
 	}
 
 	avatarSetID := strings.TrimSpace(record.GetAvatarSetId())

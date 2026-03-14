@@ -26,17 +26,17 @@ func signupCompletedEvent(clock func() time.Time, idGenerator func() (string, er
 
 	eventID, err := idGenerator()
 	if err != nil {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("generate signup completed event id: %w", err)
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Generate signup completed event ID: %w", err)
 	}
 	payload, err := json.Marshal(map[string]string{
 		"user_id":        created.ID,
-		"email":          created.Email,
+		"username":       created.Username,
 		"signup_method":  signupMethod,
 		"signup_at":      now.Format(time.RFC3339Nano),
 		"notification_v": "v1",
 	})
 	if err != nil {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("marshal signup completed payload: %w", err)
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Marshal signup completed payload: %w", err)
 	}
 
 	return storage.IntegrationOutboxEvent{

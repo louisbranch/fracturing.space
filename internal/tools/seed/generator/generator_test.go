@@ -6,7 +6,6 @@ import (
 	"math/rand"
 	"testing"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"google.golang.org/grpc"
@@ -117,14 +116,6 @@ func fullFakeDeps() generatorDeps {
 		events: &fakeEventAppender{
 			appendEvent: func(context.Context, *statev1.AppendEventRequest, ...grpc.CallOption) (*statev1.AppendEventResponse, error) {
 				return &statev1.AppendEventResponse{}, nil
-			},
-		},
-		authClient: &fakeAuthProvider{
-			createUser: func(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-				return &authv1.CreateUserResponse{User: &authv1.User{Id: "user-1"}}, nil
-			},
-			issueJoinGrant: func(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
-				return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
 			},
 		},
 	}

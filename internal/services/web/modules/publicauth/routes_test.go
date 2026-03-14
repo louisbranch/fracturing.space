@@ -3,6 +3,7 @@ package publicauth
 import (
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
@@ -45,7 +46,11 @@ func TestRegisterRoutesPublicPathAndMethodContracts(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			req := httptest.NewRequest(tc.method, tc.path, nil)
+			body := strings.NewReader("")
+			if tc.method == http.MethodPost && tc.path == routepath.PasskeyLoginStart {
+				body = strings.NewReader(`{"username":"louis"}`)
+			}
+			req := httptest.NewRequest(tc.method, tc.path, body)
 			rr := httptest.NewRecorder()
 			mux.ServeHTTP(rr, req)
 			if rr.Code != tc.wantStatus {

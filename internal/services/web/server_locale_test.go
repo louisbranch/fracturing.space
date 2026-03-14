@@ -52,7 +52,7 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 		`>Configurações</a>`,
 		`>Campanhas</a>`,
 		`<h1 class="mb-0">Configurações</h1>`,
-		`<h2 class="card-title">Perfil público</h2>`,
+		`<h2 class="card-title">Perfil</h2>`,
 		`<span class="label-text">Nome de usuário</span>`,
 	} {
 		if !strings.Contains(body, marker) {

@@ -217,7 +217,7 @@ func (q *Queries) DeleteDaggerheartWeapon(ctx context.Context, id string) error 
 
 const getDaggerheartAdversary = `-- name: GetDaggerheartAdversary :one
 
-SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at FROM daggerheart_adversaries
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at, conditions_json FROM daggerheart_adversaries
 WHERE campaign_id = ? AND adversary_id = ?
 `
 
@@ -245,9 +245,9 @@ func (q *Queries) GetDaggerheartAdversary(ctx context.Context, arg GetDaggerhear
 		&i.MajorThreshold,
 		&i.SevereThreshold,
 		&i.Armor,
-		&i.ConditionsJson,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.ConditionsJson,
 	)
 	return i, err
 }
@@ -847,7 +847,7 @@ func (q *Queries) GetDaggerheartWeapon(ctx context.Context, id string) (Daggerhe
 }
 
 const listDaggerheartAdversariesByCampaign = `-- name: ListDaggerheartAdversariesByCampaign :many
-SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at FROM daggerheart_adversaries
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at, conditions_json FROM daggerheart_adversaries
 WHERE campaign_id = ?
 ORDER BY name ASC, adversary_id ASC
 `
@@ -876,9 +876,9 @@ func (q *Queries) ListDaggerheartAdversariesByCampaign(ctx context.Context, camp
 			&i.MajorThreshold,
 			&i.SevereThreshold,
 			&i.Armor,
-			&i.ConditionsJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ConditionsJson,
 		); err != nil {
 			return nil, err
 		}
@@ -894,7 +894,7 @@ func (q *Queries) ListDaggerheartAdversariesByCampaign(ctx context.Context, camp
 }
 
 const listDaggerheartAdversariesBySession = `-- name: ListDaggerheartAdversariesBySession :many
-SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, conditions_json, created_at, updated_at FROM daggerheart_adversaries
+SELECT campaign_id, adversary_id, name, kind, session_id, notes, hp, hp_max, stress, stress_max, evasion, major_threshold, severe_threshold, armor, created_at, updated_at, conditions_json FROM daggerheart_adversaries
 WHERE campaign_id = ? AND session_id = ?
 ORDER BY name ASC, adversary_id ASC
 `
@@ -928,9 +928,9 @@ func (q *Queries) ListDaggerheartAdversariesBySession(ctx context.Context, arg L
 			&i.MajorThreshold,
 			&i.SevereThreshold,
 			&i.Armor,
-			&i.ConditionsJson,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.ConditionsJson,
 		); err != nil {
 			return nil, err
 		}

@@ -21,24 +21,24 @@ import (
 
 func (s *AuthService) BeginPasskeyRegistration(ctx context.Context, in *authv1.BeginPasskeyRegistrationRequest) (*authv1.BeginPasskeyRegistrationResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "begin passkey registration request is required")
+		return nil, status.Error(codes.InvalidArgument, "Begin passkey registration request is required.")
 	}
 	if s.store == nil {
-		return nil, status.Error(codes.Internal, "user store is not configured")
+		return nil, status.Error(codes.Internal, "User store is not configured.")
 	}
 	if s.passkeyStore == nil {
-		return nil, status.Error(codes.Internal, "passkey store is not configured")
+		return nil, status.Error(codes.Internal, "Passkey store is not configured.")
 	}
 	if s.passkeyInitErr != nil || s.passkeyWebAuthn == nil {
-		return nil, status.Error(codes.Internal, "passkey configuration is not available")
+		return nil, status.Error(codes.Internal, "Passkey configuration is not available.")
 	}
 	if s.passkeyParser == nil {
-		return nil, status.Error(codes.Internal, "passkey parser is not configured")
+		return nil, status.Error(codes.Internal, "Passkey parser is not configured.")
 	}
 
 	userID := strings.TrimSpace(in.GetUserId())
 	if userID == "" {
-		return nil, status.Error(codes.InvalidArgument, "user id is required")
+		return nil, status.Error(codes.InvalidArgument, "User ID is required.")
 	}
 	baseUser, err := s.store.GetUser(ctx, userID)
 	if err != nil {
@@ -47,7 +47,7 @@ func (s *AuthService) BeginPasskeyRegistration(ctx context.Context, in *authv1.B
 
 	passkeyUser, err := s.loadPasskeyUser(ctx, baseUser)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load passkey user: %v", err)
+		return nil, status.Errorf(codes.Internal, "Load passkey user: %v", err)
 	}
 
 	options := []webauthn.RegistrationOption{
@@ -59,19 +59,19 @@ func (s *AuthService) BeginPasskeyRegistration(ctx context.Context, in *authv1.B
 
 	creation, session, err := s.passkeyWebAuthn.BeginRegistration(passkeyUser, options...)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "begin passkey registration: %v", err)
+		return nil, status.Errorf(codes.Internal, "Begin passkey registration: %v", err)
 	}
 
 	sessionID, err := s.newPasskeySessionID()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "create passkey session: %v", err)
+		return nil, status.Errorf(codes.Internal, "Create passkey session: %v", err)
 	}
 	if err := s.storePasskeySession(ctx, sessionID, passkey.SessionKindRegistration, baseUser.ID, session); err != nil {
-		return nil, status.Errorf(codes.Internal, "store passkey session: %v", err)
+		return nil, status.Errorf(codes.Internal, "Store passkey session: %v", err)
 	}
 	optionsJSON, err := json.Marshal(creation)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode registration options: %v", err)
+		return nil, status.Errorf(codes.Internal, "Encode registration options: %v", err)
 	}
 
 	return &authv1.BeginPasskeyRegistrationResponse{
@@ -84,8 +84,7 @@ type passkeyProvider interface {
 	BeginRegistration(user webauthn.User, opts ...webauthn.RegistrationOption) (*protocol.CredentialCreation, *webauthn.SessionData, error)
 	CreateCredential(user webauthn.User, session webauthn.SessionData, response *protocol.ParsedCredentialCreationData) (*webauthn.Credential, error)
 	BeginLogin(user webauthn.User, opts ...webauthn.LoginOption) (*protocol.CredentialAssertion, *webauthn.SessionData, error)
-	BeginDiscoverableLogin(opts ...webauthn.LoginOption) (*protocol.CredentialAssertion, *webauthn.SessionData, error)
-	ValidatePasskeyLogin(handler webauthn.DiscoverableUserHandler, session webauthn.SessionData, response *protocol.ParsedCredentialAssertionData) (webauthn.User, *webauthn.Credential, error)
+	ValidateLogin(user webauthn.User, session webauthn.SessionData, response *protocol.ParsedCredentialAssertionData) (*webauthn.Credential, error)
 }
 
 type passkeyParser interface {
@@ -105,27 +104,27 @@ func (defaultPasskeyParser) ParseCredentialRequestResponseBytes(data []byte) (*p
 
 func (s *AuthService) FinishPasskeyRegistration(ctx context.Context, in *authv1.FinishPasskeyRegistrationRequest) (*authv1.FinishPasskeyRegistrationResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "finish passkey registration request is required")
+		return nil, status.Error(codes.InvalidArgument, "Finish passkey registration request is required.")
 	}
 	if s.store == nil {
-		return nil, status.Error(codes.Internal, "user store is not configured")
+		return nil, status.Error(codes.Internal, "User store is not configured.")
 	}
 	if s.passkeyStore == nil {
-		return nil, status.Error(codes.Internal, "passkey store is not configured")
+		return nil, status.Error(codes.Internal, "Passkey store is not configured.")
 	}
 	if s.passkeyInitErr != nil || s.passkeyWebAuthn == nil {
-		return nil, status.Error(codes.Internal, "passkey configuration is not available")
+		return nil, status.Error(codes.Internal, "Passkey configuration is not available.")
 	}
 	if s.passkeyParser == nil {
-		return nil, status.Error(codes.Internal, "passkey parser is not configured")
+		return nil, status.Error(codes.Internal, "Passkey parser is not configured.")
 	}
 
 	sessionID := strings.TrimSpace(in.GetSessionId())
 	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+		return nil, status.Error(codes.InvalidArgument, "Session ID is required.")
 	}
 	if len(in.GetCredentialResponseJson()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "credential response json is required")
+		return nil, status.Error(codes.InvalidArgument, "Credential response JSON is required.")
 	}
 
 	session, err := s.loadPasskeySession(ctx, sessionID, passkey.SessionKindRegistration)
@@ -133,7 +132,7 @@ func (s *AuthService) FinishPasskeyRegistration(ctx context.Context, in *authv1.
 		return nil, err
 	}
 	if session.UserID == "" {
-		return nil, status.Error(codes.Internal, "passkey session missing user id")
+		return nil, status.Error(codes.Internal, "Passkey session is missing a user ID.")
 	}
 
 	baseUser, err := s.store.GetUser(ctx, session.UserID)
@@ -142,20 +141,20 @@ func (s *AuthService) FinishPasskeyRegistration(ctx context.Context, in *authv1.
 	}
 	passkeyUser, err := s.loadPasskeyUser(ctx, baseUser)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "load passkey user: %v", err)
+		return nil, status.Errorf(codes.Internal, "Load passkey user: %v", err)
 	}
 
 	parsed, err := s.passkeyParser.ParseCredentialCreationResponseBytes(in.GetCredentialResponseJson())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "parse credential response: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Parse credential response: %v", err)
 	}
 	credential, err := s.passkeyWebAuthn.CreateCredential(passkeyUser, session.Data, parsed)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "validate credential response: %v", err)
+		return nil, status.Errorf(codes.Internal, "Validate credential response: %v", err)
 	}
 
 	if err := s.storePasskeyCredential(ctx, baseUser.ID, *credential, false); err != nil {
-		return nil, status.Errorf(codes.Internal, "store passkey credential: %v", err)
+		return nil, status.Errorf(codes.Internal, "Store passkey credential: %v", err)
 	}
 	_ = s.passkeyStore.DeletePasskeySession(ctx, sessionID)
 
@@ -167,55 +166,48 @@ func (s *AuthService) FinishPasskeyRegistration(ctx context.Context, in *authv1.
 
 func (s *AuthService) BeginPasskeyLogin(ctx context.Context, in *authv1.BeginPasskeyLoginRequest) (*authv1.BeginPasskeyLoginResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "begin passkey login request is required")
+		return nil, status.Error(codes.InvalidArgument, "Begin passkey login request is required.")
 	}
 	if s.store == nil {
-		return nil, status.Error(codes.Internal, "user store is not configured")
+		return nil, status.Error(codes.Internal, "User store is not configured.")
 	}
 	if s.passkeyStore == nil {
-		return nil, status.Error(codes.Internal, "passkey store is not configured")
+		return nil, status.Error(codes.Internal, "Passkey store is not configured.")
 	}
 	if s.passkeyInitErr != nil || s.passkeyWebAuthn == nil {
-		return nil, status.Error(codes.Internal, "passkey configuration is not available")
+		return nil, status.Error(codes.Internal, "Passkey configuration is not available.")
 	}
 	if s.passkeyParser == nil {
-		return nil, status.Error(codes.Internal, "passkey parser is not configured")
+		return nil, status.Error(codes.Internal, "Passkey parser is not configured.")
 	}
 
-	userID := strings.TrimSpace(in.GetUserId())
-	var (
-		assertion *protocol.CredentialAssertion
-		session   *webauthn.SessionData
-		err       error
-	)
-
-	if userID == "" {
-		assertion, session, err = s.passkeyWebAuthn.BeginDiscoverableLogin()
-	} else {
-		baseUser, err := s.store.GetUser(ctx, userID)
-		if err != nil {
-			return nil, handleDomainError(err)
-		}
-		passkeyUser, err := s.loadPasskeyUser(ctx, baseUser)
-		if err != nil {
-			return nil, status.Errorf(codes.Internal, "load passkey user: %v", err)
-		}
-		assertion, session, err = s.passkeyWebAuthn.BeginLogin(passkeyUser)
+	username := strings.TrimSpace(in.GetUsername())
+	if username == "" {
+		return nil, status.Error(codes.InvalidArgument, "Username is required.")
 	}
+	baseUser, err := s.store.GetUserByUsername(ctx, username)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "begin passkey login: %v", err)
+		return nil, handleDomainError(err)
+	}
+	passkeyUser, err := s.loadPasskeyUser(ctx, baseUser)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Load passkey user: %v", err)
+	}
+	assertion, session, err := s.passkeyWebAuthn.BeginLogin(passkeyUser)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Begin passkey login: %v", err)
 	}
 
 	sessionID, err := s.newPasskeySessionID()
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "create passkey session: %v", err)
+		return nil, status.Errorf(codes.Internal, "Create passkey session: %v", err)
 	}
-	if err := s.storePasskeySession(ctx, sessionID, passkey.SessionKindLogin, userID, session); err != nil {
-		return nil, status.Errorf(codes.Internal, "store passkey session: %v", err)
+	if err := s.storePasskeySession(ctx, sessionID, passkey.SessionKindLogin, baseUser.ID, session); err != nil {
+		return nil, status.Errorf(codes.Internal, "Store passkey session: %v", err)
 	}
 	optionsJSON, err := json.Marshal(assertion)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "encode login options: %v", err)
+		return nil, status.Errorf(codes.Internal, "Encode login options: %v", err)
 	}
 
 	return &authv1.BeginPasskeyLoginResponse{
@@ -226,27 +218,27 @@ func (s *AuthService) BeginPasskeyLogin(ctx context.Context, in *authv1.BeginPas
 
 func (s *AuthService) FinishPasskeyLogin(ctx context.Context, in *authv1.FinishPasskeyLoginRequest) (*authv1.FinishPasskeyLoginResponse, error) {
 	if in == nil {
-		return nil, status.Error(codes.InvalidArgument, "finish passkey login request is required")
+		return nil, status.Error(codes.InvalidArgument, "Finish passkey login request is required.")
 	}
 	if s.store == nil {
-		return nil, status.Error(codes.Internal, "user store is not configured")
+		return nil, status.Error(codes.Internal, "User store is not configured.")
 	}
 	if s.passkeyStore == nil {
-		return nil, status.Error(codes.Internal, "passkey store is not configured")
+		return nil, status.Error(codes.Internal, "Passkey store is not configured.")
 	}
 	if s.passkeyInitErr != nil || s.passkeyWebAuthn == nil {
-		return nil, status.Error(codes.Internal, "passkey configuration is not available")
+		return nil, status.Error(codes.Internal, "Passkey configuration is not available.")
 	}
 	if s.passkeyParser == nil {
-		return nil, status.Error(codes.Internal, "passkey parser is not configured")
+		return nil, status.Error(codes.Internal, "Passkey parser is not configured.")
 	}
 
 	sessionID := strings.TrimSpace(in.GetSessionId())
 	if sessionID == "" {
-		return nil, status.Error(codes.InvalidArgument, "session id is required")
+		return nil, status.Error(codes.InvalidArgument, "Session ID is required.")
 	}
 	if len(in.GetCredentialResponseJson()) == 0 {
-		return nil, status.Error(codes.InvalidArgument, "credential response json is required")
+		return nil, status.Error(codes.InvalidArgument, "Credential response JSON is required.")
 	}
 
 	session, err := s.loadPasskeySession(ctx, sessionID, passkey.SessionKindLogin)
@@ -256,32 +248,38 @@ func (s *AuthService) FinishPasskeyLogin(ctx context.Context, in *authv1.FinishP
 
 	parsed, err := s.passkeyParser.ParseCredentialRequestResponseBytes(in.GetCredentialResponseJson())
 	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "parse credential response: %v", err)
+		return nil, status.Errorf(codes.InvalidArgument, "Parse credential response: %v", err)
 	}
 
-	validatedUser, validatedCredential, err := s.passkeyWebAuthn.ValidatePasskeyLogin(s.passkeyUserHandler(ctx), session.Data, parsed)
+	if session.UserID == "" {
+		return nil, status.Error(codes.Internal, "Passkey session is missing a user ID.")
+	}
+	baseUser, err := s.store.GetUser(ctx, session.UserID)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "validate passkey login: %v", err)
+		return nil, handleDomainError(err)
+	}
+	passkeyUser, err := s.loadPasskeyUser(ctx, baseUser)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Load passkey user: %v", err)
+	}
+	validatedCredential, err := s.passkeyWebAuthn.ValidateLogin(passkeyUser, session.Data, parsed)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Validate passkey login: %v", err)
 	}
 
-	userRecord, ok := validatedUser.(*passkeyUser)
-	if !ok {
-		return nil, status.Error(codes.Internal, "passkey user type mismatch")
-	}
-
-	if err := s.storePasskeyCredential(ctx, userRecord.user.ID, *validatedCredential, true); err != nil {
-		return nil, status.Errorf(codes.Internal, "store passkey credential: %v", err)
+	if err := s.storePasskeyCredential(ctx, baseUser.ID, *validatedCredential, true); err != nil {
+		return nil, status.Errorf(codes.Internal, "Store passkey credential: %v", err)
 	}
 	_ = s.passkeyStore.DeletePasskeySession(ctx, sessionID)
 
 	if pendingID := strings.TrimSpace(in.GetPendingId()); pendingID != "" {
-		if err := s.attachPendingAuthorization(ctx, pendingID, userRecord.user.ID); err != nil {
+		if err := s.attachPendingAuthorization(ctx, pendingID, baseUser.ID); err != nil {
 			return nil, err
 		}
 	}
 
 	return &authv1.FinishPasskeyLoginResponse{
-		User:         userToProto(userRecord.user),
+		User:         userToProto(baseUser),
 		CredentialId: encodeCredentialID(validatedCredential.ID),
 	}, nil
 }
@@ -296,11 +294,11 @@ func (u *passkeyUser) WebAuthnID() []byte {
 }
 
 func (u *passkeyUser) WebAuthnName() string {
-	return u.user.ID
+	return u.user.Username
 }
 
 func (u *passkeyUser) WebAuthnDisplayName() string {
-	return u.user.Email
+	return u.user.Username
 }
 
 func (u *passkeyUser) WebAuthnIcon() string {
@@ -331,22 +329,22 @@ func decodeStoredCredentials(records []storage.PasskeyCredential) ([]webauthn.Cr
 	for _, record := range records {
 		var credential webauthn.Credential
 		if err := json.Unmarshal([]byte(record.CredentialJSON), &credential); err != nil {
-			return nil, fmt.Errorf("decode credential %s: %w", record.CredentialID, err)
+			return nil, fmt.Errorf("Decode credential %s: %w", record.CredentialID, err)
 		}
 		credentials = append(credentials, credential)
 	}
 	return credentials, nil
 }
 
-func (s *AuthService) storePasskeyCredential(ctx context.Context, userID string, credential webauthn.Credential, used bool) error {
+func (s *AuthService) buildPasskeyCredentialRecord(ctx context.Context, userID string, credential webauthn.Credential, used bool) (storage.PasskeyCredential, error) {
 	credentialID := encodeCredentialID(credential.ID)
 	now := s.clock().UTC()
 	stored, err := s.passkeyStore.GetPasskeyCredential(ctx, credentialID)
 	if err != nil && err != storage.ErrNotFound {
-		return err
+		return storage.PasskeyCredential{}, err
 	}
 	if err == storage.ErrNotFound && used {
-		return fmt.Errorf("passkey credential not found")
+		return storage.PasskeyCredential{}, fmt.Errorf("Passkey credential not found.")
 	}
 
 	createdAt := now
@@ -355,26 +353,34 @@ func (s *AuthService) storePasskeyCredential(ctx context.Context, userID string,
 	}
 	credentialJSON, err := json.Marshal(credential)
 	if err != nil {
-		return err
+		return storage.PasskeyCredential{}, err
 	}
 	var lastUsed *time.Time
 	if used {
 		value := now
 		lastUsed = &value
 	}
-	return s.passkeyStore.PutPasskeyCredential(ctx, storage.PasskeyCredential{
+	return storage.PasskeyCredential{
 		CredentialID:   credentialID,
 		UserID:         userID,
 		CredentialJSON: string(credentialJSON),
 		CreatedAt:      createdAt,
 		UpdatedAt:      now,
 		LastUsedAt:     lastUsed,
-	})
+	}, nil
+}
+
+func (s *AuthService) storePasskeyCredential(ctx context.Context, userID string, credential webauthn.Credential, used bool) error {
+	record, err := s.buildPasskeyCredentialRecord(ctx, userID, credential, used)
+	if err != nil {
+		return err
+	}
+	return s.passkeyStore.PutPasskeyCredential(ctx, record)
 }
 
 func (s *AuthService) storePasskeySession(ctx context.Context, sessionID string, kind passkey.SessionKind, userID string, session *webauthn.SessionData) error {
 	if session == nil {
-		return fmt.Errorf("session data is required")
+		return fmt.Errorf("Session data is required.")
 	}
 	payload, err := json.Marshal(session)
 	if err != nil {
@@ -399,37 +405,23 @@ func (s *AuthService) loadPasskeySession(ctx context.Context, sessionID string, 
 	stored, err := s.passkeyStore.GetPasskeySession(ctx, sessionID)
 	if err != nil {
 		if err == storage.ErrNotFound {
-			return loadedSession{}, status.Error(codes.NotFound, "passkey session not found")
+			return loadedSession{}, status.Error(codes.NotFound, "Passkey session not found.")
 		}
-		return loadedSession{}, status.Errorf(codes.Internal, "load passkey session: %v", err)
+		return loadedSession{}, status.Errorf(codes.Internal, "Load passkey session: %v", err)
 	}
 	if stored.Kind != string(expectedKind) {
-		return loadedSession{}, status.Error(codes.InvalidArgument, "passkey session kind mismatch")
+		return loadedSession{}, status.Error(codes.InvalidArgument, "Passkey session kind mismatch.")
 	}
 	if stored.ExpiresAt.Before(s.clock().UTC()) {
 		_ = s.passkeyStore.DeletePasskeySession(ctx, sessionID)
-		return loadedSession{}, status.Error(codes.InvalidArgument, "passkey session expired")
+		return loadedSession{}, status.Error(codes.InvalidArgument, "Passkey session expired.")
 	}
 
 	var session webauthn.SessionData
 	if err := json.Unmarshal([]byte(stored.SessionJSON), &session); err != nil {
-		return loadedSession{}, status.Errorf(codes.Internal, "decode passkey session: %v", err)
+		return loadedSession{}, status.Errorf(codes.Internal, "Decode passkey session: %v", err)
 	}
 	return loadedSession{Data: session, Kind: expectedKind, UserID: stored.UserID}, nil
-}
-
-func (s *AuthService) passkeyUserHandler(ctx context.Context) webauthn.DiscoverableUserHandler {
-	return func(_, userHandle []byte) (webauthn.User, error) {
-		userID := string(userHandle)
-		if strings.TrimSpace(userID) == "" {
-			return nil, fmt.Errorf("user handle is required")
-		}
-		baseUser, err := s.store.GetUser(ctx, userID)
-		if err != nil {
-			return nil, err
-		}
-		return s.loadPasskeyUser(ctx, baseUser)
-	}
 }
 
 func (s *AuthService) newPasskeySessionID() (string, error) {
@@ -445,21 +437,21 @@ func encodeCredentialID(raw []byte) string {
 
 func (s *AuthService) attachPendingAuthorization(ctx context.Context, pendingID string, userID string) error {
 	if s.oauthStore == nil {
-		return status.Error(codes.Internal, "oauth store is not configured")
+		return status.Error(codes.Internal, "OAuth store is not configured.")
 	}
 	if strings.TrimSpace(pendingID) == "" || strings.TrimSpace(userID) == "" {
-		return status.Error(codes.InvalidArgument, "pending id and user id are required")
+		return status.Error(codes.InvalidArgument, "Pending ID and user ID are required.")
 	}
 	pending, err := s.oauthStore.GetPendingAuthorization(pendingID)
 	if err != nil || pending == nil {
-		return status.Error(codes.NotFound, "authorization session not found")
+		return status.Error(codes.NotFound, "Authorization session not found.")
 	}
 	if pending.ExpiresAt.Before(s.clock().UTC()) {
 		s.oauthStore.DeletePendingAuthorization(pendingID)
-		return status.Error(codes.InvalidArgument, "authorization session expired")
+		return status.Error(codes.InvalidArgument, "Authorization session expired.")
 	}
 	if err := s.oauthStore.UpdatePendingAuthorizationUserID(pendingID, userID); err != nil {
-		return status.Errorf(codes.Internal, "update authorization: %v", err)
+		return status.Errorf(codes.Internal, "Update authorization: %v", err)
 	}
 	return nil
 }

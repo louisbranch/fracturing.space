@@ -16,8 +16,8 @@ import (
 
 // TestOAuthAuthorizationCodeFlow exercises the authorize → consent → token → introspect
 // flow end-to-end. Since password login has been removed, the test directly sets the
-// pending authorization's user ID to simulate authentication (e.g. via passkey or
-// external provider).
+// pending authorization's user ID to simulate authentication after username +
+// passkey login.
 func TestOAuthAuthorizationCodeFlow(t *testing.T) {
 	store := openAuthStoreForTest(t)
 	oauthStore := NewStore(store.DB())

@@ -146,5 +146,5 @@ messages:
   "SNAPSHOT_INSUFFICIENT_GM_FEAR": "Medo do MJ insuficiente para gastar"
   "SNAPSHOT_INVALID_GM_FEAR_AMOUNT": "A quantidade de Medo do MJ deve ser maior que zero"
   "SNAPSHOT_INVALID_HP": "O HP {{.HP}} excede o máximo {{.HPMax}}"
-  "USER_EMPTY_EMAIL": "O e-mail não pode estar vazio"
-  "USER_INVALID_EMAIL": "O e-mail deve ser um endereço de e-mail válido"
+  "USER_EMPTY_USERNAME": "O nome de usuário não pode estar vazio"
+  "USER_INVALID_USERNAME": "O nome de usuário deve corresponder ao formato exigido"

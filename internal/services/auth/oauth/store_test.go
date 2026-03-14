@@ -43,14 +43,6 @@ func TestStoreDeletePendingAuthorizationNilSafe(t *testing.T) {
 	store.DeletePendingAuthorization("id") // should not panic
 }
 
-func TestStoreDeleteProviderStateNilSafe(t *testing.T) {
-	var nilStore *Store
-	nilStore.DeleteProviderState("state") // should not panic
-
-	store := &Store{}
-	store.DeleteProviderState("state") // should not panic
-}
-
 func TestStoreCleanupExpiredNilSafe(t *testing.T) {
 	var nilStore *Store
 	nilStore.CleanupExpired(time.Now()) // should not panic
@@ -227,63 +219,6 @@ func TestStoreOperationsWithDB(t *testing.T) {
 		}
 		if pending != nil {
 			t.Error("expected nil after deletion")
-		}
-	})
-
-	t.Run("ProviderStateLifecycle", func(t *testing.T) {
-		ps, err := store.CreateProviderState("google", "http://localhost/cb", "verifier", time.Hour)
-		if err != nil {
-			t.Fatalf("create: %v", err)
-		}
-		got, err := store.GetProviderState(ps.State)
-		if err != nil {
-			t.Fatalf("get: %v", err)
-		}
-		if got.Provider != "google" || got.CodeVerifier != "verifier" {
-			t.Errorf("unexpected state: %+v", got)
-		}
-
-		store.DeleteProviderState(ps.State)
-		got, err = store.GetProviderState(ps.State)
-		if err != nil {
-			t.Fatalf("get after delete: %v", err)
-		}
-		if got != nil {
-			t.Error("expected nil after deletion")
-		}
-	})
-
-	t.Run("ExternalIdentityLifecycle", func(t *testing.T) {
-		identity := ExternalIdentity{
-			ID:             "ext-1",
-			Provider:       "google",
-			ProviderUserID: "goog-123",
-			UserID:         "user-1",
-			AccessToken:    "at",
-			RefreshToken:   "rt",
-			Scope:          "openid",
-			ExpiresAt:      time.Now().Add(time.Hour).UTC(),
-			IDToken:        "idt",
-			UpdatedAt:      time.Now().UTC(),
-		}
-		if err := store.UpsertExternalIdentity(identity); err != nil {
-			t.Fatalf("upsert: %v", err)
-		}
-		got, err := store.GetExternalIdentity("google", "goog-123")
-		if err != nil {
-			t.Fatalf("get: %v", err)
-		}
-		if got.UserID != "user-1" {
-			t.Errorf("expected user_id %q, got %q", "user-1", got.UserID)
-		}
-
-		// Non-existent identity.
-		got, err = store.GetExternalIdentity("google", "nonexistent")
-		if err != nil {
-			t.Fatalf("get nonexistent: %v", err)
-		}
-		if got != nil {
-			t.Error("expected nil for nonexistent identity")
 		}
 	})
 

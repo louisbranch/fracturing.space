@@ -209,7 +209,7 @@ func TestAppPageTitleUsesWebComposition(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `<title>Public Profile | Fracturing.Space</title>`) {
+	if !strings.Contains(body, `<title>Profile | Fracturing.Space</title>`) {
 		t.Fatalf("body missing composed page title: %q", body)
 	}
 }
@@ -307,6 +307,13 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	for _, marker := range []string{
 		`id="auth-shell"`,
 		`id="auth-language-menu"`,
+		`Welcome to Fracturing.Space`,
+		`lg:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]`,
+		`lg:divider-horizontal`,
+		`id="register-username"`,
+		`id="login-username"`,
+		`Create Account With Passkey`,
+		`Log In With Passkey`,
 		`/passkeys/login/start`,
 		`/passkeys/login/finish`,
 		`/passkeys/register/start`,
@@ -314,6 +321,17 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing auth contract marker %q", marker)
+		}
+	}
+	if strings.Contains(body, `id="username"`) {
+		t.Fatalf("body still renders legacy shared username input: %q", body)
+	}
+	for _, removed := range []string{
+		`This becomes your public handle.`,
+		`Username is required to find your account before passkey sign-in.`,
+	} {
+		if strings.Contains(body, removed) {
+			t.Fatalf("body still renders removed auth helper copy %q", removed)
 		}
 	}
 }
@@ -412,14 +430,16 @@ func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
 func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	t.Parallel()
 
-	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Username: "rhea", Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "apothecary_journeyman"}}}
+	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale", AvatarSetId: "avatar_set_v1", AvatarAssetId: "apothecary_journeyman"}}}
 	assetBaseURL := "https://cdn.example.com/avatars"
 	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "avatar_set_v1", "apothecary_journeyman")
 	auth := newFakeWebAuthClient()
+	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{
 				SessionClient: auth,
+				AccountClient: account,
 				SocialClient:  social,
 				AssetBaseURL:  assetBaseURL,
 			},
@@ -429,7 +449,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 				Profile:      modules.ProfileDependencies{SocialClient: social},
 				Settings: modules.SettingsDependencies{
 					SocialClient:     social,
-					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+					AccountClient:    account,
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
@@ -451,6 +471,9 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	if !social.getUserProfileCalled {
 		t.Fatalf("expected social profile lookup")
 	}
+	if !account.getProfileCalled {
+		t.Fatalf("expected account profile lookup")
+	}
 	for _, marker := range []string{
 		`src="` + expectedAvatarURL + `"`,
 		`alt="Rhea Vale"`,
@@ -467,15 +490,17 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	}
 }
 
-func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(t *testing.T) {
+func TestAppPageUserDropdownProfileUsesAuthUsernameWhenSocialProfileHasNoUsername(t *testing.T) {
 	t.Parallel()
 
 	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale"}}}
 	auth := newFakeWebAuthClient()
+	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	h, err := NewHandler(Config{
 		Dependencies: newDependencyBundle(
 			PrincipalDependencies{
 				SessionClient: auth,
+				AccountClient: account,
 				SocialClient:  social,
 				AssetBaseURL:  "https://cdn.example.com/avatars",
 			},
@@ -485,7 +510,7 @@ func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(
 				Profile:      modules.ProfileDependencies{SocialClient: social},
 				Settings: modules.SettingsDependencies{
 					SocialClient:     social,
-					AccountClient:    &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
+					AccountClient:    account,
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
@@ -504,8 +529,8 @@ func TestAppPageUserDropdownProfileFallsBackToSettingsNoticeWhenUsernameMissing(
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	if !strings.Contains(body, `href="/app/settings/profile/required"`) {
-		t.Fatalf("body missing profile fallback notice link: %q", body)
+	if !strings.Contains(body, `href="/u/rhea"`) {
+		t.Fatalf("body missing auth-backed public profile link: %q", body)
 	}
 }
 
@@ -620,10 +645,6 @@ func (f *fakeSocialClient) GetUserProfile(context.Context, *socialv1.GetUserProf
 		return f.getUserProfileResp, nil
 	}
 	return &socialv1.GetUserProfileResponse{}, nil
-}
-
-func (f *fakeSocialClient) LookupUserProfile(context.Context, *socialv1.LookupUserProfileRequest, ...grpc.CallOption) (*socialv1.LookupUserProfileResponse, error) {
-	return &socialv1.LookupUserProfileResponse{}, nil
 }
 
 func (fakeCredentialClient) ListCredentials(context.Context, *aiv1.ListCredentialsRequest, ...grpc.CallOption) (*aiv1.ListCredentialsResponse, error) {

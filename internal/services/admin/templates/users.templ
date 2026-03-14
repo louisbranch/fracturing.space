@@ -42,11 +42,11 @@ templ UsersPage(view UsersPageView, loc Localizer) {
 			Title:       T(loc, "users.get.heading"),
 			Action:      "/app/users/lookup",
 			Method:      "get",
-			FieldLabel:  T(loc, "users.get.user_id"),
-			FieldName:   "user_id",
+			FieldLabel:  "Username",
+			FieldName:   "username",
 			FieldValue:  "",
 			FieldType:   "text",
-			Placeholder: "user-123",
+			Placeholder: "alice",
 			Required:    false,
 			ButtonLabel: T(loc, "users.get.submit"),
 		})
@@ -97,7 +97,7 @@ templ UsersTable(rows []UserRow, message string, loc Localizer) {
 			<thead>
 				<tr>
 					<th>{T(loc, "users.table.id")}</th>
-					<th>{T(loc, "users.table.email")}</th>
+					<th>{"Username"}</th>
 					<th>{T(loc, "users.table.created")}</th>
 					<th>{T(loc, "users.table.updated")}</th>
 				</tr>
@@ -112,7 +112,7 @@ templ UsersTable(rows []UserRow, message string, loc Localizer) {
 						</td>
 						<td>
 							@NavLink("/app/users/" + row.ID) {
-								{row.Email}
+								{row.Username}
 							}
 						</td>
 						<td>{row.CreatedAt}</td>
@@ -130,38 +130,11 @@ templ UserDetailCard(detail UserDetail, loc Localizer) {
 	<table class="table table-zebra">
 		<tbody>
 			<tr><td><strong>{T(loc, "users.detail.id")}</strong></td><td><code>{detail.ID}</code></td></tr>
-			@DetailRow(T(loc, "users.detail.email"), detail.Email)
+			@DetailRow("Username", detail.Username)
 			@DetailRow(T(loc, "users.detail.created"), detail.CreatedAt)
 			@DetailRow(T(loc, "users.detail.updated"), detail.UpdatedAt)
 		</tbody>
 	</table>
-	<div class="mt-6">
-		<h4>{T(loc, "users.emails.heading")}</h4>
-		if len(detail.Emails) == 0 {
-			@EmptyState(T(loc, "users.emails.empty"))
-		} else {
-			<table class="table table-zebra">
-				<thead>
-					<tr>
-						<th>{T(loc, "users.emails.email")}</th>
-						<th>{T(loc, "users.emails.verified")}</th>
-						<th>{T(loc, "users.emails.created")}</th>
-						<th>{T(loc, "users.emails.updated")}</th>
-					</tr>
-				</thead>
-				<tbody>
-					for _, row := range detail.Emails {
-						<tr>
-							<td>{row.Email}</td>
-							<td>{row.VerifiedAt}</td>
-							<td>{row.CreatedAt}</td>
-							<td>{row.UpdatedAt}</td>
-						</tr>
-					}
-				</tbody>
-			</table>
-		}
-	</div>
 }
 
 // UserPendingInvitesTab renders the pending invites tab content.

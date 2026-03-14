@@ -86,6 +86,7 @@ type DashboardDependencies struct {
 
 // ProfileDependencies contains profile feature clients.
 type ProfileDependencies struct {
+	AuthClient   profile.AuthClient
 	SocialClient profile.SocialClient
 }
 

@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
 	"time"
 
@@ -11,25 +13,29 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/oauth"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/passkey"
+	"github.com/louisbranch/fracturing.space/internal/services/auth/recoverycode"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 type fakePasskeyStore struct {
-	sessions    map[string]storage.PasskeySession
-	credentials map[string]storage.PasskeyCredential
-	putErr      error
-	getErr      error
-	listErr     error
+	sessions      map[string]storage.PasskeySession
+	credentials   map[string]storage.PasskeyCredential
+	registrations map[string]storage.RegistrationSession
+	recoveries    map[string]storage.RecoverySession
+	putErr        error
+	getErr        error
+	listErr       error
 }
 
 func newFakePasskeyStore() *fakePasskeyStore {
 	return &fakePasskeyStore{
-		sessions:    make(map[string]storage.PasskeySession),
-		credentials: make(map[string]storage.PasskeyCredential),
+		sessions:      make(map[string]storage.PasskeySession),
+		credentials:   make(map[string]storage.PasskeyCredential),
+		registrations: make(map[string]storage.RegistrationSession),
+		recoveries:    make(map[string]storage.RecoverySession),
 	}
 }
 
@@ -70,6 +76,24 @@ func (s *fakePasskeyStore) DeletePasskeyCredential(_ context.Context, credential
 	return nil
 }
 
+func (s *fakePasskeyStore) DeletePasskeyCredentialsByUser(_ context.Context, userID string) error {
+	for id, credential := range s.credentials {
+		if credential.UserID == userID {
+			delete(s.credentials, id)
+		}
+	}
+	return nil
+}
+
+func (s *fakePasskeyStore) DeletePasskeyCredentialsByUserExcept(_ context.Context, userID string, credentialID string) error {
+	for id, credential := range s.credentials {
+		if credential.UserID == userID && id != credentialID {
+			delete(s.credentials, id)
+		}
+	}
+	return nil
+}
+
 func (s *fakePasskeyStore) PutPasskeySession(_ context.Context, session storage.PasskeySession) error {
 	if s.putErr != nil {
 		return s.putErr
@@ -98,679 +122,460 @@ func (s *fakePasskeyStore) DeleteExpiredPasskeySessions(_ context.Context, _ tim
 	return nil
 }
 
+func (s *fakePasskeyStore) PutRegistrationSession(_ context.Context, session storage.RegistrationSession) error {
+	s.registrations[session.ID] = session
+	return nil
+}
+
+func (s *fakePasskeyStore) GetRegistrationSession(_ context.Context, id string) (storage.RegistrationSession, error) {
+	session, ok := s.registrations[id]
+	if !ok {
+		return storage.RegistrationSession{}, storage.ErrNotFound
+	}
+	return session, nil
+}
+
+func (s *fakePasskeyStore) DeleteRegistrationSession(_ context.Context, id string) error {
+	delete(s.registrations, id)
+	return nil
+}
+
+func (s *fakePasskeyStore) DeleteExpiredRegistrationSessions(_ context.Context, _ time.Time) error {
+	return nil
+}
+
+func (s *fakePasskeyStore) PutRecoverySession(_ context.Context, session storage.RecoverySession) error {
+	s.recoveries[session.ID] = session
+	return nil
+}
+
+func (s *fakePasskeyStore) GetRecoverySession(_ context.Context, id string) (storage.RecoverySession, error) {
+	session, ok := s.recoveries[id]
+	if !ok {
+		return storage.RecoverySession{}, storage.ErrNotFound
+	}
+	return session, nil
+}
+
+func (s *fakePasskeyStore) DeleteRecoverySession(_ context.Context, id string) error {
+	delete(s.recoveries, id)
+	return nil
+}
+
+func (s *fakePasskeyStore) DeleteExpiredRecoverySessions(_ context.Context, _ time.Time) error {
+	return nil
+}
+
 func TestBeginPasskeyRegistration_Success(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
 
 	svc := NewAuthService(userStore, passkeyStore, nil)
 	fixed := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 	svc.clock = func() time.Time { return fixed }
 	svc.passkeyIDGenerator = func() (string, error) { return "session-1", nil }
+	svc.passkeyWebAuthn = &fakePasskeyProvider{}
+	svc.passkeyInitErr = nil
+	svc.passkeyParser = &fakePasskeyParser{}
 
 	resp, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"})
 	if err != nil {
 		t.Fatalf("begin passkey registration: %v", err)
 	}
-	if resp.GetSessionId() == "" {
-		t.Fatalf("expected session id")
+	if got := resp.GetSessionId(); got != "session-1" {
+		t.Fatalf("session id = %q, want %q", got, "session-1")
 	}
 	if len(resp.GetCredentialCreationOptionsJson()) == 0 {
-		t.Fatalf("expected creation options json")
+		t.Fatal("expected creation options")
 	}
-	stored, ok := passkeyStore.sessions[resp.GetSessionId()]
-	if !ok {
-		t.Fatalf("expected stored session")
-	}
-	if stored.UserID != "user-1" {
-		t.Fatalf("stored user id = %q, want %q", stored.UserID, "user-1")
-	}
-	if stored.Kind != "registration" {
-		t.Fatalf("stored kind = %q, want %q", stored.Kind, "registration")
-	}
-	if !stored.ExpiresAt.After(fixed) {
-		t.Fatalf("expected expiry after now")
+	if stored := passkeyStore.sessions["session-1"]; stored.UserID != "user-1" || stored.Kind != string(passkey.SessionKindRegistration) {
+		t.Fatalf("stored session = %+v", stored)
 	}
 }
 
-func TestBeginPasskeyRegistration_MissingUserID(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestBeginPasskeyRegistration_NilRequest(t *testing.T) {
+func TestBeginPasskeyLogin_RequiresUsername(t *testing.T) {
 	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	_, err := svc.BeginPasskeyRegistration(context.Background(), nil)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestBeginPasskeyRegistration_NilStore(t *testing.T) {
-	svc := NewAuthService(nil, newFakePasskeyStore(), nil)
-	_, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestBeginPasskeyRegistration_NilPasskeyStore(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestBeginPasskeyRegistration_WebAuthnNil(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	svc.passkeyWebAuthn = nil
-	_, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestBeginPasskeyRegistration_UserNotFound(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{UserId: "missing"})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.NotFound)
-}
-
-func TestBeginPasskeyRegistration_StoreSessionError(t *testing.T) {
-	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	passkeyStore := newFakePasskeyStore()
-	passkeyStore.putErr = status.Error(codes.Internal, "store failed")
-
-	svc := NewAuthService(userStore, passkeyStore, nil)
 	svc.passkeyWebAuthn = &fakePasskeyProvider{}
+	svc.passkeyInitErr = nil
+	svc.passkeyParser = &fakePasskeyParser{}
 
-	_, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
+	_, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{})
+	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestBeginPasskeyRegistration_WithExistingCredentials(t *testing.T) {
+func TestBeginPasskeyLogin_Success(t *testing.T) {
 	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
+	userStore.users["user-1"] = user.User{ID: "user-1", Username: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	passkeyStore := newFakePasskeyStore()
-
 	credential := webauthn.Credential{ID: []byte("cred-1")}
-	jsonPayload, err := json.Marshal(credential)
+	payload, err := json.Marshal(credential)
 	if err != nil {
 		t.Fatalf("marshal credential: %v", err)
 	}
 	passkeyStore.credentials[encodeCredentialID(credential.ID)] = storage.PasskeyCredential{
 		CredentialID:   encodeCredentialID(credential.ID),
 		UserID:         "user-1",
-		CredentialJSON: string(jsonPayload),
+		CredentialJSON: string(payload),
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
-
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	svc.passkeyWebAuthn = &fakePasskeyProvider{}
-	svc.passkeyIDGenerator = func() (string, error) { return "session-3", nil }
-
-	resp, err := svc.BeginPasskeyRegistration(context.Background(), &authv1.BeginPasskeyRegistrationRequest{UserId: "user-1"})
-	if err != nil {
-		t.Fatalf("begin passkey registration: %v", err)
-	}
-	if resp.GetSessionId() == "" {
-		t.Fatalf("expected session id")
-	}
-}
-
-func TestBeginPasskeyLogin_Discoverable(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
 
 	svc := NewAuthService(userStore, passkeyStore, nil)
 	svc.passkeyIDGenerator = func() (string, error) { return "session-2", nil }
+	svc.passkeyWebAuthn = &fakePasskeyProvider{}
+	svc.passkeyInitErr = nil
+	svc.passkeyParser = &fakePasskeyParser{}
 
-	resp, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{})
+	resp, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{Username: "alpha"})
 	if err != nil {
 		t.Fatalf("begin passkey login: %v", err)
 	}
-	if resp.GetSessionId() == "" {
-		t.Fatalf("expected session id")
+	if got := resp.GetSessionId(); got != "session-2" {
+		t.Fatalf("session id = %q, want %q", got, "session-2")
 	}
-	if len(resp.GetCredentialRequestOptionsJson()) == 0 {
-		t.Fatalf("expected request options json")
-	}
-	stored, ok := passkeyStore.sessions[resp.GetSessionId()]
-	if !ok {
-		t.Fatalf("expected stored session")
-	}
-	if stored.UserID != "" {
-		t.Fatalf("stored user id = %q, want empty", stored.UserID)
-	}
-	if stored.Kind != "login" {
-		t.Fatalf("stored kind = %q, want %q", stored.Kind, "login")
+	if stored := passkeyStore.sessions["session-2"]; stored.UserID != "user-1" || stored.Kind != string(passkey.SessionKindLogin) {
+		t.Fatalf("stored session = %+v", stored)
 	}
 }
 
-func TestBeginPasskeyLogin_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	_, err := svc.BeginPasskeyLogin(context.Background(), nil)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestBeginPasskeyLogin_NilStore(t *testing.T) {
-	svc := NewAuthService(nil, newFakePasskeyStore(), nil)
-	_, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestBeginPasskeyLogin_NilPasskeyStore(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestBeginPasskeyLogin_WebAuthnNil(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	svc.passkeyWebAuthn = nil
-	_, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestBeginPasskeyLogin_UserNotFound(t *testing.T) {
+func TestBeginAccountRegistration_Success(t *testing.T) {
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
 	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{UserId: "missing"})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.NotFound)
-}
-
-func TestBeginPasskeyLogin_StoreSessionError(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	passkeyStore.putErr = status.Error(codes.Internal, "store failed")
-
-	svc := NewAuthService(userStore, passkeyStore, nil)
+	svc.idGenerator = func() (string, error) { return "user-123", nil }
+	svc.passkeyIDGenerator = func() (string, error) { return "reg-1", nil }
 	svc.passkeyWebAuthn = &fakePasskeyProvider{}
+	svc.passkeyInitErr = nil
 
-	_, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{})
-	if err == nil {
-		t.Fatalf("expected error")
+	resp, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "  ALICE  "})
+	if err != nil {
+		t.Fatalf("begin account registration: %v", err)
+	}
+	if got := resp.GetSessionId(); got != "reg-1" {
+		t.Fatalf("session id = %q, want %q", got, "reg-1")
+	}
+	registration := passkeyStore.registrations["reg-1"]
+	if registration.UserID != "user-123" {
+		t.Fatalf("registration user id = %q, want %q", registration.UserID, "user-123")
+	}
+	if registration.Username != "alice" {
+		t.Fatalf("registration username = %q, want %q", registration.Username, "alice")
 	}
 }
 
-func TestBeginPasskeyLogin_WithUserID(t *testing.T) {
-	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	passkeyStore := newFakePasskeyStore()
-
-	credential := webauthn.Credential{ID: []byte("cred-1")}
-	jsonPayload, err := json.Marshal(credential)
-	if err != nil {
-		t.Fatalf("marshal credential: %v", err)
-	}
-	passkeyStore.credentials[encodeCredentialID(credential.ID)] = storage.PasskeyCredential{
-		CredentialID:   encodeCredentialID(credential.ID),
-		UserID:         "user-1",
-		CredentialJSON: string(jsonPayload),
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+func TestBeginAccountRegistration_DeletesExpiredReservationAndSucceeds(t *testing.T) {
+	store := openTempAuthStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	if err := store.PutRegistrationSession(context.Background(), storage.RegistrationSession{
+		ID:        "expired-reg",
+		UserID:    "user-old",
+		Username:  "alice",
+		ExpiresAt: now.Add(-time.Minute),
+		CreatedAt: now.Add(-2 * time.Minute),
+		UpdatedAt: now.Add(-2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("put expired registration: %v", err)
 	}
 
-	svc := NewAuthService(userStore, passkeyStore, nil)
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return now }
+	svc.idGenerator = func() (string, error) { return "user-123", nil }
+	svc.passkeyIDGenerator = func() (string, error) { return "reg-1", nil }
 	svc.passkeyWebAuthn = &fakePasskeyProvider{}
-	svc.passkeyIDGenerator = func() (string, error) { return "session-4", nil }
+	svc.passkeyInitErr = nil
 
-	resp, err := svc.BeginPasskeyLogin(context.Background(), &authv1.BeginPasskeyLoginRequest{UserId: "user-1"})
+	resp, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "alice"})
 	if err != nil {
-		t.Fatalf("begin passkey login: %v", err)
+		t.Fatalf("begin account registration: %v", err)
 	}
-	if resp.GetSessionId() == "" {
-		t.Fatalf("expected session id")
+	if got := resp.GetSessionId(); got != "reg-1" {
+		t.Fatalf("session id = %q, want %q", got, "reg-1")
+	}
+	if _, err := store.GetRegistrationSession(context.Background(), "expired-reg"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected expired reservation cleanup, got %v", err)
 	}
 }
 
-func TestFinishPasskeyLogin_MissingSession(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.FinishPasskeyLogin(context.Background(), &authv1.FinishPasskeyLoginRequest{SessionId: "missing", CredentialResponseJson: []byte("{}")})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.NotFound)
-}
-
-func TestFinishPasskeyLogin_MissingFields(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	_, err := svc.FinishPasskeyLogin(context.Background(), &authv1.FinishPasskeyLoginRequest{SessionId: ""})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestFinishPasskeyLogin_InvalidCredentialJSON(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "login",
-		SessionJSON: "{}",
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
+func TestBeginAccountRegistration_ReservationFailureDoesNotLeakPasskeySession(t *testing.T) {
+	store := openTempAuthStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	if err := store.PutRegistrationSession(context.Background(), storage.RegistrationSession{
+		ID:        "active-reg",
+		UserID:    "user-old",
+		Username:  "alice",
+		ExpiresAt: now.Add(time.Hour),
+		CreatedAt: now,
+		UpdatedAt: now,
+	}); err != nil {
+		t.Fatalf("put active registration: %v", err)
 	}
 
-	_, err := svc.FinishPasskeyLogin(context.Background(), &authv1.FinishPasskeyLoginRequest{
-		SessionId:              "session-1",
-		CredentialResponseJson: []byte("not-json"),
-	})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return now }
+	svc.idGenerator = func() (string, error) { return "user-123", nil }
+	svc.passkeyIDGenerator = func() (string, error) { return "reg-1", nil }
+	svc.passkeyWebAuthn = &fakePasskeyProvider{}
+	svc.passkeyInitErr = nil
 
-func TestFinishPasskeyLogin_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	_, err := svc.FinishPasskeyLogin(context.Background(), nil)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestFinishPasskeyLogin_NilPasskeyStore(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.FinishPasskeyLogin(context.Background(), &authv1.FinishPasskeyLoginRequest{SessionId: "session", CredentialResponseJson: []byte("{}")})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
+	_, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "alice"})
 	assertStatusCode(t, err, codes.Internal)
+	if _, err := store.GetPasskeySession(context.Background(), "reg-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected no leaked passkey session, got %v", err)
+	}
 }
 
-func TestFinishPasskeyRegistration_MissingSession(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.FinishPasskeyRegistration(context.Background(), &authv1.FinishPasskeyRegistrationRequest{SessionId: "missing", CredentialResponseJson: []byte("{}")})
-	if err == nil {
-		t.Fatalf("expected error")
+func TestFinishAccountRegistration_Success(t *testing.T) {
+	store := openTempAuthStore(t)
+	svc := NewAuthService(store, store, nil)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	ids := []string{"user-1", "event-1", "ws-1"}
+	svc.idGenerator = func() (string, error) {
+		id := ids[0]
+		ids = ids[1:]
+		return id, nil
 	}
-	assertStatusCode(t, err, codes.NotFound)
-}
+	svc.passkeyIDGenerator = func() (string, error) { return "reg-1", nil }
+	svc.clock = func() time.Time { return now }
+	svc.randReader = bytes.NewReader(bytes.Repeat([]byte{1}, 64))
+	svc.passkeyWebAuthn = &fakePasskeyProvider{credential: &webauthn.Credential{ID: []byte("cred-1")}}
+	svc.passkeyInitErr = nil
+	svc.passkeyParser = &fakePasskeyParser{creation: &protocol.ParsedCredentialCreationData{}}
 
-func TestFinishPasskeyRegistration_MissingFields(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	_, err := svc.FinishPasskeyRegistration(context.Background(), &authv1.FinishPasskeyRegistrationRequest{SessionId: ""})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestFinishPasskeyRegistration_InvalidCredentialJSON(t *testing.T) {
-	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "registration",
-		UserID:      "user-1",
-		SessionJSON: "{}",
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
+	beginResp, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "alpha"})
+	if err != nil {
+		t.Fatalf("begin account registration: %v", err)
 	}
 
-	_, err := svc.FinishPasskeyRegistration(context.Background(), &authv1.FinishPasskeyRegistrationRequest{
-		SessionId:              "session-1",
-		CredentialResponseJson: []byte("not-json"),
+	finishResp, err := svc.FinishAccountRegistration(context.Background(), &authv1.FinishAccountRegistrationRequest{
+		SessionId:              beginResp.GetSessionId(),
+		CredentialResponseJson: []byte("{}"),
 	})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestFinishPasskeyRegistration_NilRequest(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	_, err := svc.FinishPasskeyRegistration(context.Background(), nil)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestFinishPasskeyRegistration_NilPasskeyStore(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
-	_, err := svc.FinishPasskeyRegistration(context.Background(), &authv1.FinishPasskeyRegistrationRequest{SessionId: "session", CredentialResponseJson: []byte("{}")})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestLoadPasskeySessionKindMismatch(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "registration",
-		SessionJSON: "{}",
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
-	}
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.loadPasskeySession(context.Background(), "session-1", passkey.SessionKindLogin)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-}
-
-func TestLoadPasskeySessionExpired(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "login",
-		SessionJSON: "{}",
-		ExpiresAt:   time.Date(2026, 2, 12, 10, 0, 0, 0, time.UTC),
-	}
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	svc.clock = func() time.Time { return time.Date(2026, 2, 12, 10, 1, 0, 0, time.UTC) }
-
-	_, err := svc.loadPasskeySession(context.Background(), "session-1", passkey.SessionKindLogin)
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.InvalidArgument)
-	if _, ok := passkeyStore.sessions["session-1"]; ok {
-		t.Fatalf("expected session to be deleted")
-	}
-}
-
-func TestStorePasskeyCredential(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	svc.clock = func() time.Time { return time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC) }
-
-	credential := webauthn.Credential{ID: []byte("cred-1")}
-	if err := svc.storePasskeyCredential(context.Background(), "user-1", credential, false); err != nil {
-		t.Fatalf("store credential: %v", err)
-	}
-	stored, ok := passkeyStore.credentials[encodeCredentialID(credential.ID)]
-	if !ok {
-		t.Fatalf("expected credential stored")
-	}
-	if stored.LastUsedAt != nil {
-		t.Fatalf("expected nil last used at")
-	}
-}
-
-func TestStorePasskeyCredentialUsedMissing(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	credential := webauthn.Credential{ID: []byte("cred-1")}
-	if err := svc.storePasskeyCredential(context.Background(), "user-1", credential, true); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestDecodeStoredCredentialsInvalidJSON(t *testing.T) {
-	_, err := decodeStoredCredentials([]storage.PasskeyCredential{{
-		CredentialID:   "cred-1",
-		CredentialJSON: "not-json",
-	}})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestDefaultPasskeyParserErrors(t *testing.T) {
-	parser := defaultPasskeyParser{}
-	if _, err := parser.ParseCredentialCreationResponseBytes([]byte("not-json")); err == nil {
-		t.Fatalf("expected creation parse error")
-	}
-	if _, err := parser.ParseCredentialRequestResponseBytes([]byte("not-json")); err == nil {
-		t.Fatalf("expected request parse error")
-	}
-}
-
-func TestPasskeyUserMethods(t *testing.T) {
-	credential := webauthn.Credential{ID: []byte("cred-1")}
-	user := passkeyUser{user: user.User{ID: "user-1", Email: "alpha"}, credentials: []webauthn.Credential{credential}}
-	if string(user.WebAuthnID()) != "user-1" {
-		t.Fatalf("expected WebAuthnID")
-	}
-	if user.WebAuthnName() != "user-1" {
-		t.Fatalf("expected WebAuthnName to be user id")
-	}
-	if user.WebAuthnDisplayName() != "alpha" {
-		t.Fatalf("expected WebAuthnDisplayName")
-	}
-	if user.WebAuthnIcon() != "" {
-		t.Fatalf("expected empty WebAuthnIcon")
-	}
-	if len(user.WebAuthnCredentials()) != 1 {
-		t.Fatalf("expected credentials")
-	}
-}
-
-func TestLoadPasskeyUser(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	base := user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	userStore.users["user-1"] = base
-
-	credential := webauthn.Credential{ID: []byte("cred-1")}
-	jsonPayload, err := json.Marshal(credential)
 	if err != nil {
-		t.Fatalf("marshal credential: %v", err)
+		t.Fatalf("finish account registration: %v", err)
 	}
-	passkeyStore.credentials[encodeCredentialID(credential.ID)] = storage.PasskeyCredential{
-		CredentialID:   encodeCredentialID(credential.ID),
-		UserID:         "user-1",
-		CredentialJSON: string(jsonPayload),
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+	if got := finishResp.GetUser().GetUsername(); got != "alpha" {
+		t.Fatalf("username = %q, want %q", got, "alpha")
+	}
+	if finishResp.GetRecoveryCode() == "" {
+		t.Fatal("expected recovery code")
+	}
+	if finishResp.GetSession().GetId() != "ws-1" {
+		t.Fatalf("web session id = %q, want %q", finishResp.GetSession().GetId(), "ws-1")
 	}
 
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	loaded, err := svc.loadPasskeyUser(context.Background(), base)
+	storedUser, err := store.GetUser(context.Background(), "user-1")
 	if err != nil {
-		t.Fatalf("load passkey user: %v", err)
+		t.Fatalf("get user: %v", err)
 	}
-	if len(loaded.credentials) != 1 {
-		t.Fatalf("expected credential loaded")
+	if !recoverycode.Verify(finishResp.GetRecoveryCode(), storedUser.RecoveryCodeHash) {
+		t.Fatal("expected stored recovery hash to verify")
 	}
-}
-
-func TestStorePasskeySession(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	svc.clock = func() time.Time { return time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC) }
-
-	sessionData := webauthn.SessionData{}
-	if err := svc.storePasskeySession(context.Background(), "session-1", passkey.SessionKindLogin, "user-1", &sessionData); err != nil {
-		t.Fatalf("store session: %v", err)
+	if _, err := store.GetPasskeyCredential(context.Background(), encodeCredentialID([]byte("cred-1"))); err != nil {
+		t.Fatalf("get stored passkey: %v", err)
 	}
-	stored, ok := passkeyStore.sessions["session-1"]
-	if !ok {
-		t.Fatalf("expected stored session")
-	}
-	if stored.Kind != "login" {
-		t.Fatalf("unexpected kind")
-	}
-}
-
-func TestPasskeyUserHandler(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	base := user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	userStore.users["user-1"] = base
-
-	credential := webauthn.Credential{ID: []byte("cred-1")}
-	jsonPayload, err := json.Marshal(credential)
+	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 10, now, time.Minute)
 	if err != nil {
-		t.Fatalf("marshal credential: %v", err)
+		t.Fatalf("lease signup outbox events: %v", err)
 	}
-	passkeyStore.credentials[encodeCredentialID(credential.ID)] = storage.PasskeyCredential{
-		CredentialID:   encodeCredentialID(credential.ID),
-		UserID:         "user-1",
-		CredentialJSON: string(jsonPayload),
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
+	if len(leased) != 1 {
+		t.Fatalf("leased events len = %d, want 1", len(leased))
 	}
-
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	handler := svc.passkeyUserHandler(context.Background())
-	userResult, err := handler(nil, []byte("user-1"))
-	if err != nil {
-		t.Fatalf("handler error: %v", err)
-	}
-	if userResult == nil {
-		t.Fatalf("expected user")
+	if leased[0].EventType != "auth.signup_completed" {
+		t.Fatalf("event type = %q, want %q", leased[0].EventType, "auth.signup_completed")
 	}
 }
 
-func TestPasskeyUserHandlerMissingUserHandle(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	handler := svc.passkeyUserHandler(context.Background())
-	if _, err := handler(nil, nil); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestStorePasskeyCredentialSetsLastUsedAt(t *testing.T) {
+func TestFinishAccountRegistration_PersistFailureLeavesRegistrationState(t *testing.T) {
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
 	svc := NewAuthService(userStore, passkeyStore, nil)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	userStore.signupPutErr = errors.New("boom")
+	ids := []string{"user-1", "ws-1", "event-1"}
+	svc.idGenerator = func() (string, error) {
+		id := ids[0]
+		ids = ids[1:]
+		return id, nil
+	}
+	svc.passkeyIDGenerator = func() (string, error) { return "reg-1", nil }
 	svc.clock = func() time.Time { return now }
+	svc.randReader = bytes.NewReader(bytes.Repeat([]byte{1}, 64))
+	svc.passkeyWebAuthn = &fakePasskeyProvider{credential: &webauthn.Credential{ID: []byte("cred-1")}}
+	svc.passkeyInitErr = nil
+	svc.passkeyParser = &fakePasskeyParser{creation: &protocol.ParsedCredentialCreationData{}}
 
-	credential := webauthn.Credential{ID: []byte("cred-1")}
-	passkeyStore.credentials[encodeCredentialID(credential.ID)] = storage.PasskeyCredential{
-		CredentialID:   encodeCredentialID(credential.ID),
+	beginResp, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "alpha"})
+	if err != nil {
+		t.Fatalf("begin account registration: %v", err)
+	}
+
+	_, err = svc.FinishAccountRegistration(context.Background(), &authv1.FinishAccountRegistrationRequest{
+		SessionId:              beginResp.GetSessionId(),
+		CredentialResponseJson: []byte("{}"),
+	})
+	assertStatusCode(t, err, codes.Internal)
+	if _, ok := userStore.users["user-1"]; ok {
+		t.Fatal("expected user persistence rollback")
+	}
+	if _, ok := passkeyStore.registrations["reg-1"]; !ok {
+		t.Fatal("expected registration session to remain for retry")
+	}
+	if _, ok := passkeyStore.sessions["reg-1"]; !ok {
+		t.Fatal("expected passkey session to remain for retry")
+	}
+}
+
+func TestBeginAccountRecovery_Success(t *testing.T) {
+	store := openTempAuthStore(t)
+	code, hash, err := recoverycode.Generate(bytes.NewReader(bytes.Repeat([]byte{2}, 64)))
+	if err != nil {
+		t.Fatalf("generate recovery code: %v", err)
+	}
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	if err := store.PutUser(context.Background(), user.User{
+		ID:               "user-1",
+		Username:         "alpha",
+		RecoveryCodeHash: hash,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return now }
+	svc.idGenerator = func() (string, error) { return "recovery-1", nil }
+
+	resp, err := svc.BeginAccountRecovery(context.Background(), &authv1.BeginAccountRecoveryRequest{
+		Username:     "alpha",
+		RecoveryCode: code,
+	})
+	if err != nil {
+		t.Fatalf("begin account recovery: %v", err)
+	}
+	if got := resp.GetRecoverySessionId(); got != "recovery-1" {
+		t.Fatalf("recovery session id = %q, want %q", got, "recovery-1")
+	}
+
+	storedUser, err := store.GetUser(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("get user: %v", err)
+	}
+	if storedUser.RecoveryReservedSessionID != "recovery-1" {
+		t.Fatalf("reserved recovery session = %q, want %q", storedUser.RecoveryReservedSessionID, "recovery-1")
+	}
+}
+
+func TestFinishRecoveryPasskeyRegistration_Success(t *testing.T) {
+	store := openTempAuthStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	oldCode, oldHash, err := recoverycode.Generate(bytes.NewReader(bytes.Repeat([]byte{3}, 64)))
+	if err != nil {
+		t.Fatalf("generate recovery code: %v", err)
+	}
+	userRecord := user.User{
+		ID:               "user-1",
+		Username:         "alpha",
+		RecoveryCodeHash: oldHash,
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	if err := store.PutUser(context.Background(), userRecord); err != nil {
+		t.Fatalf("put user: %v", err)
+	}
+	if err := store.PutWebSession(context.Background(), storage.WebSession{
+		ID:        "ws-old",
+		UserID:    "user-1",
+		CreatedAt: now,
+		ExpiresAt: now.Add(time.Hour),
+	}); err != nil {
+		t.Fatalf("put web session: %v", err)
+	}
+	oldCredential := webauthn.Credential{ID: []byte("old-cred")}
+	oldPayload, err := json.Marshal(oldCredential)
+	if err != nil {
+		t.Fatalf("marshal old credential: %v", err)
+	}
+	if err := store.PutPasskeyCredential(context.Background(), storage.PasskeyCredential{
+		CredentialID:   encodeCredentialID(oldCredential.ID),
 		UserID:         "user-1",
-		CredentialJSON: "{}",
-		CreatedAt:      now.Add(-time.Hour),
-		UpdatedAt:      now.Add(-time.Hour),
+		CredentialJSON: string(oldPayload),
+		CreatedAt:      now,
+		UpdatedAt:      now,
+	}); err != nil {
+		t.Fatalf("put old credential: %v", err)
 	}
 
-	if err := svc.storePasskeyCredential(context.Background(), "user-1", credential, true); err != nil {
-		t.Fatalf("store credential: %v", err)
+	svc := NewAuthService(store, store, nil)
+	ids := []string{"recovery-1", "ws-new"}
+	svc.idGenerator = func() (string, error) {
+		id := ids[0]
+		ids = ids[1:]
+		return id, nil
 	}
-	stored := passkeyStore.credentials[encodeCredentialID(credential.ID)]
-	if stored.LastUsedAt == nil {
-		t.Fatalf("expected last used at")
+	svc.passkeyIDGenerator = func() (string, error) { return "passkey-1", nil }
+	svc.clock = func() time.Time { return now }
+	svc.randReader = bytes.NewReader(bytes.Repeat([]byte{4}, 64))
+	svc.passkeyWebAuthn = &fakePasskeyProvider{credential: &webauthn.Credential{ID: []byte("new-cred")}}
+	svc.passkeyInitErr = nil
+	svc.passkeyParser = &fakePasskeyParser{creation: &protocol.ParsedCredentialCreationData{}}
+
+	beginRecovery, err := svc.BeginAccountRecovery(context.Background(), &authv1.BeginAccountRecoveryRequest{
+		Username:     "alpha",
+		RecoveryCode: oldCode,
+	})
+	if err != nil {
+		t.Fatalf("begin account recovery: %v", err)
 	}
-}
-
-func TestStorePasskeySessionRequiresSession(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	if err := svc.storePasskeySession(context.Background(), "session-1", passkey.SessionKindLogin, "user-1", nil); err == nil {
-		t.Fatalf("expected error")
+	beginPasskey, err := svc.BeginRecoveryPasskeyRegistration(context.Background(), &authv1.BeginRecoveryPasskeyRegistrationRequest{
+		RecoverySessionId: beginRecovery.GetRecoverySessionId(),
+	})
+	if err != nil {
+		t.Fatalf("begin recovery passkey registration: %v", err)
 	}
-}
-
-func TestLoadPasskeySessionInvalidJSON(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "login",
-		SessionJSON: "not-json",
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
+	finishResp, err := svc.FinishRecoveryPasskeyRegistration(context.Background(), &authv1.FinishRecoveryPasskeyRegistrationRequest{
+		RecoverySessionId:      beginRecovery.GetRecoverySessionId(),
+		SessionId:              beginPasskey.GetSessionId(),
+		CredentialResponseJson: []byte("{}"),
+	})
+	if err != nil {
+		t.Fatalf("finish recovery passkey registration: %v", err)
 	}
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.loadPasskeySession(context.Background(), "session-1", passkey.SessionKindLogin)
-	if err == nil {
-		t.Fatalf("expected error")
+	if finishResp.GetSession().GetId() != "ws-new" {
+		t.Fatalf("new web session id = %q, want %q", finishResp.GetSession().GetId(), "ws-new")
 	}
-}
-
-func TestLoadPasskeyUserListError(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	passkeyStore.listErr = status.Error(codes.Internal, "list failed")
-	svc := NewAuthService(userStore, passkeyStore, nil)
-
-	_, err := svc.loadPasskeyUser(context.Background(), user.User{ID: "user-1"})
-	if err == nil {
-		t.Fatalf("expected error")
+	if finishResp.GetRecoveryCode() == "" {
+		t.Fatal("expected rotated recovery code")
 	}
-}
 
-func TestFinishPasskeyRegistrationParserMissing(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	svc.passkeyParser = nil
-
-	_, err := svc.FinishPasskeyRegistration(context.Background(), &authv1.FinishPasskeyRegistrationRequest{SessionId: "session", CredentialResponseJson: []byte("{}")})
-	if err == nil {
-		t.Fatalf("expected error")
+	storedUser, err := store.GetUser(context.Background(), "user-1")
+	if err != nil {
+		t.Fatalf("get user: %v", err)
 	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestFinishPasskeyLoginParserMissing(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	svc.passkeyParser = nil
-
-	_, err := svc.FinishPasskeyLogin(context.Background(), &authv1.FinishPasskeyLoginRequest{SessionId: "session", CredentialResponseJson: []byte("{}")})
-	if err == nil {
-		t.Fatalf("expected error")
+	if recoverycode.Verify(oldCode, storedUser.RecoveryCodeHash) {
+		t.Fatal("expected old recovery code to be invalid after rotation")
 	}
-	assertStatusCode(t, err, codes.Internal)
+	if !recoverycode.Verify(finishResp.GetRecoveryCode(), storedUser.RecoveryCodeHash) {
+		t.Fatal("expected new recovery code to verify")
+	}
+	if _, err := store.GetPasskeyCredential(context.Background(), encodeCredentialID([]byte("old-cred"))); err != storage.ErrNotFound {
+		t.Fatalf("old credential err = %v, want not found", err)
+	}
+	newCredential, err := store.GetPasskeyCredential(context.Background(), encodeCredentialID([]byte("new-cred")))
+	if err != nil {
+		t.Fatalf("get new credential: %v", err)
+	}
+	if newCredential.UserID != "user-1" {
+		t.Fatalf("new credential user id = %q, want %q", newCredential.UserID, "user-1")
+	}
+	webSession, err := store.GetWebSession(context.Background(), "ws-old")
+	if err != nil {
+		t.Fatalf("get old web session: %v", err)
+	}
+	if webSession.RevokedAt == nil {
+		t.Fatal("expected old web session revoked")
+	}
 }
 
 func TestAttachPendingAuthorizationExpired(t *testing.T) {
@@ -788,150 +593,15 @@ func TestAttachPendingAuthorizationExpired(t *testing.T) {
 
 	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), oauthStore)
 	if err := svc.attachPendingAuthorization(context.Background(), pendingID, "user-1"); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestAttachPendingAuthorizationNoStore(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
-	if err := svc.attachPendingAuthorization(context.Background(), "pending", "user-1"); err == nil {
-		t.Fatalf("expected error")
-	}
-}
-
-func TestFinishPasskeyRegistration_Success(t *testing.T) {
-	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	passkeyStore := newFakePasskeyStore()
-
-	store := openTempOAuthStore(t)
-	svc := NewAuthService(userStore, passkeyStore, store)
-	svc.passkeyWebAuthn = &fakePasskeyProvider{credential: &webauthn.Credential{ID: []byte("cred-1")}}
-	svc.passkeyParser = &fakePasskeyParser{creation: &protocol.ParsedCredentialCreationData{}}
-
-	sessionData := webauthn.SessionData{}
-	payload, err := json.Marshal(sessionData)
-	if err != nil {
-		t.Fatalf("marshal session: %v", err)
-	}
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "registration",
-		UserID:      "user-1",
-		SessionJSON: string(payload),
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
-	}
-
-	resp, err := svc.FinishPasskeyRegistration(context.Background(), &authv1.FinishPasskeyRegistrationRequest{
-		SessionId:              "session-1",
-		CredentialResponseJson: []byte("{}"),
-	})
-	if err != nil {
-		t.Fatalf("finish passkey registration: %v", err)
-	}
-	if resp.GetCredentialId() == "" {
-		t.Fatalf("expected credential id")
-	}
-	if _, ok := passkeyStore.credentials[resp.GetCredentialId()]; !ok {
-		t.Fatalf("expected credential stored")
-	}
-	if _, ok := passkeyStore.sessions["session-1"]; ok {
-		t.Fatalf("expected session deleted")
-	}
-	if len(userStore.outboxEvents) != 0 {
-		t.Fatalf("expected no outbox event from passkey completion, got %d", len(userStore.outboxEvents))
-	}
-}
-
-func TestFinishPasskeyRegistrationMissingUserID(t *testing.T) {
-	userStore := newFakeUserStore()
-	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
-	svc.passkeyWebAuthn = &fakePasskeyProvider{}
-	svc.passkeyParser = &fakePasskeyParser{creation: &protocol.ParsedCredentialCreationData{}}
-
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "registration",
-		SessionJSON: "{}",
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
-	}
-
-	_, err := svc.FinishPasskeyRegistration(context.Background(), &authv1.FinishPasskeyRegistrationRequest{
-		SessionId:              "session-1",
-		CredentialResponseJson: []byte("{}"),
-	})
-	if err == nil {
-		t.Fatalf("expected error")
-	}
-	assertStatusCode(t, err, codes.Internal)
-}
-
-func TestFinishPasskeyLogin_AttachesPendingAuthorization(t *testing.T) {
-	userStore := newFakeUserStore()
-	userStore.users["user-1"] = user.User{ID: "user-1", Email: "alpha", CreatedAt: time.Now(), UpdatedAt: time.Now()}
-	passkeyStore := newFakePasskeyStore()
-
-	oauthStore := openTempOAuthStore(t)
-	pendingID, err := oauthStore.CreatePendingAuthorization(oauth.AuthorizationRequest{
-		ResponseType:        "code",
-		ClientID:            "test-client",
-		RedirectURI:         "http://localhost:5555/callback",
-		CodeChallenge:       "challenge",
-		CodeChallengeMethod: "S256",
-	}, time.Minute)
-	if err != nil {
-		t.Fatalf("create pending: %v", err)
-	}
-
-	svc := NewAuthService(userStore, passkeyStore, oauthStore)
-	svc.passkeyWebAuthn = &fakePasskeyProvider{
-		loginUser:  &passkeyUser{user: userStore.users["user-1"]},
-		credential: &webauthn.Credential{ID: []byte("cred-1")},
-	}
-	svc.passkeyParser = &fakePasskeyParser{assertion: &protocol.ParsedCredentialAssertionData{}}
-	passkeyStore.credentials[encodeCredentialID([]byte("cred-1"))] = storage.PasskeyCredential{
-		CredentialID:   encodeCredentialID([]byte("cred-1")),
-		UserID:         "user-1",
-		CredentialJSON: "{}",
-		CreatedAt:      time.Now(),
-		UpdatedAt:      time.Now(),
-	}
-
-	sessionData := webauthn.SessionData{}
-	payload, err := json.Marshal(sessionData)
-	if err != nil {
-		t.Fatalf("marshal session: %v", err)
-	}
-	passkeyStore.sessions["session-1"] = storage.PasskeySession{
-		ID:          "session-1",
-		Kind:        "login",
-		UserID:      "user-1",
-		SessionJSON: string(payload),
-		ExpiresAt:   time.Now().Add(5 * time.Minute),
-	}
-
-	resp, err := svc.FinishPasskeyLogin(context.Background(), &authv1.FinishPasskeyLoginRequest{
-		SessionId:              "session-1",
-		CredentialResponseJson: []byte("{}"),
-		PendingId:              pendingID,
-	})
-	if err != nil {
-		t.Fatalf("finish passkey login: %v", err)
-	}
-	if resp.GetCredentialId() == "" {
-		t.Fatalf("expected credential id")
-	}
-	if pending, err := oauthStore.GetPendingAuthorization(pendingID); err != nil || pending == nil || pending.UserID != "user-1" {
-		t.Fatalf("expected pending authorization updated, got %v", err)
+		t.Fatal("expected error")
 	}
 }
 
 type fakePasskeyProvider struct {
 	credential           *webauthn.Credential
-	loginUser            webauthn.User
 	beginRegistrationErr error
 	beginLoginErr        error
+	validateLoginErr     error
 }
 
 func (f *fakePasskeyProvider) BeginRegistration(user webauthn.User, opts ...webauthn.RegistrationOption) (*protocol.CredentialCreation, *webauthn.SessionData, error) {
@@ -955,22 +625,14 @@ func (f *fakePasskeyProvider) BeginLogin(user webauthn.User, opts ...webauthn.Lo
 	return &protocol.CredentialAssertion{}, &webauthn.SessionData{}, nil
 }
 
-func (f *fakePasskeyProvider) BeginDiscoverableLogin(opts ...webauthn.LoginOption) (*protocol.CredentialAssertion, *webauthn.SessionData, error) {
-	if f.beginLoginErr != nil {
-		return nil, nil, f.beginLoginErr
+func (f *fakePasskeyProvider) ValidateLogin(user webauthn.User, session webauthn.SessionData, response *protocol.ParsedCredentialAssertionData) (*webauthn.Credential, error) {
+	if f.validateLoginErr != nil {
+		return nil, f.validateLoginErr
 	}
-	return &protocol.CredentialAssertion{}, &webauthn.SessionData{}, nil
-}
-
-func (f *fakePasskeyProvider) ValidatePasskeyLogin(handler webauthn.DiscoverableUserHandler, session webauthn.SessionData, response *protocol.ParsedCredentialAssertionData) (webauthn.User, *webauthn.Credential, error) {
-	if f.loginUser == nil {
-		return nil, nil, status.Error(codes.Unauthenticated, "missing user")
+	if f.credential != nil {
+		return f.credential, nil
 	}
-	credential := f.credential
-	if credential == nil {
-		credential = &webauthn.Credential{ID: []byte("cred")}
-	}
-	return f.loginUser, credential, nil
+	return &webauthn.Credential{ID: []byte("cred")}, nil
 }
 
 type fakePasskeyParser struct {

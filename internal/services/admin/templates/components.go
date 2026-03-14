@@ -35,8 +35,8 @@ func userDetailBreadcrumbLabel(view UserDetailPageView, loc Localizer) string {
 	if view.Detail == nil {
 		return T(loc, "users.detail.heading")
 	}
-	if strings.TrimSpace(view.Detail.Email) != "" {
-		return view.Detail.Email
+	if strings.TrimSpace(view.Detail.Username) != "" {
+		return view.Detail.Username
 	}
 	return strings.TrimSpace(view.Detail.ID)
 }

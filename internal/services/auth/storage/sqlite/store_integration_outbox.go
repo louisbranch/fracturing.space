@@ -16,7 +16,7 @@ func (s *Store) EnqueueIntegrationOutboxEvent(ctx context.Context, event storage
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
+		return fmt.Errorf("Storage is not configured.")
 	}
 	return enqueueIntegrationOutboxEvent(ctx, s.sqlDB, event)
 }
@@ -27,12 +27,12 @@ func (s *Store) GetIntegrationOutboxEvent(ctx context.Context, id string) (stora
 		return storage.IntegrationOutboxEvent{}, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("storage is not configured")
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Storage is not configured.")
 	}
 
 	id = strings.TrimSpace(id)
 	if id == "" {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("event id is required")
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Event ID is required.")
 	}
 
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -58,7 +58,7 @@ WHERE id = ?
 		if errors.Is(err, sql.ErrNoRows) {
 			return storage.IntegrationOutboxEvent{}, storage.ErrNotFound
 		}
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("get integration outbox event: %w", err)
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Get integration outbox event: %w", err)
 	}
 	return event, nil
 }
@@ -69,18 +69,18 @@ func (s *Store) LeaseIntegrationOutboxEvents(ctx context.Context, consumer strin
 		return nil, err
 	}
 	if s == nil || s.sqlDB == nil {
-		return nil, fmt.Errorf("storage is not configured")
+		return nil, fmt.Errorf("Storage is not configured.")
 	}
 
 	consumer = strings.TrimSpace(consumer)
 	if consumer == "" {
-		return nil, fmt.Errorf("consumer is required")
+		return nil, fmt.Errorf("Consumer is required.")
 	}
 	if limit <= 0 {
-		return nil, fmt.Errorf("limit must be greater than zero")
+		return nil, fmt.Errorf("Limit must be greater than zero.")
 	}
 	if leaseTTL <= 0 {
-		return nil, fmt.Errorf("lease ttl must be greater than zero")
+		return nil, fmt.Errorf("Lease TTL must be greater than zero.")
 	}
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -90,7 +90,7 @@ func (s *Store) LeaseIntegrationOutboxEvents(ctx context.Context, consumer strin
 
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, fmt.Errorf("start lease transaction: %w", err)
+		return nil, fmt.Errorf("Start lease transaction: %w", err)
 	}
 	defer func() {
 		_ = tx.Rollback()
@@ -114,27 +114,27 @@ LIMIT ?
 		limit,
 	)
 	if err != nil {
-		return nil, fmt.Errorf("select lease candidates: %w", err)
+		return nil, fmt.Errorf("Select lease candidates: %w", err)
 	}
 	candidateIDs := make([]string, 0, limit)
 	for rows.Next() {
 		var id string
 		if scanErr := rows.Scan(&id); scanErr != nil {
 			_ = rows.Close()
-			return nil, fmt.Errorf("scan lease candidate: %w", scanErr)
+			return nil, fmt.Errorf("Scan lease candidate: %w", scanErr)
 		}
 		candidateIDs = append(candidateIDs, id)
 	}
 	if err := rows.Err(); err != nil {
 		_ = rows.Close()
-		return nil, fmt.Errorf("iterate lease candidates: %w", err)
+		return nil, fmt.Errorf("Iterate lease candidates: %w", err)
 	}
 	if err := rows.Close(); err != nil {
-		return nil, fmt.Errorf("close lease candidates: %w", err)
+		return nil, fmt.Errorf("Close lease candidates: %w", err)
 	}
 	if len(candidateIDs) == 0 {
 		if err := tx.Commit(); err != nil {
-			return nil, fmt.Errorf("commit empty lease transaction: %w", err)
+			return nil, fmt.Errorf("Commit empty lease transaction: %w", err)
 		}
 		return []storage.IntegrationOutboxEvent{}, nil
 	}
@@ -166,11 +166,11 @@ AND (
 			toMillis(now),
 		)
 		if updateErr != nil {
-			return nil, fmt.Errorf("lease integration outbox event %s: %w", id, updateErr)
+			return nil, fmt.Errorf("Lease integration outbox event %s: %w", id, updateErr)
 		}
 		rowsAffected, rowsErr := result.RowsAffected()
 		if rowsErr != nil {
-			return nil, fmt.Errorf("lease rows affected for %s: %w", id, rowsErr)
+			return nil, fmt.Errorf("Lease rows affected for %s: %w", id, rowsErr)
 		}
 		if rowsAffected == 0 {
 			continue
@@ -196,13 +196,13 @@ WHERE id = ?
 `, id)
 		event, scanErr := scanIntegrationOutboxEvent(row.Scan)
 		if scanErr != nil {
-			return nil, fmt.Errorf("scan leased integration outbox event %s: %w", id, scanErr)
+			return nil, fmt.Errorf("Scan leased integration outbox event %s: %w", id, scanErr)
 		}
 		leased = append(leased, event)
 	}
 
 	if err := tx.Commit(); err != nil {
-		return nil, fmt.Errorf("commit lease transaction: %w", err)
+		return nil, fmt.Errorf("Commit lease transaction: %w", err)
 	}
 	return leased, nil
 }
@@ -213,16 +213,16 @@ func (s *Store) MarkIntegrationOutboxSucceeded(ctx context.Context, id string, c
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
+		return fmt.Errorf("Storage is not configured.")
 	}
 
 	id = strings.TrimSpace(id)
 	consumer = strings.TrimSpace(consumer)
 	if id == "" {
-		return fmt.Errorf("event id is required")
+		return fmt.Errorf("Event ID is required.")
 	}
 	if consumer == "" {
-		return fmt.Errorf("consumer is required")
+		return fmt.Errorf("Consumer is required.")
 	}
 	if processedAt.IsZero() {
 		processedAt = time.Now().UTC()
@@ -250,11 +250,11 @@ AND lease_owner = ?
 		consumer,
 	)
 	if err != nil {
-		return fmt.Errorf("mark integration outbox succeeded: %w", err)
+		return fmt.Errorf("Mark integration outbox succeeded: %w", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("mark integration outbox succeeded rows affected: %w", err)
+		return fmt.Errorf("Mark integration outbox succeeded rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
 		return storage.ErrNotFound
@@ -268,20 +268,20 @@ func (s *Store) MarkIntegrationOutboxRetry(ctx context.Context, id string, consu
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
+		return fmt.Errorf("Storage is not configured.")
 	}
 
 	id = strings.TrimSpace(id)
 	consumer = strings.TrimSpace(consumer)
 	lastError = strings.TrimSpace(lastError)
 	if id == "" {
-		return fmt.Errorf("event id is required")
+		return fmt.Errorf("Event ID is required.")
 	}
 	if consumer == "" {
-		return fmt.Errorf("consumer is required")
+		return fmt.Errorf("Consumer is required.")
 	}
 	if nextAttemptAt.IsZero() {
-		return fmt.Errorf("next attempt at is required")
+		return fmt.Errorf("Next attempt at is required.")
 	}
 	now := time.Now().UTC()
 	nextAttemptAt = nextAttemptAt.UTC()
@@ -310,11 +310,11 @@ AND lease_owner = ?
 		consumer,
 	)
 	if err != nil {
-		return fmt.Errorf("mark integration outbox retry: %w", err)
+		return fmt.Errorf("Mark integration outbox retry: %w", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("mark integration outbox retry rows affected: %w", err)
+		return fmt.Errorf("Mark integration outbox retry rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
 		return storage.ErrNotFound
@@ -328,17 +328,17 @@ func (s *Store) MarkIntegrationOutboxDead(ctx context.Context, id string, consum
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
+		return fmt.Errorf("Storage is not configured.")
 	}
 
 	id = strings.TrimSpace(id)
 	consumer = strings.TrimSpace(consumer)
 	lastError = strings.TrimSpace(lastError)
 	if id == "" {
-		return fmt.Errorf("event id is required")
+		return fmt.Errorf("Event ID is required.")
 	}
 	if consumer == "" {
-		return fmt.Errorf("consumer is required")
+		return fmt.Errorf("Consumer is required.")
 	}
 	if processedAt.IsZero() {
 		processedAt = time.Now().UTC()
@@ -368,11 +368,11 @@ AND lease_owner = ?
 		consumer,
 	)
 	if err != nil {
-		return fmt.Errorf("mark integration outbox dead: %w", err)
+		return fmt.Errorf("Mark integration outbox dead: %w", err)
 	}
 	rowsAffected, err := result.RowsAffected()
 	if err != nil {
-		return fmt.Errorf("mark integration outbox dead rows affected: %w", err)
+		return fmt.Errorf("Mark integration outbox dead rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
 		return storage.ErrNotFound

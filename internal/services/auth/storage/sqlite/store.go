@@ -59,7 +59,7 @@ func (s *Store) DB() *sql.DB {
 // callers to coordinate migrations independently.
 func Open(path string) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
-		return nil, fmt.Errorf("storage path is required")
+		return nil, fmt.Errorf("Storage path is required.")
 	}
 
 	sqlDB, err := sqliteconn.Open(path)
@@ -74,7 +74,7 @@ func Open(path string) (*Store, error) {
 
 	if err := store.runMigrations(); err != nil {
 		_ = sqlDB.Close()
-		return nil, fmt.Errorf("run migrations: %w", err)
+		return nil, fmt.Errorf("Run migrations: %w", err)
 	}
 
 	return store, nil
@@ -103,25 +103,31 @@ func isAlreadyExistsError(err error) bool {
 	return sqlitemigrate.IsAlreadyExistsError(err)
 }
 
-// PutUser persists a user record and its primary email atomically.
-
-func dbUserToDomain(id string, email string, locale string, createdAt int64, updatedAt int64) user.User {
+// dbUserToDomain reconstructs auth-owned identity state from SQLite rows.
+func dbUserToDomain(row db.User) user.User {
 	parsedLocale := platformi18n.DefaultLocale()
-	if parsed, ok := platformi18n.ParseLocale(locale); ok {
+	if parsed, ok := platformi18n.ParseLocale(row.Locale); ok {
 		parsedLocale = parsed
 	}
 
+	var recoveryReservedUntil *time.Time
+	if row.RecoveryReservedUntil.Valid {
+		value := fromMillis(row.RecoveryReservedUntil.Int64)
+		recoveryReservedUntil = &value
+	}
+
 	return user.User{
-		ID:        id,
-		Email:     email,
-		Locale:    parsedLocale,
-		CreatedAt: fromMillis(createdAt),
-		UpdatedAt: fromMillis(updatedAt),
+		ID:                        row.ID,
+		Username:                  row.Username,
+		Locale:                    parsedLocale,
+		RecoveryCodeHash:          row.RecoveryCodeHash,
+		RecoveryReservedSessionID: row.RecoveryReservedSessionID,
+		RecoveryReservedUntil:     recoveryReservedUntil,
+		RecoveryCodeUpdatedAt:     fromMillis(row.RecoveryCodeUpdatedAt),
+		CreatedAt:                 fromMillis(row.CreatedAt),
+		UpdatedAt:                 fromMillis(row.UpdatedAt),
 	}
 }
-
-// PutPasskeyCredential stores a WebAuthn credential.
-// PutUserEmail stores a user email record.
 
 func scanIntegrationOutboxEvent(scan integrationOutboxScanner) (storage.IntegrationOutboxEvent, error) {
 	var event storage.IntegrationOutboxEvent
@@ -170,10 +176,10 @@ func normalizeIntegrationOutboxEvent(event storage.IntegrationOutboxEvent) (stor
 	event.LeaseOwner = strings.TrimSpace(event.LeaseOwner)
 	event.LastError = strings.TrimSpace(event.LastError)
 	if event.ID == "" {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("event id is required")
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Event ID is required.")
 	}
 	if event.EventType == "" {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("event type is required")
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Event type is required.")
 	}
 	if event.PayloadJSON == "" {
 		event.PayloadJSON = "{}"
@@ -182,7 +188,7 @@ func normalizeIntegrationOutboxEvent(event storage.IntegrationOutboxEvent) (stor
 		event.Status = storage.IntegrationOutboxStatusPending
 	}
 	if event.AttemptCount < 0 {
-		return storage.IntegrationOutboxEvent{}, fmt.Errorf("attempt count must be greater than or equal to zero")
+		return storage.IntegrationOutboxEvent{}, fmt.Errorf("Attempt count must be greater than or equal to zero.")
 	}
 	now := time.Now().UTC()
 	if event.CreatedAt.IsZero() {
@@ -245,53 +251,15 @@ ON CONFLICT(dedupe_key) WHERE dedupe_key <> '' DO NOTHING
 		toMillis(normalized.UpdatedAt),
 	)
 	if err != nil {
-		return fmt.Errorf("enqueue integration outbox event: %w", err)
+		return fmt.Errorf("Enqueue integration outbox event: %w", err)
 	}
 	return nil
-}
-
-func dbUserEmailToDomain(row db.UserEmail) storage.UserEmail {
-	var verified *time.Time
-	if row.VerifiedAt.Valid {
-		value := fromMillis(row.VerifiedAt.Int64)
-		verified = &value
-	}
-	return storage.UserEmail{
-		ID:         row.ID,
-		UserID:     row.UserID,
-		Email:      row.Email,
-		VerifiedAt: verified,
-		CreatedAt:  fromMillis(row.CreatedAt),
-		UpdatedAt:  fromMillis(row.UpdatedAt),
-	}
-}
-
-func dbMagicLinkToDomain(row db.MagicLink) storage.MagicLink {
-	pendingID := ""
-	if row.PendingID.Valid {
-		pendingID = row.PendingID.String
-	}
-	var used *time.Time
-	if row.UsedAt.Valid {
-		value := fromMillis(row.UsedAt.Int64)
-		used = &value
-	}
-	return storage.MagicLink{
-		Token:     row.Token,
-		UserID:    row.UserID,
-		Email:     row.Email,
-		PendingID: pendingID,
-		CreatedAt: fromMillis(row.CreatedAt),
-		ExpiresAt: fromMillis(row.ExpiresAt),
-		UsedAt:    used,
-	}
 }
 
 var _ storage.UserStore = (*Store)(nil)
 var _ storage.StatisticsStore = (*Store)(nil)
 var _ storage.PasskeyStore = (*Store)(nil)
 var _ storage.WebSessionStore = (*Store)(nil)
-var _ storage.EmailStore = (*Store)(nil)
-var _ storage.MagicLinkStore = (*Store)(nil)
 var _ storage.IntegrationOutboxStore = (*Store)(nil)
 var _ storage.UserOutboxTransactionalStore = (*Store)(nil)
+var _ storage.UserSignupTransactionalStore = (*Store)(nil)

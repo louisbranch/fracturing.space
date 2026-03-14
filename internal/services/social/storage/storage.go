@@ -30,7 +30,6 @@ type ContactPage struct {
 // UserProfile stores one social/discovery profile for a user.
 type UserProfile struct {
 	UserID        string
-	Username      string
 	Name          string
 	AvatarSetID   string
 	AvatarAssetID string
@@ -52,5 +51,4 @@ type ContactStore interface {
 type UserProfileStore interface {
 	PutUserProfile(ctx context.Context, profile UserProfile) error
 	GetUserProfileByUserID(ctx context.Context, userID string) (UserProfile, error)
-	GetUserProfileByUsername(ctx context.Context, username string) (UserProfile, error)
 }

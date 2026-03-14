@@ -9,9 +9,6 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
-	usernameutil "github.com/louisbranch/fracturing.space/internal/services/social/username"
-	msqlite "modernc.org/sqlite"
-	sqlite3lib "modernc.org/sqlite/lib"
 )
 
 // PutUserProfile upserts one social/discovery user profile record.
@@ -25,10 +22,6 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile)
 	userID := strings.TrimSpace(profile.UserID)
 	if userID == "" {
 		return fmt.Errorf("user id is required")
-	}
-	canonicalUsername, err := canonicalizeOptionalUsername(profile.Username)
-	if err != nil {
-		return fmt.Errorf("normalize username: %w", err)
 	}
 	name := strings.TrimSpace(profile.Name)
 	avatarSetID := strings.TrimSpace(profile.AvatarSetID)
@@ -49,26 +42,23 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile)
 		}
 	}
 
-	_, err = s.sqlDB.ExecContext(
+	_, err := s.sqlDB.ExecContext(
 		ctx,
-		`INSERT INTO user_profiles (user_id, username, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		`INSERT INTO user_profiles (user_id, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(user_id) DO UPDATE SET
-		   username = excluded.username,
 		   name = excluded.name,
 		   avatar_set_id = excluded.avatar_set_id,
 		   avatar_asset_id = excluded.avatar_asset_id,
 		   bio = excluded.bio,
 		   pronouns = excluded.pronouns,
 		   updated_at = excluded.updated_at
-		 WHERE user_profiles.username <> excluded.username
-		    OR user_profiles.name <> excluded.name
+		 WHERE user_profiles.name <> excluded.name
 		    OR user_profiles.avatar_set_id <> excluded.avatar_set_id
 		    OR user_profiles.avatar_asset_id <> excluded.avatar_asset_id
 		    OR user_profiles.bio <> excluded.bio
 		    OR user_profiles.pronouns <> excluded.pronouns`,
 		userID,
-		canonicalUsername,
 		name,
 		avatarSetID,
 		avatarAssetID,
@@ -78,9 +68,6 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile)
 		toMillis(updatedAt),
 	)
 	if err != nil {
-		if isUserProfileUsernameUniqueViolation(err) {
-			return storage.ErrAlreadyExists
-		}
 		return fmt.Errorf("put user profile: %w", err)
 	}
 	return nil
@@ -101,7 +88,7 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 
 	row := s.sqlDB.QueryRowContext(
 		ctx,
-		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at
+		`SELECT user_id, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at
 		 FROM user_profiles
 		 WHERE user_id = ?`,
 		userID,
@@ -111,7 +98,6 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 	var updatedAt int64
 	err := row.Scan(
 		&record.UserID,
-		&record.Username,
 		&record.Name,
 		&record.AvatarSetID,
 		&record.AvatarAssetID,
@@ -129,74 +115,4 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 	record.CreatedAt = fromMillis(createdAt)
 	record.UpdatedAt = fromMillis(updatedAt)
 	return record, nil
-}
-
-// GetUserProfileByUsername returns one social/discovery profile by canonical username.
-func (s *Store) GetUserProfileByUsername(ctx context.Context, username string) (storage.UserProfile, error) {
-	if err := ctx.Err(); err != nil {
-		return storage.UserProfile{}, err
-	}
-	if s == nil || s.sqlDB == nil {
-		return storage.UserProfile{}, fmt.Errorf("storage is not configured")
-	}
-	canonicalUsername, err := usernameutil.Canonicalize(username)
-	if err != nil {
-		return storage.UserProfile{}, fmt.Errorf("normalize username: %w", err)
-	}
-
-	row := s.sqlDB.QueryRowContext(
-		ctx,
-		`SELECT user_id, username, name, avatar_set_id, avatar_asset_id, bio, pronouns, created_at, updated_at
-		 FROM user_profiles
-		 WHERE username = ?`,
-		canonicalUsername,
-	)
-	var record storage.UserProfile
-	var createdAt int64
-	var updatedAt int64
-	err = row.Scan(
-		&record.UserID,
-		&record.Username,
-		&record.Name,
-		&record.AvatarSetID,
-		&record.AvatarAssetID,
-		&record.Bio,
-		&record.Pronouns,
-		&createdAt,
-		&updatedAt,
-	)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return storage.UserProfile{}, storage.ErrNotFound
-		}
-		return storage.UserProfile{}, fmt.Errorf("get user profile by username: %w", err)
-	}
-	record.CreatedAt = fromMillis(createdAt)
-	record.UpdatedAt = fromMillis(updatedAt)
-	return record, nil
-}
-
-// isUserProfileUsernameUniqueViolation reports whether a username uniqueness constraint failed.
-func isUserProfileUsernameUniqueViolation(err error) bool {
-	if err == nil {
-		return false
-	}
-	var sqliteErr *msqlite.Error
-	if errors.As(err, &sqliteErr) {
-		switch sqliteErr.Code() {
-		case sqlite3lib.SQLITE_CONSTRAINT_UNIQUE, sqlite3lib.SQLITE_CONSTRAINT:
-			return true
-		}
-	}
-	message := strings.ToLower(err.Error())
-	return strings.Contains(message, "unique constraint failed") &&
-		strings.Contains(message, "user_profiles.username")
-}
-
-func canonicalizeOptionalUsername(value string) (string, error) {
-	value = strings.TrimSpace(value)
-	if value == "" {
-		return "", nil
-	}
-	return usernameutil.Canonicalize(value)
 }

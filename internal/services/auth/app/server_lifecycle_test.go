@@ -41,8 +41,8 @@ func TestServeLifecycleWithoutHTTP(t *testing.T) {
 func TestRunRequiresContext(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_AUTH_DB_PATH", filepath.Join(t.TempDir(), "auth.db"))
 
-	if err := Run(nil, 0, ""); err == nil || err.Error() != "context is required" {
-		t.Fatalf("Run error = %v, want context is required", err)
+	if err := Run(nil, 0, ""); err == nil || err.Error() != "Context is required." {
+		t.Fatalf("Run error = %v, want Context is required.", err)
 	}
 }
 
@@ -57,8 +57,8 @@ func TestServeRequiresContext(t *testing.T) {
 		srv.Close()
 	})
 
-	if err := srv.Serve(nil); err == nil || err.Error() != "context is required" {
-		t.Fatalf("Serve error = %v, want context is required", err)
+	if err := srv.Serve(nil); err == nil || err.Error() != "Context is required." {
+		t.Fatalf("Serve error = %v, want Context is required.", err)
 	}
 }
 

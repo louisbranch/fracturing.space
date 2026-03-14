@@ -14,9 +14,8 @@ import (
 type consentView struct {
 	AppName    string
 	PendingID  string
-	ClientID   string
 	ClientName string
-	Email      string
+	Username   string
 	Scopes     []string
 }
 
@@ -48,7 +47,7 @@ type introspectResponse struct {
 
 func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed.", http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -64,53 +63,53 @@ func (s *Server) handleAuthorize(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if request.ResponseType != "code" {
-		s.renderError(w, r, "unsupported_response_type", "Only 'code' response type is supported", http.StatusBadRequest)
+		s.renderError(w, r, "unsupported_response_type", "Only 'code' response type is supported.", http.StatusBadRequest)
 		return
 	}
 
 	client := s.clientForID(request.ClientID)
 	if client == nil {
-		s.renderError(w, r, "invalid_request", "Unknown client_id", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "Unknown client_id.", http.StatusBadRequest)
 		return
 	}
 
 	if request.RedirectURI == "" {
-		s.renderError(w, r, "invalid_request", "redirect_uri is required", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "redirect_uri is required.", http.StatusBadRequest)
 		return
 	}
 	if !redirectURIAllowed(request.RedirectURI, client.RedirectURIs) {
-		s.renderError(w, r, "invalid_request", "redirect_uri is not registered", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "redirect_uri is not registered.", http.StatusBadRequest)
 		return
 	}
 
 	if request.CodeChallenge == "" {
-		s.redirectError(w, r, request, "invalid_request", "code_challenge is required")
+		s.redirectError(w, r, request, "invalid_request", "code_challenge is required.")
 		return
 	}
 	if request.CodeChallengeMethod != "S256" {
-		s.redirectError(w, r, request, "invalid_request", "code_challenge_method must be S256")
+		s.redirectError(w, r, request, "invalid_request", "code_challenge_method must be S256.")
 		return
 	}
 	if !ValidateCodeChallenge(request.CodeChallenge) {
-		s.redirectError(w, r, request, "invalid_request", "invalid code_challenge format")
+		s.redirectError(w, r, request, "invalid_request", "Invalid code_challenge format.")
 		return
 	}
 
 	pendingID, err := s.store.CreatePendingAuthorization(request, s.config.PendingAuthorizationTTL)
 	if err != nil {
-		s.redirectError(w, r, request, "server_error", "failed to create authorization request")
+		s.redirectError(w, r, request, "server_error", "Failed to create the authorization request.")
 		return
 	}
 
 	loginUIURL := strings.TrimSpace(s.config.LoginUIURL)
 	if loginUIURL == "" {
-		s.renderError(w, r, "server_error", "login UI URL not configured", http.StatusInternalServerError)
+		s.renderError(w, r, "server_error", "Login UI URL is not configured.", http.StatusInternalServerError)
 		return
 	}
 
 	redirectURL, err := url.Parse(loginUIURL)
 	if err != nil {
-		s.renderError(w, r, "server_error", "invalid login ui url", http.StatusInternalServerError)
+		s.renderError(w, r, "server_error", "Invalid login UI URL.", http.StatusInternalServerError)
 		return
 	}
 	query := redirectURL.Query()
@@ -126,16 +125,16 @@ func (s *Server) handleConsent(w http.ResponseWriter, r *http.Request) {
 		pendingID := strings.TrimSpace(r.URL.Query().Get("pending_id"))
 		pending, err := s.store.GetPendingAuthorization(pendingID)
 		if err != nil || pending == nil {
-			s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
+			s.renderError(w, r, "invalid_request", "Authorization session expired.", http.StatusBadRequest)
 			return
 		}
 		if pending.ExpiresAt.Before(s.clock().UTC()) {
 			s.store.DeletePendingAuthorization(pendingID)
-			s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
+			s.renderError(w, r, "invalid_request", "Authorization session expired.", http.StatusBadRequest)
 			return
 		}
 		if pending.UserID == "" {
-			s.renderError(w, r, "invalid_request", "user not authenticated", http.StatusBadRequest)
+			s.renderError(w, r, "invalid_request", "User not authenticated.", http.StatusBadRequest)
 			return
 		}
 
@@ -149,12 +148,12 @@ func (s *Server) handleConsent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, "invalid form data", http.StatusBadRequest)
+		http.Error(w, "Invalid form data.", http.StatusBadRequest)
 		return
 	}
 
@@ -163,23 +162,23 @@ func (s *Server) handleConsent(w http.ResponseWriter, r *http.Request) {
 
 	pending, err := s.store.GetPendingAuthorization(pendingID)
 	if err != nil || pending == nil {
-		s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "Authorization session expired.", http.StatusBadRequest)
 		return
 	}
 	if pending.ExpiresAt.Before(s.clock().UTC()) {
 		s.store.DeletePendingAuthorization(pendingID)
-		s.renderError(w, r, "invalid_request", "authorization session expired", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "Authorization session expired.", http.StatusBadRequest)
 		return
 	}
 	if pending.UserID == "" {
-		s.renderError(w, r, "invalid_request", "user not authenticated", http.StatusBadRequest)
+		s.renderError(w, r, "invalid_request", "User not authenticated.", http.StatusBadRequest)
 		return
 	}
 
 	defer s.store.DeletePendingAuthorization(pendingID)
 
 	if decision != "allow" {
-		s.redirectError(w, r, pending.Request, "access_denied", "user denied the request")
+		s.redirectError(w, r, pending.Request, "access_denied", "User denied the request.")
 		return
 	}
 
@@ -191,7 +190,7 @@ func (s *Server) handleConsent(w http.ResponseWriter, r *http.Request) {
 func (s *Server) approveAndRedirect(w http.ResponseWriter, r *http.Request, pendingID string, pending *PendingAuthorization) {
 	code, err := s.store.CreateAuthorizationCode(pending.Request, pending.UserID, s.config.AuthorizationCodeTTL)
 	if err != nil {
-		s.redirectError(w, r, pending.Request, "server_error", "failed to create authorization code")
+		s.redirectError(w, r, pending.Request, "server_error", "Failed to create the authorization code.")
 		return
 	}
 
@@ -199,7 +198,7 @@ func (s *Server) approveAndRedirect(w http.ResponseWriter, r *http.Request, pend
 
 	redirectURL, err := url.Parse(pending.Request.RedirectURI)
 	if err != nil {
-		s.renderError(w, r, "server_error", "invalid redirect uri", http.StatusInternalServerError)
+		s.renderError(w, r, "server_error", "Invalid redirect URI.", http.StatusInternalServerError)
 		return
 	}
 	query := redirectURL.Query()
@@ -213,12 +212,12 @@ func (s *Server) approveAndRedirect(w http.ResponseWriter, r *http.Request, pend
 
 func (s *Server) handleToken(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		writeJSONError(w, http.StatusMethodNotAllowed, "invalid_request", "method not allowed")
+		writeJSONError(w, http.StatusMethodNotAllowed, "invalid_request", "Method not allowed.")
 		return
 	}
 
 	if err := r.ParseForm(); err != nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid_request", "invalid form data")
+		writeJSONError(w, http.StatusBadRequest, "invalid_request", "Invalid form data.")
 		return
 	}
 
@@ -230,61 +229,61 @@ func (s *Server) handleToken(w http.ResponseWriter, r *http.Request) {
 	clientSecret := r.FormValue("client_secret")
 
 	if grantType != "authorization_code" {
-		writeJSONError(w, http.StatusBadRequest, "unsupported_grant_type", "only authorization_code is supported")
+		writeJSONError(w, http.StatusBadRequest, "unsupported_grant_type", "Only authorization_code is supported.")
 		return
 	}
 	if code == "" || codeVerifier == "" || clientID == "" || redirectURI == "" {
-		writeJSONError(w, http.StatusBadRequest, "invalid_request", "missing required fields")
+		writeJSONError(w, http.StatusBadRequest, "invalid_request", "Missing required fields.")
 		return
 	}
 
 	client := s.clientForID(clientID)
 	if client == nil {
-		writeJSONError(w, http.StatusUnauthorized, "invalid_client", "unknown client")
+		writeJSONError(w, http.StatusUnauthorized, "invalid_client", "Unknown client.")
 		return
 	}
 	if err := validateTokenClientAuth(client, clientSecret); err != nil {
-		writeJSONError(w, http.StatusUnauthorized, "invalid_client", "invalid client authentication")
+		writeJSONError(w, http.StatusUnauthorized, "invalid_client", "Invalid client authentication.")
 		return
 	}
 
 	authCode, err := s.store.GetAuthorizationCode(code)
 	if err != nil || authCode == nil {
-		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "invalid authorization code")
+		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "Invalid authorization code.")
 		return
 	}
 	if s.clock().UTC().After(authCode.ExpiresAt) {
 		s.store.DeleteAuthorizationCode(code)
-		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "authorization code expired")
+		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "Authorization code expired.")
 		return
 	}
 	if authCode.Used {
 		s.store.DeleteAuthorizationCode(code)
-		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "authorization code already used")
+		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "Authorization code already used.")
 		return
 	}
 	if authCode.ClientID != clientID {
-		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "client_id mismatch")
+		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "client_id mismatch.")
 		return
 	}
 	if authCode.RedirectURI != redirectURI {
-		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "redirect_uri mismatch")
+		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "redirect_uri mismatch.")
 		return
 	}
 	if !ValidatePKCE(codeVerifier, authCode.CodeChallenge, authCode.CodeChallengeMethod) {
-		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "PKCE verification failed")
+		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "PKCE verification failed.")
 		return
 	}
 
 	used, err := s.store.MarkAuthorizationCodeUsed(code)
 	if err != nil || !used {
-		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "authorization code already used")
+		writeJSONError(w, http.StatusBadRequest, "invalid_grant", "Authorization code already used.")
 		return
 	}
 
 	accessToken, err := s.store.CreateAccessToken(authCode.ClientID, authCode.UserID, authCode.Scope, s.config.TokenTTL)
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, "server_error", "failed to create access token")
+		writeJSONError(w, http.StatusInternalServerError, "server_error", "Failed to create the access token.")
 		return
 	}
 
@@ -301,27 +300,27 @@ func (s *Server) handleToken(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleIntrospect(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		http.Error(w, "Method not allowed.", http.StatusMethodNotAllowed)
 		return
 	}
 
 	if s.config.ResourceSecret == "" {
-		http.Error(w, "missing shared secret", http.StatusInternalServerError)
+		http.Error(w, "Missing shared secret.", http.StatusInternalServerError)
 		return
 	}
 	if r.Header.Get("X-Resource-Secret") != s.config.ResourceSecret {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		http.Error(w, "Unauthorized.", http.StatusUnauthorized)
 		return
 	}
 
 	authHeader := r.Header.Get("Authorization")
 	if !strings.HasPrefix(authHeader, "Bearer ") {
-		http.Error(w, "missing bearer token", http.StatusBadRequest)
+		http.Error(w, "Missing bearer token.", http.StatusBadRequest)
 		return
 	}
 	accessToken := strings.TrimSpace(strings.TrimPrefix(authHeader, "Bearer "))
 	if accessToken == "" {
-		http.Error(w, "missing bearer token", http.StatusBadRequest)
+		http.Error(w, "Missing bearer token.", http.StatusBadRequest)
 		return
 	}
 	entry, ok, err := s.store.ValidateAccessToken(accessToken)
@@ -350,27 +349,26 @@ func (s *Server) renderError(w http.ResponseWriter, r *http.Request, code, descr
 
 func (s *Server) renderConsentView(w http.ResponseWriter, r *http.Request, pending *PendingAuthorization) {
 	client := s.clientForID(pending.Request.ClientID)
-	email := pending.UserID
+	username := pending.UserID
 	if s.userStore != nil {
 		if user, err := s.userStore.GetUser(r.Context(), pending.UserID); err == nil {
-			if strings.TrimSpace(user.Email) != "" {
-				email = user.Email
+			if strings.TrimSpace(user.Username) != "" {
+				username = user.Username
 			}
 		}
 	}
 	view := consentView{
 		AppName:    branding.AppName,
 		PendingID:  pending.ID,
-		ClientID:   pending.Request.ClientID,
 		ClientName: clientDisplayName(client),
-		Email:      email,
+		Username:   username,
 		Scopes:     formatScopes(pending.Request.Scope),
 	}
 	_ = oauthtemplates.ConsentPage(oauthtemplates.ConsentPageParams{
 		AppName:    view.AppName,
 		PendingID:  view.PendingID,
 		ClientName: view.ClientName,
-		Email:      view.Email,
+		Username:   view.Username,
 		Scopes:     view.Scopes,
 	}).Render(r.Context(), w)
 }
@@ -424,7 +422,7 @@ func redirectURIAllowed(uri string, allowed []string) bool {
 
 func validateTokenClientAuth(client *Client, clientSecret string) error {
 	if client == nil {
-		return errors.New("unknown client")
+		return errors.New("Unknown client.")
 	}
 	method := strings.TrimSpace(client.TokenEndpointAuthMethod)
 	if method == "" {
@@ -438,13 +436,13 @@ func validateTokenClientAuth(client *Client, clientSecret string) error {
 		return nil
 	}
 	if method != "client_secret_post" {
-		return errors.New("unsupported token endpoint auth method")
+		return errors.New("Unsupported token endpoint auth method.")
 	}
 	if client.Secret == "" {
-		return errors.New("client secret not configured")
+		return errors.New("Client secret is not configured.")
 	}
 	if clientSecret == "" || clientSecret != client.Secret {
-		return errors.New("invalid client authentication")
+		return errors.New("Invalid client authentication.")
 	}
 	return nil
 }

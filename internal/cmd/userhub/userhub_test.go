@@ -15,6 +15,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.Port != 8092 {
 		t.Fatalf("port = %d, want 8092", cfg.Port)
 	}
+	if cfg.AuthAddr != "auth:8083" {
+		t.Fatalf("auth_addr = %q, want %q", cfg.AuthAddr, "auth:8083")
+	}
 	if cfg.GameAddr != "game:8082" {
 		t.Fatalf("game_addr = %q, want %q", cfg.GameAddr, "game:8082")
 	}
@@ -34,11 +37,13 @@ func TestParseConfigDefaults(t *testing.T) {
 
 func TestParseConfigOverrides(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_USERHUB_PORT", "9000")
+	t.Setenv("FRACTURING_SPACE_USERHUB_AUTH_ADDR", "custom-auth:19003")
 	t.Setenv("FRACTURING_SPACE_USERHUB_GAME_ADDR", "custom-game:19000")
 
 	fs := flag.NewFlagSet("userhub", flag.ContinueOnError)
 	cfg, err := ParseConfig(fs, []string{
 		"-port", "9001",
+		"-auth-addr", "custom-auth-flag:19004",
 		"-social-addr", "custom-social:19001",
 		"-notifications-addr", "custom-notifications:19002",
 		"-cache-fresh-ttl", "20s",
@@ -49,6 +54,9 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.Port != 9001 {
 		t.Fatalf("port = %d, want 9001", cfg.Port)
+	}
+	if cfg.AuthAddr != "custom-auth-flag:19004" {
+		t.Fatalf("auth_addr = %q, want %q", cfg.AuthAddr, "custom-auth-flag:19004")
 	}
 	if cfg.GameAddr != "custom-game:19000" {
 		t.Fatalf("game_addr = %q, want %q", cfg.GameAddr, "custom-game:19000")
@@ -64,5 +72,18 @@ func TestParseConfigOverrides(t *testing.T) {
 	}
 	if cfg.CacheStaleTTL != 4*time.Minute {
 		t.Fatalf("cache_stale_ttl = %s, want %s", cfg.CacheStaleTTL, 4*time.Minute)
+	}
+}
+
+func TestParseConfigFallsBackToGlobalAuthAddr(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", "localhost:18083")
+
+	fs := flag.NewFlagSet("userhub", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, nil)
+	if err != nil {
+		t.Fatalf("parse config: %v", err)
+	}
+	if cfg.AuthAddr != "localhost:18083" {
+		t.Fatalf("auth_addr = %q, want %q", cfg.AuthAddr, "localhost:18083")
 	}
 }

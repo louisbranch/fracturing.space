@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
@@ -36,6 +37,7 @@ var listenTCP = net.Listen
 // RuntimeConfig controls userhub service startup and dependency wiring.
 type RuntimeConfig struct {
 	Port              int
+	AuthAddr          string
 	GameAddr          string
 	SocialAddr        string
 	NotificationsAddr string
@@ -53,6 +55,7 @@ type Server struct {
 	reporter     *platformstatus.Reporter
 	stopReporter func()
 
+	authMc          *platformgrpc.ManagedConn
 	gameMc          *platformgrpc.ManagedConn
 	socialMc        *platformgrpc.ManagedConn
 	notificationsMc *platformgrpc.ManagedConn
@@ -97,9 +100,21 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 	// Status reporter — starts with nil client; bound later when statusMc is ready.
 	reporter := platformstatus.NewReporter("userhub", nil)
 
-	// Dial all optional dependencies via ManagedConn. Connections are non-nil
+	// Dial all dependencies via ManagedConn. Connections are non-nil
 	// immediately; RPCs fail with Unavailable until the peer is up. The domain
 	// layer's DegradedDependencies / stale-cache pattern handles this.
+	authMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "auth",
+		Addr:             normalized.AuthAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             logf,
+		StatusReporter:   reporter,
+		StatusCapability: "userhub.auth.integration",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("userhub: managed conn auth: %w", err)
+	}
+
 	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name:             "game",
 		Addr:             normalized.GameAddr,
@@ -121,6 +136,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		StatusCapability: "userhub.social.integration",
 	})
 	if err != nil {
+		authMc.Close()
 		gameMc.Close()
 		return nil, fmt.Errorf("userhub: managed conn social: %w", err)
 	}
@@ -134,12 +150,14 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		StatusCapability: "userhub.notifications.integration",
 	})
 	if err != nil {
+		authMc.Close()
 		gameMc.Close()
 		socialMc.Close()
 		return nil, fmt.Errorf("userhub: managed conn notifications: %w", err)
 	}
 
 	// Build gateways — conn is always non-nil, RPCs fail gracefully until peer is up.
+	authGateway := newGRPCAuthGateway(authv1.NewAuthServiceClient(authMc.Conn()))
 	gameGateway := newGRPCGameGateway(
 		gamev1.NewCampaignServiceClient(gameMc.Conn()),
 		gamev1.NewInviteServiceClient(gameMc.Conn()),
@@ -164,7 +182,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 			}
 		},
 	)
-	domainService = domain.NewService(gameGateway, socialGateway, notificationsGateway, domain.Config{
+	domainService = domain.NewService(authGateway, gameGateway, socialGateway, notificationsGateway, domain.Config{
 		CacheFreshTTL: normalized.CacheFreshTTL,
 		CacheStaleTTL: normalized.CacheStaleTTL,
 		CampaignDependencyObserver: campaignDependencyObserver{
@@ -177,6 +195,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 
 	listener, err := listenTCP("tcp", fmt.Sprintf(":%d", normalized.Port))
 	if err != nil {
+		authMc.Close()
 		gameMc.Close()
 		socialMc.Close()
 		notificationsMc.Close()
@@ -204,6 +223,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		Logf: logf,
 	})
 	if err != nil {
+		authMc.Close()
 		gameMc.Close()
 		socialMc.Close()
 		notificationsMc.Close()
@@ -226,6 +246,7 @@ func New(ctx context.Context, cfg RuntimeConfig) (*Server, error) {
 		grpcServer:                 grpcServer,
 		health:                     healthServer,
 		reporter:                   reporter,
+		authMc:                     authMc,
 		gameMc:                     gameMc,
 		socialMc:                   socialMc,
 		notificationsMc:            notificationsMc,
@@ -317,10 +338,14 @@ func (s *Server) Close() {
 		closeManagedConn(s.notificationsMc, "notifications")
 		closeManagedConn(s.socialMc, "social")
 		closeManagedConn(s.gameMc, "game")
+		closeManagedConn(s.authMc, "auth")
 	})
 }
 
 func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
+	if strings.TrimSpace(cfg.AuthAddr) == "" {
+		return RuntimeConfig{}, fmt.Errorf("auth address is required")
+	}
 	if strings.TrimSpace(cfg.GameAddr) == "" {
 		return RuntimeConfig{}, fmt.Errorf("game address is required")
 	}

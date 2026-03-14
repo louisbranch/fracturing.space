@@ -179,9 +179,6 @@ func TestNotificationAndSettingsRouteBuilders(t *testing.T) {
 	if AppSettingsProfile != "/app/settings/profile" {
 		t.Fatalf("AppSettingsProfile = %q", AppSettingsProfile)
 	}
-	if AppSettingsProfileRequired != "/app/settings/profile/required" {
-		t.Fatalf("AppSettingsProfileRequired = %q", AppSettingsProfileRequired)
-	}
 	if AppSettingsLocale != "/app/settings/locale" {
 		t.Fatalf("AppSettingsLocale = %q", AppSettingsLocale)
 	}

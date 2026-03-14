@@ -4,17 +4,14 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
-	"net/mail"
 	"testing"
 
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/tools/seed/worldbuilder"
 	"google.golang.org/grpc"
 )
 
-// sequenceSource returns a deterministic series of values to force duplicate names
-// while keeping participant controllers human for CreateUser calls.
+// sequenceSource returns a deterministic series of values to force duplicate names.
 type sequenceSource struct {
 	values []int64
 	index  int
@@ -37,16 +34,7 @@ func (s *sequenceSource) Seed(seed int64) {
 }
 
 func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
-	var emails []string
-	auth := &fakeAuthProvider{
-		createUser: func(_ context.Context, in *authv1.CreateUserRequest, _ ...grpc.CallOption) (*authv1.CreateUserResponse, error) {
-			emails = append(emails, in.GetEmail())
-			return &authv1.CreateUserResponse{User: &authv1.User{Id: fmt.Sprintf("user-%d", len(emails))}}, nil
-		},
-		issueJoinGrant: func(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
-			return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
-		},
-	}
+	var names []string
 	camp := &fakeCampaignCreator{
 		createCampaign: func(_ context.Context, _ *statev1.CreateCampaignRequest, _ ...grpc.CallOption) (*statev1.CreateCampaignResponse, error) {
 			return &statev1.CreateCampaignResponse{
@@ -59,6 +47,7 @@ func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
 	part := &fakeParticipantCreator{
 		create: func(_ context.Context, in *statev1.CreateParticipantRequest, _ ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
 			partSeq++
+			names = append(names, in.Name)
 			return &statev1.CreateParticipantResponse{
 				Participant: &statev1.Participant{
 					Id:         fmt.Sprintf("p-%d", partSeq),
@@ -68,18 +57,10 @@ func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
 			}, nil
 		},
 	}
-	inv := &fakeInviteManager{
-		createInvite: func(context.Context, *statev1.CreateInviteRequest, ...grpc.CallOption) (*statev1.CreateInviteResponse, error) {
-			return &statev1.CreateInviteResponse{Invite: &statev1.Invite{Id: "inv-1"}}, nil
-		},
-		claimInvite: func(context.Context, *statev1.ClaimInviteRequest, ...grpc.CallOption) (*statev1.ClaimInviteResponse, error) {
-			return &statev1.ClaimInviteResponse{}, nil
-		},
-	}
 
 	mid := int64(1 << 62)
 	rng := rand.New(&sequenceSource{values: []int64{0, 0, 0, 0, mid, 0, 0, mid, 0, 0}})
-	g := newGenerator(Config{}, rng, worldbuilder.New(rng), testDeps(camp, part, inv, nil, nil, nil, auth))
+	g := newGenerator(Config{}, rng, worldbuilder.New(rng), testDeps(camp, part, nil, nil, nil, nil))
 
 	if _, _, err := g.createCampaign(context.Background(), statev1.GmMode_HUMAN); err != nil {
 		t.Fatalf("unexpected campaign error: %v", err)
@@ -88,17 +69,14 @@ func TestGenerator_UniqueUserDisplayNames(t *testing.T) {
 		t.Fatalf("unexpected participant error: %v", err)
 	}
 
-	if len(emails) < 3 {
-		t.Fatalf("expected at least 3 users created, got %d", len(emails))
+	if len(names) != 2 {
+		t.Fatalf("expected 2 participants created, got %d", len(names))
 	}
 	seen := make(map[string]struct{})
-	for _, email := range emails {
-		if _, ok := seen[email]; ok {
-			t.Fatalf("expected unique CreateUser emails, got duplicate %q", email)
+	for _, name := range names {
+		if _, ok := seen[name]; ok {
+			t.Fatalf("expected unique participant names, got duplicate %q", name)
 		}
-		if _, err := mail.ParseAddress(email); err != nil {
-			t.Fatalf("expected %q to be a valid email, got parse error: %v", email, err)
-		}
-		seen[email] = struct{}{}
+		seen[name] = struct{}{}
 	}
 }

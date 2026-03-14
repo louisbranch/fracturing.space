@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"google.golang.org/grpc"
@@ -14,9 +13,8 @@ import (
 
 // AuthClient performs passkey and user bootstrap operations.
 type AuthClient interface {
-	CreateUser(context.Context, *authv1.CreateUserRequest, ...grpc.CallOption) (*authv1.CreateUserResponse, error)
-	BeginPasskeyRegistration(context.Context, *authv1.BeginPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.BeginPasskeyRegistrationResponse, error)
-	FinishPasskeyRegistration(context.Context, *authv1.FinishPasskeyRegistrationRequest, ...grpc.CallOption) (*authv1.FinishPasskeyRegistrationResponse, error)
+	BeginAccountRegistration(context.Context, *authv1.BeginAccountRegistrationRequest, ...grpc.CallOption) (*authv1.BeginAccountRegistrationResponse, error)
+	FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error)
 	BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error)
 	FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest, ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error)
 	CreateWebSession(context.Context, *authv1.CreateWebSessionRequest, ...grpc.CallOption) (*authv1.CreateWebSessionResponse, error)
@@ -56,60 +54,52 @@ func mapGRPCErrorWithKey(err error, fallbackKind apperrors.Kind, fallbackKey str
 	})
 }
 
-// CreateUser executes package-scoped creation behavior for this flow.
-func (g GRPCGateway) CreateUser(ctx context.Context, email string) (string, error) {
-	resp, err := g.Client.CreateUser(ctx, &authv1.CreateUserRequest{
-		Email:  email,
-		Locale: commonv1.Locale_LOCALE_EN_US,
-	})
+// BeginAccountRegistration starts username-backed registration.
+func (g GRPCGateway) BeginAccountRegistration(ctx context.Context, username string) (publicauthapp.PasskeyChallenge, error) {
+	resp, err := g.Client.BeginAccountRegistration(ctx, &authv1.BeginAccountRegistrationRequest{Username: username})
 	if err != nil {
-		return "", mapGRPCErrorWithKey(err, apperrors.KindInvalidInput, "error.http.failed_to_create_user", "failed to create user")
-	}
-	userID := strings.TrimSpace(resp.GetUser().GetId())
-	if userID == "" {
-		return "", apperrors.E(apperrors.KindUnknown, "auth did not return user id")
-	}
-	return userID, nil
-}
-
-// BeginPasskeyRegistration centralizes this web behavior in one helper seam.
-func (g GRPCGateway) BeginPasskeyRegistration(ctx context.Context, userID string) (publicauthapp.PasskeyChallenge, error) {
-	resp, err := g.Client.BeginPasskeyRegistration(ctx, &authv1.BeginPasskeyRegistrationRequest{UserId: userID})
-	if err != nil {
-		return publicauthapp.PasskeyChallenge{}, mapGRPCError(err, apperrors.KindInvalidInput, "failed to start passkey registration")
+		return publicauthapp.PasskeyChallenge{}, mapGRPCErrorWithKey(err, apperrors.KindInvalidInput, "error.http.failed_to_create_user", "Failed to create user.")
 	}
 	sessionID := strings.TrimSpace(resp.GetSessionId())
 	if sessionID == "" {
-		return publicauthapp.PasskeyChallenge{}, apperrors.E(apperrors.KindUnknown, "auth did not return registration session")
+		return publicauthapp.PasskeyChallenge{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a registration session.")
 	}
 	return publicauthapp.PasskeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialCreationOptionsJson())}, nil
 }
 
-// FinishPasskeyRegistration centralizes this web behavior in one helper seam.
-func (g GRPCGateway) FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (string, error) {
-	resp, err := g.Client.FinishPasskeyRegistration(ctx, &authv1.FinishPasskeyRegistrationRequest{
+// FinishAccountRegistration centralizes this web behavior in one helper seam.
+func (g GRPCGateway) FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (publicauthapp.PasskeyFinish, error) {
+	resp, err := g.Client.FinishAccountRegistration(ctx, &authv1.FinishAccountRegistrationRequest{
 		SessionId:              sessionID,
 		CredentialResponseJson: credential,
 	})
 	if err != nil {
-		return "", mapGRPCError(err, apperrors.KindInvalidInput, "failed to finish passkey registration")
+		return publicauthapp.PasskeyFinish{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to finish passkey registration.")
 	}
 	userID := strings.TrimSpace(resp.GetUser().GetId())
 	if userID == "" {
-		return "", apperrors.E(apperrors.KindUnknown, "auth did not return user id")
+		return publicauthapp.PasskeyFinish{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a user ID.")
 	}
-	return userID, nil
+	webSessionID := strings.TrimSpace(resp.GetSession().GetId())
+	if webSessionID == "" {
+		return publicauthapp.PasskeyFinish{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a web session ID.")
+	}
+	return publicauthapp.PasskeyFinish{
+		SessionID:    webSessionID,
+		UserID:       userID,
+		RecoveryCode: strings.TrimSpace(resp.GetRecoveryCode()),
+	}, nil
 }
 
 // BeginPasskeyLogin centralizes this web behavior in one helper seam.
-func (g GRPCGateway) BeginPasskeyLogin(ctx context.Context) (publicauthapp.PasskeyChallenge, error) {
-	resp, err := g.Client.BeginPasskeyLogin(ctx, &authv1.BeginPasskeyLoginRequest{})
+func (g GRPCGateway) BeginPasskeyLogin(ctx context.Context, username string) (publicauthapp.PasskeyChallenge, error) {
+	resp, err := g.Client.BeginPasskeyLogin(ctx, &authv1.BeginPasskeyLoginRequest{Username: username})
 	if err != nil {
-		return publicauthapp.PasskeyChallenge{}, mapGRPCError(err, apperrors.KindInvalidInput, "failed to start passkey login")
+		return publicauthapp.PasskeyChallenge{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to start passkey login.")
 	}
 	sessionID := strings.TrimSpace(resp.GetSessionId())
 	if sessionID == "" {
-		return publicauthapp.PasskeyChallenge{}, apperrors.E(apperrors.KindUnknown, "auth did not return login session")
+		return publicauthapp.PasskeyChallenge{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a login session.")
 	}
 	return publicauthapp.PasskeyChallenge{SessionID: sessionID, PublicKey: json.RawMessage(resp.GetCredentialRequestOptionsJson())}, nil
 }
@@ -121,11 +111,11 @@ func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, c
 		CredentialResponseJson: credential,
 	})
 	if err != nil {
-		return "", mapGRPCError(err, apperrors.KindInvalidInput, "failed to finish passkey login")
+		return "", mapGRPCError(err, apperrors.KindInvalidInput, "Failed to finish passkey login.")
 	}
 	userID := strings.TrimSpace(resp.GetUser().GetId())
 	if userID == "" {
-		return "", apperrors.E(apperrors.KindUnknown, "auth did not return user id")
+		return "", apperrors.E(apperrors.KindUnknown, "Auth did not return a user ID.")
 	}
 	return userID, nil
 }
@@ -134,11 +124,11 @@ func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, c
 func (g GRPCGateway) CreateWebSession(ctx context.Context, userID string) (string, error) {
 	resp, err := g.Client.CreateWebSession(ctx, &authv1.CreateWebSessionRequest{UserId: userID})
 	if err != nil {
-		return "", mapGRPCError(err, apperrors.KindUnknown, "failed to create web session")
+		return "", mapGRPCError(err, apperrors.KindUnknown, "Failed to create a web session.")
 	}
 	sessionID := strings.TrimSpace(resp.GetSession().GetId())
 	if sessionID == "" {
-		return "", apperrors.E(apperrors.KindUnknown, "auth did not return web session id")
+		return "", apperrors.E(apperrors.KindUnknown, "Auth did not return a web session ID.")
 	}
 	return sessionID, nil
 }
@@ -155,5 +145,5 @@ func (g GRPCGateway) HasValidWebSession(ctx context.Context, sessionID string) b
 // RevokeWebSession applies this package workflow transition.
 func (g GRPCGateway) RevokeWebSession(ctx context.Context, sessionID string) error {
 	_, err := g.Client.RevokeWebSession(ctx, &authv1.RevokeWebSessionRequest{SessionId: sessionID})
-	return mapGRPCError(err, apperrors.KindUnknown, "failed to revoke web session")
+	return mapGRPCError(err, apperrors.KindUnknown, "Failed to revoke the web session.")
 }

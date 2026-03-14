@@ -82,7 +82,7 @@ func buildServiceDescriptors(
 		return nil, fmt.Errorf("create daggerheart asset service: %w", err)
 	}
 	campaignService := gamegrpc.NewCampaignService(stores, authClient, aiAgentClient)
-	participantService := gamegrpc.NewParticipantService(stores)
+	participantService := gamegrpc.NewParticipantService(stores, authClient)
 	inviteService := gamegrpc.NewInviteService(stores, authClient)
 	characterService := gamegrpc.NewCharacterService(stores)
 	snapshotService := gamegrpc.NewSnapshotService(stores)
