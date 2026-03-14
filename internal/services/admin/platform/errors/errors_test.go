@@ -86,7 +86,9 @@ func TestMapGRPCTransportError(t *testing.T) {
 
 	// Already typed — pass through.
 	typed := E(KindConflict, "already typed")
-	if got := MapGRPCTransportError(typed, mapping); got != typed {
+	got := MapGRPCTransportError(typed, mapping)
+	var typedErr Error
+	if !stderrors.As(got, &typedErr) || typedErr.Kind != KindConflict || typedErr.Message != "already typed" {
 		t.Fatalf("MapGRPCTransportError(typed) = %v", got)
 	}
 
@@ -112,10 +114,10 @@ func TestMapGRPCTransportError(t *testing.T) {
 		t.Fatalf("MapGRPCTransportError(Unavailable) = %+v", mapped)
 	}
 
-	// gRPC Aborted → KindConflict with message.
+	// gRPC Aborted → KindConflict with safe fallback message.
 	grpcErr = status.Error(codes.Aborted, "conflict detail")
 	mapped = MapGRPCTransportError(grpcErr, mapping)
-	if !stderrors.As(mapped, &appErr) || appErr.Kind != KindConflict || appErr.Message != "conflict detail" {
+	if !stderrors.As(mapped, &appErr) || appErr.Kind != KindConflict || appErr.Message != "fallback msg" {
 		t.Fatalf("MapGRPCTransportError(Aborted) = %+v", mapped)
 	}
 

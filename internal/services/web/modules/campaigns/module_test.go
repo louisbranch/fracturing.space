@@ -724,8 +724,12 @@ type fakeGateway struct {
 	updateCampaignErr                 error
 	updateCampaignAIBindingErr        error
 	createParticipantErr              error
+	createInviteErr                   error
+	revokeInviteErr                   error
 	createdParticipantID              string
 	lastCreateParticipantInput        campaignapp.CreateParticipantInput
+	lastCreateInviteInput             campaignapp.CreateInviteInput
+	lastRevokeInviteInput             campaignapp.RevokeInviteInput
 	updateParticipantErr              error
 	err                               error
 	createErr                         error
@@ -1011,10 +1015,18 @@ func (f fakeGateway) ReleaseCharacterControl(context.Context, string, string) er
 func (f fakeGateway) UpdateParticipant(context.Context, string, campaignapp.UpdateParticipantInput) error {
 	return f.updateParticipantErr
 }
-func (fakeGateway) CreateInvite(context.Context, string, campaignapp.CreateInviteInput) error {
+func (f fakeGateway) CreateInvite(_ context.Context, _ string, input campaignapp.CreateInviteInput) error {
+	if f.createInviteErr != nil {
+		return f.createInviteErr
+	}
+	f.lastCreateInviteInput = input
 	return nil
 }
-func (fakeGateway) RevokeInvite(context.Context, string, campaignapp.RevokeInviteInput) error {
+func (f fakeGateway) RevokeInvite(_ context.Context, _ string, input campaignapp.RevokeInviteInput) error {
+	if f.revokeInviteErr != nil {
+		return f.revokeInviteErr
+	}
+	f.lastRevokeInviteInput = input
 	return nil
 }
 func (f fakeGateway) ApplyCharacterCreationStep(context.Context, string, string, *campaignapp.CampaignCharacterCreationStepInput) error {

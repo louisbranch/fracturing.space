@@ -1,6 +1,9 @@
 package templates
 
-import "net/http"
+import (
+	"net/http"
+	"strings"
+)
 
 const (
 	appErrorPageTitleNotFoundKey   = "web.error.page_title_not_found"
@@ -49,6 +52,15 @@ func appErrorMessage(statusCode int, loc Localizer) string {
 	default:
 		return T(loc, appErrorMessageServerErrKey)
 	}
+}
+
+// appErrorDisplayMessage keeps generic page copy as the default while allowing
+// callers to override it with an explicit user-safe detail string.
+func appErrorDisplayMessage(statusCode int, message string, loc Localizer) string {
+	if value := strings.TrimSpace(message); value != "" {
+		return value
+	}
+	return appErrorMessage(statusCode, loc)
 }
 
 // normalizeAppErrorStatus buckets HTTP status codes into display categories:

@@ -89,6 +89,12 @@ func TestAppErrorCopyHelpers(t *testing.T) {
 	if got := appErrorMessage(http.StatusInternalServerError, loc); got != "Please try again later." {
 		t.Fatalf("appErrorMessage(500) = %q, want %q", got, "Please try again later.")
 	}
+	if got := appErrorDisplayMessage(http.StatusConflict, "User already has a pending invite in this campaign", loc); got != "User already has a pending invite in this campaign" {
+		t.Fatalf("appErrorDisplayMessage(explicit) = %q", got)
+	}
+	if got := appErrorDisplayMessage(http.StatusConflict, "   ", loc); got != "Please check your request." {
+		t.Fatalf("appErrorDisplayMessage(fallback) = %q, want %q", got, "Please check your request.")
+	}
 	if got := normalizeAppErrorStatus(http.StatusNotFound); got != http.StatusNotFound {
 		t.Fatalf("normalizeAppErrorStatus(404) = %d, want %d", got, http.StatusNotFound)
 	}

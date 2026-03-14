@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	platformerrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	sharedi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"golang.org/x/text/language"
@@ -109,5 +110,22 @@ func TestLocalizeErrorUsesLocalizationKeyWhenAvailable(t *testing.T) {
 	}
 	if got := LocalizeError(loc, apperrors.E(apperrors.KindUnavailable, "fallback")); got != "fallback" {
 		t.Fatalf("LocalizeError(no-key) = %q, want %q", got, "fallback")
+	}
+}
+
+func TestLocalizeErrorPrefersRequestLocaleForRichPlatformReason(t *testing.T) {
+	t.Parallel()
+
+	err := apperrors.Error{
+		Kind:                apperrors.KindConflict,
+		Message:             "failed to create invite",
+		PublicMessage:       "Mensagem em portugues",
+		PublicMessageLocale: "pt-BR",
+		ReasonDomain:        platformerrors.Domain,
+		Reason:              string(platformerrors.CodeInviteRecipientAlreadyInvited),
+	}
+	loc := &localizerStub{value: "error.web.message.failed_to_create_invite"}
+	if got := LocalizeError(loc, err, "en-US"); got != "User already has a pending invite in this campaign" {
+		t.Fatalf("LocalizeError(rich reason) = %q", got)
 	}
 }

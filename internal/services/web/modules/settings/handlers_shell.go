@@ -36,8 +36,8 @@ func (h handlers) writeFlashNotice(w http.ResponseWriter, r *http.Request, notic
 
 // writeJSONError writes a localized JSON error payload for settings endpoints.
 func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
-	loc, _ := h.PageLocalizer(w, r)
-	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), webi18n.LocalizeError(loc, err))
+	loc, lang := h.PageLocalizer(w, r)
+	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), webi18n.LocalizeError(loc, err, lang))
 }
 
 // hasSameOriginProof reports whether this package condition is satisfied.

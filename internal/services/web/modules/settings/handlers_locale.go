@@ -32,8 +32,8 @@ func (h handlers) handleLocalePost(w http.ResponseWriter, r *http.Request) {
 	selectedLocale := parseLocaleInput(r.PostForm)
 	if err := h.locale.SaveLocale(ctx, userID, selectedLocale); err != nil {
 		if apperrors.HTTPStatus(err) == http.StatusBadRequest {
-			loc, _ := h.PageLocalizer(w, r)
-			h.renderLocalePage(w, r, http.StatusBadRequest, selectedLocale, webi18n.LocalizeError(loc, err))
+			loc, lang := h.PageLocalizer(w, r)
+			h.renderLocalePage(w, r, http.StatusBadRequest, selectedLocale, webi18n.LocalizeError(loc, err, lang))
 			return
 		}
 		h.WriteError(w, r, err)

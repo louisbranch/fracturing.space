@@ -65,6 +65,32 @@ func TestReadAndClearLegacyCookieWithoutSurfaceRoundTrip(t *testing.T) {
 	}
 }
 
+func TestWriteAndReadAndClearMessageRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/c1/invites", nil)
+	writeRR := httptest.NewRecorder()
+
+	Write(writeRR, req, Notice{Kind: KindError, Message: "User already has a pending invite in this campaign"})
+	cookie, err := http.ParseSetCookie(writeRR.Header().Get("Set-Cookie"))
+	if err != nil {
+		t.Fatalf("ParseSetCookie() error = %v", err)
+	}
+	req.AddCookie(cookie)
+
+	readRR := httptest.NewRecorder()
+	notice, ok := ReadAndClear(readRR, req)
+	if !ok {
+		t.Fatalf("ReadAndClear() ok = false, want true")
+	}
+	if notice.Key != "" {
+		t.Fatalf("notice.Key = %q, want empty", notice.Key)
+	}
+	if notice.Message != "User already has a pending invite in this campaign" {
+		t.Fatalf("notice.Message = %q", notice.Message)
+	}
+}
+
 func TestReadAndClearInvalidCookieValueStillClears(t *testing.T) {
 	t.Parallel()
 

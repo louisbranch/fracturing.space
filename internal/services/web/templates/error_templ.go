@@ -17,7 +17,7 @@ func appErrorStatusLabel(statusCode int) string {
 	return strconv.Itoa(statusCode)
 }
 
-func AppErrorState(statusCode int, loc Localizer) templ.Component {
+func AppErrorState(statusCode int, message string, loc Localizer) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -82,9 +82,9 @@ func AppErrorState(statusCode int, loc Localizer) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var5 string
-		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(appErrorMessage(statusCode, loc))
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(appErrorDisplayMessage(statusCode, message, loc))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/error.templ`, Line: 17, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/templates/error.templ`, Line: 17, Col: 84}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {

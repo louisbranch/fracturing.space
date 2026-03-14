@@ -209,7 +209,11 @@ func TestMapGRPCTransportErrorPassesThroughAppErrors(t *testing.T) {
 	got := MapGRPCTransportError(input, GRPCStatusMapping{
 		FallbackKind: KindInvalidInput,
 	})
-	if got != input {
-		t.Fatalf("MapGRPCTransportError() = %#v, want %#v", got, input)
+	var gotErr Error
+	if !errors.As(got, &gotErr) {
+		t.Fatalf("MapGRPCTransportError() type = %T, want Error", got)
+	}
+	if gotErr.Kind != KindForbidden || gotErr.Message != "forbidden" {
+		t.Fatalf("MapGRPCTransportError() = %#v", gotErr)
 	}
 }
