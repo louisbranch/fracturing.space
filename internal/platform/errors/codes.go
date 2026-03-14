@@ -29,13 +29,14 @@ const (
 	CodeUserInvalidUsername Code = "USER_INVALID_USERNAME"
 
 	// Invite errors
-	CodeInviteEmptyCampaignID      Code = "INVITE_EMPTY_CAMPAIGN_ID"
-	CodeInviteEmptyParticipantID   Code = "INVITE_EMPTY_PARTICIPANT_ID"
-	CodeInviteRecipientUserMissing Code = "INVITE_RECIPIENT_USER_MISSING"
-	CodeInviteJoinGrantInvalid     Code = "INVITE_JOIN_GRANT_INVALID"
-	CodeInviteJoinGrantExpired     Code = "INVITE_JOIN_GRANT_EXPIRED"
-	CodeInviteJoinGrantMismatch    Code = "INVITE_JOIN_GRANT_MISMATCH"
-	CodeInviteJoinGrantUsed        Code = "INVITE_JOIN_GRANT_USED"
+	CodeInviteEmptyCampaignID         Code = "INVITE_EMPTY_CAMPAIGN_ID"
+	CodeInviteEmptyParticipantID      Code = "INVITE_EMPTY_PARTICIPANT_ID"
+	CodeInviteRecipientAlreadyInvited Code = "INVITE_RECIPIENT_ALREADY_INVITED"
+	CodeInviteRecipientUserMissing    Code = "INVITE_RECIPIENT_USER_MISSING"
+	CodeInviteJoinGrantInvalid        Code = "INVITE_JOIN_GRANT_INVALID"
+	CodeInviteJoinGrantExpired        Code = "INVITE_JOIN_GRANT_EXPIRED"
+	CodeInviteJoinGrantMismatch       Code = "INVITE_JOIN_GRANT_MISMATCH"
+	CodeInviteJoinGrantUsed           Code = "INVITE_JOIN_GRANT_USED"
 
 	// Session errors
 	CodeSessionEmptyCampaignID Code = "SESSION_EMPTY_CAMPAIGN_ID"
@@ -161,7 +162,8 @@ func (c Code) GRPCCode() codes.Code {
 		return codes.NotFound
 
 	// AlreadyExists - unique resource constraint
-	case CodeParticipantUserAlreadyClaimed:
+	case CodeParticipantUserAlreadyClaimed,
+		CodeInviteRecipientAlreadyInvited:
 		return codes.AlreadyExists
 
 	default:

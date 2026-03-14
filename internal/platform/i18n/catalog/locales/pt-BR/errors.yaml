@@ -85,6 +85,7 @@ messages:
   "INVITE_JTI_REQUIRED": "O JTI é obrigatório"
   "INVITE_NOT_CREATED": "O convite não existe"
   "INVITE_PARTICIPANT_ID_REQUIRED": "O ID do participante é obrigatório"
+  "INVITE_RECIPIENT_ALREADY_INVITED": "O usuário já tem um convite pendente nesta campanha"
   "INVITE_RECIPIENT_USER_MISSING": "Usuário destinatário do convite não encontrado"
   "INVITE_STATUS_INVALID": "O status do convite é inválido"
   "INVITE_USER_ID_REQUIRED": "O ID do usuário é obrigatório"

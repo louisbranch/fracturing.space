@@ -175,6 +175,223 @@ func TestCreateInvite_UsesDomainEngine(t *testing.T) {
 	}
 }
 
+func TestCreateInvite_RecipientAlreadyParticipant(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+		"participant-2": {ID: "participant-2", CampaignID: "campaign-1", UserID: "user-2"},
+	}
+
+	svc := &InviteService{
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
+		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		idGenerator: fixedIDGenerator("invite-123"),
+		authClient:  authClient,
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
+		CampaignId:      "campaign-1",
+		ParticipantId:   "participant-1",
+		RecipientUserId: "user-2",
+	})
+	assertStatusCode(t, err, codes.AlreadyExists)
+
+	if authClient.lastGetUserRequest == nil || authClient.lastGetUserRequest.GetUserId() != "user-2" {
+		t.Fatalf("GetUser request = %#v, want user-2", authClient.lastGetUserRequest)
+	}
+	if participantStore.listCampaignIDsByUserCalls != 1 {
+		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", participantStore.listCampaignIDsByUserCalls)
+	}
+	if len(eventStore.events["campaign-1"]) != 0 {
+		t.Fatalf("event count = %d, want 0", len(eventStore.events["campaign-1"]))
+	}
+}
+
+func TestCreateInvite_RecipientAlreadyHasPendingInvite(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+		"participant-2": {ID: "participant-2", CampaignID: "campaign-1"},
+	}
+	inviteStore.invites["invite-existing"] = storage.InviteRecord{
+		ID:              "invite-existing",
+		CampaignID:      "campaign-1",
+		ParticipantID:   "participant-2",
+		RecipientUserID: "user-2",
+		Status:          invite.StatusPending,
+	}
+
+	svc := &InviteService{
+		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
+		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		idGenerator: fixedIDGenerator("invite-123"),
+		authClient:  authClient,
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	_, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
+		CampaignId:      "campaign-1",
+		ParticipantId:   "participant-1",
+		RecipientUserId: "user-2",
+	})
+	assertStatusCode(t, err, codes.AlreadyExists)
+
+	if authClient.lastGetUserRequest == nil || authClient.lastGetUserRequest.GetUserId() != "user-2" {
+		t.Fatalf("GetUser request = %#v, want user-2", authClient.lastGetUserRequest)
+	}
+	if participantStore.listCampaignIDsByUserCalls != 1 {
+		t.Fatalf("ListCampaignIDsByUser calls = %d, want 1", participantStore.listCampaignIDsByUserCalls)
+	}
+	if len(eventStore.events["campaign-1"]) != 0 {
+		t.Fatalf("event count = %d, want 0", len(eventStore.events["campaign-1"]))
+	}
+}
+
+func TestCreateInvite_RecipientParticipantInOtherCampaignDoesNotBlock(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+	participantStore.participants["campaign-2"] = map[string]storage.ParticipantRecord{
+		"participant-2": {ID: "participant-2", CampaignID: "campaign-2", UserID: "user-2"},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "invite",
+			EntityID:    "invite-123",
+			PayloadJSON: []byte(`{"invite_id":"invite-123","participant_id":"participant-1","recipient_user_id":"user-2","status":"pending","created_by_participant_id":"owner-1"}`),
+		}),
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("invite-123"),
+		authClient:  authClient,
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
+		CampaignId:      "campaign-1",
+		ParticipantId:   "participant-1",
+		RecipientUserId: "user-2",
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("CreateInvite response has nil invite")
+	}
+	if resp.Invite.GetRecipientUserId() != "user-2" {
+		t.Fatalf("recipient user id = %q, want user-2", resp.Invite.GetRecipientUserId())
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+}
+
+func TestCreateInvite_RecipientPendingInviteInOtherCampaignDoesNotBlock(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeEventStore()
+	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-2"}}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"owner-1":       {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
+	}
+	inviteStore.invites["invite-other"] = storage.InviteRecord{
+		ID:              "invite-other",
+		CampaignID:      "campaign-2",
+		ParticipantID:   "participant-2",
+		RecipientUserID: "user-2",
+		Status:          invite.StatusPending,
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+		Decision: command.Accept(event.Event{
+			CampaignID:  "campaign-1",
+			Type:        event.Type("invite.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "invite",
+			EntityID:    "invite-123",
+			PayloadJSON: []byte(`{"invite_id":"invite-123","participant_id":"participant-1","recipient_user_id":"user-2","status":"pending","created_by_participant_id":"owner-1"}`),
+		}),
+	}}
+
+	svc := &InviteService{
+		stores: Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+		clock:       fixedClock(now),
+		idGenerator: fixedIDGenerator("invite-123"),
+		authClient:  authClient,
+	}
+
+	ctx := contextWithParticipantID("owner-1")
+	resp, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
+		CampaignId:      "campaign-1",
+		ParticipantId:   "participant-1",
+		RecipientUserId: "user-2",
+	})
+	if err != nil {
+		t.Fatalf("CreateInvite returned error: %v", err)
+	}
+	if resp.Invite == nil {
+		t.Fatal("CreateInvite response has nil invite")
+	}
+	if resp.Invite.GetRecipientUserId() != "user-2" {
+		t.Fatalf("recipient user id = %q, want user-2", resp.Invite.GetRecipientUserId())
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+}
+
 func TestRevokeInvite_AlreadyClaimed(t *testing.T) {
 	inviteStore := newFakeInviteStore()
 	eventStore := newFakeEventStore()
