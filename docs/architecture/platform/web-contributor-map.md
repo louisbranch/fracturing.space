@@ -34,6 +34,8 @@ Canonical implementation path: `internal/services/web/`.
 ## Package Roles
 
 - `internal/services/web/principal`: request-scoped session validation, viewer chrome, locale resolution, and the middleware-owned principal snapshot.
+  Request-time signed-in state belongs here; public modules should consume
+  `ResolveSignedIn` instead of re-validating cookies through feature gateways.
 - `internal/services/web/module`: canonical module contract types only.
 - `internal/services/web/composition`: turns resolved principal callbacks and module dependencies into the app handler.
 - `internal/services/web/app`: root mux composition, auth wrapping, and same-origin protections.
@@ -70,9 +72,22 @@ Canonical implementation path: `internal/services/web/`.
   duplicate app-owned workflow registry, root-owned workflow contract,
   production alias wall, and broad flat gateway client bag are gone, and the
   campaign detail handlers and module-owned markup now live under
-  `campaigns/render`, but contributors still have to navigate a very large
-  route surface.
-- `templates`: still centralize too much area-owned knowledge.
+  `campaigns/render`, while list/start/create/chat pages live under the root
+  `campaigns` package. Character-creation assembly and step parsing now live in
+  `campaigns/workflow/service.go`, and production module wiring now passes
+  read/mutation/authz seams explicitly, including test module construction.
+  The remaining contributor caution is mostly app/gateway size and route-surface
+  complexity, not shared page ownership or broad constructor bags.
+- `settings`: route/files already split by account and AI ownership, and the
+  constructor seam now matches that split via explicit account-vs-AI app
+  services in `settings/module.go` and `settings/app/service.go`.
+- `publicauth`: page templates are module-owned, and post-auth continuation
+  path validation is shared via `publicauth/redirectpath` instead of being
+  duplicated in handlers and the app service. Request-time signed-in detection
+  now comes from `principal.ResolveSignedIn`; `publicauth` owns auth ceremonies
+  and logout/session revocation, not duplicate session-validation policy.
+- `templates`: now functions as a shared shell/layout primitive package. Keep
+  area-owned pages out of it instead of re-growing a cross-area page bucket.
 
 ## Guardrails To Trust
 

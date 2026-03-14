@@ -15,7 +15,13 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	svc := settingsapp.NewService(staticGateway{})
+	svc := settingsapp.NewService(settingsapp.ServiceConfig{
+		ProfileGateway:  staticGateway{},
+		LocaleGateway:   staticGateway{},
+		SecurityGateway: staticGateway{},
+		AIKeyGateway:    staticGateway{},
+		AIAgentGateway:  staticGateway{},
+	})
 	registerRoutes(nil, newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
 		profile:  true,
 		locale:   true,
@@ -29,7 +35,13 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	svc := settingsapp.NewService(staticGateway{})
+	svc := settingsapp.NewService(settingsapp.ServiceConfig{
+		ProfileGateway:  staticGateway{},
+		LocaleGateway:   staticGateway{},
+		SecurityGateway: staticGateway{},
+		AIKeyGateway:    staticGateway{},
+		AIAgentGateway:  staticGateway{},
+	})
 	registerRoutes(mux, newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
 		profile:  true,
 		locale:   true,
@@ -81,7 +93,13 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 func TestWithCredentialIDReturnsNotFoundForMissingPathValue(t *testing.T) {
 	t.Parallel()
 
-	svc := settingsapp.NewService(staticGateway{})
+	svc := settingsapp.NewService(settingsapp.ServiceConfig{
+		ProfileGateway:  staticGateway{},
+		LocaleGateway:   staticGateway{},
+		SecurityGateway: staticGateway{},
+		AIKeyGateway:    staticGateway{},
+		AIAgentGateway:  staticGateway{},
+	})
 	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
 		profile:  true,
 		locale:   true,
@@ -109,7 +127,13 @@ func TestWithCredentialIDReturnsNotFoundForMissingPathValue(t *testing.T) {
 func TestWithCredentialIDDelegatesResolvedID(t *testing.T) {
 	t.Parallel()
 
-	svc := settingsapp.NewService(staticGateway{})
+	svc := settingsapp.NewService(settingsapp.ServiceConfig{
+		ProfileGateway:  staticGateway{},
+		LocaleGateway:   staticGateway{},
+		SecurityGateway: staticGateway{},
+		AIKeyGateway:    staticGateway{},
+		AIAgentGateway:  staticGateway{},
+	})
 	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
 		profile:  true,
 		locale:   true,
@@ -140,7 +164,13 @@ func TestWithCredentialIDDelegatesResolvedID(t *testing.T) {
 func TestWithAgentIDDelegatesResolvedID(t *testing.T) {
 	t.Parallel()
 
-	svc := settingsapp.NewService(staticGateway{})
+	svc := settingsapp.NewService(settingsapp.ServiceConfig{
+		ProfileGateway:  staticGateway{},
+		LocaleGateway:   staticGateway{},
+		SecurityGateway: staticGateway{},
+		AIKeyGateway:    staticGateway{},
+		AIAgentGateway:  staticGateway{},
+	})
 	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
 		profile:  true,
 		locale:   true,

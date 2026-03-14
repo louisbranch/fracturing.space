@@ -14,19 +14,16 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-// notificationService defines the service contract used by notification handlers.
-type notificationService = notificationsapp.Service
-
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
-	service  notificationService
+	service  notificationsapp.Service
 	renderer notificationCopyRenderer
 	nowFunc  func() time.Time
 }
 
 // newHandlers builds package wiring for this web seam.
-func newHandlers(s notificationService, base modulehandler.Base) handlers {
+func newHandlers(s notificationsapp.Service, base modulehandler.Base) handlers {
 	return handlers{
 		Base:     base,
 		service:  s,
@@ -95,7 +92,7 @@ func (h handlers) handleOpen(w http.ResponseWriter, r *http.Request, notificatio
 }
 
 // loadNotificationListView loads and maps notification list items for rendering.
-func (h handlers) loadNotificationListView(ctx context.Context, userID string, loc webtemplates.Localizer) ([]webtemplates.NotificationListItemView, error) {
+func (h handlers) loadNotificationListView(ctx context.Context, userID string, loc Localizer) ([]NotificationListItemView, error) {
 	items, err := h.service.ListNotifications(ctx, userID)
 	if err != nil {
 		return nil, err
@@ -108,8 +105,8 @@ func (h handlers) writeNotificationsPage(
 	w http.ResponseWriter,
 	r *http.Request,
 	loc webtemplates.Localizer,
-	items []webtemplates.NotificationListItemView,
-	selected *webtemplates.NotificationDetailView,
+	items []NotificationListItemView,
+	selected *NotificationDetailView,
 ) {
 	h.WritePage(
 		w,
@@ -118,7 +115,7 @@ func (h handlers) writeNotificationsPage(
 		http.StatusOK,
 		notificationsMainHeader(loc),
 		webtemplates.AppMainLayoutOptions{},
-		webtemplates.NotificationsFragment(webtemplates.NotificationsPageView{
+		NotificationsFragment(NotificationsPageView{
 			Items:    items,
 			Selected: selected,
 		}, loc),

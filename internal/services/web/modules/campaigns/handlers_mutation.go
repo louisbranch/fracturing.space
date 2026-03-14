@@ -93,7 +93,7 @@ func (h handlers) handleCharacterCreate(w http.ResponseWriter, r *http.Request, 
 
 	// Redirect to creation page if the campaign has a character creation workflow.
 	workspace, err := h.service.CampaignWorkspace(ctx, campaignID)
-	if err == nil && h.resolveWorkflow(workspace.System) != nil {
+	if err == nil && h.creation.Enabled(workspace.System) {
 		h.writeMutationSuccess(w, r, "web.campaigns.notice_character_created", routepath.AppCampaignCharacterCreation(campaignID, created.CharacterID))
 		return
 	}

@@ -15,7 +15,7 @@ import (
 // handleAIAgentsGet handles this route in the module transport layer.
 func (h handlers) handleAIAgentsGet(w http.ResponseWriter, r *http.Request) {
 	ctx, userID := h.RequestContextAndUserID(r)
-	form := webtemplates.SettingsAIAgentsForm{
+	form := SettingsAIAgentsForm{
 		CredentialID: parseAIAgentCredentialSelectionInput(r.URL.Query()),
 	}
 	if form.CredentialID != "" {
@@ -47,7 +47,7 @@ func (h handlers) handleAIAgentsCreate(w http.ResponseWriter, r *http.Request) {
 		statusCode := apperrors.HTTPStatus(err)
 		if statusCode == http.StatusBadRequest || statusCode == http.StatusConflict {
 			loc, lang := h.PageLocalizer(w, r)
-			form := webtemplates.SettingsAIAgentsForm{
+			form := SettingsAIAgentsForm{
 				Label:        input.Label,
 				CredentialID: input.CredentialID,
 				Model:        input.Model,
@@ -93,7 +93,7 @@ func (h handlers) renderAIAgentsPage(
 	ctx context.Context,
 	userID string,
 	statusCode int,
-	form webtemplates.SettingsAIAgentsForm,
+	form SettingsAIAgentsForm,
 	errorMessage string,
 ) {
 	loc, _ := h.PageLocalizer(w, r)
@@ -116,6 +116,6 @@ func (h handlers) renderAIAgentsPage(
 		statusCode,
 		routepath.AppSettingsAIAgents,
 		webtemplates.T(loc, "web.settings.page_ai_agents_title"),
-		webtemplates.SettingsAIAgentsFragment(form, agentRows, loc),
+		SettingsAIAgentsFragment(form, agentRows, loc),
 	)
 }

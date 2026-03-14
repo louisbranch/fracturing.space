@@ -2,14 +2,12 @@ package app
 
 import (
 	"context"
-	"net/http"
 	"testing"
 
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"golang.org/x/text/language"
 )
 
-func TestCampaignCharacterCreationDelegatesToWorkflow(t *testing.T) {
+func TestCampaignCharacterCreationDataLoadsGenericInputs(t *testing.T) {
 	t.Parallel()
 
 	svc := newService(&campaignGatewayStub{
@@ -23,50 +21,34 @@ func TestCampaignCharacterCreationDelegatesToWorkflow(t *testing.T) {
 		},
 	})
 
-	creation, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", language.AmericanEnglish, testCreationWorkflow{})
+	data, err := svc.campaignCharacterCreationData(context.Background(), "c1", "char-1", language.AmericanEnglish)
 	if err != nil {
-		t.Fatalf("campaignCharacterCreation() error = %v", err)
+		t.Fatalf("campaignCharacterCreationData() error = %v", err)
 	}
-	if creation.Progress.NextStep != 2 {
-		t.Fatalf("NextStep = %d, want 2", creation.Progress.NextStep)
+	if data.Progress.NextStep != 2 {
+		t.Fatalf("NextStep = %d, want 2", data.Progress.NextStep)
 	}
-	if creation.Profile.ClassID != "warrior" {
-		t.Fatalf("ClassID = %q, want %q", creation.Profile.ClassID, "warrior")
+	if data.Profile.ClassID != "warrior" {
+		t.Fatalf("ClassID = %q, want %q", data.Profile.ClassID, "warrior")
 	}
-	if len(creation.Classes) != 1 || creation.Classes[0].ID != "warrior" {
-		t.Fatalf("Classes = %#v, want single warrior class", creation.Classes)
+	if len(data.Catalog.Classes) != 1 || data.Catalog.Classes[0].ID != "warrior" {
+		t.Fatalf("Classes = %#v, want single warrior class", data.Catalog.Classes)
 	}
 }
 
-func TestCampaignCharacterCreationForwardsCatalogLocale(t *testing.T) {
+func TestCampaignCharacterCreationDataForwardsCatalogLocale(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{}
 	svc := newService(gateway)
 
 	ptBR := language.MustParse("pt-BR")
-	_, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", ptBR, testCreationWorkflow{})
+	_, err := svc.campaignCharacterCreationData(context.Background(), "c1", "char-1", ptBR)
 	if err != nil {
-		t.Fatalf("campaignCharacterCreation() error = %v", err)
+		t.Fatalf("campaignCharacterCreationData() error = %v", err)
 	}
 	if gateway.characterCreationCatalogLocale != ptBR {
 		t.Fatalf("catalog locale = %v, want %v", gateway.characterCreationCatalogLocale, ptBR)
-	}
-}
-
-func TestCampaignCharacterCreationRejectsNilWorkflow(t *testing.T) {
-	t.Parallel()
-
-	svc := newService(&campaignGatewayStub{})
-	_, err := svc.campaignCharacterCreation(context.Background(), "c1", "char-1", language.AmericanEnglish, nil)
-	if err == nil {
-		t.Fatalf("campaignCharacterCreation() error = nil, want invalid input")
-	}
-	if apperrors.HTTPStatus(err) != http.StatusBadRequest {
-		t.Fatalf("campaignCharacterCreation() status = %d, want %d", apperrors.HTTPStatus(err), http.StatusBadRequest)
-	}
-	if apperrors.LocalizationKey(err) != "error.web.message.character_creation_step_is_not_available" {
-		t.Fatalf("campaignCharacterCreation() localization key = %q", apperrors.LocalizationKey(err))
 	}
 }
 

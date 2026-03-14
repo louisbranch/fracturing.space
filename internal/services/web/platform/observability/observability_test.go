@@ -2,7 +2,7 @@ package observability
 
 import (
 	"bytes"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -13,7 +13,7 @@ func TestRequestLoggerLogsMethodAndPath(t *testing.T) {
 	t.Parallel()
 
 	var buffer bytes.Buffer
-	logger := log.New(&buffer, "", 0)
+	logger := slog.New(slog.NewTextHandler(&buffer, nil))
 	h := RequestLogger(logger)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	}))
@@ -26,7 +26,7 @@ func TestRequestLoggerLogsMethodAndPath(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNoContent)
 	}
 	logLine := buffer.String()
-	for _, marker := range []string{"method=GET", "path=/discover/campaigns", "status=204", "request_id=req-123"} {
+	for _, marker := range []string{"level=INFO", "msg=http_request", "method=GET", "path=/discover/campaigns", "status=204", "request_id=req-123"} {
 		if !strings.Contains(logLine, marker) {
 			t.Fatalf("log line missing marker %q: %q", marker, logLine)
 		}
@@ -37,7 +37,7 @@ func TestRequestLoggerCapturesImplicitStatusOKAndBytes(t *testing.T) {
 	t.Parallel()
 
 	var buffer bytes.Buffer
-	logger := log.New(&buffer, "", 0)
+	logger := slog.New(slog.NewTextHandler(&buffer, nil))
 	h := RequestLogger(logger)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte("ok"))
 	}))

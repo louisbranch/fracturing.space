@@ -13,7 +13,7 @@ func (s service) LoadProfile(ctx context.Context, userID string) (SettingsProfil
 	if err != nil {
 		return SettingsProfile{}, err
 	}
-	profile, err := s.gateway.LoadProfile(ctx, resolvedUserID)
+	profile, err := s.profileGateway.LoadProfile(ctx, resolvedUserID)
 	if err != nil {
 		return SettingsProfile{}, err
 	}
@@ -30,7 +30,7 @@ func (s service) SaveProfile(ctx context.Context, userID string, profile Setting
 	if err := validateNameLength(profile.Name); err != nil {
 		return err
 	}
-	return s.gateway.SaveProfile(ctx, resolvedUserID, profile)
+	return s.profileGateway.SaveProfile(ctx, resolvedUserID, profile)
 }
 
 // LoadLocale loads the package state needed for this request path.
@@ -39,7 +39,7 @@ func (s service) LoadLocale(ctx context.Context, userID string) (string, error) 
 	if err != nil {
 		return "", err
 	}
-	locale, err := s.gateway.LoadLocale(ctx, resolvedUserID)
+	locale, err := s.localeGateway.LoadLocale(ctx, resolvedUserID)
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +56,7 @@ func (s service) SaveLocale(ctx context.Context, userID string, value string) er
 	if !ok {
 		return apperrors.EK(apperrors.KindInvalidInput, "error.http.invalid_locale", "locale is invalid")
 	}
-	return s.gateway.SaveLocale(ctx, resolvedUserID, locale)
+	return s.localeGateway.SaveLocale(ctx, resolvedUserID, locale)
 }
 
 // normalizeSettingsProfile centralizes profile field normalization before service flows.

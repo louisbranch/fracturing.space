@@ -8,17 +8,14 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-// dashboardService defines the service contract used by dashboard handlers.
-type dashboardService = dashboardapp.Service
-
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
-	service dashboardService
+	service dashboardapp.Service
 }
 
 // newHandlers builds package wiring for this web seam.
-func newHandlers(s dashboardService, base modulehandler.Base) handlers {
+func newHandlers(s dashboardapp.Service, base modulehandler.Base) handlers {
 	return handlers{Base: base, service: s}
 }
 
@@ -31,7 +28,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, err)
 		return
 	}
-	h.WritePage(w, r, webtemplates.T(loc, "dashboard.title"), http.StatusOK, dashboardMainHeader(loc), webtemplates.AppMainLayoutOptions{}, webtemplates.DashboardFragment(mapDashboardTemplateView(view), loc))
+	h.WritePage(w, r, webtemplates.T(loc, "dashboard.title"), http.StatusOK, dashboardMainHeader(loc), webtemplates.AppMainLayoutOptions{}, DashboardFragment(mapDashboardTemplateView(view), loc))
 }
 
 // dashboardMainHeader centralizes this web behavior in one helper seam.

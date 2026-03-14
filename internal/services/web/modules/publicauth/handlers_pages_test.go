@@ -110,7 +110,7 @@ func TestHandleRecoveryCodeAcknowledgeRedirectsToSafeNext(t *testing.T) {
 func TestRedirectAuthenticatedToAppUsesValidatedNextPath(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(publicauthapp.NewService(publicauthGatewayStub{validSession: true}, ""), requestmeta.SchemePolicy{})
+	h := newHandlers(publicauthapp.NewService(publicauthGatewayStub{}, ""), requestmeta.SchemePolicy{}, func(*http.Request) bool { return true })
 	req := httptest.NewRequest(http.MethodGet, routepath.Login+"?next=%2Finvite%2Finv-1", nil)
 	req.AddCookie(&http.Cookie{Name: sessioncookie.Name, Value: "sess-1"})
 	rr := httptest.NewRecorder()
@@ -126,9 +126,7 @@ func TestRedirectAuthenticatedToAppUsesValidatedNextPath(t *testing.T) {
 	}
 }
 
-type publicauthGatewayStub struct {
-	validSession bool
-}
+type publicauthGatewayStub struct{}
 
 func (publicauthGatewayStub) BeginAccountRegistration(context.Context, string) (publicauthapp.PasskeyChallenge, error) {
 	return publicauthapp.PasskeyChallenge{}, nil
@@ -164,10 +162,6 @@ func (publicauthGatewayStub) FinishRecoveryPasskeyRegistration(context.Context, 
 
 func (publicauthGatewayStub) CreateWebSession(context.Context, string) (string, error) {
 	return "", nil
-}
-
-func (s publicauthGatewayStub) HasValidWebSession(context.Context, string) bool {
-	return s.validSession
 }
 
 func (publicauthGatewayStub) RevokeWebSession(context.Context, string) error {

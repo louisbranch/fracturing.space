@@ -174,3 +174,13 @@ func (unavailableGateway) ApplyCharacterCreationStep(context.Context, string, st
 func (unavailableGateway) ResetCharacterCreationWorkflow(context.Context, string, string) error {
 	return apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
+
+// CanCampaignAction fails closed when authorization is unavailable.
+func (unavailableGateway) CanCampaignAction(context.Context, string, AuthorizationAction, AuthorizationResource, *AuthorizationTarget) (AuthorizationDecision, error) {
+	return AuthorizationDecision{}, apperrors.E(apperrors.KindUnavailable, "campaign authorization is not configured")
+}
+
+// BatchCanCampaignAction fails closed when authorization is unavailable.
+func (unavailableGateway) BatchCanCampaignAction(context.Context, string, []AuthorizationCheck) ([]AuthorizationDecision, error) {
+	return nil, apperrors.E(apperrors.KindUnavailable, "campaign authorization is not configured")
+}

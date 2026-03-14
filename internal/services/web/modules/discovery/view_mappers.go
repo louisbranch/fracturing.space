@@ -1,15 +1,17 @@
 package discovery
 
-import webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
+import (
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
+)
 
 // mapEntriesToView converts gateway domain types to template view types.
-func mapEntriesToView(entries []StarterEntry) []webtemplates.StarterEntryView {
+func mapEntriesToView(entries []discoveryapp.StarterEntry) []StarterEntryView {
 	if len(entries) == 0 {
 		return nil
 	}
-	views := make([]webtemplates.StarterEntryView, len(entries))
+	views := make([]StarterEntryView, len(entries))
 	for i, entry := range entries {
-		views[i] = webtemplates.StarterEntryView{
+		views[i] = StarterEntryView{
 			CampaignID:  entry.CampaignID,
 			Title:       entry.Title,
 			Description: entry.Description,

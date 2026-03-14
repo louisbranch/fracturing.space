@@ -7,7 +7,7 @@ package main
 import (
 	"context"
 	"flag"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
@@ -16,15 +16,19 @@ import (
 )
 
 func main() {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, nil)).With("service", "web")
+	slog.SetDefault(logger)
+
 	cfg, err := webcmd.ParseConfig(flag.CommandLine, os.Args[1:])
 	if err != nil {
-		log.Fatalf("parse flags: %v", err)
+		logger.Error("parse web config", "error", err)
+		os.Exit(1)
 	}
-	log.SetPrefix("[WEB] ")
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
 	if err := webcmd.Run(ctx, cfg); err != nil {
-		log.Fatalf("failed to serve: %v", err)
+		logger.Error("serve web", "error", err)
+		os.Exit(1)
 	}
 }

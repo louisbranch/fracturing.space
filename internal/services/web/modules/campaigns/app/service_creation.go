@@ -8,36 +8,38 @@ import (
 	"golang.org/x/text/language"
 )
 
-// campaignCharacterCreation centralizes this web behavior in one helper seam.
-func (s service) campaignCharacterCreation(ctx context.Context, campaignID string, characterID string, locale language.Tag, workflow CharacterCreationWorkflow) (CampaignCharacterCreation, error) {
+// campaignCharacterCreationData centralizes generic character-creation reads in
+// one app-owned helper seam.
+func (s service) campaignCharacterCreationData(ctx context.Context, campaignID string, characterID string, locale language.Tag) (CampaignCharacterCreationData, error) {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
-		return CampaignCharacterCreation{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+		return CampaignCharacterCreationData{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
 	}
 	characterID = strings.TrimSpace(characterID)
 	if characterID == "" {
-		return CampaignCharacterCreation{}, apperrors.E(apperrors.KindInvalidInput, "character id is required")
-	}
-	if workflow == nil {
-		return CampaignCharacterCreation{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_step_is_not_available", "character creation step is not available")
+		return CampaignCharacterCreationData{}, apperrors.E(apperrors.KindInvalidInput, "character id is required")
 	}
 
 	progress, err := s.readGateway.CharacterCreationProgress(ctx, campaignID, characterID)
 	if err != nil {
-		return CampaignCharacterCreation{}, err
+		return CampaignCharacterCreationData{}, err
 	}
 
 	catalog, err := s.readGateway.CharacterCreationCatalog(ctx, locale)
 	if err != nil {
-		return CampaignCharacterCreation{}, err
+		return CampaignCharacterCreationData{}, err
 	}
 
 	profile, err := s.readGateway.CharacterCreationProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return CampaignCharacterCreation{}, err
+		return CampaignCharacterCreationData{}, err
 	}
 
-	return workflow.AssembleCatalog(progress, catalog, profile), nil
+	return CampaignCharacterCreationData{
+		Progress: progress,
+		Catalog:  catalog,
+		Profile:  profile,
+	}, nil
 }
 
 // campaignCharacterCreationProgress centralizes this web behavior in one helper seam.

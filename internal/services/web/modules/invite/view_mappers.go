@@ -5,12 +5,11 @@ import (
 
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // mapPublicInviteView keeps template-facing copy and links out of the app layer.
-func mapPublicInviteView(page inviteapp.InvitePage) webtemplates.PublicInvitePageView {
-	view := webtemplates.PublicInvitePageView{
+func mapPublicInviteView(page inviteapp.InvitePage) PublicInvitePageView {
+	view := PublicInvitePageView{
 		CampaignName:    strings.TrimSpace(page.Invite.CampaignName),
 		ParticipantName: strings.TrimSpace(page.Invite.ParticipantName),
 		StatusLabel:     strings.Title(string(page.Invite.Status)),

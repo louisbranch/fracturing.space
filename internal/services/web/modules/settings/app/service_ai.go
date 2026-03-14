@@ -13,7 +13,7 @@ func (s service) ListAIKeys(ctx context.Context, userID string) ([]SettingsAIKey
 	if err != nil {
 		return nil, err
 	}
-	keys, err := s.gateway.ListAIKeys(ctx, resolvedUserID)
+	keys, err := s.aiKeyGateway.ListAIKeys(ctx, resolvedUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +35,7 @@ func (s service) ListAIAgentCredentials(ctx context.Context, userID string) ([]S
 	if err != nil {
 		return nil, err
 	}
-	options, err := s.gateway.ListAIAgentCredentials(ctx, resolvedUserID)
+	options, err := s.aiAgentGateway.ListAIAgentCredentials(ctx, resolvedUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (s service) ListAIAgents(ctx context.Context, userID string) ([]SettingsAIA
 	if err != nil {
 		return nil, err
 	}
-	agents, err := s.gateway.ListAIAgents(ctx, resolvedUserID)
+	agents, err := s.aiAgentGateway.ListAIAgents(ctx, resolvedUserID)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (s service) ListAIProviderModels(ctx context.Context, userID string, creden
 	if resolvedCredentialID == "" || !IsSafePathID(resolvedCredentialID) {
 		return nil, apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_credential_required", "credential is required")
 	}
-	models, err := s.gateway.ListAIProviderModels(ctx, resolvedUserID, resolvedCredentialID)
+	models, err := s.aiAgentGateway.ListAIProviderModels(ctx, resolvedUserID, resolvedCredentialID)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +107,7 @@ func (s service) CreateAIKey(ctx context.Context, userID string, label string, s
 	if label == "" || secret == "" {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_keys.error_required", "label and secret are required")
 	}
-	return s.gateway.CreateAIKey(ctx, resolvedUserID, label, secret)
+	return s.aiKeyGateway.CreateAIKey(ctx, resolvedUserID, label, secret)
 }
 
 // CreateAIAgent executes package-scoped agent creation behavior.
@@ -129,7 +129,7 @@ func (s service) CreateAIAgent(ctx context.Context, userID string, input CreateA
 	if !IsSafePathID(input.CredentialID) {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_credential_required", "credential is required")
 	}
-	return s.gateway.CreateAIAgent(ctx, resolvedUserID, input)
+	return s.aiAgentGateway.CreateAIAgent(ctx, resolvedUserID, input)
 }
 
 // DeleteAIAgent removes one user-owned AI agent when it is not in use.
@@ -142,7 +142,7 @@ func (s service) DeleteAIAgent(ctx context.Context, userID string, agentID strin
 	if resolvedAgentID == "" || !IsSafePathID(resolvedAgentID) {
 		return apperrors.EK(apperrors.KindInvalidInput, "web.settings.ai_agents.error_agent_required", "agent is required")
 	}
-	return s.gateway.DeleteAIAgent(ctx, resolvedUserID, resolvedAgentID)
+	return s.aiAgentGateway.DeleteAIAgent(ctx, resolvedUserID, resolvedAgentID)
 }
 
 // RevokeAIKey applies this package workflow transition.
@@ -159,7 +159,7 @@ func (s service) RevokeAIKey(ctx context.Context, userID string, credentialID st
 			"credential id is required",
 		)
 	}
-	return s.gateway.RevokeAIKey(ctx, resolvedUserID, resolvedCredentialID)
+	return s.aiKeyGateway.RevokeAIKey(ctx, resolvedUserID, resolvedCredentialID)
 }
 
 // normalizeSettingsAIKey normalizes one credential row for stable template rendering.

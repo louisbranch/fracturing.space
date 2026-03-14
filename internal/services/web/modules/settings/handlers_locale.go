@@ -53,7 +53,7 @@ func (h handlers) renderLocalePage(w http.ResponseWriter, r *http.Request, statu
 		statusCode,
 		routepath.AppSettingsLocale,
 		webtemplates.T(loc, "web.settings.page_locale_title"),
-		webtemplates.SettingsLocaleFragment(webtemplates.SettingsLocaleForm{
+		SettingsLocaleFragment(SettingsLocaleForm{
 			SelectedLocale: selectedLocale,
 			ErrorMessage:   errorMessage,
 		}, loc),

@@ -47,7 +47,15 @@ func (m Module) Healthy() bool {
 // Mount wires settings route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := settingsapp.NewService(m.gateway)
+	account := settingsapp.NewAccountService(settingsapp.AccountServiceConfig{
+		ProfileGateway:  m.gateway,
+		LocaleGateway:   m.gateway,
+		SecurityGateway: m.gateway,
+	})
+	ai := settingsapp.NewAIService(settingsapp.AIServiceConfig{
+		AIKeyGateway:   m.gateway,
+		AIAgentGateway: m.gateway,
+	})
 	availability := settingsSurfaceAvailability{
 		profile:  settingsapp.IsProfileGatewayHealthy(m.gateway),
 		locale:   settingsapp.IsLocaleGatewayHealthy(m.gateway),
@@ -55,7 +63,7 @@ func (m Module) Mount() (module.Mount, error) {
 		aiKeys:   settingsapp.IsAIKeyGatewayHealthy(m.gateway),
 		aiAgents: settingsapp.IsAIAgentGatewayHealthy(m.gateway),
 	}
-	h := newHandlers(svc, svc, svc, svc, svc, availability, m.base, m.flashMeta, m.sync)
+	h := newHandlers(account, account, account, ai, ai, availability, m.base, m.flashMeta, m.sync)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.SettingsPrefix, Handler: mux}, nil
 }

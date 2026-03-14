@@ -7,10 +7,10 @@ import (
 
 	"github.com/a-h/templ"
 	sharedi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/redirectpath"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/language"
 )
 
@@ -21,7 +21,7 @@ func (h handlers) handleRoot(w http.ResponseWriter, r *http.Request) {
 	}
 	langTag := h.resolveAuthTag(w, r)
 	copy := webi18n.Auth(langTag)
-	h.writeAuthPage(w, r, copy.LandingTitle, copy.MetaDescription, langTag.String(), webtemplates.PublicRootFragment(copy))
+	h.writeAuthPage(w, r, copy.LandingTitle, copy.MetaDescription, langTag.String(), PublicRootFragment(copy))
 }
 
 // handleLogin handles this route in the module transport layer.
@@ -31,7 +31,7 @@ func (h handlers) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	langTag := h.resolveAuthTag(w, r)
 	copy := webi18n.Auth(langTag)
-	h.writeAuthPage(w, r, copy.LoginTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyLoginPage(copy, h.recoveryPageURL(r), h.pendingID(r), h.nextPath(r)))
+	h.writeAuthPage(w, r, copy.LoginTitle, copy.MetaDescription, langTag.String(), PasskeyLoginPage(copy, h.recoveryPageURL(r), h.pendingID(r), h.nextPath(r)))
 }
 
 // handleRecoveryGet handles this route in the module transport layer.
@@ -41,7 +41,7 @@ func (h handlers) handleRecoveryGet(w http.ResponseWriter, r *http.Request) {
 	}
 	langTag := h.resolveAuthTag(w, r)
 	copy := webi18n.Auth(langTag)
-	h.writeAuthPage(w, r, copy.RecoveryTitle, copy.MetaDescription, langTag.String(), webtemplates.PasskeyRecoveryPage(copy, h.pendingID(r), h.nextPath(r)))
+	h.writeAuthPage(w, r, copy.RecoveryTitle, copy.MetaDescription, langTag.String(), PasskeyRecoveryPage(copy, h.pendingID(r), h.nextPath(r)))
 }
 
 // handleAuthLogin handles this route in the module transport layer.
@@ -89,31 +89,23 @@ func (h handlers) nextPath(r *http.Request) string {
 	if r == nil || r.URL == nil {
 		return ""
 	}
-	return resolveSafeRedirectPath(r.URL.Query().Get("next"))
+	return redirectpath.ResolveSafe(r.URL.Query().Get("next"))
 }
 
 // recoveryPageURL builds the login-to-recovery link, preserving post-auth state.
 func (h handlers) recoveryPageURL(r *http.Request) string {
-	if r == nil {
-		return routepath.LoginRecovery
-	}
-	values := url.Values{}
-	if pendingID := h.pendingID(r); pendingID != "" {
-		values.Set("pending_id", pendingID)
-	}
-	if nextPath := h.nextPath(r); nextPath != "" {
-		values.Set("next", nextPath)
-	}
-	if len(values) == 0 {
-		return routepath.LoginRecovery
-	}
-	return routepath.LoginRecovery + "?" + values.Encode()
+	return h.authPageURL(routepath.LoginRecovery, r)
 }
 
 // loginPageURL builds the auth-login redirect target, preserving post-auth state.
 func (h handlers) loginPageURL(r *http.Request) string {
+	return h.authPageURL(routepath.Login, r)
+}
+
+// authPageURL builds one auth-surface URL while preserving post-auth state.
+func (h handlers) authPageURL(basePath string, r *http.Request) string {
 	if r == nil {
-		return routepath.Login
+		return basePath
 	}
 	values := url.Values{}
 	if pendingID := h.pendingID(r); pendingID != "" {
@@ -123,7 +115,7 @@ func (h handlers) loginPageURL(r *http.Request) string {
 		values.Set("next", nextPath)
 	}
 	if len(values) == 0 {
-		return routepath.Login
+		return basePath
 	}
-	return routepath.Login + "?" + values.Encode()
+	return basePath + "?" + values.Encode()
 }

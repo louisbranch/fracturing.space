@@ -62,11 +62,6 @@ func (unavailableGateway) CreateWebSession(context.Context, string) (string, err
 	return "", apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 
-// HasValidWebSession reports false because unavailable auth cannot validate sessions.
-func (unavailableGateway) HasValidWebSession(context.Context, string) bool {
-	return false
-}
-
 // RevokeWebSession fails fast so callers can surface missing auth wiring.
 func (unavailableGateway) RevokeWebSession(context.Context, string) error {
 	return apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)

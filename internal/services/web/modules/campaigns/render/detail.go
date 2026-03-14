@@ -1,7 +1,5 @@
 package render
 
-import webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
-
 // DetailView is the module-owned render model for campaign detail pages.
 type DetailView struct {
 	Marker                   string
@@ -35,7 +33,7 @@ type DetailView struct {
 	Invites                  []InviteView
 	InviteSeatOptions        []InviteSeatOptionView
 	CharacterCreationEnabled bool
-	CharacterCreation        webtemplates.CampaignCharacterCreationView
+	CharacterCreation        CampaignCharacterCreationView
 }
 
 // ParticipantView carries participant rows without forcing handlers to depend

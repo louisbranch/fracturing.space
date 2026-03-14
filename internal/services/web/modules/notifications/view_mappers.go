@@ -8,7 +8,6 @@ import (
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // now returns the current time using the injected nowFunc, defaulting to time.Now
@@ -21,18 +20,18 @@ func (h handlers) now() time.Time {
 }
 
 // notificationListView centralizes this web behavior in one helper seam.
-func (h handlers) notificationListView(items []notificationsapp.NotificationSummary, loc webtemplates.Localizer) []webtemplates.NotificationListItemView {
+func (h handlers) notificationListView(items []notificationsapp.NotificationSummary, loc Localizer) []NotificationListItemView {
 	if len(items) == 0 {
 		return nil
 	}
-	rows := make([]webtemplates.NotificationListItemView, 0, len(items))
+	rows := make([]NotificationListItemView, 0, len(items))
 	for _, item := range items {
 		itemID := strings.TrimSpace(item.ID)
 		if itemID == "" {
 			continue
 		}
 		rendered := h.copyRenderer().RenderInApp(loc, item)
-		rows = append(rows, webtemplates.NotificationListItemView{
+		rows = append(rows, NotificationListItemView{
 			ID:           itemID,
 			Title:        rendered.Title,
 			Body:         rendered.Body,
@@ -47,13 +46,13 @@ func (h handlers) notificationListView(items []notificationsapp.NotificationSumm
 }
 
 // notificationDetailView centralizes this web behavior in one helper seam.
-func (h handlers) notificationDetailView(item notificationsapp.NotificationSummary, loc webtemplates.Localizer) *webtemplates.NotificationDetailView {
+func (h handlers) notificationDetailView(item notificationsapp.NotificationSummary, loc Localizer) *NotificationDetailView {
 	itemID := strings.TrimSpace(item.ID)
 	if itemID == "" {
 		return nil
 	}
 	rendered := h.copyRenderer().RenderInApp(loc, item)
-	return &webtemplates.NotificationDetailView{
+	return &NotificationDetailView{
 		ID:           itemID,
 		Title:        rendered.Title,
 		Body:         rendered.Body,
@@ -66,63 +65,63 @@ func (h handlers) notificationDetailView(item notificationsapp.NotificationSumma
 }
 
 // notificationTitle centralizes this web behavior in one helper seam.
-func notificationTitle(value string, loc webtemplates.Localizer) string {
+func notificationTitle(value string, loc Localizer) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return webtemplates.T(loc, "game.notifications.topic_unknown")
+		return T(loc, "game.notifications.topic_unknown")
 	}
 	return value
 }
 
 // notificationBody centralizes this web behavior in one helper seam.
-func notificationBody(value string, loc webtemplates.Localizer) string {
+func notificationBody(value string, loc Localizer) string {
 	value = strings.TrimSpace(value)
 	if value == "" {
-		return webtemplates.T(loc, "game.notifications.detail_empty")
+		return T(loc, "game.notifications.detail_empty")
 	}
 	return value
 }
 
 // notificationSourceLabel centralizes this web behavior in one helper seam.
-func notificationSourceLabel(source string, loc webtemplates.Localizer) string {
+func notificationSourceLabel(source string, loc Localizer) string {
 	source = strings.ToLower(strings.TrimSpace(source))
 	if source == notificationsgateway.NotificationSourceSystem {
-		return webtemplates.T(loc, "game.notifications.source_system")
+		return T(loc, "game.notifications.source_system")
 	}
-	return webtemplates.T(loc, "game.notifications.source_unknown")
+	return T(loc, "game.notifications.source_unknown")
 }
 
 // notificationCreatedLabel centralizes this web behavior in one helper seam.
-func notificationCreatedLabel(createdAt time.Time, now time.Time, loc webtemplates.Localizer) string {
+func notificationCreatedLabel(createdAt time.Time, now time.Time, loc Localizer) string {
 	if createdAt.IsZero() {
-		return webtemplates.T(loc, "game.notifications.time.just_now")
+		return T(loc, "game.notifications.time.just_now")
 	}
 	delta := now.Sub(createdAt.UTC())
 	if delta < 0 {
 		delta = 0
 	}
 	if delta < time.Minute {
-		return webtemplates.T(loc, "game.notifications.time.just_now")
+		return T(loc, "game.notifications.time.just_now")
 	}
 	if delta < time.Hour {
 		minutes := int(delta / time.Minute)
 		if minutes <= 1 {
-			return webtemplates.T(loc, "game.notifications.time.minute_ago")
+			return T(loc, "game.notifications.time.minute_ago")
 		}
-		return webtemplates.T(loc, "game.notifications.time.minutes_ago", minutes)
+		return T(loc, "game.notifications.time.minutes_ago", minutes)
 	}
 	if delta < 24*time.Hour {
 		hours := int(delta / time.Hour)
 		if hours <= 1 {
-			return webtemplates.T(loc, "game.notifications.time.hour_ago")
+			return T(loc, "game.notifications.time.hour_ago")
 		}
-		return webtemplates.T(loc, "game.notifications.time.hours_ago", hours)
+		return T(loc, "game.notifications.time.hours_ago", hours)
 	}
 	days := int(delta / (24 * time.Hour))
 	if days <= 1 {
-		return webtemplates.T(loc, "game.notifications.time.day_ago")
+		return T(loc, "game.notifications.time.day_ago")
 	}
-	return webtemplates.T(loc, "game.notifications.time.days_ago", days)
+	return T(loc, "game.notifications.time.days_ago", days)
 }
 
 // inviteNotificationPayload captures the routing fields used for invite deep links.

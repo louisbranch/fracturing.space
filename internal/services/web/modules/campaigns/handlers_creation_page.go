@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -17,22 +18,19 @@ func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	workflow := h.resolveWorkflow(page.workspace.System)
-	if workflow == nil {
+	if !h.creation.Enabled(page.workspace.System) {
 		h.WriteNotFound(w, r)
 		return
 	}
 
-	creation, err := h.service.CampaignCharacterCreation(ctx, campaignID, characterID, page.locale, workflow)
+	creationPage, err := h.creation.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
 
-	creationView := workflow.CreationView(creation)
-
 	// Resolve character name for breadcrumbs from the already-fetched profile.
-	characterName := creation.Profile.CharacterName
+	characterName := creationPage.CharacterName
 	if characterName == "" {
 		characterName = webtemplates.T(page.loc, "game.character_detail.title")
 	}
@@ -55,12 +53,12 @@ func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Req
 		},
 	}
 
-	view := webtemplates.CharacterCreationPageView{
+	view := campaignrender.CharacterCreationPageView{
 		CampaignID:  campaignID,
 		CharacterID: characterID,
-		Creation:    creationView,
+		Creation:    creationPage.Creation,
 	}
 
 	h.WritePage(w, r, webtemplates.T(page.loc, "game.character_creation.title"), http.StatusOK,
-		header, layout, webtemplates.CharacterCreationPage(view, page.loc))
+		header, layout, campaignrender.CharacterCreationPage(view, page.loc))
 }

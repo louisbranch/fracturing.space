@@ -50,7 +50,13 @@ func TestLoadAIKeyRowsUsesServiceResult(t *testing.T) {
 			CanRevoke: true,
 		}},
 	}
-	svc := settingsapp.NewService(gw)
+	svc := settingsapp.NewService(settingsapp.ServiceConfig{
+		ProfileGateway:  gw,
+		LocaleGateway:   gw,
+		SecurityGateway: gw,
+		AIKeyGateway:    gw,
+		AIAgentGateway:  gw,
+	})
 	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
 		profile:  true,
 		locale:   true,
@@ -87,7 +93,13 @@ func TestLoadAIAgentRowsAndCredentialsUseServiceResult(t *testing.T) {
 			CreatedAt:           "2026-01-01 00:00 UTC",
 		}},
 	}
-	svc := settingsapp.NewService(gw)
+	svc := settingsapp.NewService(settingsapp.ServiceConfig{
+		ProfileGateway:  gw,
+		LocaleGateway:   gw,
+		SecurityGateway: gw,
+		AIKeyGateway:    gw,
+		AIAgentGateway:  gw,
+	})
 	h := newHandlers(svc, svc, svc, svc, svc, settingsSurfaceAvailability{
 		profile:  true,
 		locale:   true,

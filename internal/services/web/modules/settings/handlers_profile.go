@@ -62,7 +62,7 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, stat
 		statusCode,
 		routepath.AppSettingsProfile,
 		webtemplates.T(loc, "web.settings.page_profile_title"),
-		webtemplates.SettingsProfileFragment(webtemplates.SettingsProfileForm{
+		SettingsProfileFragment(SettingsProfileForm{
 			Username:      profile.Username,
 			Name:          profile.Name,
 			AvatarSetID:   profile.AvatarSetID,

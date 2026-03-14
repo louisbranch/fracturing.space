@@ -122,7 +122,7 @@ func (g *gatewayStub) RevokeAIKey(_ context.Context, userID string, credentialID
 func TestNewServiceFailsClosedWhenGatewayMissing(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(nil)
+	svc := newService(nil)
 	_, err := svc.LoadProfile(context.Background(), "user-1")
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -237,7 +237,7 @@ func TestUnavailableGatewayFailsClosed(t *testing.T) {
 func TestSaveProfileValidatesNameLength(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&gatewayStub{})
+	svc := newService(&gatewayStub{})
 	err := svc.SaveProfile(context.Background(), "user-1", SettingsProfile{Name: strings.Repeat("x", UserProfileNameMaxLength+1)})
 	if err == nil {
 		t.Fatalf("expected validation error")
@@ -260,7 +260,7 @@ func TestLoadAndSaveProfileNormalizeFields(t *testing.T) {
 			Bio:           "  cartographer ",
 		},
 	}
-	svc := NewService(gateway)
+	svc := newService(gateway)
 
 	loaded, err := svc.LoadProfile(context.Background(), "user-1")
 	if err != nil {
@@ -307,7 +307,7 @@ func TestLocaleNormalizationAndParsing(t *testing.T) {
 func TestServiceRequiresUserID(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&gatewayStub{})
+	svc := newService(&gatewayStub{})
 	if _, err := svc.LoadProfile(context.Background(), "   "); err == nil {
 		t.Fatalf("expected user-id error")
 	}
@@ -320,7 +320,7 @@ func TestSaveLocaleValidatesAndDelegates(t *testing.T) {
 	t.Parallel()
 
 	gateway := &gatewayStub{}
-	svc := NewService(gateway)
+	svc := newService(gateway)
 	if err := svc.SaveLocale(context.Background(), "user-1", "pt"); err != nil {
 		t.Fatalf("SaveLocale() error = %v", err)
 	}
@@ -335,7 +335,7 @@ func TestSaveLocaleValidatesAndDelegates(t *testing.T) {
 func TestLoadLocaleValidatesAndNormalizes(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&gatewayStub{locale: "pt"})
+	svc := newService(&gatewayStub{locale: "pt"})
 	locale, err := svc.LoadLocale(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("LoadLocale() error = %v", err)
@@ -352,7 +352,7 @@ func TestLoadLocaleValidatesAndNormalizes(t *testing.T) {
 func TestListAIKeysNormalizesRows(t *testing.T) {
 	t.Parallel()
 
-	svc := NewService(&gatewayStub{keys: []SettingsAIKey{{
+	svc := newService(&gatewayStub{keys: []SettingsAIKey{{
 		ID:        "unsafe/id",
 		Provider:  "",
 		Status:    "",
@@ -379,7 +379,7 @@ func TestCreateAndRevokeAIKeyValidationAndDelegation(t *testing.T) {
 	t.Parallel()
 
 	gateway := &gatewayStub{}
-	svc := NewService(gateway)
+	svc := newService(gateway)
 	if err := svc.CreateAIKey(context.Background(), "user-1", "", "secret"); err == nil {
 		t.Fatalf("expected create validation error")
 	}
@@ -408,7 +408,7 @@ func TestAIAgentServiceFlowsValidateNormalizeAndDelegate(t *testing.T) {
 		models:      []SettingsAIModelOption{{ID: " gpt-4o-mini ", OwnedBy: " openai "}},
 		agents:      []SettingsAIAgent{{ID: " agent-1 ", Label: " narrator ", Provider: " OpenAI ", Model: " gpt-4o-mini ", AuthState: " Ready ", CanDelete: true, ActiveCampaignCount: 2, CreatedAt: " 2026-01-01 00:00 UTC "}},
 	}
-	svc := NewService(gateway)
+	svc := newService(gateway)
 
 	credentials, err := svc.ListAIAgentCredentials(context.Background(), "user-1")
 	if err != nil {

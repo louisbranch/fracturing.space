@@ -25,8 +25,6 @@ type Gateway interface {
 	FinishRecoveryPasskeyRegistration(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
 	// CreateWebSession creates a session for the given user, returning the session ID.
 	CreateWebSession(ctx context.Context, userID string) (string, error)
-	// HasValidWebSession checks whether a session exists and is valid.
-	HasValidWebSession(ctx context.Context, sessionID string) bool
 	// RevokeWebSession invalidates a web session.
 	RevokeWebSession(ctx context.Context, sessionID string) error
 }
@@ -42,7 +40,6 @@ type Service interface {
 	RecoveryStart(ctx context.Context, username string, recoveryCode string) (RecoveryChallenge, error)
 	RecoveryFinish(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
 	ResolvePostAuthRedirect(pendingID string, nextPath string) string
-	HasValidWebSession(ctx context.Context, sessionID string) bool
 	RevokeWebSession(ctx context.Context, sessionID string) error
 }
 

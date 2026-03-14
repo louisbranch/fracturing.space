@@ -12,18 +12,15 @@ import (
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
-// profileService defines an internal contract used at this web package boundary.
-type profileService = profileapp.Service
-
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	publichandler.Base
 	assetBaseURL string
-	service      profileService
+	service      profileapp.Service
 }
 
 // newHandlers builds package wiring for this web seam.
-func newHandlers(s profileService, assetBaseURL string, base publichandler.Base) handlers {
+func newHandlers(s profileapp.Service, assetBaseURL string, base publichandler.Base) handlers {
 	return handlers{Base: base, assetBaseURL: assetBaseURL, service: s}
 }
 
@@ -58,6 +55,6 @@ func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, prof
 		webtemplates.T(loc, "layout.meta_description"),
 		lang,
 		http.StatusOK,
-		webtemplates.PublicProfilePage(mapPublicProfileTemplateView(profile, h.assetBaseURL, h.IsViewerSignedIn(r)), loc),
+		PublicProfilePage(mapPublicProfileTemplateView(profile, h.assetBaseURL, h.IsViewerSignedIn(r)), loc),
 	)
 }

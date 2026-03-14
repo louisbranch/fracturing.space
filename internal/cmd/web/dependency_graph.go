@@ -3,7 +3,7 @@ package web
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
@@ -285,13 +285,15 @@ func bootstrapDependencies(
 	requirements []dependencyRequirement,
 	assetBaseURL string,
 	reporter *platformstatus.Reporter,
+	logger *slog.Logger,
 ) (web.DependencyBundle, managedConns, error) {
 	principalDeps := principal.Dependencies{AssetBaseURL: assetBaseURL}
 	modDeps := modules.Dependencies{AssetBaseURL: assetBaseURL}
 	var conns managedConns
+	logger = defaultLogger(logger)
 
 	logf := func(format string, args ...any) {
-		log.Printf(format, args...)
+		logger.Info(fmt.Sprintf(format, args...))
 	}
 
 	for _, dep := range requirements {
@@ -307,7 +309,7 @@ func bootstrapDependencies(
 			StatusCapability: dep.capability,
 		})
 		if err != nil {
-			closeManagedConns(conns)
+			closeManagedConns(conns, logger)
 			return web.DependencyBundle{}, nil, fmt.Errorf("dependency %s: %w", dep.name, err)
 		}
 		conns = append(conns, mc)
@@ -322,19 +324,27 @@ func bootstrapDependencies(
 	return web.DependencyBundle{Principal: principalDeps, Modules: modDeps}, conns, nil
 }
 
+// defaultLogger normalizes nil logger inputs to the process default logger.
+func defaultLogger(logger *slog.Logger) *slog.Logger {
+	if logger == nil {
+		return slog.Default()
+	}
+	return logger
+}
+
 // closeManagedConns closes all ManagedConn instances.
-func closeManagedConns(conns managedConns) {
+func closeManagedConns(conns managedConns, logger *slog.Logger) {
 	for _, mc := range conns {
-		closeManagedConn(mc, "dependency")
+		closeManagedConn(mc, "dependency", logger)
 	}
 }
 
 // closeManagedConn nil-safely closes a ManagedConn with error logging.
-func closeManagedConn(mc closableManagedConn, name string) {
+func closeManagedConn(mc closableManagedConn, name string, logger *slog.Logger) {
 	if mc == nil {
 		return
 	}
 	if err := mc.Close(); err != nil {
-		log.Printf("close web %s managed conn: %v", name, err)
+		defaultLogger(logger).Error("close web managed conn", "name", name, "error", err)
 	}
 }

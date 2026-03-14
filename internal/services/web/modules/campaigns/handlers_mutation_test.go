@@ -43,7 +43,7 @@ func flashNoticeFromResponse(t *testing.T, rr *httptest.ResponseRecorder) flash.
 
 func TestMountCharacterCreateUsesHXRedirect(t *testing.T) {
 	t.Parallel()
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=pc"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -62,7 +62,7 @@ func TestMountCharacterCreateUsesHXRedirect(t *testing.T) {
 func TestMountCharacterCreateRedirectsForNonHTMX(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=pc"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -83,7 +83,7 @@ func TestMountCharacterCreateRedirectsForNonHTMX(t *testing.T) {
 func TestMountCharacterCreateRedirectsToCreationFlowWhenWorkflowExists(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: defaultTestWorkflows()})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), defaultTestWorkflows()))
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&pronouns=they%2Fthem&kind=pc"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -104,7 +104,7 @@ func TestMountCharacterCreateRedirectsToCreationFlowWhenWorkflowExists(t *testin
 func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignCharacterCreate("c1"), strings.NewReader("name=Hero&kind=invalid"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -125,7 +125,7 @@ func TestMountCharacterCreateRejectsInvalidKind(t *testing.T) {
 func TestStableMutationRoutesReturnParseErrorFlashKeys(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -226,7 +226,7 @@ func TestStableMutationRoutesReturnParseErrorFlashKeys(t *testing.T) {
 func TestStableMutationRoutesReturnRequiredFieldFlashKeys(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -300,7 +300,7 @@ func TestInviteCreateRichErrorRendersSpecificToastAfterRedirect(t *testing.T) {
 		FallbackKey:     "error.web.message.failed_to_create_invite",
 		FallbackMessage: "failed to create invite",
 	})
-	m := New(Config{Gateway: gateway, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(gateway, managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	postReq := httptest.NewRequest(http.MethodPost, routepath.AppCampaignInviteCreate("c1"), strings.NewReader("participant_id=p-1&username=alice"))
@@ -336,7 +336,7 @@ func TestInviteCreateRichErrorRendersSpecificToastAfterRedirect(t *testing.T) {
 func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -481,14 +481,14 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 func TestCampaignAIBindingRouteRedirectsBackToParticipantEdit(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{
+	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		authorizationDecision: campaignapp.AuthorizationDecision{
 			Evaluated:           true,
 			Allowed:             true,
 			ActorCampaignAccess: "Owner",
 		},
-	}, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	}, managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignAIBinding("c1"), strings.NewReader("participant_id=p-ai&ai_agent_id=agent-1"))
@@ -510,7 +510,7 @@ func TestCampaignAIBindingRouteRedirectsBackToParticipantEdit(t *testing.T) {
 func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -551,7 +551,7 @@ func TestParticipantUpdateRouteValidatesRoleAndAccess(t *testing.T) {
 func TestParticipantCreateRouteValidatesFields(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	tests := []struct {
@@ -600,7 +600,7 @@ func TestParticipantCreateRouteValidatesFields(t *testing.T) {
 func TestParticipantCreateRouteRejectsHumanGMForAIGMCampaigns(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{
+	m := New(configWithGateway(fakeGateway{
 		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		workspaceGMMode: "AI",
 		participants: []campaignapp.CampaignParticipant{{
@@ -608,7 +608,7 @@ func TestParticipantCreateRouteRejectsHumanGMForAIGMCampaigns(t *testing.T) {
 			UserID:         "user-123",
 			CampaignAccess: "Manager",
 		}},
-	}, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	}, managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantCreate("c1"), strings.NewReader("name=Pending+GM&role=gm&campaign_access=member"))
@@ -630,7 +630,7 @@ func TestParticipantCreateRouteRejectsHumanGMForAIGMCampaigns(t *testing.T) {
 func TestParticipantUpdateRouteRejectsAIInvariantTampering(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{
+	m := New(configWithGateway(fakeGateway{
 		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
 		participant: campaignapp.CampaignParticipant{
 			ID:             "p-ai",
@@ -641,7 +641,7 @@ func TestParticipantUpdateRouteRejectsAIInvariantTampering(t *testing.T) {
 			Pronouns:       "it/its",
 		},
 		authorizationDecision: campaignapp.AuthorizationDecision{Evaluated: true, Allowed: true},
-	}, Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	}, managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignParticipantEdit("c1", "p-ai"), strings.NewReader("name=Caretaker&role=player&campaign_access=member&pronouns=it%2Fits"))
@@ -660,7 +660,7 @@ func TestParticipantUpdateRouteRejectsAIInvariantTampering(t *testing.T) {
 func TestCampaignUpdateRouteValidatesLocale(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: managerMutationGateway(), Base: managerMutationBase(), ChatFallbackPort: "", Workflows: nil})
+	m := New(configWithGateway(managerMutationGateway(), managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
 	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignEdit("c1"), strings.NewReader("name=Campaign+One&theme_prompt=Theme&locale=es-ES"))
@@ -679,14 +679,22 @@ func TestCampaignUpdateRouteValidatesLocale(t *testing.T) {
 func TestRequestContextWithUserIDBehavior(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlers(campaignapp.NewService(fakeGateway{}), modulehandler.NewBase(nil, nil, nil), "", nil)
+	h := newHandlers(campaignapp.NewService(campaignapp.ServiceConfig{
+		ReadGateway:     fakeGateway{},
+		MutationGateway: fakeGateway{},
+		AuthzGateway:    fakeGateway{},
+	}), modulehandler.NewBase(nil, nil, nil), "", nil)
 	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
 	ctx, _ := h.RequestContextAndUserID(req)
 	if md, ok := metadata.FromOutgoingContext(ctx); ok && len(md.Get(grpcmeta.UserIDHeader)) > 0 {
 		t.Fatalf("unexpected user metadata when resolver is nil")
 	}
 
-	h = newHandlers(campaignapp.NewService(fakeGateway{}), modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), "", nil)
+	h = newHandlers(campaignapp.NewService(campaignapp.ServiceConfig{
+		ReadGateway:     fakeGateway{},
+		MutationGateway: fakeGateway{},
+		AuthzGateway:    fakeGateway{},
+	}), modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), "", nil)
 	ctx, _ = h.RequestContextAndUserID(req)
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {

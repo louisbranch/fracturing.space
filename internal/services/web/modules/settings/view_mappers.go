@@ -54,10 +54,10 @@ func settingsSideMenu(currentPath string, loc webtemplates.Localizer, availabili
 }
 
 // mapPasskeyTemplateRows maps settings passkeys into template rows.
-func mapPasskeyTemplateRows(passkeys []settingsapp.SettingsPasskey) []webtemplates.SettingsPasskeyRow {
-	rows := make([]webtemplates.SettingsPasskeyRow, 0, len(passkeys))
+func mapPasskeyTemplateRows(passkeys []settingsapp.SettingsPasskey) []SettingsPasskeyRow {
+	rows := make([]SettingsPasskeyRow, 0, len(passkeys))
 	for _, passkey := range passkeys {
-		rows = append(rows, webtemplates.SettingsPasskeyRow{
+		rows = append(rows, SettingsPasskeyRow{
 			Number:     passkey.Number,
 			CreatedAt:  passkey.CreatedAt,
 			LastUsedAt: passkey.LastUsedAt,
@@ -67,10 +67,10 @@ func mapPasskeyTemplateRows(passkeys []settingsapp.SettingsPasskey) []webtemplat
 }
 
 // mapAIKeyTemplateRows maps settings AI key values into template rows.
-func mapAIKeyTemplateRows(keys []settingsapp.SettingsAIKey) []webtemplates.SettingsAIKeyRow {
-	rows := make([]webtemplates.SettingsAIKeyRow, 0, len(keys))
+func mapAIKeyTemplateRows(keys []settingsapp.SettingsAIKey) []SettingsAIKeyRow {
+	rows := make([]SettingsAIKeyRow, 0, len(keys))
 	for _, key := range keys {
-		rows = append(rows, webtemplates.SettingsAIKeyRow{
+		rows = append(rows, SettingsAIKeyRow{
 			ID:        key.ID,
 			Label:     key.Label,
 			Provider:  key.Provider,
@@ -84,10 +84,10 @@ func mapAIKeyTemplateRows(keys []settingsapp.SettingsAIKey) []webtemplates.Setti
 }
 
 // mapAIAgentCredentialTemplateOptions maps credential options into template options.
-func mapAIAgentCredentialTemplateOptions(options []settingsapp.SettingsAICredentialOption) []webtemplates.SettingsAICredentialOption {
-	rows := make([]webtemplates.SettingsAICredentialOption, 0, len(options))
+func mapAIAgentCredentialTemplateOptions(options []settingsapp.SettingsAICredentialOption) []SettingsAICredentialOption {
+	rows := make([]SettingsAICredentialOption, 0, len(options))
 	for _, option := range options {
-		rows = append(rows, webtemplates.SettingsAICredentialOption{
+		rows = append(rows, SettingsAICredentialOption{
 			ID:       option.ID,
 			Label:    option.Label,
 			Provider: option.Provider,
@@ -97,10 +97,10 @@ func mapAIAgentCredentialTemplateOptions(options []settingsapp.SettingsAICredent
 }
 
 // mapAIModelTemplateOptions maps provider-backed models into template options.
-func mapAIModelTemplateOptions(models []settingsapp.SettingsAIModelOption) []webtemplates.SettingsAIModelOption {
-	rows := make([]webtemplates.SettingsAIModelOption, 0, len(models))
+func mapAIModelTemplateOptions(models []settingsapp.SettingsAIModelOption) []SettingsAIModelOption {
+	rows := make([]SettingsAIModelOption, 0, len(models))
 	for _, model := range models {
-		rows = append(rows, webtemplates.SettingsAIModelOption{
+		rows = append(rows, SettingsAIModelOption{
 			ID:      model.ID,
 			OwnedBy: model.OwnedBy,
 		})
@@ -109,10 +109,10 @@ func mapAIModelTemplateOptions(models []settingsapp.SettingsAIModelOption) []web
 }
 
 // mapAIAgentTemplateRows maps settings AI agents into template rows.
-func mapAIAgentTemplateRows(agents []settingsapp.SettingsAIAgent) []webtemplates.SettingsAIAgentRow {
-	rows := make([]webtemplates.SettingsAIAgentRow, 0, len(agents))
+func mapAIAgentTemplateRows(agents []settingsapp.SettingsAIAgent) []SettingsAIAgentRow {
+	rows := make([]SettingsAIAgentRow, 0, len(agents))
 	for _, agent := range agents {
-		rows = append(rows, webtemplates.SettingsAIAgentRow{
+		rows = append(rows, SettingsAIAgentRow{
 			ID:                  agent.ID,
 			Label:               agent.Label,
 			Provider:            agent.Provider,

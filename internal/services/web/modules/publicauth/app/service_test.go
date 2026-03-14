@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/redirectpath"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -101,8 +102,8 @@ func TestResolvePostAuthRedirectPathAllowsSafeInviteAndAppPaths(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			if got := resolvePostAuthRedirectPath(tc.raw); got != tc.want {
-				t.Fatalf("resolvePostAuthRedirectPath(%q) = %q, want %q", tc.raw, got, tc.want)
+			if got := redirectpath.ResolveSafe(tc.raw); got != tc.want {
+				t.Fatalf("ResolveSafe(%q) = %q, want %q", tc.raw, got, tc.want)
 			}
 		})
 	}
@@ -122,8 +123,8 @@ func TestResolvePostAuthRedirectPathRejectsUnsafeTargets(t *testing.T) {
 	}
 
 	for _, raw := range tests {
-		if got := resolvePostAuthRedirectPath(raw); got != "" {
-			t.Fatalf("resolvePostAuthRedirectPath(%q) = %q, want empty", raw, got)
+		if got := redirectpath.ResolveSafe(raw); got != "" {
+			t.Fatalf("ResolveSafe(%q) = %q, want empty", raw, got)
 		}
 	}
 }
@@ -171,10 +172,6 @@ func (*authGatewayStub) FinishRecoveryPasskeyRegistration(context.Context, strin
 
 func (f *authGatewayStub) CreateWebSession(context.Context, string) (string, error) {
 	return f.webSessionID, nil
-}
-
-func (*authGatewayStub) HasValidWebSession(context.Context, string) bool {
-	return false
 }
 
 func (*authGatewayStub) RevokeWebSession(context.Context, string) error {

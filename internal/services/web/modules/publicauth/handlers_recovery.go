@@ -7,7 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // handleRecoveryStart handles this route in the module transport layer.
@@ -66,7 +65,7 @@ func (h handlers) handleRecoveryCodeGet(w http.ResponseWriter, r *http.Request) 
 		copy.RecoveryCodePageTitle,
 		copy.MetaDescription,
 		langTag.String(),
-		webtemplates.RecoveryCodePage(webtemplates.RecoveryCodePageParams{
+		RecoveryCodePage(RecoveryCodePageParams{
 			Copy:       copy,
 			Code:       state.Code,
 			PendingID:  state.PendingID,

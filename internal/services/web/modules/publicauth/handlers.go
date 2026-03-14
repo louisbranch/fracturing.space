@@ -3,6 +3,7 @@ package publicauth
 import (
 	"net/http"
 
+	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -16,8 +17,16 @@ type handlers struct {
 }
 
 // newHandlers builds package wiring for this web seam.
-func newHandlers(s publicauthapp.Service, policy requestmeta.SchemePolicy) handlers {
-	return handlers{service: s, requestMeta: policy}
+func newHandlers(s publicauthapp.Service, policy requestmeta.SchemePolicy, resolveSignedIn ...module.ResolveSignedIn) handlers {
+	var signedIn module.ResolveSignedIn
+	if len(resolveSignedIn) > 0 {
+		signedIn = resolveSignedIn[0]
+	}
+	return handlers{
+		Base:        publichandler.NewBase(publichandler.WithResolveViewerSignedIn(signedIn)),
+		service:     s,
+		requestMeta: policy,
+	}
 }
 
 // handleNotFound handles this route in the module transport layer.

@@ -30,7 +30,7 @@ func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campa
 		view.CanCreateCharacter = true
 	}
 	view.Characters = mapCharactersView(items)
-	view.CharacterCreationEnabled = h.resolveWorkflow(page.workspace.System) != nil
+	view.CharacterCreationEnabled = h.creation.Enabled(page.workspace.System)
 	h.writeCampaignDetailPage(w, r, page, campaignID, view, sharedtemplates.BreadcrumbItem{Label: webtemplates.T(page.loc, "game.characters.title")})
 }
 
@@ -121,15 +121,14 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	view.CharacterControl = mapCharacterControlView(control)
-	workflow := h.resolveWorkflow(page.workspace.System)
-	view.CharacterCreationEnabled = workflow != nil
+	view.CharacterCreationEnabled = h.creation.Enabled(page.workspace.System)
 	if view.CharacterCreationEnabled {
-		creation, err := h.service.CampaignCharacterCreation(ctx, campaignID, characterID, page.locale, workflow)
+		creationPage, err := h.creation.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
 		if err != nil {
 			h.WriteError(w, r, err)
 			return
 		}
-		view.CharacterCreation = workflow.CreationView(creation)
+		view.CharacterCreation = creationPage.Creation
 	}
 	h.writeCampaignDetailPage(
 		w,

@@ -5,8 +5,6 @@ import (
 	"context"
 	"strings"
 	"testing"
-
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 func TestFragmentRendersCharacterDetailState(t *testing.T) {
@@ -68,7 +66,7 @@ func TestFragmentRendersCharacterDetailState(t *testing.T) {
 			Label:         "Scout",
 		}},
 		CharacterCreationEnabled: true,
-		CharacterCreation: webtemplates.CampaignCharacterCreationView{
+		CharacterCreation: CampaignCharacterCreationView{
 			Ready:    true,
 			NextStep: 9,
 		},

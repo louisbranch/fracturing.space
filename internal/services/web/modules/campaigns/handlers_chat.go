@@ -8,7 +8,6 @@ import (
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
-	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // --- Campaign chat route ---
@@ -30,7 +29,7 @@ func (h handlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID 
 		h.WriteError(w, r, err)
 		return
 	}
-	view := webtemplates.CampaignChatView{
+	view := CampaignChatView{
 		CampaignID:       campaignID,
 		CampaignName:     page.workspace.Name,
 		BackURL:          routepath.AppCampaign(campaignID),
@@ -55,26 +54,26 @@ func (h handlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID 
 func (h handlers) writeCampaignChatHTML(
 	w http.ResponseWriter,
 	r *http.Request,
-	view webtemplates.CampaignChatView,
+	view CampaignChatView,
 	lang string,
-	loc webtemplates.Localizer,
+	loc Localizer,
 ) {
 	if httpx.IsHTMXRequest(r) {
 		httpx.WriteHXRedirect(w, routepath.AppCampaignGame(view.CampaignID))
 		return
 	}
-	if err := webtemplates.CampaignChatPage(view, lang, loc).Render(r.Context(), w); err != nil {
+	if err := CampaignChatPage(view, lang, loc).Render(r.Context(), w); err != nil {
 		h.WriteError(w, r, err)
 	}
 }
 
 // campaignGameStreamViews maps app-layer stream context into the template view
 // model so the page renders authoritative game-owned routing metadata.
-func campaignGameStreamViews(streams []campaignapp.CampaignGameStream, defaultStreamID string) []webtemplates.CampaignChatStreamView {
+func campaignGameStreamViews(streams []campaignapp.CampaignGameStream, defaultStreamID string) []CampaignChatStreamView {
 	if len(streams) == 0 {
-		return []webtemplates.CampaignChatStreamView{}
+		return []CampaignChatStreamView{}
 	}
-	views := make([]webtemplates.CampaignChatStreamView, 0, len(streams))
+	views := make([]CampaignChatStreamView, 0, len(streams))
 	defaultStreamID = strings.TrimSpace(defaultStreamID)
 	for _, stream := range streams {
 		label := strings.TrimSpace(stream.Label)
@@ -87,7 +86,7 @@ func campaignGameStreamViews(streams []campaignapp.CampaignGameStream, defaultSt
 		} else if strings.TrimSpace(stream.SessionID) != "" {
 			secondary = "session · " + strings.TrimSpace(stream.SessionID)
 		}
-		views = append(views, webtemplates.CampaignChatStreamView{
+		views = append(views, CampaignChatStreamView{
 			StreamID:      strings.TrimSpace(stream.ID),
 			Label:         label,
 			Kind:          strings.TrimSpace(stream.Kind),
@@ -101,11 +100,11 @@ func campaignGameStreamViews(streams []campaignapp.CampaignGameStream, defaultSt
 
 // campaignGamePersonaViews maps app-layer persona options into the template
 // view model so the surface can render allowed speaking identities.
-func campaignGamePersonaViews(personas []campaignapp.CampaignGamePersona, defaultPersonaID string) []webtemplates.CampaignChatPersonaView {
+func campaignGamePersonaViews(personas []campaignapp.CampaignGamePersona, defaultPersonaID string) []CampaignChatPersonaView {
 	if len(personas) == 0 {
-		return []webtemplates.CampaignChatPersonaView{}
+		return []CampaignChatPersonaView{}
 	}
-	views := make([]webtemplates.CampaignChatPersonaView, 0, len(personas))
+	views := make([]CampaignChatPersonaView, 0, len(personas))
 	defaultPersonaID = strings.TrimSpace(defaultPersonaID)
 	for _, persona := range personas {
 		displayName := strings.TrimSpace(persona.DisplayName)
@@ -116,7 +115,7 @@ func campaignGamePersonaViews(personas []campaignapp.CampaignGamePersona, defaul
 		if strings.TrimSpace(persona.CharacterID) != "" {
 			kindLabel = strings.TrimSpace(persona.Kind) + " · " + strings.TrimSpace(persona.CharacterID)
 		}
-		views = append(views, webtemplates.CampaignChatPersonaView{
+		views = append(views, CampaignChatPersonaView{
 			PersonaID:   strings.TrimSpace(persona.ID),
 			DisplayName: displayName,
 			KindLabel:   kindLabel,

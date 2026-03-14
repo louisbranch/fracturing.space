@@ -1,0 +1,1482 @@
+package render
+
+import (
+	"fmt"
+	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	"strings"
+)
+
+// CharacterCreationPageView holds the data for the dedicated creation page.
+type CharacterCreationPageView struct {
+	CampaignID  string
+	CharacterID string
+	Creation    CampaignCharacterCreationView
+}
+
+// creationStepClass returns the DaisyUI step class for a given step.
+func creationStepClass(view CampaignCharacterCreationView, step CampaignCharacterCreationStepView) string {
+	if step.Complete {
+		return "step step-success"
+	}
+	if !view.Ready && view.NextStep == step.Step {
+		return "step step-primary"
+	}
+	return "step"
+}
+
+// creationStepSummary returns the chosen value summary for a completed step.
+func creationStepSummary(view CampaignCharacterCreationView, step CampaignCharacterCreationStepView) string {
+	if !step.Complete {
+		return ""
+	}
+	switch strings.TrimSpace(step.Key) {
+	case "class_subclass":
+		className := creationNameByID(view.Classes, view.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name })
+		subclassName := creationNameByID(view.Subclasses, view.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name })
+		if className != "" && subclassName != "" {
+			return className + " / " + subclassName
+		}
+		return className + subclassName
+	case "heritage":
+		ancestry := creationNameByID(view.Ancestries, view.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name })
+		community := creationNameByID(view.Communities, view.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name })
+		if ancestry != "" && community != "" {
+			return ancestry + ", " + community
+		}
+		return ancestry + community
+	default:
+		return ""
+	}
+}
+
+// creationNameByID finds a name by ID from a slice.
+func creationNameByID[T any](items []T, id string, getID func(T) string, getName func(T) string) string {
+	trimmedID := strings.TrimSpace(id)
+	if trimmedID == "" {
+		return ""
+	}
+	for _, item := range items {
+		if strings.TrimSpace(getID(item)) == trimmedID {
+			return getName(item)
+		}
+	}
+	return ""
+}
+
+// creationCardSelectedClass returns extra classes when the card ID matches.
+func creationCardSelectedClass(cardID, selectedID string) string {
+	if strings.TrimSpace(cardID) != "" && strings.TrimSpace(cardID) == strings.TrimSpace(selectedID) {
+		return "border-primary ring-2 ring-primary/20"
+	}
+	return ""
+}
+
+// creationCardSelectedClassFromChecked returns selected-state classes when the option is checked.
+func creationCardSelectedClassFromChecked(checked bool) string {
+	if checked {
+		return "border-primary ring-2 ring-primary/20"
+	}
+	return ""
+}
+
+// creationCardDisabledClass returns disabled classes for non-interactive option cards.
+func creationCardDisabledClass(disabled bool) string {
+	if disabled {
+		return "opacity-60 cursor-not-allowed pointer-events-none"
+	}
+	return ""
+}
+
+// creationOptionInputType normalizes selectable-card input type to radio or checkbox.
+func creationOptionInputType(inputType string) string {
+	if strings.EqualFold(strings.TrimSpace(inputType), "checkbox") {
+		return "checkbox"
+	}
+	return "radio"
+}
+
+// creationFormatHP formats HP for display.
+func creationFormatHP(hp int32) string {
+	return fmt.Sprintf("HP %d", hp)
+}
+
+// creationFormatEvasion formats evasion for display.
+func creationFormatEvasion(evasion int32) string {
+	return fmt.Sprintf("Evasion %d", evasion)
+}
+
+// creationFormatArmorScore formats armor score for display.
+func creationFormatArmorScore(score int32) string {
+	return fmt.Sprintf("Score %d", score)
+}
+
+// creationFormatRecallCost formats recall cost for display.
+func creationFormatRecallCost(cost int32) string {
+	if cost == 0 {
+		return ""
+	}
+	return fmt.Sprintf("Recall %d", cost)
+}
+
+// creationSubclassClassIDs returns unique class IDs from the subclass list.
+func creationSubclassClassIDs(subclasses []CampaignCreationSubclassView) []string {
+	seen := map[string]bool{}
+	var ids []string
+	for _, sc := range subclasses {
+		cid := strings.TrimSpace(sc.ClassID)
+		if cid != "" && !seen[cid] {
+			seen[cid] = true
+			ids = append(ids, cid)
+		}
+	}
+	return ids
+}
+
+// creationSubclassesByClass filters subclasses for a given class ID.
+func creationSubclassesByClass(subclasses []CampaignCreationSubclassView, classID string) []CampaignCreationSubclassView {
+	var result []CampaignCreationSubclassView
+	for _, sc := range subclasses {
+		if strings.TrimSpace(sc.ClassID) == classID {
+			result = append(result, sc)
+		}
+	}
+	return result
+}
+
+// creationClassCollapsedHidden returns "hidden" when no class is selected (summary should be hidden).
+func creationClassCollapsedHidden(selectedClassID string) string {
+	if strings.TrimSpace(selectedClassID) != "" {
+		return ""
+	}
+	return "hidden"
+}
+
+// creationClassGridHidden returns "hidden" when a class is already selected (grid should be collapsed).
+func creationClassGridHidden(selectedClassID string) string {
+	if strings.TrimSpace(selectedClassID) != "" {
+		return "hidden"
+	}
+	return ""
+}
+
+// creationSubclassDividerHidden returns "hidden" when no class is selected.
+func creationSubclassDividerHidden(selectedClassID string) string {
+	if strings.TrimSpace(selectedClassID) != "" {
+		return ""
+	}
+	return "hidden"
+}
+
+// creationSubclassGroupHidden returns "hidden" if the group should be hidden.
+func creationSubclassGroupHidden(groupClassID, selectedClassID string) string {
+	if selectedClassID != "" && groupClassID == selectedClassID {
+		return ""
+	}
+	return "hidden"
+}
+
+// creationExperienceValue returns the experience value at the given index, or empty.
+func creationExperienceValue(experiences []CampaignCreationExperienceView, index int, field string) string {
+	if index >= len(experiences) {
+		if field == "modifier" {
+			return "2"
+		}
+		return ""
+	}
+	if field == "modifier" {
+		v := strings.TrimSpace(experiences[index].Modifier)
+		if v == "" {
+			return "2"
+		}
+		return v
+	}
+	return experiences[index].Name
+}
+
+// creationFormatModifier formats a modifier string for display.
+func creationFormatModifier(modifier string) string {
+	v := strings.TrimSpace(modifier)
+	if v == "" {
+		return ""
+	}
+	if v[0] == '+' || v[0] == '-' {
+		return v
+	}
+	return "+" + v
+}
+
+// creationTruncate truncates a string for summary display.
+func creationTruncate(s string, maxLen int) string {
+	s = strings.TrimSpace(s)
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen]) + "..."
+}
+
+var creationMaskURLReplacer = strings.NewReplacer(
+	"\\", "%5C",
+	"\"", "%22",
+	"'", "%27",
+	"(", "%28",
+	")", "%29",
+	" ", "%20",
+	"\t", "%09",
+	"\n", "%0A",
+	"\r", "%0D",
+)
+
+// creationHasDomainWatermarkIcons reports whether at least one watermark has a usable icon URL.
+func creationHasDomainWatermarkIcons(domainWatermarks []CampaignCreationDomainWatermarkView) bool {
+	for _, watermark := range domainWatermarks {
+		if strings.TrimSpace(watermark.IconURL) != "" {
+			return true
+		}
+	}
+	return false
+}
+
+// creationIconMaskStyle renders a URL-backed mask so icon glyphs can inherit text color.
+func creationIconMaskStyle(iconURL string) string {
+	trimmed := strings.TrimSpace(iconURL)
+	if trimmed == "" {
+		return ""
+	}
+	escaped := creationMaskURLReplacer.Replace(trimmed)
+	return fmt.Sprintf(
+		"mask-image:url(%s);-webkit-mask-image:url(%s);mask-repeat:no-repeat;-webkit-mask-repeat:no-repeat;mask-position:center;-webkit-mask-position:center;mask-size:contain;-webkit-mask-size:contain;",
+		escaped,
+		escaped,
+	)
+}
+
+func creationStepClassSubclassReady(view CampaignCharacterCreationView) bool {
+	return strings.TrimSpace(view.ClassID) != "" && strings.TrimSpace(view.SubclassID) != ""
+}
+
+func creationStepHeritageReady(view CampaignCharacterCreationView) bool {
+	return strings.TrimSpace(view.AncestryID) != "" && strings.TrimSpace(view.CommunityID) != ""
+}
+
+func creationStepTraitsReady(view CampaignCharacterCreationView) bool {
+	counts := map[string]int{}
+	for _, value := range []string{
+		strings.TrimSpace(view.Agility),
+		strings.TrimSpace(view.Strength),
+		strings.TrimSpace(view.Finesse),
+		strings.TrimSpace(view.Instinct),
+		strings.TrimSpace(view.Presence),
+		strings.TrimSpace(view.Knowledge),
+	} {
+		counts[value]++
+	}
+	return counts["-1"] == 1 && counts["0"] == 2 && counts["1"] == 2 && counts["2"] == 1
+}
+
+func creationStepEquipmentReady(view CampaignCharacterCreationView) bool {
+	return strings.TrimSpace(view.PrimaryWeaponID) != "" &&
+		strings.TrimSpace(view.ArmorID) != "" &&
+		strings.TrimSpace(view.PotionItemID) != ""
+}
+
+func creationStepExperiencesReady(view CampaignCharacterCreationView) bool {
+	if len(view.Experiences) < 2 {
+		return false
+	}
+	return strings.TrimSpace(view.Experiences[0].Name) != "" && strings.TrimSpace(view.Experiences[1].Name) != ""
+}
+
+func creationStepDomainCardsReady(view CampaignCharacterCreationView) bool {
+	return len(view.DomainCardIDs) == 2
+}
+
+func creationStepTextareaReady(value string) bool {
+	return strings.TrimSpace(value) != ""
+}
+
+templ creationFeatureList(features []CampaignCreationClassFeatureView) {
+	if len(features) > 0 {
+		<ul class="list-disc list-inside mt-0.5 space-y-1">
+			for _, feature := range features {
+				<li>
+					<span class="text-sm font-semibold">{ feature.Name }</span>
+					if feature.Description != "" {
+						<p class="text-sm opacity-60 ml-5">{ feature.Description }</p>
+					}
+				</li>
+			}
+		</ul>
+	}
+}
+
+// creationSelectableOptionCard is the shared shell used by selectable creation cards.
+templ creationSelectableOptionCard(
+	id string,
+	name string,
+	imageURL string,
+	inputName string,
+	inputType string,
+	checked bool,
+	required bool,
+	disabled bool,
+	showImageFrame bool,
+	optionKind string,
+	domainWatermarks []CampaignCreationDomainWatermarkView,
+) {
+	<label
+		class={ "card relative bg-base-100 border border-base-300 shadow-sm cursor-pointer hover:shadow-md transition-shadow md:card-side overflow-hidden " + creationCardSelectedClassFromChecked(checked) + " " + creationCardDisabledClass(disabled) }
+		data-creation-option-kind={ strings.TrimSpace(optionKind) }
+	>
+		if creationHasDomainWatermarkIcons(domainWatermarks) {
+			<div class="pointer-events-none absolute right-0 top-3 z-10" data-class-domain-watermarks="true" aria-hidden="true">
+				<div class="flex h-24 w-14 flex-col items-center justify-center gap-1.5 rounded-l-xl border border-r-0 border-base-200 bg-white/5 p-2 shadow-sm md:h-28 md:w-16">
+					for _, watermark := range domainWatermarks {
+						if strings.TrimSpace(watermark.IconURL) != "" {
+							<div class="h-8 w-8 md:h-10 md:w-10" data-class-domain-watermark={ watermark.ID }>
+								<div class="h-full w-full bg-base-content opacity-50" style={ creationIconMaskStyle(watermark.IconURL) }></div>
+							</div>
+						}
+					}
+				</div>
+			</div>
+		}
+		if showImageFrame {
+			<figure class="h-48 md:h-auto md:w-48 bg-base-300 shrink-0">
+				@AppImage(AppImageView{
+					Src:        imageURL,
+					Alt:        name,
+					WidthPX:    3,
+					HeightPX:   4,
+					FrameClass: "h-full w-full",
+					ImageClass: "h-full w-full object-cover",
+				})
+			</figure>
+		}
+		<input
+			type={ creationOptionInputType(inputType) }
+			name={ inputName }
+			value={ id }
+			class="hidden"
+			required?={ required }
+			checked?={ checked }
+			disabled?={ disabled }
+		/>
+		<div class="card-body gap-2 p-4">
+			<h4 class="card-title text-base">{ name }</h4>
+			{ children... }
+		</div>
+	</label>
+}
+
+// creationOptionCard is the shared radio-card shell used by class/subclass/heritage selection.
+templ creationOptionCard(id string, name string, imageURL string, radioName string, selectedID string, domainWatermarks []CampaignCreationDomainWatermarkView) {
+	@creationSelectableOptionCard(
+		id,
+		name,
+		imageURL,
+		radioName,
+		"radio",
+		campaignCreationOptionSelected(id, selectedID),
+		true,
+		false,
+		strings.TrimSpace(imageURL) != "",
+		"",
+		domainWatermarks,
+	) {
+		{ children... }
+	}
+}
+
+// creationCheckboxOptionCard renders a checkbox version of the shared selectable card shell.
+templ creationCheckboxOptionCard(id string, name string, imageURL string, checkboxName string, selected []string, disabled bool, showImageFrame bool, optionKind string) {
+	@creationSelectableOptionCard(
+		id,
+		name,
+		imageURL,
+		checkboxName,
+		"checkbox",
+		campaignCreationOptionInSet(id, selected),
+		false,
+		disabled,
+		showImageFrame,
+		optionKind,
+		nil,
+	) {
+		{ children... }
+	}
+}
+
+templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
+	<div class="grid gap-6 lg:grid-cols-[14rem_1fr]" data-character-creation-page="true">
+		if len(view.Creation.NextStepPrefetchURLs) > 0 {
+			<div class="sr-only" aria-hidden="true" data-image-prefetch-root="character-creation">
+				for _, imageURL := range view.Creation.NextStepPrefetchURLs {
+					<div data-image-prefetch-url={ imageURL }></div>
+				}
+			</div>
+		}
+		<!-- Step Navigator -->
+		<aside class="h-fit">
+			<ul class="steps steps-vertical w-full">
+				for _, step := range view.Creation.Steps {
+					<li class={ creationStepClass(view.Creation, step) } data-creation-nav-step={ step.Key }>
+						<div class="text-left">
+							<span class="text-sm font-medium">{ campaignCreationStepLabel(loc, step.Key) }</span>
+							if creationStepSummary(view.Creation, step) != "" {
+								<span class="block text-xs opacity-70">{ creationStepSummary(view.Creation, step) }</span>
+							}
+						</div>
+					</li>
+				}
+			</ul>
+		</aside>
+		<!-- Step Content -->
+		<div class="space-y-4" data-character-creation-content="true">
+			if view.Creation.Ready {
+				@creationSummaryCard(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 1) {
+				@creationStepClassSubclass(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 2) {
+				@creationStepHeritage(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 3) {
+				@creationStepTraits(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 4) {
+				@creationStepEquipment(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 5) {
+				@creationStepExperiences(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 6) {
+				@creationStepDomainCards(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 7) {
+				@creationStepDetails(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 8) {
+				@creationStepBackground(view, loc)
+			} else if campaignCreationIsStep(view.Creation, 9) {
+				@creationStepConnections(view, loc)
+			}
+			if len(view.Creation.UnmetReasons) > 0 {
+				<details class="collapse collapse-arrow border border-base-300 bg-base-100" data-character-creation-unmet="true">
+					<summary class="collapse-title text-sm font-medium">
+						{ T(loc, "game.character_creation.unmet_requirements") }
+					</summary>
+					<div class="collapse-content">
+						<ul class="list-disc ps-5 text-sm opacity-80">
+							for _, reason := range view.Creation.UnmetReasons {
+								<li>{ campaignCreationUnmetReason(loc, reason) }</li>
+							}
+						</ul>
+					</div>
+				</details>
+			}
+		</div>
+	</div>
+}
+
+templ creationResetForm(view CharacterCreationPageView, loc Localizer) {
+	<form
+		method="post"
+		action={ routepath.AppCampaignCharacterCreationReset(view.CampaignID, view.CharacterID) }
+		data-character-creation-reset="true"
+		onsubmit="return confirm(this.dataset.confirmText);"
+		data-confirm-text={ T(loc, "game.character_creation.confirm_start_again") }
+	>
+		<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.character_creation.action_start_again") }</button>
+	</form>
+}
+
+templ creationFooter(view CharacterCreationPageView, loc Localizer) {
+	<div class="grid items-center gap-3 pt-2 md:grid-cols-[1fr_auto_1fr]">
+		<div class="justify-self-start">
+			@creationResetForm(view, loc)
+		</div>
+		<div class="justify-self-center">
+			{ children... }
+		</div>
+		<div></div>
+	</div>
+}
+
+templ creationNextButton(loc Localizer, disabled bool) {
+	<button
+		class="btn btn-primary btn-wide"
+		type="submit"
+		disabled?={ disabled }
+		data-character-creation-next="true"
+	>{ T(loc, "game.character_creation.action_next") }</button>
+}
+
+// --- Summary Card (when creation is complete) ---
+
+templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer) {
+	<div class="grid gap-4 lg:grid-cols-2">
+		<div class="space-y-4">
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.class_subclass") }</span>
+				<p class="text-sm">
+					{ creationNameByID(creation.Classes, creation.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name }) }
+					if creationNameByID(creation.Subclasses, creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) != "" {
+						<span class="opacity-70">
+							{ " / " + creationNameByID(creation.Subclasses, creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) }
+						</span>
+					}
+				</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.heritage") }</span>
+				<p class="text-sm">
+					{ creationNameByID(creation.Ancestries, creation.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
+					<span class="opacity-70">
+						{ ", " + creationNameByID(creation.Communities, creation.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
+					</span>
+				</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.traits") }</span>
+				<div class="mt-1 flex flex-wrap gap-2">
+					<span class="badge badge-outline badge-sm">AGI { creation.Agility }</span>
+					<span class="badge badge-outline badge-sm">STR { creation.Strength }</span>
+					<span class="badge badge-outline badge-sm">FIN { creation.Finesse }</span>
+					<span class="badge badge-outline badge-sm">INS { creation.Instinct }</span>
+					<span class="badge badge-outline badge-sm">PRE { creation.Presence }</span>
+					<span class="badge badge-outline badge-sm">KNO { creation.Knowledge }</span>
+				</div>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.equipment") }</span>
+				<div class="mt-1 flex flex-wrap gap-2">
+					<span class="badge badge-outline badge-sm">
+						{ creationNameByID(creation.PrimaryWeapons, creation.PrimaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
+					</span>
+					if creation.SecondaryWeaponID != "" {
+						<span class="badge badge-outline badge-sm">
+							{ creationNameByID(creation.SecondaryWeapons, creation.SecondaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
+						</span>
+					}
+					<span class="badge badge-outline badge-sm">
+						{ creationNameByID(creation.Armor, creation.ArmorID, func(a CampaignCreationArmorView) string { return a.ID }, func(a CampaignCreationArmorView) string { return a.Name }) }
+					</span>
+					<span class="badge badge-outline badge-sm">
+						{ creationNameByID(creation.PotionItems, creation.PotionItemID, func(i CampaignCreationItemView) string { return i.ID }, func(i CampaignCreationItemView) string { return i.Name }) }
+					</span>
+				</div>
+			</div>
+			if len(creation.Experiences) > 0 {
+				<div>
+					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.experiences") }</span>
+					<div class="mt-1 flex flex-wrap gap-2">
+						for _, exp := range creation.Experiences {
+							<span class="badge badge-outline badge-sm">{ exp.Name } { creationFormatModifier(exp.Modifier) }</span>
+						}
+					</div>
+				</div>
+			}
+			if len(creation.DomainCardIDs) > 0 {
+				<div>
+					<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.domain_cards") }</span>
+					<div class="mt-1 flex flex-wrap gap-2">
+						for _, cardID := range creation.DomainCardIDs {
+							<span class="badge badge-outline badge-sm">
+								{ creationNameByID(creation.DomainCards, cardID, func(c CampaignCreationDomainCardView) string { return c.ID }, func(c CampaignCreationDomainCardView) string { return c.Name }) }
+							</span>
+						}
+					</div>
+				</div>
+			}
+		</div>
+		<div class="space-y-4">
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.details") }</span>
+				<p class="text-sm">{ creationTruncate(creation.Description, 200) }</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.background") }</span>
+				<p class="text-sm">{ creationTruncate(creation.Background, 200) }</p>
+			</div>
+			<div>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.connections") }</span>
+				<p class="text-sm">{ creationTruncate(creation.Connections, 200) }</p>
+			</div>
+		</div>
+	</div>
+}
+
+templ creationSummaryCard(view CharacterCreationPageView, loc Localizer) {
+	<div class="alert alert-success mb-4" data-character-creation-ready="true">
+		<span>{ T(loc, "game.character_creation.ready") }</span>
+	</div>
+	<div class="card bg-base-100 border border-base-300 shadow-sm" data-character-creation-summary="true">
+		<div class="card-body gap-4">
+			<h3 class="card-title text-lg">{ T(loc, "game.character_creation.summary_title") }</h3>
+			@creationSummaryBody(view.Creation, loc)
+			@creationFooter(view, loc) {
+				<a class="btn btn-primary btn-wide" href={ routepath.AppCampaignCharacters(view.CampaignID) } data-character-creation-back-to-campaign="true">{ T(loc, "game.character_creation.action_back_to_campaign") }</a>
+			}
+		</div>
+	</div>
+}
+
+// --- Step 1: Class & Subclass ---
+
+templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
+	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="1">
+		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.class_subclass") }</h3>
+		<!-- Collapsed class summary (shown after class is selected) -->
+		<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.ClassID) } data-class-selected>
+			<span class="font-medium" data-class-selected-name>
+				{ creationNameByID(view.Creation.Classes, view.Creation.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name }) }
+			</span>
+			<button type="button" class="btn btn-ghost btn-xs" data-class-change>{ T(loc, "game.character_creation.action_change") }</button>
+		</div>
+		<!-- Class selection grid (hidden when a class is selected) -->
+		<div class={ creationClassGridHidden(view.Creation.ClassID) } data-class-grid>
+			<div class="form-control">
+				<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.class") }</span></label>
+				<div class="grid grid-cols-1 gap-4">
+					for _, class := range view.Creation.Classes {
+						<div data-class-card={ class.ID } data-class-name={ class.Name }>
+							@creationOptionCard(class.ID, class.Name, class.ImageURL, "class_id", view.Creation.ClassID, class.DomainWatermarks) {
+								<div class="flex flex-wrap gap-2 text-xs">
+									<span class="badge badge-outline badge-sm">{ creationFormatHP(class.StartingHP) }</span>
+									<span class="badge badge-outline badge-sm">{ creationFormatEvasion(class.StartingEvasion) }</span>
+								</div>
+								if len(class.DomainNames) > 0 {
+									<p class="text-sm opacity-70">
+										<span class="font-medium">{ T(loc, "game.character_creation.label.domains") }:</span>
+										{ " " + strings.Join(class.DomainNames, ", ") }
+									</p>
+								}
+								if class.HopeFeature.Name != "" {
+									<div class="mt-1">
+										<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.label.hope") }:</span>
+										<span class="text-sm font-semibold">{ " " + class.HopeFeature.Name }</span>
+										if class.HopeFeature.Description != "" {
+											<p class="text-sm opacity-60 mt-0.5">{ class.HopeFeature.Description }</p>
+										}
+									</div>
+								}
+								if len(class.Features) > 0 {
+									<div class="mt-1">
+										<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.label.features") }:</span>
+										@creationFeatureList(class.Features)
+									</div>
+								}
+							}
+						</div>
+					}
+				</div>
+			</div>
+		</div>
+		<!-- Subclass selection grouped by class -->
+		if len(view.Creation.Subclasses) > 0 {
+			<div class={ "scroll-mt-20 " + creationSubclassDividerHidden(view.Creation.ClassID) } data-subclass-section>
+				<!-- Collapsed subclass summary -->
+				<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.SubclassID) } data-subclass-selected>
+					<span class="font-medium" data-subclass-selected-name>
+						{ creationNameByID(view.Creation.Subclasses, view.Creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) }
+					</span>
+					<button type="button" class="btn btn-ghost btn-xs" data-subclass-change>{ T(loc, "game.character_creation.action_change") }</button>
+				</div>
+				<!-- Subclass grid -->
+				<div class={ creationClassGridHidden(view.Creation.SubclassID) } data-subclass-grid>
+					<div class="divider">{ T(loc, "game.character_creation.field.subclass") }</div>
+					for _, classID := range creationSubclassClassIDs(view.Creation.Subclasses) {
+						<div class={ "form-control " + creationSubclassGroupHidden(classID, view.Creation.ClassID) } data-subclass-group={ classID }>
+							<div class="grid grid-cols-1 gap-4">
+								for _, subclass := range creationSubclassesByClass(view.Creation.Subclasses, classID) {
+									@creationOptionCard(subclass.ID, subclass.Name, subclass.ImageURL, "subclass_id", view.Creation.SubclassID, nil) {
+										if len(subclass.Foundation) > 0 {
+											@creationFeatureList(subclass.Foundation)
+										}
+										if subclass.SpellcastTrait != "" {
+											<p class="text-xs opacity-60 mt-1">Spellcast: { subclass.SpellcastTrait }</p>
+										}
+									}
+								}
+							</div>
+						</div>
+					}
+				</div>
+			</div>
+		}
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepClassSubclassReady(view.Creation))
+		}
+	</form>
+	<script>
+		(function() {
+			var form = document.querySelector('[data-character-creation-form-step="1"]');
+			if (!form) return;
+			var classGrid = form.querySelector('[data-class-grid]');
+			var classSummary = form.querySelector('[data-class-selected]');
+			var classNameEl = form.querySelector('[data-class-selected-name]');
+			var changeBtn = form.querySelector('[data-class-change]');
+			var subclassSection = form.querySelector('[data-subclass-section]');
+			var subclassGrid = form.querySelector('[data-subclass-grid]');
+			var subclassSummary = form.querySelector('[data-subclass-selected]');
+			var subclassNameEl = form.querySelector('[data-subclass-selected-name]');
+			var subclassChangeBtn = form.querySelector('[data-subclass-change]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var hasClass = !!form.querySelector('input[name="class_id"]:checked');
+				var hasSubclass = !!form.querySelector('input[name="subclass_id"]:checked');
+				nextButton.disabled = !(hasClass && hasSubclass);
+			}
+
+			function collapseClass(selectedClassID) {
+				var card = form.querySelector('[data-class-card="' + selectedClassID + '"]');
+				if (card) classNameEl.textContent = card.dataset.className;
+				classGrid.classList.add('hidden');
+				classSummary.classList.remove('hidden');
+				if (subclassSection) {
+					subclassSection.classList.remove('hidden');
+					expandSubclass();
+					subclassSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+				// Show matching subclass group, hide others
+				var groups = form.querySelectorAll('[data-subclass-group]');
+				groups.forEach(function(g) {
+					if (g.dataset.subclassGroup === selectedClassID) {
+						g.classList.remove('hidden');
+					} else {
+						g.classList.add('hidden');
+						g.querySelectorAll('input[name="subclass_id"]').forEach(function(r) { r.checked = false; });
+					}
+				});
+				updateNextButton();
+			}
+
+			function expandClass() {
+				classGrid.classList.remove('hidden');
+				classSummary.classList.add('hidden');
+				if (subclassSection) subclassSection.classList.add('hidden');
+				updateNextButton();
+			}
+
+			function collapseSubclass(selectedID) {
+				var radios = form.querySelectorAll('input[name="subclass_id"]');
+				radios.forEach(function(r) {
+					if (r.value === selectedID) {
+						var card = r.closest('[class*="card"]');
+						if (card) {
+							var nameEl = card.querySelector('.card-title');
+							if (nameEl && subclassNameEl) subclassNameEl.textContent = nameEl.textContent;
+						}
+					}
+				});
+				if (subclassGrid) subclassGrid.classList.add('hidden');
+				if (subclassSummary) subclassSummary.classList.remove('hidden');
+				updateNextButton();
+			}
+
+			function expandSubclass() {
+				if (subclassGrid) subclassGrid.classList.remove('hidden');
+				if (subclassSummary) subclassSummary.classList.add('hidden');
+				updateNextButton();
+			}
+
+			form.querySelectorAll('input[name="class_id"]').forEach(function(r) {
+				r.addEventListener('click', function() { collapseClass(r.value); });
+			});
+			form.querySelectorAll('input[name="subclass_id"]').forEach(function(r) {
+				r.addEventListener('click', function() { collapseSubclass(r.value); });
+			});
+
+			if (changeBtn) {
+				changeBtn.addEventListener('click', expandClass);
+			}
+			if (subclassChangeBtn) {
+				subclassChangeBtn.addEventListener('click', expandSubclass);
+			}
+			updateNextButton();
+		})();
+	</script>
+}
+
+// --- Step 2: Heritage (Ancestry + Community) ---
+
+templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
+	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="2">
+		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.heritage") }</h3>
+		<!-- Collapsed ancestry summary -->
+		<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.AncestryID) } data-ancestry-selected>
+			<span class="font-medium" data-ancestry-selected-name>
+				{ creationNameByID(view.Creation.Ancestries, view.Creation.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
+			</span>
+			<button type="button" class="btn btn-ghost btn-xs" data-ancestry-change>{ T(loc, "game.character_creation.action_change") }</button>
+		</div>
+		<!-- Ancestry grid -->
+		<div class={ creationClassGridHidden(view.Creation.AncestryID) } data-ancestry-grid>
+			<div class="form-control">
+				<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.ancestry") }</span></label>
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						for _, ancestry := range view.Creation.Ancestries {
+							<div data-ancestry-card={ ancestry.ID } data-ancestry-name={ ancestry.Name }>
+								@creationOptionCard(ancestry.ID, ancestry.Name, ancestry.ImageURL, "ancestry_id", view.Creation.AncestryID, nil) {
+									@creationFeatureList(ancestry.Features)
+								}
+							</div>
+					}
+				</div>
+			</div>
+		</div>
+		<!-- Community section (hidden until ancestry selected) -->
+		<div class={ "scroll-mt-20 " + creationSubclassDividerHidden(view.Creation.AncestryID) } data-community-section>
+			<!-- Collapsed community summary -->
+			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.CommunityID) } data-community-selected>
+				<span class="font-medium" data-community-selected-name>
+					{ creationNameByID(view.Creation.Communities, view.Creation.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
+				</span>
+				<button type="button" class="btn btn-ghost btn-xs" data-community-change>{ T(loc, "game.character_creation.action_change") }</button>
+			</div>
+			<!-- Community grid -->
+			<div class={ creationClassGridHidden(view.Creation.CommunityID) } data-community-grid>
+				<div class="divider">{ T(loc, "game.character_creation.field.community") }</div>
+				<div class="form-control">
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+						for _, community := range view.Creation.Communities {
+							@creationOptionCard(community.ID, community.Name, community.ImageURL, "community_id", view.Creation.CommunityID, nil) {
+								@creationFeatureList(community.Features)
+							}
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepHeritageReady(view.Creation))
+		}
+	</form>
+	<script>
+		(function() {
+			var form = document.querySelector('[data-character-creation-form-step="2"]');
+			if (!form) return;
+			var ancestryGrid = form.querySelector('[data-ancestry-grid]');
+			var ancestrySummary = form.querySelector('[data-ancestry-selected]');
+			var ancestryNameEl = form.querySelector('[data-ancestry-selected-name]');
+			var changeBtn = form.querySelector('[data-ancestry-change]');
+			var communitySection = form.querySelector('[data-community-section]');
+			var communityGrid = form.querySelector('[data-community-grid]');
+			var communitySummary = form.querySelector('[data-community-selected]');
+			var communityNameEl = form.querySelector('[data-community-selected-name]');
+			var communityChangeBtn = form.querySelector('[data-community-change]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var hasAncestry = !!form.querySelector('input[name="ancestry_id"]:checked');
+				var hasCommunity = !!form.querySelector('input[name="community_id"]:checked');
+				nextButton.disabled = !(hasAncestry && hasCommunity);
+			}
+
+			function collapseAncestry(selectedID) {
+				var card = form.querySelector('[data-ancestry-card="' + selectedID + '"]');
+				if (card) ancestryNameEl.textContent = card.dataset.ancestryName;
+				ancestryGrid.classList.add('hidden');
+				ancestrySummary.classList.remove('hidden');
+				if (communitySection) {
+					communitySection.classList.remove('hidden');
+					expandCommunity();
+					communitySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+				updateNextButton();
+			}
+
+			function expandAncestry() {
+				ancestryGrid.classList.remove('hidden');
+				ancestrySummary.classList.add('hidden');
+				if (communitySection) communitySection.classList.add('hidden');
+				updateNextButton();
+			}
+
+			function collapseCommunity(selectedID) {
+				var radios = form.querySelectorAll('input[name="community_id"]');
+				radios.forEach(function(r) {
+					if (r.value === selectedID) {
+						var card = r.closest('[class*="card"]');
+						if (card) {
+							var nameEl = card.querySelector('.card-title');
+							if (nameEl && communityNameEl) communityNameEl.textContent = nameEl.textContent;
+						}
+					}
+				});
+				if (communityGrid) communityGrid.classList.add('hidden');
+				if (communitySummary) communitySummary.classList.remove('hidden');
+				updateNextButton();
+			}
+
+			function expandCommunity() {
+				if (communityGrid) communityGrid.classList.remove('hidden');
+				if (communitySummary) communitySummary.classList.add('hidden');
+				updateNextButton();
+			}
+
+			form.querySelectorAll('input[name="ancestry_id"]').forEach(function(r) {
+				r.addEventListener('click', function() { collapseAncestry(r.value); });
+			});
+			form.querySelectorAll('input[name="community_id"]').forEach(function(r) {
+				r.addEventListener('click', function() { collapseCommunity(r.value); });
+			});
+
+			if (changeBtn) {
+				changeBtn.addEventListener('click', expandAncestry);
+			}
+			if (communityChangeBtn) {
+				communityChangeBtn.addEventListener('click', expandCommunity);
+			}
+			updateNextButton();
+		})();
+	</script>
+}
+
+// --- Step 3: Traits ---
+
+templ creationStepTraits(view CharacterCreationPageView, loc Localizer) {
+	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="3">
+		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.traits") }</h3>
+		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.traits_guidance") }</p>
+		<div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+			@creationTraitSelect(loc, "agility", "game.character_creation.field.agility", view.Creation.Agility)
+			@creationTraitSelect(loc, "strength", "game.character_creation.field.strength", view.Creation.Strength)
+			@creationTraitSelect(loc, "finesse", "game.character_creation.field.finesse", view.Creation.Finesse)
+			@creationTraitSelect(loc, "instinct", "game.character_creation.field.instinct", view.Creation.Instinct)
+			@creationTraitSelect(loc, "presence", "game.character_creation.field.presence", view.Creation.Presence)
+			@creationTraitSelect(loc, "knowledge", "game.character_creation.field.knowledge", view.Creation.Knowledge)
+		</div>
+		<div class="alert alert-error hidden text-sm" data-traits-error>
+			<span>{ T(loc, "game.character_creation.traits_distribution_error") }</span>
+		</div>
+		<p class="text-sm opacity-50" data-traits-remaining data-label={ T(loc, "game.character_creation.traits_remaining_label") }></p>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepTraitsReady(view.Creation))
+		}
+	</form>
+	<script>
+		(function() {
+			var form = document.querySelector('[data-character-creation-form-step="3"]');
+			if (!form) return;
+			var errorEl = form.querySelector('[data-traits-error]');
+			var remainingEl = form.querySelector('[data-traits-remaining]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+			var expected = [-1, 0, 0, 1, 1, 2];
+			var traitNames = ['agility', 'strength', 'finesse', 'instinct', 'presence', 'knowledge'];
+
+			function getValues() {
+				return traitNames.map(function(n) { return parseInt(form.querySelector('[name="' + n + '"]').value, 10); });
+			}
+
+			function updateStatus() {
+				var values = getValues();
+				var sorted = values.slice().sort(function(a, b) { return a - b; });
+				var valid = sorted.length === expected.length && sorted.every(function(v, i) { return v === expected[i]; });
+
+				// Build remaining summary: which values still need to be assigned
+				var used = {};
+				values.forEach(function(v) { var k = String(v); used[k] = (used[k] || 0) + 1; });
+				var need = {};
+				expected.forEach(function(v) { var k = String(v); need[k] = (need[k] || 0) + 1; });
+				var remaining = [];
+				Object.keys(need).sort(function(a,b){return Number(a)-Number(b);}).forEach(function(k) {
+					var left = need[k] - (used[k] || 0);
+					for (var i = 0; i < left; i++) remaining.push((Number(k) >= 0 ? '+' : '') + k);
+				});
+
+				if (remaining.length > 0 && !valid) {
+					remainingEl.textContent = remainingEl.dataset.label + ' ' + remaining.join(', ');
+					remainingEl.classList.remove('hidden');
+				} else {
+					remainingEl.classList.add('hidden');
+				}
+
+				if (valid) {
+					errorEl.classList.add('hidden');
+				}
+				if (nextButton) {
+					nextButton.disabled = !valid;
+				}
+			}
+
+			form.addEventListener('change', updateStatus);
+			remainingEl.dataset.label = remainingEl.dataset.label || 'Remaining:';
+			updateStatus();
+
+			form.addEventListener('submit', function(e) {
+				var values = getValues();
+				var sorted = values.slice().sort(function(a, b) { return a - b; });
+				var valid = sorted.length === expected.length && sorted.every(function(v, i) { return v === expected[i]; });
+				if (!valid) {
+					e.preventDefault();
+					errorEl.classList.remove('hidden');
+					errorEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+				}
+			});
+		})();
+	</script>
+}
+
+templ creationTraitSelect(loc Localizer, name string, labelKey string, current string) {
+	<label class="form-control">
+		<span class="label-text">{ T(loc, labelKey) }</span>
+		<select name={ name } required class="select select-bordered">
+			<option value="-1" selected?={ current == "-1" }>-1</option>
+			<option value="0" selected?={ current == "0" || current == "" }>0</option>
+			<option value="1" selected?={ current == "1" }>+1</option>
+			<option value="2" selected?={ current == "2" }>+2</option>
+		</select>
+	</label>
+}
+
+// --- Step 4: Equipment ---
+
+templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
+	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="4">
+		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.equipment") }</h3>
+		<!-- Primary Weapon -->
+		<div data-equip-section="weapon_primary_id">
+			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.PrimaryWeaponID) } data-equip-selected>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.primary_weapon") }:</span>
+				<span class="font-medium" data-equip-selected-name>
+					{ creationNameByID(view.Creation.PrimaryWeapons, view.Creation.PrimaryWeaponID, func(w CampaignCreationWeaponView) string { return w.ID }, func(w CampaignCreationWeaponView) string { return w.Name }) }
+				</span>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+			</div>
+			<div class={ creationClassGridHidden(view.Creation.PrimaryWeaponID) } data-equip-grid>
+				<div class="form-control">
+					<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.primary_weapon") }</span></label>
+					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+						for _, weapon := range view.Creation.PrimaryWeapons {
+							<div data-equip-card data-equip-card-name={ weapon.Name }>
+								@creationSelectableOptionCard(
+									weapon.ID,
+									weapon.Name,
+									weapon.ImageURL,
+									"weapon_primary_id",
+									"radio",
+									campaignCreationOptionSelected(weapon.ID, view.Creation.PrimaryWeaponID),
+									true,
+									false,
+									strings.TrimSpace(weapon.ImageURL) != "",
+									"equipment-primary-weapon",
+									nil,
+								) {
+									<div class="flex flex-wrap gap-2 text-xs">
+										if weapon.Damage != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
+										}
+										if weapon.Range != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
+										}
+										if weapon.Trait != "" {
+											<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
+										}
+									</div>
+									if weapon.Feature != "" {
+										<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
+									}
+								}
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Secondary Weapon -->
+		<div data-equip-section="weapon_secondary_id">
+			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 hidden" } data-equip-selected>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.secondary_weapon") }:</span>
+				<span class="font-medium" data-equip-selected-name></span>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+			</div>
+			<div data-equip-grid>
+				<div class="divider">{ T(loc, "game.character_creation.field.secondary_weapon") }</div>
+				<div class="form-control">
+					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+						<div data-equip-card data-equip-card-name={ T(loc, "game.character_creation.value.none") }>
+							@creationSelectableOptionCard(
+								"",
+								T(loc, "game.character_creation.value.none"),
+								"",
+								"weapon_secondary_id",
+								"radio",
+								strings.TrimSpace(view.Creation.SecondaryWeaponID) == "",
+								false,
+								false,
+								false,
+								"equipment-secondary-weapon",
+								nil,
+							) {}
+						</div>
+						for _, weapon := range view.Creation.SecondaryWeapons {
+							<div data-equip-card data-equip-card-name={ weapon.Name }>
+								@creationSelectableOptionCard(
+									weapon.ID,
+									weapon.Name,
+									weapon.ImageURL,
+									"weapon_secondary_id",
+									"radio",
+									campaignCreationOptionSelected(weapon.ID, view.Creation.SecondaryWeaponID),
+									false,
+									false,
+									strings.TrimSpace(weapon.ImageURL) != "",
+									"equipment-secondary-weapon",
+									nil,
+								) {
+									<div class="flex flex-wrap gap-2 text-xs">
+										if weapon.Damage != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
+										}
+										if weapon.Range != "" {
+											<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
+										}
+										if weapon.Trait != "" {
+											<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
+										}
+									</div>
+									if weapon.Feature != "" {
+										<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
+									}
+								}
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Armor -->
+		<div data-equip-section="armor_id">
+			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 hidden" } data-equip-selected>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.armor") }:</span>
+				<span class="font-medium" data-equip-selected-name></span>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+			</div>
+			<div data-equip-grid>
+				<div class="divider">{ T(loc, "game.character_creation.field.armor") }</div>
+				<div class="form-control">
+					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+						for _, armor := range view.Creation.Armor {
+							<div data-equip-card data-equip-card-name={ armor.Name }>
+								@creationSelectableOptionCard(
+									armor.ID,
+									armor.Name,
+									armor.ImageURL,
+									"armor_id",
+									"radio",
+									campaignCreationOptionSelected(armor.ID, view.Creation.ArmorID),
+									true,
+									false,
+									strings.TrimSpace(armor.ImageURL) != "",
+									"equipment-armor",
+									nil,
+								) {
+									<div class="flex flex-wrap gap-2 text-xs">
+										<span class="badge badge-outline badge-sm">{ creationFormatArmorScore(armor.ArmorScore) }</span>
+										if armor.BaseThresholds != "" {
+											<span class="badge badge-outline badge-sm">{ armor.BaseThresholds }</span>
+										}
+									</div>
+									if armor.Feature != "" {
+										<p class="text-xs opacity-60 mt-1">{ armor.Feature }</p>
+									}
+								}
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		<!-- Potion -->
+		<div data-equip-section="potion_item_id">
+			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 hidden" } data-equip-selected>
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.potion") }:</span>
+				<span class="font-medium" data-equip-selected-name></span>
+				<button type="button" class="btn btn-ghost btn-xs" data-equip-change>{ T(loc, "game.character_creation.action_change") }</button>
+			</div>
+			<div data-equip-grid>
+				<div class="divider">{ T(loc, "game.character_creation.field.potion") }</div>
+				<div class="form-control">
+					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+						for _, item := range view.Creation.PotionItems {
+							<div data-equip-card data-equip-card-name={ item.Name }>
+								@creationSelectableOptionCard(
+									item.ID,
+									item.Name,
+									item.ImageURL,
+									"potion_item_id",
+									"radio",
+									campaignCreationOptionSelected(item.ID, view.Creation.PotionItemID),
+									true,
+									false,
+									strings.TrimSpace(item.ImageURL) != "",
+									"equipment-potion",
+									nil,
+								) {
+									if item.Description != "" {
+										<p class="text-xs opacity-70">{ item.Description }</p>
+									}
+								}
+							</div>
+						}
+					</div>
+				</div>
+			</div>
+		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepEquipmentReady(view.Creation))
+		}
+	</form>
+	<script>
+		(function() {
+			var form = document.querySelector('[data-character-creation-form-step="4"]');
+			if (!form) return;
+			var sections = form.querySelectorAll('[data-equip-section]');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var ready = !!form.querySelector('input[name="weapon_primary_id"]:checked') &&
+					!!form.querySelector('input[name="armor_id"]:checked') &&
+					!!form.querySelector('input[name="potion_item_id"]:checked');
+				nextButton.disabled = !ready;
+			}
+
+			sections.forEach(function(section) {
+				var inputName = section.dataset.equipSection;
+				var summary = section.querySelector('[data-equip-selected]');
+				var nameEl = section.querySelector('[data-equip-selected-name]');
+				var grid = section.querySelector('[data-equip-grid]');
+				var changeBtn = section.querySelector('[data-equip-change]');
+
+				function collapse() {
+					var checked = section.querySelector('input[name="' + inputName + '"]:checked');
+					if (!checked) return;
+					var card = checked.closest('[data-equip-card]');
+					if (card) nameEl.textContent = card.dataset.equipCardName;
+					grid.classList.add('hidden');
+					summary.classList.remove('hidden');
+					updateNextButton();
+				}
+
+				function expand() {
+					grid.classList.remove('hidden');
+					summary.classList.add('hidden');
+					updateNextButton();
+				}
+
+				// Collapse on selection (click fires even when re-selecting same option)
+				section.querySelectorAll('input[name="' + inputName + '"]').forEach(function(r) {
+					r.addEventListener('click', collapse);
+				});
+
+				if (changeBtn) changeBtn.addEventListener('click', expand);
+
+				// Collapse on load if already selected
+				var checked = section.querySelector('input[name="' + inputName + '"]:checked');
+				if (checked && checked.value !== '') collapse();
+			});
+			updateNextButton();
+		})();
+	</script>
+}
+
+// --- Step 5: Experiences ---
+
+templ creationStepExperiences(view CharacterCreationPageView, loc Localizer) {
+	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="5">
+		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.experiences") }</h3>
+		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.experiences_guidance") }</p>
+		<!-- Experience 1 -->
+		<div class="card bg-base-100 border border-base-300 p-4 space-y-3">
+			<div class="flex items-center gap-2">
+				<h4 class="text-sm font-medium">{ T(loc, "game.character_creation.experience_label_1") }</h4>
+				<span class="badge badge-outline">+2</span>
+			</div>
+			<label class="form-control">
+				<span class="label-text">{ T(loc, "game.character_creation.field.experience_name") }</span>
+				<input type="text" name="experience_0_name" required class="input input-bordered" value={ creationExperienceValue(view.Creation.Experiences, 0, "name") }/>
+			</label>
+		</div>
+		<!-- Experience 2 -->
+		<div class="card bg-base-100 border border-base-300 p-4 space-y-3">
+			<div class="flex items-center gap-2">
+				<h4 class="text-sm font-medium">{ T(loc, "game.character_creation.experience_label_2") }</h4>
+				<span class="badge badge-outline">+2</span>
+			</div>
+			<label class="form-control">
+				<span class="label-text">{ T(loc, "game.character_creation.field.experience_name") }</span>
+				<input type="text" name="experience_1_name" required class="input input-bordered" value={ creationExperienceValue(view.Creation.Experiences, 1, "name") }/>
+			</label>
+		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepExperiencesReady(view.Creation))
+		}
+	</form>
+	<script>
+		(function() {
+			var form = document.querySelector('[data-character-creation-form-step="5"]');
+			if (!form) return;
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton) return;
+				var first = form.querySelector('[name="experience_0_name"]');
+				var second = form.querySelector('[name="experience_1_name"]');
+				nextButton.disabled = !(first && second && first.value.trim() !== '' && second.value.trim() !== '');
+			}
+
+			form.addEventListener('input', updateNextButton);
+			updateNextButton();
+		})();
+	</script>
+}
+
+// --- Step 6: Domain Cards ---
+
+templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
+	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="6">
+		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.domain_cards") }</h3>
+		<p class="text-sm opacity-70">{ T(loc, "game.character_creation.domain_cards_hint") }</p>
+		<div class="grid gap-3 md:grid-cols-2">
+			for _, card := range view.Creation.DomainCards {
+				@creationCheckboxOptionCard(
+					card.ID,
+					card.Name,
+					card.ImageURL,
+					"domain_card_id",
+					view.Creation.DomainCardIDs,
+					len(view.Creation.DomainCardIDs) >= 2 && !campaignCreationOptionInSet(card.ID, view.Creation.DomainCardIDs),
+					true,
+					"domain-card",
+				) {
+					<div class="flex flex-wrap gap-2 text-xs">
+						if card.DomainName != "" {
+							<span class="badge badge-outline badge-sm">{ card.DomainName }</span>
+						}
+						if card.Type != "" {
+							<span class="badge badge-ghost badge-sm">{ card.Type }</span>
+						}
+						<span class="badge badge-outline badge-sm">{ T(loc, "game.character_creation.label_level") }{ card.Level }</span>
+						if creationFormatRecallCost(card.RecallCost) != "" {
+							<span class="badge badge-outline badge-sm">{ creationFormatRecallCost(card.RecallCost) }</span>
+						}
+					</div>
+					if card.FeatureText != "" {
+						<p class="text-xs opacity-70 mt-2">{ card.FeatureText }</p>
+					}
+				}
+			}
+		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepDomainCardsReady(view.Creation))
+		}
+	</form>
+	<script>
+		(function() {
+			var form = document.querySelector('[data-character-creation-form-step="6"]');
+			if (!form) return;
+			var maxCards = 2;
+			var nextButton = form.querySelector('[data-character-creation-next]');
+			function updateCheckboxes() {
+				var checked = form.querySelectorAll('input[name="domain_card_id"]:checked');
+				var options = form.querySelectorAll('[data-creation-option-kind="domain-card"]');
+				options.forEach(function(option) {
+					var checkbox = option.querySelector('input[name="domain_card_id"]');
+					if (!checkbox) return;
+					var shouldDisable = checked.length >= maxCards && !checkbox.checked;
+					checkbox.disabled = shouldDisable;
+					if (shouldDisable) {
+						option.classList.add('opacity-60', 'cursor-not-allowed', 'pointer-events-none');
+					} else {
+						option.classList.remove('opacity-60', 'cursor-not-allowed', 'pointer-events-none');
+					}
+				});
+				if (nextButton) {
+					nextButton.disabled = checked.length !== maxCards;
+				}
+			}
+			form.addEventListener('change', function(e) {
+				if (e.target.name === 'domain_card_id') updateCheckboxes();
+			});
+			updateCheckboxes();
+		})();
+	</script>
+}
+
+// creationTextareaConfig holds the varying parameters for a free-form text creation step.
+type creationTextareaConfig struct {
+	FieldName    string
+	StepNumber   string
+	Value        string
+	HeadingKey   string
+	GuidanceKey1 string
+	GuidanceKey2 string
+	GuidanceKey3 string
+}
+
+// --- Steps 7-9: Details, Background, Connections ---
+
+templ creationStepDetails(view CharacterCreationPageView, loc Localizer) {
+	@creationStepTextarea(view, loc, creationTextareaConfig{
+		FieldName: "description", StepNumber: "7", Value: view.Creation.Description,
+		HeadingKey: "game.character_creation.step.details",
+		GuidanceKey1: "game.character_creation.details_guidance_1",
+		GuidanceKey2: "game.character_creation.details_guidance_2",
+		GuidanceKey3: "game.character_creation.details_guidance_3",
+	})
+}
+
+templ creationStepBackground(view CharacterCreationPageView, loc Localizer) {
+	@creationStepTextarea(view, loc, creationTextareaConfig{
+		FieldName: "background", StepNumber: "8", Value: view.Creation.Background,
+		HeadingKey: "game.character_creation.step.background",
+		GuidanceKey1: "game.character_creation.background_guidance_1",
+		GuidanceKey2: "game.character_creation.background_guidance_2",
+		GuidanceKey3: "game.character_creation.background_guidance_3",
+	})
+}
+
+templ creationStepConnections(view CharacterCreationPageView, loc Localizer) {
+	@creationStepTextarea(view, loc, creationTextareaConfig{
+		FieldName: "connections", StepNumber: "9", Value: view.Creation.Connections,
+		HeadingKey: "game.character_creation.step.connections",
+		GuidanceKey1: "game.character_creation.connections_guidance_1",
+		GuidanceKey2: "game.character_creation.connections_guidance_2",
+		GuidanceKey3: "game.character_creation.connections_guidance_3",
+	})
+}
+
+templ creationStepTextarea(view CharacterCreationPageView, loc Localizer, cfg creationTextareaConfig) {
+	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step={ cfg.StepNumber }>
+		<h3 class="text-lg font-semibold">{ T(loc, cfg.HeadingKey) }</h3>
+		<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+			<textarea name={ cfg.FieldName } rows="6" required class="textarea textarea-bordered w-full">{ cfg.Value }</textarea>
+			<ul class="text-sm opacity-70 space-y-2 list-disc list-inside">
+				<li>{ T(loc, cfg.GuidanceKey1) }</li>
+				<li>{ T(loc, cfg.GuidanceKey2) }</li>
+				<li>{ T(loc, cfg.GuidanceKey3) }</li>
+			</ul>
+		</div>
+		@creationFooter(view, loc) {
+			@creationNextButton(loc, !creationStepTextareaReady(cfg.Value))
+		}
+	</form>
+	<script>
+		(function() {
+			var script = document.currentScript;
+			var form = script ? script.previousElementSibling : null;
+			if (!form) return;
+			var textarea = form.querySelector('textarea');
+			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function updateNextButton() {
+				if (!nextButton || !textarea) return;
+				nextButton.disabled = textarea.value.trim() === '';
+			}
+
+			if (textarea) {
+				textarea.addEventListener('input', updateNextButton);
+			}
+			updateNextButton();
+		})();
+	</script>
+}

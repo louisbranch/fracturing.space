@@ -6,8 +6,8 @@ import (
 	"golang.org/x/text/language"
 )
 
-// campaignReadGateway defines an internal contract used at this web package boundary.
-type campaignReadGateway interface {
+// ReadGateway loads campaign workspace reads for the web service.
+type ReadGateway interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
 	CampaignName(context.Context, string) (string, error)
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
@@ -25,8 +25,8 @@ type campaignReadGateway interface {
 	CharacterCreationProfile(context.Context, string, string) (CampaignCharacterCreationProfile, error)
 }
 
-// campaignMutationGateway defines an internal contract used at this web package boundary.
-type campaignMutationGateway interface {
+// MutationGateway applies campaign workspace mutations for the web service.
+type MutationGateway interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 	UpdateCampaign(context.Context, string, UpdateCampaignInput) error
 	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error
@@ -46,8 +46,9 @@ type campaignMutationGateway interface {
 	ResetCharacterCreationWorkflow(context.Context, string, string) error
 }
 
-// CampaignGateway loads campaign summaries and applies workspace mutations.
+// CampaignGateway is the combined capability bag used by concrete gateway implementations.
 type CampaignGateway interface {
-	campaignReadGateway
-	campaignMutationGateway
+	ReadGateway
+	MutationGateway
+	AuthzGateway
 }
