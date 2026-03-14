@@ -303,14 +303,14 @@
 
 
 <g>
-	<rect x="684.354739" y="497.774323" width="84.757466" height="60.535406" style="fill: rgb(123, 198, 101);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="684.354739" y="497.774323" width="84.757466" height="60.535406" style="fill: rgb(129, 201, 101);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(692.354739,513.374323) scale(0.596853)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">worker 76.9%</text>
+	data-math="N">worker 75.8%</text>
 		
 </g>
 
@@ -1065,14 +1065,14 @@
 
 
 <g>
-	<rect x="692.354739" y="519.374323" width="37.249000" height="30.935406" style="fill: rgb(106, 191, 99);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="692.354739" y="519.374323" width="37.249000" height="30.935406" style="fill: rgb(118, 196, 100);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 <text 
 	data-notex="1" 
 	text-anchor="start"
 	transform="translate(700.354739,534.974323) scale(0.245938)"
 	style="font-family: Open Sans, verdana, arial, sans-serif !important; font-size: 12px; fill: rgb(0, 0, 0); fill-opacity: 1.00; white-space: pre;" 
-	data-math="N">app 79.3%</text>
+	data-math="N">app 77.5%</text>
 		
 </g>
 
@@ -2249,7 +2249,7 @@
 
 
 <g>
-	<rect x="700.354739" y="540.974323" width="9.074678" height="1.335406" style="fill: rgb(155, 213, 104);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
+	<rect x="700.354739" y="540.974323" width="9.074678" height="1.335406" style="fill: rgb(174, 220, 110);opacity:1;fill-opacity:1.00;stroke:rgb(128,128,128);stroke-width:1px;stroke-opacity:1.00;" />
 	
 </g>
 
