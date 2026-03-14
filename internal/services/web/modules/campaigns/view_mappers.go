@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -29,6 +30,7 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, sess
 	overviewURL := routepath.AppCampaign(campaignID)
 	sessionsURL := routepath.AppCampaignSessions(campaignID)
 	participantsURL := routepath.AppCampaignParticipants(campaignID)
+	invitesURL := routepath.AppCampaignInvites(campaignID)
 	charactersURL := routepath.AppCampaignCharacters(campaignID)
 	return &webtemplates.AppSideMenu{
 		CurrentPath: strings.TrimSpace(currentPath),
@@ -61,6 +63,12 @@ func campaignWorkspaceMenu(workspace CampaignWorkspace, currentPath string, sess
 				Badge:       strconv.Itoa(campaignSessionMenuCount(sessions)),
 				IconID:      commonv1.IconId_ICON_ID_SESSION,
 				SubItems:    sessionSubItems,
+			},
+			{
+				Label:       webtemplates.T(loc, "game.campaign_invites.title"),
+				URL:         invitesURL,
+				MatchPrefix: invitesURL,
+				IconID:      commonv1.IconId_ICON_ID_INVITES,
 			},
 		},
 	}
@@ -338,4 +346,75 @@ func mapInvitesView(items []CampaignInvite) []webtemplates.CampaignInviteView {
 		})
 	}
 	return result
+}
+
+// mapInviteSeatOptions converts eligible invite targets to template select options.
+func mapInviteSeatOptions(participants []CampaignParticipant, invites []CampaignInvite) []webtemplates.CampaignInviteSeatOptionView {
+	pendingByParticipantID := make(map[string]struct{}, len(invites))
+	for _, invite := range invites {
+		participantID := strings.TrimSpace(invite.ParticipantID)
+		if participantID == "" || !campaignInviteIsPending(invite.Status) {
+			continue
+		}
+		pendingByParticipantID[participantID] = struct{}{}
+	}
+
+	result := make([]webtemplates.CampaignInviteSeatOptionView, 0, len(participants))
+	for _, participant := range participants {
+		participantID := strings.TrimSpace(participant.ID)
+		if participantID == "" {
+			continue
+		}
+		if campaignInviteSeatController(participant.Controller) != "human" {
+			continue
+		}
+		if strings.TrimSpace(participant.UserID) != "" {
+			continue
+		}
+		if _, exists := pendingByParticipantID[participantID]; exists {
+			continue
+		}
+
+		label := strings.TrimSpace(participant.Name)
+		if label == "" {
+			label = participantID
+		}
+		result = append(result, webtemplates.CampaignInviteSeatOptionView{
+			ParticipantID: participantID,
+			Label:         label,
+		})
+	}
+
+	sort.SliceStable(result, func(i, j int) bool {
+		leftLabel := strings.ToLower(strings.TrimSpace(result[i].Label))
+		rightLabel := strings.ToLower(strings.TrimSpace(result[j].Label))
+		if leftLabel == rightLabel {
+			return strings.TrimSpace(result[i].ParticipantID) < strings.TrimSpace(result[j].ParticipantID)
+		}
+		return leftLabel < rightLabel
+	})
+
+	return result
+}
+
+// campaignInviteIsPending normalizes invite status checks for selector eligibility.
+func campaignInviteIsPending(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "pending", "invite_status_pending":
+		return true
+	default:
+		return false
+	}
+}
+
+// campaignInviteSeatController canonicalizes controller labels for invite-seat filtering.
+func campaignInviteSeatController(value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "human", "controller_human":
+		return "human"
+	case "ai", "controller_ai":
+		return "ai"
+	default:
+		return ""
+	}
 }

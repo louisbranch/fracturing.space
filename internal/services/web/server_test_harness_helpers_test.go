@@ -8,6 +8,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
+	campaignsmodule "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns"
 	settingsmodule "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
 )
 
@@ -49,6 +50,11 @@ func newDependencyBundle(principal PrincipalDependencies, moduleDeps modules.Dep
 	if moduleDeps.Settings.PasskeyClient == nil && moduleDeps.PublicAuth.AuthClient != nil {
 		if passkeyClient, ok := any(moduleDeps.PublicAuth.AuthClient).(settingsmodule.PasskeyClient); ok {
 			moduleDeps.Settings.PasskeyClient = passkeyClient
+		}
+	}
+	if moduleDeps.Campaigns.AuthClient == nil && moduleDeps.PublicAuth.AuthClient != nil {
+		if authClient, ok := any(moduleDeps.PublicAuth.AuthClient).(campaignsmodule.AuthClient); ok {
+			moduleDeps.Campaigns.AuthClient = authClient
 		}
 	}
 	return &DependencyBundle{

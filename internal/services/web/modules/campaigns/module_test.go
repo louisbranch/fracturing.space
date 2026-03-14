@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -436,7 +437,7 @@ func TestGRPCGatewayMutationMethodsReturnUnavailable(t *testing.T) {
 		}()},
 		{name: "apply character creation step", err: g.ApplyCharacterCreationStep(context.Background(), "c1", "char-1", &CampaignCharacterCreationStepInput{Details: &CampaignCharacterCreationStepDetails{}})},
 		{name: "reset character creation workflow", err: g.ResetCharacterCreationWorkflow(context.Background(), "c1", "char-1")},
-		{name: "create invite", err: g.CreateInvite(context.Background(), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"})},
+		{name: "create invite", err: g.CreateInvite(context.Background(), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})},
 		{name: "revoke invite", err: g.RevokeInvite(context.Background(), "c1", RevokeInviteInput{InviteID: "inv-1"})},
 	}
 	for _, tc := range tests {
@@ -1215,6 +1216,9 @@ func completeGRPCDeps(deps GRPCGatewayDeps) GRPCGatewayDeps {
 	if deps.InviteClient == nil {
 		deps.InviteClient = fakeInviteClient{}
 	}
+	if deps.AuthClient == nil {
+		deps.AuthClient = fakeAuthClient{}
+	}
 	if deps.AuthorizationClient == nil {
 		deps.AuthorizationClient = stubAuthorizationClient{}
 	}
@@ -1227,3 +1231,15 @@ type stubCharacterClient struct{ CharacterClient }
 type stubDaggerheartContentClient struct{ DaggerheartContentClient }
 type stubDaggerheartAssetClient struct{ DaggerheartAssetClient }
 type stubAuthorizationClient struct{ AuthorizationClient }
+
+type fakeAuthClient struct{}
+
+func (fakeAuthClient) LookupUserByUsername(_ context.Context, req *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
+	username := strings.TrimSpace(req.GetUsername())
+	if username == "" {
+		return &authv1.LookupUserByUsernameResponse{}, nil
+	}
+	return &authv1.LookupUserByUsernameResponse{
+		User: &authv1.User{Id: "user-lookup-" + username, Username: username},
+	}, nil
+}

@@ -32,7 +32,7 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 			return svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player One", Role: "player"})
 		}},
 		{name: "create invite", run: func() error {
-			return svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"})
+			return svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})
 		}},
 		{name: "revoke invite", run: func() error { return svc.revokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}) }},
 	}
@@ -90,7 +90,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if err := svc.updateParticipant(ctx, "c1", UpdateParticipantInput{ParticipantID: "p-1", Name: "Player Prime", Role: "gm"}); err != nil {
 		t.Fatalf("UpdateParticipant() error = %v", err)
 	}
-	if err := svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"}); err != nil {
+	if err := svc.createInvite(ctx, "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"}); err != nil {
 		t.Fatalf("CreateInvite() error = %v", err)
 	}
 	if err := svc.revokeInvite(ctx, "c1", RevokeInviteInput{InviteID: "inv-1"}); err != nil {
@@ -112,7 +112,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if gateway.lastEndSessionInput.SessionID != "sess-1" {
 		t.Fatalf("end session input session id = %q, want %q", gateway.lastEndSessionInput.SessionID, "sess-1")
 	}
-	if gateway.lastCreateInviteInput.ParticipantID != "p-1" || gateway.lastCreateInviteInput.RecipientUserID != "user-2" {
+	if gateway.lastCreateInviteInput.ParticipantID != "p-1" || gateway.lastCreateInviteInput.RecipientUsername != "alice" {
 		t.Fatalf("create invite input = %#v", gateway.lastCreateInviteInput)
 	}
 	if gateway.lastRevokeInviteInput.InviteID != "inv-1" {
@@ -279,7 +279,7 @@ func TestMutationMethodsRequestExpectedCapabilities(t *testing.T) {
 		{
 			name: "create invite",
 			run: func(s service) error {
-				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUserID: "user-2"})
+				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{ParticipantID: "p-1", RecipientUsername: "alice"})
 			},
 			wantAction:   campaignAuthzActionManage,
 			wantResource: campaignAuthzResourceInvite,
@@ -847,8 +847,8 @@ func TestCreateInviteValidatesParticipantID(t *testing.T) {
 		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
 	})
 	err := svc.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
-		ParticipantID:   "   ",
-		RecipientUserID: "user-2",
+		ParticipantID:     "   ",
+		RecipientUsername: "alice",
 	})
 	if err == nil {
 		t.Fatalf("expected validation error for empty participant id")
@@ -921,8 +921,8 @@ func TestMutationMethodsDenyWhenAuthorizationNotEvaluated(t *testing.T) {
 			name: "create invite",
 			run: func(s service) error {
 				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
-					ParticipantID:   "p-1",
-					RecipientUserID: "user-2",
+					ParticipantID:     "p-1",
+					RecipientUsername: "alice",
 				})
 			},
 		},
@@ -977,8 +977,8 @@ func TestMutationMethodsDenyWhenAuthorizationGatewayErrors(t *testing.T) {
 			name: "create invite",
 			run: func(s service) error {
 				return s.createInvite(contextWithResolvedUserID("user-1"), "c1", CreateInviteInput{
-					ParticipantID:   "p-1",
-					RecipientUserID: "user-2",
+					ParticipantID:     "p-1",
+					RecipientUsername: "alice",
 				})
 			},
 		},

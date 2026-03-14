@@ -4,10 +4,13 @@ import (
 	"context"
 	"strings"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/grpcpaging"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // CampaignInvites centralizes this web behavior in one helper seam.
@@ -63,11 +66,15 @@ func (g GRPCGateway) CreateInvite(ctx context.Context, campaignID string, input 
 	if participantID == "" {
 		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
 	}
+	recipientUserID, err := g.resolveInviteRecipientUserID(ctx, input.RecipientUsername)
+	if err != nil {
+		return err
+	}
 
-	_, err := g.InviteClient.CreateInvite(ctx, &statev1.CreateInviteRequest{
+	_, err = g.InviteClient.CreateInvite(ctx, &statev1.CreateInviteRequest{
 		CampaignId:      campaignID,
 		ParticipantId:   participantID,
-		RecipientUserId: strings.TrimSpace(input.RecipientUserID),
+		RecipientUserId: recipientUserID,
 	})
 	if err != nil {
 		return apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
@@ -77,6 +84,40 @@ func (g GRPCGateway) CreateInvite(ctx context.Context, campaignID string, input 
 		})
 	}
 	return nil
+}
+
+// resolveInviteRecipientUserID canonicalizes optional invite usernames into auth user IDs.
+func (g GRPCGateway) resolveInviteRecipientUserID(ctx context.Context, username string) (string, error) {
+	username = strings.TrimSpace(username)
+	username = strings.TrimPrefix(username, "@")
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return "", nil
+	}
+	if g.AuthClient == nil {
+		return "", apperrors.EK(apperrors.KindUnavailable, "error.web.message.auth_service_is_not_configured", "auth service client is not configured")
+	}
+
+	resp, err := g.AuthClient.LookupUserByUsername(ctx, &authv1.LookupUserByUsernameRequest{Username: username})
+	if err != nil {
+		if statusErr, ok := status.FromError(err); ok {
+			switch statusErr.Code() {
+			case codes.InvalidArgument:
+				return "", apperrors.EK(apperrors.KindInvalidInput, "error.web.message.recipient_username_is_invalid", "recipient username is invalid")
+			case codes.NotFound:
+				return "", apperrors.EK(apperrors.KindInvalidInput, "error.web.message.recipient_username_was_not_found", "recipient username was not found")
+			}
+		}
+		return "", apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnavailable,
+			FallbackKey:     "error.web.message.failed_to_create_invite",
+			FallbackMessage: "failed to create invite",
+		})
+	}
+	if resp == nil || resp.GetUser() == nil || strings.TrimSpace(resp.GetUser().GetId()) == "" {
+		return "", apperrors.EK(apperrors.KindInvalidInput, "error.web.message.recipient_username_was_not_found", "recipient username was not found")
+	}
+	return strings.TrimSpace(resp.GetUser().GetId()), nil
 }
 
 // RevokeInvite applies this package workflow transition.

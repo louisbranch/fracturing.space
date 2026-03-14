@@ -155,6 +155,7 @@ func TestMountCampaignWorkspaceMenuRendersSessionsSectionAcrossPages(t *testing.
 		}
 		body := rr.Body.String()
 		for _, marker := range []string{
+			`href="/app/campaigns/c1/invites"`,
 			`href="/app/campaigns/c1/sessions"`,
 			`class="badge badge-sm badge-soft badge-primary">2</div>`,
 			// Only the active session (s2) appears as a sub-item.
@@ -327,6 +328,12 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 
 	m := New(Config{Gateway: fakeGateway{
 		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []CampaignParticipant{
+			{ID: "p-eligible", Name: "Aria", Controller: "Human"},
+			{ID: "p-bound", Name: "Bound Seat", Controller: "Human", UserID: "user-9"},
+			{ID: "p-ai", Name: "Oracle", Controller: "AI"},
+			{ID: "p1", Name: "Pending Seat", Controller: "Human"},
+		},
 		invites: []CampaignInvite{{
 			ID:              "inv-1",
 			ParticipantID:   "p1",
@@ -348,14 +355,195 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
+		`data-campaign-invites-header="true"`,
+		`<h2 class="card-title">Invites</h2>`,
 		`data-campaign-invite-card-id="inv-1"`,
 		`data-campaign-invite-participant="p1"`,
 		`data-campaign-invite-recipient="user-2"`,
 		`data-campaign-invite-status="Pending"`,
+		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-create-participant-select="true"`,
+		`data-campaign-invite-create-option-id="p-eligible"`,
+		`>Aria</option>`,
+		`data-campaign-invite-revoke-form="true"`,
+		`class="menu-active" href="/app/campaigns/c1/invites"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing invite marker %q: %q", marker, body)
 		}
+	}
+	// Invariant: the selector must exclude bound, AI, and already-pending seats.
+	for _, marker := range []string{
+		`data-campaign-invite-create-option-id="p-bound"`,
+		`data-campaign-invite-create-option-id="p-ai"`,
+		`data-campaign-invite-create-option-id="p1"`,
+		`name="participant_id" required placeholder=`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body should not render ineligible invite selector marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignInvitesRouteHidesManageControlsWithoutInvitePermission(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		invites: []CampaignInvite{{
+			ID:              "inv-1",
+			ParticipantID:   "p1",
+			RecipientUserID: "user-2",
+			Status:          "Pending",
+		}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    false,
+			ReasonCode: "AUTHZ_DENY_ACCESS_LEVEL_REQUIRED",
+		},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-invite-card-id="inv-1"`,
+		`class="menu-active" href="/app/campaigns/c1/invites"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing invite marker %q: %q", marker, body)
+		}
+	}
+	for _, marker := range []string{
+		`data-campaign-invite-create-entry="true"`,
+		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-revoke-form="true"`,
+		`data-campaign-invite-create-disabled="true"`,
+		`data-campaign-invite-revoke-disabled="true"`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body should not render invite manage control marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []CampaignParticipant{{
+			ID:         "p-open",
+			Name:       "Aria",
+			Controller: "Human",
+		}},
+		invites: []CampaignInvite{{
+			ID:              "inv-1",
+			ParticipantID:   "p1",
+			RecipientUserID: "user-2",
+			Status:          "Pending",
+		}},
+		sessions: []CampaignSession{{
+			ID:        "s1",
+			Name:      "First Light",
+			Status:    "Active",
+			StartedAt: "2026-02-01 20:00 UTC",
+		}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    true,
+			ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL",
+		},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-invite-create-entry="true"`,
+		`data-campaign-invite-create-participant-select="true"`,
+		`data-campaign-invite-create-disabled="true"`,
+		`data-campaign-invite-revoke-disabled="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing locked invite marker %q: %q", marker, body)
+		}
+	}
+	for _, marker := range []string{
+		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-revoke-form="true"`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body should not render live invite form marker %q while locked: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignInvitesRouteDisablesCreateWhenNoEligibleSeats(t *testing.T) {
+	t.Parallel()
+
+	m := New(Config{Gateway: fakeGateway{
+		items: []CampaignSummary{{ID: "c1", Name: "First"}},
+		participants: []CampaignParticipant{
+			{ID: "p-bound", Name: "Bound Seat", Controller: "Human", UserID: "user-1"},
+			{ID: "p-ai", Name: "Oracle", Controller: "AI"},
+			{ID: "p-pending", Name: "Pending Seat", Controller: "Human"},
+		},
+		invites: []CampaignInvite{{
+			ID:            "inv-1",
+			ParticipantID: "p-pending",
+			Status:        "Pending",
+		}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:  true,
+			Allowed:    true,
+			ReasonCode: "AUTHZ_ALLOW_ACCESS_LEVEL",
+		},
+	}, Base: modulehandler.NewTestBase(), ChatFallbackPort: "", Workflows: nil})
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-create-participant-disabled="true"`,
+		`data-campaign-invite-create-empty="true"`,
+		`data-campaign-invite-create-disabled="true"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing no-eligible-seat marker %q: %q", marker, body)
+		}
+	}
+	// Invariant: no eligible seat means no selectable invite target options.
+	if strings.Contains(body, `data-campaign-invite-create-option-id=`) {
+		t.Fatalf("body should not render selectable invite target options when none are eligible: %q", body)
 	}
 }
 
@@ -1535,13 +1723,21 @@ func TestMountCampaignRoutesRenderWorkspaceOverviewMenu(t *testing.T) {
 					t.Fatalf("path %q body missing campaign menu marker %q: %q", path, marker, body)
 				}
 			}
-			charactersIdx := strings.Index(body, `href="/app/campaigns/c1/characters"`)
-			sessionsIdx := strings.Index(body, `href="/app/campaigns/c1/sessions"`)
-			if charactersIdx == -1 || sessionsIdx == -1 {
-				t.Fatalf("path %q missing characters or sessions menu items: %q", path, body)
+			participantsIdx := strings.Index(body, `data-app-side-menu-item="/app/campaigns/c1/participants"`)
+			invitesIdx := strings.Index(body, `data-app-side-menu-item="/app/campaigns/c1/invites"`)
+			charactersIdx := strings.Index(body, `data-app-side-menu-item="/app/campaigns/c1/characters"`)
+			sessionsIdx := strings.Index(body, `data-app-side-menu-item="/app/campaigns/c1/sessions"`)
+			if participantsIdx == -1 || invitesIdx == -1 || charactersIdx == -1 || sessionsIdx == -1 {
+				t.Fatalf("path %q missing campaign workspace menu items: %q", path, body)
+			}
+			if participantsIdx > invitesIdx {
+				t.Fatalf("path %q expected participants menu item before invites menu item: %q", path, body)
 			}
 			if charactersIdx > sessionsIdx {
 				t.Fatalf("path %q expected characters menu item before sessions menu item: %q", path, body)
+			}
+			if sessionsIdx > invitesIdx {
+				t.Fatalf("path %q expected sessions menu item before invites menu item: %q", path, body)
 			}
 		})
 	}

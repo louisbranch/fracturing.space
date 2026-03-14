@@ -25,7 +25,7 @@ func (breadcrumbLocalizer) Sprintf(key message.Reference, _ ...any) string {
 		case "game.characters.title":
 			return "Characters"
 		case "game.campaign_invites.title":
-			return "Campaign Invites"
+			return "Invites"
 		case "game.my_invites.title":
 			return "My Invites"
 		}

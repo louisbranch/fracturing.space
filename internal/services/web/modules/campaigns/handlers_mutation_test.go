@@ -234,7 +234,7 @@ func TestStableMutationRoutesReturnRequiredFieldFlashKeys(t *testing.T) {
 		{
 			name:    "invite create missing participant id",
 			path:    routepath.AppCampaignInviteCreate("c1"),
-			body:    "participant_id=   &recipient_user_id=user-2",
+			body:    "participant_id=   &username=alice",
 			wantKey: "error.web.message.participant_id_is_required",
 		},
 		{
@@ -300,7 +300,7 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 		{
 			name:         "invite create",
 			path:         routepath.AppCampaignInviteCreate("c1"),
-			body:         "participant_id=p-1&recipient_user_id=user-123",
+			body:         "participant_id=p-1&username=alice",
 			wantLocation: routepath.AppCampaignInvites("c1"),
 			wantFlashKey: "web.campaigns.notice_invite_created",
 		},

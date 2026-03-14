@@ -33,6 +33,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 					DaggerheartAssetClient:   defaultDaggerheartAssetClient(),
 					SessionClient:            defaultSessionClient(),
 					InviteClient:             defaultInviteClient(),
+					AuthClient:               auth,
 					AuthorizationClient:      defaultAuthorizationClient(),
 				},
 				Settings: modules.SettingsDependencies{
