@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"strings"
+	"sync"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -12,6 +13,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+const inviteRecipientLookupMaxConcurrency = 4
 
 // CampaignInvites centralizes this web behavior in one helper seam.
 func (g inviteReadGateway) CampaignInvites(ctx context.Context, campaignID string) ([]campaignapp.CampaignInvite, error) {
@@ -39,9 +42,8 @@ func (g inviteReadGateway) CampaignInvites(ctx context.Context, campaignID strin
 		}
 		participantNames[strings.TrimSpace(participant.GetId())] = strings.TrimSpace(participant.GetName())
 	}
-	recipientUsernames := map[string]string{}
 
-	return grpcpaging.CollectPages[campaignapp.CampaignInvite, *statev1.Invite](
+	invites, err := grpcpaging.CollectPages[*statev1.Invite, *statev1.Invite](
 		ctx, 10,
 		func(ctx context.Context, pageToken string) ([]*statev1.Invite, string, error) {
 			resp, err := g.read.Invite.ListInvites(ctx, &statev1.ListInvitesRequest{
@@ -57,31 +59,29 @@ func (g inviteReadGateway) CampaignInvites(ctx context.Context, campaignID strin
 			}
 			return resp.GetInvites(), resp.GetNextPageToken(), nil
 		},
-		func(invite *statev1.Invite) (campaignapp.CampaignInvite, bool) {
-			if invite == nil {
-				return campaignapp.CampaignInvite{}, false
-			}
-			recipientUserID := strings.TrimSpace(invite.GetRecipientUserId())
-			recipientUsername := ""
-			if recipientUserID != "" && g.read.Auth != nil {
-				if cached, ok := recipientUsernames[recipientUserID]; ok {
-					recipientUsername = cached
-				} else if userResp, err := g.read.Auth.GetUser(ctx, &authv1.GetUserRequest{UserId: recipientUserID}); err == nil && userResp != nil && userResp.GetUser() != nil {
-					recipientUsername = strings.TrimSpace(userResp.GetUser().GetUsername())
-					recipientUsernames[recipientUserID] = recipientUsername
-				}
-			}
-			return campaignapp.CampaignInvite{
-				ID:                strings.TrimSpace(invite.GetId()),
-				ParticipantID:     strings.TrimSpace(invite.GetParticipantId()),
-				ParticipantName:   participantNames[strings.TrimSpace(invite.GetParticipantId())],
-				RecipientUserID:   recipientUserID,
-				RecipientUsername: recipientUsername,
-				HasRecipient:      recipientUserID != "",
-				Status:            inviteStatusLabel(invite.GetStatus()),
-			}, true
+		func(invite *statev1.Invite) (*statev1.Invite, bool) {
+			return invite, invite != nil
 		},
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	recipientUsernames := g.resolveInviteRecipientUsernames(ctx, invites)
+	result := make([]campaignapp.CampaignInvite, 0, len(invites))
+	for _, invite := range invites {
+		recipientUserID := strings.TrimSpace(invite.GetRecipientUserId())
+		result = append(result, campaignapp.CampaignInvite{
+			ID:                strings.TrimSpace(invite.GetId()),
+			ParticipantID:     strings.TrimSpace(invite.GetParticipantId()),
+			ParticipantName:   participantNames[strings.TrimSpace(invite.GetParticipantId())],
+			RecipientUserID:   recipientUserID,
+			RecipientUsername: recipientUsernames[recipientUserID],
+			HasRecipient:      recipientUserID != "",
+			Status:            inviteStatusLabel(invite.GetStatus()),
+		})
+	}
+	return result, nil
 }
 
 // CreateInvite executes package-scoped creation behavior for this flow.
@@ -149,6 +149,66 @@ func (g inviteMutationGateway) resolveInviteRecipientUserID(ctx context.Context,
 		return "", apperrors.EK(apperrors.KindInvalidInput, "error.web.message.recipient_username_was_not_found", "recipient username was not found")
 	}
 	return strings.TrimSpace(resp.GetUser().GetId()), nil
+}
+
+// resolveInviteRecipientUsernames batches best-effort auth lookups so invite pages
+// do not serialize one remote call per rendered row.
+func (g inviteReadGateway) resolveInviteRecipientUsernames(ctx context.Context, invites []*statev1.Invite) map[string]string {
+	result := map[string]string{}
+	if g.read.Auth == nil || len(invites) == 0 {
+		return result
+	}
+
+	uniqueRecipientUserIDs := make([]string, 0, len(invites))
+	seen := make(map[string]struct{}, len(invites))
+	for _, invite := range invites {
+		if invite == nil {
+			continue
+		}
+		recipientUserID := strings.TrimSpace(invite.GetRecipientUserId())
+		if recipientUserID == "" {
+			continue
+		}
+		if _, ok := seen[recipientUserID]; ok {
+			continue
+		}
+		seen[recipientUserID] = struct{}{}
+		uniqueRecipientUserIDs = append(uniqueRecipientUserIDs, recipientUserID)
+	}
+	if len(uniqueRecipientUserIDs) == 0 {
+		return result
+	}
+
+	sem := make(chan struct{}, inviteRecipientLookupMaxConcurrency)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	for _, recipientUserID := range uniqueRecipientUserIDs {
+		wg.Add(1)
+		go func(recipientUserID string) {
+			defer wg.Done()
+			select {
+			case sem <- struct{}{}:
+			case <-ctx.Done():
+				return
+			}
+			defer func() { <-sem }()
+
+			userResp, err := g.read.Auth.GetUser(ctx, &authv1.GetUserRequest{UserId: recipientUserID})
+			if err != nil || userResp == nil || userResp.GetUser() == nil {
+				return
+			}
+			username := strings.TrimSpace(userResp.GetUser().GetUsername())
+			if username == "" {
+				return
+			}
+
+			mu.Lock()
+			result[recipientUserID] = username
+			mu.Unlock()
+		}(recipientUserID)
+	}
+	wg.Wait()
+	return result
 }
 
 // RevokeInvite applies this package workflow transition.

@@ -18,8 +18,10 @@ import (
 
 const (
 	defaultProjectionWaitTimeout = 5 * time.Second
+	slowProjectionWaitThreshold  = 250 * time.Millisecond
 	projectionScopeCampaigns     = "campaign_summary"
 	projectionScopeSessions      = "campaign_sessions"
+	projectionScopeInvites       = "campaign_invites"
 )
 
 // UserHubControlClient exposes cache invalidation calls required by dashboard sync.
@@ -87,7 +89,7 @@ func (s *Syncer) InviteChanged(ctx context.Context, userIDs []string, campaignID
 			break
 		}
 	}
-	s.syncProjectionAndInvalidate(ctx, syncUserID, campaignID, projectionScopeCampaigns, "web.invite_changed")
+	s.syncProjectionAndInvalidate(ctx, syncUserID, campaignID, projectionScopeInvites, "web.invite_changed")
 	if len(normalizedIDs(userIDs)) > 1 {
 		s.invalidate(ctx, userIDs, []string{campaignID}, "web.invite_changed")
 	}
@@ -103,9 +105,15 @@ func (s *Syncer) syncProjectionAndInvalidate(ctx context.Context, userID, campai
 		s.invalidate(ctx, []string{userID}, nil, reason)
 		return
 	}
+	waitStarted := time.Now()
 	if err := s.waitForProjectionApplied(ctx, userID, campaignID, scope); err != nil {
 		if s.logger != nil {
-			s.logger.Printf("web: dashboard sync degraded reason=%s campaign_id=%s user_id=%s: %v", reason, campaignID, userID, err)
+			s.logger.Printf("web: dashboard sync degraded reason=%s campaign_id=%s user_id=%s scope=%s wait=%s: %v", reason, campaignID, userID, scope, time.Since(waitStarted), err)
+		}
+	} else if s.logger != nil {
+		waitDuration := time.Since(waitStarted)
+		if waitDuration >= slowProjectionWaitThreshold {
+			s.logger.Printf("web: dashboard sync slow reason=%s campaign_id=%s user_id=%s scope=%s wait=%s", reason, campaignID, userID, scope, waitDuration)
 		}
 	}
 	s.invalidate(ctx, []string{userID}, []string{campaignID}, reason)

@@ -53,6 +53,9 @@ func TestCampaignCreatedWaitsForProjectionAndInvalidates(t *testing.T) {
 	if game.subscribeReq.GetAfterSeq() != 7 {
 		t.Fatalf("AfterSeq = %d, want 7", game.subscribeReq.GetAfterSeq())
 	}
+	if got := game.subscribeReq.GetProjectionScopes(); len(got) != 1 || got[0] != projectionScopeCampaigns {
+		t.Fatalf("ProjectionScopes = %v, want [%s]", got, projectionScopeCampaigns)
+	}
 	if userhub.req == nil {
 		t.Fatalf("expected invalidation request")
 	}
@@ -79,6 +82,36 @@ func TestSessionStartedInvalidatesWhenProjectionWaitTimesOut(t *testing.T) {
 	}
 	if got := userhub.req.GetCampaignIds(); len(got) != 1 || got[0] != "camp-2" {
 		t.Fatalf("CampaignIds = %v, want [camp-2]", got)
+	}
+}
+
+func TestInviteChangedWaitsForInviteProjectionAndInvalidates(t *testing.T) {
+	t.Parallel()
+
+	userhub := &userhubControlStub{}
+	game := &gameEventStub{
+		listResp: &gamev1.ListEventsResponse{Events: []*gamev1.Event{{Seq: 11}}},
+		stream: &campaignStreamStub{
+			updates: []*gamev1.CampaignUpdate{{CampaignId: "camp-3", Seq: 11, Update: &gamev1.CampaignUpdate_ProjectionApplied{
+				ProjectionApplied: &gamev1.ProjectionApplied{Scopes: []string{projectionScopeInvites}},
+			}}},
+		},
+	}
+	syncer := New(userhub, game, nil)
+
+	syncer.InviteChanged(context.Background(), []string{"user-9"}, "camp-3")
+
+	if game.subscribeReq == nil {
+		t.Fatalf("expected SubscribeCampaignUpdates call")
+	}
+	if got := game.subscribeReq.GetProjectionScopes(); len(got) != 1 || got[0] != projectionScopeInvites {
+		t.Fatalf("ProjectionScopes = %v, want [%s]", got, projectionScopeInvites)
+	}
+	if userhub.req == nil {
+		t.Fatalf("expected invalidation request")
+	}
+	if got := userhub.req.GetCampaignIds(); len(got) != 1 || got[0] != "camp-3" {
+		t.Fatalf("CampaignIds = %v, want [camp-3]", got)
 	}
 }
 
