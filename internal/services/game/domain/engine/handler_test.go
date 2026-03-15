@@ -105,6 +105,23 @@ func (t *trackingStateLoader) Load(_ context.Context, cmd command.Command) (any,
 	return aggregate.State{}, nil
 }
 
+type staleThenFreshStateLoader struct {
+	loadState  any
+	freshState any
+	loadCalls  int
+	freshCalls int
+}
+
+func (l *staleThenFreshStateLoader) Load(_ context.Context, _ command.Command) (any, error) {
+	l.loadCalls++
+	return l.loadState, nil
+}
+
+func (l *staleThenFreshStateLoader) LoadFresh(_ context.Context, _ command.Command) (any, error) {
+	l.freshCalls++
+	return l.freshState, nil
+}
+
 type systemMutationApplier struct {
 	Mutate bool
 }
@@ -114,6 +131,28 @@ func (a *systemMutationApplier) Fold(_ any, _ event.Event) (any, error) {
 		return map[string]int{"mutated": 1}, nil
 	}
 	return nil, nil
+}
+
+type aiTurnStateDecider struct{}
+
+func (aiTurnStateDecider) Decide(state any, _ command.Command, now func() time.Time) command.Decision {
+	agg, _ := state.(aggregate.State)
+	if agg.Session.AITurnStatus != session.AITurnStatusRunning || agg.Session.AITurnToken != "turn-1" {
+		return command.Reject(command.Rejection{
+			Code:    "SESSION_AI_TURN_NOT_ACTIVE",
+			Message: "ai turn is not active",
+		})
+	}
+	return command.Accept(event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("session.ai_turn_cleared"),
+		EntityType:  "session",
+		EntityID:    "sess-1",
+		SessionID:   "sess-1",
+		Timestamp:   now().UTC(),
+		ActorType:   event.ActorTypeSystem,
+		PayloadJSON: []byte(`{"session_id":"sess-1","turn_token":"turn-1","reason":"completed"}`),
+	})
 }
 
 func TestNewHandler_RequiresCommands(t *testing.T) {

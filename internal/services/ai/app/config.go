@@ -16,28 +16,32 @@ import (
 
 // serverEnv captures startup configuration and optional provider integration.
 type serverEnv struct {
-	DBPath        string `env:"FRACTURING_SPACE_AI_DB_PATH"`
-	EncryptionKey string `env:"FRACTURING_SPACE_AI_ENCRYPTION_KEY"`
-	GameAddr      string `env:"FRACTURING_SPACE_GAME_ADDR"`
+	DBPath                   string `env:"FRACTURING_SPACE_AI_DB_PATH"`
+	EncryptionKey            string `env:"FRACTURING_SPACE_AI_ENCRYPTION_KEY"`
+	GameAddr                 string `env:"FRACTURING_SPACE_GAME_ADDR"`
+	InternalServiceAllowlist string `env:"FRACTURING_SPACE_AI_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,mcp,worker,game"`
 
-	OpenAIOAuthAuthURL      string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
-	OpenAIOAuthTokenURL     string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
-	OpenAIOAuthClientID     string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID"`
-	OpenAIOAuthClientSecret string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
-	OpenAIOAuthRedirectURI  string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
-	OpenAIResponsesURL      string `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
-	MCPURL                  string `env:"FRACTURING_SPACE_AI_MCP_URL"`
+	OpenAIOAuthAuthURL       string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
+	OpenAIOAuthTokenURL      string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
+	OpenAIOAuthClientID      string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID"`
+	OpenAIOAuthClientSecret  string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
+	OpenAIOAuthRedirectURI   string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
+	OpenAIResponsesURL       string `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
+	MCPURL                   string `env:"FRACTURING_SPACE_AI_MCP_URL"`
+	DaggerheartReferenceRoot string `env:"FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT"`
 }
 
 // runtimeConfig is the normalized startup configuration used by the AI runtime.
 type runtimeConfig struct {
-	DBPath             string
-	EncryptionKey      string
-	GameAddr           string
-	OpenAIOAuthConfig  *aiservice.OpenAIOAuthConfig
-	OpenAIResponsesURL string
-	MCPURL             string
-	SessionGrantConfig *aisessiongrant.Config
+	DBPath                   string
+	EncryptionKey            string
+	GameAddr                 string
+	InternalServiceAllowlist map[string]struct{}
+	OpenAIOAuthConfig        *aiservice.OpenAIOAuthConfig
+	OpenAIResponsesURL       string
+	MCPURL                   string
+	DaggerheartReferenceRoot string
+	SessionGrantConfig       *aisessiongrant.Config
 }
 
 func loadServerEnv() serverEnv {
@@ -64,13 +68,15 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 	}
 
 	return runtimeConfig{
-		DBPath:             strings.TrimSpace(srvEnv.DBPath),
-		EncryptionKey:      strings.TrimSpace(srvEnv.EncryptionKey),
-		GameAddr:           strings.TrimSpace(srvEnv.GameAddr),
-		OpenAIOAuthConfig:  openAIOAuthConfig,
-		OpenAIResponsesURL: strings.TrimSpace(srvEnv.OpenAIResponsesURL),
-		MCPURL:             strings.TrimSpace(srvEnv.MCPURL),
-		SessionGrantConfig: sessionGrantConfig,
+		DBPath:                   strings.TrimSpace(srvEnv.DBPath),
+		EncryptionKey:            strings.TrimSpace(srvEnv.EncryptionKey),
+		GameAddr:                 strings.TrimSpace(srvEnv.GameAddr),
+		InternalServiceAllowlist: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
+		OpenAIOAuthConfig:        openAIOAuthConfig,
+		OpenAIResponsesURL:       strings.TrimSpace(srvEnv.OpenAIResponsesURL),
+		MCPURL:                   strings.TrimSpace(srvEnv.MCPURL),
+		DaggerheartReferenceRoot: strings.TrimSpace(srvEnv.DaggerheartReferenceRoot),
+		SessionGrantConfig:       sessionGrantConfig,
 	}, nil
 }
 
@@ -147,4 +153,17 @@ func aiSessionGrantConfigFromEnv() (*aisessiongrant.Config, error) {
 		return nil, err
 	}
 	return &cfg, nil
+}
+
+func parseInternalServiceAllowlist(raw string) map[string]struct{} {
+	values := strings.Split(strings.TrimSpace(raw), ",")
+	allowlist := make(map[string]struct{}, len(values))
+	for _, value := range values {
+		serviceID := strings.ToLower(strings.TrimSpace(value))
+		if serviceID == "" {
+			continue
+		}
+		allowlist[serviceID] = struct{}{}
+	}
+	return allowlist
 }

@@ -32,6 +32,7 @@ type Input struct {
 	ParticipantID    string
 	Input            string
 	Model            string
+	ReasoningEffort  string
 	Instructions     string
 	CredentialSecret string
 	Provider         Provider
@@ -59,8 +60,10 @@ type ToolResult struct {
 // follow-up batch of tool outputs.
 type ProviderInput struct {
 	Model            string
+	ReasoningEffort  string
 	Instructions     string
 	Prompt           string
+	FollowUpPrompt   string
 	CredentialSecret string
 	Tools            []Tool
 	ConversationID   string

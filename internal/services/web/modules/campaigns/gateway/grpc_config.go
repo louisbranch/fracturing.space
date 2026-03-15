@@ -9,10 +9,11 @@ type CatalogReadDeps struct {
 
 // StarterDeps keeps protected starter preview/launch dependencies explicit.
 type StarterDeps struct {
-	Discovery DiscoveryClient
-	Agent     AgentClient
-	Campaign  CampaignMutationClient
-	Fork      ForkClient
+	Discovery        DiscoveryClient
+	Agent            AgentClient
+	CampaignArtifact CampaignArtifactClient
+	Campaign         CampaignMutationClient
+	Fork             ForkClient
 }
 
 // CatalogMutationDeps keeps campaign catalog mutation dependencies explicit.

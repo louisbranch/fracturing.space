@@ -12,6 +12,9 @@ const defaultMaxSteps = 8
 
 var gmToolNames = map[string]struct{}{
 	"campaign":                                   {},
+	"campaign_artifact_list":                     {},
+	"campaign_artifact_get":                      {},
+	"campaign_artifact_upsert":                   {},
 	"participant_list":                           {},
 	"character_list":                             {},
 	"character_sheet_get":                        {},
@@ -35,6 +38,8 @@ var gmToolNames = map[string]struct{}{
 	"duality_explain":                            {},
 	"duality_probability":                        {},
 	"duality_rules_version":                      {},
+	"system_reference_search":                    {},
+	"system_reference_read":                      {},
 }
 
 // ErrStepLimit indicates the model exceeded the allowed tool loop depth.
@@ -46,7 +51,10 @@ type runner struct {
 	max    int
 }
 
-type promptBrief struct {
+type sessionBrief struct {
+	skills       string
+	story        string
+	memory       string
 	current      string
 	campaign     string
 	participants string
@@ -117,12 +125,16 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	var convo string
 	committed := false
 	var results []ProviderToolResult
+	commitReminderUsed := false
+	var followUpPrompt string
 
 	for i := 0; i < r.max; i++ {
 		step, err := input.Provider.Run(ctx, ProviderInput{
 			Model:            input.Model,
+			ReasoningEffort:  input.ReasoningEffort,
 			Instructions:     input.Instructions,
 			Prompt:           prompt,
+			FollowUpPrompt:   followUpPrompt,
 			CredentialSecret: input.CredentialSecret,
 			Tools:            allowedTools,
 			ConversationID:   convo,
@@ -132,12 +144,19 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 			return Result{}, fmt.Errorf("invoke provider: %w", err)
 		}
 		convo = strings.TrimSpace(step.ConversationID)
+		followUpPrompt = ""
 		if len(step.ToolCalls) == 0 {
 			text := strings.TrimSpace(step.OutputText)
 			if text == "" {
 				return Result{}, fmt.Errorf("provider returned no tool calls or output")
 			}
 			if !committed {
+				if !commitReminderUsed && i+1 < r.max {
+					commitReminderUsed = true
+					results = nil
+					followUpPrompt = buildCommitReminder(text)
+					continue
+				}
 				return Result{}, ErrNarrationNotCommitted
 			}
 			return Result{OutputText: text}, nil
@@ -185,6 +204,19 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	return Result{}, ErrStepLimit
 }
 
+func buildCommitReminder(text string) string {
+	text = strings.TrimSpace(text)
+	var b strings.Builder
+	b.WriteString("You returned narration without calling interaction_scene_gm_output_commit.\n")
+	b.WriteString("Convert that draft into an authoritative tool call before returning final text.\n")
+	b.WriteString("If there is no active scene, set one active first.\n")
+	if text != "" {
+		b.WriteString("Use this draft narration as the commit text unless you need a small correction:\n")
+		b.WriteString(text)
+	}
+	return b.String()
+}
+
 func filterTools(tools []Tool) []Tool {
 	filtered := make([]Tool, 0, len(tools))
 	for _, tool := range tools {
@@ -206,21 +238,29 @@ func buildPrompt(ctx context.Context, sess Session, input Input) (string, error)
 		return "", err
 	}
 	var b strings.Builder
-	b.WriteString("You are the GM automation layer for the current campaign turn.\n")
+	b.WriteString("Skills:\n")
+	b.WriteString(brief.skills)
+	b.WriteString("\n\nInteraction contract:\n")
+	b.WriteString("You are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.\n")
+	b.WriteString("Keep in-character narration and out-of-character coordination separate.\n")
+	b.WriteString("Use interaction_scene_gm_output_commit for authoritative in-character narration.\n")
+	b.WriteString("Use interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.\n")
+	b.WriteString("Use system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.\n")
+	b.WriteString("Use MCP tools for authoritative state changes; do not rely on free-form narration to mutate game state.\n")
+	b.WriteString("\nAuthority:\n")
 	b.WriteString("Campaign, session, and participant authority are fixed for this turn.\n")
-	b.WriteString("Use MCP tools when authoritative game state, rules, or interaction flow changes are needed.\n")
 	if pid := strings.TrimSpace(input.ParticipantID); pid != "" {
 		b.WriteString("Fixed participant authority:\n")
 		b.WriteString(pid)
-		b.WriteString("\n\n")
+		b.WriteString("\n")
 	}
 	if brief.bootstrap {
-		b.WriteString("Bootstrap mode: there is no active scene yet.\n")
+		b.WriteString("\nBootstrap mode: there is no active scene yet.\n")
 		b.WriteString("You are responsible for creating or choosing the opening scene from campaign, participant, and character context, setting it active, and committing authoritative GM output.\n")
 		b.WriteString("If there are no suitable scenes yet, create one that fits the campaign theme and the player characters.\n")
 		b.WriteString("After the scene is active and narrated, start the first player phase when the acting characters are clear.\n\n")
 	} else {
-		b.WriteString("Active scene mode: continue the session from the current interaction state and use MCP tools for authoritative changes.\n\n")
+		b.WriteString("\nActive scene mode: continue the session from the current interaction state and use MCP tools for authoritative changes.\n\n")
 	}
 	b.WriteString("Current MCP context:\n")
 	b.WriteString(brief.current)
@@ -236,6 +276,14 @@ func buildPrompt(ctx context.Context, sess Session, input Input) (string, error)
 	b.WriteString(brief.scenes)
 	b.WriteString("\n\nCurrent interaction state:\n")
 	b.WriteString(brief.interaction)
+	if text := strings.TrimSpace(brief.story); text != "" {
+		b.WriteString("\n\nstory.md:\n")
+		b.WriteString(text)
+	}
+	if text := strings.TrimSpace(brief.memory); text != "" {
+		b.WriteString("\n\nmemory.md:\n")
+		b.WriteString(text)
+	}
 	if text := strings.TrimSpace(input.Input); text != "" {
 		b.WriteString("\n\nTurn input:\n")
 		b.WriteString(text)
@@ -244,36 +292,48 @@ func buildPrompt(ctx context.Context, sess Session, input Input) (string, error)
 	return b.String(), nil
 }
 
-func buildBrief(ctx context.Context, sess Session, input Input) (promptBrief, error) {
+func buildBrief(ctx context.Context, sess Session, input Input) (sessionBrief, error) {
 	campaignID := strings.TrimSpace(input.CampaignID)
 	sessionID := strings.TrimSpace(input.SessionID)
+	skills, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/artifacts/skills.md", campaignID))
+	if err != nil {
+		return sessionBrief{}, fmt.Errorf("read skills artifact: %w", err)
+	}
 	current, err := sess.ReadResource(ctx, "context://current")
 	if err != nil {
-		return promptBrief{}, fmt.Errorf("read mcp context: %w", err)
+		return sessionBrief{}, fmt.Errorf("read mcp context: %w", err)
 	}
 	campaign, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s", campaignID))
 	if err != nil {
-		return promptBrief{}, fmt.Errorf("read campaign: %w", err)
+		return sessionBrief{}, fmt.Errorf("read campaign: %w", err)
 	}
 	participants, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/participants", campaignID))
 	if err != nil {
-		return promptBrief{}, fmt.Errorf("read participants: %w", err)
+		return sessionBrief{}, fmt.Errorf("read participants: %w", err)
 	}
 	characters, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/characters", campaignID))
 	if err != nil {
-		return promptBrief{}, fmt.Errorf("read characters: %w", err)
+		return sessionBrief{}, fmt.Errorf("read characters: %w", err)
 	}
 	sessions, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions", campaignID))
 	if err != nil {
-		return promptBrief{}, fmt.Errorf("read sessions: %w", err)
+		return sessionBrief{}, fmt.Errorf("read sessions: %w", err)
 	}
 	scenes, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions/%s/scenes", campaignID, sessionID))
 	if err != nil {
-		return promptBrief{}, fmt.Errorf("read scenes: %w", err)
+		return sessionBrief{}, fmt.Errorf("read scenes: %w", err)
 	}
 	interaction, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/interaction", campaignID))
 	if err != nil {
-		return promptBrief{}, fmt.Errorf("read interaction state: %w", err)
+		return sessionBrief{}, fmt.Errorf("read interaction state: %w", err)
+	}
+	memory, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/artifacts/memory.md", campaignID))
+	if err != nil {
+		return sessionBrief{}, fmt.Errorf("read memory artifact: %w", err)
+	}
+	story, err := readOptionalResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/story.md", campaignID))
+	if err != nil {
+		return sessionBrief{}, fmt.Errorf("read story artifact: %w", err)
 	}
 
 	var state struct {
@@ -282,10 +342,13 @@ func buildBrief(ctx context.Context, sess Session, input Input) (promptBrief, er
 		} `json:"active_scene"`
 	}
 	if err := json.Unmarshal([]byte(interaction), &state); err != nil {
-		return promptBrief{}, fmt.Errorf("decode interaction state: %w", err)
+		return sessionBrief{}, fmt.Errorf("decode interaction state: %w", err)
 	}
 
-	return promptBrief{
+	return sessionBrief{
+		skills:       skills,
+		story:        story,
+		memory:       memory,
 		current:      current,
 		campaign:     campaign,
 		participants: participants,
@@ -295,6 +358,18 @@ func buildBrief(ctx context.Context, sess Session, input Input) (promptBrief, er
 		interaction:  interaction,
 		bootstrap:    strings.TrimSpace(state.ActiveScene.SceneID) == "",
 	}, nil
+}
+
+func readOptionalResource(ctx context.Context, sess Session, uri string) (string, error) {
+	value, err := sess.ReadResource(ctx, uri)
+	if err != nil {
+		errText := strings.ToLower(err.Error())
+		if strings.Contains(errText, "not found") || strings.Contains(errText, "missing resource") {
+			return "", nil
+		}
+		return "", err
+	}
+	return value, nil
 }
 
 func decodeArgs(raw string) (any, error) {

@@ -49,6 +49,23 @@ func (c *contractForkClient) ForkCampaign(_ context.Context, req *statev1.ForkCa
 	return &statev1.ForkCampaignResponse{}, nil
 }
 
+type contractCampaignArtifactClient struct {
+	resp    *aiv1.EnsureCampaignArtifactsResponse
+	err     error
+	lastReq *aiv1.EnsureCampaignArtifactsRequest
+}
+
+func (c *contractCampaignArtifactClient) EnsureCampaignArtifacts(_ context.Context, req *aiv1.EnsureCampaignArtifactsRequest, _ ...grpc.CallOption) (*aiv1.EnsureCampaignArtifactsResponse, error) {
+	c.lastReq = req
+	if c.err != nil {
+		return nil, c.err
+	}
+	if c.resp != nil {
+		return c.resp, nil
+	}
+	return &aiv1.EnsureCampaignArtifactsResponse{}, nil
+}
+
 func TestNewStarterGatewayRequiresExplicitDependencies(t *testing.T) {
 	t.Parallel()
 
@@ -57,10 +74,11 @@ func TestNewStarterGatewayRequiresExplicitDependencies(t *testing.T) {
 	}
 
 	ready := NewStarterGateway(StarterDeps{
-		Discovery: &contractDiscoveryClient{},
-		Agent:     &contractAgentClient{},
-		Campaign:  &contractCampaignClient{},
-		Fork:      &contractForkClient{},
+		Discovery:        &contractDiscoveryClient{},
+		Agent:            &contractAgentClient{},
+		CampaignArtifact: &contractCampaignArtifactClient{},
+		Campaign:         &contractCampaignClient{},
+		Fork:             &contractForkClient{},
 	})
 	if ready == nil {
 		t.Fatal("expected starter gateway when all deps are present")
@@ -99,10 +117,11 @@ func TestStarterPreviewMapsEntryAndLaunchableAgents(t *testing.T) {
 	}}}
 
 	gateway := NewStarterGateway(StarterDeps{
-		Discovery: discoveryClient,
-		Agent:     agentClient,
-		Campaign:  &contractCampaignClient{},
-		Fork:      &contractForkClient{},
+		Discovery:        discoveryClient,
+		Agent:            agentClient,
+		CampaignArtifact: &contractCampaignArtifactClient{},
+		Campaign:         &contractCampaignClient{},
+		Fork:             &contractForkClient{},
 	})
 
 	preview, err := gateway.StarterPreview(context.Background(), " starter:lantern-in-the-dark ")
@@ -160,12 +179,14 @@ func TestLaunchStarterForksTemplateAndBindsSelectedAgent(t *testing.T) {
 	}}}
 	forkClient := &contractForkClient{resp: &statev1.ForkCampaignResponse{Campaign: &statev1.Campaign{Id: "camp-777"}}}
 	campaignClient := &contractCampaignClient{}
+	artifactClient := &contractCampaignArtifactClient{}
 
 	gateway := NewStarterGateway(StarterDeps{
-		Discovery: discoveryClient,
-		Agent:     agentClient,
-		Campaign:  campaignClient,
-		Fork:      forkClient,
+		Discovery:        discoveryClient,
+		Agent:            agentClient,
+		CampaignArtifact: artifactClient,
+		Campaign:         campaignClient,
+		Fork:             forkClient,
 	})
 
 	result, err := gateway.LaunchStarter(context.Background(), "starter:lantern-in-the-dark", campaignapp.LaunchStarterInput{AIAgentID: "agent-ready"})
@@ -190,6 +211,12 @@ func TestLaunchStarterForksTemplateAndBindsSelectedAgent(t *testing.T) {
 	if campaignClient.lastSetAIBindingReq.GetCampaignId() != "camp-777" || campaignClient.lastSetAIBindingReq.GetAiAgentId() != "agent-ready" {
 		t.Fatalf("AI binding request = %#v", campaignClient.lastSetAIBindingReq)
 	}
+	if artifactClient.lastReq == nil {
+		t.Fatal("expected campaign artifact ensure request")
+	}
+	if artifactClient.lastReq.GetCampaignId() != "camp-777" {
+		t.Fatalf("campaign artifact request = %#v", artifactClient.lastReq)
+	}
 }
 
 func TestLaunchStarterRejectsUnavailableTemplate(t *testing.T) {
@@ -199,9 +226,10 @@ func TestLaunchStarterRejectsUnavailableTemplate(t *testing.T) {
 		Discovery: &contractDiscoveryClient{resp: &discoveryv1.GetDiscoveryEntryResponse{
 			Entry: &discoveryv1.DiscoveryEntry{EntryId: "starter:lantern"},
 		}},
-		Agent:    &contractAgentClient{},
-		Campaign: &contractCampaignClient{},
-		Fork:     &contractForkClient{},
+		Agent:            &contractAgentClient{},
+		CampaignArtifact: &contractCampaignArtifactClient{},
+		Campaign:         &contractCampaignClient{},
+		Fork:             &contractForkClient{},
 	})
 
 	_, err := gateway.LaunchStarter(context.Background(), "starter:lantern", campaignapp.LaunchStarterInput{AIAgentID: "agent-ready"})
@@ -223,8 +251,9 @@ func TestLaunchStarterRejectsUnavailableAgentSelection(t *testing.T) {
 		Agent: &contractAgentClient{listResp: &aiv1.ListAgentsResponse{Agents: []*aiv1.Agent{
 			{Id: "agent-disabled", Label: "Disabled GM", Status: aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED, AuthState: aiv1.AgentAuthState_AGENT_AUTH_STATE_READY},
 		}}},
-		Campaign: &contractCampaignClient{},
-		Fork:     &contractForkClient{},
+		CampaignArtifact: &contractCampaignArtifactClient{},
+		Campaign:         &contractCampaignClient{},
+		Fork:             &contractForkClient{},
 	})
 
 	_, err := gateway.LaunchStarter(context.Background(), "starter:lantern", campaignapp.LaunchStarterInput{AIAgentID: "agent-disabled"})

@@ -14,6 +14,7 @@ import (
 // Config holds MCP command configuration.
 type Config struct {
 	Addr       string `env:"FRACTURING_SPACE_GAME_ADDR"`
+	AIAddr     string `env:"FRACTURING_SPACE_AI_ADDR"`
 	HTTPAddr   string `env:"FRACTURING_SPACE_MCP_HTTP_ADDR" envDefault:"localhost:8085"`
 	Transport  string `env:"FRACTURING_SPACE_MCP_TRANSPORT" envDefault:"stdio"`
 	StatusAddr string `env:"FRACTURING_SPACE_STATUS_ADDR"`
@@ -26,11 +27,13 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		return Config{}, err
 	}
 	cfg.Addr = serviceaddr.OrDefaultGRPCAddr(cfg.Addr, serviceaddr.ServiceGame)
+	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
 	if cfg.StatusAddr != "" {
 		cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 	}
 
 	fs.StringVar(&cfg.Addr, "addr", cfg.Addr, "game server address")
+	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "ai server address")
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP server address (for HTTP transport)")
 	fs.StringVar(&cfg.Transport, "transport", cfg.Transport, "Transport type: stdio or http")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {
@@ -51,6 +54,6 @@ func Run(ctx context.Context, cfg Config) error {
 		)
 		defer stopReporter()
 
-		return mcpapp.Run(ctx, cfg.Addr, cfg.HTTPAddr, cfg.Transport)
+		return mcpapp.Run(ctx, cfg.Addr, cfg.AIAddr, cfg.HTTPAddr, cfg.Transport)
 	})
 }

@@ -77,10 +77,13 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 			{Name: "campaign"},
 			{Name: "campaign_end"},
 			{Name: "scene_create"},
+			{Name: "interaction_active_scene_set"},
 			{Name: "interaction_scene_gm_output_commit"},
 			{Name: "roll_dice"},
 		},
 		resources: map[string]string{
+			"campaign://camp-1/artifacts/skills.md":    "# GM Skills\nUse tools.",
+			"campaign://camp-1/artifacts/memory.md":    "Remember the lighthouse omen.",
 			"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`,
 			"campaign://camp-1":                        `{"campaign":{"id":"camp-1","name":"Ashes","theme_prompt":"Ruined empire"}}`,
 			"campaign://camp-1/participants":           `{"participants":[{"id":"gm-1","role":"GM"},{"id":"p-1","role":"PLAYER"}]}`,
@@ -148,7 +151,7 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	if len(provider.calls) != 2 {
 		t.Fatalf("provider calls = %d", len(provider.calls))
 	}
-	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"campaign", "scene_create", "interaction_scene_gm_output_commit", "roll_dice"}) {
+	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"campaign", "scene_create", "interaction_active_scene_set", "interaction_scene_gm_output_commit", "roll_dice"}) {
 		t.Fatalf("filtered tools = %#v", got)
 	}
 	if provider.calls[1].ConversationID != "resp-1" {
@@ -166,6 +169,8 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 			{Name: "campaign"},
 		},
 		resources: map[string]string{
+			"campaign://camp-1/artifacts/skills.md":    "# GM Skills\nUse tools.",
+			"campaign://camp-1/artifacts/memory.md":    "",
 			"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`,
 			"campaign://camp-1":                        `{"campaign":{"id":"camp-1"}}`,
 			"campaign://camp-1/participants":           `{"participants":[]}`,
@@ -179,10 +184,16 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 		},
 	}
 	provider := &fakeProvider{
-		steps: []ProviderOutput{{
-			ConversationID: "resp-1",
-			OutputText:     "Narration without an authoritative write.",
-		}},
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				OutputText:     "Narration without an authoritative write.",
+			},
+			{
+				ConversationID: "resp-2",
+				OutputText:     "Still no commit.",
+			},
+		},
 	}
 
 	_, err := NewRunner(&fakeDialer{sess: sess}, 2).Run(context.Background(), Input{
@@ -196,6 +207,12 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 	if !errors.Is(err, ErrNarrationNotCommitted) {
 		t.Fatalf("err = %v, want %v", err, ErrNarrationNotCommitted)
 	}
+	if len(provider.calls) != 2 {
+		t.Fatalf("provider calls = %d", len(provider.calls))
+	}
+	if !strings.Contains(provider.calls[1].FollowUpPrompt, "interaction_scene_gm_output_commit") {
+		t.Fatalf("follow-up prompt = %q", provider.calls[1].FollowUpPrompt)
+	}
 }
 
 func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
@@ -206,6 +223,8 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 			{Name: "interaction_scene_gm_output_commit"},
 		},
 		resources: map[string]string{
+			"campaign://camp-1/artifacts/skills.md":    "# GM Skills\nUse tools.",
+			"campaign://camp-1/artifacts/memory.md":    "",
 			"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`,
 			"campaign://camp-1":                        `{"campaign":{"id":"camp-1"}}`,
 			"campaign://camp-1/participants":           `{"participants":[]}`,
@@ -266,6 +285,8 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 func TestBuildPromptUsesBootstrapModeWithoutActiveScene(t *testing.T) {
 	sess := &fakeSession{
 		resources: map[string]string{
+			"campaign://camp-1/artifacts/skills.md":    "# GM Skills\nUse tools.",
+			"campaign://camp-1/artifacts/memory.md":    "Session memory.",
 			"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`,
 			"campaign://camp-1":                        `{"campaign":{"id":"camp-1","name":"Ashes","theme_prompt":"Ruined empire"}}`,
 			"campaign://camp-1/participants":           `{"participants":[{"id":"gm-1","role":"GM"},{"id":"p-1","role":"PLAYER"}]}`,
@@ -288,6 +309,128 @@ func TestBuildPromptUsesBootstrapModeWithoutActiveScene(t *testing.T) {
 	}
 	if !strings.Contains(prompt, "Scenes:\n{\"scenes\":[]}") && !strings.Contains(prompt, "\"scenes\":[]") {
 		t.Fatalf("prompt missing scenes section: %q", prompt)
+	}
+}
+
+func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{
+			{Name: "set_context"},
+			{Name: "scene_create"},
+			{Name: "interaction_active_scene_set"},
+			{Name: "interaction_scene_gm_output_commit"},
+		},
+		resources: map[string]string{
+			"campaign://camp-1/artifacts/skills.md":    "# GM Skills\nUse tools.",
+			"campaign://camp-1/artifacts/memory.md":    "",
+			"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-ai"}}`,
+			"campaign://camp-1":                        `{"campaign":{"id":"camp-1"}}`,
+			"campaign://camp-1/participants":           `{"participants":[{"id":"gm-ai","role":"GM"}]}`,
+			"campaign://camp-1/characters":             `{"characters":[{"id":"char-1","name":"Theron"}]}`,
+			"campaign://camp-1/sessions":               `{"sessions":[{"id":"sess-1","status":"ACTIVE"}]}`,
+			"campaign://camp-1/sessions/sess-1/scenes": `{"scenes":[]}`,
+			"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":""}}`,
+		},
+		results: map[string]ToolResult{
+			"set_context":                        {Output: `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-ai"}}`},
+			"scene_create":                       {Output: `{"scene_id":"scene-1","campaign_id":"camp-1","session_id":"sess-1"}`},
+			"interaction_active_scene_set":       {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+		},
+	}
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{
+					{CallID: "call-1", Name: "scene_create", Arguments: `{"name":"Opening","description":"Night fog","character_ids":["char-1"]}`},
+					{CallID: "call-2", Name: "interaction_active_scene_set", Arguments: `{"scene_id":"scene-1"}`},
+					{CallID: "call-3", Name: "interaction_scene_gm_output_commit", Arguments: `{"scene_id":"scene-1","text":"The scene opens in fog."}`},
+				},
+			},
+			{
+				ConversationID: "resp-2",
+				OutputText:     "The scene opens in fog.",
+			},
+		},
+	}
+
+	res, err := NewRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-ai",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "The scene opens in fog." {
+		t.Fatalf("output = %q", res.OutputText)
+	}
+	if !reflect.DeepEqual(sess.calls, []string{"set_context", "scene_create", "interaction_active_scene_set", "interaction_scene_gm_output_commit"}) {
+		t.Fatalf("tool calls = %#v", sess.calls)
+	}
+}
+
+func TestRunnerPromptsProviderToCommitDraftNarration(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{
+			{Name: "set_context"},
+			{Name: "interaction_scene_gm_output_commit"},
+		},
+		resources: map[string]string{
+			"campaign://camp-1/artifacts/skills.md":    "# GM Skills\nUse tools.",
+			"campaign://camp-1/artifacts/memory.md":    "",
+			"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-ai"}}`,
+			"campaign://camp-1":                        `{"campaign":{"id":"camp-1"}}`,
+			"campaign://camp-1/participants":           `{"participants":[{"id":"gm-ai","role":"GM"}]}`,
+			"campaign://camp-1/characters":             `{"characters":[]}`,
+			"campaign://camp-1/sessions":               `{"sessions":[{"id":"sess-1","status":"ACTIVE"}]}`,
+			"campaign://camp-1/sessions/sess-1/scenes": `{"scenes":[{"scene_id":"scene-1"}]}`,
+			"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"scene-1"}}`,
+		},
+		results: map[string]ToolResult{
+			"set_context":                        {Output: `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-ai"}}`},
+			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+		},
+	}
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				OutputText:     "Fog gathers at the pier.",
+			},
+			{
+				ConversationID: "resp-2",
+				ToolCalls: []ProviderToolCall{
+					{CallID: "call-1", Name: "interaction_scene_gm_output_commit", Arguments: `{"scene_id":"scene-1","text":"Fog gathers at the pier."}`},
+				},
+			},
+			{
+				ConversationID: "resp-3",
+				OutputText:     "Fog gathers at the pier.",
+			},
+		},
+	}
+
+	res, err := NewRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-ai",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "Fog gathers at the pier." {
+		t.Fatalf("output = %q", res.OutputText)
+	}
+	if len(provider.calls) < 2 || !strings.Contains(provider.calls[1].FollowUpPrompt, "Fog gathers at the pier.") {
+		t.Fatalf("follow-up prompt = %#v", provider.calls)
 	}
 }
 

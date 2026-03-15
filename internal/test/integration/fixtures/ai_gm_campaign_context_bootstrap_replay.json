@@ -1,0 +1,154 @@
+{
+  "metadata": {
+    "provider": "openai",
+    "model": "gpt-5.4",
+    "reasoning_effort": "medium",
+    "captured_at_utc": "2026-03-14T00:59:42Z",
+    "scenario": "ai_gm_campaign_context_bootstrap",
+    "source": "live_capture"
+  },
+  "initial_prompt_contains": [
+    "story.md:",
+    "Starter seed: The Black Lantern warns of a debt collected at dawn.",
+    "memory.md:",
+    "Remember: the harbor master owes the party a favor."
+  ],
+  "initial_tool_names": [
+    "campaign_artifact_get",
+    "campaign_artifact_list",
+    "campaign_artifact_upsert",
+    "character_sheet_get",
+    "duality_action_roll",
+    "duality_explain",
+    "duality_outcome",
+    "duality_probability",
+    "duality_rules_version",
+    "events_list",
+    "interaction_active_scene_set",
+    "interaction_ooc_pause",
+    "interaction_ooc_post",
+    "interaction_ooc_ready_clear",
+    "interaction_ooc_ready_mark",
+    "interaction_ooc_resume",
+    "interaction_scene_gm_output_commit",
+    "interaction_scene_player_phase_accept",
+    "interaction_scene_player_phase_end",
+    "interaction_scene_player_phase_start",
+    "interaction_scene_player_revisions_request",
+    "roll_dice",
+    "scene_create",
+    "system_reference_read",
+    "system_reference_search"
+  ],
+  "steps": [
+    {
+      "id": "resp_070f0caf97e8eb160069b4b2d09a488193b39e873e17dc518e",
+      "tool_calls": [
+        {
+          "call_id": "call_TqjF4UsjWLGpBaEWtw3MbXtQ",
+          "name": "system_reference_search",
+          "arguments": {
+            "max_results": 5,
+            "query": "Fear Daggerheart meaning GM Fear token hope fear roll",
+            "system": "daggerheart"
+          }
+        },
+        {
+          "call_id": "call_YEB4r2huG5ez7dUlkDDz9SK4",
+          "name": "character_sheet_get",
+          "arguments": {
+            "character_id": "{{character_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_070f0caf97e8eb160069b4b2d61b908193bbcd6ec4051b02b1",
+      "tool_calls": [
+        {
+          "call_id": "call_mx5NDSGCjNxKvmZpJ5r7CDYP",
+          "name": "system_reference_read",
+          "arguments": {
+            "document_id": "running-an-adventure",
+            "system": "daggerheart"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_070f0caf97e8eb160069b4b2d7739c81939ab43dc8eecf3875",
+      "tool_calls": [
+        {
+          "call_id": "call_1v0KiCPjSYXzo8V2WdUZkzlI",
+          "name": "scene_create",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "character_ids": [
+              "{{character_id}}"
+            ],
+            "description": "Pre-dawn at the Black Lantern on Replay Harbor: gulls wheel over tar-dark water, bells toll through fog, and word has spread that an old debt will be collected at dawn. The harbor master still owes the party a favor.",
+            "name": "Dawn Debt at the Black Lantern",
+            "session_id": "{{session_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_070f0caf97e8eb160069b4b2e540ac819398cc37d22d46a637",
+      "tool_calls": [
+        {
+          "call_id": "call_TpkhFcLeA4wLYhjgiNbJ4ANw",
+          "name": "interaction_active_scene_set",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "scene_id": "{{scene_id}}"
+          }
+        },
+        {
+          "call_id": "call_lR0r6asXCZUOZcIpOCBu78QN",
+          "name": "campaign_artifact_upsert",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "content": "Remember: the harbor master owes the party a favor.\n\nStarter pressure: the Black Lantern warns that a debt will be collected at dawn.\n\nOpening scene established at the Black Lantern before dawn in Replay Harbor, with the harbor debt about to come due.",
+            "path": "memory.md"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_070f0caf97e8eb160069b4b2e95640819388a8ddcdd4e35a8f",
+      "tool_calls": [
+        {
+          "call_id": "call_ftscxa9tbYCcJKwv4B0emdPf",
+          "name": "interaction_scene_gm_output_commit",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "scene_id": "{{scene_id}}",
+            "text": "Fog drapes Replay Harbor in torn gray veils as dawn threatens the horizon. The Black Lantern swings above its door, its glass panes burning with that sick amber light sailors swear means bad luck has already chosen its mark. Tar, brine, and coal smoke mix in the air. Somewhere out on the water, a bell rings once.\n\nInside, the last of the night crowd has gone quiet. A ferryman clutches his cup with both hands. A pair of dockhands pretend not to stare. Behind the bar, the keeper of the Black Lantern polishes a glass that was already clean and says, low enough for only you to hear: \"Word is the debt gets collected at dawn. Not later. Not tomorrow. Dawn.\"\n\nThen the harbor doors slam open.\n\nThe harbor master steps in, rain on his coat, breath short, pride half-drowned. He sees you and comes straight over. Whatever authority he wears on the docks has been stripped bare by fear.\n\n\"I know I owe you,\" he says. \"That favor? I'm calling it crooked if I must. A ship came in before the tide turned. No manifest, no lantern code, no crew willing to show their faces. They asked for one thing only: you.\"\n\nHe swallows, glancing toward the fog outside.\n\n\"If I stall them, I lose the harbor. If I hand you over, I lose what little soul I've got left. So choose fast. Dawn is here.\""
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_070f0caf97e8eb160069b4b2f3abb08193bf4a8a8392e6d51b",
+      "tool_calls": [
+        {
+          "call_id": "call_0LEl2Y3EdibDs7FNF5NYPWOz",
+          "name": "interaction_scene_player_phase_start",
+          "arguments": {
+            "campaign_id": "{{campaign_id}}",
+            "character_ids": [
+              "{{character_id}}"
+            ],
+            "frame_text": "You’re in the Black Lantern as dawn breaks over Replay Harbor. The harbor master has just called in the favor he owes you: an unmarked ship has arrived asking for you by name, and he can only stall for moments. You can question him, step outside to face the ship, look for another exit, rally the room, or try something else entirely.",
+            "scene_id": "{{scene_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "id": "resp_070f0caf97e8eb160069b4b2f7a1888193a5f079e4e093a2ee",
+      "output_text": "**OOC:** I consulted the Daggerheart Fear guidance first, opened the scene, set it active, updated memory with the harbor debt, and started the first player phase.\n\n**GM Output:**\n\nFog drapes Replay Harbor in torn gray veils as dawn threatens the horizon. The Black Lantern swings above its door, its glass panes burning with that sick amber light sailors swear means bad luck has already chosen its mark. Tar, brine, and coal smoke mix in the air. Somewhere out on the water, a bell rings once.\n\nInside, the last of the night crowd has gone quiet. A ferryman clutches his cup with both hands. A pair of dockhands pretend not to stare. Behind the bar, the keeper of the Black Lantern polishes a glass that was already clean and says, low enough for only you to hear: “Word is the debt gets collected at dawn. Not later. Not tomorrow. Dawn.”\n\nThen the harbor doors slam open.\n\nThe harbor master steps in, rain on his coat, breath short, pride half-drowned. He sees you and comes straight over. Whatever authority he wears on the docks has been stripped bare by fear.\n\n“I know I owe you,” he says. “That favor? I’m calling it crooked if I must. A ship came in before the tide turned. No manifest, no lantern code, no crew willing to show their faces. They asked for one thing only: you.”\n\nHe swallows, glancing toward the fog outside.\n\n“If I stall them, I lose the harbor. If I hand you over, I lose what little soul I’ve got left. So choose fast. Dawn is here.”"
+    }
+  ]
+}

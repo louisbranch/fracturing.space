@@ -17,6 +17,7 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
@@ -109,8 +110,13 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		return nil, fmt.Errorf("build secret sealer: %w", err)
 	}
 
-	grpcServer := grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler()))
+	grpcServer := grpc.NewServer(
+		grpc.StatsHandler(otelgrpc.NewServerHandler()),
+		grpc.ChainUnaryInterceptor(serviceIdentityValidationUnaryInterceptor(cfg.InternalServiceAllowlist)),
+		grpc.ChainStreamInterceptor(serviceIdentityValidationStreamInterceptor(cfg.InternalServiceAllowlist)),
+	)
 	service := aiservice.NewService(store, store, sealer)
+	service.SetInternalServiceAllowlist(cfg.InternalServiceAllowlist)
 
 	var gameMc *platformgrpc.ManagedConn
 	if gameAddr := strings.TrimSpace(cfg.GameAddr); gameAddr != "" {
@@ -130,6 +136,7 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		} else {
 			gameMc = mc
 			service.SetGameCampaignAIClient(gamev1.NewCampaignAIServiceClient(mc.Conn()))
+			service.SetGameAuthorizationClient(gamev1.NewAuthorizationServiceClient(mc.Conn()))
 		}
 	}
 
@@ -148,6 +155,9 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	if cfg.SessionGrantConfig != nil {
 		service.SetAISessionGrantConfig(*cfg.SessionGrantConfig)
 	}
+	if strings.TrimSpace(cfg.DaggerheartReferenceRoot) != "" {
+		service.SetSystemReferenceCorpus(campaigncontext.NewReferenceCorpus(cfg.DaggerheartReferenceRoot))
+	}
 	if strings.TrimSpace(cfg.MCPURL) != "" {
 		service.SetCampaignTurnRunner(orchestration.NewRunner(orchestration.NewMCPDialer(cfg.MCPURL, nil), 8))
 	}
@@ -157,6 +167,8 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	aiv1.RegisterAgentServiceServer(grpcServer, service)
 	aiv1.RegisterInvocationServiceServer(grpcServer, service)
 	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, service)
+	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, service)
+	aiv1.RegisterSystemReferenceServiceServer(grpcServer, service)
 	aiv1.RegisterProviderGrantServiceServer(grpcServer, service)
 	aiv1.RegisterAccessRequestServiceServer(grpcServer, service)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
@@ -165,6 +177,8 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	healthServer.SetServingStatus("ai.v1.AgentService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.InvocationService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.CampaignOrchestrationService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("ai.v1.CampaignArtifactService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("ai.v1.SystemReferenceService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.ProviderGrantService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.AccessRequestService", grpc_health_v1.HealthCheckResponse_SERVING)
 

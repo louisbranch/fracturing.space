@@ -75,6 +75,11 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 	if !strings.EqualFold(strings.TrimSpace(agentRecord.Status), "active") {
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai runtime is inactive")
 	}
+	if s.campaignArtifactManager != nil {
+		if _, err := s.campaignArtifactManager.EnsureDefaultArtifacts(ctx, claims.CampaignID, ""); err != nil {
+			return nil, status.Errorf(codes.Internal, "ensure campaign artifacts: %v", err)
+		}
+	}
 
 	provider := providergrant.Provider(strings.ToLower(strings.TrimSpace(agentRecord.Provider)))
 	adapter, ok := s.providerToolAdapters[provider]

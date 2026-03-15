@@ -18,6 +18,7 @@ type Dependencies struct {
 	InteractionClient        campaigngateway.InteractionClient
 	DiscoveryClient          campaigngateway.DiscoveryClient
 	AgentClient              campaigngateway.AgentClient
+	CampaignArtifactClient   campaigngateway.CampaignArtifactClient
 	ParticipantClient        ParticipantClient
 	CharacterClient          CharacterClient
 	DaggerheartContentClient campaigngateway.DaggerheartContentClient
@@ -77,4 +78,5 @@ func BindAIDependency(deps *Dependencies, conn *grpc.ClientConn) {
 		return
 	}
 	deps.AgentClient = aiv1.NewAgentServiceClient(conn)
+	deps.CampaignArtifactClient = aiv1.NewCampaignArtifactServiceClient(conn)
 }

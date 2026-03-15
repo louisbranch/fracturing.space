@@ -129,6 +129,37 @@ Example:
 go test -tags=integration ./...
 ```
 
+### Live AI capture
+
+The GM bootstrap fixture can also be refreshed from a live model run. This is a
+manual lane, not part of normal CI, and it exists to prove that a real model can
+use the exposed MCP tools before the resulting exchange is replayed
+deterministically.
+
+Run the live lane with:
+
+```sh
+INTEGRATION_OPENAI_API_KEY=... \
+go test -tags='integration liveai' ./internal/test/integration \
+  -run TestAIGMCampaignContextLiveCaptureBootstrap -count=1
+```
+
+Optional environment variables:
+
+- `INTEGRATION_AI_MODEL`: model name to use; defaults to `gpt-5.4`
+- `INTEGRATION_AI_REASONING_EFFORT`: Responses API reasoning effort; defaults to `medium`
+- `INTEGRATION_OPENAI_RESPONSES_URL`: alternate OpenAI-compatible Responses URL
+- `INTEGRATION_AI_WRITE_FIXTURE=1`: allow the test to overwrite the committed
+  replay fixture after a successful live run
+
+Behavior:
+
+- Raw live provider captures are always written under `.tmp/ai-live-captures/`
+  for local inspection.
+- The committed replay fixture is updated only when
+  `INTEGRATION_AI_WRITE_FIXTURE=1` is set.
+- Failed live runs do not overwrite the committed fixture.
+
 ## Supported verification commands
 
 For the supported contributor workflow, use the canonical

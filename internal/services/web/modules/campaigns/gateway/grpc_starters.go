@@ -15,7 +15,7 @@ import (
 
 // NewStarterGateway builds the protected starter preview/launch adapter from explicit dependencies.
 func NewStarterGateway(deps StarterDeps) campaignapp.CampaignStarterGateway {
-	if deps.Discovery == nil || deps.Agent == nil || deps.Campaign == nil || deps.Fork == nil {
+	if deps.Discovery == nil || deps.Agent == nil || deps.CampaignArtifact == nil || deps.Campaign == nil || deps.Fork == nil {
 		return nil
 	}
 	return starterGateway{deps: deps}
@@ -106,6 +106,17 @@ func (g starterGateway) LaunchStarter(ctx context.Context, starterKey string, in
 	})
 	if err != nil {
 		return campaignapp.StarterLaunchResult{}, mapCampaignAIBindingMutationError(err)
+	}
+	_, err = g.deps.CampaignArtifact.EnsureCampaignArtifacts(ctx, &aiv1.EnsureCampaignArtifactsRequest{
+		CampaignId:        campaignID,
+		StorySeedMarkdown: strings.TrimSpace(entry.GetStoryline()),
+	})
+	if err != nil {
+		return campaignapp.StarterLaunchResult{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
+			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_launch_starter",
+			FallbackMessage: "failed to launch starter",
+		})
 	}
 	return campaignapp.StarterLaunchResult{CampaignID: campaignID}, nil
 }

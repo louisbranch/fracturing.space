@@ -7,6 +7,7 @@ import (
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -1013,6 +1014,174 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			t.Fatalf("RetryAIGMTurn() = %#v, %v", resp, err)
 		}
 	})
+}
+
+func TestInteractionApplicationSetActiveScenePreservesOwningAIGMTurn(t *testing.T) {
+	t.Parallel()
+
+	h := newInteractionServiceHarness()
+	h.campaign.Campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    bridge.SystemIDDaggerheart,
+		Status:    campaign.StatusActive,
+		GmMode:    campaign.GmModeAI,
+		AIAgentID: "agent-1",
+	}
+	h.sessionInteraction.Values = map[string]storage.SessionInteraction{
+		"c1:sess-1": {
+			CampaignID:               "c1",
+			SessionID:                "sess-1",
+			GMAuthorityParticipantID: "gm-ai",
+			AITurn: storage.SessionAITurn{
+				Status:             session.AITurnStatusRunning,
+				TurnToken:          "turn-1",
+				OwnerParticipantID: "gm-ai",
+				SourceEventType:    "session.started",
+			},
+		},
+	}
+
+	now := time.Date(2026, 3, 13, 12, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{
+		resultsByType: map[command.Type]engine.Result{
+			commandTypeSessionActiveSceneSet: {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "c1",
+					Type:        session.EventTypeActiveSceneSet,
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "gm-ai",
+					SessionID:   "sess-1",
+					EntityType:  "session",
+					EntityID:    "sess-1",
+					PayloadJSON: []byte(`{"session_id":"sess-1","active_scene_id":"scene-1"}`),
+				}),
+			},
+			commandTypeSessionAITurnClear: {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "c1",
+					Type:        session.EventTypeAITurnCleared,
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "gm-ai",
+					SessionID:   "sess-1",
+					EntityType:  "session",
+					EntityID:    "sess-1",
+					PayloadJSON: []byte(`{"session_id":"sess-1","turn_token":"turn-1","reason":"active_scene_switched"}`),
+				}),
+			},
+		},
+	}
+	runtime := domainwrite.NewRuntime()
+	runtime.SetInlineApplyEnabled(false)
+	app := newInteractionApplicationWithDependencies(Stores{
+		Campaign:           h.campaign,
+		Participant:        h.participants,
+		Character:          h.characters,
+		Session:            h.sessions,
+		SessionInteraction: h.sessionInteraction,
+		Scene:              h.sceneStore,
+		SceneCharacter:     h.sceneCharacters,
+		SceneInteraction:   h.sceneInteraction,
+		Write:              domainwriteexec.WritePath{Executor: domain, Runtime: runtime},
+	}, gametest.FixedIDGenerator("unused"))
+
+	if _, err := app.SetActiveScene(
+		gametest.ContextWithParticipantID("gm-ai"),
+		"c1",
+		&gamev1.SetActiveSceneRequest{SceneId: "scene-1"},
+	); err != nil {
+		t.Fatalf("SetActiveScene() error = %v", err)
+	}
+
+	if len(domain.commands) != 1 || domain.commands[0].Type != commandTypeSessionActiveSceneSet {
+		t.Fatalf("commands = %#v, want only %q", domain.commands, commandTypeSessionActiveSceneSet)
+	}
+}
+
+func TestInteractionApplicationSetActiveSceneClearsAIGMTurnForDifferentActor(t *testing.T) {
+	t.Parallel()
+
+	h := newInteractionServiceHarness()
+	h.campaign.Campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    bridge.SystemIDDaggerheart,
+		Status:    campaign.StatusActive,
+		GmMode:    campaign.GmModeHybrid,
+		AIAgentID: "agent-1",
+	}
+	h.sessionInteraction.Values = map[string]storage.SessionInteraction{
+		"c1:sess-1": {
+			CampaignID:               "c1",
+			SessionID:                "sess-1",
+			GMAuthorityParticipantID: "gm-1",
+			AITurn: storage.SessionAITurn{
+				Status:             session.AITurnStatusRunning,
+				TurnToken:          "turn-1",
+				OwnerParticipantID: "gm-ai",
+				SourceEventType:    "session.started",
+			},
+		},
+	}
+
+	now := time.Date(2026, 3, 13, 12, 5, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{
+		resultsByType: map[command.Type]engine.Result{
+			commandTypeSessionAITurnClear: {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "c1",
+					Type:        session.EventTypeAITurnCleared,
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "gm-1",
+					SessionID:   "sess-1",
+					EntityType:  "session",
+					EntityID:    "sess-1",
+					PayloadJSON: []byte(`{"session_id":"sess-1","turn_token":"turn-1","reason":"active_scene_switched"}`),
+				}),
+			},
+			commandTypeSessionActiveSceneSet: {
+				Decision: command.Accept(event.Event{
+					CampaignID:  "c1",
+					Type:        session.EventTypeActiveSceneSet,
+					Timestamp:   now,
+					ActorType:   event.ActorTypeParticipant,
+					ActorID:     "gm-1",
+					SessionID:   "sess-1",
+					EntityType:  "session",
+					EntityID:    "sess-1",
+					PayloadJSON: []byte(`{"session_id":"sess-1","active_scene_id":"scene-1"}`),
+				}),
+			},
+		},
+	}
+	runtime := domainwrite.NewRuntime()
+	runtime.SetInlineApplyEnabled(false)
+	app := newInteractionApplicationWithDependencies(Stores{
+		Campaign:           h.campaign,
+		Participant:        h.participants,
+		Character:          h.characters,
+		Session:            h.sessions,
+		SessionInteraction: h.sessionInteraction,
+		Scene:              h.sceneStore,
+		SceneCharacter:     h.sceneCharacters,
+		SceneInteraction:   h.sceneInteraction,
+		Write:              domainwriteexec.WritePath{Executor: domain, Runtime: runtime},
+	}, gametest.FixedIDGenerator("unused"))
+
+	if _, err := app.SetActiveScene(
+		gametest.ContextWithParticipantID("gm-1"),
+		"c1",
+		&gamev1.SetActiveSceneRequest{SceneId: "scene-1"},
+	); err != nil {
+		t.Fatalf("SetActiveScene() error = %v", err)
+	}
+
+	if len(domain.commands) != 2 || domain.commands[0].Type != commandTypeSessionAITurnClear || domain.commands[1].Type != commandTypeSessionActiveSceneSet {
+		t.Fatalf("commands = %#v, want clear then set active", domain.commands)
+	}
 }
 
 func TestInteractionServiceOOCRequiresPausedSessionForParticipantActions(t *testing.T) {

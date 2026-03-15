@@ -431,3 +431,58 @@ func TestOpenAIInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 		t.Fatalf("output_text = %q", res.OutputText)
 	}
 }
+
+func TestOpenAIInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/responses" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		var body struct {
+			Model     string         `json:"model"`
+			Reasoning map[string]any `json:"reasoning"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if body.Model != "gpt-5.4" {
+			t.Fatalf("model = %q, want %q", body.Model, "gpt-5.4")
+		}
+		if got := body.Reasoning["effort"]; got != "medium" {
+			t.Fatalf("reasoning.effort = %#v, want %q", got, "medium")
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":          "resp-1",
+			"output_text": "Scene established.",
+			"output": []map[string]any{
+				{
+					"type": "message",
+					"content": []map[string]any{
+						{
+							"type": "output_text",
+							"text": "Scene established.",
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+		ResponsesURL: server.URL + "/v1/responses",
+		HTTPClient:   server.Client(),
+	}}
+	res, err := adapter.Run(context.Background(), orchestration.ProviderInput{
+		Model:            "gpt-5.4",
+		ReasoningEffort:  "medium",
+		Prompt:           "Start the scene.",
+		CredentialSecret: "sk-1",
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "Scene established." {
+		t.Fatalf("output_text = %q", res.OutputText)
+	}
+}

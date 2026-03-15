@@ -53,7 +53,7 @@ type SceneListPayload struct {
 func SceneCreateTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "scene_create",
-		Description: "Creates a new scene within the current session",
+		Description: "Creates a new scene within the current session; creation alone does not make it the authoritative active scene",
 	}
 }
 

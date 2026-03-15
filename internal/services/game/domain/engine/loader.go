@@ -37,6 +37,18 @@ type ReplayGateStateLoader struct {
 	StateLoader ReplayStateLoader
 }
 
+// noCheckpointStore disables replay checkpointing for fresh loads so callers
+// can reconstruct authoritative state directly from the event journal.
+type noCheckpointStore struct{}
+
+func (noCheckpointStore) Get(context.Context, string) (replay.Checkpoint, error) {
+	return replay.Checkpoint{}, replay.ErrCheckpointNotFound
+}
+
+func (noCheckpointStore) Save(context.Context, replay.Checkpoint) error {
+	return nil
+}
+
 // Load replays events to reconstruct state for a campaign.
 //
 // The load flow is the same source used at runtime and during command handling,
@@ -85,6 +97,16 @@ func (l ReplayStateLoader) Load(ctx context.Context, cmd command.Command) (any, 
 		return nil, err
 	}
 	return result.State, nil
+}
+
+// LoadFresh reconstructs state directly from the journal without using cached
+// snapshots or checkpoints. Handlers use this to recover from stale cached
+// state before returning a domain rejection.
+func (l ReplayStateLoader) LoadFresh(ctx context.Context, cmd command.Command) (any, error) {
+	fresh := l
+	fresh.Checkpoints = noCheckpointStore{}
+	fresh.Snapshots = nil
+	return fresh.Load(ctx, cmd)
 }
 
 // checkpointCapStore forwards checkpoint writes and caps checkpoint reads to a

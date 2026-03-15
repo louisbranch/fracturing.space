@@ -163,8 +163,10 @@ func (a interactionApplication) SetActiveScene(ctx context.Context, campaignID s
 			return nil, err
 		}
 	}
-	if err := a.clearAITurnIfPresent(ctx, campaignID, activeSession.ID, currentInteraction, "active_scene_switched"); err != nil {
-		return nil, err
+	if !shouldPreserveAITurnForSceneActivation(ctx, currentInteraction) {
+		if err := a.clearAITurnIfPresent(ctx, campaignID, activeSession.ID, currentInteraction, "active_scene_switched"); err != nil {
+			return nil, err
+		}
 	}
 
 	payload := session.ActiveSceneSetPayload{
@@ -1126,6 +1128,34 @@ func (a interactionApplication) clearAITurnIfPresent(ctx context.Context, campai
 		Reason:    strings.TrimSpace(reason),
 	}
 	return a.executeSessionCommand(ctx, commandTypeSessionAITurnClear, campaignID, sessionID, payload, "session.ai_turn.clear")
+}
+
+// shouldPreserveAITurnForSceneActivation keeps the owning AI GM turn alive while
+// that same GM activates the scene it intends to narrate during bootstrap.
+func shouldPreserveAITurnForSceneActivation(ctx context.Context, interaction storage.SessionInteraction) bool {
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	if actorType != command.ActorTypeParticipant {
+		return false
+	}
+	actorID = strings.TrimSpace(actorID)
+	if actorID == "" {
+		return false
+	}
+	if actorID != strings.TrimSpace(interaction.GMAuthorityParticipantID) {
+		return false
+	}
+	if actorID != strings.TrimSpace(interaction.AITurn.OwnerParticipantID) {
+		return false
+	}
+	if strings.TrimSpace(interaction.AITurn.TurnToken) == "" {
+		return false
+	}
+	switch interaction.AITurn.Status {
+	case session.AITurnStatusQueued, session.AITurnStatusRunning:
+		return true
+	default:
+		return false
+	}
 }
 
 func (a interactionApplication) aiTurnEligibility(

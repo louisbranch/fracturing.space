@@ -9,10 +9,11 @@ func newGatewayDeps(config CompositionConfig) campaigngateway.GRPCGatewayDeps {
 			Campaign: config.CampaignClient,
 		},
 		Starter: campaigngateway.StarterDeps{
-			Discovery: config.DiscoveryClient,
-			Agent:     config.AgentClient,
-			Campaign:  config.CampaignClient,
-			Fork:      config.ForkClient,
+			Discovery:        config.DiscoveryClient,
+			Agent:            config.AgentClient,
+			CampaignArtifact: config.CampaignArtifactClient,
+			Campaign:         config.CampaignClient,
+			Fork:             config.ForkClient,
 		},
 		CatalogMutation: campaigngateway.CatalogMutationDeps{
 			Campaign: config.CampaignClient,
