@@ -94,7 +94,7 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		{name: "campaign ai binding get", method: http.MethodGet, path: routepath.AppCampaignAIBinding("c1"), wantStatus: http.StatusForbidden},
 		{name: "campaign ai binding post", method: http.MethodPost, path: routepath.AppCampaignAIBinding("c1"), body: "ai_agent_id=agent-1", wantStatus: http.StatusFound},
 		{name: "campaign session start get resolves session detail route", method: http.MethodGet, path: routepath.AppCampaignSessionStart("c1"), wantStatus: http.StatusOK},
-		{name: "campaign session start post", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+One", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaignSessions("c1")},
+		{name: "campaign session start post", method: http.MethodPost, path: routepath.AppCampaignSessionStart("c1"), body: "name=Session+One", wantStatus: http.StatusFound, wantLoc: routepath.AppCampaignGame("c1")},
 		{name: "campaign unknown subpath", method: http.MethodGet, path: routepath.AppCampaign("c1") + "/unknown", wantStatus: http.StatusNotFound},
 	}
 

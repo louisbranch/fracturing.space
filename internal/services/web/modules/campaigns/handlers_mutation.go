@@ -42,7 +42,7 @@ func (h handlers) writeMutationSuccess(w http.ResponseWriter, r *http.Request, k
 	httpx.WriteRedirect(w, r, redirectURL)
 }
 
-// handleSessionStart starts a campaign session and redirects to sessions detail.
+// handleSessionStart starts a campaign session and redirects to the game surface.
 func (h handlers) handleSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_session_start_form", routepath.AppCampaignSessions(campaignID)) {
 		return
@@ -55,7 +55,7 @@ func (h handlers) handleSessionStart(w http.ResponseWriter, r *http.Request, cam
 	if h.sync != nil {
 		h.sync.SessionStarted(ctx, userID, campaignID)
 	}
-	h.writeMutationSuccess(w, r, "web.campaigns.notice_session_started", routepath.AppCampaignSessions(campaignID))
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_session_started", routepath.AppCampaignGame(campaignID))
 }
 
 // handleSessionEnd handles this route in the module transport layer.
