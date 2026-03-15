@@ -42,12 +42,27 @@
     el.hidden = !message;
   }
 
+  function showButtonLoadingSpinner(button) {
+    if (!button) {
+      return;
+    }
+    if (button.querySelector("[data-button-loading-spinner='true']")) {
+      return;
+    }
+    var spinner = document.createElement("span");
+    spinner.className = "loading loading-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    spinner.setAttribute("data-button-loading-spinner", "true");
+    button.insertBefore(spinner, button.firstChild);
+  }
+
   function setupSignupUsernameCheck() {
     var i18nEl = document.getElementById("i18n-strings");
+    var form = document.getElementById("register-form");
     var input = document.getElementById("register-username");
     var hintEl = document.getElementById("register-username-hint");
     var button = document.getElementById("passkey-register");
-    if (!i18nEl || !input || !hintEl || !button) {
+    if (!i18nEl || !form || !input || !hintEl || !button) {
       return;
     }
 
@@ -64,8 +79,15 @@
     };
     var requestSequence = 0;
 
+    function syncButtonEnabledState() {
+      var allowed = button.getAttribute("data-passkey-register-allowed") === "true";
+      var busy = form.getAttribute("data-passkey-busy") === "true";
+      button.disabled = busy || !allowed;
+    }
+
     function setButtonEnabled(enabled) {
-      button.disabled = !enabled;
+      button.setAttribute("data-passkey-register-allowed", enabled ? "true" : "false");
+      syncButtonEnabledState();
     }
 
     function resetValidationState() {
@@ -125,6 +147,7 @@
       }
     }, 200);
 
+    button.setAttribute("data-passkey-register-allowed", "false");
     setButtonEnabled(false);
     input.addEventListener("input", function () {
       requestSequence += 1;
@@ -244,7 +267,7 @@
       form.setAttribute("aria-busy", "true");
       form.setAttribute("data-campaign-submit-busy", "true");
       button.disabled = true;
-      button.classList.add("loading");
+      showButtonLoadingSpinner(button);
       button.setAttribute("aria-busy", "true");
     }
 

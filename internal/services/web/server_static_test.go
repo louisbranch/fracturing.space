@@ -108,6 +108,80 @@ func TestStaticCampaignChatScriptPrefersFallbackPortForLocalhost(t *testing.T) {
 	}
 }
 
+func TestStaticPasskeyAuthScriptIncludesBusyStateGuard(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+	})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/static/passkey-auth.js", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if ct := rr.Header().Get("Content-Type"); !strings.Contains(ct, "application/javascript") && !strings.Contains(ct, "text/javascript") {
+		t.Fatalf("content-type = %q, want javascript", ct)
+	}
+
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-passkey-busy`,
+		`data-button-loading-spinner='true'`,
+		`spinner.className = "loading loading-spinner"`,
+		`button.setAttribute("aria-busy", "true")`,
+		`if (!markPasskeyBusy(loginForm, passkeyButton))`,
+		`clearPasskeyBusy(registerForm, registerButton, shouldDisableRegisterButton(registerButton))`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("passkey-auth.js missing busy-state marker %q", marker)
+		}
+	}
+	if strings.Contains(body, `button.classList.add("loading")`) {
+		t.Fatalf("passkey-auth.js should not use button.loading class: %q", body)
+	}
+}
+
+func TestStaticUsernameInputScriptPreservesSignupAvailabilityDuringBusyState(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{
+		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
+	})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/static/username-input.js", nil)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if ct := rr.Header().Get("Content-Type"); !strings.Contains(ct, "application/javascript") && !strings.Contains(ct, "text/javascript") {
+		t.Fatalf("content-type = %q, want javascript", ct)
+	}
+
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-passkey-register-allowed`,
+		`data-button-loading-spinner='true'`,
+		`spinner.className = "loading loading-spinner"`,
+		`form.getAttribute("data-passkey-busy") === "true"`,
+		`syncButtonEnabledState()`,
+		`button.setAttribute("data-passkey-register-allowed", enabled ? "true" : "false")`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("username-input.js missing signup busy-state marker %q", marker)
+		}
+	}
+	if strings.Contains(body, `button.classList.add("loading")`) {
+		t.Fatalf("username-input.js should not use button.loading class: %q", body)
+	}
+}
+
 func TestStaticAppShellScriptIncludesHTMXErrorSwapContract(t *testing.T) {
 	t.Parallel()
 
