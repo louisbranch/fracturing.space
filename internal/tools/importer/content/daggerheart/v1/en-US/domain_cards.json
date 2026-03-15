@@ -5,8 +5,8 @@
   "locale": "en-US",
   "items": [
     {
-      "id": "domain_card.arcana-runeward",
-      "name": "Runeward",
+      "id": "domain_card.rune-ward",
+      "name": "Rune Ward",
       "domain_id": "domain.arcana",
       "level": 1,
       "type": "spell",
@@ -25,8 +25,8 @@
       "feature_text": "At session start, place tokens equal to your Spellcast trait. Make a Spellcast Roll against a far target and spend any number of tokens; on success, roll d10s equal to tokens spent for magic damage. Mark a Stress to replenish tokens; clear unspent tokens at session end."
     },
     {
-      "id": "domain_card.arcana-wallwalk",
-      "name": "Wallwalk",
+      "id": "domain_card.wall-walk",
+      "name": "Wall Walk",
       "domain_id": "domain.arcana",
       "level": 1,
       "type": "spell",
@@ -115,8 +115,8 @@
       "feature_text": "After the GM gives you the consequences of a roll you made, you can undo that move and make another instead."
     },
     {
-      "id": "domain_card.arcana-riftwalker",
-      "name": "Riftwalker",
+      "id": "domain_card.rift-walker",
+      "name": "Rift Walker",
       "domain_id": "domain.arcana",
       "level": 6,
       "type": "spell",
@@ -246,8 +246,8 @@
       "feature_text": "After a successful attack within very close range, spend a Hope to use the attack against all other targets within very close range; additional targets you succeed against take half damage."
     },
     {
-      "id": "domain_card.blade-soldiers-bond",
-      "name": "Comrades' Praise",
+      "id": "domain_card.a-soldier-s-bond",
+      "name": "A Soldier's Bond",
       "domain_id": "domain.blade",
       "level": 2,
       "type": "ability",
@@ -306,8 +306,8 @@
       "feature_text": "While wearing armor, gain +2 to your damage thresholds."
     },
     {
-      "id": "domain_card.blade-champions-edge",
-      "name": "Critical Edge",
+      "id": "domain_card.champion-s-edge",
+      "name": "Champion's Edge",
       "domain_id": "domain.blade",
       "level": 5,
       "type": "ability",
@@ -396,8 +396,8 @@
       "feature_text": "When you critically succeed on a weapon attack, gain a Hope or clear a Stress. When you defeat an enemy, gain a Hope or clear a Stress."
     },
     {
-      "id": "domain_card.blade-reapers-strike",
-      "name": "Execution Strike",
+      "id": "domain_card.reaper-s-strike",
+      "name": "Reaper's Strike",
       "domain_id": "domain.blade",
       "level": 9,
       "type": "ability",
@@ -627,8 +627,8 @@
       "feature_text": "Spend 3 Hope to run a straight path to a point within far range, attacking all adversaries within your weapon range along the path. Roll weapon damage with +1 Proficiency for the first target, then remove one damage die for each subsequent target."
     },
     {
-      "id": "domain_card.bone-swiftstep",
-      "name": "Swiftstep",
+      "id": "domain_card.swift-step",
+      "name": "Swift Step",
       "domain_id": "domain.bone",
       "level": 10,
       "type": "ability",
@@ -638,8 +638,8 @@
     },
 
     {
-      "id": "domain_card.codex-book-of-ava",
-      "name": "Codex of Force and Frost",
+      "id": "domain_card.book-of-ava",
+      "name": "Book of Ava",
       "domain_id": "domain.codex",
       "level": 1,
       "type": "grimoire",
@@ -648,8 +648,8 @@
       "feature_text": "Power Push: Spellcast vs melee target to knock them to far range and deal d10+2 magic damage. Tava's Armor: spend a Hope to give a touched target +1 Armor Score until next rest or recast. Ice Spike: Spellcast (12) to summon a spike within far range; if used as a weapon, deal d6 physical damage on success."
     },
     {
-      "id": "domain_card.codex-book-of-illiat",
-      "name": "Codex of Sleep and Mind",
+      "id": "domain_card.book-of-illiat",
+      "name": "Book of Illiat",
       "domain_id": "domain.codex",
       "level": 1,
       "type": "grimoire",
@@ -658,8 +658,8 @@
       "feature_text": "Slumber: Spellcast vs very close target; on success they sleep until damaged or the GM spends Fear. Arcane Barrage: once per rest, spend any Hope to deal d6 magic damage per Hope to a close target. Telepathy: spend a Hope to open mental communication with a visible target until next rest or recast."
     },
     {
-      "id": "domain_card.codex-book-of-tyfar",
-      "name": "Codex of Flame and Mist",
+      "id": "domain_card.book-of-tyfar",
+      "name": "Book of Tyfar",
       "domain_id": "domain.codex",
       "level": 1,
       "type": "grimoire",
@@ -668,8 +668,8 @@
       "feature_text": "Wild Flame: Spellcast vs up to three melee adversaries; on success they take 2d6 magic damage and mark a Stress. Magic Hand: conjure a magical hand within far range. Mysterious Mist: Spellcast (13) to create dense fog in a very close area that heavily obscures."
     },
     {
-      "id": "domain_card.codex-book-of-sitil",
-      "name": "Codex of Illusions",
+      "id": "domain_card.book-of-sitil",
+      "name": "Book of Sitil",
       "domain_id": "domain.codex",
       "level": 2,
       "type": "grimoire",
@@ -678,8 +678,8 @@
       "feature_text": "Adjust Appearance: magically shift appearance and clothing. Parallela: spend 2 Hope on self or ally within close range so their next attack can hit an additional target their roll would succeed against (only one active at a time). Illusion: Spellcast (14) to create a visual illusion within close range that lasts while you watch it."
     },
     {
-      "id": "domain_card.codex-book-of-vagras",
-      "name": "Codex of Seals and Portals",
+      "id": "domain_card.book-of-vagras",
+      "name": "Book of Vagras",
       "domain_id": "domain.codex",
       "level": 2,
       "type": "grimoire",
@@ -688,8 +688,8 @@
       "feature_text": "Runic Lock: Spellcast (15) on a closeable object; once per rest on success, lock it so only chosen creatures can open. Arcane Door: when no adversaries within melee, Spellcast (13) to create a portal to a visible far point; closes after a creature passes. Reveal: Spellcast to reveal anything magically hidden within close range."
     },
     {
-      "id": "domain_card.codex-book-of-korvax",
-      "name": "Codex of Runes and Levitation",
+      "id": "domain_card.book-of-korvax",
+      "name": "Book of Korvax",
       "domain_id": "domain.codex",
       "level": 3,
       "type": "grimoire",
@@ -698,8 +698,8 @@
       "feature_text": "Levitation: Spellcast to lift a visible target and move them within close range of their original position. Recant: spend a Hope to force a melee target to make a Reaction Roll (15); on failure they forget the last minute. Rune Circle: mark a Stress to create a circle that deals 2d12+4 magic damage to adversaries in melee range and knocks them to very close range."
     },
     {
-      "id": "domain_card.codex-book-of-norai",
-      "name": "Codex of Tethers and Fire",
+      "id": "domain_card.book-of-norai",
+      "name": "Book of Norai",
       "domain_id": "domain.codex",
       "level": 3,
       "type": "grimoire",
@@ -708,8 +708,8 @@
       "feature_text": "Mystic Tether: Spellcast vs a far target; on success they are temporarily Restrained and mark a Stress, grounding flying targets. Fireball: Spellcast vs a very far target; on success, the target and creatures within very close range make a Reaction Roll (13), taking d20+5 magic damage on failure or half on success."
     },
     {
-      "id": "domain_card.codex-book-of-exota",
-      "name": "Codex of Constructs and Warding",
+      "id": "domain_card.book-of-exota",
+      "name": "Book of Exota",
       "domain_id": "domain.codex",
       "level": 4,
       "type": "grimoire",
@@ -718,8 +718,8 @@
       "feature_text": "Repudiate: once per rest, make a reaction roll to interrupt a magical effect; on success, it ends. Create Construct: spend a Hope to animate nearby objects into a construct that follows basic commands; Spellcast to command it. It shares your Evasion and traits, deals 2d10+3 physical damage, and falls apart if damaged; only one at a time."
     },
     {
-      "id": "domain_card.codex-book-of-grynn",
-      "name": "Codex of Wards and Time",
+      "id": "domain_card.book-of-grynn",
+      "name": "Book of Grynn",
       "domain_id": "domain.codex",
       "level": 4,
       "type": "grimoire",
@@ -758,8 +758,8 @@
       "feature_text": "Spellcast vs a close target; on success roll d20s equal to your Spellcast trait. The target makes a reaction roll against your highest result; on success they mark a Stress, on failure they are banished. When PCs roll with Fear, the difficulty drops by 1 and the target rolls again to return."
     },
     {
-      "id": "domain_card.codex-sigil-of-retribution",
-      "name": "Vengeful Sigil",
+      "id": "domain_card.sigil-of-retribution",
+      "name": "Sigil of Retribution",
       "domain_id": "domain.codex",
       "level": 6,
       "type": "spell",
@@ -768,8 +768,8 @@
       "feature_text": "Mark a close adversary with a retribution sigil; the GM gains a Fear. When they damage you or allies, place a d8 on this card (up to your level). When you hit the marked adversary, roll those dice and add the total to your damage, then clear the dice. The effect ends when the target is defeated or you recast."
     },
     {
-      "id": "domain_card.codex-book-of-homet",
-      "name": "Codex of Passage",
+      "id": "domain_card.book-of-homet",
+      "name": "Book of Homet",
       "domain_id": "domain.codex",
       "level": 7,
       "type": "grimoire",
@@ -788,8 +788,8 @@
       "feature_text": "If 4 or more Codex cards are in your loadout, you can mark a Stress to add your Proficiency to a Spellcast Roll and once per rest replace this card with any card from your vault without paying its Recall Cost."
     },
     {
-      "id": "domain_card.codex-book-of-vyola",
-      "name": "Codex of Memory",
+      "id": "domain_card.book-of-vyola",
+      "name": "Book of Vyola",
       "domain_id": "domain.codex",
       "level": 8,
       "type": "grimoire",
@@ -808,8 +808,8 @@
       "feature_text": "With a few minutes of calm, spend 2 Hope to summon a safe interdimensional home. A magical door appears within close range; only chosen creatures can enter, and you can hide the entrance. Resting inside grants an additional downtime move; the doorway must be resummoned after you leave."
     },
     {
-      "id": "domain_card.codex-book-of-ronin",
-      "name": "Codex of Transformation",
+      "id": "domain_card.book-of-ronin",
+      "name": "Book of Ronin",
       "domain_id": "domain.codex",
       "level": 9,
       "type": "grimoire",
@@ -828,8 +828,8 @@
       "feature_text": "Make a Spellcast Roll (18). On success, the GM tells you which adversaries within far range have Difficulty 18 or lower. Mark a Stress for each you choose; they are killed and cannot be brought back."
     },
     {
-      "id": "domain_card.codex-book-of-yarrow",
-      "name": "Codex of Timebreak",
+      "id": "domain_card.book-of-yarrow",
+      "name": "Book of Yarrow",
       "domain_id": "domain.codex",
       "level": 10,
       "type": "grimoire",
@@ -1070,8 +1070,8 @@
       "feature_text": "Gain advantage on action rolls to pick nonmagical locks, disarm nonmagical traps, or steal items from a target."
     },
     {
-      "id": "domain_card.midnight-rain-of-blades",
-      "name": "Blade Storm",
+      "id": "domain_card.rain-of-blades",
+      "name": "Rain of Blades",
       "domain_id": "domain.midnight",
       "level": 1,
       "type": "spell",
@@ -1281,8 +1281,8 @@
       "feature_text": "When tracking a creature or group by their signs, spend any number of Hope to ask that many questions about their direction, timing, actions, or count. When you meet tracked creatures, gain +1 Evasion against them."
     },
     {
-      "id": "domain_card.sage-natures-tongue",
-      "name": "Wild Speech",
+      "id": "domain_card.nature-s-tongue",
+      "name": "Nature's Tongue",
       "domain_id": "domain.sage",
       "level": 1,
       "type": "ability",
@@ -1563,7 +1563,7 @@
     },
     {
       "id": "domain_card.splendor-lifeward",
-      "name": "Lifeward",
+      "name": "Life Ward",
       "domain_id": "domain.splendor",
       "level": 4,
       "type": "spell",
@@ -1764,7 +1764,7 @@
     },
     {
       "id": "domain_card.valor-goad-them-on",
-      "name": "Goad Them On",
+      "name": "Goad Them on",
       "domain_id": "domain.valor",
       "level": 4,
       "type": "ability",

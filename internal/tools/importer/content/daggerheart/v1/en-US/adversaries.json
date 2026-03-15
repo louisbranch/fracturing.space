@@ -3221,8 +3221,8 @@
       ]
     },
     {
-      "id": "adversary.cultadept",
-      "name": "Cultadept",
+      "id": "adversary.cult-adept",
+      "name": "Cult Adept",
       "tier": 2,
       "role": "support",
       "description": "An experienced mage wielding shadow and fear.",
@@ -3885,8 +3885,8 @@
       ]
     },
     {
-      "id": "adversary.juvenile-glimmermoth",
-      "name": "Juvenile Glimmermoth",
+      "id": "adversary.juvenile-flickerfly",
+      "name": "Juvenile Flickerfly",
       "tier": 2,
       "role": "solo",
       "description": "A horse-sized insect with iridescent scales and crystalline wings moving faster than the eye can see.",
@@ -3913,34 +3913,34 @@
       "experiences": [],
       "features": [
         {
-          "id": "adversary-feature.juvenile-glimmermoth-relentless-3",
+          "id": "adversary-feature.juvenile-flickerfly-relentless-3",
           "name": "Relentless (3)",
           "kind": "passive",
-          "description": "The Glimmermoth can be spotlighted up to three times per GM turn. Spend Fear as usual to spotlight them.",
+          "description": "The Flickerfly can be spotlighted up to three times per GM turn. Spend Fear as usual to spotlight them.",
           "cost_type": "fear",
           "cost": 1
         },
         {
-          "id": "adversary-feature.juvenile-glimmermoth-peerless-accuracy",
+          "id": "adversary-feature.juvenile-flickerfly-peerless-accuracy",
           "name": "Peerless Accuracy",
           "kind": "passive",
-          "description": "Before the Glimmermoth makes an attack, roll a d6. On a result of 4 or higher, the target's Evasion is halved against this attack.",
+          "description": "Before the Flickerfly makes an attack, roll a d6. On a result of 4 or higher, the target's Evasion is halved against this attack.",
           "cost_type": "",
           "cost": 0
         },
         {
-          "id": "adversary-feature.juvenile-glimmermoth-mind-dance",
+          "id": "adversary-feature.juvenile-flickerfly-mind-dance",
           "name": "Mind Dance",
           "kind": "action",
-          "description": "Mark a Stress to create a magically dazzling display that grapples the minds of nearby foes. All targets within Close range must make an Instinct Reaction Roll. For each target who failed, you gain a Fear and the Glimmermoth learns one of the target's fears.",
+          "description": "Mark a Stress to create a magically dazzling display that grapples the minds of nearby foes. All targets within Close range must make an Instinct Reaction Roll. For each target who failed, you gain a Fear and the Flickerfly learns one of the target's fears.",
           "cost_type": "",
           "cost": 0
         },
         {
-          "id": "adversary-feature.juvenile-glimmermoth-hallucinatory-breath",
+          "id": "adversary-feature.juvenile-flickerfly-hallucinatory-breath",
           "name": "Hallucinatory Breath",
           "kind": "reaction",
-          "description": "Countdown (Loop 1d6). When the Glimmermoth takes damage for the first time, activate the countdown. When it triggers, the Glimmermoth breathes hallucinatory gas on all targets in front of them up to Far range. Targets must succeed on an Instinct Reaction Roll or be tormented by fearful hallucinations. Targets whose fears are known to the Glimmermoth have disadvantage on this roll. Targets who fail must mark a Stress and lose a Hope.",
+          "description": "Countdown (Loop 1d6). When the Flickerfly takes damage for the first time, activate the countdown. When it triggers, the Flickerfly breathes hallucinatory gas on all targets in front of them up to Far range. Targets must succeed on an Instinct Reaction Roll or be tormented by fearful hallucinations. Targets whose fears are known to the Flickerfly have disadvantage on this roll. Targets who fail must mark a Stress and lose a Hope.",
           "cost_type": "",
           "cost": 0
         }
@@ -4254,8 +4254,8 @@
       ]
     },
     {
-      "id": "adversary.royaladvisor",
-      "name": "Royaladvisor",
+      "id": "adversary.royal-advisor",
+      "name": "Royal Advisor",
       "tier": 2,
       "role": "social",
       "description": "A high-ranking courtier with the ear of the local nobility.",
@@ -4318,7 +4318,7 @@
     },
     {
       "id": "adversary.secret-keeper",
-      "name": "SECRET-KEEPER",
+      "name": "Secret-Keeper",
       "tier": 2,
       "role": "leader",
       "description": "A clandestine leader with a direct channel to the Fallen Gods.",
@@ -4490,8 +4490,8 @@
       ]
     },
     {
-      "id": "adversary.spectralarcher",
-      "name": "Spectralarcher",
+      "id": "adversary.spectral-archer",
+      "name": "Spectral Archer",
       "tier": 2,
       "role": "ranged",
       "description": "A ghostly fighter with an ethereal bow, unable to move on while their charge is vulnerable.",
@@ -4523,7 +4523,7 @@
       ],
       "features": [
         {
-          "id": "adversary-feature.spectralarcher-ghost",
+          "id": "adversary-feature.spectral-archer-ghost",
           "name": "Ghost",
           "kind": "passive",
           "description": "The Archer has resistance to physical damage. Mark a Stress to move up to Close range through solid objects.",
@@ -4531,7 +4531,7 @@
           "cost": 0
         },
         {
-          "id": "adversary-feature.spectralarcher-pick-your-target",
+          "id": "adversary-feature.spectral-archer-pick-your-target",
           "name": "Pick Your Target",
           "kind": "action",
           "description": "Spend a Fear to make an attack within Far range against a PC who is within Very Close range of at least two other PCs. On a success, the target takes 2d8+12 physical damage.",
@@ -4856,8 +4856,8 @@
       ]
     },
     {
-      "id": "adversary.adult-glimmermoth",
-      "name": "Adult Glimmermoth",
+      "id": "adversary.adult-flickerfly",
+      "name": "Adult Flickerfly",
       "tier": 3,
       "role": "solo",
       "description": "A winged insect the size of a large house with iridescent scales and wings that move too fast to track.",
@@ -4884,58 +4884,58 @@
       "experiences": [],
       "features": [
         {
-          "id": "adversary-feature.adult-glimmermoth-relentless-4",
+          "id": "adversary-feature.adult-flickerfly-relentless-4",
           "name": "Relentless (4)",
           "kind": "passive",
-          "description": "The Glimmermoth can be spotlighted up to four times per GM turn. Spend Fear as usual to spotlight them.",
+          "description": "The Flickerfly can be spotlighted up to four times per GM turn. Spend Fear as usual to spotlight them.",
           "cost_type": "fear",
           "cost": 1
         },
         {
-          "id": "adversary-feature.adult-glimmermoth-never-misses",
+          "id": "adversary-feature.adult-flickerfly-never-misses",
           "name": "Never Misses",
           "kind": "passive",
-          "description": "When the Glimmermoth makes an attack, the target's Evasion is halved against the attack.",
+          "description": "When the Flickerfly makes an attack, the target's Evasion is halved against the attack.",
           "cost_type": "",
           "cost": 0
         },
         {
-          "id": "adversary-feature.adult-glimmermoth-deadly-flight",
+          "id": "adversary-feature.adult-flickerfly-deadly-flight",
           "name": "Deadly Flight",
           "kind": "passive",
-          "description": "While flying, the Glimmermoth can move up to Far range instead of Close range before taking an action.",
+          "description": "While flying, the Flickerfly can move up to Far range instead of Close range before taking an action.",
           "cost_type": "",
           "cost": 0
         },
         {
-          "id": "adversary-feature.adult-glimmermoth-whirlwind",
+          "id": "adversary-feature.adult-flickerfly-whirlwind",
           "name": "Whirlwind",
           "kind": "action",
-          "description": "Spend a Fear to whirl, making an attack against all targets within Very Close range. Targets the Glimmermoth succeeds against take 3d8 direct physical damage.",
+          "description": "Spend a Fear to whirl, making an attack against all targets within Very Close range. Targets the Flickerfly succeeds against take 3d8 direct physical damage.",
           "cost_type": "",
           "cost": 0
         },
         {
-          "id": "adversary-feature.adult-glimmermoth-mind-dance",
+          "id": "adversary-feature.adult-flickerfly-mind-dance",
           "name": "Mind Dance",
           "kind": "action",
-          "description": "Mark a Stress to create a magically dazzling display that grapples the minds of nearby foes. All targets within Close range must make an Instinct Reaction Roll. For each target who failed, you gain a Fear and the Glimmermoth learns one of the target's fears.",
+          "description": "Mark a Stress to create a magically dazzling display that grapples the minds of nearby foes. All targets within Close range must make an Instinct Reaction Roll. For each target who failed, you gain a Fear and the Flickerfly learns one of the target's fears.",
           "cost_type": "",
           "cost": 0
         },
         {
-          "id": "adversary-feature.adult-glimmermoth-hallucinatory-breath",
+          "id": "adversary-feature.adult-flickerfly-hallucinatory-breath",
           "name": "Hallucinatory Breath",
           "kind": "reaction",
-          "description": "Countdown (Loop 1d6). When the Glimmermoth takes damage for the first time, activate the countdown. When it triggers, the Glimmermoth breathes hallucinatory gas on all targets in front of them up to Far range. Targets must make an Instinct Reaction Roll or be tormented by fearful hallucinations. Targets whose fears are known to the Glimmermoth have disadvantage on this roll. Targets who fail lose 2 Hope and take 3d8+3 direct magic damage.",
+          "description": "Countdown (Loop 1d6). When the Flickerfly takes damage for the first time, activate the countdown. When it triggers, the Flickerfly breathes hallucinatory gas on all targets in front of them up to Far range. Targets must make an Instinct Reaction Roll or be tormented by fearful hallucinations. Targets whose fears are known to the Flickerfly have disadvantage on this roll. Targets who fail lose 2 Hope and take 3d8+3 direct magic damage.",
           "cost_type": "",
           "cost": 0
         },
         {
-          "id": "adversary-feature.adult-glimmermoth-uncanny-reflexes",
+          "id": "adversary-feature.adult-flickerfly-uncanny-reflexes",
           "name": "Uncanny Reflexes",
           "kind": "reaction",
-          "description": "When the Glimmermoth takes damage from an attack within Close range, you can mark a Stress to take half damage.",
+          "description": "When the Flickerfly takes damage from an attack within Close range, you can mark a Stress to take half damage.",
           "cost_type": "",
           "cost": 0
         }
@@ -6299,7 +6299,7 @@
     },
     {
       "id": "adversary.arch-necromancer",
-      "name": "ARCH-NECROMANCER",
+      "name": "Arch-Necromancer",
       "tier": 4,
       "role": "leader",
       "description": "A decaying mage adorned in dark, tattered robes.",
@@ -6493,11 +6493,11 @@
       ]
     },
     {
-      "id": "adversary.fallen-warlord",
-      "name": "Fallen WARLORD:",
-      "tier": 1,
+      "id": "adversary.fallen-warlord-realm-breaker",
+      "name": "Fallen Warlord: Realm-Breaker",
+      "tier": 4,
       "role": "realm-breaker",
-      "description": "Tier4 Solo A Fallen God, wreathed in rage and resentment, bearing millennia of experience in breaking heroes' spirits.",
+      "description": "A Fallen God, wreathed in rage and resentment, bearing millennia of experience in breaking heroes' spirits.",
       "motives": "Corrupt, dominate, punish, break the weak",
       "difficulty": 20,
       "major_threshold": 36,
@@ -6566,10 +6566,109 @@
           "cost": 0
         },
         {
-          "id": "adversary-feature.fallen-warlord-i-have-never-known-defeat-phase-change",
-          "name": "I Have Never Known Defeat (Phase Change)",
+          "id": "adversary-feature.fallen-warlord-doombringer",
+          "name": "Doombringer",
           "kind": "reaction",
-          "description": "When the Realm-Breaker marks their last HP, replace them with the Undefeated Champion and immediately spotlight them.",
+          "description": "When a target marks HP from an attack by the Realm-Breaker, all PCs within Far range of the target must lose a Hope.",
+          "cost_type": "",
+          "cost": 0
+        }
+      ]
+    },
+    {
+      "id": "adversary.fallen-warlord-undefeated-champion",
+      "name": "Fallen Warlord: Undefeated Champion",
+      "tier": 4,
+      "role": "realm-breaker",
+      "description": "That which only the most feared have a chance to fear.",
+      "motives": "Dispatch merciless death, punish the defiant, secure victory at any cost",
+      "difficulty": 18,
+      "major_threshold": 35,
+      "severe_threshold": 58,
+      "hp": 11,
+      "stress": 5,
+      "armor": 0,
+      "attack_modifier": 8,
+      "standard_attack": {
+        "name": "Heart-Shattering Sword",
+        "range": "very_close",
+        "damage_dice": [
+          {
+            "count": 4,
+            "sides": 12
+          }
+        ],
+        "damage_bonus": 13,
+        "damage_type": "physical"
+      },
+      "experiences": [
+        {
+          "name": "Conquest",
+          "modifier": 3
+        },
+        {
+          "name": "History",
+          "modifier": 2
+        },
+        {
+          "name": "Intimidation",
+          "modifier": 3
+        }
+      ],
+      "features": [
+        {
+          "id": "adversary-feature.fallen-warlord-undefeated-champion-relentless-3",
+          "name": "Relentless (3)",
+          "kind": "passive",
+          "description": "The Undefeated Champion can be spotlighted up to three times per GM turn. Spend Fear as usual to spotlight them.",
+          "cost_type": "fear",
+          "cost": 1
+        },
+        {
+          "id": "adversary-feature.fallen-warlord-undefeated-champion-faltering-armor",
+          "name": "Faltering Armor",
+          "kind": "passive",
+          "description": "When the Undefeated Champion takes damage, reduce it by 1d10.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.fallen-warlord-undefeated-champion-shattering-strike",
+          "name": "Shattering Strike",
+          "kind": "action",
+          "description": "Mark a Stress to make a standard attack against all targets within Very Close range. PCs the Champion succeeds against lose a number of Hope equal to the HP they marked from this attack.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.fallen-warlord-undefeated-champion-endless-legions",
+          "name": "Endless Legions",
+          "kind": "action",
+          "description": "Spend a Fear to summon a number of Fallen Shock Troops equal to twice the number of PCs. The Shock Troops appear at Far range.",
+          "cost_type": "fear",
+          "cost": 1
+        },
+        {
+          "id": "adversary-feature.fallen-warlord-undefeated-champion-circle-of-defilement",
+          "name": "Circle of Defilement",
+          "kind": "reaction",
+          "description": "When the Undefeated Champion is in the spotlight for the first time, activate the countdown. When it triggers, activate a magical circle covering an area within Far range of the Champion. A target within that area is Vulnerable until they leave the circle. The circle can be removed by dealing Severe damage to the Undefeated Champion.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.fallen-warlord-undefeated-champion-momentum",
+          "name": "Momentum",
+          "kind": "reaction",
+          "description": "When the Undefeated Champion makes a successful attack against a PC, you gain a Fear.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.fallen-warlord-undefeated-champion-doombringer",
+          "name": "Doombringer",
+          "kind": "reaction",
+          "description": "When a target marks HP from an attack by the Undefeated Champion, all PCs within Far range of the target lose a Hope.",
           "cost_type": "",
           "cost": 0
         }
@@ -6966,8 +7065,8 @@
       ]
     },
     {
-      "id": "adversary.outer-realms-corrupter",
-      "name": "Outer Realms Corrupter",
+      "id": "adversary.outer-realms-corruptor",
+      "name": "Outer Realms Corruptor",
       "tier": 4,
       "role": "support",
       "description": "A shifting, formless mass seemingly made of chromatic light.",
@@ -6994,7 +7093,7 @@
       "experiences": [],
       "features": [
         {
-          "id": "adversary-feature.outer-realms-corrupter-will-shattering-touch",
+          "id": "adversary-feature.outer-realms-corruptor-will-shattering-touch",
           "name": "Will-Shattering Touch",
           "kind": "passive",
           "description": "When a PC takes damage from the Corrupter, they lose a Hope.",
@@ -7002,7 +7101,7 @@
           "cost": 0
         },
         {
-          "id": "adversary-feature.outer-realms-corrupter-disgorge-reality-flotsam",
+          "id": "adversary-feature.outer-realms-corruptor-disgorge-reality-flotsam",
           "name": "Disgorge Reality Flotsam",
           "kind": "action",
           "description": "Mark a Stress to spew partially digested portions of consumed realities at all targets within Close range. Targets must succeed on a Knowledge Reaction Roll or mark 2 Stress.",
@@ -7053,11 +7152,11 @@
       ]
     },
     {
-      "id": "adversary.volcanic-dragon",
-      "name": "Volcanic DRAGON:",
-      "tier": 1,
+      "id": "adversary.volcanic-dragon-obsidian-predator",
+      "name": "Volcanic Dragon: Obsidian Predator",
+      "tier": 4,
       "role": "obsidian",
-      "description": "Tier4 Solo A massive winged creature with obsidian scales and impossibly sharp claws.",
+      "description": "A massive winged creature with obsidian scales and impossibly sharp claws.",
       "motives": "Defend lair, dive-bomb, fly, hunt, intimidate",
       "difficulty": 19,
       "major_threshold": 33,
@@ -7126,12 +7225,194 @@
           "cost": 0
         },
         {
-          "id": "adversary-feature.volcanic-dragon-erupting-rage-phase-change",
-          "name": "Erupting Rage (Phase Change)",
+          "id": "adversary-feature.volcanic-dragon-erupting-rage",
+          "name": "Erupting Rage",
           "kind": "reaction",
           "description": "When the Obsidian Predator marks their last HP, replace them with the Molten Scourge and immediately spotlight them.",
           "cost_type": "",
           "cost": 0
+        }
+      ]
+    },
+    {
+      "id": "adversary.volcanic-dragon-molten-scourge",
+      "name": "Volcanic Dragon: Molten Scourge",
+      "tier": 4,
+      "role": "obsidian",
+      "description": "Enraged by their wounds, the dragon bursts into molten lava.",
+      "motives": "Douse with lava, incinerate, repel Invaders, reposition",
+      "difficulty": 20,
+      "major_threshold": 30,
+      "severe_threshold": 58,
+      "hp": 7,
+      "stress": 5,
+      "armor": 0,
+      "attack_modifier": 9,
+      "standard_attack": {
+        "name": "Lava-Coated Claws",
+        "range": "close",
+        "damage_dice": [
+          {
+            "count": 4,
+            "sides": 12
+          }
+        ],
+        "damage_bonus": 4,
+        "damage_type": "physical"
+      },
+      "experiences": [
+        {
+          "name": "Hunt from Above",
+          "modifier": 5
+        }
+      ],
+      "features": [
+        {
+          "id": "adversary-feature.volcanic-dragon-molten-scourge-relentless-3",
+          "name": "Relentless (3)",
+          "kind": "passive",
+          "description": "The Molten Scourge can be spotlighted up to three times per GM turn. Spend Fear as usual to spotlight them.",
+          "cost_type": "fear",
+          "cost": 1
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-molten-scourge-cracked-scales",
+          "name": "Cracked Scales",
+          "kind": "passive",
+          "description": "When the Molten Scourge takes damage, roll a number of d6s equal to HP marked. For each result of 4 or higher, you gain a Fear.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-molten-scourge-shattering-might",
+          "name": "Shattering Might",
+          "kind": "action",
+          "description": "Mark a Stress to make an attack against a target within Very Close range. On a success, the target takes 4d8+1 physical damage, loses a Hope, and is knocked back to Close range. The Molten Scourge clears a Stress.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-molten-scourge-eruption",
+          "name": "Eruption",
+          "kind": "action",
+          "description": "Spend a Fear to erupt lava from beneath the Molten Scourge's scales, filling the area within Very Close range with molten lava. All targets in that area must succeed on an Agility Reaction Roll or take 4d6+6 physical damage and be knocked back to Close range. This area remains lava. When a creature other than the Molten Scourge enters that area or acts while inside of it, they must mark 6 HP.",
+          "cost_type": "fear",
+          "cost": 1
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-molten-scourge-volcanic-breath",
+          "name": "Volcanic Breath",
+          "kind": "reaction",
+          "description": "When the Molten Scourge takes Major damage, roll a d10. On a result of 8 or higher, the Molten Scourge breathes a flow of lava in front of them within Far range. All targets in that area must make an Agility Reaction Roll. Targets who fail take 2d10+4 physical damage, mark 1d4 Stress, and are Vulnerable until they clear a Stress. Targets who succeed take half damage and must mark a Stress.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-molten-scourge-lava-splash",
+          "name": "Lava Splash",
+          "kind": "reaction",
+          "description": "When the Molten Scourge takes Severe damage from an attack within Very Close range, molten blood gushes from the wound and deals 2d10+4 direct physical damage to the attacker.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-molten-scourge-ashen-vengeance",
+          "name": "Ashen Vengeance",
+          "kind": "reaction",
+          "description": "When the Molten Scourge marks their last HP, replace them with the Ashen Tyrant and immediately spotlight them.",
+          "cost_type": "",
+          "cost": 0
+        }
+      ]
+    },
+    {
+      "id": "adversary.volcanic-dragon-ashen-tyrant",
+      "name": "Volcanic Dragon: Ashen Tyrant",
+      "tier": 4,
+      "role": "obsidian",
+      "description": "No enemy has ever had the insolence to wound the dragon so. As the lava settles, it's ground to ash like the dragon's past foes.",
+      "motives": "Choke, fly, intimidate, kill or be killed",
+      "difficulty": 18,
+      "major_threshold": 29,
+      "severe_threshold": 55,
+      "hp": 8,
+      "stress": 5,
+      "armor": 0,
+      "attack_modifier": 10,
+      "standard_attack": {
+        "name": "Claws and Teeth",
+        "range": "close",
+        "damage_dice": [
+          {
+            "count": 4,
+            "sides": 12
+          }
+        ],
+        "damage_bonus": 15,
+        "damage_type": "physical"
+      },
+      "experiences": [
+        {
+          "name": "Hunt from Above",
+          "modifier": 5
+        }
+      ],
+      "features": [
+        {
+          "id": "adversary-feature.volcanic-dragon-ashen-tyrant-relentless-4",
+          "name": "Relentless (4)",
+          "kind": "passive",
+          "description": "The Ashen Tyrant can be spotlighted up to four times per GM turn. Spend Fear as usual to spotlight them.",
+          "cost_type": "fear",
+          "cost": 1
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-ashen-tyrant-cornered",
+          "name": "Cornered",
+          "kind": "passive",
+          "description": "Mark a Stress instead of spending a Fear to spotlight the Ashen Tyrant.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-ashen-tyrant-injured-wings",
+          "name": "Injured Wings",
+          "kind": "passive",
+          "description": "While flying, the Ashen Tyrant gains a +1 bonus to their Difficulty.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-ashen-tyrant-ashes-to-ashes",
+          "name": "Ashes to Ashes",
+          "kind": "passive",
+          "description": "When a PC rolls a failure while within Close range of the Ashen Tyrant, they lose a Hope and you gain a Fear. If the PC can't lose a Hope, they must mark a HP.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-ashen-tyrant-desperate-rampage",
+          "name": "Desperate Rampage",
+          "kind": "action",
+          "description": "Mark a Stress to make an attack against all targets within Close range. Targets the Ashen Tyrant succeeds against take 2d20+2 physical damage, are knocked back to Close range of where they were, and must mark a Stress.",
+          "cost_type": "",
+          "cost": 0
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-ashen-tyrant-ashen-cloud",
+          "name": "Ashen Cloud",
+          "kind": "action",
+          "description": "Spend a Fear to smash the ground and kick up ash within Far range. While within the ash cloud, a target has disadvantage on action rolls. The ash cloud clears the next time an adversary is spotlighted.",
+          "cost_type": "fear",
+          "cost": 1
+        },
+        {
+          "id": "adversary-feature.volcanic-dragon-ashen-tyrant-apocalyptic-thrashing",
+          "name": "Apocalyptic Thrashing",
+          "kind": "action",
+          "description": "Spend a Fear to activate. It ticks down when a PC rolls with Fear. When it triggers, the Ashen Tyrant thrashes about, causing environmental damage (such as an earthquake, avalanche, or collapsing walls). All targets within Far range must make a Strength Reaction Roll. Targets who fail take 2d10+10 physical damage and are Restrained by the rubble until they break free with a successful Strength Roll. Targets who succeed take half damage. If the Ashen Tyrant is defeated while this countdown is active, trigger the countdown immediately as the destruction caused by their death throes.",
+          "cost_type": "fear",
+          "cost": 1
         }
       ]
     },

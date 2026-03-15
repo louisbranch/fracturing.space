@@ -1,1178 +1,1088 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
-      "id": "item.basic-supplies",
-      "name": "Suprimentos Básicos",
+      "description": "You can drink this blood to disappear from where you are and immediately reappear at a\npoint you can see within Very Far range.",
+      "effect_text": "You can drink this blood to disappear from where you are and immediately reappear at a\npoint you can see within Very Far range.",
+      "id": "consumable.blood-of-the-yorgi",
+      "kind": "consumable",
+      "name": "Blood of the Yorgi",
       "rarity": "common",
-      "kind": "equipment",
-      "stack_max": 1,
-      "description": "Um pequeno kit de itens essenciais de viagem.",
-      "effect_text": "Útil para tarefas comuns durante a viagem."
+      "stack_max": 5
     },
     {
-      "id": "item.trail-rations",
-      "name": "Rações de Trilha",
+      "description": "You can drink this tea to unleash a fiery breath attack. Make an Instinct Roll against\nall adversaries in front of you within Close range. Targets you succeed against take\n2d20 physical damage using your Proficiency.",
+      "effect_text": "You can drink this tea to unleash a fiery breath attack. Make an Instinct Roll against\nall adversaries in front of you within Close range. Targets you succeed against take\n2d20 physical damage using your Proficiency.",
+      "id": "consumable.dragonbloom-tea",
+      "kind": "consumable",
+      "name": "Dragonbloom Tea",
       "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 3,
-      "description": "Provisões secas para um dia de viagem.",
-      "effect_text": "Ao descansar, remova 1 estresse."
+      "stack_max": 5
     },
     {
-      "id": "item.climbing-kit",
-      "name": "Kit de Escalada",
+      "description": "A creature who consumes this poison takes 8d10 direct magic damage.",
+      "effect_text": "A creature who consumes this poison takes 8d10 direct magic damage.",
+      "id": "consumable.dripfang-poison",
+      "kind": "consumable",
+      "name": "Dripfang Poison",
       "rarity": "common",
-      "kind": "equipment",
-      "stack_max": 1,
-      "description": "Cordas, pitões e arnês para subidas difíceis.",
-      "effect_text": "Ganhe +1 em rolagens para escalar obstáculos."
+      "stack_max": 5
     },
     {
-      "id": "item.lockpicks",
-      "name": "Gazuas",
+      "description": "You can eat this meal to clear all HP and Stress and gain 1d4 Hope.",
+      "effect_text": "You can eat this meal to clear all HP and Stress and gain 1d4 Hope.",
+      "id": "consumable.feast-of-xuria",
+      "kind": "consumable",
+      "name": "Feast of Xuria",
       "rarity": "common",
-      "kind": "equipment",
-      "stack_max": 1,
-      "description": "Ferramentas finas para abrir fechaduras difíceis.",
-      "effect_text": "Ganhe +1 em rolagens para abrir fechaduras silenciosamente."
+      "stack_max": 5
     },
     {
-      "id": "item.arcane-focus",
-      "name": "Foco Arcano",
-      "rarity": "uncommon",
-      "kind": "equipment",
-      "stack_max": 1,
-      "description": "Um amuleto ou cristal que estabiliza feitiços.",
-      "effect_text": "Uma vez por descanso, reduza um custo de recordação em 1."
-    },
-    {
-      "id": "item.instrument-kit",
-      "name": "Kit de Instrumentos",
+      "description": "You can apply this venom to a weapon that deals physical damage to add a d6 to your next damage roll with that weapon.",
+      "effect_text": "You can apply this venom to a weapon that deals physical damage to add a d6 to your next damage roll with that weapon.",
+      "id": "consumable.grindletooth-venom",
+      "kind": "consumable",
+      "name": "Grindletooth Venom",
       "rarity": "common",
-      "kind": "equipment",
-      "stack_max": 1,
-      "description": "Instrumentos compactos para apresentações em viagem.",
-      "effect_text": "Uma vez por descanso, um aliado ganha 1 esperança após sua apresentação."
+      "stack_max": 5
     },
     {
-      "id": "item.herbal-tonic",
-      "name": "Tônico de Ervas",
+      "description": "After drinking this potion, the next successful attack you make critically succeeds.",
+      "effect_text": "After drinking this potion, the next successful attack you make critically succeeds.",
+      "id": "consumable.homet-s-secret-potion",
+      "kind": "consumable",
+      "name": "Homet's Secret Potion",
       "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "When you use this flare, allies within Close range roll a d6 when they spend a Hope. On\na result of 6, they gain the effect of that Hope without spending it. The flare lasts\nuntil the end of the scene.",
+      "effect_text": "When you use this flare, allies within Close range roll a d6 when they spend a Hope. On\na result of 6, they gain the effect of that Hope without spending it. The flare lasts\nuntil the end of the scene.",
+      "id": "consumable.hopehold-flare",
       "kind": "consumable",
-      "stack_max": 2,
-      "description": "Um tônico preparado de gosto amargo.",
-      "effect_text": "Cure 1 PV ou remova 1 estresse."
-    },
-    {
-      "id": "item.sun-charm",
-      "name": "Talismã do Sol",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Um token aquecido gravado com símbolo radiante.",
-      "effect_text": "Emite luz; uma vez por descanso, reduza o medo em 1."
-    },
-    {
-      "id": "item.weapon-kit",
-      "name": "Kit de Manutenção de Armas",
+      "name": "Hopehold Flare",
       "rarity": "common",
-      "kind": "equipment",
-      "stack_max": 1,
-      "description": "Óleo, pedra de afiar e fitas de reposição.",
-      "effect_text": "Uma vez por descanso, adicione +1 de dano a um único acerto de arma."
+      "stack_max": 5
     },
     {
-      "id": "item.field-notes",
-      "name": "Notas de Campo",
+      "description": "You can apply this venom to a weapon that deals physical damage to add a d8 to your next damage roll with that weapon.",
+      "effect_text": "You can apply this venom to a weapon that deals physical damage to add a d8 to your next damage roll with that weapon.",
+      "id": "consumable.improved-grindletooth-venom",
+      "kind": "consumable",
+      "name": "Improved Grindletooth Venom",
       "rarity": "common",
-      "kind": "equipment",
-      "stack_max": 1,
-      "description": "Um caderno de viagem com diagramas e feitiços.",
-      "effect_text": "Ganhe +1 em rolagens de memória ou pesquisa em campo."
+      "stack_max": 5
     },
     {
-      "id": "item.premium-bedroll",
-      "name": "Colchonete Premium",
+      "description": "You can open this jar to release a deafening echo of voices for a number of minutes\nequal to your Instinct. Creatures within Far range unprepared for the sound take 6d8\nmagic damage.",
+      "effect_text": "You can open this jar to release a deafening echo of voices for a number of minutes\nequal to your Instinct. Creatures within Far range unprepared for the sound take 6d8\nmagic damage.",
+      "id": "consumable.jar-of-lost-voices",
+      "kind": "consumable",
+      "name": "Jar of Lost Voices",
       "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Durante a folga, você remove automaticamente 1 Estresse.",
-      "effect_text": "Durante a folga, você remove automaticamente 1 Estresse."
+      "stack_max": 5
     },
     {
-      "id": "item.piper-whistle",
-      "name": "Apito do Flautista",
+      "description": "When you take damage, you can spend a Hope to negate that damage, after which the mirror shatters.",
+      "effect_text": "When you take damage, you can spend a Hope to negate that damage, after which the mirror shatters.",
+      "id": "consumable.mirror-of-marigold",
+      "kind": "consumable",
+      "name": "Mirror of Marigold",
       "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Este apito artesanal tem um som distinto. Quando você sopra este apito, seu tom estridente pode ser ouvido em um raio de 1 milha.",
-      "effect_text": "Este apito artesanal tem um som distinto. Quando você sopra este apito, seu tom estridente pode ser ouvido em um raio de 1 milha."
+      "stack_max": 5
     },
     {
-      "id": "item.charging-quiver",
-      "name": "Aljava de Investida",
+      "description": "You can apply this saliva to a weapon that deals physical damage to add a d12 to your next damage roll with that weapon.",
+      "effect_text": "You can apply this saliva to a weapon that deals physical damage to add a d12 to your next damage roll with that weapon.",
+      "id": "consumable.redthorn-saliva",
+      "kind": "consumable",
+      "name": "Redthorn Saliva",
       "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Quando você tem sucesso em um ataque com uma flecha guardada nesta aljava, ganhe um bônus na rolagem de dano igual ao seu patamar atual.",
-      "effect_text": "Quando você tem sucesso em um ataque com uma flecha guardada nesta aljava, ganhe um bônus na rolagem de dano igual ao seu patamar atual."
+      "stack_max": 5
     },
     {
-      "id": "item.daybright-torch",
-      "name": "Tocha de Luz Diurna",
+      "description": "Consume this sap to roll a d6. On a result of 5-6, clear 2 HP. On a result of 2-4, clear\n3 Stress. On a result of 1, see through the veil of death and return changed, gaining\none scar.",
+      "effect_text": "Consume this sap to roll a d6. On a result of 5-6, clear 2 HP. On a result of 2-4, clear\n3 Stress. On a result of 1, see through the veil of death and return changed, gaining\none scar.",
+      "id": "consumable.sun-tree-sap",
+      "kind": "consumable",
+      "name": "Sun Tree Sap",
       "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode acender esta tocha mágica quando quiser.",
-      "effect_text": "Você pode acender esta tocha mágica quando quiser. A luz da chama preenche um espaço muito maior do que deveria, suficiente para iluminar uma caverna clara como o dia."
+      "stack_max": 5
     },
     {
-      "id": "item.speaking-orbs",
-      "name": "Orbes Falantes",
+      "description": "You can eat these paired leaves to immediately gain 2 Hope.",
+      "effect_text": "You can eat these paired leaves to immediately gain 2 Hope.",
+      "id": "consumable.varik-leaves",
+      "kind": "consumable",
+      "name": "Varik Leaves",
       "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Este par de orbes permite que quaisquer criaturas que os estejam segurando se comuniquem entre si a qualquer distância.",
-      "effect_text": "Este par de orbes permite que quaisquer criaturas que os estejam segurando se comuniquem entre si a qualquer distância."
+      "stack_max": 5
     },
     {
-      "id": "item.manacles",
-      "name": "Algemas",
+      "description": "When an adversary attacks you, use this vial and roll a number of d6s equal to your\nAgility. Add the highest result to your Evasion against the attack.",
+      "effect_text": "When an adversary attacks you, use this vial and roll a number of d6s equal to your\nAgility. Add the highest result to your Evasion against the attack.",
+      "id": "consumable.vial-of-darksmoke",
+      "kind": "consumable",
+      "name": "Vial of Darksmoke",
       "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Este par de algemas com trava vem com uma chave.",
-      "effect_text": "Este par de algemas com trava vem com uma chave."
+      "stack_max": 5
     },
     {
-      "id": "item.arcane-cloak",
-      "name": "Manto Arcano",
+      "description": "When you drink the contents of this vial, you can see in total darkness until your next rest.",
+      "effect_text": "When you drink the contents of this vial, you can see in total darkness until your next rest.",
+      "id": "consumable.vial-of-moondrip",
+      "kind": "consumable",
+      "name": "Vial of Moondrip",
       "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Uma criatura com o traço Spellcast usando este manto pode ajustar sua cor, textura e tamanho à vontade.",
-      "effect_text": "Uma criatura com o traço Spellcast usando este manto pode ajustar sua cor, textura e tamanho à vontade."
+      "stack_max": 5
     },
     {
-      "id": "item.woven-net",
-      "name": "Rede Tecida",
-      "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fazer uma rolagem de Finesse usando esta rede para prender uma criatura pequena.",
-      "effect_text": "Você pode fazer uma rolagem de Finesse usando esta rede para prender uma criatura pequena. Um alvo preso pode se soltar com uma rolagem de Ataque bem-sucedida (16)."
-    },
-    {
-      "id": "item.fire-jar",
-      "name": "Jarro de Fogo",
-      "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode despejar o estranho líquido deste jarro para produzir fogo instantaneamente.",
-      "effect_text": "Você pode despejar o estranho líquido deste jarro para produzir fogo instantaneamente. O conteúdo se regenera quando você faz um descanso longo."
-    },
-    {
-      "id": "item.suspended-rod",
-      "name": "Haste Suspensa",
-      "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Esta haste plana tem runas gravadas. Quando você ativa a haste, ela fica imediatamente suspensa no lugar.",
-      "effect_text": "Esta haste plana tem runas gravadas. Quando você ativa a haste, ela fica imediatamente suspensa no lugar. Até que a haste seja desativada, ela não pode se mover, não segue as regras da gravidade e permanece no lugar."
-    },
-    {
-      "id": "item.glamour-stone",
-      "name": "Pedra do Glamour",
-      "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Ative esta pedra do tamanho de um seixo para memorizar a aparência de alguém que você pode ver.",
-      "effect_text": "Ative esta pedra do tamanho de um seixo para memorizar a aparência de alguém que você pode ver. Gaste 1 Esperança para recriar magicamente essa aparência em você como uma ilusão."
-    },
-    {
-      "id": "item.empty-chest",
-      "name": "Baú Vazio",
-      "rarity": "common",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Este baú mágico parece vazio. Quando você diz uma palavra ou ação de gatilho específica e abre o baú, você pode ver os itens guardados dentro dele.",
-      "effect_text": "Este baú mágico parece vazio. Quando você diz uma palavra ou ação de gatilho específica e abre o baú, você pode ver os itens guardados dentro dele."
-    },
-    {
-      "id": "item.companion-case",
-      "name": "Estojo de Companheiro",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Este estojo pode acomodar um pequeno companheiro animal. Enquanto o companheiro estiver dentro, o animal e o estojo ficam imunes a todo dano e efeito nocivo.",
-      "effect_text": "Este estojo pode acomodar um pequeno companheiro animal. Enquanto o companheiro estiver dentro, o animal e o estojo ficam imunes a todo dano e efeito nocivo."
-    },
-    {
-      "id": "item.piercing-arrows",
-      "name": "Flechas Perfurantes",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Três vezes por descanso, quando você tem sucesso em um ataque com uma dessas flechas, você pode adicionar sua Proficiência à rolagem de dano.",
-      "effect_text": "Três vezes por descanso, quando você tem sucesso em um ataque com uma dessas flechas, você pode adicionar sua Proficiência à rolagem de dano."
-    },
-    {
-      "id": "item.valorstone",
-      "name": "Pedra do Valor",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta pedra em uma armadura que ainda não tenha uma característica.",
-      "effect_text": "Você pode fixar esta pedra em uma armadura que ainda não tenha uma característica. A armadura ganha a seguinte característica. Resiliente: Antes de marcar seu último espaço de Armadura, role 1d6. Com resultado 6, reduza a severidade em um nível sem marcar um espaço de Armadura."
-    },
-    {
-      "id": "item.skeleton-key",
-      "name": "Chave Mestra",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Quando você usa esta chave para abrir uma porta trancada, você ganha vantagem na rolagem de Finesse.",
-      "effect_text": "Quando você usa esta chave para abrir uma porta trancada, você ganha vantagem na rolagem de Finesse."
-    },
-    {
-      "id": "item.arcane-prism",
-      "name": "Prisma Arcano",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Posicione este prisma em um local de sua escolha e ative-o.",
-      "effect_text": "Posicione este prisma em um local de sua escolha e ative-o. Todos os aliados dentro do alcance próximo dele ganham +1 de bônus em suas rolagens de Spellcast. Enquanto estiver ativado, o prisma não pode ser movido. Depois que o prisma for desativado, ele não pode ser ativado novamente até seu próximo descanso longo."
-    },
-    {
-      "id": "item.minor-stamina-potion-recipe",
-      "name": "Receita de Poção Menor de Vigor",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Como um movimento de folga, você pode usar o osso de uma criatura para fabricar uma Poção Menor de Vigor.",
-      "effect_text": "Como um movimento de folga, você pode usar o osso de uma criatura para fabricar uma Poção Menor de Vigor."
-    },
-    {
-      "id": "item.minor-health-potion-recipe",
-      "name": "Receita de Poção Menor de Saúde",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Como um movimento de folga, você pode usar um frasco de sangue para fabricar uma Poção Menor de Saúde.",
-      "effect_text": "Como um movimento de folga, você pode usar um frasco de sangue para fabricar uma Poção Menor de Saúde."
-    },
-    {
-      "id": "item.homing-compasses",
-      "name": "Bússolas de Retorno",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Estas duas bússolas apontam uma para a outra, não importa quão distantes estejam.",
-      "effect_text": "Estas duas bússolas apontam uma para a outra, não importa quão distantes estejam."
-    },
-    {
-      "id": "item.corrector-sprite",
-      "name": "Duende Corretor",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Este pequeno duende se acomoda na curva do seu canal auditivo e sussurra conselhos úteis durante o combate.",
-      "effect_text": "Este pequeno duende se acomoda na curva do seu canal auditivo e sussurra conselhos úteis durante o combate. Uma vez por descanso curto, você pode ganhar vantagem em uma rolagem de ataque."
-    },
-    {
-      "id": "item.gecko-gloves",
-      "name": "Luvas de Lagartixa",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode escalar superfícies verticais e atravessar tetos.",
-      "effect_text": "Você pode escalar superfícies verticais e atravessar tetos."
-    },
-    {
-      "id": "item.lorekeeper",
-      "name": "Guardião do Conhecimento",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode guardar o nome e os detalhes de até três criaturas hostis dentro deste livro. Você ganha +1 de bônus em rolagens de ação contra essas criaturas.",
-      "effect_text": "Você pode guardar o nome e os detalhes de até três criaturas hostis dentro deste livro. Você ganha +1 de bônus em rolagens de ação contra essas criaturas."
-    },
-    {
-      "id": "item.smokeguard-vial-recipe",
-      "name": "Receita de Frasco de Guarda de Fumaça",
-      "rarity": "uncommon",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Como um movimento de folga, você pode marcar 1 Estresse para fabricar um Frasco de Guarda de Fumaça.",
-      "effect_text": "Como um movimento de folga, você pode marcar 1 Estresse para fabricar um Frasco de Guarda de Fumaça."
-    },
-    {
-      "id": "item.bloodstone",
-      "name": "Pedra de Sangue",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta pedra a uma arma que ainda não tenha uma característica.",
-      "effect_text": "Você pode fixar esta pedra a uma arma que ainda não tenha uma característica. A arma ganha a seguinte característica. Brutal: Quando você rola o valor máximo em um dado de dano, role um dado de dano adicional."
-    },
-    {
-      "id": "item.greatstone",
-      "name": "Pedra Grande",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta pedra a uma arma que ainda não tenha uma característica.",
-      "effect_text": "Você pode fixar esta pedra a uma arma que ainda não tenha uma característica. A arma ganha a seguinte característica. Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado."
-    },
-    {
-      "id": "item.glider",
-      "name": "Planador",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Enquanto estiver caindo, você pode marcar 1 Estresse para acionar este pequeno paraquedas e planar com segurança até o chão.",
-      "effect_text": "Enquanto estiver caindo, você pode marcar 1 Estresse para acionar este pequeno paraquedas e planar com segurança até o chão."
-    },
-    {
-      "id": "item.ring-of-silence",
-      "name": "Anel do Silêncio",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Gaste 1 Esperança para ativar este anel. Seus passos ficam silenciosos até seu próximo descanso.",
-      "effect_text": "Gaste 1 Esperança para ativar este anel. Seus passos ficam silenciosos até seu próximo descanso."
-    },
-    {
-      "id": "item.calming-pendant",
-      "name": "Pingente Calmante",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Quando você for marcar seu último Estresse, role 1d6.",
-      "effect_text": "Quando você for marcar seu último Estresse, role 1d6. Com resultado 5 ou mais, não o marque."
-    },
-    {
-      "id": "item.dual-flask",
-      "name": "Frasco Duplo",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Este frasco pode conter dois líquidos diferentes. Você pode alternar entre eles acionando um pequeno interruptor na lateral do frasco.",
-      "effect_text": "Este frasco pode conter dois líquidos diferentes. Você pode alternar entre eles acionando um pequeno interruptor na lateral do frasco."
-    },
-    {
-      "id": "item.shifting-sand-pouch",
-      "name": "Bolsa de Areia Mutável",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode convencer esta pequena bolsa de areia a ficar muito mais pesada ou mais leve com uma rolagem de Presença bem-sucedida (10).",
-      "effect_text": "Você pode convencer esta pequena bolsa de areia a ficar muito mais pesada ou mais leve com uma rolagem de Presença bem-sucedida (10). Além disso, com uma rolagem de Finesse bem-sucedida (10), você pode soprar um pouco de areia no rosto de um alvo para deixá-lo temporariamente Vulnerável."
-    },
-    {
-      "id": "item.ring-of-resistance",
-      "name": "Anel de Resistência",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Uma vez por descanso longo, você pode ativar este anel após um ataque bem-sucedido contra você para reduzir o dano pela metade.",
-      "effect_text": "Uma vez por descanso longo, você pode ativar este anel após um ataque bem-sucedido contra você para reduzir o dano pela metade."
-    },
-    {
-      "id": "item.phoenix-feather",
-      "name": "Pena de Fênix",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Se você tiver pelo menos uma Pena de Fênix com você quando cair inconsciente, você ganha +1 de bônus na rolagem que faz para determinar se ganha uma cicatriz.",
-      "effect_text": "Se você tiver pelo menos uma Pena de Fênix com você quando cair inconsciente, você ganha +1 de bônus na rolagem que faz para determinar se ganha uma cicatriz."
-    },
-    {
-      "id": "item.lucky-goods-box",
-      "name": "Caixa de Mercadorias Sortudas",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Uma vez por descanso longo, você pode abrir esta pequena caixa e rolar 1d12.",
-      "effect_text": "Uma vez por descanso longo, você pode abrir esta pequena caixa e rolar 1d12. Com resultado 1-6, ela está vazia. Com resultado 7-10, ela contém um consumível comum aleatório. Com resultado 11-12, ela contém dois consumíveis comuns aleatórios."
-    },
-    {
-      "id": "item.airblade-charm",
-      "name": "Amuleto da Lâmina de Ar",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar este amuleto a uma arma de alcance corpo a corpo.",
-      "effect_text": "Você pode fixar este amuleto a uma arma de alcance corpo a corpo. Três vezes por descanso, você pode ativar o amuleto e atacar um alvo dentro de alcance próximo."
-    },
-    {
-      "id": "item.portal-seed",
-      "name": "Semente de Portal",
-      "rarity": "rare",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode plantar esta semente no chão para fazer crescer um portal naquele local.",
-      "effect_text": "Você pode plantar esta semente no chão para fazer crescer um portal naquele local. O portal fica pronto para uso em 24 horas. Você pode usar este portal para viajar para qualquer outro local onde tenha plantado uma semente de portal. Um portal pode ser destruído ao sofrer qualquer quantidade de dano mágico."
-    },
-    {
-      "id": "item.oathbound-chain",
-      "name": "Corrente Juramentada",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Como um movimento de folga, você pode meditar sobre um ideal ou princípio que preza e focar sua vontade nesta corrente.",
-      "effect_text": "Como um movimento de folga, você pode meditar sobre um ideal ou princípio que preza e focar sua vontade nesta corrente. Uma vez por descanso longo, você pode gastar 1 Esperança para rolar 1d20 como seu Dado de Esperança em rolagens que se alinhem diretamente a esse princípio."
-    },
-    {
-      "id": "item.elusive-amulet",
-      "name": "Amuleto Elusivo",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Uma vez por descanso longo, você pode ativar este amuleto para ficar Oculto até se mover. Enquanto estiver Oculto dessa forma, você permanece invisível mesmo se um adversário se mover para onde normalmente veria você.",
-      "effect_text": "Uma vez por descanso longo, você pode ativar este amuleto para ficar Oculto até se mover. Enquanto estiver Oculto dessa forma, você permanece invisível mesmo se um adversário se mover para onde normalmente veria você."
-    },
-    {
-      "id": "item.hopekeeper-locket",
-      "name": "Medalhão Guardião da Esperança",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Durante um descanso longo, se você tiver 6 Esperança, você pode gastar 1 Esperança para imbuir este medalhão com sua farta determinação.",
-      "effect_text": "Durante um descanso longo, se você tiver 6 Esperança, você pode gastar 1 Esperança para imbuir este medalhão com sua farta determinação. Quando você tiver 0 Esperança, você pode usar o medalhão para ganhar imediatamente 1 Esperança. O medalhão precisa ser reimbuído antes de poder ser usado dessa forma novamente."
-    },
-    {
-      "id": "item.infinite-bag",
-      "name": "Bolsa Infinita",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Quando você guarda itens nesta bolsa, eles ficam em uma dimensão de bolso que nunca fica sem espaço. Você pode recuperar um item a qualquer momento.",
-      "effect_text": "Quando você guarda itens nesta bolsa, eles ficam em uma dimensão de bolso que nunca fica sem espaço. Você pode recuperar um item a qualquer momento."
-    },
-    {
-      "id": "item.stride-relic",
-      "name": "Relíquia da Passada",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você ganha +1 de bônus em sua Agilidade. Você só pode carregar uma relíquia.",
-      "effect_text": "Você ganha +1 de bônus em sua Agilidade. Você só pode carregar uma relíquia."
-    },
-    {
-      "id": "item.bolster-relic",
-      "name": "Relíquia do Vigor",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você ganha +1 de bônus em sua Força. Você só pode carregar uma relíquia.",
-      "effect_text": "Você ganha +1 de bônus em sua Força. Você só pode carregar uma relíquia."
-    },
-    {
-      "id": "item.control-relic",
-      "name": "Relíquia do Controle",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você ganha +1 de bônus em sua Finesse. Você só pode carregar uma relíquia.",
-      "effect_text": "Você ganha +1 de bônus em sua Finesse. Você só pode carregar uma relíquia."
-    },
-    {
-      "id": "item.attune-relic",
-      "name": "Relíquia da Sintonia",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você ganha +1 de bônus em seu Instinto. Você só pode carregar uma relíquia.",
-      "effect_text": "Você ganha +1 de bônus em seu Instinto. Você só pode carregar uma relíquia."
-    },
-    {
-      "id": "item.charm-relic",
-      "name": "Relíquia do Encanto",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você ganha +1 de bônus em sua Presença. Você só pode carregar uma relíquia.",
-      "effect_text": "Você ganha +1 de bônus em sua Presença. Você só pode carregar uma relíquia."
-    },
-    {
-      "id": "item.enlighten-relic",
-      "name": "Relíquia do Esclarecimento",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você ganha +1 de bônus em seu Conhecimento. Você só pode carregar uma relíquia.",
-      "effect_text": "Você ganha +1 de bônus em seu Conhecimento. Você só pode carregar uma relíquia."
-    },
-    {
-      "id": "item.honing-relic",
-      "name": "Relíquia do Aprimoramento",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você ganha +1 de bônus em uma Experiência de sua escolha. Você só pode carregar uma relíquia.",
-      "effect_text": "Você ganha +1 de bônus em uma Experiência de sua escolha. Você só pode carregar uma relíquia."
-    },
-    {
-      "id": "item.glimmermoth-pendant",
-      "name": "Pingente da Mariposa Reluzente",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Enquanto você carrega este pingente, suas armas de alcance corpo a corpo que causam dano físico têm um brilho etéreo e podem atacar alvos dentro de alcance muito próximo.",
-      "effect_text": "Enquanto você carrega este pingente, suas armas de alcance corpo a corpo que causam dano físico têm um brilho etéreo e podem atacar alvos dentro de alcance muito próximo."
-    },
-    {
-      "id": "item.waterstride-boots",
-      "name": "Botas de Andar na Água",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode caminhar sobre a superfície da água como se fosse chão macio.",
-      "effect_text": "Você pode caminhar sobre a superfície da água como se fosse chão macio."
-    },
-    {
-      "id": "item.clay-companion",
-      "name": "Companheiro de Argila",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Quando você esculpe esta bola de argila em um companheiro animal de argila, ele se comporta como esse animal.",
-      "effect_text": "Quando você esculpe esta bola de argila em um companheiro animal de argila, ele se comporta como esse animal. Por exemplo, uma aranha de argila pode fiar teias de argila, enquanto um pássaro de argila pode voar. O companheiro de argila mantém memória e identidade entre formas diferentes, mas pode adotar novos maneirismos a cada forma."
-    },
-    {
-      "id": "item.mythic-dust-recipe",
-      "name": "Receita de Pó Mítico",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Como um movimento de folga, você pode usar um punhado de pó de ouro fino para fabricar Pó Mítico.",
-      "effect_text": "Como um movimento de folga, você pode usar um punhado de pó de ouro fino para fabricar Pó Mítico."
-    },
-    {
-      "id": "item.shard-of-memory",
-      "name": "Fragmento da Memória",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Uma vez por descanso longo, você pode gastar 2 Esperança para recordar uma carta de domínio do seu cofre em vez de pagar seu Custo de Recordação.",
-      "effect_text": "Uma vez por descanso longo, você pode gastar 2 Esperança para recordar uma carta de domínio do seu cofre em vez de pagar seu Custo de Recordação."
-    },
-    {
-      "id": "item.gem-of-agility",
-      "name": "Gema da Agilidade",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta gema a uma arma, permitindo usar sua Agilidade ao fazer um ataque com essa arma.",
-      "effect_text": "Você pode fixar esta gema a uma arma, permitindo usar sua Agilidade ao fazer um ataque com essa arma."
-    },
-    {
-      "id": "item.gem-of-strength",
-      "name": "Gema da Força",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta gema a uma arma, permitindo usar sua Força ao fazer um ataque com essa arma.",
-      "effect_text": "Você pode fixar esta gema a uma arma, permitindo usar sua Força ao fazer um ataque com essa arma."
-    },
-    {
-      "id": "item.gem-of-finesse",
-      "name": "Gema da Finesse",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta gema a uma arma, permitindo usar sua Finesse ao fazer um ataque com essa arma.",
-      "effect_text": "Você pode fixar esta gema a uma arma, permitindo usar sua Finesse ao fazer um ataque com essa arma."
-    },
-    {
-      "id": "item.gem-of-instinct",
-      "name": "Gema do Instinto",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta gema a uma arma, permitindo usar seu Instinto ao fazer um ataque com essa arma.",
-      "effect_text": "Você pode fixar esta gema a uma arma, permitindo usar seu Instinto ao fazer um ataque com essa arma."
-    },
-    {
-      "id": "item.gem-of-presence",
-      "name": "Gema da Presença",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta gema a uma arma, permitindo usar sua Presença ao fazer um ataque com essa arma.",
-      "effect_text": "Você pode fixar esta gema a uma arma, permitindo usar sua Presença ao fazer um ataque com essa arma."
-    },
-    {
-      "id": "item.gem-of-knowledge",
-      "name": "Gema do Conhecimento",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Você pode fixar esta gema a uma arma, permitindo usar seu Conhecimento ao fazer um ataque com essa arma.",
-      "effect_text": "Você pode fixar esta gema a uma arma, permitindo usar seu Conhecimento ao fazer um ataque com essa arma."
-    },
-    {
-      "id": "item.fearward-ring",
-      "name": "Anel de Guarda do Medo",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Uma vez por sessão, quando o GM gastar um Medo, você pode gastar 4 Esperança para cancelar os efeitos desse Medo gasto.",
-      "effect_text": "Uma vez por sessão, quando o GM gastar um Medo, você pode gastar 4 Esperança para cancelar os efeitos desse Medo gasto."
-    },
-    {
-      "id": "item.belt-of-unity",
-      "name": "Cinto da Unidade",
-      "rarity": "legendary",
-      "kind": "treasure",
-      "stack_max": 1,
-      "description": "Uma vez por sessão, você pode gastar 5 Esperança para liderar uma rolagem de Tag Team com três PCs em vez de dois.",
-      "effect_text": "Uma vez por sessão, você pode gastar 5 Esperança para liderar uma rolagem de Tag Team com três PCs em vez de dois."
-    },
-    {
-      "id": "item.stride-potion",
-      "name": "Poção da Passada",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua próxima rolagem de Agilidade.",
-      "effect_text": "Você ganha +1 de bônus em sua próxima rolagem de Agilidade."
-    },
-    {
-      "id": "item.bolster-potion",
-      "name": "Poção do Vigor",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua próxima rolagem de Força.",
-      "effect_text": "Você ganha +1 de bônus em sua próxima rolagem de Força."
-    },
-    {
-      "id": "item.control-potion",
-      "name": "Poção do Controle",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua próxima rolagem de Finesse.",
-      "effect_text": "Você ganha +1 de bônus em sua próxima rolagem de Finesse."
-    },
-    {
-      "id": "item.attune-potion",
-      "name": "Poção da Sintonia",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua próxima rolagem de Instinto.",
-      "effect_text": "Você ganha +1 de bônus em sua próxima rolagem de Instinto."
-    },
-    {
-      "id": "item.charm-potion",
-      "name": "Poção do Encanto",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua próxima rolagem de Presença.",
-      "effect_text": "Você ganha +1 de bônus em sua próxima rolagem de Presença."
-    },
-    {
-      "id": "item.enlighten-potion",
-      "name": "Poção do Esclarecimento",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua próxima rolagem de Conhecimento.",
-      "effect_text": "Você ganha +1 de bônus em sua próxima rolagem de Conhecimento."
-    },
-    {
-      "id": "item.minor-health-potion",
-      "name": "Poção Menor de Saúde",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Remova 1d4 PV.",
-      "effect_text": "Remova 1d4 PV."
-    },
-    {
-      "id": "item.minor-stamina-potion",
-      "name": "Poção Menor de Vigor",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Remova 1d4 Estresse.",
-      "effect_text": "Remova 1d4 Estresse."
-    },
-    {
-      "id": "item.wyvern-venom",
-      "name": "Veneno de Wyvern",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode aplicar este veneno a uma arma que cause dano físico para adicionar 1d6 à sua próxima rolagem de dano com essa arma.",
-      "effect_text": "Você pode aplicar este veneno a uma arma que cause dano físico para adicionar 1d6 à sua próxima rolagem de dano com essa arma."
-    },
-    {
-      "id": "item.hopeleaf",
-      "name": "Folha da Esperança",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode comer estas folhas pareadas para ganhar imediatamente 2 Esperança.",
-      "effect_text": "Você pode comer estas folhas pareadas para ganhar imediatamente 2 Esperança."
-    },
-    {
-      "id": "item.nightvision-vial",
-      "name": "Frasco de Visão Noturna",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Quando você bebe o conteúdo deste frasco, você pode ver na escuridão total até seu próximo descanso.",
-      "effect_text": "Quando você bebe o conteúdo deste frasco, você pode ver na escuridão total até seu próximo descanso."
-    },
-    {
-      "id": "item.unstable-arcane-shard",
-      "name": "Fragmento Arcano Instável",
-      "rarity": "common",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode fazer uma rolagem de Finesse para arremessar este fragmento contra um grupo de adversários dentro de alcance longo.",
-      "effect_text": "Você pode fazer uma rolagem de Finesse para arremessar este fragmento contra um grupo de adversários dentro de alcance longo. Alvos contra os quais você tem sucesso sofrem 1d20 de dano mágico."
-    },
-    {
-      "id": "item.potion-of-stability",
-      "name": "Poção de Estabilidade",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode beber esta poção para escolher um movimento de folga adicional.",
-      "effect_text": "Você pode beber esta poção para escolher um movimento de folga adicional."
-    },
-    {
-      "id": "item.improved-wyvern-venom",
-      "name": "Veneno de Wyvern Aprimorado",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode aplicar este veneno a uma arma que cause dano físico para adicionar 1d8 à sua próxima rolagem de dano com essa arma.",
-      "effect_text": "Você pode aplicar este veneno a uma arma que cause dano físico para adicionar 1d8 à sua próxima rolagem de dano com essa arma."
-    },
-    {
-      "id": "item.morphing-clay",
-      "name": "Argila Mutável",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode gastar 1 Esperança para usar esta argila, alterando seu rosto o suficiente para ficar irreconhecível até seu próximo descanso.",
-      "effect_text": "Você pode gastar 1 Esperança para usar esta argila, alterando seu rosto o suficiente para ficar irreconhecível até seu próximo descanso."
-    },
-    {
-      "id": "item.smokeguard-vial",
-      "name": "Frasco de Guarda de Fumaça",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Quando um adversário ataca você, use este frasco e role um número de d6s igual à sua Agilidade.",
-      "effect_text": "Quando um adversário ataca você, use este frasco e role um número de d6s igual à sua Agilidade. Adicione o maior resultado à sua Evasão contra o ataque."
-    },
-    {
-      "id": "item.jumping-root",
-      "name": "Raiz Saltitante",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Coma esta raiz para saltar até alcance longo uma vez sem precisar rolar.",
-      "effect_text": "Coma esta raiz para saltar até alcance longo uma vez sem precisar rolar."
-    },
-    {
-      "id": "item.snap-powder",
-      "name": "Pó de Estalo",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Marque 1 Estresse e remova 1 PV.",
-      "effect_text": "Marque 1 Estresse e remova 1 PV."
-    },
-    {
-      "id": "item.health-potion",
-      "name": "Poção de Saúde",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Remova 1d4+1 PV.",
-      "effect_text": "Remova 1d4+1 PV."
-    },
-    {
-      "id": "item.stamina-potion",
-      "name": "Poção de Vigor",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Remova 1d4+1 Estresse.",
-      "effect_text": "Remova 1d4+1 Estresse."
-    },
-    {
-      "id": "item.armor-stitcher",
-      "name": "Costurador de Armadura",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode usar este costurador para gastar qualquer quantidade de Esperança e remover esse mesmo número de espaços de Armadura.",
-      "effect_text": "Você pode usar este costurador para gastar qualquer quantidade de Esperança e remover esse mesmo número de espaços de Armadura."
-    },
-    {
-      "id": "item.gill-salve",
-      "name": "Pomada de Brânquias",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode aplicar esta pomada no pescoço para respirar debaixo d'água por um número de minutos igual ao seu nível.",
-      "effect_text": "Você pode aplicar esta pomada no pescoço para respirar debaixo d'água por um número de minutos igual ao seu nível."
-    },
-    {
-      "id": "item.replication-parchment",
-      "name": "Pergaminho de Replicação",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Ao tocar este pergaminho em outro, você pode copiar perfeitamente o conteúdo do segundo.",
-      "effect_text": "Ao tocar este pergaminho em outro, você pode copiar perfeitamente o conteúdo do segundo. Depois de usado, este pergaminho se torna papel comum."
-    },
-    {
-      "id": "item.improved-arcane-shard",
-      "name": "Fragmento Arcano Aprimorado",
-      "rarity": "uncommon",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode fazer uma rolagem de Finesse para arremessar este fragmento contra um grupo de adversários dentro de alcance longo.",
-      "effect_text": "Você pode fazer uma rolagem de Finesse para arremessar este fragmento contra um grupo de adversários dentro de alcance longo. Alvos contra os quais você tem sucesso sofrem 2d20 de dano mágico."
-    },
-    {
-      "id": "item.major-stride-potion",
-      "name": "Poção Maior da Passada",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua Agilidade até seu próximo descanso.",
-      "effect_text": "Você ganha +1 de bônus em sua Agilidade até seu próximo descanso."
-    },
-    {
-      "id": "item.major-bolster-potion",
-      "name": "Poção Maior do Vigor",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua Força até seu próximo descanso.",
-      "effect_text": "Você ganha +1 de bônus em sua Força até seu próximo descanso."
-    },
-    {
-      "id": "item.major-control-potion",
-      "name": "Poção Maior do Controle",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua Finesse até seu próximo descanso.",
-      "effect_text": "Você ganha +1 de bônus em sua Finesse até seu próximo descanso."
-    },
-    {
-      "id": "item.major-attune-potion",
-      "name": "Poção Maior da Sintonia",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em seu Instinto até seu próximo descanso.",
-      "effect_text": "Você ganha +1 de bônus em seu Instinto até seu próximo descanso."
-    },
-    {
-      "id": "item.major-charm-potion",
-      "name": "Poção Maior do Encanto",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em sua Presença até seu próximo descanso.",
-      "effect_text": "Você ganha +1 de bônus em sua Presença até seu próximo descanso."
-    },
-    {
-      "id": "item.major-enlighten-potion",
-      "name": "Poção Maior do Esclarecimento",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha +1 de bônus em seu Conhecimento até seu próximo descanso.",
-      "effect_text": "Você ganha +1 de bônus em seu Conhecimento até seu próximo descanso."
-    },
-    {
-      "id": "item.blood-of-the-phase-spider",
-      "name": "Sangue da Aranha de Fase",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode beber este sangue para desaparecer de onde está e reaparecer imediatamente em um ponto que você possa ver dentro de alcance muito longo.",
-      "effect_text": "Você pode beber este sangue para desaparecer de onde está e reaparecer imediatamente em um ponto que você possa ver dentro de alcance muito longo."
-    },
-    {
-      "id": "item.surestrike-potion",
-      "name": "Poção de Golpe Certeiro",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Depois de beber esta poção, o próximo ataque bem-sucedido que você fizer é um acerto crítico.",
-      "effect_text": "Depois de beber esta poção, o próximo ataque bem-sucedido que você fizer é um acerto crítico."
-    },
-    {
-      "id": "item.manticore-saliva",
-      "name": "Saliva de Mantícora",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode aplicar esta saliva a uma arma que cause dano físico para adicionar 1d12 à sua próxima rolagem de dano com essa arma.",
-      "effect_text": "Você pode aplicar esta saliva a uma arma que cause dano físico para adicionar 1d12 à sua próxima rolagem de dano com essa arma."
-    },
-    {
-      "id": "item.channelstone",
-      "name": "Pedra Canalizadora",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode usar esta pedra para pegar uma magia ou grimório do seu cofre, usá-la uma vez e devolvê-la ao cofre.",
-      "effect_text": "Você pode usar esta pedra para pegar uma magia ou grimório do seu cofre, usá-la uma vez e devolvê-la ao cofre."
-    },
-    {
-      "id": "item.mythic-dust",
-      "name": "Pó Mítico",
-      "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode aplicar este pó a uma arma que cause dano mágico para adicionar 1d12 à sua próxima rolagem de dano com essa arma.",
-      "effect_text": "Você pode aplicar este pó a uma arma que cause dano mágico para adicionar 1d12 à sua próxima rolagem de dano com essa arma."
-    },
-    {
+      "description": "This paste eats awaywalls and other surfaces in bright flashes.",
+      "effect_text": "This paste eats awaywalls and other surfaces in bright flashes.",
       "id": "item.acidpaste",
+      "kind": "consumable",
       "name": "Pasta Ácida",
       "rarity": "rare",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Esta pasta corrói paredes e outras superfícies em flashes brilhantes.",
-      "effect_text": "Esta pasta corrói paredes e outras superfícies em flashes brilhantes."
+      "stack_max": 5
     },
     {
-      "id": "item.sanctuary-flare",
-      "name": "Sinalizador de Santuário",
+      "description": "You may attach this charm to a weapon with a Melee range.",
+      "effect_text": "You may attach this charm to a weapon with a Melee range. Three times per rest, you can activate the charm and attack a target within Close range.",
+      "id": "item.airblade-charm",
+      "kind": "treasure",
+      "name": "Amuleto da Lâmina de Ar",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "You can light this magic torch at will. The flame's light fills a much larger space than\nit should, enough to illuminate a cave bright as day.",
+      "effect_text": "You can light this magic torch at will. The flame's light fills a much larger space than\nit should, enough to illuminate a cave bright as day.",
+      "id": "item.alistair-s-torch",
+      "kind": "treasure",
+      "name": "Alistair's Torch",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "A creature with a Spellcast trait wearing this cloak can adjust its color, texture, and size at will.",
+      "effect_text": "A creature with a Spellcast trait wearing this cloak can adjust its color, texture, and size at will.",
+      "id": "item.arcane-cloak",
+      "kind": "treasure",
+      "name": "Manto Arcano",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "Position this prism in a location of your choosing and activate it.",
+      "effect_text": "Position this prism in a location of your choosing and activate it. All allies within Close range of it gain a +1 bonus to their Spellcast Rolls. While activated, the prism can't be moved. Once the prism is deactivated, it can't be activated again until your next long rest.",
+      "id": "item.arcane-prism",
+      "kind": "treasure",
+      "name": "Prisma Arcano",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "You may use this stitcherto spend any number of Hope and clearthat many Armor Slots.",
+      "effect_text": "You may use this stitcherto spend any number of Hope and clearthat many Armor Slots.",
+      "id": "item.armor-stitcher",
+      "kind": "consumable",
+      "name": "Costurador de Armadura",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your next Instinct Roll.",
+      "effect_text": "You gain a +1 bonus to your next Instinct Roll.",
+      "id": "item.attune-potion",
+      "kind": "consumable",
+      "name": "Poção da Sintonia",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Instinct. You may only carry one relic.",
+      "effect_text": "You gain a +1 bonus to your Instinct. You may only carry one relic.",
+      "id": "item.attune-relic",
+      "kind": "treasure",
+      "name": "Relíquia da Sintonia",
       "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Quando você usa este sinalizador, aliados dentro de alcance próximo rolam 1d6 quando gastam 1 Esperança.",
-      "effect_text": "Quando você usa este sinalizador, aliados dentro de alcance próximo rolam 1d6 quando gastam 1 Esperança. Com resultado 6, eles ganham o efeito daquela Esperança sem gastá-la. O sinalizador dura até o fim da cena."
+      "stack_max": 1
     },
     {
-      "id": "item.major-arcane-shard",
-      "name": "Fragmento Arcano Maior",
+      "description": "You can convince this small bag of sand to be much heavier or lighter with a successful\nPresence Roll (10). Additionally, on a successful Finesse Roll (10), you can blow a bit\nof sand into a target's face to make them temporarily Vulnerable.",
+      "effect_text": "You can convince this small bag of sand to be much heavier or lighter with a successful\nPresence Roll (10). Additionally, on a successful Finesse Roll (10), you can blow a bit\nof sand into a target's face to make them temporarily Vulnerable.",
+      "id": "item.bag-of-ficklesand",
+      "kind": "treasure",
+      "name": "Bag of Ficklesand",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "Once per session, you can spend 5 Hope to lead a Tag Team Roll with three PCs instead of two.",
+      "effect_text": "Once per session, you can spend 5 Hope to lead a Tag Team Roll with three PCs instead of two.",
+      "id": "item.belt-of-unity",
+      "kind": "treasure",
+      "name": "Cinto da Unidade",
       "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode fazer uma rolagem de Finesse para arremessar este fragmento contra um grupo de adversários dentro de alcance longo.",
-      "effect_text": "Você pode fazer uma rolagem de Finesse para arremessar este fragmento contra um grupo de adversários dentro de alcance longo. Alvos contra os quais você tem sucesso sofrem 4d20 de dano mágico."
+      "stack_max": 1
     },
     {
-      "id": "item.featherbone",
-      "name": "Osso de Pluma",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode usar este osso para controlar sua velocidade de queda por um número de minutos igual ao seu nível.",
-      "effect_text": "Você pode usar este osso para controlar sua velocidade de queda por um número de minutos igual ao seu nível."
-    },
-    {
-      "id": "item.circle-of-the-void",
-      "name": "Círculo do Vazio",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Marque 1 Estresse para criar um vazio que se estende até alcance longo.",
-      "effect_text": "Marque 1 Estresse para criar um vazio que se estende até alcance longo. Nenhuma magia pode ser conjurada dentro do vazio, e criaturas dentro dele são imunes a dano mágico."
-    },
-    {
-      "id": "item.worldtree-sap",
-      "name": "Seiva da Árvore do Mundo",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Consuma esta seiva para rolar 1d6.",
-      "effect_text": "Consuma esta seiva para rolar 1d6. Com resultado 5-6, remova 2 PV. Com resultado 2-4, remova 3 Estresse. Com resultado 1, enxergue através do véu da morte e retorne mudado, ganhando uma cicatriz."
-    },
-    {
-      "id": "item.viperfang-poison",
-      "name": "Veneno de Presa de Víbora",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Uma criatura que consome este veneno sofre 8d10 de dano mágico direto.",
-      "effect_text": "Uma criatura que consome este veneno sofre 8d10 de dano mágico direto."
-    },
-    {
-      "id": "item.major-health-potion",
-      "name": "Poção Maior de Saúde",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Remova 1d4+2 PV.",
-      "effect_text": "Remova 1d4+2 PV."
-    },
-    {
-      "id": "item.major-stamina-potion",
-      "name": "Poção Maior de Vigor",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Remova 1d4+2 Estresse.",
-      "effect_text": "Remova 1d4+2 Estresse."
-    },
-    {
-      "id": "item.ogre-musk",
-      "name": "Almíscar de Ogro",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode usar este almíscar para impedir que alguém rastreie você por meios mundanos ou mágicos até seu próximo descanso.",
-      "effect_text": "Você pode usar este almíscar para impedir que alguém rastreie você por meios mundanos ou mágicos até seu próximo descanso."
-    },
-    {
-      "id": "item.wingsprout",
-      "name": "Broto de Asas",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você ganha asas mágicas que permitem voar por um número de minutos igual ao seu nível.",
-      "effect_text": "Você ganha asas mágicas que permitem voar por um número de minutos igual ao seu nível."
-    },
-    {
-      "id": "item.deafening-echo-jar",
-      "name": "Frasco de Eco Ensurdecedor",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode abrir este jarro para liberar um eco ensurdecedor de vozes por um número de minutos igual ao seu Instinto.",
-      "effect_text": "Você pode abrir este jarro para liberar um eco ensurdecedor de vozes por um número de minutos igual ao seu Instinto. Criaturas dentro de alcance longo despreparadas para o som sofrem 6d8 de dano mágico."
-    },
-    {
-      "id": "item.dragonfire-tea",
-      "name": "Chá de Fogo de Dragão",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode beber este chá para liberar um ataque de hálito flamejante.",
-      "effect_text": "Você pode beber este chá para liberar um ataque de hálito flamejante. Faça uma rolagem de Instinto contra todos os adversários à sua frente dentro de alcance próximo. Alvos contra os quais você tem sucesso sofrem 1d20 de dano físico usando sua Proficiência."
-    },
-    {
-      "id": "item.bridge-seed",
-      "name": "Semente de Ponte",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Trepadeiras grossas crescem da sua posição até um ponto de sua escolha dentro de alcance longo, permitindo que você suba ou atravesse por elas.",
-      "effect_text": "Trepadeiras grossas crescem da sua posição até um ponto de sua escolha dentro de alcance longo, permitindo que você suba ou atravesse por elas. As trepadeiras se dissipam no seu próximo descanso curto."
-    },
-    {
-      "id": "item.sleeping-sap",
-      "name": "Seiva do Sono",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode beber esta poção para dormir por uma noite inteira de descanso. Você remove todo o Estresse ao acordar.",
-      "effect_text": "Você pode beber esta poção para dormir por uma noite inteira de descanso. Você remove todo o Estresse ao acordar."
-    },
-    {
-      "id": "item.triumphant-feast",
-      "name": "Banquete Triunfal",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode comer esta refeição para remover todos os PV e Estresse e ganhar 1d4 Esperança.",
-      "effect_text": "Você pode comer esta refeição para remover todos os PV e Estresse e ganhar 1d4 Esperança."
-    },
-    {
-      "id": "item.bonding-honey",
-      "name": "Mel de Ligação",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Este mel pode ser usado para colar dois objetos permanentemente.",
-      "effect_text": "Este mel pode ser usado para colar dois objetos permanentemente."
-    },
-    {
-      "id": "item.shrinking-potion",
-      "name": "Poção de Encolhimento",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode beber esta poção para reduzir seu tamanho pela metade até escolher abandonar esta forma ou até seu próximo descanso. Enquanto estiver nesta forma, você recebe +2 de bônus em Agilidade e -1 de penalidade em sua Proficiência.",
-      "effect_text": "Você pode beber esta poção para reduzir seu tamanho pela metade até escolher abandonar esta forma ou até seu próximo descanso. Enquanto estiver nesta forma, você recebe +2 de bônus em Agilidade e -1 de penalidade em sua Proficiência."
-    },
-    {
-      "id": "item.growing-potion",
-      "name": "Poção de Crescimento",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode beber esta poção para dobrar seu tamanho até escolher abandonar esta forma ou até seu próximo descanso. Enquanto estiver nesta forma, você recebe +2 de bônus em Força e +1 de bônus em sua Proficiência.",
-      "effect_text": "Você pode beber esta poção para dobrar seu tamanho até escolher abandonar esta forma ou até seu próximo descanso. Enquanto estiver nesta forma, você recebe +2 de bônus em Força e +1 de bônus em sua Proficiência."
-    },
-    {
-      "id": "item.knowledge-stone",
-      "name": "Pedra do Conhecimento",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Se você morrer enquanto segura esta pedra, um aliado pode pegar uma carta do seu loadout para colocá-la no loadout ou no cofre dele.",
-      "effect_text": "Se você morrer enquanto segura esta pedra, um aliado pode pegar uma carta do seu loadout para colocá-la no loadout ou no cofre dele. Depois que ele pega esse conhecimento, a pedra se desfaz."
-    },
-    {
-      "id": "item.sweet-moss",
-      "name": "Musgo Doce",
-      "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode consumir este musgo durante um descanso para remover 1d10 PV ou 1d10 Estresse.",
-      "effect_text": "Você pode consumir este musgo durante um descanso para remover 1d10 PV ou 1d10 Estresse."
-    },
-    {
+      "description": "You may activate this orb to create a flash of bright light.",
+      "effect_text": "You may activate this orb to create a flash of bright light. All targets within Close range become Vulnerable until they mark HP.",
       "id": "item.blinding-orb",
+      "kind": "consumable",
       "name": "Orbe Cegante",
       "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode ativar este orbe para criar um clarão de luz intensa.",
-      "effect_text": "Você pode ativar este orbe para criar um clarão de luz intensa. Todos os alvos dentro de alcance próximo ficam Vulneráveis até marcarem PV."
+      "stack_max": 5
     },
     {
+      "description": "You may attach this stone to a weapon that doesn't already have a feature.",
+      "effect_text": "You may attach this stone to a weapon that doesn't already have a feature. The weapon gains the following feature. Brutal: When you roll the maximum value on a damage die, roll an additional damage die.",
+      "id": "item.bloodstone",
+      "kind": "treasure",
+      "name": "Pedra de Sangue",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "You gain a +1 bonus to your next Strength Roll.",
+      "effect_text": "You gain a +1 bonus to your next Strength Roll.",
+      "id": "item.bolster-potion",
+      "kind": "consumable",
+      "name": "Poção do Vigor",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Strength. You may only carry one relic.",
+      "effect_text": "You gain a +1 bonus to your Strength. You may only carry one relic.",
+      "id": "item.bolster-relic",
+      "kind": "treasure",
+      "name": "Relíquia do Vigor",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "This honey can be used to glue two objects together permanently.",
+      "effect_text": "This honey can be used to glue two objects together permanently.",
+      "id": "item.bonding-honey",
+      "kind": "consumable",
+      "name": "Mel de Ligação",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "Once per long rest, you can open this small box and roll a d12. On a result of 1-6, it's\nempty. On a result of 7-10, it contains one random common consumable. On a result of\n11-12, it contains two random common consumables.",
+      "effect_text": "Once per long rest, you can open this small box and roll a d12. On a result of 1-6, it's\nempty. On a result of 7-10, it contains one random common consumable. On a result of\n11-12, it contains two random common consumables.",
+      "id": "item.box-of-many-goods",
+      "kind": "treasure",
+      "name": "Box of Many Goods",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "Thickvines growfrom your location to a point of your choice within Far range, allowing you to climb up or across them.",
+      "effect_text": "Thickvines growfrom your location to a point of your choice within Far range, allowing you to climb up or across them. The vines dissipate on your next short rest.",
+      "id": "item.bridge-seed",
+      "kind": "consumable",
+      "name": "Semente de Ponte",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "When you would mark your last Stress, roll a d6.",
+      "effect_text": "When you would mark your last Stress, roll a d6. On a result of 5 or higher, don't mark it.",
+      "id": "item.calming-pendant",
+      "kind": "treasure",
+      "name": "Pingente Calmante",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "You may use this stone to take a spell or grimoire from your vault, use it once, and return it to your vault.",
+      "effect_text": "You may use this stone to take a spell or grimoire from your vault, use it once, and return it to your vault.",
+      "id": "item.channelstone",
+      "kind": "consumable",
+      "name": "Pedra Canalizadora",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "When you succeed on an attack with an arrow stored in this quiver, gain a bonus to the damage roll equal to your current tier.",
+      "effect_text": "When you succeed on an attack with an arrow stored in this quiver, gain a bonus to the damage roll equal to your current tier.",
+      "id": "item.charging-quiver",
+      "kind": "treasure",
+      "name": "Aljava de Investida",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You gain a +1 bonus to your next Presence Roll.",
+      "effect_text": "You gain a +1 bonus to your next Presence Roll.",
+      "id": "item.charm-potion",
+      "kind": "consumable",
+      "name": "Poção do Encanto",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Presence. You may only carry one relic.",
+      "effect_text": "You gain a +1 bonus to your Presence. You may only carry one relic.",
+      "id": "item.charm-relic",
+      "kind": "treasure",
+      "name": "Relíquia do Encanto",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "Mark a Stress to create a void that extends up to Far range.",
+      "effect_text": "Mark a Stress to create a void that extends up to Far range. No magic can be cast inside the void, and creatures within the void are immune to magic damage.",
+      "id": "item.circle-of-the-void",
+      "kind": "consumable",
+      "name": "Círculo do Vazio",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "When you sculpt this ball of clay into a clay animal companion, it behaves as that animal.",
+      "effect_text": "When you sculpt this ball of clay into a clay animal companion, it behaves as that animal. For example, a clay spider can spin clay webs, while a clay bird can fly. The clay companion retains memory and identity across different shapes, but they can adopt new mannerisms with each form.",
+      "id": "item.clay-companion",
+      "kind": "treasure",
+      "name": "Companheiro de Argila",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "This case can fit a small animal companion. While the companion is inside, the animal and case are immune to all damage and harmful effects.",
+      "effect_text": "This case can fit a small animal companion. While the companion is inside, the animal and case are immune to all damage and harmful effects.",
+      "id": "item.companion-case",
+      "kind": "treasure",
+      "name": "Estojo de Companheiro",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "You gain a +1 bonus to your next Finesse Roll.",
+      "effect_text": "You gain a +1 bonus to your next Finesse Roll.",
+      "id": "item.control-potion",
+      "kind": "consumable",
+      "name": "Poção do Controle",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Finesse. You may only carry one relic.",
+      "effect_text": "You gain a +1 bonus to your Finesse. You may only carry one relic.",
+      "id": "item.control-relic",
+      "kind": "treasure",
+      "name": "Relíquia do Controle",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "This tiny sprite sits in the curve of your ear canal and whispers helpful advice during combat.",
+      "effect_text": "This tiny sprite sits in the curve of your ear canal and whispers helpful advice during combat. Once per short rest, you can gain advantage on an attack roll.",
+      "id": "item.corrector-sprite",
+      "kind": "treasure",
+      "name": "Duende Corretor",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "After you drink this tea, you instantly kill your target when you critically succeed on an attack.",
+      "effect_text": "After you drink this tea, you instantly kill your target when you critically succeed on an attack. If you don't critically succeed on an attack before your next long rest, you die.",
       "id": "item.death-tea",
+      "kind": "consumable",
       "name": "Chá da Morte",
       "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Depois de beber este chá, você mata instantaneamente seu alvo quando tem um acerto crítico em um ataque.",
-      "effect_text": "Depois de beber este chá, você mata instantaneamente seu alvo quando tem um acerto crítico em um ataque. Se você não conseguir um acerto crítico em um ataque antes do seu próximo descanso longo, você morre."
+      "stack_max": 5
     },
     {
-      "id": "item.aegis-mirror",
-      "name": "Espelho de Égide",
+      "description": "This flask can hold two different liquids. You may swap between them by flipping a small switch on the flask's side.",
+      "effect_text": "This flask can hold two different liquids. You may swap between them by flipping a small switch on the flask's side.",
+      "id": "item.dual-flask",
+      "kind": "treasure",
+      "name": "Frasco Duplo",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "Once per long rest, you can activate this amulet to become Hidden until you move. While Hidden in this way, you remain unseen even if an adversary moves to where they would normally see you.",
+      "effect_text": "Once per long rest, you can activate this amulet to become Hidden until you move. While Hidden in this way, you remain unseen even if an adversary moves to where they would normally see you.",
+      "id": "item.elusive-amulet",
+      "kind": "treasure",
+      "name": "Amuleto Elusivo",
       "rarity": "legendary",
-      "kind": "consumable",
-      "stack_max": 5,
-      "description": "Quando você sofre dano, você pode gastar 1 Esperança para anular esse dano, depois disso o espelho se estilhaça.",
-      "effect_text": "Quando você sofre dano, você pode gastar 1 Esperança para anular esse dano, depois disso o espelho se estilhaça."
+      "stack_max": 1
     },
     {
+      "description": "This magical chest appears empty. When you speak a specific trigger word or action and open the chest, you can see the items stored within it.",
+      "effect_text": "This magical chest appears empty. When you speak a specific trigger word or action and open the chest, you can see the items stored within it.",
+      "id": "item.empty-chest",
+      "kind": "treasure",
+      "name": "Baú Vazio",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You gain a +1 bonus to your next Knowledge Roll.",
+      "effect_text": "You gain a +1 bonus to your next Knowledge Roll.",
+      "id": "item.enlighten-potion",
+      "kind": "consumable",
+      "name": "Poção do Esclarecimento",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Knowledge. You may only carry one relic.",
+      "effect_text": "You gain a +1 bonus to your Knowledge. You may only carry one relic.",
+      "id": "item.enlighten-relic",
+      "kind": "treasure",
+      "name": "Relíquia do Esclarecimento",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "You may use this bone to control your falling speed for a number of minutes equal to your level.",
+      "effect_text": "You may use this bone to control your falling speed for a number of minutes equal to your level.",
+      "id": "item.featherbone",
+      "kind": "consumable",
+      "name": "Osso de Pluma",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "You may pour out the strange liquid contents of this jar to instantly produce fire.",
+      "effect_text": "You may pour out the strange liquid contents of this jar to instantly produce fire. The contents regenerate when you take a long rest.",
+      "id": "item.fire-jar",
+      "kind": "treasure",
+      "name": "Jarro de Fogo",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "While you carry this pendant, your weapons with a Melee range that deal physical damage\nhave a gossamer sheen and can attack targets within Very Close range.",
+      "effect_text": "While you carry this pendant, your weapons with a Melee range that deal physical damage\nhave a gossamer sheen and can attack targets within Very Close range.",
+      "id": "item.flickerfly-pendant",
+      "kind": "treasure",
+      "name": "Flickerfly Pendant",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You may climb up vertical surfaces and across ceilings.",
+      "effect_text": "You may climb up vertical surfaces and across ceilings.",
+      "id": "item.gecko-gloves",
+      "kind": "treasure",
+      "name": "Luvas de Lagartixa",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "You can attach this gem to a weapon, allowing you to use your Agility when making an attack with that weapon.",
+      "effect_text": "You can attach this gem to a weapon, allowing you to use your Agility when making an attack with that weapon.",
+      "id": "item.gem-of-alacrity",
+      "kind": "treasure",
+      "name": "Gem of Alacrity",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You can attach this gem to a weapon, allowing you to use your Presence when making an attack with that weapon.",
+      "effect_text": "You can attach this gem to a weapon, allowing you to use your Presence when making an attack with that weapon.",
+      "id": "item.gem-of-audacity",
+      "kind": "treasure",
+      "name": "Gem of Audacity",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You can attach this gem to a weapon, allowing you to use your Instinct when making an attack with that weapon.",
+      "effect_text": "You can attach this gem to a weapon, allowing you to use your Instinct when making an attack with that weapon.",
+      "id": "item.gem-of-insight",
+      "kind": "treasure",
+      "name": "Gem of Insight",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You can attach this gem to a weapon, allowing you to use your Strength when making an attack with that weapon.",
+      "effect_text": "You can attach this gem to a weapon, allowing you to use your Strength when making an attack with that weapon.",
+      "id": "item.gem-of-might",
+      "kind": "treasure",
+      "name": "Gem of Might",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You can attach this gem to a weapon, allowing you to use your Finesse when making an attack with that weapon.",
+      "effect_text": "You can attach this gem to a weapon, allowing you to use your Finesse when making an attack with that weapon.",
+      "id": "item.gem-of-precision",
+      "kind": "treasure",
+      "name": "Gem of Precision",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You can attach this gem to a weapon, allowing you to use your Knowledge when making an attack with that weapon.",
+      "effect_text": "You can attach this gem to a weapon, allowing you to use your Knowledge when making an attack with that weapon.",
+      "id": "item.gem-of-sagacity",
+      "kind": "treasure",
+      "name": "Gem of Sagacity",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You may apply this salve to your neck to breathe underwater for a number of minutes equal to your level.",
+      "effect_text": "You may apply this salve to your neck to breathe underwater for a number of minutes equal to your level.",
+      "id": "item.gill-salve",
+      "kind": "consumable",
+      "name": "Pomada de Brânquias",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "Activate this pebble-sized stone to memorize the appearance of someone you can see.",
+      "effect_text": "Activate this pebble-sized stone to memorize the appearance of someone you can see. Spend 1 Hope to magically recreate this guise on yourself as an illusion.",
+      "id": "item.glamour-stone",
+      "kind": "treasure",
+      "name": "Pedra do Glamour",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "While falling, you can mark a Stress to deploy this small parachute and glide safely to the ground.",
+      "effect_text": "While falling, you can mark a Stress to deploy this small parachute and glide safely to the ground.",
+      "id": "item.glider",
+      "kind": "treasure",
+      "name": "Planador",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "You may attach this stone to a weapon that doesn't already have a feature.",
+      "effect_text": "You may attach this stone to a weapon that doesn't already have a feature. The weapon gains the following feature. Powerful: On a successful attack, roll an additional damage die and discard the lowest result.",
+      "id": "item.greatstone",
+      "kind": "treasure",
+      "name": "Pedra Grande",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "You may drink this potion to double your size until you choose to drop this form or your next rest. While in this form, you have a +2 bonus to Strength and a +1 bonus to your Proficiency.",
+      "effect_text": "You may drink this potion to double your size until you choose to drop this form or your next rest. While in this form, you have a +2 bonus to Strength and a +1 bonus to your Proficiency.",
+      "id": "item.growing-potion",
+      "kind": "consumable",
+      "name": "Poção de Crescimento",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "Clear 1d4+1 HP.",
+      "effect_text": "Clear 1d4+1 HP.",
+      "id": "item.health-potion",
+      "kind": "consumable",
+      "name": "Poção de Saúde",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "These two compasses point toward each other no matter how far apart they are.",
+      "effect_text": "These two compasses point toward each other no matter how far apart they are.",
+      "id": "item.homing-compasses",
+      "kind": "treasure",
+      "name": "Bússolas de Retorno",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "You gain a +1 bonus to an Experience of your choice. You may only carry one relic.",
+      "effect_text": "You gain a +1 bonus to an Experience of your choice. You may only carry one relic.",
+      "id": "item.honing-relic",
+      "kind": "treasure",
+      "name": "Relíquia do Aprimoramento",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "During a long rest, if you have 6 Hope, you can spend 1 Hope to imbue this locket with your bountiful resolve.",
+      "effect_text": "During a long rest, if you have 6 Hope, you can spend 1 Hope to imbue this locket with your bountiful resolve. When you have 0 Hope, you can use the locket to immediately gain a Hope. The locket must be re-imbued before it can be used this way again.",
+      "id": "item.hopekeeper-locket",
+      "kind": "treasure",
+      "name": "Medalhão Guardião da Esperança",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "You may make a Finesse Roll to throw this shard at a group of adversaries within Far range.",
+      "effect_text": "You may make a Finesse Roll to throw this shard at a group of adversaries within Far range. Targets you succeed against take 2d20 magic damage.",
+      "id": "item.improved-arcane-shard",
+      "kind": "consumable",
+      "name": "Fragmento Arcano Aprimorado",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "When you store items in this bag, they are kept in a pocket dimension that never runs out of space. You may retrieve an item at any time.",
+      "effect_text": "When you store items in this bag, they are kept in a pocket dimension that never runs out of space. You may retrieve an item at any time.",
+      "id": "item.infinite-bag",
+      "kind": "treasure",
+      "name": "Bolsa Infinita",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "Eat this root to leap up to Far range once without needing to roll.",
+      "effect_text": "Eat this root to leap up to Far range once without needing to roll.",
+      "id": "item.jumping-root",
+      "kind": "consumable",
+      "name": "Raiz Saltitante",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "If you die while holding this stone, an ally can take a card from your loadout to place in their loadout or vault.",
+      "effect_text": "If you die while holding this stone, an ally can take a card from your loadout to place in their loadout or vault. After they take this knowledge, the stone crumbles.",
+      "id": "item.knowledge-stone",
+      "kind": "consumable",
+      "name": "Pedra do Conhecimento",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "You can walk on the surface of water as if it were soft ground.",
+      "effect_text": "You can walk on the surface of water as if it were soft ground.",
+      "id": "item.lakestrider-boots",
+      "kind": "treasure",
+      "name": "Lakestrider Boots",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You may store the name and details of up to three hostile creatures inside this book. You gain a +1 bonus to action rolls against those creatures.",
+      "effect_text": "You may store the name and details of up to three hostile creatures inside this book. You gain a +1 bonus to action rolls against those creatures.",
+      "id": "item.lorekeeper",
+      "kind": "treasure",
+      "name": "Guardião do Conhecimento",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "You may make a Finesse Roll to throw this shard at a group of adversaries within Far range.",
+      "effect_text": "You may make a Finesse Roll to throw this shard at a group of adversaries within Far range. Targets you succeed against take 4d20 magic damage.",
+      "id": "item.major-arcane-shard",
+      "kind": "consumable",
+      "name": "Fragmento Arcano Maior",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Instinct until your next rest.",
+      "effect_text": "You gain a +1 bonus to your Instinct until your next rest.",
+      "id": "item.major-attune-potion",
+      "kind": "consumable",
+      "name": "Poção Maior da Sintonia",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Strength until your next rest.",
+      "effect_text": "You gain a +1 bonus to your Strength until your next rest.",
+      "id": "item.major-bolster-potion",
+      "kind": "consumable",
+      "name": "Poção Maior do Vigor",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Presence until your next rest.",
+      "effect_text": "You gain a +1 bonus to your Presence until your next rest.",
+      "id": "item.major-charm-potion",
+      "kind": "consumable",
+      "name": "Poção Maior do Encanto",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Finesse until your next rest.",
+      "effect_text": "You gain a +1 bonus to your Finesse until your next rest.",
+      "id": "item.major-control-potion",
+      "kind": "consumable",
+      "name": "Poção Maior do Controle",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Knowledge until your next rest.",
+      "effect_text": "You gain a +1 bonus to your Knowledge until your next rest.",
+      "id": "item.major-enlighten-potion",
+      "kind": "consumable",
+      "name": "Poção Maior do Esclarecimento",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "Clear 1d4+2 HP.",
+      "effect_text": "Clear 1d4+2 HP.",
+      "id": "item.major-health-potion",
+      "kind": "consumable",
+      "name": "Poção Maior de Saúde",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "Clear 1d4+2 Stress.",
+      "effect_text": "Clear 1d4+2 Stress.",
+      "id": "item.major-stamina-potion",
+      "kind": "consumable",
+      "name": "Poção Maior de Vigor",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Agility until your next rest.",
+      "effect_text": "You gain a +1 bonus to your Agility until your next rest.",
+      "id": "item.major-stride-potion",
+      "kind": "consumable",
+      "name": "Poção Maior da Passada",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "This pair of locking cuffs comes with a key.",
+      "effect_text": "This pair of locking cuffs comes with a key.",
+      "id": "item.manacles",
+      "kind": "treasure",
+      "name": "Algemas",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "Clear 1d4 HP.",
+      "effect_text": "Clear 1d4 HP.",
+      "id": "item.minor-health-potion",
+      "kind": "consumable",
+      "name": "Poção Menor de Saúde",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "As a downtime move, you can use a vial of blood to craft a Minor Health Potion.",
+      "effect_text": "As a downtime move, you can use a vial of blood to craft a Minor Health Potion.",
+      "id": "item.minor-health-potion-recipe",
+      "kind": "treasure",
+      "name": "Receita de Poção Menor de Saúde",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "Clear 1d4 Stress.",
+      "effect_text": "Clear 1d4 Stress.",
+      "id": "item.minor-stamina-potion",
+      "kind": "consumable",
+      "name": "Poção Menor de Vigor",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "As a downtime move, you can use the bone of a creature to craft a Minor Stamina Potion.",
+      "effect_text": "As a downtime move, you can use the bone of a creature to craft a Minor Stamina Potion.",
+      "id": "item.minor-stamina-potion-recipe",
+      "kind": "treasure",
+      "name": "Receita de Poção Menor de Vigor",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "You may spend 1 Hope to use this clay, altering your face enough to make you unrecognizable until your next rest.",
+      "effect_text": "You may spend 1 Hope to use this clay, altering your face enough to make you unrecognizable until your next rest.",
+      "id": "item.morphing-clay",
+      "kind": "consumable",
+      "name": "Argila Mutável",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "You may apply this dust to a weapon that deals magic damage to add a d12 to your next damage roll with that weapon.",
+      "effect_text": "You may apply this dust to a weapon that deals magic damage to add a d12 to your next damage roll with that weapon.",
+      "id": "item.mythic-dust",
+      "kind": "consumable",
+      "name": "Pó Mítico",
+      "rarity": "rare",
+      "stack_max": 5
+    },
+    {
+      "description": "As a downtime move, you can use a handful of fine gold dust to craft Mythic Dust.",
+      "effect_text": "As a downtime move, you can use a handful of fine gold dust to craft Mythic Dust.",
+      "id": "item.mythic-dust-recipe",
+      "kind": "treasure",
+      "name": "Receita de Pó Mítico",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "You may use this musk to prevent anyone from tracking you by mundane or magical means until your next rest.",
+      "effect_text": "You may use this musk to prevent anyone from tracking you by mundane or magical means until your next rest.",
+      "id": "item.ogre-musk",
+      "kind": "consumable",
+      "name": "Almíscar de Ogro",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "As a downtime move, you can meditate on an ideal or principle you hold dear and focus\nyour will into this chain. Once per long rest, you can spend a Hope to roll a d20 as\nyour Hope Die for rolls that directly align with that principle.",
+      "effect_text": "As a downtime move, you can meditate on an ideal or principle you hold dear and focus\nyour will into this chain. Once per long rest, you can spend a Hope to roll a d20 as\nyour Hope Die for rolls that directly align with that principle.",
+      "id": "item.paragon-s-chain",
+      "kind": "treasure",
+      "name": "Paragon’s Chain",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "If you have at least one Phoenix Feather on you when you fall unconscious, you gain a +1 bonus to the roll you make to determine whether you gain a scar.",
+      "effect_text": "If you have at least one Phoenix Feather on you when you fall unconscious, you gain a +1 bonus to the roll you make to determine whether you gain a scar.",
+      "id": "item.phoenix-feather",
+      "kind": "treasure",
+      "name": "Pena de Fênix",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "Three times per rest when you succeed on an attack with one of these arrows, you can add your Proficiency to the damage roll.",
+      "effect_text": "Three times per rest when you succeed on an attack with one of these arrows, you can add your Proficiency to the damage roll.",
+      "id": "item.piercing-arrows",
+      "kind": "treasure",
+      "name": "Flechas Perfurantes",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "This handcrafted whistle has a distinctive sound. When you blow this whistle, its piercing tone can be heard within a 1-mile radius.",
+      "effect_text": "This handcrafted whistle has a distinctive sound. When you blow this whistle, its piercing tone can be heard within a 1-mile radius.",
+      "id": "item.piper-whistle",
+      "kind": "treasure",
+      "name": "Apito do Flautista",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You may plant this seed in the ground to grow a portal in that spot.",
+      "effect_text": "You may plant this seed in the ground to grow a portal in that spot. The portal is readyto use in 24 hours. You may use this portal to travel to any other location where you planted a portal seed. A portal can be destroyed by dealing any amount of magic damage to it.",
+      "id": "item.portal-seed",
+      "kind": "treasure",
+      "name": "Semente de Portal",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "You may drink this potion to choose one additional downtime move.",
+      "effect_text": "You may drink this potion to choose one additional downtime move.",
+      "id": "item.potion-of-stability",
+      "kind": "consumable",
+      "name": "Poção de Estabilidade",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "During downtime, you automatically clear a Stress.",
+      "effect_text": "During downtime, you automatically clear a Stress.",
+      "id": "item.premium-bedroll",
+      "kind": "treasure",
+      "name": "Colchonete Premium",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "By touching this piece of parchment to another, you can perfectly copy the second parchment's contents.",
+      "effect_text": "By touching this piece of parchment to another, you can perfectly copy the second parchment's contents. Once used, this parchment becomes mundane paper.",
+      "id": "item.replication-parchment",
+      "kind": "consumable",
+      "name": "Pergaminho de Replicação",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "Once per long rest, you can activate this ring after a successful attack against you to halve the damage.",
+      "effect_text": "Once per long rest, you can activate this ring after a successful attack against you to halve the damage.",
+      "id": "item.ring-of-resistance",
+      "kind": "treasure",
+      "name": "Anel de Resistência",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "Spend 1 Hope to activate this ring. Your footsteps are silent until your next rest.",
+      "effect_text": "Spend 1 Hope to activate this ring. Your footsteps are silent until your next rest.",
+      "id": "item.ring-of-silence",
+      "kind": "treasure",
+      "name": "Anel do Silêncio",
+      "rarity": "rare",
+      "stack_max": 1
+    },
+    {
+      "description": "Once per session, when the GM spends a Fear, you can spend 4 Hope to cancel the effects of that spent Fear.",
+      "effect_text": "Once per session, when the GM spends a Fear, you can spend 4 Hope to cancel the effects of that spent Fear.",
+      "id": "item.ring-of-unbreakable-resolve",
+      "kind": "treasure",
+      "name": "Ring of Unbreakable Resolve",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "Once per long rest, you can spend 2 Hope to recall a domain card from your vault instead of paying its Recall Cost.",
+      "effect_text": "Once per long rest, you can spend 2 Hope to recall a domain card from your vault instead of paying its Recall Cost.",
+      "id": "item.shard-of-memory",
+      "kind": "treasure",
+      "name": "Fragmento da Memória",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "You may drink this potion to halve your size until you choose to drop this form or your next rest. While in this form, you have a +2 bonus to Agility and a -1 penalty to your Proficiency.",
+      "effect_text": "You may drink this potion to halve your size until you choose to drop this form or your next rest. While in this form, you have a +2 bonus to Agility and a -1 penalty to your Proficiency.",
+      "id": "item.shrinking-potion",
+      "kind": "consumable",
+      "name": "Poção de Encolhimento",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "When you use this key to open a locked door, you gain advantage on the Finesse Roll.",
+      "effect_text": "When you use this key to open a locked door, you gain advantage on the Finesse Roll.",
+      "id": "item.skeleton-key",
+      "kind": "treasure",
+      "name": "Chave Mestra",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "You may drink this potion to fall asleep for a full night's rest. You clear all Stress upon waking.",
+      "effect_text": "You may drink this potion to fall asleep for a full night's rest. You clear all Stress upon waking.",
+      "id": "item.sleeping-sap",
+      "kind": "consumable",
+      "name": "Seiva do Sono",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "Mark a Stress and clear a HP.",
+      "effect_text": "Mark a Stress and clear a HP.",
+      "id": "item.snap-powder",
+      "kind": "consumable",
+      "name": "Pó de Estalo",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "This pair of orbs allows any creatures holding them to communicate with each other across any distance.",
+      "effect_text": "This pair of orbs allows any creatures holding them to communicate with each other across any distance.",
+      "id": "item.speaking-orbs",
+      "kind": "treasure",
+      "name": "Orbes Falantes",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "Clear 1d4+1 Stress.",
+      "effect_text": "Clear 1d4+1 Stress.",
+      "id": "item.stamina-potion",
+      "kind": "consumable",
+      "name": "Poção de Vigor",
+      "rarity": "uncommon",
+      "stack_max": 5
+    },
+    {
+      "description": "You may use this stardrop to summon a hailstorm of comets that deals 8d20 physical damage to all targets within Very Far range.",
+      "effect_text": "You may use this stardrop to summon a hailstorm of comets that deals 8d20 physical damage to all targets within Very Far range.",
       "id": "item.stardrop",
+      "kind": "consumable",
       "name": "Gota Estelar",
       "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your next Agility Roll.",
+      "effect_text": "You gain a +1 bonus to your next Agility Roll.",
+      "id": "item.stride-potion",
       "kind": "consumable",
-      "stack_max": 5,
-      "description": "Você pode usar esta gota estelar para invocar uma chuva de cometas que causa 8d20 de dano físico a todos os alvos dentro de alcance muito longo.",
-      "effect_text": "Você pode usar esta gota estelar para invocar uma chuva de cometas que causa 8d20 de dano físico a todos os alvos dentro de alcance muito longo."
+      "name": "Poção da Passada",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "You gain a +1 bonus to your Agility. You may only carry one relic.",
+      "effect_text": "You gain a +1 bonus to your Agility. You may only carry one relic.",
+      "id": "item.stride-relic",
+      "kind": "treasure",
+      "name": "Relíquia da Passada",
+      "rarity": "legendary",
+      "stack_max": 1
+    },
+    {
+      "description": "This flat rod is inscribed with runes. When you activate the rod, it is immediately suspended in place.",
+      "effect_text": "This flat rod is inscribed with runes. When you activate the rod, it is immediately suspended in place. Until the rod is deactivated, it can't move, doesn't abide by the rules of gravity, and remains in place.",
+      "id": "item.suspended-rod",
+      "kind": "treasure",
+      "name": "Haste Suspensa",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You may consume this moss during a rest to clear 1d10 HP or 1d10 Stress.",
+      "effect_text": "You may consume this moss during a rest to clear 1d10 HP or 1d10 Stress.",
+      "id": "item.sweet-moss",
+      "kind": "consumable",
+      "name": "Musgo Doce",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "You may make a Finesse Roll to throw this shard at a group of adversaries within Far range.",
+      "effect_text": "You may make a Finesse Roll to throw this shard at a group of adversaries within Far range. Targets you succeed against take 1d20 magic damage.",
+      "id": "item.unstable-arcane-shard",
+      "kind": "consumable",
+      "name": "Fragmento Arcano Instável",
+      "rarity": "common",
+      "stack_max": 5
+    },
+    {
+      "description": "You may attach this stone to armor that doesn't already have a feature.",
+      "effect_text": "You may attach this stone to armor that doesn't already have a feature. The armor gains the following feature. Resilient: Before you mark your last Armor Slot, roll a d6. On a result of 6, reduce the severity by one threshold without marking an Armor Slot.",
+      "id": "item.valorstone",
+      "kind": "treasure",
+      "name": "Pedra do Valor",
+      "rarity": "uncommon",
+      "stack_max": 1
+    },
+    {
+      "description": "As a downtime move, you can mark a Stress to craft a Vial of Darksmoke.",
+      "effect_text": "As a downtime move, you can mark a Stress to craft a Vial of Darksmoke.",
+      "id": "item.vial-of-darksmoke-recipe",
+      "kind": "treasure",
+      "name": "Vial of Darksmoke Recipe",
+      "rarity": "common",
+      "stack_max": 1
+    },
+    {
+      "description": "You gain magic wings that allow you to fly for a number of minutes equal to your level.",
+      "effect_text": "You gain magic wings that allow you to fly for a number of minutes equal to your level.",
+      "id": "item.wingsprout",
+      "kind": "consumable",
+      "name": "Broto de Asas",
+      "rarity": "legendary",
+      "stack_max": 5
+    },
+    {
+      "description": "You may make a Finesse Roll using this net to trap a small creature.",
+      "effect_text": "You may make a Finesse Roll using this net to trap a small creature. A trapped target can break free with a successful Attack Roll (16).",
+      "id": "item.woven-net",
+      "kind": "treasure",
+      "name": "Rede Tecida",
+      "rarity": "common",
+      "stack_max": 1
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }

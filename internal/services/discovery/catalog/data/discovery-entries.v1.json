@@ -137,7 +137,7 @@
       "description": "Fine coat, quick smile, and a satchel packed with notes on every guildmaster worth flattering.",
       "background": "Traveling negotiator who learned that every market has a song, and every liar misses a beat.",
       "connections": "One of the fair's patrons thinks you are here to help them win the auction, while another knows too much about your past cons.",
-      "domain_card_ids": ["domain_card.grace-inspirational-words", "domain_card.codex-book-of-illiat"],
+      "domain_card_ids": ["domain_card.grace-inspirational-words", "domain_card.book-of-illiat"],
       "traits": {
         "agility": 0,
         "strength": -1,

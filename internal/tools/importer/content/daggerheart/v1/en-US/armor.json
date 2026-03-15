@@ -96,7 +96,7 @@
     },
     {
       "id": "armor.irontree-breastplate-armor",
-      "name": "Irontree Breastplate Armor",
+      "name": "IronTree Breastplate Armor",
       "tier": 2,
       "base_major_threshold": 9,
       "base_severe_threshold": 20,
@@ -203,8 +203,8 @@
       "feature": "Physical: You can't mark an Armor Slot to reduce magic damage."
     },
     {
-      "id": "armor.monetts-cloak",
-      "name": "Spellward Cloak",
+      "id": "armor.monett-s-cloak",
+      "name": "Monett's Cloak",
       "tier": 3,
       "base_major_threshold": 16,
       "base_severe_threshold": 39,
