@@ -6,41 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/shared/mcpbridge"
 )
 
 const defaultMaxSteps = 8
-
-var gmToolNames = map[string]struct{}{
-	"campaign":                                   {},
-	"campaign_artifact_list":                     {},
-	"campaign_artifact_get":                      {},
-	"campaign_artifact_upsert":                   {},
-	"participant_list":                           {},
-	"character_list":                             {},
-	"character_sheet_get":                        {},
-	"session_list":                               {},
-	"events_list":                                {},
-	"scene_create":                               {},
-	"interaction_active_scene_set":               {},
-	"interaction_scene_player_phase_start":       {},
-	"interaction_scene_player_phase_accept":      {},
-	"interaction_scene_player_revisions_request": {},
-	"interaction_scene_player_phase_end":         {},
-	"interaction_scene_gm_output_commit":         {},
-	"interaction_ooc_pause":                      {},
-	"interaction_ooc_post":                       {},
-	"interaction_ooc_ready_mark":                 {},
-	"interaction_ooc_ready_clear":                {},
-	"interaction_ooc_resume":                     {},
-	"duality_action_roll":                        {},
-	"roll_dice":                                  {},
-	"duality_outcome":                            {},
-	"duality_explain":                            {},
-	"duality_probability":                        {},
-	"duality_rules_version":                      {},
-	"system_reference_search":                    {},
-	"system_reference_read":                      {},
-}
 
 // ErrStepLimit indicates the model exceeded the allowed tool loop depth.
 var ErrStepLimit = errors.New("campaign orchestration exceeded tool loop limit")
@@ -81,8 +51,8 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	if input.Provider == nil {
 		return Result{}, fmt.Errorf("campaign turn provider is required")
 	}
-	if strings.TrimSpace(input.CampaignID) == "" || strings.TrimSpace(input.SessionID) == "" {
-		return Result{}, fmt.Errorf("campaign and session are required")
+	if strings.TrimSpace(input.CampaignID) == "" || strings.TrimSpace(input.SessionID) == "" || strings.TrimSpace(input.ParticipantID) == "" {
+		return Result{}, fmt.Errorf("campaign, session, and participant are required")
 	}
 	if strings.TrimSpace(input.Model) == "" {
 		return Result{}, fmt.Errorf("model is required")
@@ -91,22 +61,17 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 		return Result{}, fmt.Errorf("credential secret is required")
 	}
 
+	ctx = mcpbridge.WithSessionContext(ctx, mcpbridge.SessionContext{
+		CampaignID:    input.CampaignID,
+		SessionID:     input.SessionID,
+		ParticipantID: input.ParticipantID,
+	})
+
 	sess, err := r.dialer.Dial(ctx)
 	if err != nil {
 		return Result{}, fmt.Errorf("dial mcp: %w", err)
 	}
 	defer sess.Close()
-
-	args := map[string]any{
-		"campaign_id": input.CampaignID,
-		"session_id":  input.SessionID,
-	}
-	if pid := strings.TrimSpace(input.ParticipantID); pid != "" {
-		args["participant_id"] = pid
-	}
-	if _, err := sess.CallTool(ctx, "set_context", args); err != nil {
-		return Result{}, fmt.Errorf("set mcp context: %w", err)
-	}
 
 	tools, err := sess.ListTools(ctx)
 	if err != nil {
@@ -221,10 +186,10 @@ func filterTools(tools []Tool) []Tool {
 	filtered := make([]Tool, 0, len(tools))
 	for _, tool := range tools {
 		name := strings.TrimSpace(tool.Name)
-		if name == "" || name == "set_context" {
+		if name == "" {
 			continue
 		}
-		if _, ok := gmToolNames[name]; !ok {
+		if !mcpbridge.ProductionToolAllowed(name) {
 			continue
 		}
 		filtered = append(filtered, tool)

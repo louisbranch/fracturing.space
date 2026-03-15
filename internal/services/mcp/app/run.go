@@ -2,27 +2,16 @@ package mcp
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/service"
 )
 
-// Run starts the MCP app with the provided game/AI gRPC addresses, HTTP address, and transport type.
-func Run(ctx context.Context, grpcAddr, aiAddr, httpAddr, transport string) error {
-	var transportKind service.TransportKind
-	switch transport {
-	case "http":
-		transportKind = service.TransportHTTP
-	case "stdio", "":
-		transportKind = service.TransportStdio
-	default:
-		return fmt.Errorf("invalid transport %q: must be 'stdio' or 'http'", transport)
-	}
-
+// Run starts the MCP app with the provided game/AI gRPC and HTTP addresses.
+func Run(ctx context.Context, grpcAddr, aiAddr, httpAddr string, profile service.RegistrationProfile) error {
 	return service.Run(ctx, service.Config{
-		GRPCAddr:  grpcAddr,
-		AIAddr:    aiAddr,
-		HTTPAddr:  httpAddr,
-		Transport: transportKind,
+		GRPCAddr:            grpcAddr,
+		AIAddr:              aiAddr,
+		HTTPAddr:            httpAddr,
+		RegistrationProfile: profile,
 	})
 }

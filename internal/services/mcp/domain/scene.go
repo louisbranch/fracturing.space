@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -71,7 +72,7 @@ func SceneListResourceTemplate() *mcp.ResourceTemplate {
 // SceneCreateHandler creates scenes through MCP.
 func SceneCreateHandler(client statev1.SceneServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[SceneCreateInput, SceneCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input SceneCreateInput) (*mcp.CallToolResult, SceneCreateResult, error) {
-		callCtx, err := newToolInvocationContext(ctx, getContext)
+		callCtx, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, SceneCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -92,7 +93,7 @@ func SceneCreateHandler(client statev1.SceneServiceClient, getContext func() Con
 			return nil, SceneCreateResult{}, fmt.Errorf("session_id is required")
 		}
 
-		outCtx, callMeta, err := NewOutgoingContextWithContext(callCtx.RunCtx, callCtx.InvocationID, callCtx.MCPContext)
+		outCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callCtx.RunCtx, callCtx.InvocationID, callCtx.MCPContext)
 		if err != nil {
 			return nil, SceneCreateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -120,14 +121,14 @@ func SceneCreateHandler(client statev1.SceneServiceClient, getContext func() Con
 			Description:  strings.TrimSpace(input.Description),
 			CharacterIDs: append([]string(nil), input.CharacterIDs...),
 		}
-		meta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(ctx, notify, fmt.Sprintf("campaign://%s/sessions/%s/scenes", campaignID, sessionID))
-		return CallToolResultWithMetadata(meta), result, nil
+		meta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(ctx, notify, fmt.Sprintf("campaign://%s/sessions/%s/scenes", campaignID, sessionID))
+		return sessionctx.CallToolResultWithMetadata(meta), result, nil
 	}
 }
 
 // SceneListResourceHandler returns a readable session scene listing resource.
-func SceneListResourceHandler(client statev1.SceneServiceClient) mcp.ResourceHandler {
+func SceneListResourceHandler(client statev1.SceneServiceClient, getContext ...func() Context) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("scene list client is not configured")
@@ -141,10 +142,14 @@ func SceneListResourceHandler(client statev1.SceneServiceClient) mcp.ResourceHan
 			return nil, fmt.Errorf("parse scene list uri: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
+		runCtx, cancel := context.WithTimeout(ctx, sessionctx.CallTimeout)
 		defer cancel()
 
-		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		callContext := Context{}
+		if len(getContext) != 0 && getContext[0] != nil {
+			callContext = getContext[0]()
+		}
+		callCtx, _, err := sessionctx.NewOutgoingContextWithContext(runCtx, "", callContext)
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}

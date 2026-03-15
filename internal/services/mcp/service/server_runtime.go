@@ -10,7 +10,8 @@ import (
 
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
-	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/httptransport"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -52,49 +53,43 @@ func resourceUnsubscribeHandler(_ context.Context, req *mcp.UnsubscribeRequest) 
 }
 
 // Run is the service entrypoint for MCP and blocks until context cancellation.
-// It is intentionally transport-agnostic so startup can choose stdio for local
-// tools and HTTP for browser/remote integrations.
+// MCP now serves one internal streamable-HTTP transport for AI orchestration.
 func Run(ctx context.Context, cfg Config) error {
-	if cfg.Transport == "" {
-		cfg.Transport = TransportStdio
-	}
 	cfg.AIAddr = aiAddress(cfg.AIAddr)
-
-	switch cfg.Transport {
-	case TransportStdio:
-		return runWithTransportWithAI(ctx, cfg.GRPCAddr, cfg.AIAddr, &mcp.StdioTransport{})
-	case TransportHTTP:
-		return runWithHTTPTransport(ctx, cfg)
-	default:
-		return fmt.Errorf("transport %q is not supported", cfg.Transport)
+	profile, err := resolveRegistrationProfile(cfg.RegistrationProfile)
+	if err != nil {
+		return err
 	}
+	return runWithHTTPTransport(ctx, cfg, profile)
 }
 
 // runWithHTTPTransport creates a server and serves it over HTTP transport.
-// runWithHTTPTransport keeps HTTP session/stateful transport concerns isolated from
-// the same MCP domain handlers used by stdio.
-func runWithHTTPTransport(ctx context.Context, cfg Config) error {
+// runWithHTTPTransport keeps HTTP session/stateful transport concerns isolated
+// from the same MCP domain handlers used by in-memory and focused harnesses.
+func runWithHTTPTransport(ctx context.Context, cfg Config, profile mcpRegistrationProfile) error {
 	// Default to localhost-only binding for security
 	httpAddr := cfg.HTTPAddr
 	if httpAddr == "" {
-		httpAddr = "localhost:8081"
+		httpAddr = "localhost:8085"
 	}
 
-	mcpServer, err := newRuntimeServer(ctx, cfg.GRPCAddr, cfg.AIAddr)
+	mcpServer, err := newRuntimeServer(ctx, cfg.GRPCAddr, cfg.AIAddr, profile)
 	if err != nil {
 		return err
 	}
 	defer mcpServer.Close()
 
-	// Create HTTP transport with reference to MCP server
-	httpTransport := NewHTTPTransportWithServer(httpAddr, mcpServer.mcpServer)
-	httpTransport.applyConfig(cfg)
+	// Create HTTP transport with reference to the MCP runtime so each HTTP
+	// session can bind one fixed internal bridge context when required.
+	httpTransport := httptransport.NewHTTPTransportWithRuntime(httpAddr, httpTransportRuntimeFactory{runtime: mcpServer})
+	httpTransport.SetTLSConfig(cfg.TLSConfig)
 
 	// Start HTTP server (this will handle all HTTP requests)
 	return httpTransport.Start(ctx)
 }
 
-// Serve starts the MCP server on stdio and blocks until it stops or the context ends.
+// Serve starts the MCP server on a stdio transport and blocks until it stops or
+// the context ends. It remains available for focused test harnesses.
 func (s *Server) Serve(ctx context.Context) error {
 	return s.serveWithTransport(ctx, &mcp.StdioTransport{})
 }
@@ -122,8 +117,8 @@ func (s *Server) Close() error {
 }
 
 // serveWithTransport starts the MCP server using the provided transport.
-// The server and its managed connection share a single exit path so cleanup behavior
-// is consistent for both stdio and HTTP runs.
+// The server and its managed connection share a single exit path so cleanup
+// behavior is consistent across HTTP and harness transports.
 func (s *Server) serveWithTransport(ctx context.Context, transport mcp.Transport) error {
 	if s == nil || s.mcpServer == nil {
 		return fmt.Errorf("MCP server is not configured")
@@ -148,8 +143,8 @@ func (s *Server) serveWithTransport(ctx context.Context, transport mcp.Transport
 	return nil
 }
 
-// setContext updates the server's context state.
-func (s *Server) setContext(ctx domain.Context) {
+// setContext stores the current server context.
+func (s *Server) setContext(ctx sessionctx.Context) {
 	if s == nil {
 		return
 	}
@@ -158,10 +153,10 @@ func (s *Server) setContext(ctx domain.Context) {
 	s.ctx = ctx
 }
 
-// getContext returns the server's current context state.
-func (s *Server) getContext() domain.Context {
+// getContext returns the current server context.
+func (s *Server) getContext() sessionctx.Context {
 	if s == nil {
-		return domain.Context{}
+		return sessionctx.Context{}
 	}
 	s.ctxMu.RLock()
 	defer s.ctxMu.RUnlock()
@@ -174,7 +169,7 @@ func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transp
 }
 
 func runWithTransportWithAI(ctx context.Context, grpcAddr string, aiAddr string, transport mcp.Transport) error {
-	mcpServer, err := newRuntimeServer(ctx, grpcAddr, aiAddr)
+	mcpServer, err := newRuntimeServer(ctx, grpcAddr, aiAddr, mcpRegistrationProfileStandard)
 	if err != nil {
 		return err
 	}
@@ -182,13 +177,19 @@ func runWithTransportWithAI(ctx context.Context, grpcAddr string, aiAddr string,
 	return mcpServer.serveWithTransport(ctx, transport)
 }
 
-func newRuntimeServer(ctx context.Context, grpcAddr string, aiAddr string) (*Server, error) {
+func newRuntimeServer(ctx context.Context, grpcAddr string, aiAddr string, profile mcpRegistrationProfile) (*Server, error) {
 	addr := grpcAddress(grpcAddr)
-	return buildServerWithManagedConns(ctx, addr, aiAddr, platformgrpc.ModeRequired)
+	return buildServerWithManagedConns(ctx, addr, aiAddr, platformgrpc.ModeRequired, profile)
 }
 
 // buildServerWithManagedConns dials the game service and optionally the AI service.
-func buildServerWithManagedConns(ctx context.Context, addr string, aiAddr string, mode platformgrpc.ManagedConnMode) (*Server, error) {
+func buildServerWithManagedConns(
+	ctx context.Context,
+	addr string,
+	aiAddr string,
+	mode platformgrpc.ManagedConnMode,
+	profile mcpRegistrationProfile,
+) (*Server, error) {
 	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "game",
 		Addr: addr,
@@ -196,8 +197,8 @@ func buildServerWithManagedConns(ctx context.Context, addr string, aiAddr string
 		Logf: log.Printf,
 		DialOpts: append(
 			platformgrpc.LenientDialOptions(),
-			grpc.WithChainUnaryInterceptor(grpcauthctx.AdminOverrideUnaryClientInterceptor(mcpAuthzOverrideReason)),
-			grpc.WithChainStreamInterceptor(grpcauthctx.AdminOverrideStreamClientInterceptor(mcpAuthzOverrideReason)),
+			grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceMCP)),
+			grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceMCP)),
 		),
 	})
 	if err != nil {
@@ -223,9 +224,13 @@ func buildServerWithManagedConns(ctx context.Context, addr string, aiAddr string
 	}
 	var server *Server
 	if aiMc != nil {
-		server, err = newServerWithAIConn(gameMc.Conn(), aiMc.Conn())
+		server, err = newServerWithAIConnProfile(gameMc.Conn(), aiMc.Conn(), profile, sessionctx.Context{})
 	} else {
-		server, err = buildMCPServerFromConn(gameMc.Conn())
+		if profile == mcpRegistrationProfileStandard {
+			server, err = buildMCPServerFromConn(gameMc.Conn())
+		} else {
+			server, err = newServerWithAIConnProfile(gameMc.Conn(), nil, profile, sessionctx.Context{})
+		}
 	}
 	if err != nil {
 		closeManagedConn(gameMc, "game")
@@ -256,4 +261,15 @@ func aiAddress(fallback string) string {
 		return value
 	}
 	return serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceAI)
+}
+
+func resolveRegistrationProfile(profile RegistrationProfile) (mcpRegistrationProfile, error) {
+	switch normalized := RegistrationProfile(strings.ToLower(strings.TrimSpace(string(profile)))); normalized {
+	case "", RegistrationProfileStandard:
+		return mcpRegistrationProfileStandard, nil
+	case RegistrationProfileHarness:
+		return mcpRegistrationProfileHarness, nil
+	default:
+		return mcpRegistrationProfileStandard, fmt.Errorf("unsupported MCP registration profile %q", profile)
+	}
 }

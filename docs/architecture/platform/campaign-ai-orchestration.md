@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-14"
 ---
 
 # Campaign AI Orchestration
@@ -71,8 +71,9 @@ an `active` agent plus a ready credential/provider-grant reference.
 3. Game interaction reaches an AI-owned decision point, including
    `session.started` bootstrap turns before an active scene exists.
 4. Game/worker requests a session grant for the active campaign session.
-5. AI validates the grant, checks live auth state, sets MCP context, rebuilds a
-   fresh session brief, and executes provider work against the curated tool set.
+5. AI validates the grant, checks live auth state, opens an internal MCP bridge
+   session with fixed campaign/session/participant authority, rebuilds a fresh
+   session brief, and executes provider work against the curated tool set.
 6. The model must commit authoritative GM narration through interaction-owned
    MCP tools before the turn succeeds.
 7. Worker completes the AI turn only after those authoritative writes land;
@@ -80,12 +81,13 @@ an `active` agent plus a ready credential/provider-grant reference.
 
 ## Initial AI MCP Policy
 
-The MVP orchestration path is OpenAI-first and MCP-backed. `set_context` stays
-orchestrator-owned, the prompt brief is rebuilt from authoritative MCP
-resources on every turn, and the model receives only the GM-safe subset of MCP
-tools needed for scene bootstrap, interaction pacing, GM narration commit, and
-Daggerheart rules/dice support. Campaign lifecycle, participant CRUD, fork, and
-other non-GM mutations are intentionally excluded.
+The MVP orchestration path is OpenAI-first and MCP-backed. The prompt brief is
+rebuilt from authoritative MCP resources on every turn, MCP authority is fixed
+per session, and the model receives only the GM-safe subset of MCP tools needed
+for scene bootstrap, interaction pacing, GM narration commit, campaign
+artifacts, and Daggerheart rules/reference support. Campaign lifecycle,
+participant CRUD, fork, and other non-GM mutations are intentionally excluded
+from the production bridge profile.
 
 Exact prompt-brief inputs and bootstrap behavior live in
 [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md). Human chat

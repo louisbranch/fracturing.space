@@ -184,7 +184,7 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 				ActorID:     "owner-1",
 				EntityType:  "participant",
 				EntityID:    "participant-123",
-				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"","name":"Game Master","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"","name":"Game Master","role":"GM","controller":"AI","campaign_access":"MANAGER"}`),
 			}),
 		},
 	}}
@@ -220,8 +220,8 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 	if resp.Participant.Controller != statev1.Controller_CONTROLLER_AI {
 		t.Errorf("Participant Controller = %v, want %v", resp.Participant.Controller, statev1.Controller_CONTROLLER_AI)
 	}
-	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER {
-		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER)
+	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
 	}
 	if got := len(eventStore.Events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)

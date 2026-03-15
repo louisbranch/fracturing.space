@@ -7,6 +7,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -235,7 +236,7 @@ func RulesVersionTool() *mcp.Tool {
 // ActionRollHandler executes a duality action roll.
 func ActionRollHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[ActionRollInput, ActionRollResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ActionRollInput) (*mcp.CallToolResult, ActionRollResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, nil)
 		if err != nil {
 			return nil, ActionRollResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -249,7 +250,7 @@ func ActionRollHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[Ac
 			difficulty = &value
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, ActionRollResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -298,15 +299,15 @@ func ActionRollHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[Ac
 			result.Difficulty = &value
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // DualityOutcomeHandler executes a deterministic outcome evaluation.
 func DualityOutcomeHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[DualityOutcomeInput, DualityOutcomeResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityOutcomeInput) (*mcp.CallToolResult, DualityOutcomeResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, nil)
 		if err != nil {
 			return nil, DualityOutcomeResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -318,7 +319,7 @@ func DualityOutcomeHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFo
 			difficulty = &value
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, DualityOutcomeResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -349,15 +350,15 @@ func DualityOutcomeHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFo
 			result.Difficulty = &value
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // DualityExplainHandler executes a deterministic explanation request.
 func DualityExplainHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[DualityExplainInput, DualityExplainResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityExplainInput) (*mcp.CallToolResult, DualityExplainResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, nil)
 		if err != nil {
 			return nil, DualityExplainResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -376,7 +377,7 @@ func DualityExplainHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFo
 			requestID = input.RequestID
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, DualityExplainResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -436,21 +437,21 @@ func DualityExplainHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFo
 			})
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // DualityProbabilityHandler executes the deterministic probability evaluation.
 func DualityProbabilityHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[DualityProbabilityInput, DualityProbabilityResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input DualityProbabilityInput) (*mcp.CallToolResult, DualityProbabilityResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, nil)
 		if err != nil {
 			return nil, DualityProbabilityResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, DualityProbabilityResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -484,21 +485,21 @@ func DualityProbabilityHandler(client pb.DaggerheartServiceClient) mcp.ToolHandl
 			OutcomeCounts: counts,
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // RulesVersionHandler returns static ruleset metadata from the gRPC service.
 func RulesVersionHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[RulesVersionInput, RulesVersionResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, _ RulesVersionInput) (*mcp.CallToolResult, RulesVersionResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, nil)
 		if err != nil {
 			return nil, RulesVersionResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, RulesVersionResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -518,8 +519,8 @@ func RulesVersionHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[
 			outcomes = append(outcomes, outcome.String())
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), RulesVersionResult{
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), RulesVersionResult{
 			System:         response.GetSystem(),
 			Module:         response.GetModule(),
 			RulesVersion:   response.GetRulesVersion(),
@@ -535,7 +536,7 @@ func RulesVersionHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[
 // RollDiceHandler executes a generic dice roll.
 func RollDiceHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[RollDiceInput, RollDiceResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input RollDiceInput) (*mcp.CallToolResult, RollDiceResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, nil)
 		if err != nil {
 			return nil, RollDiceResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -549,7 +550,7 @@ func RollDiceHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[Roll
 			})
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, RollDiceResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -600,8 +601,8 @@ func RollDiceHandler(client pb.DaggerheartServiceClient) mcp.ToolHandlerFor[Roll
 			Rng:   rngResult,
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 

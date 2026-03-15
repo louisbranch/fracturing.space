@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-14"
 ---
 
 # Docker Compose (Local)
@@ -37,7 +37,7 @@ make topology-check
 - Web login: `http://localhost:8080`
 - Auth: `http://auth.localhost:8080`
 - Admin: `http://admin.localhost:8080`
-- MCP health: `http://mcp.localhost:8080/mcp/health`
+- MCP bridge health (internal): `http://mcp.localhost:8080/mcp/health`
 - Notifications gRPC (internal): `notifications:8088`
 - Worker gRPC health (internal): `worker:8089`
 

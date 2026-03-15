@@ -6,7 +6,9 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	mcpcampaigncontext "github.com/louisbranch/fracturing.space/internal/services/mcp/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -23,6 +25,14 @@ type mcpRegistrationModule struct {
 	register func(mcpRegistrationTarget) error
 }
 
+type mcpRegistrationProfile int
+
+const (
+	mcpRegistrationProfileStandard mcpRegistrationProfile = iota
+	mcpRegistrationProfileHarness
+	mcpRegistrationProfileInternalAI
+)
+
 const (
 	mcpDaggerheartToolsModuleName    = "daggerheart-tools"
 	mcpCampaignToolsModuleName       = "campaign-tools"
@@ -31,7 +41,7 @@ const (
 	mcpInteractionToolsModuleName    = "interaction-tools"
 	mcpForkToolsModuleName           = "fork-tools"
 	mcpEventToolsModuleName          = "event-tools"
-	mcpContextToolsModuleName        = "context-tools"
+	mcpHarnessContextToolsModuleName = "harness-context-tools"
 	mcpCampaignResourceModuleName    = "campaign-resources"
 	mcpSessionResourceModuleName     = "session-resources"
 	mcpSceneResourceModuleName       = "scene-resources"
@@ -125,11 +135,11 @@ var mcpToolRegistrars = []mcpToolRegistrar{
 	newMCPToolRegistrar[domain.CampaignForkInput, domain.CampaignForkResult](),
 	newMCPToolRegistrar[domain.CampaignLineageInput, domain.CampaignLineageResult](),
 	newMCPToolRegistrar[domain.SetContextInput, domain.SetContextResult](),
-	newMCPToolRegistrar[domain.CampaignArtifactListInput, domain.CampaignArtifactListResult](),
-	newMCPToolRegistrar[domain.CampaignArtifactGetInput, domain.CampaignArtifactResult](),
-	newMCPToolRegistrar[domain.CampaignArtifactUpsertInput, domain.CampaignArtifactResult](),
-	newMCPToolRegistrar[domain.SystemReferenceSearchInput, domain.SystemReferenceSearchResult](),
-	newMCPToolRegistrar[domain.SystemReferenceReadInput, domain.SystemReferenceDocumentResult](),
+	newMCPToolRegistrar[mcpcampaigncontext.ArtifactListInput, mcpcampaigncontext.ArtifactListResult](),
+	newMCPToolRegistrar[mcpcampaigncontext.ArtifactGetInput, mcpcampaigncontext.ArtifactResult](),
+	newMCPToolRegistrar[mcpcampaigncontext.ArtifactUpsertInput, mcpcampaigncontext.ArtifactResult](),
+	newMCPToolRegistrar[mcpcampaigncontext.ReferenceSearchInput, mcpcampaigncontext.ReferenceSearchResult](),
+	newMCPToolRegistrar[mcpcampaigncontext.ReferenceReadInput, mcpcampaigncontext.ReferenceDocumentResult](),
 }
 
 func addMCPTool(server *mcp.Server, tool *mcp.Tool, handler any) error {
@@ -149,8 +159,22 @@ func addMCPTool(server *mcp.Server, tool *mcp.Tool, handler any) error {
 func newMCPRegistrationModules(
 	server *Server,
 	clients mcpRegistrationClients,
-	notify domain.ResourceUpdateNotifier,
+	args ...any,
 ) []mcpRegistrationModule {
+	profile := mcpRegistrationProfileStandard
+	var notify sessionctx.ResourceUpdateNotifier
+	if len(args) != 0 {
+		if value, ok := args[0].(mcpRegistrationProfile); ok {
+			profile = value
+		}
+	}
+	if len(args) > 1 {
+		notify, _ = args[1].(sessionctx.ResourceUpdateNotifier)
+	}
+	if profile == mcpRegistrationProfileInternalAI {
+		return newInternalAIRegistrationModules(server, clients, notify)
+	}
+
 	modules := []mcpRegistrationModule{
 		{
 			name: mcpDaggerheartToolsModuleName,
@@ -191,7 +215,7 @@ func newMCPRegistrationModules(
 			name: mcpForkToolsModuleName,
 			kind: mcpRegistrationKindTools,
 			register: func(registrar mcpRegistrationTarget) error {
-				return registerForkTools(registrar, clients.forkClient, notify)
+				return registerForkTools(registrar, clients.forkClient, server.getContext, notify)
 			},
 		},
 		{
@@ -202,17 +226,10 @@ func newMCPRegistrationModules(
 			},
 		},
 		{
-			name: mcpContextToolsModuleName,
-			kind: mcpRegistrationKindTools,
-			register: func(registrar mcpRegistrationTarget) error {
-				return registerContextTools(registrar, clients.campaignClient, clients.sessionClient, clients.participantClient, server, notify)
-			},
-		},
-		{
 			name: mcpCampaignResourceModuleName,
 			kind: mcpRegistrationKindResources,
 			register: func(registrar mcpRegistrationTarget) error {
-				registerCampaignResources(registrar, clients.campaignClient, clients.participantClient, clients.characterClient)
+				registerCampaignResources(registrar, clients.campaignClient, clients.participantClient, clients.characterClient, server.getContext)
 				return nil
 			},
 		},
@@ -220,7 +237,7 @@ func newMCPRegistrationModules(
 			name: mcpSessionResourceModuleName,
 			kind: mcpRegistrationKindResources,
 			register: func(registrar mcpRegistrationTarget) error {
-				registerSessionResources(registrar, clients.sessionClient)
+				registerSessionResources(registrar, clients.sessionClient, server.getContext)
 				return nil
 			},
 		},
@@ -228,7 +245,7 @@ func newMCPRegistrationModules(
 			name: mcpSceneResourceModuleName,
 			kind: mcpRegistrationKindResources,
 			register: func(registrar mcpRegistrationTarget) error {
-				registerSceneResources(registrar, clients.sceneClient)
+				registerSceneResources(registrar, clients.sceneClient, server.getContext)
 				return nil
 			},
 		},
@@ -244,7 +261,108 @@ func newMCPRegistrationModules(
 			name: mcpEventResourceModuleName,
 			kind: mcpRegistrationKindResources,
 			register: func(registrar mcpRegistrationTarget) error {
-				registerEventResources(registrar, clients.eventClient)
+				registerEventResources(registrar, clients.eventClient, server.getContext)
+				return nil
+			},
+		},
+		{
+			name: mcpContextResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerContextResources(registrar, server)
+				return nil
+			},
+		},
+	}
+	if profile == mcpRegistrationProfileHarness {
+		modules = append(modules[:len(modules)-6], append([]mcpRegistrationModule{
+			{
+				name: mcpHarnessContextToolsModuleName,
+				kind: mcpRegistrationKindTools,
+				register: func(registrar mcpRegistrationTarget) error {
+					return registerHarnessContextTools(registrar, clients.campaignClient, clients.sessionClient, clients.participantClient, server, notify)
+				},
+			},
+		}, modules[len(modules)-6:]...)...)
+	}
+	if clients.campaignArtifactClient != nil || clients.systemReferenceClient != nil {
+		modules = append(modules, mcpRegistrationModule{
+			name: "campaign-context-tools",
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return mcpcampaigncontext.RegisterTools(registrar, clients.campaignArtifactClient, clients.systemReferenceClient, server.getContext, notify)
+			},
+		})
+	}
+	if clients.campaignArtifactClient != nil {
+		modules = append(modules, mcpRegistrationModule{
+			name: "campaign-context-resources",
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				mcpcampaigncontext.RegisterResources(registrar, clients.campaignArtifactClient)
+				return nil
+			},
+		})
+	}
+	return modules
+}
+
+func newInternalAIRegistrationModules(
+	server *Server,
+	clients mcpRegistrationClients,
+	notify sessionctx.ResourceUpdateNotifier,
+) []mcpRegistrationModule {
+	modules := []mcpRegistrationModule{
+		{
+			name: mcpDaggerheartToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerDaggerheartTools(registrar, clients.daggerheartClient)
+			},
+		},
+		{
+			name: mcpSceneToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerInternalAISceneTools(registrar, clients.sceneClient, server.getContext, notify)
+			},
+		},
+		{
+			name: mcpInteractionToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerInternalAIInteractionTools(registrar, clients.interactionClient, server.getContext, notify)
+			},
+		},
+		{
+			name: mcpCampaignResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerInternalAICampaignResources(registrar, clients.campaignClient, clients.participantClient, clients.characterClient, server.getContext)
+				return nil
+			},
+		},
+		{
+			name: mcpSessionResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerSessionResources(registrar, clients.sessionClient, server.getContext)
+				return nil
+			},
+		},
+		{
+			name: mcpSceneResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerSceneResources(registrar, clients.sceneClient, server.getContext)
+				return nil
+			},
+		},
+		{
+			name: mcpInteractionResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerInteractionResources(registrar, clients.interactionClient, server.getContext)
 				return nil
 			},
 		},
@@ -262,7 +380,7 @@ func newMCPRegistrationModules(
 			name: "campaign-context-tools",
 			kind: mcpRegistrationKindTools,
 			register: func(registrar mcpRegistrationTarget) error {
-				return registerCampaignContextTools(registrar, clients.campaignArtifactClient, clients.systemReferenceClient, server.getContext, notify)
+				return mcpcampaigncontext.RegisterTools(registrar, clients.campaignArtifactClient, clients.systemReferenceClient, server.getContext, notify)
 			},
 		})
 	}
@@ -271,7 +389,7 @@ func newMCPRegistrationModules(
 			name: "campaign-context-resources",
 			kind: mcpRegistrationKindResources,
 			register: func(registrar mcpRegistrationTarget) error {
-				registerCampaignContextResources(registrar, clients.campaignArtifactClient)
+				mcpcampaigncontext.RegisterResources(registrar, clients.campaignArtifactClient)
 				return nil
 			},
 		})

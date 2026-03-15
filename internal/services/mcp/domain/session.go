@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -39,13 +40,13 @@ func SessionStartTool() *mcp.Tool {
 // SessionStartHandler executes a session start request.
 func SessionStartHandler(client statev1.SessionServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[SessionStartInput, SessionStartResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input SessionStartInput) (*mcp.CallToolResult, SessionStartResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, SessionStartResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, SessionStartResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -76,14 +77,14 @@ func SessionStartHandler(client statev1.SessionServiceClient, getContext func() 
 			result.EndedAt = formatTimestamp(response.Session.GetEndedAt())
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			fmt.Sprintf("campaign://%s", result.CampaignID),
 			fmt.Sprintf("campaign://%s/sessions", result.CampaignID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -115,7 +116,7 @@ func SessionEndTool() *mcp.Tool {
 // SessionEndHandler executes a session end request.
 func SessionEndHandler(client statev1.SessionServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[SessionEndInput, SessionEndResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input SessionEndInput) (*mcp.CallToolResult, SessionEndResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, SessionEndResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -136,7 +137,7 @@ func SessionEndHandler(client statev1.SessionServiceClient, getContext func() Co
 			return nil, SessionEndResult{}, fmt.Errorf("session_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, SessionEndResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -166,14 +167,14 @@ func SessionEndHandler(client statev1.SessionServiceClient, getContext func() Co
 			result.EndedAt = formatTimestamp(response.Session.GetEndedAt())
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			fmt.Sprintf("campaign://%s", result.CampaignID),
 			fmt.Sprintf("campaign://%s/sessions", result.CampaignID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -219,7 +220,7 @@ func SessionListResourceTemplate() *mcp.ResourceTemplate {
 }
 
 // SessionListResourceHandler returns a readable session listing resource.
-func SessionListResourceHandler(client statev1.SessionServiceClient) mcp.ResourceHandler {
+func SessionListResourceHandler(client statev1.SessionServiceClient, getContext ...func() Context) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("session list client is not configured")
@@ -236,10 +237,14 @@ func SessionListResourceHandler(client statev1.SessionServiceClient) mcp.Resourc
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
+		runCtx, cancel := context.WithTimeout(ctx, sessionctx.CallTimeout)
 		defer cancel()
 
-		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		callContext := Context{}
+		if len(getContext) != 0 && getContext[0] != nil {
+			callContext = getContext[0]()
+		}
+		callCtx, _, err := sessionctx.NewOutgoingContextWithContext(runCtx, "", callContext)
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}

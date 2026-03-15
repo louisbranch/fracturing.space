@@ -17,6 +17,7 @@ go_test_cache_dir="${GO_TEST_CACHE_DIR:-$repo_root/.tmp/go-cache}"
 go_test_tmp_dir="${GO_TEST_TMP_DIR:-$repo_root/.tmp/go-build}"
 integration_shared_fixture="${INTEGRATION_SHARED_FIXTURE:-true}"
 integration_shards="${INTEGRATION_COVERAGE_SHARDS:-4}"
+integration_parallelism="${INTEGRATION_COVERAGE_PARALLELISM:-1}"
 cov_root="$repo_root/.tmp/cover-covdata"
 
 finish() {
@@ -92,25 +93,39 @@ run_non_integration_coverage() {
 run_integration_shards() {
 	local -a pids=()
 	local shard_index
+	if ! [[ "$integration_parallelism" =~ ^[0-9]+$ ]] || (( integration_parallelism <= 0 )); then
+		echo "invalid INTEGRATION_COVERAGE_PARALLELISM=$integration_parallelism" >&2
+		exit 1
+	fi
 	for (( shard_index = 0; shard_index < integration_shards; shard_index++ )); do
 		local shard_status_dir="$status_dir/integration-shards/${shard_index}"
 		local shard_covdir="$cov_root/integration-shard-${shard_index}"
 		local shard_log="$log_dir/integration-shard-${shard_index}.log"
+		local shard_go_tmp_dir="$go_test_tmp_dir/integration-shard-${shard_index}"
 		mkdir -p "$shard_covdir"
+		mkdir -p "$shard_go_tmp_dir"
 		(
 			bash ./scripts/go-test-progress.sh \
 				--label "cover-integration-shard-${shard_index}" \
 				--status-dir "$shard_status_dir" \
 				-- \
-				env GOCACHE="$go_test_cache_dir" GOTMPDIR="$go_test_tmp_dir" \
+				env GOCACHE="$go_test_cache_dir" GOTMPDIR="$shard_go_tmp_dir" \
 					INTEGRATION_SHARED_FIXTURE="$integration_shared_fixture" \
 					INTEGRATION_SHARD_TOTAL="$integration_shards" \
 					INTEGRATION_SHARD_INDEX="$shard_index" \
 					bash ./scripts/integration-shard.sh -count=1 -json -cover -covermode=set -args "-test.gocoverdir=$shard_covdir"
 		) > >(tee "$shard_log") 2>&1 &
 		pids+=("$!")
+		if (( ${#pids[@]} >= integration_parallelism )); then
+			local pid
+			for pid in "${pids[@]}"; do
+				wait "$pid"
+			done
+			pids=()
+		fi
 	done
 
+	local pid
 	for pid in "${pids[@]}"; do
 		wait "$pid"
 	done

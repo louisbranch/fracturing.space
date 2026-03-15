@@ -1,4 +1,4 @@
-package service
+package httptransport
 
 import (
 	"context"
@@ -10,11 +10,7 @@ import (
 
 func TestStartUsesTLSListenerWhenConfigured(t *testing.T) {
 	transport := NewHTTPTransport("127.0.0.1:0")
-	transport.applyConfig(Config{
-		TLSConfig: &tls.Config{
-			MinVersion: tls.VersionTLS12,
-		},
-	})
+	transport.SetTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12})
 
 	origListenTCP := listenTCP
 	origNewTLSListener := newTLSListener

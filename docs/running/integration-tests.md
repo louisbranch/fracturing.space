@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 7
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-10"
+last_reviewed: "2026-03-14"
 ---
 
 # Integration Tests
@@ -13,20 +13,19 @@ last_reviewed: "2026-03-10"
 
 Integration tests exercise the full request path through the game server, MCP
 bridge, and SQLite storage using real processes and transports. These tests are
-meant to increase trust in end-to-end behavior and backward compatibility.
+meant to increase trust in end-to-end behavior across the internal AI bridge.
 Contributors should use the public runtime Make targets rather than the older
 integration/scenario-specific aliases.
 
 ## Goals
 
-- Validate MCP JSON-RPC traffic over stdio for real client behavior.
+- Validate MCP JSON-RPC traffic over the internal HTTP bridge.
 - Verify server, MCP, and storage wiring in one run.
 - Keep tests deterministic by avoiding or normalizing random output.
 - Support local runs and CI execution.
 
 ## Non-goals
 
-- Full HTTP transport coverage (planned for a later phase).
 - Performance or load testing.
 - Cross-platform process orchestration beyond standard CI runners.
 
@@ -34,8 +33,14 @@ integration/scenario-specific aliases.
 
 1. Start the game server in-process on an ephemeral port.
 2. Start the MCP server as a subprocess and point it at the game address.
-3. Connect an MCP client over the stdio transport and exchange JSON-RPC.
+3. Connect an MCP client over the HTTP bridge and exchange JSON-RPC.
 4. Assert responses using strict or normalized expectations.
+
+The general integration harness defaults to a non-production MCP harness
+profile so legacy context-dependent coverage can bootstrap campaign/session
+identity with a test-only `set_context` tool. The generic HTTP blackbox
+fixtures also run against that harness profile; production AI-bridge coverage
+is handled separately by the AI-scoped fixtures and orchestration tests.
 
 ## Scenario Fixture Format
 
@@ -66,8 +71,8 @@ Use `capture` to extract IDs from responses and reuse them in later steps via
 loader supports shortcuts like `campaign`, `participant`, `character`, and
 `session` to map to common structuredContent ID paths.
 
-Use `expect_sse: true` at the fixture level to assert SSE resource updates for
-that scenario. Other fixtures omit SSE checks by default.
+Use fixture-level transport assertions only when the scenario depends on
+streaming update behavior.
 
 Example:
 
@@ -116,8 +121,8 @@ Example:
 
 - List tools: verify expected tool IDs are returned.
 - Duality outcome: call with fixed dice and verify exact output.
-- Campaign create + list: create a campaign, then read campaigns://list and
-  assert the new campaign is present with matching IDs and timestamps.
+- GM-safe scene/interaction flow: create a scene, drive interaction state, and
+  verify authoritative resources update as expected.
 - Rules metadata: verify duality_rules_version returns stable fields.
 
 ## Tagging and CI

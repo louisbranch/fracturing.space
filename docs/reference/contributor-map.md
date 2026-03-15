@@ -2,7 +2,7 @@
 title: "Contributor map"
 parent: "Reference"
 nav_order: 4
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-14"
 ---
 
 # Contributor map
@@ -15,7 +15,9 @@ Use this map to find the best first edit point for common contribution types.
 | --- | --- |
 | Add a command, event, or game system | `docs/guides/adding-command-event-system.md` |
 | Add/update Daggerheart mechanics or gRPC gameplay/content flows | `internal/services/game/domain/bridge/daggerheart/`, `internal/services/game/api/grpc/systems/daggerheart/` |
-| Add/update MCP tool/resource handlers | `internal/services/mcp/domain/`, `internal/services/mcp/service/server.go` |
+| Add/update MCP gameplay tool/resource handlers or production bridge exposure | `internal/services/mcp/domain/`, `internal/services/mcp/sessionctx/`, `internal/services/mcp/service/server_registration.go`, `internal/services/shared/mcpbridge/` |
+| Add/update MCP AI campaign artifacts or system-reference tools/resources | `internal/services/mcp/campaigncontext/`, `internal/services/mcp/service/server_registration.go`, `internal/services/shared/mcpbridge/` |
+| Add/update MCP HTTP bridge transport, session lifecycle, or host validation | `internal/services/mcp/httptransport/`, `internal/services/mcp/service/server_runtime.go`, `internal/services/mcp/service/http_transport_runtime_adapter.go` |
 | Add/update auth identity/OAuth/passkey behavior | `internal/services/auth/api/grpc/auth/`, `internal/services/auth/oauth/`, `internal/services/auth/storage/sqlite/` |
 | Add/update AI orchestration/agent invocation | `internal/services/ai/api/grpc/ai/`, `internal/services/ai/storage/sqlite/`, `internal/services/ai/app/` |
 | Add/update play realtime transport, transcript flow, or play-session/auth handoff | `internal/services/play/app/`, `internal/services/play/storage/sqlite/`, `internal/services/shared/playlaunchgrant/`, `internal/services/shared/playorigin/` |

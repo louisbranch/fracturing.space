@@ -1,4 +1,4 @@
-package domain
+package sessionctx
 
 import (
 	"context"
@@ -25,7 +25,6 @@ func TestNewOutgoingContext(t *testing.T) {
 		if got := md.Get(grpcmeta.RequestIDHeader); len(got) == 0 || got[0] != meta.RequestID {
 			t.Errorf("expected request ID %q in metadata, got %v", meta.RequestID, got)
 		}
-		// Admin override is handled by connection-level interceptors, not per-call.
 		if got := md.Get(grpcmeta.PlatformRoleHeader); len(got) != 0 {
 			t.Errorf("expected no platform role in per-call metadata, got %v", got)
 		}

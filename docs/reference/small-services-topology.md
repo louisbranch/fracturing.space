@@ -46,9 +46,10 @@ Runtime and ownership map for service processes outside `web`, `game`, and
     typing/presence fanout without becoming gameplay authority
   - replaces the removed standalone chat runtime; transcript transport now
     lives inside `play`
-- MCP transport modes:
-  - `stdio`: local MCP host integration.
-  - `http`: HTTP/SSE transport boundary.
+- MCP runtime role:
+  - internal HTTP bridge between AI orchestration and game/AI services
+  - not a public integrator or browser-facing surface
+  - production tool exposure is intentionally GM-safe
 
 ## Common first-edit seams
 

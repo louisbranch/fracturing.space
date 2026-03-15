@@ -143,7 +143,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 			Name:           handler.DefaultAIParticipantName(defaultLocale),
 			Role:           "GM",
 			Controller:     "AI",
-			CampaignAccess: "MEMBER",
+			CampaignAccess: "MANAGER",
 			Pronouns:       handler.DefaultAIParticipantPronouns(),
 		})
 	}

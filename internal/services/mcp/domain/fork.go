@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -63,15 +64,15 @@ func CampaignLineageTool() *mcp.Tool {
 }
 
 // CampaignForkHandler executes a campaign fork request.
-func CampaignForkHandler(client statev1.ForkServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignForkInput, CampaignForkResult] {
+func CampaignForkHandler(client statev1.ForkServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignForkInput, CampaignForkResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignForkInput) (*mcp.CallToolResult, CampaignForkResult, error) {
-		callContext, err := newToolInvocationContextWithTimeout(ctx, nil, grpcLongCallTimeout)
+		callContext, err := sessionctx.NewToolInvocationContextWithTimeout(ctx, getContext, sessionctx.LongCallTimeout)
 		if err != nil {
 			return nil, CampaignForkResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignForkResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -116,27 +117,27 @@ func CampaignForkHandler(client statev1.ForkServiceClient, notify ResourceUpdate
 			result.Depth = int(response.Lineage.GetDepth())
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.CampaignID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // CampaignLineageHandler executes a campaign lineage request.
-func CampaignLineageHandler(client statev1.ForkServiceClient) mcp.ToolHandlerFor[CampaignLineageInput, CampaignLineageResult] {
+func CampaignLineageHandler(client statev1.ForkServiceClient, getContext func() Context) mcp.ToolHandlerFor[CampaignLineageInput, CampaignLineageResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignLineageInput) (*mcp.CallToolResult, CampaignLineageResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CampaignLineageResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignLineageResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -163,7 +164,7 @@ func CampaignLineageHandler(client statev1.ForkServiceClient) mcp.ToolHandlerFor
 			IsOriginal:       lineage.GetParentCampaignId() == "",
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }

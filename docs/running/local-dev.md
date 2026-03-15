@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-14"
 ---
 
 # Local development (Go)
@@ -119,7 +119,7 @@ AES key (16/24/32 bytes) before startup.
 - Auth gRPC: `localhost:8083`
 - Auth HTTP: `http://localhost:8084`
 - Social gRPC: `localhost:8090`
-- MCP HTTP: `http://localhost:8085/mcp/health`
+- MCP bridge health: `http://localhost:8085/mcp/health`
 - Admin: `http://localhost:8081`
 - Play: `http://localhost:8094/up`
 - AI gRPC: `localhost:8087`

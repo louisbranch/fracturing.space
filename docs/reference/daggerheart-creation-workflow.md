@@ -132,7 +132,8 @@ This keeps transport-level readiness surfaces consistent with domain decisions.
 
 MCP readiness and import flows use `character_creation_workflow_apply` for
 workflow fields. `character_profile_patch` is limited to non-workflow profile
-fields.
+fields. These are broader MCP/domain contracts, not part of the GM-safe
+production AI bridge profile.
 
 ## Implementation map
 

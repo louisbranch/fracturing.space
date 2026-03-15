@@ -1,6 +1,6 @@
 # Fracturing.Space ![Coverage](../../raw/badges/coverage.svg)
 
-Fracturing.Space is an open-source, server-authoritative engine for tabletop RPG campaigns modeled as deterministic, event-sourced state machines. It exposes gRPC and MCP interfaces for clients and automated agents.
+Fracturing.Space is an open-source, server-authoritative engine for tabletop RPG campaigns modeled as deterministic, event-sourced state machines. It exposes gRPC APIs plus an internal MCP bridge for AI orchestration.
 
 ## Start here
 
@@ -28,7 +28,7 @@ For detailed runtime paths:
 - User path (player/GM evaluation): [docs/audience/users.md](docs/audience/users.md)
 - Contributor path: [docs/audience/contributors.md](docs/audience/contributors.md)
 - Go developer path: [docs/audience/go-developers.md](docs/audience/go-developers.md)
-- Integrator path (MCP/clients): [docs/audience/integrators.md](docs/audience/integrators.md)
+- MCP bridge/reference docs: [docs/reference/mcp.md](docs/reference/mcp.md)
 - System developer path: [docs/audience/system-developers.md](docs/audience/system-developers.md)
 - Translator path: [docs/audience/translators.md](docs/audience/translators.md)
 

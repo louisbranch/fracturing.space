@@ -1,9 +1,10 @@
-package service
+package httptransport
 
 import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -183,19 +184,6 @@ func TestHTTPTransport_handleMessages_NewSession(t *testing.T) {
 
 	transport.handleMessages(w, req)
 
-	// Should have created a session (check cookie)
-	cookies := w.Result().Cookies()
-	var sessionCookie *http.Cookie
-	for _, cookie := range cookies {
-		if cookie.Name == "mcp_session" {
-			sessionCookie = cookie
-			break
-		}
-	}
-	if sessionCookie == nil || sessionCookie.Value == "" {
-		t.Error("handleMessages() should set mcp_session cookie for new sessions")
-	}
-
 	if got := w.Result().Header.Get("Mcp-Session-Id"); got == "" {
 		t.Error("handleMessages() should set Mcp-Session-Id header for new sessions")
 	}
@@ -279,7 +267,40 @@ func TestHTTPTransport_handleMessages_MissingSessionRequiresInitialize(t *testin
 	}
 }
 
-func TestHTTPTransport_handleMessages_HeaderSessionReuse(t *testing.T) {
+func TestHTTPTransport_handleMessages_InitializeRejectedByRuntimeFactory(t *testing.T) {
+	transport := NewHTTPTransportWithRuntime("localhost:8081", fakeRuntimeFactory{
+		newSessionRuntime: func(http.Header) (SessionRuntime, error) {
+			return nil, fmt.Errorf("%w: missing required MCP bridge session headers", ErrSessionBootstrapRejected)
+		},
+	})
+
+	request := map[string]interface{}{
+		"jsonrpc": "2.0",
+		"id":      1,
+		"method":  "initialize",
+		"params":  map[string]interface{}{},
+	}
+	body, _ := json.Marshal(request)
+
+	req := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(body)))
+	req.Header.Set("Content-Type", "application/json")
+	setLocalhostHeaders(req)
+	w := httptest.NewRecorder()
+
+	transport.handleMessages(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("handleMessages() status = %d, want %d", w.Code, http.StatusBadRequest)
+	}
+	if sessionID := strings.TrimSpace(w.Header().Get("Mcp-Session-Id")); sessionID != "" {
+		t.Fatalf("unexpected Mcp-Session-Id header %q", sessionID)
+	}
+	if !strings.Contains(w.Body.String(), "missing required MCP bridge session headers") {
+		t.Fatalf("handleMessages() body = %q, want bootstrap rejection", w.Body.String())
+	}
+}
+
+func TestHTTPTransport_handleMessages_HeaderSessionReuseAfterInitialize(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
 	initRequest := map[string]interface{}{
@@ -771,7 +792,7 @@ func TestHTTPTransport_handleMessages_InvalidSessionHeader(t *testing.T) {
 	}
 }
 
-func TestHTTPTransport_handleMessages_CookieSessionReuse(t *testing.T) {
+func TestHTTPTransport_handleMessages_HeaderSessionReuse(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
 	// First: create a session via initialize
@@ -794,19 +815,12 @@ func TestHTTPTransport_handleMessages_CookieSessionReuse(t *testing.T) {
 
 	transport.handleMessages(initResp, initReq)
 
-	// Extract session cookie
-	var sessionCookie *http.Cookie
-	for _, cookie := range initResp.Result().Cookies() {
-		if cookie.Name == "mcp_session" {
-			sessionCookie = cookie
-			break
-		}
-	}
-	if sessionCookie == nil {
-		t.Fatal("expected mcp_session cookie")
+	sessionID := initResp.Result().Header.Get("Mcp-Session-Id")
+	if sessionID == "" {
+		t.Fatal("expected Mcp-Session-Id header")
 	}
 
-	// Second: use cookie to reuse session
+	// Second: use the bridge session header to reuse the session.
 	listRequest := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"id":      2,
@@ -817,7 +831,7 @@ func TestHTTPTransport_handleMessages_CookieSessionReuse(t *testing.T) {
 
 	listReq := httptest.NewRequest(http.MethodPost, "/mcp/messages", strings.NewReader(string(listBody)))
 	listReq.Header.Set("Content-Type", "application/json")
-	listReq.AddCookie(sessionCookie)
+	listReq.Header.Set("Mcp-Session-Id", sessionID)
 	setLocalhostHeaders(listReq)
 	listResp := httptest.NewRecorder()
 
@@ -827,9 +841,9 @@ func TestHTTPTransport_handleMessages_CookieSessionReuse(t *testing.T) {
 
 	transport.handleMessages(listResp, listReq)
 
-	// Should not be a session error (400 with "Invalid or missing session ID")
+	// Reusing the header should avoid session validation errors.
 	if listResp.Code == http.StatusBadRequest && strings.Contains(listResp.Body.String(), "Invalid or missing session ID") {
-		t.Error("expected cookie-based session reuse, got session error")
+		t.Error("expected header-based session reuse, got session error")
 	}
 }
 
@@ -865,7 +879,7 @@ func TestHTTPTransport_handleMessages_NotificationNoResponse(t *testing.T) {
 	}
 }
 
-func TestHTTPTransport_handleSSE_CookieSession(t *testing.T) {
+func TestHTTPTransport_handleSSE_HeaderSession(t *testing.T) {
 	transport := NewHTTPTransport("localhost:8081")
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -877,7 +891,7 @@ func TestHTTPTransport_handleSSE_CookieSession(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodGet, "/mcp/sse", nil)
 	setLocalhostHeaders(req)
-	req.AddCookie(&http.Cookie{Name: "mcp_session", Value: sessionID})
+	req.Header.Set("Mcp-Session-Id", sessionID)
 
 	// Cancel the context shortly to stop the SSE loop
 	go func() {
@@ -891,6 +905,68 @@ func TestHTTPTransport_handleSSE_CookieSession(t *testing.T) {
 
 	if ct := w.Header().Get("Content-Type"); ct != "text/event-stream" {
 		t.Errorf("content-type = %q, want text/event-stream", ct)
+	}
+}
+
+func TestHTTPTransport_handleSSE_ClosedNotificationChannelDoesNotWriteNull(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+
+	ctx := context.Background()
+	conn, err := transport.Connect(ctx)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	sessionID := conn.SessionID()
+	if err := conn.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/mcp/sse", nil)
+	setLocalhostHeaders(req)
+	req.Header.Set("Mcp-Session-Id", sessionID)
+
+	w := httptest.NewRecorder()
+	transport.handleSSE(w, req)
+
+	if got := strings.TrimSpace(w.Body.String()); got != "" {
+		t.Fatalf("SSE body = %q, want empty body", got)
+	}
+}
+
+func TestHTTPTransport_handleSSE_EncodesJSONRPCWireMessages(t *testing.T) {
+	transport := NewHTTPTransport("localhost:8081")
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	conn, err := transport.Connect(ctx)
+	if err != nil {
+		t.Fatalf("Connect: %v", err)
+	}
+	sessionID := conn.SessionID()
+
+	req := httptest.NewRequest(http.MethodGet, "/mcp/sse", nil)
+	setLocalhostHeaders(req)
+	req.Header.Set("Mcp-Session-Id", sessionID)
+	req = req.WithContext(ctx)
+
+	done := make(chan struct{})
+	w := httptest.NewRecorder()
+	go func() {
+		transport.handleSSE(w, req)
+		close(done)
+	}()
+
+	time.Sleep(20 * time.Millisecond)
+	if err := conn.Write(context.Background(), &jsonrpc.Request{Method: "notifications/initialized"}); err != nil {
+		t.Fatalf("Write notification: %v", err)
+	}
+
+	time.Sleep(20 * time.Millisecond)
+	cancel()
+	<-done
+
+	if got := w.Body.String(); !strings.Contains(got, "\"jsonrpc\":\"2.0\"") {
+		t.Fatalf("SSE body missing JSON-RPC version tag: %q", got)
 	}
 }
 

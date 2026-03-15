@@ -1,4 +1,4 @@
-package service
+package httptransport
 
 import (
 	"fmt"
@@ -12,7 +12,7 @@ import (
 // validateLocalRequest enforces host access to mitigate DNS rebinding.
 // It checks Host and Origin headers against allowed hosts per MCP guidance so
 // remote web pages cannot reach local MCP servers via rebinding.
-// This is the transport-side "network guardrail" before we have richer auth.
+// This remains the transport-side network guardrail for the internal bridge.
 func (t *HTTPTransport) validateLocalRequest(r *http.Request) error {
 	if r == nil {
 		return fmt.Errorf("invalid request")

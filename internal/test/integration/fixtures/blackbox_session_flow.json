@@ -20,15 +20,8 @@
         "theme_prompt": "sessions"
       },
       "capture": {
-        "campaign_id": "campaign"
-      }
-    },
-    {
-      "name": "owner_participant_read",
-      "action": "read_resource",
-      "uri": "campaign://{{campaign_id}}/participants",
-      "capture": {
-        "owner_id": "result.contents[0].text|json.participants[0].id"
+        "campaign_id": "campaign",
+        "owner_id": "result.structuredContent.owner_participant_id"
       }
     },
     {

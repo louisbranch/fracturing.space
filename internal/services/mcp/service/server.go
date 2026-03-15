@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 	"sync"
 
@@ -15,7 +14,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/conformance"
-	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/mcpbridge"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 )
@@ -23,8 +23,6 @@ import (
 const (
 	// serverVersion identifies the MCP server version.
 	serverVersion = "0.1.0"
-	// mcpAuthzOverrideReason records why MCP uses platform override metadata.
-	mcpAuthzOverrideReason = "mcp_service"
 )
 
 // registration-related module composition moved to server_registration.go.
@@ -41,39 +39,23 @@ var (
 	buildMCPServerFromConn = newServer
 )
 
-// TransportKind identifies the MCP transport implementation.
-type TransportKind string
+// RegistrationProfile controls which MCP registrations are exposed by a
+// server instance. The default runtime uses the standard profile; integration
+// harnesses opt into broader bootstrap tools explicitly.
+type RegistrationProfile string
 
 const (
-	// TransportStdio uses standard input/output for MCP.
-	TransportStdio TransportKind = "stdio"
-	// TransportHTTP runs MCP over HTTP/SSE for browser or remote clients.
-	TransportHTTP TransportKind = "http"
+	RegistrationProfileStandard RegistrationProfile = "standard"
+	RegistrationProfileHarness  RegistrationProfile = "harness"
 )
 
 // Config configures the MCP server.
 type Config struct {
-	GRPCAddr  string
-	AIAddr    string
-	Transport TransportKind
-	HTTPAddr  string // HTTP server address (e.g., "localhost:8081"). Defaults to localhost:8081 for HTTP transport.
-	AuthToken string // Optional bearer token accepted by /mcp endpoints when OAuth is also configured.
-	TLSConfig *tls.Config
-
-	// Optional extension points for request admission and fairness controls.
-	RequestAuthorizer RequestAuthorizer
-	RateLimiter       RequestRateLimiter
-}
-
-// RequestAuthorizer validates incoming MCP HTTP requests before message handling.
-type RequestAuthorizer interface {
-	Authorize(r *http.Request) error
-}
-
-// RequestRateLimiter throttles incoming MCP HTTP requests.
-type RequestRateLimiter interface {
-	// Allow returns an error when the request should be rejected.
-	Allow(r *http.Request) error
+	GRPCAddr            string
+	AIAddr              string
+	HTTPAddr            string // HTTP server address (e.g., "localhost:8085"). Defaults to localhost:8085.
+	TLSConfig           *tls.Config
+	RegistrationProfile RegistrationProfile
 }
 
 // Server hosts the MCP server.
@@ -81,23 +63,42 @@ type Server struct {
 	mcpServer *mcp.Server
 	gameMc    *platformgrpc.ManagedConn
 	aiMc      *platformgrpc.ManagedConn
-	ctx       domain.Context
+	profile   mcpRegistrationProfile
+	ctx       sessionctx.Context
 	ctxMu     sync.RWMutex
 }
 
 // New creates a configured MCP server that connects to state and game system
 // gRPC services and hydrates tool/resource handlers from those APIs.
 func New(grpcAddr string) (*Server, error) {
-	return buildServerWithManagedConns(context.Background(), grpcAddr, "", platformgrpc.ModeOptional)
+	return buildServerWithManagedConns(context.Background(), grpcAddr, "", platformgrpc.ModeOptional, mcpRegistrationProfileStandard)
+}
+
+// NewHarness creates a non-production MCP server with mutable context
+// bootstrap tooling enabled for integration harnesses and focused local tests.
+func NewHarness(grpcAddr string) (*Server, error) {
+	return buildServerWithManagedConns(context.Background(), grpcAddr, "", platformgrpc.ModeOptional, mcpRegistrationProfileHarness)
 }
 
 // newServer creates MCP tool/resource handler bindings once and keeps shared
 // context for protocol state updates.
 func newServer(conn *grpc.ClientConn) (*Server, error) {
-	return newServerWithAIConn(conn, nil)
+	return newServerWithAIConnProfile(conn, nil, mcpRegistrationProfileStandard, sessionctx.Context{})
 }
 
 func newServerWithAIConn(conn *grpc.ClientConn, aiConn *grpc.ClientConn) (*Server, error) {
+	return newServerWithAIConnProfile(conn, aiConn, mcpRegistrationProfileStandard, sessionctx.Context{})
+}
+
+func newInternalAISessionServer(conn *grpc.ClientConn, aiConn *grpc.ClientConn, sessionCtx mcpbridge.SessionContext) (*Server, error) {
+	return newServerWithAIConnProfile(conn, aiConn, mcpRegistrationProfileInternalAI, sessionctx.Context{
+		CampaignID:    sessionCtx.CampaignID,
+		SessionID:     sessionCtx.SessionID,
+		ParticipantID: sessionCtx.ParticipantID,
+	})
+}
+
+func newServerWithAIConnProfile(conn *grpc.ClientConn, aiConn *grpc.ClientConn, profile mcpRegistrationProfile, initialContext sessionctx.Context) (*Server, error) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, &mcp.ServerOptions{
 		CompletionHandler:  completionHandler,
 		SubscribeHandler:   resourceSubscribeHandler,
@@ -121,12 +122,12 @@ func newServerWithAIConn(conn *grpc.ClientConn, aiConn *grpc.ClientConn) (*Serve
 		systemReferenceClient = aiv1.NewSystemReferenceServiceClient(aiConn)
 	}
 
-	server := &Server{mcpServer: mcpServer}
+	server := &Server{mcpServer: mcpServer, profile: profile, ctx: initialContext}
 	resourceNotifier := func(ctx context.Context, uri string) {
 		if strings.TrimSpace(uri) == "" {
 			return
 		}
-		if ctx == nil {
+		if ctx == nil || ctx.Err() != nil {
 			ctx = context.Background()
 		}
 		if err := mcpServer.ResourceUpdated(ctx, &mcp.ResourceUpdatedNotificationParams{URI: uri}); err != nil {
@@ -150,6 +151,7 @@ func newServerWithAIConn(conn *grpc.ClientConn, aiConn *grpc.ClientConn) (*Serve
 			campaignArtifactClient: campaignArtifactClient,
 			systemReferenceClient:  systemReferenceClient,
 		},
+		profile,
 		resourceNotifier,
 	) {
 		if err := module.register(mcpServerRegistrationAdapter{server: mcpServer}); err != nil {

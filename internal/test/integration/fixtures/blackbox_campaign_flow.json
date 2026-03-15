@@ -38,24 +38,8 @@
         "theme_prompt": "An integration test campaign"
       },
       "capture": {
-        "campaign_id": "campaign"
-      }
-    },
-    {
-      "name": "campaign_read",
-      "action": "read_resource",
-      "uri": "campaign://{{campaign_id}}",
-      "expect_paths": {
-        "result.contents[0].text|json.campaign.id": "{{campaign_id}}",
-        "result.contents[0].text|json.campaign.name": "Blackbox Campaign"
-      }
-    },
-    {
-      "name": "owner_participant_read",
-      "action": "read_resource",
-      "uri": "campaign://{{campaign_id}}/participants",
-      "capture": {
-        "owner_id": "result.contents[0].text|json.participants[0].id"
+        "campaign_id": "campaign",
+        "owner_id": "result.structuredContent.owner_participant_id"
       }
     },
     {
@@ -67,6 +51,15 @@
         "participant_id": {"ref": "owner_id"}
       },
       "expect": "none"
+    },
+    {
+      "name": "campaign_read",
+      "action": "read_resource",
+      "uri": "campaign://{{campaign_id}}",
+      "expect_paths": {
+        "result.contents[0].text|json.campaign.id": "{{campaign_id}}",
+        "result.contents[0].text|json.campaign.name": "Blackbox Campaign"
+      }
     },
     {
       "name": "campaign_subscribe",
@@ -139,7 +132,7 @@
       "args": {
         "campaign_id": {"ref": "campaign_id"},
         "character_id": {"ref": "character_id"},
-        "controller": {"ref": "participant_id"}
+        "participant_id": {"ref": "participant_id"}
       },
       "expect": "none"
     },
@@ -168,13 +161,24 @@
       "expect": "none"
     },
     {
-      "name": "set_context",
+      "name": "set_context_player",
       "action": "tool_call",
       "tool": "set_context",
       "args": {
         "campaign_id": {"ref": "campaign_id"},
         "session_id": {"ref": "session_id"},
         "participant_id": {"ref": "participant_id"}
+      },
+      "expect": "none"
+    },
+    {
+      "name": "set_context_owner_for_session_end",
+      "action": "tool_call",
+      "tool": "set_context",
+      "args": {
+        "campaign_id": {"ref": "campaign_id"},
+        "session_id": {"ref": "session_id"},
+        "participant_id": {"ref": "owner_id"}
       },
       "expect": "none"
     },

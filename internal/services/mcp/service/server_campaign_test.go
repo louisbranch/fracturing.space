@@ -10,6 +10,7 @@ import (
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -229,8 +230,8 @@ func TestCampaignEndHandlerUsesContextDefaults(t *testing.T) {
 	client := &fakeCampaignClient{endCampaignResponse: &statev1.EndCampaignResponse{
 		Campaign: &statev1.Campaign{Id: "camp-123"},
 	}}
-	getContext := func() domain.Context {
-		return domain.Context{CampaignID: "camp-123"}
+	getContext := func() sessionctx.Context {
+		return sessionctx.Context{CampaignID: "camp-123"}
 	}
 
 	result, _, err := domain.CampaignEndHandler(client, getContext, nil)(
@@ -253,7 +254,7 @@ func TestCampaignEndHandlerUsesContextDefaults(t *testing.T) {
 // TestCampaignEndHandlerRejectsMissingCampaign ensures campaign_id is required.
 func TestCampaignEndHandlerRejectsMissingCampaign(t *testing.T) {
 	client := &fakeCampaignClient{}
-	handler := domain.CampaignEndHandler(client, func() domain.Context { return domain.Context{} }, nil)
+	handler := domain.CampaignEndHandler(client, func() sessionctx.Context { return sessionctx.Context{} }, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{})
 	if err == nil {
@@ -338,8 +339,8 @@ func TestCampaignArchiveHandlerUsesContextDefaults(t *testing.T) {
 	client := &fakeCampaignClient{archiveCampaignResponse: &statev1.ArchiveCampaignResponse{
 		Campaign: &statev1.Campaign{Id: "camp-123"},
 	}}
-	getContext := func() domain.Context {
-		return domain.Context{CampaignID: "camp-123"}
+	getContext := func() sessionctx.Context {
+		return sessionctx.Context{CampaignID: "camp-123"}
 	}
 
 	result, _, err := domain.CampaignArchiveHandler(client, getContext, nil)(
@@ -362,7 +363,7 @@ func TestCampaignArchiveHandlerUsesContextDefaults(t *testing.T) {
 // TestCampaignArchiveHandlerRejectsMissingCampaign ensures campaign_id is required.
 func TestCampaignArchiveHandlerRejectsMissingCampaign(t *testing.T) {
 	client := &fakeCampaignClient{}
-	handler := domain.CampaignArchiveHandler(client, func() domain.Context { return domain.Context{} }, nil)
+	handler := domain.CampaignArchiveHandler(client, func() sessionctx.Context { return sessionctx.Context{} }, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{})
 	if err == nil {
@@ -449,8 +450,8 @@ func TestCampaignRestoreHandlerUsesContextDefaults(t *testing.T) {
 	client := &fakeCampaignClient{restoreCampaignResponse: &statev1.RestoreCampaignResponse{
 		Campaign: &statev1.Campaign{Id: "camp-123"},
 	}}
-	getContext := func() domain.Context {
-		return domain.Context{CampaignID: "camp-123"}
+	getContext := func() sessionctx.Context {
+		return sessionctx.Context{CampaignID: "camp-123"}
 	}
 
 	result, _, err := domain.CampaignRestoreHandler(client, getContext, nil)(
@@ -473,7 +474,7 @@ func TestCampaignRestoreHandlerUsesContextDefaults(t *testing.T) {
 // TestCampaignRestoreHandlerRejectsMissingCampaign ensures campaign_id is required.
 func TestCampaignRestoreHandlerRejectsMissingCampaign(t *testing.T) {
 	client := &fakeCampaignClient{}
-	handler := domain.CampaignRestoreHandler(client, func() domain.Context { return domain.Context{} }, nil)
+	handler := domain.CampaignRestoreHandler(client, func() sessionctx.Context { return sessionctx.Context{} }, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.CampaignStatusChangeInput{})
 	if err == nil {
