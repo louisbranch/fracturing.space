@@ -113,6 +113,64 @@
     return response.json();
   }
 
+  function showButtonLoadingSpinner(button) {
+    if (!button) {
+      return;
+    }
+    if (button.querySelector("[data-button-loading-spinner='true']")) {
+      return;
+    }
+    var spinner = document.createElement("span");
+    spinner.className = "loading loading-spinner";
+    spinner.setAttribute("aria-hidden", "true");
+    spinner.setAttribute("data-button-loading-spinner", "true");
+    button.insertBefore(spinner, button.firstChild);
+  }
+
+  function hideButtonLoadingSpinner(button) {
+    if (!button) {
+      return;
+    }
+    var spinner = button.querySelector("[data-button-loading-spinner='true']");
+    if (!spinner) {
+      return;
+    }
+    button.removeChild(spinner);
+  }
+
+  function markPasskeyBusy(form, button) {
+    if (!form || !button) {
+      return false;
+    }
+    if (form.getAttribute("data-passkey-busy") === "true") {
+      return false;
+    }
+    form.setAttribute("data-passkey-busy", "true");
+    form.setAttribute("aria-busy", "true");
+    button.disabled = true;
+    showButtonLoadingSpinner(button);
+    button.setAttribute("aria-busy", "true");
+    return true;
+  }
+
+  function clearPasskeyBusy(form, button, disabled) {
+    if (!form || !button) {
+      return;
+    }
+    form.removeAttribute("data-passkey-busy");
+    form.removeAttribute("aria-busy");
+    hideButtonLoadingSpinner(button);
+    button.removeAttribute("aria-busy");
+    button.disabled = !!disabled;
+  }
+
+  function shouldDisableRegisterButton(button) {
+    if (!button) {
+      return true;
+    }
+    return button.getAttribute("data-passkey-register-allowed") !== "true";
+  }
+
   function setupLoginAndRegister() {
     var i18nEl = document.getElementById("i18n-strings");
     if (!i18nEl) {
@@ -171,9 +229,6 @@
     }
 
     async function performPasskeyLogin(username) {
-      if (!username) {
-        throw new Error(jsLoginUsernameRequired);
-      }
       var start = await startPasskeyLogin(username);
       var publicKey = normalizeRequestOptions(start.public_key.publicKey);
       var assertion = await navigator.credentials.get({ publicKey: publicKey });
@@ -186,10 +241,18 @@
     if (loginForm && passkeyButton && window.PublicKeyCredential) {
       passkeyButton.addEventListener("click", async function () {
         hide(passkeyError);
+        var username = loginUsername ? loginUsername.value.trim() : "";
+        if (!username) {
+          show(passkeyError, jsLoginUsernameRequired);
+          return;
+        }
+        if (!markPasskeyBusy(loginForm, passkeyButton)) {
+          return;
+        }
         try {
-          var username = loginUsername ? loginUsername.value.trim() : "";
           await performPasskeyLogin(username);
         } catch (err) {
+          clearPasskeyBusy(loginForm, passkeyButton, false);
           show(passkeyError, err.message || jsPasskeyFailed);
         }
       });
@@ -203,18 +266,19 @@
           show(registerError, jsRegisterUsernameRequired);
           return;
         }
+        if (!markPasskeyBusy(registerForm, registerButton)) {
+          return;
+        }
         try {
-          if (registerButton.disabled) {
-            return;
-          }
-      var start = await startPasskeyRegister(username);
-      var publicKey = normalizeCreationOptions(start.public_key.publicKey);
-      var credential = await navigator.credentials.create({ publicKey: publicKey });
-      var finish = await finishPasskeyRegister(start.session_id, credentialToJSON(credential));
+          var start = await startPasskeyRegister(username);
+          var publicKey = normalizeCreationOptions(start.public_key.publicKey);
+          var credential = await navigator.credentials.create({ publicKey: publicKey });
+          var finish = await finishPasskeyRegister(start.session_id, credentialToJSON(credential));
           if (finish.redirect_url) {
             window.location = finish.redirect_url;
           }
         } catch (err) {
+          clearPasskeyBusy(registerForm, registerButton, shouldDisableRegisterButton(registerButton));
           show(registerError, err.message || jsRegisterFailed);
         }
       });
@@ -274,6 +338,9 @@
           show(recoveryError, jsRecoveryCodeRequired);
           return;
         }
+        if (!markPasskeyBusy(recoveryForm, recoveryButton)) {
+          return;
+        }
         try {
           var start = await startRecovery(username, code);
           var publicKey = normalizeCreationOptions(start.public_key.publicKey);
@@ -283,6 +350,7 @@
             window.location = finish.redirect_url;
           }
         } catch (err) {
+          clearPasskeyBusy(recoveryForm, recoveryButton, false);
           show(recoveryError, err.message || jsRecoveryFailed);
         }
       });
