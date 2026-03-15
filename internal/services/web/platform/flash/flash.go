@@ -25,14 +25,14 @@ const (
 
 // Notice stores one flash message reference.
 type Notice struct {
-	Kind    Kind   `json:"kind"`
-	Key     string `json:"key,omitempty"`
-	Message string `json:"message,omitempty"`
+	Kind Kind     `json:"kind"`
+	Key  string   `json:"key,omitempty"`
+	Args []string `json:"args,omitempty"`
 }
 
 // NoticeSuccess creates a success notice for the provided localization key.
-func NoticeSuccess(key string) Notice {
-	return Notice{Kind: KindSuccess, Key: key}
+func NoticeSuccess(key string, args ...string) Notice {
+	return Notice{Kind: KindSuccess, Key: key, Args: args}
 }
 
 // Write stores a flash notice cookie for the next page render.
@@ -127,8 +127,16 @@ func decodeNotice(raw string) (Notice, bool) {
 // normalizeNotice centralizes this web behavior in one helper seam.
 func normalizeNotice(notice Notice) (Notice, bool) {
 	notice.Key = strings.TrimSpace(notice.Key)
-	notice.Message = strings.TrimSpace(notice.Message)
-	if notice.Key == "" && notice.Message == "" {
+	if len(notice.Args) > 0 {
+		args := make([]string, 0, len(notice.Args))
+		for _, arg := range notice.Args {
+			args = append(args, strings.TrimSpace(arg))
+		}
+		notice.Args = args
+	} else {
+		notice.Args = nil
+	}
+	if notice.Key == "" {
 		return Notice{}, false
 	}
 	notice.Kind = Kind(strings.ToLower(strings.TrimSpace(string(notice.Kind))))

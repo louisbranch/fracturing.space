@@ -62,22 +62,24 @@ func LocalizeError(loc Localizer, err error, locale ...string) string {
 	if err == nil {
 		return ""
 	}
-	msg := strings.TrimSpace(err.Error())
-	if msg == "" {
-		return ""
-	}
-	if loc == nil {
-		return msg
-	}
-	if key := apperrors.LocalizationKey(err); key != "" {
-		if localized := strings.TrimSpace(loc.Sprintf(key)); localized != "" && localized != key {
-			return localized
+	if loc != nil {
+		if key := apperrors.LocalizationKey(err); key != "" {
+			if localized := strings.TrimSpace(loc.Sprintf(key)); localized != "" && localized != key {
+				return localized
+			}
 		}
 	}
 	if rich := apperrors.ResolveRichMessage(err, firstLocale(locale)); rich != "" {
 		return rich
 	}
-	return msg
+	statusCode := apperrors.HTTPStatus(err)
+	if statusCode < http.StatusBadRequest {
+		statusCode = http.StatusInternalServerError
+	}
+	if text := strings.TrimSpace(http.StatusText(statusCode)); text != "" {
+		return text
+	}
+	return http.StatusText(http.StatusInternalServerError)
 }
 
 // firstLocale selects the first non-empty locale override when callers supply one.

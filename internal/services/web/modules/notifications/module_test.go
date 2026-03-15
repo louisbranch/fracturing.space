@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
@@ -131,8 +132,11 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 	detailItem := notificationsapp.NotificationSummary{
 		ID:          "n1",
 		MessageType: "system.message.v1",
-		PayloadJSON: `{"title":"Detail view title","body":"Detail body."}`,
-		Read:        false,
+		PayloadJSON: mustNotificationPayloadJSON(notificationpayload.InAppPayload{
+			Title: platformi18n.NewCopyRef("notification.campaign_invite.updated.title"),
+			Body:  platformi18n.NewCopyRef("notification.campaign_invite.updated.body"),
+		}),
+		Read: false,
 	}
 	m := New(Config{Gateway: fakeGateway{
 		listItems: []notificationsapp.NotificationSummary{listItem},
@@ -140,8 +144,11 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 		openItem: notificationsapp.NotificationSummary{
 			ID:          "n1",
 			MessageType: "system.message.v1",
-			PayloadJSON: `{"title":"Opened title","body":"Opened body."}`,
-			Read:        true,
+			PayloadJSON: mustNotificationPayloadJSON(notificationpayload.InAppPayload{
+				Title: platformi18n.NewCopyRef("notification.campaign_invite.accepted.title"),
+				Body:  platformi18n.NewCopyRef("notification.campaign_invite.accepted.body"),
+			}),
+			Read: true,
 		},
 	}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
@@ -158,11 +165,11 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 	if !strings.Contains(body, "notification-open") {
 		t.Fatalf("body missing detail container marker: %q", body)
 	}
-	if !strings.Contains(body, "Detail view title") {
+	if !strings.Contains(body, "Invitation update") {
 		t.Fatalf("body missing rendered detail title: %q", body)
 	}
 	// Invariant: GET detail remains read-only; only POST /open performs acknowledgment.
-	if strings.Contains(body, "Opened title") {
+	if strings.Contains(body, "Invitation accepted") {
 		t.Fatalf("body unexpectedly rendered open-route content on GET detail: %q", body)
 	}
 	if !strings.Contains(body, `class="menu-active" href="/app/notifications/n1"`) {
@@ -177,12 +184,12 @@ func TestMountServesInviteNotificationDetailActions(t *testing.T) {
 	t.Parallel()
 
 	payloadJSON, err := json.Marshal(notificationpayload.InAppPayload{
-		Title: "Campaign invitation",
-		Body:  "@gm invited you to join Skyfall.",
+		Title: platformi18n.NewCopyRef("notification.campaign_invite.created.title"),
+		Body:  platformi18n.NewCopyRef("notification.campaign_invite.created.body_summary", "gm", "Skyfall"),
 		Facts: []notificationpayload.PayloadFact{
-			{Label: "Campaign", Value: "Skyfall"},
-			{Label: "Seat", Value: "Scout"},
-			{Label: "Invited by", Value: "@gm"},
+			{Label: platformi18n.NewCopyRef("notification.fact.campaign"), Value: "Skyfall"},
+			{Label: platformi18n.NewCopyRef("notification.fact.seat"), Value: "Scout"},
+			{Label: platformi18n.NewCopyRef("notification.fact.invited_by"), Value: "@gm"},
 		},
 		Actions: []notificationpayload.PayloadAction{
 			notificationpayload.ViewInvitationAction("inv-1"),
@@ -253,8 +260,8 @@ func TestMountInviteNotificationOpenRouteStaysInNotifications(t *testing.T) {
 	t.Parallel()
 
 	payloadJSON, err := json.Marshal(notificationpayload.InAppPayload{
-		Title: "Campaign invitation",
-		Body:  "@gm invited you to join Skyfall.",
+		Title: platformi18n.NewCopyRef("notification.campaign_invite.created.title"),
+		Body:  platformi18n.NewCopyRef("notification.campaign_invite.created.body_summary", "gm", "Skyfall"),
 		Actions: []notificationpayload.PayloadAction{
 			notificationpayload.ViewInvitationAction("inv-1"),
 		},

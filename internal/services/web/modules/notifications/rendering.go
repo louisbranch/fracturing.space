@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -47,7 +48,10 @@ func (defaultNotificationCopyRenderer) RenderInApp(loc webtemplates.Localizer, i
 	}
 	facts := make([]NotificationFactView, 0, len(payload.Facts))
 	for _, fact := range payload.Facts {
-		facts = append(facts, NotificationFactView{Label: fact.Label, Value: fact.Value})
+		facts = append(facts, NotificationFactView{
+			Label: platformi18n.ResolveCopy(loc, fact.Label),
+			Value: fact.Value,
+		})
 	}
 	actions := make([]NotificationActionView, 0, len(payload.Actions))
 	for _, action := range payload.Actions {
@@ -56,7 +60,7 @@ func (defaultNotificationCopyRenderer) RenderInApp(loc webtemplates.Localizer, i
 			continue
 		}
 		actions = append(actions, NotificationActionView{
-			Label:   action.Label,
+			Label:   platformi18n.ResolveCopy(loc, action.Label),
 			URL:     url,
 			Method:  action.Method,
 			Primary: action.Style == notificationpayload.ActionStylePrimary,

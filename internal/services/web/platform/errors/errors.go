@@ -5,6 +5,7 @@ package errors
 import (
 	stderrors "errors"
 	"net/http"
+	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/httperrors"
 	"google.golang.org/grpc/codes"
@@ -44,7 +45,15 @@ var PublicMessage = httperrors.PublicMessage
 var ResolveRichMessage = httperrors.ResolveRichMessage
 
 // MapGRPCTransportError converts gRPC transport errors into typed web errors.
-var MapGRPCTransportError = httperrors.MapGRPCTransportError
+func MapGRPCTransportError(err error, mapping GRPCStatusMapping) error {
+	if err == nil {
+		return nil
+	}
+	if strings.TrimSpace(mapping.FallbackKey) == "" {
+		panic("web/platform/errors: FallbackKey is required for MapGRPCTransportError")
+	}
+	return httperrors.MapGRPCTransportError(err, mapping)
+}
 
 // HTTPStatus maps an error to an HTTP status code.
 // Web uses a slightly different gRPC fallback mapping than the shared default:

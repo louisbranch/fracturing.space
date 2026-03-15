@@ -46,11 +46,14 @@ func TestInviteCreatedNotificationHandler_HandleCreatesRecipientIntent(t *testin
 	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
 		t.Fatalf("unmarshal payload json: %v", err)
 	}
-	if payload.Title != "Campaign invitation" {
-		t.Fatalf("title = %q, want %q", payload.Title, "Campaign invitation")
+	if payload.Title.Key != "notification.campaign_invite.created.title" {
+		t.Fatalf("title key = %q, want %q", payload.Title.Key, "notification.campaign_invite.created.title")
 	}
-	if payload.Body != "@owner invited you to join Campaign Name." {
-		t.Fatalf("body = %q, want inviter campaign summary", payload.Body)
+	if payload.Body.Key != "notification.campaign_invite.created.body_summary" {
+		t.Fatalf("body key = %q, want inviter campaign summary key", payload.Body.Key)
+	}
+	if len(payload.Body.Args) != 2 || payload.Body.Args[0] != "owner" || payload.Body.Args[1] != "Campaign Name" {
+		t.Fatalf("body args = %+v, want inviter+campaign args", payload.Body.Args)
 	}
 	if len(payload.Facts) != 3 {
 		t.Fatalf("facts = %+v, want campaign, seat, inviter", payload.Facts)
@@ -58,8 +61,8 @@ func TestInviteCreatedNotificationHandler_HandleCreatesRecipientIntent(t *testin
 	if len(payload.Actions) != 1 {
 		t.Fatalf("actions = %+v, want single view action", payload.Actions)
 	}
-	if payload.Actions[0].Label != "View invitation" {
-		t.Fatalf("action label = %q, want %q", payload.Actions[0].Label, "View invitation")
+	if payload.Actions[0].Label.Key != "notification.action.view_invitation" {
+		t.Fatalf("action label key = %q, want %q", payload.Actions[0].Label.Key, "notification.action.view_invitation")
 	}
 	if payload.Actions[0].Kind != notificationpayload.ActionKindPublicInviteView || payload.Actions[0].TargetID != "invite-1" {
 		t.Fatalf("action = %+v, want invite view action", payload.Actions[0])
@@ -97,8 +100,8 @@ func TestInviteAcceptedNotificationHandler_HandleCreatesInviterIntent(t *testing
 	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
 		t.Fatalf("unmarshal payload json: %v", err)
 	}
-	if payload.Title != "Invitation accepted" {
-		t.Fatalf("title = %q, want %q", payload.Title, "Invitation accepted")
+	if payload.Title.Key != "notification.campaign_invite.accepted.title" {
+		t.Fatalf("title key = %q, want %q", payload.Title.Key, "notification.campaign_invite.accepted.title")
 	}
 	if len(payload.Actions) != 1 || payload.Actions[0].Kind != notificationpayload.ActionKindAppCampaignOpen || payload.Actions[0].TargetID != "campaign-1" {
 		t.Fatalf("actions = %+v, want open campaign action", payload.Actions)
@@ -136,11 +139,14 @@ func TestInviteDeclinedNotificationHandler_HandleCreatesInviterIntent(t *testing
 	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
 		t.Fatalf("unmarshal payload json: %v", err)
 	}
-	if payload.Title != "Invitation declined" {
-		t.Fatalf("title = %q, want %q", payload.Title, "Invitation declined")
+	if payload.Title.Key != "notification.campaign_invite.declined.title" {
+		t.Fatalf("title key = %q, want %q", payload.Title.Key, "notification.campaign_invite.declined.title")
 	}
-	if payload.Body != "@recipient declined to participate as Seat Name in Campaign Name." {
-		t.Fatalf("body = %q, want updated declined copy", payload.Body)
+	if payload.Body.Key != "notification.campaign_invite.declined.body_summary" {
+		t.Fatalf("body key = %q, want %q", payload.Body.Key, "notification.campaign_invite.declined.body_summary")
+	}
+	if len(payload.Body.Args) != 3 || payload.Body.Args[0] != "recipient" || payload.Body.Args[1] != "Seat Name" || payload.Body.Args[2] != "Campaign Name" {
+		t.Fatalf("body args = %+v, want recipient+seat+campaign args", payload.Body.Args)
 	}
 	if len(payload.Actions) != 1 || payload.Actions[0].Kind != notificationpayload.ActionKindAppCampaignOpen || payload.Actions[0].TargetID != "campaign-1" {
 		t.Fatalf("actions = %+v, want open campaign action", payload.Actions)

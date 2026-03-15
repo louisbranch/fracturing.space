@@ -236,7 +236,7 @@ func TestWritePublicPageRendersToastFromFlashNotice(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/login", nil)
-	setFlashCookie(t, req, flashnotice.Notice{Kind: flashnotice.KindError, Message: "Signup expired. Please try again."})
+	setFlashCookie(t, req, flashnotice.Notice{Kind: flashnotice.KindError, Key: "recovery_code.signup_expired"})
 	rr := httptest.NewRecorder()
 
 	WritePublicPage(rr, req, "Sign In", "desc", "en", http.StatusAccepted, textComponent(`<section id="public-fragment">ok</section>`))
@@ -245,7 +245,7 @@ func TestWritePublicPageRendersToastFromFlashNotice(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusAccepted)
 	}
 	body := rr.Body.String()
-	for _, marker := range []string{`id="app-toast"`, `Signup expired. Please try again.`, `id="public-fragment"`} {
+	for _, marker := range []string{`id="app-toast"`, `That unfinished signup expired or was replaced. Create the account again.`, `id="public-fragment"`} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing marker %q: %q", marker, body)
 		}
@@ -299,17 +299,17 @@ func TestResolveFlashToastFallsBackToNoticeKeyWhenLocalizationMissing(t *testing
 	}
 }
 
-func TestResolveFlashToastUsesLiteralMessageWhenKeyMissing(t *testing.T) {
+func TestResolveFlashToastFallsBackToNoticeKeyWithoutLocalization(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/c1/invites", nil)
-	setFlashCookie(t, req, flashnotice.Notice{Kind: flashnotice.KindError, Message: "User already has a pending invite in this campaign"})
+	setFlashCookie(t, req, flashnotice.Notice{Kind: flashnotice.KindError, Key: "error.web.message.invite_claim_user_already_in_campaign"})
 	rr := httptest.NewRecorder()
 	toast := resolveFlashToast(rr, req, blankLocalizer{}, "en-US")
 	if toast == nil {
 		t.Fatalf("resolveFlashToast() = nil, want toast")
 	}
-	if toast.Message != "User already has a pending invite in this campaign" {
+	if toast.Message != "error.web.message.invite_claim_user_already_in_campaign" {
 		t.Fatalf("toast.Message = %q", toast.Message)
 	}
 }

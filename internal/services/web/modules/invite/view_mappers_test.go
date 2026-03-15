@@ -1,11 +1,57 @@
 package invite
 
 import (
+	"fmt"
 	"testing"
 
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	"golang.org/x/text/message"
 )
+
+type testLocalizer map[string]string
+
+func (l testLocalizer) Sprintf(key message.Reference, args ...any) string {
+	keyString := fmt.Sprint(key)
+	format, ok := l[keyString]
+	if !ok {
+		format = keyString
+	}
+	if len(args) == 0 {
+		return format
+	}
+	return fmt.Sprintf(format, args...)
+}
+
+func englishInviteLocalizer() testLocalizer {
+	return testLocalizer{
+		"web.invite.action.accept":           "Accept invitation",
+		"web.invite.action.dashboard":        "Back to dashboard",
+		"web.invite.action.decline":          "Decline invitation",
+		"web.invite.action.login":            "Sign in or create account",
+		"web.invite.state.anonymous.body":    "Sign in or create an account to view and respond to this invitation.",
+		"web.invite.state.anonymous.heading": "Campaign invitation",
+		"web.invite.state.claimable.body":    "This invitation is unassigned. You can claim it with your current account.",
+		"web.invite.state.claimable.heading": "Claim this seat",
+		"web.invite.state.claimed.body":      "This seat has already been claimed.",
+		"web.invite.state.claimed.heading":   "Invitation claimed",
+		"web.invite.state.declined.body":     "This invitation has already been declined.",
+		"web.invite.state.declined.heading":  "Invitation declined",
+		"web.invite.state.default.body":      "Review this invitation.",
+		"web.invite.state.default.heading":   "Campaign invitation",
+		"web.invite.state.mismatch.body":     "This invitation is reserved for a different account.",
+		"web.invite.state.mismatch.heading":  "Invitation reserved",
+		"web.invite.state.revoked.body":      "This invitation is no longer available.",
+		"web.invite.state.revoked.heading":   "Invitation revoked",
+		"web.invite.state.targeted.body":     "This invitation is addressed to you. You can accept or decline it now.",
+		"web.invite.state.targeted.heading":  "Invitation ready",
+		"web.invite.status.claimed":          "Claimed",
+		"web.invite.status.declined":         "Declined",
+		"web.invite.status.pending":          "Pending",
+		"web.invite.status.revoked":          "Revoked",
+		"web.invite.status.unspecified":      "Unspecified",
+	}
+}
 
 func TestMapPublicInviteViewAnonymousInviteIncludesInviterProfileAndLoginRedirect(t *testing.T) {
 	t.Parallel()
@@ -19,7 +65,7 @@ func TestMapPublicInviteViewAnonymousInviteIncludesInviterProfileAndLoginRedirec
 			InviterUsername: " gm ",
 			Status:          inviteapp.InviteStatusPending,
 		},
-	})
+	}, englishInviteLocalizer())
 
 	if view.CampaignName != "Skyfall" {
 		t.Fatalf("CampaignName = %q, want %q", view.CampaignName, "Skyfall")
@@ -145,7 +191,7 @@ func TestMapPublicInviteViewMapsActionableAndTerminalStates(t *testing.T) {
 					InviteID: "inv-1",
 					Status:   inviteapp.InviteStatusPending,
 				},
-			})
+			}, englishInviteLocalizer())
 			view := assertionsView{
 				Heading:        mapped.Heading,
 				Body:           mapped.Body,
@@ -162,5 +208,36 @@ func TestMapPublicInviteViewMapsActionableAndTerminalStates(t *testing.T) {
 			}
 			tc.assert(t, view)
 		})
+	}
+}
+
+func TestMapPublicInviteViewLocalizesStatusAndActions(t *testing.T) {
+	t.Parallel()
+
+	view := mapPublicInviteView(inviteapp.InvitePage{
+		State: inviteapp.InvitePageStateTargeted,
+		Invite: inviteapp.PublicInvite{
+			InviteID: "inv-1",
+			Status:   inviteapp.InviteStatusClaimed,
+		},
+	}, testLocalizer{
+		"web.invite.action.accept":          "Aceitar convite",
+		"web.invite.action.decline":         "Recusar convite",
+		"web.invite.state.targeted.heading": "Convite pronto",
+		"web.invite.state.targeted.body":    "Este convite foi enderecado a voce.",
+		"web.invite.status.claimed":         "Reivindicado",
+	})
+
+	if view.Heading != "Convite pronto" {
+		t.Fatalf("Heading = %q, want %q", view.Heading, "Convite pronto")
+	}
+	if view.AcceptLabel != "Aceitar convite" {
+		t.Fatalf("AcceptLabel = %q, want %q", view.AcceptLabel, "Aceitar convite")
+	}
+	if view.DeclineLabel != "Recusar convite" {
+		t.Fatalf("DeclineLabel = %q, want %q", view.DeclineLabel, "Recusar convite")
+	}
+	if view.StatusLabel != "Reivindicado" {
+		t.Fatalf("StatusLabel = %q, want %q", view.StatusLabel, "Reivindicado")
 	}
 }

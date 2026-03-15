@@ -40,6 +40,7 @@ func (g GRPCGateway) ListStarterEntries(ctx context.Context) ([]discoveryapp.Sta
 	if err != nil {
 		return nil, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnavailable,
+			FallbackKey:     "error.web.message.failed_to_list_discovery_entries",
 			FallbackMessage: "discovery service is unavailable",
 		})
 	}

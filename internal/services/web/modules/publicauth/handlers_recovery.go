@@ -103,10 +103,9 @@ func (h handlers) handleRecoveryCodeAcknowledge(w http.ResponseWriter, r *http.R
 			status := apperrors.HTTPStatus(err)
 			if status == http.StatusNotFound || status == http.StatusConflict {
 				clearRecoveryRevealState(w, r, h.requestMeta)
-				copy := webi18n.Auth(h.resolveAuthTag(w, r))
 				flashnotice.WriteWithPolicy(w, r, flashnotice.Notice{
-					Kind:    flashnotice.KindError,
-					Message: copy.RecoveryCodeSignupExpired,
+					Kind: flashnotice.KindError,
+					Key:  "recovery_code.signup_expired",
 				}, h.requestMeta)
 				httpx.WriteRedirect(w, r, h.authPageURLWithState(routepath.Login, state.PendingID, state.Next))
 				return

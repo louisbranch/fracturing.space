@@ -68,7 +68,8 @@ func WriteError(w http.ResponseWriter, err error) {
 		w.WriteHeader(http.StatusOK)
 		return
 	}
-	http.Error(w, err.Error(), apperrors.HTTPStatus(err))
+	statusCode := apperrors.HTTPStatus(err)
+	http.Error(w, strings.TrimSpace(http.StatusText(statusCode)), statusCode)
 }
 
 // RequestContext returns r.Context() with a nil-safe fallback to context.Background().

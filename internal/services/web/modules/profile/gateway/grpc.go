@@ -48,6 +48,7 @@ func (g GRPCGateway) LookupUserProfile(ctx context.Context, req profileapp.Looku
 	if err != nil {
 		return profileapp.LookupUserProfileResponse{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnavailable,
+			FallbackKey:     "error.web.message.failed_to_load_user_profile",
 			FallbackMessage: "auth service is unavailable",
 		})
 	}

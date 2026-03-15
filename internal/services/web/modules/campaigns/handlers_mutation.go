@@ -21,14 +21,6 @@ func (h handlers) writeMutationError(w http.ResponseWriter, r *http.Request, err
 	if key := apperrors.LocalizationKey(err); key != "" {
 		notice.Key = key
 	} else {
-		_, lang := h.PageLocalizer(w, r)
-		if message := strings.TrimSpace(apperrors.ResolveRichMessage(err, lang)); message != "" {
-			notice.Message = message
-		} else {
-			notice.Key = fallbackKey
-		}
-	}
-	if notice.Key == "" && strings.TrimSpace(notice.Message) == "" {
 		notice.Key = fallbackKey
 	}
 	flash.Write(w, r, notice)

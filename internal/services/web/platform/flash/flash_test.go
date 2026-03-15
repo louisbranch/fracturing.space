@@ -65,13 +65,13 @@ func TestReadAndClearLegacyCookieWithoutSurfaceRoundTrip(t *testing.T) {
 	}
 }
 
-func TestWriteAndReadAndClearMessageRoundTrip(t *testing.T) {
+func TestWriteAndReadAndClearArgsRoundTrip(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/c1/invites", nil)
 	writeRR := httptest.NewRecorder()
 
-	Write(writeRR, req, Notice{Kind: KindError, Message: "User already has a pending invite in this campaign"})
+	Write(writeRR, req, Notice{Kind: KindError, Key: "error.web.message.invite_claim_user_already_in_campaign", Args: []string{"unused"}})
 	cookie, err := http.ParseSetCookie(writeRR.Header().Get("Set-Cookie"))
 	if err != nil {
 		t.Fatalf("ParseSetCookie() error = %v", err)
@@ -83,11 +83,11 @@ func TestWriteAndReadAndClearMessageRoundTrip(t *testing.T) {
 	if !ok {
 		t.Fatalf("ReadAndClear() ok = false, want true")
 	}
-	if notice.Key != "" {
-		t.Fatalf("notice.Key = %q, want empty", notice.Key)
+	if notice.Key != "error.web.message.invite_claim_user_already_in_campaign" {
+		t.Fatalf("notice.Key = %q", notice.Key)
 	}
-	if notice.Message != "User already has a pending invite in this campaign" {
-		t.Fatalf("notice.Message = %q", notice.Message)
+	if len(notice.Args) != 1 || notice.Args[0] != "unused" {
+		t.Fatalf("notice.Args = %+v", notice.Args)
 	}
 }
 

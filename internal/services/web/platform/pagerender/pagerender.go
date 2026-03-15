@@ -86,15 +86,16 @@ func resolveFlashToast(w http.ResponseWriter, r *http.Request, loc webi18n.Local
 	if !ok {
 		return nil
 	}
-	message := strings.TrimSpace(notice.Message)
 	key := strings.TrimSpace(notice.Key)
+	message := key
 	if key != "" && loc != nil {
-		if localized := strings.TrimSpace(loc.Sprintf(key)); localized != "" && localized != key {
+		args := make([]any, 0, len(notice.Args))
+		for _, arg := range notice.Args {
+			args = append(args, arg)
+		}
+		if localized := strings.TrimSpace(loc.Sprintf(key, args...)); localized != "" && localized != key {
 			message = localized
 		}
-	}
-	if message == "" {
-		message = key
 	}
 	if message == "" {
 		return nil
@@ -116,7 +117,8 @@ func WritePublicPage(w http.ResponseWriter, r *http.Request, title string, metaD
 	if body == nil {
 		body = emptyComponent{}
 	}
-	toast := resolveFlashToast(w, r, nil, "")
+	pageState := requestresolver.ResolveLocalizedPage(w, r, nil)
+	toast := resolveFlashToast(w, r, pageState.Localizer, pageState.Language)
 	if toast != nil {
 		content := body
 		body = templ.ComponentFunc(func(ctx context.Context, wr io.Writer) error {

@@ -3,8 +3,8 @@
   "locales": [
     {
       "locale": "en-US",
-      "base_keys": 1293,
-      "translated": 1293,
+      "base_keys": 1340,
+      "translated": 1340,
       "missing": 0,
       "extra": 0,
       "completion": 100,
@@ -43,16 +43,16 @@
         },
         {
           "namespace": "notifications",
-          "base_keys": 10,
-          "translated": 10,
+          "base_keys": 26,
+          "translated": 26,
           "missing": 0,
           "extra": 0,
           "completion": 100
         },
         {
           "namespace": "web",
-          "base_keys": 732,
-          "translated": 732,
+          "base_keys": 763,
+          "translated": 763,
           "missing": 0,
           "extra": 0,
           "completion": 100
@@ -63,8 +63,8 @@
     },
     {
       "locale": "pt-BR",
-      "base_keys": 1293,
-      "translated": 1293,
+      "base_keys": 1340,
+      "translated": 1340,
       "missing": 0,
       "extra": 0,
       "completion": 100,
@@ -103,16 +103,16 @@
         },
         {
           "namespace": "notifications",
-          "base_keys": 10,
-          "translated": 10,
+          "base_keys": 26,
+          "translated": 26,
           "missing": 0,
           "extra": 0,
           "completion": 100
         },
         {
           "namespace": "web",
-          "base_keys": 732,
-          "translated": 732,
+          "base_keys": 763,
+          "translated": 763,
           "missing": 0,
           "extra": 0,
           "completion": 100

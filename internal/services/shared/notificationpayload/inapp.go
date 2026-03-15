@@ -3,6 +3,8 @@ package notificationpayload
 import (
 	"encoding/json"
 	"strings"
+
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 )
 
 const (
@@ -18,31 +20,31 @@ const (
 
 // InAppPayload is the canonical inbox payload stored in notification payload_json.
 type InAppPayload struct {
-	Title   string          `json:"title"`
-	Body    string          `json:"body"`
-	Facts   []PayloadFact   `json:"facts,omitempty"`
-	Actions []PayloadAction `json:"actions,omitempty"`
+	Title   platformi18n.CopyRef `json:"title"`
+	Body    platformi18n.CopyRef `json:"body"`
+	Facts   []PayloadFact        `json:"facts,omitempty"`
+	Actions []PayloadAction      `json:"actions,omitempty"`
 }
 
 // PayloadFact is one labeled row in the notification detail view.
 type PayloadFact struct {
-	Label string `json:"label"`
-	Value string `json:"value"`
+	Label platformi18n.CopyRef `json:"label"`
+	Value string               `json:"value"`
 }
 
 // PayloadAction is one inbox action rendered from notification payload.
 type PayloadAction struct {
-	Label    string `json:"label"`
-	Kind     string `json:"kind"`
-	TargetID string `json:"target_id,omitempty"`
-	Method   string `json:"method,omitempty"`
-	Style    string `json:"style,omitempty"`
+	Label    platformi18n.CopyRef `json:"label"`
+	Kind     string               `json:"kind"`
+	TargetID string               `json:"target_id,omitempty"`
+	Method   string               `json:"method,omitempty"`
+	Style    string               `json:"style,omitempty"`
 }
 
 // ViewInvitationAction returns the canonical inbox action for opening a public invite.
 func ViewInvitationAction(inviteID string) PayloadAction {
 	return PayloadAction{
-		Label:    "View invitation",
+		Label:    platformi18n.NewCopyRef("notification.action.view_invitation"),
 		Kind:     ActionKindPublicInviteView,
 		TargetID: strings.TrimSpace(inviteID),
 		Method:   ActionMethodGet,
@@ -53,7 +55,7 @@ func ViewInvitationAction(inviteID string) PayloadAction {
 // OpenCampaignAction returns the canonical inbox action for opening a campaign.
 func OpenCampaignAction(campaignID string) PayloadAction {
 	return PayloadAction{
-		Label:    "Open campaign",
+		Label:    platformi18n.NewCopyRef("notification.action.open_campaign"),
 		Kind:     ActionKindAppCampaignOpen,
 		TargetID: strings.TrimSpace(campaignID),
 		Method:   ActionMethodGet,
@@ -74,11 +76,11 @@ func ParseInAppPayload(raw string) (InAppPayload, bool) {
 }
 
 func normalizeInAppPayload(payload InAppPayload) (InAppPayload, bool) {
-	payload.Title = strings.TrimSpace(payload.Title)
-	payload.Body = strings.TrimSpace(payload.Body)
+	payload.Title, _ = platformi18n.NormalizeCopyRef(payload.Title)
+	payload.Body, _ = platformi18n.NormalizeCopyRef(payload.Body)
 	payload.Facts = normalizePayloadFacts(payload.Facts)
 	payload.Actions = normalizePayloadActions(payload.Actions)
-	if payload.Title == "" && payload.Body == "" && len(payload.Facts) == 0 && len(payload.Actions) == 0 {
+	if payload.Title.Key == "" && payload.Body.Key == "" && len(payload.Facts) == 0 && len(payload.Actions) == 0 {
 		return InAppPayload{}, false
 	}
 	return payload, true
@@ -90,9 +92,9 @@ func normalizePayloadFacts(facts []PayloadFact) []PayloadFact {
 	}
 	result := make([]PayloadFact, 0, len(facts))
 	for _, fact := range facts {
-		fact.Label = strings.TrimSpace(fact.Label)
+		fact.Label, _ = platformi18n.NormalizeCopyRef(fact.Label)
 		fact.Value = strings.TrimSpace(fact.Value)
-		if fact.Label == "" || fact.Value == "" {
+		if fact.Label.Key == "" || fact.Value == "" {
 			continue
 		}
 		result = append(result, fact)
@@ -109,12 +111,12 @@ func normalizePayloadActions(actions []PayloadAction) []PayloadAction {
 	}
 	result := make([]PayloadAction, 0, len(actions))
 	for _, action := range actions {
-		action.Label = strings.TrimSpace(action.Label)
+		action.Label, _ = platformi18n.NormalizeCopyRef(action.Label)
 		action.Kind = strings.ToLower(strings.TrimSpace(action.Kind))
 		action.TargetID = strings.TrimSpace(action.TargetID)
 		action.Method = strings.ToUpper(strings.TrimSpace(action.Method))
 		action.Style = strings.ToLower(strings.TrimSpace(action.Style))
-		if action.Label == "" || action.TargetID == "" {
+		if action.Label.Key == "" || action.TargetID == "" {
 			continue
 		}
 		if !supportedActionKind(action.Kind) {

@@ -171,6 +171,12 @@ func TestWriteErrorUsesTypedStatus(t *testing.T) {
 	if rr.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusUnauthorized)
 	}
+	if body := rr.Body.String(); !strings.Contains(body, http.StatusText(http.StatusUnauthorized)) {
+		t.Fatalf("body = %q, want unauthorized status text", body)
+	}
+	if strings.Contains(rr.Body.String(), "missing session") {
+		t.Fatalf("body leaked raw error message: %q", rr.Body.String())
+	}
 }
 
 func TestWriteErrorDefaultsInternalError(t *testing.T) {
@@ -180,6 +186,12 @@ func TestWriteErrorDefaultsInternalError(t *testing.T) {
 	WriteError(rr, errors.New("boom"))
 	if rr.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
+	}
+	if body := rr.Body.String(); !strings.Contains(body, http.StatusText(http.StatusInternalServerError)) {
+		t.Fatalf("body = %q, want internal server error status text", body)
+	}
+	if strings.Contains(rr.Body.String(), "boom") {
+		t.Fatalf("body leaked raw error message: %q", rr.Body.String())
 	}
 }
 
