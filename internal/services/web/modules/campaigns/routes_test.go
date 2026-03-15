@@ -16,11 +16,15 @@ func newRouteTestServiceConfig(gw fakeGateway) serviceConfigs {
 }
 
 func newRouteHandlers(gw fakeGateway, base modulehandler.Base) handlers {
-	return newHandlers(handlersConfig{
+	handlerSet, err := newHandlers(handlersConfig{
 		Services:        newHandlerServices(newRouteTestServiceConfig(gw)),
 		Base:            base,
 		PlayLaunchGrant: fakePlayLaunchGrantConfig(),
 	})
+	if err != nil {
+		panic(err)
+	}
+	return handlerSet
 }
 
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {

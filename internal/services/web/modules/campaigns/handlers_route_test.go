@@ -229,7 +229,7 @@ func TestWithCampaignIDReturnsNotFoundForEmptyPath(t *testing.T) {
 
 	h := newTestHandlers(fakeGateway{})
 	called := false
-	handler := h.withCampaignID(func(w http.ResponseWriter, r *http.Request, id string) {
+	handler := h.overview.withCampaignID(func(w http.ResponseWriter, r *http.Request, id string) {
 		called = true
 	})
 
@@ -253,7 +253,7 @@ func TestWithCampaignAndCharacterIDDelegatesResolvedParams(t *testing.T) {
 	h := newTestHandlers(fakeGateway{})
 	called := false
 	var gotCampaignID, gotCharacterID string
-	handler := h.withCampaignAndCharacterID(func(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+	handler := h.characters.withCampaignAndCharacterID(func(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 		called = true
 		gotCampaignID = campaignID
 		gotCharacterID = characterID
@@ -278,7 +278,7 @@ func TestWithCampaignAndCharacterIDReturnsNotFoundForMissingCharacterID(t *testi
 
 	h := newTestHandlers(fakeGateway{})
 	called := false
-	handler := h.withCampaignAndCharacterID(func(http.ResponseWriter, *http.Request, string, string) {
+	handler := h.characters.withCampaignAndCharacterID(func(http.ResponseWriter, *http.Request, string, string) {
 		called = true
 	})
 
@@ -300,7 +300,7 @@ func TestWithCampaignAndParticipantIDReturnsNotFoundForMissingParticipantID(t *t
 
 	h := newTestHandlers(fakeGateway{})
 	called := false
-	handler := h.withCampaignAndParticipantID(func(http.ResponseWriter, *http.Request, string, string) {
+	handler := h.participants.withCampaignAndParticipantID(func(http.ResponseWriter, *http.Request, string, string) {
 		called = true
 	})
 
@@ -322,7 +322,7 @@ func TestWithCampaignAndSessionIDReturnsNotFoundForMissingSessionID(t *testing.T
 
 	h := newTestHandlers(fakeGateway{})
 	called := false
-	handler := h.withCampaignAndSessionID(func(http.ResponseWriter, *http.Request, string, string) {
+	handler := h.sessions.withCampaignAndSessionID(func(http.ResponseWriter, *http.Request, string, string) {
 		called = true
 	})
 

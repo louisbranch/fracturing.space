@@ -17,7 +17,7 @@ func TestNewHandlerResolvesCookieSessionAtMostOncePerRequest(t *testing.T) {
 
 	auth := newCountingWebAuthClient()
 	_, _ = auth.CreateWebSession(context.Background(), &authv1.CreateWebSessionRequest{UserId: "user-1"})
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{SessionClient: auth, AccountClient: &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}},
 			modules.Dependencies{

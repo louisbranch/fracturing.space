@@ -4,7 +4,7 @@ parent: "Guides"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-10"
+last_reviewed: "2026-03-14"
 ---
 
 # Web Module Playbook
@@ -124,6 +124,10 @@ app/gateway seam stops being cohesive:
   Composition may still assemble those groups from a gateway, but `Module`
   config and `Mount` should not keep raw gateway fields once the route surface
   already depends on explicit app-service groups,
+- if transport already depends directly on owned capability services rather
+  than one route-surface bundle, pass those services straight through module
+  config and handler wiring. Do not add a second rebundling layer just to
+  shorten composition code,
 - when an area offers both collection and entity reads, detail/edit/control
   transport should use true entity reads instead of loading the full collection
   and rediscovering one row in transport or render code,
@@ -193,6 +197,16 @@ app/gateway seam stops being cohesive:
   `composition.go` entrypoint that the registry calls. The registry should
   select modules and pass dependency policy, not build feature-local gateways
   inline or move gateway construction into `Mount`.
+- For layered modules, keep `Module` config on ready transport-facing app
+  services plus shared handler dependencies. `composition.go` should build the
+  gateway and service graph; `Mount` should stay focused on local mux and
+  handler wiring.
+- When one layered area still needs many backend clients at startup, group the
+  composition-owned gateway inputs by the same owned route surfaces that the
+  module exports instead of one flat `CompositionConfig` client bag.
+- If multiple areas share one runtime helper policy, build it once in the
+  registry (for example dashboard-sync freshness) and pass the ready helper to
+  module composition. Do not reconstruct the same helper inside each area.
 - Runtime module selection is composition-owned: `composition.ComposeAppHandler`
   calls a `modules.RegistryBuilder` with `modules.RegistryInput` to assemble module sets.
   Keep module packages unaware of startup mode flags.
@@ -207,6 +221,9 @@ app/gateway seam stops being cohesive:
   through explicit owned slices (for example campaigns:
   overview + participants + characters + character-creation +
   sessions/game + invites) so ownership stays diffable in one place.
+  When those slices need different transport helpers, bind owned handler
+  values per slice instead of routing all methods through one root handler
+  receiver.
 - When one module surface depends on multiple backend services with different
   availability profiles, derive health per user-facing surface instead of one
   module-wide backend bit. Hide unavailable sibling links from owned navigation
@@ -226,9 +243,17 @@ app/gateway seam stops being cohesive:
   mapping, keep workflow registration in the root transport area. `app`
   services may accept a workflow as input for orchestration, but they should
   not also own the workflow registry or transport-facing parser/view methods.
+- Keep that workflow registration install-time and manifest-driven. The same
+  root transport registry should own user-facing aliases/defaults for form
+  parsing so adding one system does not require another handler-local or
+  workflow-local parser switch.
 - When those system-specific workflows become a contributor-owned seam of their
   own, move the contract into an area-local subpackage such as
   `<area>/workflow` instead of defining it in the root module package.
+- Once an area owns `render/` or `workflow/` subpackages, keep those packages
+  reader-first: add a package-intent `doc.go` and focused seam tests on the
+  exported entrypoints so contributors can start there instead of generated
+  `*_templ.go` output.
 - If that workflow subpackage starts handling both page assembly and mutation
   orchestration, split those into separate services/interfaces so GET and POST
   transport paths depend on the narrower workflow surface they actually use.
@@ -267,6 +292,9 @@ app/gateway seam stops being cohesive:
   - cross-module boundary expectations in
     `internal/services/web/modules/architecture_test.go` or
     `internal/services/web/modules/boundary_guardrails_test.go`
+- When a guardrail only needs to protect constructor/package ownership, prefer
+  AST-backed invariants on imports, struct fields, and constructor calls over
+  raw source-fragment string checks.
 - Prefer route-param guard helpers for multi-param routes (for example
   `withCampaignAndCharacterID`) so 404 behavior is centralized and testable.
 - Prefer `internal/services/web/platform/routeparam` for single-parameter
@@ -351,7 +379,7 @@ app/gateway seam stops being cohesive:
   parameters instead of extracting identity from transport metadata inside
   gateways.
 - At composition/module boundaries, prefer one grouped
-  `platform/requestresolver` principal contract over separate
+  `internal/services/web/principal` principal contract over separate
   `ResolveSignedIn`, `ResolveUserID`, `ResolveLanguage`, or `ResolveViewer`
   callback fields.
 - Prefer `internal/services/web/platform/weberror.WriteModuleError` for
@@ -365,7 +393,7 @@ Public (unauthenticated) modules follow a lighter pattern than protected modules
 
 - They do **not** embed `modulehandler.Base`.
 - Public modules that need shared page/localization/signed-in state should use
-  `publichandler.Base` built from `requestresolver.PrincipalResolver`.
+  `publichandler.Base` built from `principal.PrincipalResolver`.
 - Request-time signed-in detection and optional viewer/user-id/language
   resolution come from that shared principal seam, not ad hoc gateway or
   session-validation checks inside the module.

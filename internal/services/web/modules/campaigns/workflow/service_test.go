@@ -23,7 +23,7 @@ func TestServiceLoadPageAssemblesCreationView(t *testing.T) {
 			CharacterName: "Nox",
 			ClassID:       "warrior",
 		},
-	}, Registry{GameSystemDaggerheart: testWorkflow{}})
+	}, testWorkflowRegistry())
 
 	page, err := svc.LoadPage(context.Background(), "c1", "char-1", language.AmericanEnglish, "Daggerheart")
 	if err != nil {
@@ -46,11 +46,14 @@ func TestServiceApplyStepParsesWorkflowInputAndDelegatesMutation(t *testing.T) {
 	app := &workflowAppStub{
 		progress: Progress{NextStep: 3},
 	}
-	svc := NewMutationService(app, Registry{GameSystemDaggerheart: testWorkflow{
-		parsed: &StepInput{
-			Details: &campaignapp.CampaignCharacterCreationStepDetails{Description: "done"},
-		},
-	}})
+	svc := NewMutationService(app, Install(Installation{
+		ID:      "daggerheart",
+		Aliases: []string{"Daggerheart"},
+		CharacterCreation: testWorkflow{
+			parsed: &StepInput{
+				Details: &campaignapp.CampaignCharacterCreationStepDetails{Description: "done"},
+			},
+		}}))
 
 	err := svc.ApplyStep(context.Background(), "c1", "char-1", "daggerheart", url.Values{"description": {"done"}})
 	if err != nil {
@@ -66,7 +69,7 @@ func TestServiceApplyStepRejectsReadyWorkflow(t *testing.T) {
 
 	svc := NewMutationService(&workflowAppStub{
 		progress: Progress{Ready: true},
-	}, Registry{GameSystemDaggerheart: testWorkflow{}})
+	}, testWorkflowRegistry())
 
 	err := svc.ApplyStep(context.Background(), "c1", "char-1", "daggerheart", url.Values{})
 	if err == nil {
@@ -125,6 +128,14 @@ func (w workflowAppStub) ResetCharacterCreationWorkflow(context.Context, string,
 
 type testWorkflow struct {
 	parsed *StepInput
+}
+
+func testWorkflowRegistry() Registry {
+	return Install(Installation{
+		ID:                "daggerheart",
+		Aliases:           []string{"Daggerheart", "game_system_daggerheart"},
+		CharacterCreation: testWorkflow{},
+	})
 }
 
 func (w testWorkflow) BuildView(

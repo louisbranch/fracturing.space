@@ -6,12 +6,13 @@ import (
 	"strings"
 
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -27,12 +28,15 @@ type handlers struct {
 // newHandlers assembles the invite transport surface from explicit dependencies.
 func newHandlers(
 	s inviteapp.Service,
-	principal requestresolver.PrincipalResolver,
+	requestPrincipal principal.PrincipalResolver,
 	policy requestmeta.SchemePolicy,
 	sync DashboardSync,
 ) handlers {
+	if sync == nil {
+		sync = dashboardsync.Noop{}
+	}
 	return handlers{
-		Base:        publichandler.NewBaseFromPrincipal(principal),
+		Base:        publichandler.NewBaseFromPrincipal(requestPrincipal),
 		service:     s,
 		requestMeta: policy,
 		sync:        sync,
@@ -71,9 +75,7 @@ func (h handlers) handleAccept(w http.ResponseWriter, r *http.Request, inviteID 
 		h.WriteError(w, r, err)
 		return
 	}
-	if h.sync != nil {
-		h.sync.InviteChanged(r.Context(), result.UserIDs, result.CampaignID)
-	}
+	h.sync.InviteChanged(r.Context(), result.UserIDs, result.CampaignID)
 	http.Redirect(w, r, routepath.AppCampaign(result.CampaignID), http.StatusSeeOther)
 }
 
@@ -93,9 +95,7 @@ func (h handlers) handleDecline(w http.ResponseWriter, r *http.Request, inviteID
 		h.WriteError(w, r, err)
 		return
 	}
-	if h.sync != nil {
-		h.sync.InviteChanged(r.Context(), result.UserIDs, result.CampaignID)
-	}
+	h.sync.InviteChanged(r.Context(), result.UserIDs, result.CampaignID)
 	http.Redirect(w, r, routepath.AppDashboard, http.StatusSeeOther)
 }
 

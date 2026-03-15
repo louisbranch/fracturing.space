@@ -29,7 +29,12 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	if New(Config{}).Healthy() {
 		t.Fatalf("New().Healthy() = true, want false for degraded module")
 	}
-	if !New(Config{Gateway: &fakeGateway{}, Base: modulehandler.NewTestBase(), HealthProvider: nil}).Healthy() {
+	gateway := &fakeGateway{}
+	if !New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    modulehandler.NewTestBase(),
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	}).Healthy() {
 		t.Fatalf("New(Config{...}).Healthy() = false, want true")
 	}
 }
@@ -145,7 +150,12 @@ func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 		func(*http.Request) string { return "pt-BR" },
 		nil,
 	)
-	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{NeedsProfileCompletion: true}}, Base: base, HealthProvider: nil})
+	gateway := &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{NeedsProfileCompletion: true}}
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -174,10 +184,15 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+	gateway := &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
 		NeedsProfileCompletion: true,
 		DegradedDependencies:   []string{dashboardapp.DegradedDependencySocialProfile},
-	}}, Base: base, HealthProvider: nil})
+	}}
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -213,10 +228,15 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+	gateway := &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
 		HasDraftOrActiveCampaign: false,
 		CampaignsHasMore:         false,
-	}}, Base: base, HealthProvider: nil})
+	}}
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -245,10 +265,15 @@ func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+	gateway := &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
 		HasDraftOrActiveCampaign: true,
 		CampaignsHasMore:         false,
-	}}, Base: base, HealthProvider: nil})
+	}}
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -274,11 +299,16 @@ func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
+	gateway := &fakeGateway{snapshot: dashboardapp.DashboardSnapshot{
 		HasDraftOrActiveCampaign: false,
 		CampaignsHasMore:         false,
 		DegradedDependencies:     []string{dashboardapp.DegradedDependencyGameCampaigns},
-	}}, Base: base, HealthProvider: nil})
+	}}
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -316,7 +346,12 @@ func TestMountRendersActiveSessionsBlockWithMultipleJoinLinks(t *testing.T) {
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	gateway := dashboardgateway.NewGRPCGateway(client)
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -367,7 +402,12 @@ func TestMountRendersCampaignStartNudgesBlock(t *testing.T) {
 		func(*http.Request) string { return "en-US" },
 		nil,
 	)
-	m := New(Config{Gateway: dashboardgateway.NewGRPCGateway(client), Base: base, HealthProvider: nil})
+	gateway := dashboardgateway.NewGRPCGateway(client)
+	m := New(Config{
+		Service: dashboardapp.NewService(gateway, nil, nil),
+		Base:    base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

@@ -10,6 +10,10 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
 
+func newTestCampaignSystems(workflows ...campaignworkflow.Registry) campaignSystemRegistry {
+	return newCampaignSystemsFromWorkflows(workflows...)
+}
+
 type testGatewayBundle interface {
 	campaignapp.CampaignCatalogReadGateway
 	campaignapp.CampaignStarterGateway
@@ -130,12 +134,99 @@ func configWithGateway(gateway testGatewayBundle, base modulehandler.Base, workf
 		Base:             base,
 		PlayFallbackPort: "",
 		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),
-		Workflows:        workflows,
+		Systems:          newTestCampaignSystems(workflows),
 	}
 }
 
 func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseURL string) serviceConfigs {
-	return newServiceConfigsFromGRPCDeps(deps, assetBaseURL)
+	authorization := campaigngateway.NewAuthorizationGateway(deps.Page.Authorization)
+	participantRead := campaignapp.ParticipantReadServiceConfig{
+		Read:               campaigngateway.NewParticipantReadGateway(deps.Participants.Read, assetBaseURL),
+		Workspace:          campaigngateway.NewWorkspaceReadGateway(deps.Participants.Workspace, assetBaseURL),
+		BatchAuthorization: campaigngateway.NewBatchAuthorizationGateway(deps.Participants.Authorization),
+	}
+	return serviceConfigs{
+		Page: pageServiceConfig{
+			Workspace: campaignapp.WorkspaceServiceConfig{
+				Read: campaigngateway.NewWorkspaceReadGateway(deps.Page.Workspace, assetBaseURL),
+			},
+			SessionRead: campaignapp.SessionReadServiceConfig{
+				Read: campaigngateway.NewSessionReadGateway(deps.Page.SessionRead),
+			},
+			Authorization: authorization,
+		},
+		Catalog: catalogServiceConfig{
+			Catalog: campaignapp.CatalogServiceConfig{
+				Read:     campaigngateway.NewCatalogReadGateway(deps.Catalog.Read, assetBaseURL),
+				Mutation: campaigngateway.NewCatalogMutationGateway(deps.Catalog.Mutation),
+			},
+		},
+		Starter: starterServiceConfig{
+			Starter: campaignapp.StarterServiceConfig{
+				Gateway: campaigngateway.NewStarterGateway(deps.Starter.Starter),
+			},
+		},
+		Overview: overviewServiceConfig{
+			AutomationRead: campaignapp.AutomationReadServiceConfig{
+				Participants: campaigngateway.NewParticipantReadGateway(deps.Overview.Participants, assetBaseURL),
+				Read:         campaigngateway.NewAutomationReadGateway(deps.Overview.AutomationRead),
+			},
+			AutomationMutation: campaignapp.AutomationMutationServiceConfig{
+				Participants: campaigngateway.NewParticipantReadGateway(deps.Overview.Participants, assetBaseURL),
+				Mutation:     campaigngateway.NewAutomationMutationGateway(deps.Overview.AutomationMutation),
+			},
+			Configuration: campaignapp.ConfigurationServiceConfig{
+				Workspace: campaigngateway.NewWorkspaceReadGateway(deps.Overview.Workspace, assetBaseURL),
+				Mutation:  campaigngateway.NewConfigurationMutationGateway(deps.Overview.ConfigurationMutation),
+			},
+			Authorization: campaigngateway.NewAuthorizationGateway(deps.Overview.Authorization),
+		},
+		Participants: participantServiceConfig{
+			Read: participantRead,
+			Mutation: campaignapp.ParticipantMutationServiceConfig{
+				Read:      campaigngateway.NewParticipantReadGateway(deps.Participants.Read, assetBaseURL),
+				Mutation:  campaigngateway.NewParticipantMutationGateway(deps.Participants.Mutation),
+				Workspace: campaigngateway.NewWorkspaceReadGateway(deps.Participants.Workspace, assetBaseURL),
+			},
+			Authorization: campaigngateway.NewAuthorizationGateway(deps.Participants.Authorization),
+		},
+		Characters: characterServiceConfig{
+			Read: campaignapp.CharacterReadServiceConfig{
+				Read:               campaigngateway.NewCharacterReadGateway(deps.Characters.Read, assetBaseURL),
+				BatchAuthorization: campaigngateway.NewBatchAuthorizationGateway(deps.Characters.Authorization),
+			},
+			Control: campaignapp.CharacterControlServiceConfig{
+				Read:         campaigngateway.NewCharacterReadGateway(deps.Characters.Read, assetBaseURL),
+				Mutation:     campaigngateway.NewCharacterControlMutationGateway(deps.Characters.Control),
+				Participants: campaigngateway.NewParticipantReadGateway(deps.Characters.Participants, assetBaseURL),
+				Sessions:     campaigngateway.NewSessionReadGateway(deps.Characters.Sessions),
+			},
+			Mutation: campaignapp.CharacterMutationServiceConfig{
+				Mutation: campaigngateway.NewCharacterMutationGateway(deps.Characters.Mutation),
+				Sessions: campaigngateway.NewSessionReadGateway(deps.Characters.Sessions),
+			},
+			Creation: campaignapp.CharacterCreationServiceConfig{
+				Read:     campaigngateway.NewCharacterCreationReadGateway(deps.Characters.CreationRead, assetBaseURL),
+				Mutation: campaigngateway.NewCharacterCreationMutationGateway(deps.Characters.CreationMutation),
+			},
+			Authorization: campaigngateway.NewAuthorizationGateway(deps.Characters.Authorization),
+		},
+		Sessions: sessionServiceConfig{
+			Mutation: campaignapp.SessionMutationServiceConfig{
+				Mutation: campaigngateway.NewSessionMutationGateway(deps.Sessions.Mutation),
+			},
+		},
+		Invites: inviteServiceConfig{
+			Read: campaignapp.InviteReadServiceConfig{
+				Read: campaigngateway.NewInviteReadGateway(deps.Invites.Read),
+			},
+			Mutation: campaignapp.InviteMutationServiceConfig{
+				Mutation: campaigngateway.NewInviteMutationGateway(deps.Invites.Mutation),
+			},
+			ParticipantRead: participantRead,
+			Authorization:   campaigngateway.NewAuthorizationGateway(deps.Invites.Authorization),
+		},
+	}
 }
 
 func configWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, base modulehandler.Base, workflows campaignworkflow.Registry) Config {
@@ -144,7 +235,7 @@ func configWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, base modulehandler
 		Base:             base,
 		PlayFallbackPort: "",
 		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),
-		Workflows:        workflows,
+		Systems:          newTestCampaignSystems(workflows),
 	}
 }
 

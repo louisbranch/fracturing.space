@@ -16,9 +16,9 @@ func stableCampaignStarterRoutes() routeSurface {
 
 // registerStableCampaignStarterRoutes registers the protected starter preview and launch routes.
 func registerStableCampaignStarterRoutes(mux *http.ServeMux, h handlers) {
-	if mux == nil || h.starters.starters == nil {
+	if mux == nil || h.starters.starters.starters == nil {
 		return
 	}
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignStarterPattern, h.handleStarterPreview)
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignStarterLaunchPattern, h.handleStarterLaunch)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignStarterPattern, h.starters.handleStarterPreview)
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignStarterLaunchPattern, h.starters.handleStarterLaunch)
 }

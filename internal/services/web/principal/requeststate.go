@@ -1,4 +1,4 @@
-package requestresolver
+package principal
 
 import (
 	"net/http"
@@ -32,17 +32,17 @@ type PrincipalResolver interface {
 // contract so higher-level transport bases can embed it instead of repeating
 // the same request-scoped plumbing.
 type Base struct {
-	resolveLanguage module.ResolveLanguage
-	resolveViewer   module.ResolveViewer
+	resolveLanguage LanguageFunc
+	resolveViewer   ViewerFunc
 }
 
 // Principal provides a nil-safe implementation of the full request-scoped
-// principal contract shared by server, composition, and module wiring.
+// principal contract shared by tests, composition, and module wiring.
 type Principal struct {
 	Base
 	authRequired    func(*http.Request) bool
-	resolveSignedIn module.ResolveSignedIn
-	resolveUserID   module.ResolveUserID
+	resolveSignedIn SignedInFunc
+	resolveUserID   UserIDFunc
 }
 
 // LocalizedPage carries the request-scoped localized shell values shared by
@@ -52,32 +52,32 @@ type LocalizedPage struct {
 	Language  string
 }
 
-// New builds a shared request resolver from explicit callbacks.
-func New(resolveLanguage module.ResolveLanguage, resolveViewer module.ResolveViewer) Base {
+// NewBase builds a shared request-state base from explicit callbacks.
+func NewBase(resolveLanguage LanguageFunc, resolveViewer ViewerFunc) Base {
 	return Base{
 		resolveLanguage: resolveLanguage,
 		resolveViewer:   resolveViewer,
 	}
 }
 
-// NewFromPageResolver builds a shared page resolver base from another page
-// resolver contract and preserves nil-safe behavior for callers that accept an
-// interface at composition time.
-func NewFromPageResolver(resolver PageResolver) Base {
+// NewBaseFromPageResolver builds a shared page resolver base from another
+// page resolver contract and preserves nil-safe behavior for callers that
+// accept an interface at composition time.
+func NewBaseFromPageResolver(resolver PageResolver) Base {
 	if resolver == nil {
 		return Base{}
 	}
-	return New(resolver.ResolveRequestLanguage, resolver.ResolveRequestViewer)
+	return NewBase(resolver.ResolveRequestLanguage, resolver.ResolveRequestViewer)
 }
 
 // WithLanguage returns a copy with the supplied language resolver.
-func (b Base) WithLanguage(resolveLanguage module.ResolveLanguage) Base {
+func (b Base) WithLanguage(resolveLanguage LanguageFunc) Base {
 	b.resolveLanguage = resolveLanguage
 	return b
 }
 
 // WithViewer returns a copy with the supplied viewer resolver.
-func (b Base) WithViewer(resolveViewer module.ResolveViewer) Base {
+func (b Base) WithViewer(resolveViewer ViewerFunc) Base {
 	b.resolveViewer = resolveViewer
 	return b
 }
@@ -86,13 +86,13 @@ func (b Base) WithViewer(resolveViewer module.ResolveViewer) Base {
 // callbacks.
 func NewPrincipal(
 	authRequired func(*http.Request) bool,
-	resolveSignedIn module.ResolveSignedIn,
-	resolveUserID module.ResolveUserID,
-	resolveLanguage module.ResolveLanguage,
-	resolveViewer module.ResolveViewer,
+	resolveSignedIn SignedInFunc,
+	resolveUserID UserIDFunc,
+	resolveLanguage LanguageFunc,
+	resolveViewer ViewerFunc,
 ) Principal {
 	return Principal{
-		Base:            New(resolveLanguage, resolveViewer),
+		Base:            NewBase(resolveLanguage, resolveViewer),
 		authRequired:    authRequired,
 		resolveSignedIn: resolveSignedIn,
 		resolveUserID:   resolveUserID,
@@ -102,7 +102,7 @@ func NewPrincipal(
 // ResolveLocalizedPage resolves the localized page values shared by shell
 // rendering and error helpers.
 func ResolveLocalizedPage(w http.ResponseWriter, r *http.Request, resolver PageResolver) LocalizedPage {
-	var resolveLanguage module.ResolveLanguage
+	var resolveLanguage LanguageFunc
 	if resolver != nil {
 		resolveLanguage = resolver.ResolveRequestLanguage
 	}

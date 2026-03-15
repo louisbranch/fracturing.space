@@ -8,7 +8,7 @@ import (
 )
 
 // handleCharacters handles this route in the module transport layer.
-func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h characterHandlers) handleCharacters(w http.ResponseWriter, r *http.Request, campaignID string) {
 	viewerUserID := h.RequestUserID(r)
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
@@ -29,7 +29,7 @@ func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campa
 }
 
 // handleCharacterCreatePage handles this route in the module transport layer.
-func (h handlers) handleCharacterCreatePage(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h characterHandlers) handleCharacterCreatePage(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -50,7 +50,7 @@ func (h handlers) handleCharacterCreatePage(w http.ResponseWriter, r *http.Reque
 }
 
 // handleCharacterEdit handles this route in the module transport layer.
-func (h handlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h characterHandlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -76,7 +76,7 @@ func (h handlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, ca
 }
 
 // handleCharacterDetail handles this route in the module transport layer.
-func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h characterHandlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	userID := h.RequestUserID(r)
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {

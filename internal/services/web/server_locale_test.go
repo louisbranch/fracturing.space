@@ -18,7 +18,7 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
@@ -67,7 +67,7 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
@@ -111,7 +111,7 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 func TestLoginPageLocaleMenuUsesConsistentLabels(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},

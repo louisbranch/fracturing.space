@@ -6,25 +6,23 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/settings"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 // defaultProtectedModules returns stable authenticated web modules.
-func defaultProtectedModules(deps Dependencies, principal requestresolver.PrincipalResolver, opts ProtectedModuleOptions) []module.Module {
-	return buildProtectedModules(deps, principal, opts)
+func defaultProtectedModules(deps Dependencies, requestPrincipal principal.PrincipalResolver, opts ProtectedModuleOptions) []module.Module {
+	return buildProtectedModules(deps, requestPrincipal, opts)
 }
 
 // buildProtectedModules centralizes protected module ordering while keeping
 // production wiring inside the owning area packages.
 func buildProtectedModules(
 	deps Dependencies,
-	principal requestresolver.PrincipalResolver,
+	requestPrincipal principal.PrincipalResolver,
 	opts ProtectedModuleOptions,
 ) []module.Module {
-	base := modulehandler.NewBaseFromPrincipal(principal)
-	dashboardSync := dashboardsync.New(deps.DashboardSync.UserHubControlClient, deps.DashboardSync.GameEventClient, nil)
+	base := modulehandler.NewBaseFromPrincipal(requestPrincipal)
 
 	protected := []module.Module{
 		dashboard.Compose(dashboard.CompositionConfig{
@@ -35,7 +33,7 @@ func buildProtectedModules(
 		settings.Compose(settings.CompositionConfig{
 			Base:             base,
 			FlashMeta:        opts.RequestSchemePolicy,
-			DashboardSync:    dashboardSync,
+			DashboardSync:    opts.DashboardSync,
 			SocialClient:     deps.Settings.SocialClient,
 			AccountClient:    deps.Settings.AccountClient,
 			PasskeyClient:    deps.Settings.PasskeyClient,
@@ -54,7 +52,7 @@ func buildProtectedModules(
 		PlayFallbackPort: opts.PlayFallbackPort,
 		PlayLaunchGrant:  opts.PlayLaunchGrant,
 		RequestMeta:      opts.RequestSchemePolicy,
-		DashboardSync:    dashboardSync,
+		DashboardSync:    opts.DashboardSync,
 		AssetBaseURL:     deps.AssetBaseURL,
 	}, deps.Campaigns); ok {
 		protected = append(protected, campaignsModule)

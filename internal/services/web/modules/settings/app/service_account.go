@@ -8,7 +8,7 @@ import (
 )
 
 // LoadProfile loads the package state needed for this request path.
-func (s service) LoadProfile(ctx context.Context, userID string) (SettingsProfile, error) {
+func (s accountService) LoadProfile(ctx context.Context, userID string) (SettingsProfile, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return SettingsProfile{}, err
@@ -21,7 +21,7 @@ func (s service) LoadProfile(ctx context.Context, userID string) (SettingsProfil
 }
 
 // SaveProfile centralizes this web behavior in one helper seam.
-func (s service) SaveProfile(ctx context.Context, userID string, profile SettingsProfile) error {
+func (s accountService) SaveProfile(ctx context.Context, userID string, profile SettingsProfile) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return err
@@ -34,7 +34,7 @@ func (s service) SaveProfile(ctx context.Context, userID string, profile Setting
 }
 
 // LoadLocale loads the package state needed for this request path.
-func (s service) LoadLocale(ctx context.Context, userID string) (string, error) {
+func (s accountService) LoadLocale(ctx context.Context, userID string) (string, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return "", err
@@ -47,7 +47,7 @@ func (s service) LoadLocale(ctx context.Context, userID string) (string, error) 
 }
 
 // SaveLocale centralizes this web behavior in one helper seam.
-func (s service) SaveLocale(ctx context.Context, userID string, value string) error {
+func (s accountService) SaveLocale(ctx context.Context, userID string, value string) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return err

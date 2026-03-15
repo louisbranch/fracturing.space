@@ -140,14 +140,7 @@ func (s MutationService) Reset(ctx context.Context, campaignID string, character
 
 // resolve returns the installed workflow implementation for one campaign system.
 func (s workflowResolver) resolve(system string) CharacterCreation {
-	if s.workflows == nil {
-		return nil
-	}
-	resolvedSystem, ok := parseGameSystem(system)
-	if !ok {
-		return nil
-	}
-	return s.workflows[resolvedSystem]
+	return s.workflows.Resolve(system)
 }
 
 // require resolves a supported workflow or returns the canonical unavailable-step error.
@@ -157,14 +150,4 @@ func (s workflowResolver) require(system string) (CharacterCreation, error) {
 		return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_step_is_not_available", "character creation step is not available")
 	}
 	return workflow, nil
-}
-
-// parseGameSystem maps route-level system labels to canonical workflow registry keys.
-func parseGameSystem(system string) (GameSystem, bool) {
-	switch normalized := strings.ToLower(strings.TrimSpace(system)); normalized {
-	case string(GameSystemDaggerheart):
-		return GameSystemDaggerheart, true
-	default:
-		return "", false
-	}
 }

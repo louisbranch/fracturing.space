@@ -27,7 +27,7 @@ func starterPreviewHeader(loc webtemplates.Localizer, title string) *webtemplate
 }
 
 // handleStarterPreview renders the protected starter preview page from discovery-owned entry data.
-func (h handlers) handleStarterPreview(w http.ResponseWriter, r *http.Request) {
+func (h starterHandlers) handleStarterPreview(w http.ResponseWriter, r *http.Request) {
 	starterKey, ok := h.routeStarterKey(r)
 	if !ok {
 		h.WriteNotFound(w, r)
@@ -52,7 +52,7 @@ func (h handlers) handleStarterPreview(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleStarterLaunch validates the AI selection and redirects into the new forked campaign.
-func (h handlers) handleStarterLaunch(w http.ResponseWriter, r *http.Request) {
+func (h starterHandlers) handleStarterLaunch(w http.ResponseWriter, r *http.Request) {
 	starterKey, ok := h.routeStarterKey(r)
 	if !ok {
 		h.WriteNotFound(w, r)

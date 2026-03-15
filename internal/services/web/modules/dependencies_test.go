@@ -83,9 +83,6 @@ func TestBindDependenciesWireOwnedModuleClients(t *testing.T) {
 	if deps.DashboardSync.GameEventClient == nil {
 		t.Fatal("DashboardSync.GameEventClient = nil, want client")
 	}
-	if deps.Invite.GameEventClient == nil {
-		t.Fatal("Invite.GameEventClient = nil, want client")
-	}
 
 	BindAIDependency(&deps, conn)
 	if deps.Settings.CredentialClient == nil {
@@ -112,9 +109,6 @@ func TestBindDependenciesWireOwnedModuleClients(t *testing.T) {
 	}
 	if deps.DashboardSync.UserHubControlClient == nil {
 		t.Fatal("DashboardSync.UserHubControlClient = nil, want client")
-	}
-	if deps.Invite.UserHubControlClient == nil {
-		t.Fatal("Invite.UserHubControlClient = nil, want client")
 	}
 
 	BindNotificationsDependency(&deps, conn)

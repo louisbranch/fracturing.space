@@ -19,9 +19,9 @@ func registerStableCampaignSessionGameRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return
 	}
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignSessionsPattern, h.withCampaignID(h.handleSessions))
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignSessionPattern, h.withCampaignAndSessionID(h.handleSessionDetail))
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignSessionStartPattern, h.withCampaignID(h.handleSessionStart))
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignSessionEndPattern, h.withCampaignID(h.handleSessionEnd))
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignGamePattern, h.withCampaignID(h.handleGame))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignSessionsPattern, h.sessions.withCampaignID(h.sessions.handleSessions))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignSessionPattern, h.sessions.withCampaignAndSessionID(h.sessions.handleSessionDetail))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignSessionStartPattern, h.sessions.withCampaignID(h.sessions.handleSessionStart))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignSessionEndPattern, h.sessions.withCampaignID(h.sessions.handleSessionEnd))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignGamePattern, h.sessions.withCampaignID(h.sessions.handleGame))
 }

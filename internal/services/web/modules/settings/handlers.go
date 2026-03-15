@@ -1,18 +1,15 @@
 package settings
 
 import (
-	"context"
-
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-// DashboardSync exposes dashboard cache refresh hooks needed by settings mutations.
-type DashboardSync interface {
-	ProfileSaved(context.Context, string)
-}
+// DashboardSync keeps settings mutations aligned with dashboard freshness.
+type DashboardSync = dashboardsync.Service
 
 // settingsSurfaceAvailability tracks which settings pages should be discoverable.
 type settingsSurfaceAvailability struct {
@@ -73,12 +70,16 @@ type handlersConfig struct {
 
 // newHandlers builds package wiring for this web seam.
 func newHandlers(config handlersConfig) handlers {
+	sync := config.Sync
+	if sync == nil {
+		sync = dashboardsync.Noop{}
+	}
 	return handlers{
 		Base:         config.Base,
 		account:      config.Services.Account,
 		ai:           config.Services.AI,
 		availability: config.Availability,
 		flashMeta:    config.Policy,
-		sync:         config.Sync,
+		sync:         sync,
 	}
 }

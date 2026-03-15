@@ -53,6 +53,14 @@ func newDependencyBundle(principalDeps principal.Dependencies, moduleDeps module
 	}
 }
 
+func newTestHandler(cfg Config) (http.Handler, error) {
+	return composeHandler(cfg, true)
+}
+
+func newTestServer(cfg Config) (*Server, error) {
+	return newServer(cfg, true)
+}
+
 func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBundle {
 	return newDependencyBundle(principal.Dependencies{}, moduleDeps)
 }
@@ -132,16 +140,8 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 			}
 		}
 	}
-	if moduleDeps.Invite.UserHubControlClient == nil && moduleDeps.DashboardSync.UserHubControlClient != nil {
-		moduleDeps.Invite.UserHubControlClient = moduleDeps.DashboardSync.UserHubControlClient
-	}
-	if moduleDeps.Invite.GameEventClient == nil && moduleDeps.DashboardSync.GameEventClient != nil {
-		moduleDeps.Invite.GameEventClient = moduleDeps.DashboardSync.GameEventClient
-	}
 	hasInviteDependency := moduleDeps.Invite.InviteClient != nil ||
-		moduleDeps.Invite.AuthClient != nil ||
-		moduleDeps.Invite.UserHubControlClient != nil ||
-		moduleDeps.Invite.GameEventClient != nil
+		moduleDeps.Invite.AuthClient != nil
 	if hasInviteDependency {
 		if moduleDeps.Invite.InviteClient == nil {
 			moduleDeps.Invite.InviteClient = defaultInviteClient()

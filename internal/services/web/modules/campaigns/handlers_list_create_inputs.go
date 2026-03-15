@@ -9,12 +9,8 @@ import (
 )
 
 // parseCreateCampaignInput maps and validates create-campaign form values.
-func parseCreateCampaignInput(form url.Values) (campaignapp.CreateCampaignInput, error) {
-	systemValue := strings.TrimSpace(form.Get("system"))
-	if systemValue == "" {
-		systemValue = "daggerheart"
-	}
-	system, ok := parseAppGameSystem(systemValue)
+func parseCreateCampaignInput(form url.Values, systems campaignSystemRegistry) (campaignapp.CreateCampaignInput, error) {
+	system, ok := systems.parseCreateSystem(form.Get("system"))
 	if !ok {
 		return campaignapp.CreateCampaignInput{}, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.campaign_system_is_invalid", "campaign system is invalid")
 	}

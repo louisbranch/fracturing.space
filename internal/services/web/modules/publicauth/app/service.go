@@ -13,80 +13,68 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-// service centralizes public auth orchestration so handlers stay transport-focused.
-type service struct {
-	session     SessionGateway
-	passkeys    PasskeyGateway
-	recovery    RecoveryGateway
+// pageService owns page-only public auth behavior.
+type pageService struct {
 	authBaseURL string
 }
 
-// serviceConfig keeps ceremony-owned auth dependencies explicit.
-type serviceConfig struct {
-	SessionGateway  SessionGateway
-	PasskeyGateway  PasskeyGateway
-	RecoveryGateway RecoveryGateway
-	AuthBaseURL     string
+// sessionService owns session-backed redirect and logout behavior.
+type sessionService struct {
+	session     SessionGateway
+	authBaseURL string
 }
 
-// newServiceState wires auth-backed public auth flows behind input validation.
-func newServiceState(config serviceConfig) service {
-	sessionGateway := config.SessionGateway
-	if sessionGateway == nil {
-		sessionGateway = unavailableGateway{}
-	}
-	passkeyGateway := config.PasskeyGateway
-	if passkeyGateway == nil {
-		passkeyGateway = unavailableGateway{}
-	}
-	recoveryGateway := config.RecoveryGateway
-	if recoveryGateway == nil {
-		recoveryGateway = unavailableGateway{}
-	}
-	return service{
-		session:     sessionGateway,
-		passkeys:    passkeyGateway,
-		recovery:    recoveryGateway,
-		authBaseURL: strings.TrimSpace(config.AuthBaseURL),
-	}
+// passkeyService owns username, login, and signup ceremonies.
+type passkeyService struct {
+	passkeys PasskeyGateway
+}
+
+// recoveryService owns account recovery ceremonies.
+type recoveryService struct {
+	recovery RecoveryGateway
 }
 
 // NewPageService wires page-only public auth flows behind input validation.
 func NewPageService(authBaseURL string) PageService {
-	return newServiceState(serviceConfig{AuthBaseURL: authBaseURL})
+	return pageService{authBaseURL: normalizeAuthBaseURL(authBaseURL)}
 }
 
 // NewSessionService wires session-only public auth flows behind input validation.
 func NewSessionService(gateway SessionGateway, authBaseURL string) SessionService {
-	return newServiceState(serviceConfig{
-		SessionGateway: gateway,
-		AuthBaseURL:    authBaseURL,
-	})
+	if gateway == nil {
+		gateway = unavailableGateway{}
+	}
+	return sessionService{
+		session:     gateway,
+		authBaseURL: normalizeAuthBaseURL(authBaseURL),
+	}
 }
 
 // NewPasskeyService wires passkey-only public auth flows behind input validation.
 func NewPasskeyService(gateway PasskeyGateway, authBaseURL string) PasskeyService {
-	return newServiceState(serviceConfig{
-		PasskeyGateway: gateway,
-		AuthBaseURL:    authBaseURL,
-	})
+	_ = authBaseURL
+	if gateway == nil {
+		gateway = unavailableGateway{}
+	}
+	return passkeyService{passkeys: gateway}
 }
 
 // NewRecoveryService wires recovery-only public auth flows behind input validation.
 func NewRecoveryService(gateway RecoveryGateway, authBaseURL string) RecoveryService {
-	return newServiceState(serviceConfig{
-		RecoveryGateway: gateway,
-		AuthBaseURL:     authBaseURL,
-	})
+	_ = authBaseURL
+	if gateway == nil {
+		gateway = unavailableGateway{}
+	}
+	return recoveryService{recovery: gateway}
 }
 
 // HealthBody returns the plain-text health response expected by the endpoint.
-func (service) HealthBody() string {
+func (pageService) HealthBody() string {
 	return "ok"
 }
 
 // CheckUsernameAvailability returns advisory live validation state for signup.
-func (s service) CheckUsernameAvailability(ctx context.Context, username string) (UsernameAvailability, error) {
+func (s passkeyService) CheckUsernameAvailability(ctx context.Context, username string) (UsernameAvailability, error) {
 	username = strings.TrimSpace(username)
 	if username == "" {
 		return UsernameAvailability{State: UsernameAvailabilityStateInvalid}, nil
@@ -95,7 +83,7 @@ func (s service) CheckUsernameAvailability(ctx context.Context, username string)
 }
 
 // PasskeyLoginStart normalizes the username before asking auth to begin login.
-func (s service) PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error) {
+func (s passkeyService) PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error) {
 	resolvedUsername, err := requireUsername(username)
 	if err != nil {
 		return PasskeyChallenge{}, err
@@ -104,7 +92,7 @@ func (s service) PasskeyLoginStart(ctx context.Context, username string) (Passke
 }
 
 // PasskeyLoginFinish validates the ceremony response, then creates a web session.
-func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error) {
+func (s passkeyService) PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error) {
 	resolvedSessionID, err := requireSessionID(sessionID)
 	if err != nil {
 		return PasskeyFinish{}, err
@@ -132,7 +120,7 @@ func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, crede
 }
 
 // PasskeyRegisterStart validates the requested username before starting signup.
-func (s service) PasskeyRegisterStart(ctx context.Context, username string) (PasskeyRegisterResult, error) {
+func (s passkeyService) PasskeyRegisterStart(ctx context.Context, username string) (PasskeyRegisterResult, error) {
 	resolvedUsername, err := requireUsername(username)
 	if err != nil {
 		return PasskeyRegisterResult{}, err
@@ -149,7 +137,7 @@ func (s service) PasskeyRegisterStart(ctx context.Context, username string) (Pas
 }
 
 // PasskeyRegisterFinish stages signup and normalizes the recovery-code reveal.
-func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyRegistrationReveal, error) {
+func (s passkeyService) PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyRegistrationReveal, error) {
 	resolvedSessionID, err := requireSessionID(sessionID)
 	if err != nil {
 		return PasskeyRegistrationReveal{}, err
@@ -169,7 +157,7 @@ func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, cr
 }
 
 // PasskeyRegisterAcknowledge activates one staged signup and returns the signed-in session.
-func (s service) PasskeyRegisterAcknowledge(ctx context.Context, sessionID string, pendingID string) (PasskeyFinish, error) {
+func (s passkeyService) PasskeyRegisterAcknowledge(ctx context.Context, sessionID string, pendingID string) (PasskeyFinish, error) {
 	resolvedSessionID, err := requireSessionID(sessionID)
 	if err != nil {
 		return PasskeyFinish{}, err
@@ -190,7 +178,7 @@ func (s service) PasskeyRegisterAcknowledge(ctx context.Context, sessionID strin
 }
 
 // RecoveryStart verifies the recovery code, then starts replacement passkey enrollment.
-func (s service) RecoveryStart(ctx context.Context, username string, recoveryCode string) (RecoveryChallenge, error) {
+func (s recoveryService) RecoveryStart(ctx context.Context, username string, recoveryCode string) (RecoveryChallenge, error) {
 	resolvedUsername, err := requireUsername(username)
 	if err != nil {
 		return RecoveryChallenge{}, err
@@ -223,7 +211,7 @@ func (s service) RecoveryStart(ctx context.Context, username string, recoveryCod
 }
 
 // RecoveryFinish completes replacement passkey enrollment and returns the signed-in session.
-func (s service) RecoveryFinish(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error) {
+func (s recoveryService) RecoveryFinish(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error) {
 	resolvedRecoverySessionID, err := requireSessionID(recoverySessionID)
 	if err != nil {
 		return PasskeyFinish{}, err
@@ -254,8 +242,21 @@ func (s service) RecoveryFinish(ctx context.Context, recoverySessionID string, s
 	return finished, nil
 }
 
-// ResolvePostAuthRedirect returns the auth consent URL, validated continuation, or dashboard.
-func (s service) ResolvePostAuthRedirect(pendingID string, nextPath string) string {
+// ResolvePostAuthRedirect returns the auth consent URL, validated continuation,
+// or dashboard.
+func (s pageService) ResolvePostAuthRedirect(pendingID string, nextPath string) string {
+	return resolvePostAuthRedirect(s.authBaseURL, pendingID, nextPath)
+}
+
+// ResolvePostAuthRedirect returns the auth consent URL, validated continuation,
+// or dashboard.
+func (s sessionService) ResolvePostAuthRedirect(pendingID string, nextPath string) string {
+	return resolvePostAuthRedirect(s.authBaseURL, pendingID, nextPath)
+}
+
+// resolvePostAuthRedirect centralizes the validated post-auth landing decision
+// shared by page-only and session-backed public auth flows.
+func resolvePostAuthRedirect(authBaseURL string, pendingID string, nextPath string) string {
 	pendingID = strings.TrimSpace(pendingID)
 	if pendingID == "" {
 		if resolved := redirectpath.ResolveSafe(nextPath); resolved != "" {
@@ -263,7 +264,7 @@ func (s service) ResolvePostAuthRedirect(pendingID string, nextPath string) stri
 		}
 		return routepath.AppDashboard
 	}
-	base := strings.TrimRight(strings.TrimSpace(s.authBaseURL), "/")
+	base := strings.TrimRight(authBaseURL, "/")
 	if base == "" {
 		return routepath.AppDashboard
 	}
@@ -282,12 +283,18 @@ func (s service) ResolvePostAuthRedirect(pendingID string, nextPath string) stri
 }
 
 // RevokeWebSession treats blank cookie values as already-cleared sessions.
-func (s service) RevokeWebSession(ctx context.Context, sessionID string) error {
+func (s sessionService) RevokeWebSession(ctx context.Context, sessionID string) error {
 	resolvedSessionID := strings.TrimSpace(sessionID)
 	if resolvedSessionID == "" {
 		return nil
 	}
 	return s.session.RevokeWebSession(ctx, resolvedSessionID)
+}
+
+// normalizeAuthBaseURL trims composition input once so redirect building does
+// not need to repeat auth-base normalization at each call site.
+func normalizeAuthBaseURL(authBaseURL string) string {
+	return strings.TrimSpace(authBaseURL)
 }
 
 // requireSessionID rejects empty ceremony and cookie session identifiers early.

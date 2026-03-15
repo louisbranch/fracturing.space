@@ -5,10 +5,9 @@ import (
 	"strings"
 
 	"github.com/a-h/templ"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -16,34 +15,34 @@ import (
 // modules. Embed this in handler structs to get WritePublicPage, WriteNotFound,
 // WriteError, and optional viewer resolution for free.
 type Base struct {
-	requestresolver.Base
-	resolveViewerSignedIn module.ResolveSignedIn
-	resolveUserID         module.ResolveUserID
+	principal.Base
+	resolveViewerSignedIn principal.SignedInFunc
+	resolveUserID         principal.UserIDFunc
 }
 
 // Option configures a Base.
 type Option func(*Base)
 
 // WithResolveViewer attaches a viewer resolver for app-chrome rendering.
-func WithResolveViewer(rv module.ResolveViewer) Option {
+func WithResolveViewer(rv principal.ViewerFunc) Option {
 	return func(b *Base) { b.Base = b.Base.WithViewer(rv) }
 }
 
 // WithResolveViewerSignedIn attaches a direct signed-in resolver to avoid coupling
 // auth state to public profile metadata.
-func WithResolveViewerSignedIn(resolver module.ResolveSignedIn) Option {
+func WithResolveViewerSignedIn(resolver principal.SignedInFunc) Option {
 	return func(b *Base) { b.resolveViewerSignedIn = resolver }
 }
 
 // WithResolveUserID attaches a direct user-id resolver for shared public
 // transport flows that need to branch on the signed-in viewer.
-func WithResolveUserID(resolver module.ResolveUserID) Option {
+func WithResolveUserID(resolver principal.UserIDFunc) Option {
 	return func(b *Base) { b.resolveUserID = resolver }
 }
 
 // NewBase builds a public handler base with the given options.
 func NewBase(opts ...Option) Base {
-	b := Base{Base: requestresolver.New(nil, nil)}
+	b := Base{Base: principal.NewBase(nil, nil)}
 	for _, o := range opts {
 		o(&b)
 	}
@@ -52,15 +51,15 @@ func NewBase(opts ...Option) Base {
 
 // NewBaseFromPrincipal builds a public handler base from the shared principal
 // resolver seam used by root composition.
-func NewBaseFromPrincipal(resolver requestresolver.PrincipalResolver) Base {
-	var resolveSignedIn module.ResolveSignedIn
-	var resolveUserID module.ResolveUserID
+func NewBaseFromPrincipal(resolver principal.PrincipalResolver) Base {
+	var resolveSignedIn principal.SignedInFunc
+	var resolveUserID principal.UserIDFunc
 	if resolver != nil {
 		resolveSignedIn = resolver.ResolveSignedIn
 		resolveUserID = resolver.ResolveUserID
 	}
 	return Base{
-		Base:                  requestresolver.NewFromPageResolver(resolver),
+		Base:                  principal.NewBaseFromPageResolver(resolver),
 		resolveViewerSignedIn: resolveSignedIn,
 		resolveUserID:         resolveUserID,
 	}
@@ -85,7 +84,7 @@ func (b Base) RequestUserID(r *http.Request) string {
 // PageLocalizer resolves the shared localized page state used by public pages
 // and JSON error responses.
 func (b Base) PageLocalizer(w http.ResponseWriter, r *http.Request) (webtemplates.Localizer, string) {
-	page := requestresolver.ResolveLocalizedPage(w, r, &b)
+	page := principal.ResolveLocalizedPage(w, r, &b)
 	return page.Localizer, page.Language
 }
 

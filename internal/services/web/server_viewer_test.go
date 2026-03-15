@@ -23,7 +23,7 @@ func TestAppCampaignsPageRendersPrimaryNavigation(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -41,7 +41,7 @@ func TestAppDashboardPageRendersPrimaryNavigation(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -68,7 +68,7 @@ func TestPrimaryNavigationOmitsUnavailableLinks(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -95,7 +95,7 @@ func TestPrimaryNavigationOmitsNotificationsLinkWhenNotificationsModuleUnavailab
 	cfg := defaultProtectedConfig(auth)
 	cfg.Dependencies.Principal.NotificationClient = nil
 	cfg.Dependencies.Modules.Notifications.NotificationClient = nil
-	h, err := NewHandler(cfg)
+	h, err := newTestHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -125,7 +125,7 @@ func TestPrimaryNavigationUsesDashboardAndCampaignIcons(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -175,7 +175,7 @@ func TestPrimaryNavigationUsesUnreadNotificationIndicatorWhenUserHasUnread(t *te
 	}
 	cfg.Dependencies.Principal.NotificationClient = notifClient
 	cfg.Dependencies.Modules.Notifications.NotificationClient = notifClient
-	h, err := NewHandler(cfg)
+	h, err := newTestHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -204,7 +204,7 @@ func TestPrimaryNavigationFallsBackToReadNotificationIconWhenUnreadLookupFails(t
 	notifClient := fakeWebNotificationClient{unreadErr: context.Canceled}
 	cfg.Dependencies.Principal.NotificationClient = notifClient
 	cfg.Dependencies.Modules.Notifications.NotificationClient = notifClient
-	h, err := NewHandler(cfg)
+	h, err := newTestHandler(cfg)
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -230,7 +230,7 @@ func TestAppPageTitleUsesWebComposition(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -251,7 +251,7 @@ func TestPrimaryNavigationOmitsInvitesLinkWhileScaffoldDisabled(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -272,7 +272,7 @@ func TestInvitesRouteReturnsNotFoundWhileScaffoldDisabled(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -288,7 +288,7 @@ func TestInvitesRouteReturnsNotFoundWhileScaffoldDisabled(t *testing.T) {
 func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
@@ -321,7 +321,7 @@ func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
@@ -373,7 +373,7 @@ func TestAppPageIncludesThemeAssets(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -396,7 +396,7 @@ func TestAppPageUsesWebStyleChromeMarkers(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -420,7 +420,7 @@ func TestAppPageIncludesRouteMetadataAttribute(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -441,7 +441,7 @@ func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -468,7 +468,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "avatar_set_v1", "apothecary_journeyman", 40)
 	auth := newFakeWebAuthClient()
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{
 				SessionClient: auth,
@@ -529,7 +529,7 @@ func TestAppPageUserDropdownProfileUsesAuthUsernameWhenSocialProfileHasNoUsernam
 	social := &fakeSocialClient{getUserProfileResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{Name: "Rhea Vale"}}}
 	auth := newFakeWebAuthClient()
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{
 				SessionClient: auth,
@@ -574,7 +574,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 	assetBaseURL := "https://cdn.example.com/avatars"
 	expectedAvatarURL := websupport.AvatarImageURL(assetBaseURL, "user", "user-1", "", "", 40)
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{
 				SessionClient: auth,

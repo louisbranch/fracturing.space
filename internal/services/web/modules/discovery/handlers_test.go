@@ -25,7 +25,7 @@ func TestHandleIndexRendersDiscoveryPageForDegradedServiceState(t *testing.T) {
 	t.Parallel()
 
 	svc := &serviceStub{page: discoveryapp.Page{Status: discoveryapp.PageStatusUnavailable}}
-	h := newHandlers(publichandler.NewBase(), svc)
+	h := newHandlersWithBase(publichandler.NewBase(), svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
 	rr := httptest.NewRecorder()
@@ -69,7 +69,7 @@ func TestHandleIndexMapsServiceEntries(t *testing.T) {
 			}},
 		},
 	}
-	h := newHandlers(publichandler.NewBase(), svc)
+	h := newHandlersWithBase(publichandler.NewBase(), svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
 	rr := httptest.NewRecorder()

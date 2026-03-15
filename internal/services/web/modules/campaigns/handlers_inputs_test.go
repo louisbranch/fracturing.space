@@ -10,10 +10,11 @@ import (
 func TestParseCreateCampaignInputDefaultsAndValidation(t *testing.T) {
 	t.Parallel()
 
+	systems := newTestCampaignSystems()
 	input, err := parseCreateCampaignInput(url.Values{
 		"name":         {"  Voyage  "},
 		"theme_prompt": {"  stormy sea  "},
-	})
+	}, systems)
 	if err != nil {
 		t.Fatalf("parseCreateCampaignInput() error = %v", err)
 	}
@@ -30,10 +31,10 @@ func TestParseCreateCampaignInputDefaultsAndValidation(t *testing.T) {
 		t.Fatalf("ThemePrompt = %q, want %q", input.ThemePrompt, "stormy sea")
 	}
 
-	if _, err := parseCreateCampaignInput(url.Values{"system": {"unknown"}}); err == nil {
+	if _, err := parseCreateCampaignInput(url.Values{"system": {"unknown"}}, systems); err == nil {
 		t.Fatalf("expected invalid system error")
 	}
-	if _, err := parseCreateCampaignInput(url.Values{"gm_mode": {"nope"}}); err == nil {
+	if _, err := parseCreateCampaignInput(url.Values{"gm_mode": {"nope"}}, systems); err == nil {
 		t.Fatalf("expected invalid gm mode error")
 	}
 }

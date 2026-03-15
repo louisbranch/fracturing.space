@@ -34,42 +34,56 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 	}
 
 	ready := NewGRPCGateway(GRPCGatewayDeps{
-		CatalogRead:       CatalogReadDeps{Campaign: &contractCampaignClient{}},
-		CatalogMutation:   CatalogMutationDeps{Campaign: &contractCampaignClient{}},
-		WorkspaceRead:     WorkspaceReadDeps{Campaign: &contractCampaignClient{}},
-		ParticipantRead:   ParticipantReadDeps{Participant: &contractParticipantClient{}},
-		ParticipantMutate: ParticipantMutationDeps{Participant: &contractParticipantClient{}},
-		CharacterRead: CharacterReadDeps{
-			Character:          &fakeCharacterWorkflowClient{},
-			Participant:        &contractParticipantClient{},
-			DaggerheartContent: &fakeDaggerheartContentClient{},
+		Page: PageGatewayDeps{
+			Workspace:     WorkspaceReadDeps{Campaign: &contractCampaignClient{}},
+			SessionRead:   SessionReadDeps{Campaign: &contractCampaignClient{}, Session: &contractSessionClient{}},
+			Authorization: AuthorizationDeps{Client: contractAuthorizationClient{}},
 		},
-		CharacterControl: CharacterControlMutationDeps{Character: &fakeCharacterWorkflowClient{}},
-		CharacterMutate:  CharacterMutationDeps{Character: &fakeCharacterWorkflowClient{}},
-		SessionRead:      SessionReadDeps{Campaign: &contractCampaignClient{}, Session: &contractSessionClient{}},
-		SessionMutate:    SessionMutationDeps{Session: &contractSessionClient{}},
-		InviteRead: InviteReadDeps{
-			Invite:      &contractInviteClient{},
-			Participant: &contractParticipantClient{},
-			Social:      &contractSocialClient{},
-			Auth:        &contractAuthClient{},
+		Catalog: CatalogGatewayDeps{
+			Read:     CatalogReadDeps{Campaign: &contractCampaignClient{}},
+			Mutation: CatalogMutationDeps{Campaign: &contractCampaignClient{}},
 		},
-		InviteMutate: InviteMutationDeps{Invite: &contractInviteClient{}, Auth: &contractAuthClient{}},
-		ConfigMutate: ConfigurationMutationDeps{Campaign: &contractCampaignClient{}},
-		AutomationRead: AutomationReadDeps{
-			Agent: &contractAgentClient{},
+		Overview: OverviewGatewayDeps{
+			Participants:          ParticipantReadDeps{Participant: &contractParticipantClient{}},
+			Workspace:             WorkspaceReadDeps{Campaign: &contractCampaignClient{}},
+			Authorization:         AuthorizationDeps{Client: contractAuthorizationClient{}},
+			AutomationRead:        AutomationReadDeps{Agent: &contractAgentClient{}},
+			AutomationMutation:    AutomationMutationDeps{Campaign: &contractCampaignClient{}},
+			ConfigurationMutation: ConfigurationMutationDeps{Campaign: &contractCampaignClient{}},
 		},
-		AutomationMutate: AutomationMutationDeps{Campaign: &contractCampaignClient{}},
-		CreationRead: CharacterCreationReadDeps{
-			Character:          &fakeCharacterWorkflowClient{},
-			DaggerheartContent: &fakeDaggerheartContentClient{},
-			DaggerheartAsset:   &fakeDaggerheartContentClient{},
+		Participants: ParticipantGatewayDeps{
+			Read:          ParticipantReadDeps{Participant: &contractParticipantClient{}},
+			Mutation:      ParticipantMutationDeps{Participant: &contractParticipantClient{}},
+			Workspace:     WorkspaceReadDeps{Campaign: &contractCampaignClient{}},
+			Authorization: AuthorizationDeps{Client: contractAuthorizationClient{}},
 		},
-		CreationMutation: CharacterCreationMutationDeps{
-			Character: &fakeCharacterWorkflowClient{},
+		Characters: CharacterGatewayDeps{
+			Read: CharacterReadDeps{
+				Character:          &fakeCharacterWorkflowClient{},
+				Participant:        &contractParticipantClient{},
+				DaggerheartContent: &fakeDaggerheartContentClient{},
+			},
+			Control:          CharacterControlMutationDeps{Character: &fakeCharacterWorkflowClient{}},
+			Mutation:         CharacterMutationDeps{Character: &fakeCharacterWorkflowClient{}},
+			Participants:     ParticipantReadDeps{Participant: &contractParticipantClient{}},
+			Sessions:         SessionReadDeps{Campaign: &contractCampaignClient{}, Session: &contractSessionClient{}},
+			Authorization:    AuthorizationDeps{Client: contractAuthorizationClient{}},
+			CreationRead:     CharacterCreationReadDeps{Character: &fakeCharacterWorkflowClient{}, DaggerheartContent: &fakeDaggerheartContentClient{}, DaggerheartAsset: &fakeDaggerheartContentClient{}},
+			CreationMutation: CharacterCreationMutationDeps{Character: &fakeCharacterWorkflowClient{}},
 		},
-		Authorization: AuthorizationDeps{
-			Client: contractAuthorizationClient{},
+		Sessions: SessionGatewayDeps{
+			Mutation: SessionMutationDeps{Session: &contractSessionClient{}},
+		},
+		Invites: InviteGatewayDeps{
+			Read: InviteReadDeps{
+				Invite:      &contractInviteClient{},
+				Participant: &contractParticipantClient{},
+				Social:      &contractSocialClient{},
+				Auth:        &contractAuthClient{},
+			},
+			Mutation:      InviteMutationDeps{Invite: &contractInviteClient{}, Auth: &contractAuthClient{}},
+			Participants:  ParticipantReadDeps{Participant: &contractParticipantClient{}},
+			Authorization: AuthorizationDeps{Client: contractAuthorizationClient{}},
 		},
 	})
 	if _, ok := ready.(GRPCGateway); !ok {

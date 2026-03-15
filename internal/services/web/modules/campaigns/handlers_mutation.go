@@ -5,37 +5,14 @@ import (
 	"strings"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
-	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/forminput"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // --- Mutation route handlers ---
 
-// writeMutationError writes a flash error notice and redirects back to the
-// originating page so the user stays in context and can retry.
-func (h handlers) writeMutationError(w http.ResponseWriter, r *http.Request, err error, fallbackKey, redirectURL string) {
-	notice := flash.Notice{Kind: flash.KindError}
-	if key := apperrors.LocalizationKey(err); key != "" {
-		notice.Key = key
-	} else {
-		notice.Key = fallbackKey
-	}
-	flash.Write(w, r, notice)
-	httpx.WriteRedirect(w, r, redirectURL)
-}
-
-// writeMutationSuccess writes a success flash notice and redirects to the
-// target page so the user sees confirmation feedback.
-func (h handlers) writeMutationSuccess(w http.ResponseWriter, r *http.Request, key, redirectURL string) {
-	flash.Write(w, r, flash.NoticeSuccess(key))
-	httpx.WriteRedirect(w, r, redirectURL)
-}
-
 // handleSessionStart starts a campaign session and redirects to the game surface.
-func (h handlers) handleSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h sessionHandlers) handleSessionStart(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_session_start_form", routepath.AppCampaignSessions(campaignID)) {
 		return
 	}
@@ -44,14 +21,12 @@ func (h handlers) handleSessionStart(w http.ResponseWriter, r *http.Request, cam
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_start_session", routepath.AppCampaignSessions(campaignID))
 		return
 	}
-	if h.sync != nil {
-		h.sync.SessionStarted(ctx, userID, campaignID)
-	}
+	h.sync.SessionStarted(ctx, userID, campaignID)
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_session_started", routepath.AppCampaignGame(campaignID))
 }
 
 // handleSessionEnd handles this route in the module transport layer.
-func (h handlers) handleSessionEnd(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h sessionHandlers) handleSessionEnd(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_session_end_form", routepath.AppCampaignSessions(campaignID)) {
 		return
 	}
@@ -60,14 +35,12 @@ func (h handlers) handleSessionEnd(w http.ResponseWriter, r *http.Request, campa
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_end_session", routepath.AppCampaignSessions(campaignID))
 		return
 	}
-	if h.sync != nil {
-		h.sync.SessionEnded(ctx, userID, campaignID)
-	}
+	h.sync.SessionEnded(ctx, userID, campaignID)
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_session_ended", routepath.AppCampaignSessions(campaignID))
 }
 
 // handleCharacterCreate handles this route in the module transport layer.
-func (h handlers) handleCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h characterHandlers) handleCharacterCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_create_form", routepath.AppCampaign(campaignID)) {
 		return
 	}
@@ -94,7 +67,7 @@ func (h handlers) handleCharacterCreate(w http.ResponseWriter, r *http.Request, 
 }
 
 // handleCharacterUpdate handles this route in the module transport layer.
-func (h handlers) handleCharacterUpdate(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h characterHandlers) handleCharacterUpdate(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_update_form", routepath.AppCampaignCharacter(campaignID, characterID)) {
 		return
 	}
@@ -107,7 +80,7 @@ func (h handlers) handleCharacterUpdate(w http.ResponseWriter, r *http.Request, 
 }
 
 // handleCharacterControlSet updates the character controller from the detail page.
-func (h handlers) handleCharacterControlSet(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h characterHandlers) handleCharacterControlSet(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
 		return
@@ -121,7 +94,7 @@ func (h handlers) handleCharacterControlSet(w http.ResponseWriter, r *http.Reque
 }
 
 // handleCharacterControlClaim claims an unassigned character for the current participant.
-func (h handlers) handleCharacterControlClaim(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h characterHandlers) handleCharacterControlClaim(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
 		return
@@ -135,7 +108,7 @@ func (h handlers) handleCharacterControlClaim(w http.ResponseWriter, r *http.Req
 }
 
 // handleCharacterControlRelease releases the current participant's control.
-func (h handlers) handleCharacterControlRelease(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h characterHandlers) handleCharacterControlRelease(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_controller_form", redirectURL) {
 		return
@@ -149,7 +122,7 @@ func (h handlers) handleCharacterControlRelease(w http.ResponseWriter, r *http.R
 }
 
 // handleCharacterDelete removes a character from the campaign.
-func (h handlers) handleCharacterDelete(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h characterHandlers) handleCharacterDelete(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	redirectURL := routepath.AppCampaignCharacter(campaignID, characterID)
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_delete_form", redirectURL) {
 		return
@@ -163,7 +136,7 @@ func (h handlers) handleCharacterDelete(w http.ResponseWriter, r *http.Request, 
 }
 
 // handleInviteCreate handles this route in the module transport layer.
-func (h handlers) handleInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h inviteHandlers) handleInviteCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_invite_create_form", routepath.AppCampaignInvites(campaignID)) {
 		return
 	}
@@ -172,14 +145,12 @@ func (h handlers) handleInviteCreate(w http.ResponseWriter, r *http.Request, cam
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_invite", routepath.AppCampaignInvites(campaignID))
 		return
 	}
-	if h.sync != nil {
-		h.sync.InviteChanged(ctx, []string{userID}, campaignID)
-	}
+	h.sync.InviteChanged(ctx, []string{userID}, campaignID)
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_invite_created", routepath.AppCampaignInvites(campaignID))
 }
 
 // handleParticipantCreate handles this route in the module transport layer.
-func (h handlers) handleParticipantCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h participantHandlers) handleParticipantCreate(w http.ResponseWriter, r *http.Request, campaignID string) {
 	redirectURL := routepath.AppCampaignParticipantCreate(campaignID)
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_participant_create_form", redirectURL) {
 		return
@@ -193,7 +164,7 @@ func (h handlers) handleParticipantCreate(w http.ResponseWriter, r *http.Request
 }
 
 // handleInviteRevoke handles this route in the module transport layer.
-func (h handlers) handleInviteRevoke(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h inviteHandlers) handleInviteRevoke(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_invite_revoke_form", routepath.AppCampaignInvites(campaignID)) {
 		return
 	}
@@ -202,14 +173,12 @@ func (h handlers) handleInviteRevoke(w http.ResponseWriter, r *http.Request, cam
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_revoke_invite", routepath.AppCampaignInvites(campaignID))
 		return
 	}
-	if h.sync != nil {
-		h.sync.InviteChanged(ctx, []string{userID}, campaignID)
-	}
+	h.sync.InviteChanged(ctx, []string{userID}, campaignID)
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_invite_revoked", routepath.AppCampaignInvites(campaignID))
 }
 
 // handleParticipantUpdate handles this route in the module transport layer.
-func (h handlers) handleParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID, participantID string) {
+func (h participantHandlers) handleParticipantUpdate(w http.ResponseWriter, r *http.Request, campaignID, participantID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_participant_update_form", routepath.AppCampaignParticipants(campaignID)) {
 		return
 	}
@@ -222,7 +191,7 @@ func (h handlers) handleParticipantUpdate(w http.ResponseWriter, r *http.Request
 }
 
 // handleCampaignAIBinding handles this route in the module transport layer.
-func (h handlers) handleCampaignAIBinding(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h overviewHandlers) handleCampaignAIBinding(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_ai_binding_form", routepath.AppCampaignAIBinding(campaignID)) {
 		return
 	}
@@ -236,7 +205,7 @@ func (h handlers) handleCampaignAIBinding(w http.ResponseWriter, r *http.Request
 }
 
 // handleCampaignUpdate handles this route in the module transport layer.
-func (h handlers) handleCampaignUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h overviewHandlers) handleCampaignUpdate(w http.ResponseWriter, r *http.Request, campaignID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_update_form", routepath.AppCampaign(campaignID)) {
 		return
 	}

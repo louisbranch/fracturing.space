@@ -7,7 +7,7 @@ import (
 )
 
 // handleParticipants handles this route in the module transport layer.
-func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h participantHandlers) handleParticipants(w http.ResponseWriter, r *http.Request, campaignID string) {
 	viewerUserID := h.RequestUserID(r)
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
@@ -23,7 +23,7 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 }
 
 // handleParticipantCreatePage handles this route in the module transport layer.
-func (h handlers) handleParticipantCreatePage(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h participantHandlers) handleParticipantCreatePage(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -45,7 +45,7 @@ func (h handlers) handleParticipantCreatePage(w http.ResponseWriter, r *http.Req
 }
 
 // handleParticipantEdit handles this route in the module transport layer.
-func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, campaignID, participantID string) {
+func (h participantHandlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, campaignID, participantID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return

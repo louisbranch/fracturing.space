@@ -5,15 +5,19 @@ import (
 	"strings"
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
 // Module provides unauthenticated root/auth routes.
 type Module struct {
-	services       handlerServices
-	principal      requestresolver.PrincipalResolver
+	pageService    publicauthapp.PageService
+	sessionService publicauthapp.SessionService
+	passkeyService publicauthapp.PasskeyService
+	recovery       publicauthapp.RecoveryService
+	principal      principal.PrincipalResolver
 	requestMeta    requestmeta.SchemePolicy
 	id             string
 	prefix         string
@@ -34,17 +38,23 @@ const (
 
 // Config defines constructor dependencies for a publicauth module.
 type Config struct {
-	Services    handlerServices
-	Principal   requestresolver.PrincipalResolver
-	RequestMeta requestmeta.SchemePolicy
-	Surface     Surface
+	PageService    publicauthapp.PageService
+	SessionService publicauthapp.SessionService
+	PasskeyService publicauthapp.PasskeyService
+	Recovery       publicauthapp.RecoveryService
+	Principal      principal.PrincipalResolver
+	RequestMeta    requestmeta.SchemePolicy
+	Surface        Surface
 }
 
 // New returns a publicauth module with explicit dependencies.
 func New(config Config) Module {
 	id, prefix, register := resolveSurface(config.Surface)
 	return Module{
-		services:       normalizeHandlerServices(config.Services),
+		pageService:    config.PageService,
+		sessionService: config.SessionService,
+		passkeyService: config.PasskeyService,
+		recovery:       config.Recovery,
 		principal:      config.Principal,
 		requestMeta:    config.RequestMeta,
 		id:             id,
@@ -82,7 +92,10 @@ func (m Module) ID() string {
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	h := newHandlers(handlersConfig{
-		Services:  m.services,
+		Pages:     m.pageService,
+		Session:   m.sessionService,
+		Passkeys:  m.passkeyService,
+		Recovery:  m.recovery,
 		Policy:    m.requestMeta,
 		Principal: m.principal,
 	})

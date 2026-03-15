@@ -26,7 +26,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 	t.Parallel()
 
 	deps := completeGRPCDeps(campaigngateway.GRPCGatewayDeps{
-		CatalogRead: campaigngateway.CatalogReadDeps{
+		Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{
 			Campaign: fakeCampaignClient{
 				response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{
 					{
@@ -46,7 +46,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 					},
 				}},
 			},
-		},
+		}},
 	})
 	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
 
@@ -118,7 +118,7 @@ func TestMountCampaignsPageRendersCardIconsFromCatalog(t *testing.T) {
 	t.Parallel()
 
 	deps := completeGRPCDeps(campaigngateway.GRPCGatewayDeps{
-		CatalogRead: campaigngateway.CatalogReadDeps{
+		Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{
 			Campaign: fakeCampaignClient{
 				response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{
 					{
@@ -130,7 +130,7 @@ func TestMountCampaignsPageRendersCardIconsFromCatalog(t *testing.T) {
 					},
 				}},
 			},
-		},
+		}},
 	})
 	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
 
@@ -474,8 +474,10 @@ func TestMountCampaignCreatePostUsesResolvedLanguageLocaleWhenUsingDependenciesC
 
 	client := &capturingCampaignClient{}
 	deps := completeGRPCDeps(campaigngateway.GRPCGatewayDeps{
-		CatalogRead:     campaigngateway.CatalogReadDeps{Campaign: client},
-		CatalogMutation: campaigngateway.CatalogMutationDeps{Campaign: client},
+		Catalog: campaigngateway.CatalogGatewayDeps{
+			Read:     campaigngateway.CatalogReadDeps{Campaign: client},
+			Mutation: campaigngateway.CatalogMutationDeps{Campaign: client},
+		},
 	})
 	m := New(configWithGRPCDeps(deps, modulehandler.NewBase(nil, func(*http.Request) string { return "pt-BR" }, nil), nil))
 	mount, err := m.Mount()
@@ -625,10 +627,11 @@ func TestMountCampaignCreatePostRedirectsOnFormParseFailure(t *testing.T) {
 func TestParseAppGameSystemAndGmMode(t *testing.T) {
 	t.Parallel()
 
-	if system, ok := parseAppGameSystem("daggerheart"); !ok || system != campaignapp.GameSystemDaggerheart {
-		t.Fatalf("parseAppGameSystem daggerheart = (%v, %v)", system, ok)
+	systems := newTestCampaignSystems()
+	if system, ok := systems.parseCreateSystem("daggerheart"); !ok || system != campaignapp.GameSystemDaggerheart {
+		t.Fatalf("parseCreateSystem daggerheart = (%v, %v)", system, ok)
 	}
-	if _, ok := parseAppGameSystem("unknown"); ok {
+	if _, ok := systems.parseCreateSystem("unknown"); ok {
 		t.Fatalf("expected unknown game system to fail parse")
 	}
 

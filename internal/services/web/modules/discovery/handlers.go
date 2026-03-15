@@ -14,12 +14,18 @@ type handlers struct {
 	service discoveryapp.Service
 }
 
-// newHandlers builds package wiring for this web seam.
-func newHandlers(base publichandler.Base, service discoveryapp.Service) handlers {
+// newHandlersWithBase keeps package tests free to inject a custom base while
+// module roots stay transport-only.
+func newHandlersWithBase(base publichandler.Base, service discoveryapp.Service) handlers {
 	if service == nil {
 		service = discoveryapp.NewService(nil)
 	}
 	return handlers{Base: base, service: service}
+}
+
+// newHandlers builds package wiring for the production discovery module seam.
+func newHandlers(service discoveryapp.Service) handlers {
+	return newHandlersWithBase(publichandler.NewBase(), service)
 }
 
 // handleIndex handles this route in the module transport layer.

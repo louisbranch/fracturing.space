@@ -42,6 +42,25 @@ Canonical implementation path: `internal/services/web/`.
   Startup dependency policy, dependency bootstrapping, and command/runtime
   wiring.
 
+## High-Signal Shared-Platform Coverage
+
+- `internal/services/web/principal/requeststate_test.go`
+  Shared request-state contracts used by handler bases, page rendering, and
+  error helpers.
+- `internal/services/web/platform/modulehandler/modulehandler_test.go`
+  Protected handler-base behavior for user-id propagation, localization, and
+  page/error rendering helpers.
+- `internal/services/web/platform/publichandler/publichandler_test.go`
+  Public handler-base behavior for signed-in branching, localization, and page
+  shell helpers.
+- `internal/services/web/platform/pagerender/pagerender_test.go`
+  Shared app-shell/public-shell page writing behavior once page state is
+  resolved.
+- `internal/services/web/platform/weberror/weberror_test.go`
+  Shared protected/public error rendering behavior and safe message handling.
+- `internal/services/web/platform/dashboardsync/sync_test.go`
+  Shared dashboard freshness invalidation and degraded-mode behavior.
+
 ## High-Signal Module Coverage
 
 - `internal/services/web/modules/<area>/routes_test.go`
@@ -53,6 +72,8 @@ Canonical implementation path: `internal/services/web/`.
   Cross-module AST-based architecture rules and module-template invariants.
 - `internal/services/web/modules/boundary_guardrails_test.go`
   Cross-module boundary guardrails for known hotspot seams and ownership cuts.
+  Prefer adding AST/package-construction invariants there over raw source-text
+  fragment scans when refactors move code around without changing ownership.
 
 ## Where To Add Tests
 
@@ -63,6 +84,13 @@ Canonical implementation path: `internal/services/web/`.
 - Locale, viewer, or shell-level chrome behavior:
   `internal/services/web/server_locale_test.go`
   `internal/services/web/server_viewer_test.go`
+- Shared request-state or transport helper behavior:
+  `internal/services/web/principal/requeststate_test.go`
+  `internal/services/web/platform/modulehandler/modulehandler_test.go`
+  `internal/services/web/platform/publichandler/publichandler_test.go`
+  `internal/services/web/platform/pagerender/pagerender_test.go`
+  `internal/services/web/platform/weberror/weberror_test.go`
+  `internal/services/web/platform/dashboardsync/sync_test.go`
 - Module route or handler behavior:
   the owning module `routes_test.go` and any owned `handlers*_test.go`
 - Shared web architecture or boundary rules:

@@ -2,6 +2,7 @@ package discovery
 
 import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	discoveryapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/app"
 	discoverygateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/discovery/gateway"
 )
 
@@ -15,7 +16,9 @@ type CompositionConfig struct {
 // Compose builds the production discovery module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
+	gateway := discoverygateway.NewGRPCGateway(config.DiscoveryClient)
 	return New(Config{
-		Gateway: discoverygateway.NewGRPCGateway(config.DiscoveryClient),
+		Service: discoveryapp.NewService(gateway),
+		Healthy: discoveryapp.IsGatewayHealthy(gateway),
 	})
 }

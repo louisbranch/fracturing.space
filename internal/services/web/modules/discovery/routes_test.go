@@ -13,14 +13,14 @@ import (
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
-	registerRoutes(nil, newHandlers(publichandler.NewBase(), nil))
+	registerRoutes(nil, newHandlersWithBase(publichandler.NewBase(), nil))
 }
 
 func TestRegisterRoutesDiscoveryMethodContract(t *testing.T) {
 	t.Parallel()
 
 	mux := http.NewServeMux()
-	registerRoutes(mux, newHandlers(publichandler.NewBase(), nil))
+	registerRoutes(mux, newHandlersWithBase(publichandler.NewBase(), nil))
 
 	getReq := httptest.NewRequest(http.MethodGet, routepath.Discover, nil)
 	getRR := httptest.NewRecorder()

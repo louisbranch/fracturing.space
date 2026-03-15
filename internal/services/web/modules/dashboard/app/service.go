@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -13,17 +13,17 @@ import (
 // service defines an internal contract used at this web package boundary.
 type service struct {
 	readGateway    Gateway
-	logger         *log.Logger
+	logger         *slog.Logger
 	healthProvider HealthProvider
 }
 
 // NewService constructs a dashboard service with fail-closed gateway defaults.
-func NewService(gateway Gateway, logger *log.Logger, health HealthProvider) Service {
+func NewService(gateway Gateway, logger *slog.Logger, health HealthProvider) Service {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
 	if logger == nil {
-		logger = log.Default()
+		logger = slog.Default()
 	}
 	return service{readGateway: gateway, logger: logger, healthProvider: health}
 }
@@ -44,19 +44,19 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 	}
 	snapshot, err := s.readGateway.LoadDashboard(ctx, userID, locale)
 	if err != nil {
-		s.logger.Printf("dashboard: load failed for user %s: %v", userID, err)
+		s.logger.Warn("dashboard unavailable", "user_id", userID, "error", err)
 		return DashboardView{
 			DataStatus:    DashboardDataStatusUnavailable,
 			ServiceHealth: s.loadHealth(ctx),
 		}, nil
 	}
 	if snapshot.Freshness != DashboardFreshnessUnspecified || snapshot.CacheHit || !snapshot.GeneratedAt.IsZero() {
-		s.logger.Printf(
-			"dashboard: userhub freshness=%d cache_hit=%t generated_at=%s user=%s",
-			snapshot.Freshness,
-			snapshot.CacheHit,
-			snapshot.GeneratedAt.UTC().Format(time.RFC3339),
-			userID,
+		s.logger.Info(
+			"dashboard freshness",
+			"freshness", snapshot.Freshness,
+			"cache_hit", snapshot.CacheHit,
+			"generated_at", snapshot.GeneratedAt.UTC().Format(time.RFC3339),
+			"user_id", userID,
 		)
 	}
 	activeSessions := []ActiveSessionItem(nil)
@@ -74,7 +74,7 @@ func (s service) LoadDashboard(ctx context.Context, userID string, locale langua
 		campaignStartNudgesMore = snapshot.CampaignStartNudgesHasMore
 	}
 	if HasDegradedDependency(snapshot.DegradedDependencies, DegradedDependencySocialProfile) {
-		s.logger.Printf("dashboard: degraded dependency %s for user %s", DegradedDependencySocialProfile, userID)
+		s.logger.Warn("dashboard degraded dependency", "dependency", DegradedDependencySocialProfile, "user_id", userID)
 	}
 	health := s.loadHealth(ctx)
 	showAdventureBlock := false

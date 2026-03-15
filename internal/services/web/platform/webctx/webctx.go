@@ -5,12 +5,12 @@ import (
 	"net/http"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
-	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 // WithResolvedUserID returns request context enriched with resolved user metadata.
-func WithResolvedUserID(r *http.Request, resolve module.ResolveUserID) context.Context {
+func WithResolvedUserID(r *http.Request, resolve principal.UserIDFunc) context.Context {
 	if r == nil {
 		return context.Background()
 	}

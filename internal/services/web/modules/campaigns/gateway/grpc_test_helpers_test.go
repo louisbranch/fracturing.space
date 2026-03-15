@@ -89,51 +89,51 @@ type GRPCGateway struct {
 }
 
 func NewGRPCGateway(deps GRPCGatewayDeps) testGatewayBundle {
-	if deps.CatalogRead.Campaign == nil || deps.ParticipantRead.Participant == nil ||
-		deps.CharacterRead.Character == nil || deps.CharacterRead.DaggerheartContent == nil ||
-		deps.SessionRead.Session == nil || deps.SessionRead.Campaign == nil ||
-		deps.InviteRead.Invite == nil || deps.InviteRead.Participant == nil || deps.InviteRead.Social == nil || deps.InviteRead.Auth == nil ||
-		deps.AutomationRead.Agent == nil ||
-		deps.CatalogMutation.Campaign == nil || deps.ParticipantMutate.Participant == nil ||
-		deps.CharacterControl.Character == nil || deps.CharacterMutate.Character == nil ||
-		deps.SessionMutate.Session == nil || deps.InviteMutate.Invite == nil || deps.InviteMutate.Auth == nil ||
-		deps.ConfigMutate.Campaign == nil || deps.AutomationMutate.Campaign == nil ||
-		deps.Authorization.Client == nil || deps.CreationRead.Character == nil ||
-		deps.CreationRead.DaggerheartContent == nil || deps.CreationRead.DaggerheartAsset == nil ||
-		deps.CreationMutation.Character == nil {
+	if deps.Catalog.Read.Campaign == nil || deps.Participants.Read.Participant == nil ||
+		deps.Characters.Read.Character == nil || deps.Characters.Read.DaggerheartContent == nil ||
+		deps.Page.SessionRead.Session == nil || deps.Page.SessionRead.Campaign == nil ||
+		deps.Invites.Read.Invite == nil || deps.Invites.Read.Participant == nil || deps.Invites.Read.Social == nil || deps.Invites.Read.Auth == nil ||
+		deps.Overview.AutomationRead.Agent == nil ||
+		deps.Catalog.Mutation.Campaign == nil || deps.Participants.Mutation.Participant == nil ||
+		deps.Characters.Control.Character == nil || deps.Characters.Mutation.Character == nil ||
+		deps.Sessions.Mutation.Session == nil || deps.Invites.Mutation.Invite == nil || deps.Invites.Mutation.Auth == nil ||
+		deps.Overview.ConfigurationMutation.Campaign == nil || deps.Overview.AutomationMutation.Campaign == nil ||
+		deps.Page.Authorization.Client == nil || deps.Characters.CreationRead.Character == nil ||
+		deps.Characters.CreationRead.DaggerheartContent == nil || deps.Characters.CreationRead.DaggerheartAsset == nil ||
+		deps.Characters.CreationMutation.Character == nil {
 		return campaignapp.NewUnavailableGateway()
 	}
 	return GRPCGateway{
 		Read: GRPCGatewayReadDeps{
-			Campaign:           deps.CatalogRead.Campaign,
-			Agent:              deps.AutomationRead.Agent,
-			Participant:        deps.ParticipantRead.Participant,
-			Character:          deps.CharacterRead.Character,
-			DaggerheartContent: deps.CharacterRead.DaggerheartContent,
-			DaggerheartAsset:   deps.CreationRead.DaggerheartAsset,
-			Session:            deps.SessionRead.Session,
-			Invite:             deps.InviteRead.Invite,
-			Social:             deps.InviteRead.Social,
+			Campaign:           deps.Catalog.Read.Campaign,
+			Agent:              deps.Overview.AutomationRead.Agent,
+			Participant:        deps.Participants.Read.Participant,
+			Character:          deps.Characters.Read.Character,
+			DaggerheartContent: deps.Characters.Read.DaggerheartContent,
+			DaggerheartAsset:   deps.Characters.CreationRead.DaggerheartAsset,
+			Session:            deps.Page.SessionRead.Session,
+			Invite:             deps.Invites.Read.Invite,
+			Social:             deps.Invites.Read.Social,
 		},
 		CreationRead: GRPCGatewayCreationReadDeps{
-			Character:          deps.CreationRead.Character,
-			DaggerheartContent: deps.CreationRead.DaggerheartContent,
-			DaggerheartAsset:   deps.CreationRead.DaggerheartAsset,
+			Character:          deps.Characters.CreationRead.Character,
+			DaggerheartContent: deps.Characters.CreationRead.DaggerheartContent,
+			DaggerheartAsset:   deps.Characters.CreationRead.DaggerheartAsset,
 		},
 		Mutation: GRPCGatewayMutationDeps{
-			Campaign:         deps.CatalogMutation.Campaign,
-			Participant:      deps.ParticipantMutate.Participant,
-			CharacterControl: deps.CharacterControl.Character,
-			Character:        deps.CharacterMutate.Character,
-			Session:          deps.SessionMutate.Session,
-			Invite:           deps.InviteMutate.Invite,
-			Auth:             deps.InviteMutate.Auth,
+			Campaign:         deps.Catalog.Mutation.Campaign,
+			Participant:      deps.Participants.Mutation.Participant,
+			CharacterControl: deps.Characters.Control.Character,
+			Character:        deps.Characters.Mutation.Character,
+			Session:          deps.Sessions.Mutation.Session,
+			Invite:           deps.Invites.Mutation.Invite,
+			Auth:             deps.Invites.Mutation.Auth,
 		},
 		CreationMutation: GRPCGatewayCreationMutationDeps{
-			Character: deps.CreationMutation.Character,
+			Character: deps.Characters.CreationMutation.Character,
 		},
 		Authorization: GRPCGatewayAuthorizationDeps{
-			Client: deps.Authorization.Client,
+			Client: deps.Page.Authorization.Client,
 		},
 		AssetBaseURL: deps.AssetBaseURL,
 	}

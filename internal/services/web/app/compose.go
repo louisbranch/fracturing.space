@@ -1,21 +1,11 @@
 package app
 
 import (
-	"fmt"
 	"net/http"
-	"net/url"
-	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/shared/modulecompose"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
-	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
-
-const defaultLoginPath = routepath.Login
 
 // ComposeInput carries module groups and shared composition contracts.
 type ComposeInput struct {
@@ -27,254 +17,25 @@ type ComposeInput struct {
 
 // Compose builds a root HTTP handler from module groups.
 func Compose(input ComposeInput) (http.Handler, error) {
+	input = normalizeComposeInput(input)
 	root := http.NewServeMux()
-	if input.AuthRequired == nil {
-		input.AuthRequired = func(*http.Request) bool { return false }
-	}
 	seen := make(map[string]string)
 
-	for _, feature := range input.PublicModules {
-		if feature == nil {
-			return nil, fmt.Errorf("public module is nil")
-		}
-		if err := mountPublicModule(root, feature, seen); err != nil {
-			return nil, err
-		}
+	if err := mountPublicModules(root, input.PublicModules, seen); err != nil {
+		return nil, err
 	}
-
-	for _, feature := range input.ProtectedModules {
-		if feature == nil {
-			return nil, fmt.Errorf("protected module is nil")
-		}
-		if err := mountProtectedModule(root, feature, seen, wrapProtectedModule(input.AuthRequired, input.RequestSchemePolicy)); err != nil {
-			return nil, err
-		}
+	if err := mountProtectedModules(root, input.ProtectedModules, seen, input.AuthRequired, input.RequestSchemePolicy); err != nil {
+		return nil, err
 	}
 
 	return root, nil
 }
 
-// mountModule performs shared mount bookkeeping so public/protected mounting
-// paths enforce one prefix owner and optional wrapper behavior consistently.
-func mountModule(
-	root *http.ServeMux,
-	feature module.Module,
-	mount module.Mount,
-	prefix string,
-	seen map[string]string,
-	wrap func(http.Handler) http.Handler,
-) error {
-	if root == nil || feature == nil {
-		return nil
+// normalizeComposeInput fills nil-safe root composition defaults so tests and
+// production wiring both traverse the same assembly path.
+func normalizeComposeInput(input ComposeInput) ComposeInput {
+	if input.AuthRequired == nil {
+		input.AuthRequired = func(*http.Request) bool { return false }
 	}
-	if err := claimRoute(seen, prefix, feature.ID()); err != nil {
-		return err
-	}
-
-	handler := mount.Handler
-	if wrap != nil {
-		handler = wrap(handler)
-	}
-	handler = canonicalizeTrailingSlash(prefix, mount.CanonicalRoot, handler)
-
-	if mount.CanonicalRoot {
-		rootPath := strings.TrimSuffix(prefix, "/")
-		if rootPath == "" || rootPath == routepath.Root {
-			return fmt.Errorf("module %q has invalid canonical root for prefix %q", feature.ID(), prefix)
-		}
-		if err := claimRoute(seen, rootPath, feature.ID()); err != nil {
-			return err
-		}
-		root.Handle(rootPath, handler)
-	}
-
-	root.Handle(prefix, handler)
-	return nil
-}
-
-// claimRoute preserves one-owner route claims during app composition so module collisions fail fast.
-func claimRoute(seen map[string]string, pattern string, owner string) error {
-	if previous, ok := seen[pattern]; ok {
-		return fmt.Errorf("module %q duplicates prefix %q owned by module %q", owner, pattern, previous)
-	}
-	seen[pattern] = owner
-	return nil
-}
-
-// mountPublicModule enforces that public modules never claim protected prefixes.
-func mountPublicModule(root *http.ServeMux, feature module.Module, seen map[string]string) error {
-	mount, prefix, err := resolveMount(feature)
-	if err != nil {
-		return err
-	}
-	if isProtectedPrefix(prefix) {
-		return fmt.Errorf("module %q has protected prefix %q in public group", feature.ID(), prefix)
-	}
-	return mountModule(root, feature, mount, prefix, seen, nil)
-}
-
-// mountProtectedModule enforces protected-prefix ownership for canonical
-// `/app/*` module roots.
-func mountProtectedModule(root *http.ServeMux, feature module.Module, seen map[string]string, wrap func(http.Handler) http.Handler) error {
-	mount, prefix, err := resolveMount(feature)
-	if err != nil {
-		return err
-	}
-	if !isProtectedPrefix(prefix) {
-		return fmt.Errorf("module %q must mount under /app/, got %q", feature.ID(), prefix)
-	}
-	return mountModule(root, feature, mount, prefix, seen, wrap)
-}
-
-// isProtectedPrefix centralizes the `/app/` ownership rule used during compose.
-func isProtectedPrefix(prefix string) bool {
-	return strings.HasPrefix(prefix, routepath.AppPrefix)
-}
-
-// resolveMount validates module mount contracts once so callers can share
-// canonical prefix and handler checks.
-func resolveMount(feature module.Module) (module.Mount, string, error) {
-	if feature == nil {
-		return module.Mount{}, "", fmt.Errorf("module is nil")
-	}
-	mount, err := feature.Mount()
-	if err != nil {
-		return module.Mount{}, "", fmt.Errorf("mount module %q: %w", feature.ID(), err)
-	}
-	prefix := strings.TrimSpace(mount.Prefix)
-	if err := modulecompose.ValidatePrefix(prefix); err != nil {
-		return module.Mount{}, "", fmt.Errorf("mount module %q has invalid prefix %q: %w", feature.ID(), mount.Prefix, err)
-	}
-	if prefix == "" {
-		return module.Mount{}, "", fmt.Errorf("mount module %q: prefix is required", feature.ID())
-	}
-	if prefix == routepath.Root && mount.CanonicalRoot {
-		return module.Mount{}, "", fmt.Errorf("mount module %q: root mount cannot claim canonical root", feature.ID())
-	}
-	if mount.Handler == nil {
-		return module.Mount{}, "", fmt.Errorf("mount module %q: handler is required", feature.ID())
-	}
-	return mount, prefix, nil
-}
-
-// canonicalizeTrailingSlash redirects owned slashful requests to the slashless browser URL before downstream module handling.
-func canonicalizeTrailingSlash(prefix string, canonicalRoot bool, next http.Handler) http.Handler {
-	if next == nil {
-		next = http.NotFoundHandler()
-	}
-	if prefix == routepath.Root {
-		return next
-	}
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r == nil || r.URL == nil {
-			next.ServeHTTP(w, r)
-			return
-		}
-		path := strings.TrimSpace(r.URL.Path)
-		if path == "" || path == routepath.Root || !strings.HasSuffix(path, "/") {
-			next.ServeHTTP(w, r)
-			return
-		}
-		if path == prefix && !canonicalRoot {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		location := strings.TrimSuffix(path, "/")
-		if location == "" {
-			location = routepath.Root
-		}
-		if query := strings.TrimSpace(r.URL.RawQuery); query != "" {
-			location += "?" + query
-		}
-		httpx.WriteCanonicalRedirect(w, r, location)
-	})
-}
-
-// requireAuth wraps handlers with session-backed auth checks and redirects to
-// the shared login path when auth is missing.
-func requireAuth(authenticated func(*http.Request) bool) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		if next == nil {
-			return http.NotFoundHandler()
-		}
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !authenticated(r) {
-				httpx.WriteRedirect(w, r, loginRedirectPath(r))
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// loginRedirectPath preserves the blocked destination so auth can resume the
-// original protected request after the user signs in.
-func loginRedirectPath(r *http.Request) string {
-	if r == nil || r.URL == nil {
-		return defaultLoginPath
-	}
-	nextPath := strings.TrimSpace(r.URL.RequestURI())
-	if nextPath == "" {
-		return defaultLoginPath
-	}
-	values := url.Values{}
-	values.Set("next", nextPath)
-	return defaultLoginPath + "?" + values.Encode()
-}
-
-// wrapProtectedModule composes auth and same-origin protections for protected
-// modules so each module mount receives identical guardrails.
-func wrapProtectedModule(authenticated func(*http.Request) bool, policy requestmeta.SchemePolicy) func(http.Handler) http.Handler {
-	authWrap := requireAuth(authenticated)
-	csrfWrap := requireCookieSessionSameOrigin(policy)
-	return func(next http.Handler) http.Handler {
-		return authWrap(csrfWrap(next))
-	}
-}
-
-// requireCookieSessionSameOrigin enforces same-origin proof for cookie-backed
-// mutation requests and leaves non-mutation reads untouched.
-func requireCookieSessionSameOrigin(policy requestmeta.SchemePolicy) func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		if next == nil {
-			next = http.NotFoundHandler()
-		}
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if !isMutationMethod(r) || !hasSessionCookie(r) {
-				next.ServeHTTP(w, r)
-				return
-			}
-			if !hasSameOriginProof(r, policy) {
-				weberror.WriteAppError(w, r, http.StatusForbidden, nil)
-				return
-			}
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-
-// isMutationMethod identifies state-changing HTTP verbs for same-origin checks.
-func isMutationMethod(r *http.Request) bool {
-	if r == nil {
-		return false
-	}
-	switch r.Method {
-	case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete:
-		return true
-	default:
-		return false
-	}
-}
-
-// hasSessionCookie reports whether the request carries an authenticated web
-// session cookie and therefore requires same-origin mutation proof.
-func hasSessionCookie(r *http.Request) bool {
-	_, ok := sessioncookie.Read(r)
-	return ok
-}
-
-// hasSameOriginProof delegates proof validation to shared requestmeta helpers.
-func hasSameOriginProof(r *http.Request, policy requestmeta.SchemePolicy) bool {
-	return requestmeta.HasSameOriginProofWithPolicy(r, policy)
+	return input
 }

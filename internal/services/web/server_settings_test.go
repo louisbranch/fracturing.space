@@ -11,7 +11,7 @@ func TestAppSettingsPageRendersPrimaryNavigation(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -29,7 +29,7 @@ func TestAppSettingsRootRedirectsToProfile(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -49,7 +49,7 @@ func TestAppSettingsSlashfulRootRedirectsToCanonicalPath(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -69,7 +69,7 @@ func TestAppSettingsProfileRendersSettingsMenuAndContent(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}

@@ -72,3 +72,19 @@ type serviceConfigs struct {
 	Sessions     sessionServiceConfig
 	Invites      inviteServiceConfig
 }
+
+// newServiceConfigs assembles the production app-service graph from explicit
+// surface-local composition builders instead of routing every capability through
+// one root wiring sink.
+func newServiceConfigs(config CompositionConfig) serviceConfigs {
+	return serviceConfigs{
+		Page:         newPageServiceConfig(config),
+		Catalog:      newCatalogSurfaceConfig(config),
+		Starter:      newStarterSurfaceConfig(config),
+		Overview:     newOverviewSurfaceConfig(config),
+		Participants: newParticipantSurfaceConfig(config),
+		Characters:   newCharacterSurfaceConfig(config),
+		Sessions:     newSessionSurfaceConfig(config),
+		Invites:      newInviteSurfaceConfig(config),
+	}
+}

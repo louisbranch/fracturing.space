@@ -4,6 +4,8 @@ package daggerheart
 
 import (
 	"strings"
+
+	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
 
 // SystemLabel is the case-insensitive system label used to resolve this workflow.
@@ -21,3 +23,12 @@ type Workflow struct {
 
 // New returns a new Daggerheart workflow implementation.
 func New(assetBaseURL string) Workflow { return Workflow{AssetBaseURL: assetBaseURL} }
+
+// Install returns the install-time workflow manifest for Daggerheart.
+func Install(assetBaseURL string) campaignworkflow.Installation {
+	return campaignworkflow.Installation{
+		ID:                strings.ToLower(SystemLabel),
+		Aliases:           []string{SystemLabel},
+		CharacterCreation: New(assetBaseURL),
+	}
+}

@@ -6,14 +6,14 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 // defaultPublicModules returns stable public web modules.
-func defaultPublicModules(deps Dependencies, principal requestresolver.PrincipalResolver, opts PublicModuleOptions) []module.Module {
+func defaultPublicModules(deps Dependencies, requestPrincipal principal.PrincipalResolver, opts PublicModuleOptions) []module.Module {
 	publicModules := publicauth.ComposeSurfaceSet(publicauth.SurfaceSetConfig{
 		AuthClient:  deps.PublicAuth.AuthClient,
-		Principal:   principal,
+		Principal:   requestPrincipal,
 		RequestMeta: opts.RequestSchemePolicy,
 		AuthBaseURL: deps.PublicAuth.AuthBaseURL,
 	})
@@ -25,11 +25,12 @@ func defaultPublicModules(deps Dependencies, principal requestresolver.Principal
 			AuthClient:   deps.Profile.AuthClient,
 			SocialClient: deps.Profile.SocialClient,
 			AssetBaseURL: deps.AssetBaseURL,
-			Principal:    principal,
+			Principal:    requestPrincipal,
 		}),
 		invite.ComposePublic(invite.PublicSurfaceOptions{
-			RequestMeta: opts.RequestSchemePolicy,
-			Principal:   principal,
+			RequestMeta:   opts.RequestSchemePolicy,
+			Principal:     requestPrincipal,
+			DashboardSync: opts.DashboardSync,
 		}, deps.Invite),
 	)
 	return publicModules

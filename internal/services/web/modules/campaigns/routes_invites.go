@@ -19,8 +19,8 @@ func registerStableCampaignInviteRoutes(mux *http.ServeMux, h handlers) {
 	if mux == nil {
 		return
 	}
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignInvitesPattern, h.withCampaignID(h.handleInvites))
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteSearchPattern, h.withCampaignID(h.handleInviteSearch))
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteCreatePattern, h.withCampaignID(h.handleInviteCreate))
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteRevokePattern, h.withCampaignID(h.handleInviteRevoke))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignInvitesPattern, h.invites.withCampaignID(h.invites.handleInvites))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteSearchPattern, h.invites.withCampaignID(h.invites.handleInviteSearch))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteCreatePattern, h.invites.withCampaignID(h.invites.handleInviteCreate))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignInviteRevokePattern, h.invites.withCampaignID(h.invites.handleInviteRevoke))
 }

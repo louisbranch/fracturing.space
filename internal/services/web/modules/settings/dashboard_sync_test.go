@@ -16,7 +16,7 @@ func TestMountProfilePostTriggersDashboardSyncOnSuccess(t *testing.T) {
 	t.Parallel()
 
 	sync := &settingsDashboardSyncStub{}
-	m := New(Config{AccountGateway: newPopulatedFakeGateway(), Base: settingsTestBase(), DashboardSync: sync})
+	m := newSettingsModuleFromGateways(newPopulatedFakeGateway(), nil, settingsTestBase(), withDashboardSync(sync))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -37,7 +37,7 @@ func TestMountProfilePostDoesNotTriggerDashboardSyncOnValidationError(t *testing
 	t.Parallel()
 
 	sync := &settingsDashboardSyncStub{}
-	m := New(Config{AccountGateway: newPopulatedFakeGateway(), Base: settingsTestBase(), DashboardSync: sync})
+	m := newSettingsModuleFromGateways(newPopulatedFakeGateway(), nil, settingsTestBase(), withDashboardSync(sync))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -61,3 +61,11 @@ type settingsDashboardSyncStub struct {
 func (s *settingsDashboardSyncStub) ProfileSaved(_ context.Context, userID string) {
 	s.userIDs = append(s.userIDs, userID)
 }
+
+func (*settingsDashboardSyncStub) CampaignCreated(context.Context, string, string) {}
+
+func (*settingsDashboardSyncStub) SessionStarted(context.Context, string, string) {}
+
+func (*settingsDashboardSyncStub) SessionEnded(context.Context, string, string) {}
+
+func (*settingsDashboardSyncStub) InviteChanged(context.Context, []string, string) {}

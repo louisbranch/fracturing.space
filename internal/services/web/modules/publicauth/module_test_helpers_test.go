@@ -1,13 +1,17 @@
 package publicauth
 
 import (
+	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func newConfigFromGateway(gateway gatewayServices, authBaseURL string) Config {
 	return Config{
-		Services: newHandlerServicesFromGateway(gateway, authBaseURL),
+		PageService:    publicauthapp.NewPageService(authBaseURL),
+		SessionService: publicauthapp.NewSessionService(gateway, authBaseURL),
+		PasskeyService: publicauthapp.NewPasskeyService(gateway, authBaseURL),
+		Recovery:       publicauthapp.NewRecoveryService(gateway, authBaseURL),
 	}
 }
 
@@ -17,9 +21,9 @@ func withRequestMeta(policy requestmeta.SchemePolicy) func(*Config) {
 	}
 }
 
-func withPrincipal(principal requestresolver.PrincipalResolver) func(*Config) {
+func withPrincipal(requestPrincipal principal.PrincipalResolver) func(*Config) {
 	return func(config *Config) {
-		config.Principal = principal
+		config.Principal = requestPrincipal
 	}
 }
 

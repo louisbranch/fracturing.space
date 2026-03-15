@@ -32,11 +32,11 @@ func campaignListItemURL(item CampaignListItem) string {
 	return routepath.AppCampaign(campaignID)
 }
 
-func campaignCreateSystemValue(form CampaignCreateFormValues) string {
+func campaignCreateSystemValue(form CampaignCreateFormValues, defaultSystem string) string {
 	if strings.TrimSpace(form.System) != "" {
 		return strings.TrimSpace(form.System)
 	}
-	return "daggerheart"
+	return strings.TrimSpace(defaultSystem)
 }
 
 func campaignCreateGMModeValue(form CampaignCreateFormValues) string {
@@ -74,7 +74,7 @@ templ CampaignStartFragment(loc Localizer) {
 	</section>
 }
 
-templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
+templ CampaignCreateFragment(form CampaignCreateFormValues, systems []CampaignCreateSystemOption, defaultSystem string, loc Localizer) {
 	<section class="card bg-base-200">
 		<div class="card-body">
 			<form method="post" action={ routepath.AppCampaignsCreate } class="space-y-4">
@@ -89,10 +89,12 @@ templ CampaignCreateFragment(form CampaignCreateFormValues, loc Localizer) {
 						<span class="label-text">{ T(loc, "game.create.field_system") }</span>
 					</label>
 					<select name="system" required class="select select-bordered w-full">
-						if campaignCreateSystemValue(form) == "daggerheart" {
-							<option value="daggerheart" selected>{ T(loc, "game.create.field_system_value_daggerheart") }</option>
-						} else {
-							<option value="daggerheart">{ T(loc, "game.create.field_system_value_daggerheart") }</option>
+						for _, system := range systems {
+							if campaignCreateSystemValue(form, defaultSystem) == system.Value {
+								<option value={ system.Value } selected>{ T(loc, system.LabelKey) }</option>
+							} else {
+								<option value={ system.Value }>{ T(loc, system.LabelKey) }</option>
+							}
 						}
 					</select>
 				</div>

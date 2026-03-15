@@ -8,12 +8,12 @@ import (
 	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 // ComposeInput describes the contracts needed to compose the application mux.
 type ComposeInput struct {
-	Principal requestresolver.PrincipalResolver
+	Principal principal.PrincipalResolver
 
 	ModuleDependencies modules.Dependencies
 

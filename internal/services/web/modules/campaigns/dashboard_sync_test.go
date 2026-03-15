@@ -76,6 +76,8 @@ type campaignDashboardSyncStub struct {
 	invites []string
 }
 
+func (*campaignDashboardSyncStub) ProfileSaved(context.Context, string) {}
+
 func (s *campaignDashboardSyncStub) CampaignCreated(_ context.Context, userID, campaignID string) {
 	s.created = append(s.created, userID+"/"+campaignID)
 }

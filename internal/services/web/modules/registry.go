@@ -3,8 +3,9 @@ package modules
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 // RegistryBuilder builds public/protected module sets from registry inputs.
@@ -18,7 +19,7 @@ type Registry struct{}
 // RegistryInput carries the dependencies and options needed to compose module sets.
 type RegistryInput struct {
 	Dependencies     Dependencies
-	Principal        requestresolver.PrincipalResolver
+	Principal        principal.PrincipalResolver
 	PublicOptions    PublicModuleOptions
 	ProtectedOptions ProtectedModuleOptions
 }
@@ -36,11 +37,21 @@ func NewRegistryBuilder() RegistryBuilder {
 
 // Build composes module sets for the requested stability mode.
 func (Registry) Build(input RegistryInput) RegistryOutput {
-	publicModules := defaultPublicModules(input.Dependencies, input.Principal, input.PublicOptions)
+	shared := newSharedServices(input.Dependencies)
+	publicOptions := input.PublicOptions
+	if publicOptions.DashboardSync == nil {
+		publicOptions.DashboardSync = shared.dashboardSync
+	}
+	protectedOptions := input.ProtectedOptions
+	if protectedOptions.DashboardSync == nil {
+		protectedOptions.DashboardSync = shared.dashboardSync
+	}
+
+	publicModules := defaultPublicModules(input.Dependencies, input.Principal, publicOptions)
 	protectedModules := buildProtectedModules(
 		input.Dependencies,
 		input.Principal,
-		input.ProtectedOptions,
+		protectedOptions,
 	)
 
 	return RegistryOutput{
@@ -52,6 +63,7 @@ func (Registry) Build(input RegistryInput) RegistryOutput {
 // PublicModuleOptions controls variant behavior for public module composition.
 type PublicModuleOptions struct {
 	RequestSchemePolicy requestmeta.SchemePolicy
+	DashboardSync       dashboardsync.Service
 }
 
 // ProtectedModuleOptions controls variant behavior for protected module composition.
@@ -64,4 +76,7 @@ type ProtectedModuleOptions struct {
 
 	// RequestSchemePolicy controls scheme resolution for scheme-sensitive behavior in protected modules.
 	RequestSchemePolicy requestmeta.SchemePolicy
+
+	// DashboardSync coordinates shared dashboard freshness after successful mutations.
+	DashboardSync dashboardsync.Service
 }

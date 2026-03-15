@@ -2,12 +2,6 @@ package workflow
 
 import campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 
-// GameSystem keeps workflow registry ownership local while reusing canonical app labels.
-type GameSystem = campaignapp.GameSystem
-
-// GameSystemDaggerheart is the canonical workflow key for Daggerheart creation.
-const GameSystemDaggerheart = campaignapp.GameSystemDaggerheart
-
 // StepInput keeps workflow mutation parsing aligned with the campaigns app mutation contract.
 type StepInput = campaignapp.CampaignCharacterCreationStepInput
 

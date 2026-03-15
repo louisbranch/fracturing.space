@@ -23,8 +23,8 @@ func (r Resolver) ResolveLanguage(request *http.Request) string {
 	return r.resolveLanguageUncached(request)
 }
 
-// ResolveRequestLanguage adapts the principal resolver to the shared
-// requestresolver page contract.
+// ResolveRequestLanguage adapts the production resolver to the shared page
+// contract used by transport helpers.
 func (r Resolver) ResolveRequestLanguage(request *http.Request) string {
 	return r.ResolveLanguage(request)
 }

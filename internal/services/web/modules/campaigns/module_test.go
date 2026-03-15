@@ -441,11 +441,11 @@ func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T)
 	t.Parallel()
 
 	deps := completeGRPCDeps(campaigngateway.GRPCGatewayDeps{
-		CatalogRead: campaigngateway.CatalogReadDeps{
+		Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{
 			Campaign: fakeCampaignClient{
 				response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "remote-1", Name: "Remote Campaign"}}},
 			},
-		},
+		}},
 	})
 	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
@@ -541,7 +541,7 @@ func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 
-	h.WritePage(rr, req, "Campaigns", http.StatusOK, campaignsListHeader(nil), webtemplates.AppMainLayoutOptions{}, failingCampaignComponent{err: errors.New("render failed")})
+	h.catalog.WritePage(rr, req, "Campaigns", http.StatusOK, campaignsListHeader(nil), webtemplates.AppMainLayoutOptions{}, failingCampaignComponent{err: errors.New("render failed")})
 	// Buffered rendering catches the error before headers are sent, producing
 	// a clean error page instead of a partially-written response.
 	if rr.Code != http.StatusInternalServerError {
@@ -784,8 +784,12 @@ func (testCreationWorkflow) ParseStepInput(form url.Values, nextStep int32) (*ca
 
 // defaultTestWorkflows returns a workflow map suitable for tests that need
 // character creation enabled for Daggerheart campaigns.
-func defaultTestWorkflows() map[campaignapp.GameSystem]campaignworkflow.CharacterCreation {
-	return map[campaignapp.GameSystem]campaignworkflow.CharacterCreation{campaignapp.GameSystemDaggerheart: testCreationWorkflow{}}
+func defaultTestWorkflows() campaignworkflow.Registry {
+	return campaignworkflow.Install(campaignworkflow.Installation{
+		ID:                string(campaignapp.GameSystemDaggerheart),
+		Aliases:           []string{"Daggerheart", "game_system_daggerheart"},
+		CharacterCreation: testCreationWorkflow{},
+	})
 }
 
 type fakeGateway struct {
@@ -1428,98 +1432,131 @@ func responseCookieByName(rr *httptest.ResponseRecorder, name string) *http.Cook
 // of the fail-closed unavailable gateway. Tests only need to set the clients
 // they exercise.
 func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPCGatewayDeps {
-	if deps.Starter.Discovery == nil {
-		deps.Starter.Discovery = stubDiscoveryClient{}
+	if deps.Starter.Starter.Discovery == nil {
+		deps.Starter.Starter.Discovery = stubDiscoveryClient{}
 	}
-	if deps.Starter.Agent == nil {
-		deps.Starter.Agent = stubAgentClient{}
+	if deps.Starter.Starter.Agent == nil {
+		deps.Starter.Starter.Agent = stubAgentClient{}
 	}
-	if deps.Starter.Campaign == nil {
-		deps.Starter.Campaign = fakeCampaignClient{}
+	if deps.Starter.Starter.Campaign == nil {
+		deps.Starter.Starter.Campaign = fakeCampaignClient{}
 	}
-	if deps.Starter.Fork == nil {
-		deps.Starter.Fork = stubForkClient{}
+	if deps.Starter.Starter.Fork == nil {
+		deps.Starter.Starter.Fork = stubForkClient{}
 	}
-	if deps.CatalogRead.Campaign == nil {
-		deps.CatalogRead.Campaign = fakeCampaignClient{}
+	if deps.Catalog.Read.Campaign == nil {
+		deps.Catalog.Read.Campaign = fakeCampaignClient{}
 	}
-	if deps.CatalogMutation.Campaign == nil {
-		deps.CatalogMutation.Campaign = fakeCampaignClient{}
+	if deps.Catalog.Mutation.Campaign == nil {
+		deps.Catalog.Mutation.Campaign = fakeCampaignClient{}
 	}
-	if deps.WorkspaceRead.Campaign == nil {
-		deps.WorkspaceRead.Campaign = deps.CatalogRead.Campaign
+	if deps.Page.Workspace.Campaign == nil {
+		deps.Page.Workspace.Campaign = deps.Catalog.Read.Campaign
 	}
-	if deps.ConfigMutate.Campaign == nil {
-		deps.ConfigMutate.Campaign = deps.CatalogMutation.Campaign
+	if deps.Page.SessionRead.Campaign == nil {
+		deps.Page.SessionRead.Campaign = deps.Catalog.Read.Campaign
 	}
-	if deps.AutomationMutate.Campaign == nil {
-		deps.AutomationMutate.Campaign = deps.CatalogMutation.Campaign
+	if deps.Page.SessionRead.Session == nil {
+		deps.Page.SessionRead.Session = fakeSessionClient{}
 	}
-	if deps.AutomationRead.Agent == nil {
-		deps.AutomationRead.Agent = stubAgentClient{}
+	if deps.Page.Authorization.Client == nil {
+		deps.Page.Authorization.Client = stubAuthorizationClient{}
 	}
-	if deps.ParticipantRead.Participant == nil {
-		deps.ParticipantRead.Participant = stubParticipantReadClient{}
+	if deps.Overview.Workspace.Campaign == nil {
+		deps.Overview.Workspace.Campaign = deps.Page.Workspace.Campaign
 	}
-	if deps.ParticipantMutate.Participant == nil {
-		deps.ParticipantMutate.Participant = stubParticipantMutationClient{}
+	if deps.Overview.ConfigurationMutation.Campaign == nil {
+		deps.Overview.ConfigurationMutation.Campaign = deps.Catalog.Mutation.Campaign
 	}
-	if deps.CharacterRead.Character == nil {
-		deps.CharacterRead.Character = stubCharacterReadClient{}
+	if deps.Overview.AutomationMutation.Campaign == nil {
+		deps.Overview.AutomationMutation.Campaign = deps.Catalog.Mutation.Campaign
 	}
-	if deps.CharacterRead.Participant == nil {
-		deps.CharacterRead.Participant = deps.ParticipantRead.Participant
+	if deps.Overview.AutomationRead.Agent == nil {
+		deps.Overview.AutomationRead.Agent = stubAgentClient{}
 	}
-	if deps.CreationRead.Character == nil {
-		deps.CreationRead.Character = deps.CharacterRead.Character
+	if deps.Overview.Participants.Participant == nil {
+		deps.Overview.Participants.Participant = stubParticipantReadClient{}
 	}
-	if deps.CharacterMutate.Character == nil {
-		deps.CharacterMutate.Character = stubCharacterMutationClient{}
+	if deps.Overview.Authorization.Client == nil {
+		deps.Overview.Authorization.Client = deps.Page.Authorization.Client
 	}
-	if deps.CharacterControl.Character == nil {
-		deps.CharacterControl.Character = deps.CharacterMutate.Character
+	if deps.Participants.Read.Participant == nil {
+		deps.Participants.Read.Participant = deps.Overview.Participants.Participant
 	}
-	if deps.CreationMutation.Character == nil {
-		deps.CreationMutation.Character = deps.CharacterMutate.Character
+	if deps.Participants.Mutation.Participant == nil {
+		deps.Participants.Mutation.Participant = stubParticipantMutationClient{}
 	}
-	if deps.CharacterRead.DaggerheartContent == nil {
-		deps.CharacterRead.DaggerheartContent = stubDaggerheartContentClient{}
+	if deps.Participants.Workspace.Campaign == nil {
+		deps.Participants.Workspace.Campaign = deps.Page.Workspace.Campaign
 	}
-	if deps.CreationRead.DaggerheartContent == nil {
-		deps.CreationRead.DaggerheartContent = deps.CharacterRead.DaggerheartContent
+	if deps.Participants.Authorization.Client == nil {
+		deps.Participants.Authorization.Client = deps.Page.Authorization.Client
 	}
-	if deps.CreationRead.DaggerheartAsset == nil {
-		deps.CreationRead.DaggerheartAsset = stubDaggerheartAssetClient{}
+	if deps.Characters.Read.Character == nil {
+		deps.Characters.Read.Character = stubCharacterReadClient{}
 	}
-	if deps.SessionRead.Campaign == nil {
-		deps.SessionRead.Campaign = deps.CatalogRead.Campaign
+	if deps.Characters.Read.Participant == nil {
+		deps.Characters.Read.Participant = deps.Participants.Read.Participant
 	}
-	if deps.SessionRead.Session == nil {
-		deps.SessionRead.Session = fakeSessionClient{}
+	if deps.Characters.Read.DaggerheartContent == nil {
+		deps.Characters.Read.DaggerheartContent = stubDaggerheartContentClient{}
 	}
-	if deps.SessionMutate.Session == nil {
-		deps.SessionMutate.Session = fakeSessionClient{}
+	if deps.Characters.Control.Character == nil {
+		deps.Characters.Control.Character = stubCharacterMutationClient{}
 	}
-	if deps.InviteRead.Invite == nil {
-		deps.InviteRead.Invite = fakeInviteClient{}
+	if deps.Characters.Mutation.Character == nil {
+		deps.Characters.Mutation.Character = deps.Characters.Control.Character
 	}
-	if deps.InviteRead.Participant == nil {
-		deps.InviteRead.Participant = deps.ParticipantRead.Participant
+	if deps.Characters.Participants.Participant == nil {
+		deps.Characters.Participants.Participant = deps.Participants.Read.Participant
 	}
-	if deps.InviteRead.Social == nil {
-		deps.InviteRead.Social = fakeSocialClient{}
+	if deps.Characters.Sessions.Campaign == nil {
+		deps.Characters.Sessions.Campaign = deps.Page.SessionRead.Campaign
 	}
-	if deps.InviteRead.Auth == nil {
-		deps.InviteRead.Auth = fakeAuthClient{}
+	if deps.Characters.Sessions.Session == nil {
+		deps.Characters.Sessions.Session = deps.Page.SessionRead.Session
 	}
-	if deps.InviteMutate.Invite == nil {
-		deps.InviteMutate.Invite = fakeInviteClient{}
+	if deps.Characters.Authorization.Client == nil {
+		deps.Characters.Authorization.Client = deps.Page.Authorization.Client
 	}
-	if deps.InviteMutate.Auth == nil {
-		deps.InviteMutate.Auth = fakeAuthClient{}
+	if deps.Characters.CreationRead.Character == nil {
+		deps.Characters.CreationRead.Character = deps.Characters.Read.Character
 	}
-	if deps.Authorization.Client == nil {
-		deps.Authorization.Client = stubAuthorizationClient{}
+	if deps.Characters.CreationRead.DaggerheartContent == nil {
+		deps.Characters.CreationRead.DaggerheartContent = deps.Characters.Read.DaggerheartContent
+	}
+	if deps.Characters.CreationRead.DaggerheartAsset == nil {
+		deps.Characters.CreationRead.DaggerheartAsset = stubDaggerheartAssetClient{}
+	}
+	if deps.Characters.CreationMutation.Character == nil {
+		deps.Characters.CreationMutation.Character = deps.Characters.Mutation.Character
+	}
+	if deps.Sessions.Mutation.Session == nil {
+		deps.Sessions.Mutation.Session = fakeSessionClient{}
+	}
+	if deps.Invites.Read.Invite == nil {
+		deps.Invites.Read.Invite = fakeInviteClient{}
+	}
+	if deps.Invites.Read.Participant == nil {
+		deps.Invites.Read.Participant = deps.Participants.Read.Participant
+	}
+	if deps.Invites.Read.Social == nil {
+		deps.Invites.Read.Social = fakeSocialClient{}
+	}
+	if deps.Invites.Read.Auth == nil {
+		deps.Invites.Read.Auth = fakeAuthClient{}
+	}
+	if deps.Invites.Mutation.Invite == nil {
+		deps.Invites.Mutation.Invite = fakeInviteClient{}
+	}
+	if deps.Invites.Mutation.Auth == nil {
+		deps.Invites.Mutation.Auth = fakeAuthClient{}
+	}
+	if deps.Invites.Participants.Participant == nil {
+		deps.Invites.Participants.Participant = deps.Participants.Read.Participant
+	}
+	if deps.Invites.Authorization.Client == nil {
+		deps.Invites.Authorization.Client = deps.Page.Authorization.Client
 	}
 	return deps
 }

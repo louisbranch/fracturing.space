@@ -675,13 +675,13 @@ func TestRequestContextWithUserIDBehavior(t *testing.T) {
 
 	h := newHandlersFromConfig(serviceConfigsWithGateway(fakeGateway{}), modulehandler.NewBase(nil, nil, nil), nil)
 	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
-	ctx, _ := h.RequestContextAndUserID(req)
+	ctx, _ := h.catalog.RequestContextAndUserID(req)
 	if md, ok := metadata.FromOutgoingContext(ctx); ok && len(md.Get(grpcmeta.UserIDHeader)) > 0 {
 		t.Fatalf("unexpected user metadata when resolver is nil")
 	}
 
 	h = newHandlersFromConfig(serviceConfigsWithGateway(fakeGateway{}), modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil), nil)
-	ctx, _ = h.RequestContextAndUserID(req)
+	ctx, _ = h.catalog.RequestContextAndUserID(req)
 	md, ok := metadata.FromOutgoingContext(ctx)
 	if !ok {
 		t.Fatalf("expected outgoing metadata")

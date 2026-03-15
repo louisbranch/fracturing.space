@@ -33,7 +33,7 @@ type inviteSearchResponse struct {
 }
 
 // handleInviteSearch returns invite-recipient suggestions for one campaign.
-func (h handlers) handleInviteSearch(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h inviteHandlers) handleInviteSearch(w http.ResponseWriter, r *http.Request, campaignID string) {
 	input, err := parseInviteSearchInput(r)
 	if err != nil {
 		h.writeJSONError(w, r, err)
@@ -79,7 +79,7 @@ func newInviteSearchResponse(results []campaignapp.InviteUserSearchResult) invit
 }
 
 // writeJSONError writes one localized JSON error response for campaigns JSON endpoints.
-func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
+func (h inviteHandlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
 	loc, lang := h.PageLocalizer(w, r)
 	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), webi18n.LocalizeError(loc, err, lang))
 }

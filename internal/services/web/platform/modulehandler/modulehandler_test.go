@@ -11,17 +11,17 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 	"golang.org/x/text/language"
 )
 
 func testPrincipalResolver(
-	resolveUserID module.ResolveUserID,
-	resolveLanguage module.ResolveLanguage,
-	resolveViewer module.ResolveViewer,
-) requestresolver.Principal {
-	return requestresolver.NewPrincipal(nil, nil, resolveUserID, resolveLanguage, resolveViewer)
+	resolveUserID principal.UserIDFunc,
+	resolveLanguage principal.LanguageFunc,
+	resolveViewer principal.ViewerFunc,
+) principal.Principal {
+	return principal.NewPrincipal(nil, nil, resolveUserID, resolveLanguage, resolveViewer)
 }
 
 func TestNewBaseExtractsResolvers(t *testing.T) {

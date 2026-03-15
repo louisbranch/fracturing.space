@@ -1,4 +1,3 @@
-// Package web hosts the clean-slate browser-facing service.
 package web
 
 import (
@@ -44,8 +43,15 @@ type Server struct {
 	logger     *slog.Logger
 }
 
-// NewHandler builds a root handler from default module registry groups.
-func NewHandler(cfg Config) (http.Handler, error) {
+// composeHandler builds the root web handler from validated startup config and
+// keeps the test-only partial-dependency path explicit.
+func composeHandler(cfg Config, allowPartialDependencies bool) (http.Handler, error) {
+	if !allowPartialDependencies {
+		if err := validateRequiredDependencyBundle(cfg.Dependencies); err != nil {
+			return nil, err
+		}
+	}
+
 	deps := DependencyBundle{}
 	if cfg.Dependencies != nil {
 		deps = *cfg.Dependencies
@@ -77,13 +83,14 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	), nil
 }
 
-// NewServer validates config and constructs a web server.
-func NewServer(_ context.Context, cfg Config) (*Server, error) {
+// newServer validates listener config and wraps the composed root handler in an
+// HTTP server with shared lifecycle defaults.
+func newServer(cfg Config, allowPartialDependencies bool) (*Server, error) {
 	httpAddr := strings.TrimSpace(cfg.HTTPAddr)
 	if httpAddr == "" {
 		return nil, errors.New("http address is required")
 	}
-	handler, err := NewHandler(cfg)
+	handler, err := composeHandler(cfg, allowPartialDependencies)
 	if err != nil {
 		return nil, fmt.Errorf("compose web handler: %w", err)
 	}
@@ -96,6 +103,16 @@ func NewServer(_ context.Context, cfg Config) (*Server, error) {
 		},
 		logger: loggerOrDefault(cfg.Logger),
 	}, nil
+}
+
+// NewHandler builds a root handler from default module registry groups.
+func NewHandler(cfg Config) (http.Handler, error) {
+	return composeHandler(cfg, false)
+}
+
+// NewServer validates config and constructs a web server.
+func NewServer(_ context.Context, cfg Config) (*Server, error) {
+	return newServer(cfg, false)
 }
 
 // loggerOrDefault normalizes nil logger inputs to the process default logger.

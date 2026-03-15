@@ -9,9 +9,9 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/webctx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 
 	"golang.org/x/text/language"
@@ -21,27 +21,27 @@ import (
 // Embed this in module handler structs to get standard user resolution, localization,
 // page rendering, and error writing without duplicating boilerplate.
 type Base struct {
-	requestresolver.Base
-	resolveUserID module.ResolveUserID
+	principal.Base
+	resolveUserID principal.UserIDFunc
 }
 
 // NewBase builds a handler base from explicit resolver functions.
-func NewBase(resolveUserID module.ResolveUserID, resolveLanguage module.ResolveLanguage, resolveViewer module.ResolveViewer) Base {
+func NewBase(resolveUserID principal.UserIDFunc, resolveLanguage principal.LanguageFunc, resolveViewer principal.ViewerFunc) Base {
 	return Base{
-		Base:          requestresolver.New(resolveLanguage, resolveViewer),
+		Base:          principal.NewBase(resolveLanguage, resolveViewer),
 		resolveUserID: resolveUserID,
 	}
 }
 
 // NewBaseFromPrincipal builds a handler base from the shared principal
 // resolver seam used by root composition.
-func NewBaseFromPrincipal(resolver requestresolver.PrincipalResolver) Base {
-	var resolveUserID module.ResolveUserID
+func NewBaseFromPrincipal(resolver principal.PrincipalResolver) Base {
+	var resolveUserID principal.UserIDFunc
 	if resolver != nil {
 		resolveUserID = resolver.ResolveUserID
 	}
 	return Base{
-		Base:          requestresolver.NewFromPageResolver(resolver),
+		Base:          principal.NewBaseFromPageResolver(resolver),
 		resolveUserID: resolveUserID,
 	}
 }
@@ -50,7 +50,7 @@ func NewBaseFromPrincipal(resolver requestresolver.PrincipalResolver) Base {
 // that do not exercise user resolution, localization, or viewer state.
 func NewTestBase() Base {
 	return Base{
-		Base: requestresolver.New(
+		Base: principal.NewBase(
 			func(*http.Request) string { return "" },
 			func(*http.Request) module.Viewer { return module.Viewer{} },
 		),
@@ -60,7 +60,7 @@ func NewTestBase() Base {
 
 // PageLocalizer resolves a localizer and language tag from the request.
 func (b Base) PageLocalizer(w http.ResponseWriter, r *http.Request) (webtemplates.Localizer, string) {
-	page := requestresolver.ResolveLocalizedPage(w, r, &b)
+	page := principal.ResolveLocalizedPage(w, r, &b)
 	return page.Localizer, page.Language
 }
 

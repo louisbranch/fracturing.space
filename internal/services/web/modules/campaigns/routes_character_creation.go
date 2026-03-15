@@ -19,10 +19,10 @@ func registerStableCampaignCharacterCreationRoutes(mux *http.ServeMux, h handler
 	if mux == nil {
 		return
 	}
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharacterCreationPattern, h.withCampaignAndCharacterID(h.handleCharacterCreationPage))
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationStepPattern, h.withCampaignAndCharacterID(h.handleCharacterCreationStep))
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationResetPattern, h.withCampaignAndCharacterID(h.handleCharacterCreationReset))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignCharacterCreationPattern, h.creation.withCampaignAndCharacterID(h.creation.handleCharacterCreationPage))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationStepPattern, h.creation.withCampaignAndCharacterID(h.creation.handleCharacterCreationStep))
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignCharacterCreationResetPattern, h.creation.withCampaignAndCharacterID(h.creation.handleCharacterCreationReset))
 
-	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignRestPattern, h.WriteNotFound)
-	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignRestPattern, h.WriteNotFound)
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignRestPattern, h.creation.WriteNotFound)
+	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignRestPattern, h.creation.WriteNotFound)
 }
