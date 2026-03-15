@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
+	"fmt"
 	"net"
 	"slices"
 	"strings"
@@ -140,6 +141,36 @@ func TestParseConfigOverrideTrustForwardedProto(t *testing.T) {
 	}
 }
 
+func TestParseConfigOverrideDependencyAddrFlags(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("web", flag.ContinueOnError)
+	args := make([]string, 0, len(dependencyAddressBindingNames())*2)
+	want := make(map[string]string, len(dependencyAddressBindingNames()))
+
+	for i, name := range dependencyAddressBindingNames() {
+		value := fmt.Sprintf("127.0.0.%d:%d", 1+i, 20000+i)
+		args = append(args, "-"+dependencyAddressFlagName(name), value)
+		want[name] = value
+	}
+
+	cfg, err := ParseConfig(fs, args)
+	if err != nil {
+		t.Fatalf("ParseConfig() error = %v", err)
+	}
+
+	for _, name := range dependencyAddressBindingNames() {
+		binding, ok := dependencyAddressBindingForName(name)
+		if !ok {
+			t.Fatalf("missing dependency address binding for %q", name)
+		}
+		got := strings.TrimSpace(*binding.address(&cfg))
+		if got != want[name] {
+			t.Fatalf("dependency address %q = %q, want %q", name, got, want[name])
+		}
+	}
+}
+
 func TestParseConfigOverrideUserHubAddr(t *testing.T) {
 	t.Parallel()
 
@@ -192,6 +223,61 @@ func testDependencyConfig() Config {
 	}
 }
 
+func copyDependencyAddressResolvers() map[string]dependencyAddressResolver {
+	return dependencyAddressResolverDefaults()
+}
+
+func TestBootstrapRuntimeDependenciesReturnsMissingAddressError(t *testing.T) {
+	cfg := testDependencyConfig()
+	cfg.AuthAddr = "   "
+	cfg.SocialAddr = " "
+	cfg.GameAddr = ""
+
+	_, err := bootstrapRuntimeDependenciesWithConnFactory(
+		context.Background(),
+		cfg,
+		platformstatus.NewReporter("web", nil),
+		testManagedConnFactory(t),
+	)
+	if err == nil {
+		t.Fatal("expected missing required address error")
+	}
+
+	var missing MissingRequiredStartupDependencyAddressesError
+	if !errors.As(err, &missing) {
+		t.Fatalf("bootstrapRuntimeDependenciesWithConnFactory() error type = %T, want MissingRequiredStartupDependencyAddressesError", err)
+	}
+
+	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameSocial}
+	if !slices.Equal(missing.Missing, want) {
+		t.Fatalf("missing required addresses = %#v, want %#v", missing.Missing, want)
+	}
+}
+
+func TestBootstrapRuntimeDependenciesReturnsResolverContractErrorOnCoverageDrift(t *testing.T) {
+	drifted := copyDependencyAddressResolvers()
+	delete(drifted, web.DependencyNameSocial)
+
+	_, err := bootstrapRuntimeDependenciesWithConnFactoryWithResolvers(
+		context.Background(),
+		testDependencyConfig(),
+		platformstatus.NewReporter("web", nil),
+		testManagedConnFactory(t),
+		drifted,
+	)
+	if err == nil {
+		t.Fatal("expected dependency resolver contract mismatch error")
+	}
+
+	var contractErr DependencyAddressResolverContractError
+	if !errors.As(err, &contractErr) {
+		t.Fatalf("bootstrapRuntimeDependenciesWithConnFactory() error type = %T, want DependencyAddressResolverContractError", err)
+	}
+	if !slices.Equal(contractErr.Missing, []string{web.DependencyNameSocial}) {
+		t.Fatalf("resolver contract mismatch = %#v, want missing [%q]", contractErr, web.DependencyNameSocial)
+	}
+}
+
 func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	t.Parallel()
 
@@ -207,6 +293,150 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	if !slices.Equal(requiredNames, want) {
 		t.Fatalf("required dependencies = %v, want %v", requiredNames, want)
 	}
+}
+
+func TestDependencyRequirementsRejectMissingRequiredAddress(t *testing.T) {
+	t.Parallel()
+
+	cfg := testDependencyConfig()
+	cfg.AuthAddr = "   "
+	_, err := dependencyRequirements(cfg, nil)
+	if err == nil {
+		t.Fatal("expected required-address dependency error")
+	}
+	var errMissingAddress MissingRequiredStartupDependencyAddressesError
+	if !errors.As(err, &errMissingAddress) {
+		t.Fatalf("dependencyRequirements() error type = %T, want MissingRequiredStartupDependencyAddressesError", err)
+	}
+	if len(errMissingAddress.Missing) != 1 || errMissingAddress.Missing[0] != web.DependencyNameAuth {
+		t.Fatalf("dependencyRequirements() missing addresses = %#v, want [%q]", errMissingAddress.Missing, web.DependencyNameAuth)
+	}
+}
+
+func TestDependencyAddressBindingsCoverStartupDescriptors(t *testing.T) {
+	t.Parallel()
+
+	descriptors := web.StartupDependencyDescriptors()
+	descriptorNames := make(map[string]struct{}, len(descriptors))
+	missing := make([]string, 0)
+	for _, descriptor := range descriptors {
+		name := strings.TrimSpace(descriptor.Name)
+		if name == "" {
+			continue
+		}
+		descriptorNames[name] = struct{}{}
+		if _, ok := dependencyAddressBindingForName(name); !ok {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) > 0 {
+		t.Fatalf("dependency address bindings missing for %v", missing)
+	}
+
+	extras := make([]string, 0)
+	for name := range dependencyAddressBindings {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if _, ok := descriptorNames[name]; !ok {
+			extras = append(extras, name)
+		}
+	}
+	if len(extras) > 0 {
+		t.Fatalf("dependency address bindings include unknown dependencies %v", extras)
+	}
+}
+
+func TestDependencyRequirementsCollectsAllMissingRequiredAddresses(t *testing.T) {
+	t.Parallel()
+
+	cfg := testDependencyConfig()
+	cfg.AuthAddr = "   "
+	cfg.GameAddr = "   "
+	cfg.SocialAddr = ""
+	_, err := dependencyRequirements(cfg, nil)
+	if err == nil {
+		t.Fatal("expected required-address dependency error")
+	}
+	var errMissingAddress MissingRequiredStartupDependencyAddressesError
+	if !errors.As(err, &errMissingAddress) {
+		t.Fatalf("dependencyRequirements() error type = %T, want MissingRequiredStartupDependencyAddressesError", err)
+	}
+	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameSocial}
+	if !slices.Equal(errMissingAddress.Missing, want) {
+		// Ordered by canonical sorted error payload.
+		t.Fatalf("dependencyRequirements() missing addresses = %#v, want %#v", errMissingAddress.Missing, want)
+	}
+}
+
+func TestDependencyAddressResolverForNameRejectsUnknownDependency(t *testing.T) {
+	t.Parallel()
+
+	if got := dependencyAddressResolverForName("ghost-dependency"); got != nil {
+		t.Fatalf("dependencyAddressResolverForName(ghost) = %#v, want nil", got)
+	}
+}
+
+func TestDependencyRequirementsWithResolversRejectsCoverageDrift(t *testing.T) {
+	t.Parallel()
+
+	_, err := dependencyRequirementsWithResolvers(testDependencyConfig(), nil, nil)
+	if err == nil {
+		t.Fatal("expected resolver contract mismatch for nil resolver map")
+	}
+	var contractErr DependencyAddressResolverContractError
+	if !errors.As(err, &contractErr) {
+		t.Fatalf("dependencyRequirementsWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+	}
+	want := []string{
+		web.DependencyNameAI,
+		web.DependencyNameAuth,
+		web.DependencyNameDiscovery,
+		web.DependencyNameGame,
+		web.DependencyNameNotifications,
+		web.DependencyNameSocial,
+		web.DependencyNameStatus,
+		web.DependencyNameUserHub,
+	}
+	if !slices.Equal(contractErr.Missing, want) {
+		t.Fatalf("dependency resolver contract mismatch missing = %#v, want %#v", contractErr.Missing, want)
+	}
+}
+
+func TestDependencyAddressResolverDefaultsAreSnapshotSafe(t *testing.T) {
+	t.Parallel()
+
+	mutatedDefaults := copyDependencyAddressResolvers()
+	delete(mutatedDefaults, web.DependencyNameGame)
+
+	_, err := dependencyRequirementsWithResolvers(testDependencyConfig(), nil, mutatedDefaults)
+	if err == nil {
+		t.Fatal("expected resolver contract mismatch from mutated snapshot")
+	}
+	var contractErr DependencyAddressResolverContractError
+	if !errors.As(err, &contractErr) {
+		t.Fatalf("dependencyRequirementsWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+	}
+	if !slices.Equal(contractErr.Missing, []string{web.DependencyNameGame}) {
+		t.Fatalf("mutated resolver contract mismatch missing = %#v, want missing [%q]", contractErr, web.DependencyNameGame)
+	}
+
+	_, err = dependencyRequirements(testDependencyConfig(), nil)
+	if err != nil {
+		t.Fatalf("dependencyRequirements() should use stable defaults; got error = %v", err)
+	}
+
+	deps, err := bootstrapRuntimeDependenciesWithConnFactory(
+		context.Background(),
+		testDependencyConfig(),
+		platformstatus.NewReporter("web", nil),
+		testManagedConnFactory(t),
+	)
+	if err != nil {
+		t.Fatalf("bootstrapRuntimeDependenciesWithConnFactory() should use stable defaults; got error = %v", err)
+	}
+	defer deps.close()
 }
 
 func TestDependencyRequirementsCoverAllServiceOwnedDescriptors(t *testing.T) {
@@ -245,6 +475,60 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 		if !slices.Equal(got[name], want) {
 			t.Fatalf("dependency %q surfaces = %v, want %v", name, got[name], want)
 		}
+	}
+}
+
+func TestDependencyRequirementsAddressCoverageHasNoCoverageDrift(t *testing.T) {
+	t.Parallel()
+
+	if err := validateDependencyAddressResolversCoverage(); err != nil {
+		t.Fatalf("validateDependencyAddressResolversCoverage() error = %v", err)
+	}
+}
+
+func TestValidateDependencyAddressResolversCoverageReportsMissingResolver(t *testing.T) {
+	t.Parallel()
+
+	resolvers := make(map[string]dependencyAddressResolver, len(copyDependencyAddressResolvers()))
+	for name, resolve := range dependencyAddressResolverDefaults() {
+		resolvers[name] = resolve
+	}
+	delete(resolvers, web.DependencyNameSocial)
+
+	err := validateDependencyAddressResolversCoverageWithResolvers(resolvers)
+	if err == nil {
+		t.Fatal("expected contract mismatch for missing social resolver")
+	}
+	var contractErr DependencyAddressResolverContractError
+	if !errors.As(err, &contractErr) {
+		t.Fatalf("validateDependencyAddressResolversCoverageWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+	}
+	if len(contractErr.Missing) != 1 || contractErr.Missing[0] != web.DependencyNameSocial {
+		t.Fatalf("dependency resolver contract mismatch = %#v, want missing=[%q]", contractErr, web.DependencyNameSocial)
+	}
+}
+
+func TestValidateDependencyAddressResolversCoverageReportsExtraResolver(t *testing.T) {
+	t.Parallel()
+
+	resolvers := make(map[string]dependencyAddressResolver, len(copyDependencyAddressResolvers())+1)
+	for name, resolve := range dependencyAddressResolverDefaults() {
+		resolvers[name] = resolve
+	}
+	resolvers["ghost-service"] = func(cfg Config) string {
+		return cfg.HTTPAddr
+	}
+
+	err := validateDependencyAddressResolversCoverageWithResolvers(resolvers)
+	if err == nil {
+		t.Fatal("expected contract mismatch for extra resolver")
+	}
+	var contractErr DependencyAddressResolverContractError
+	if !errors.As(err, &contractErr) {
+		t.Fatalf("validateDependencyAddressResolversCoverageWithResolvers() error type = %T, want DependencyAddressResolverContractError", err)
+	}
+	if len(contractErr.Extra) != 1 || contractErr.Extra[0] != "ghost-service" {
+		t.Fatalf("dependency resolver contract mismatch = %#v, want extras=[%q]", contractErr, "ghost-service")
 	}
 }
 

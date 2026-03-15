@@ -52,19 +52,6 @@ type GRPCGateway struct {
 	AgentClient      AgentClient
 }
 
-// NewGRPCGateway builds the full production settings gateway from the configured
-// clients. Tests can still use this broader seam, but production composition
-// should prefer the account-owned and AI-owned constructors below.
-func NewGRPCGateway(socialClient SocialClient, accountClient AccountClient, passkeyClient PasskeyClient, credentialClient CredentialClient, agentClient AgentClient) GRPCGateway {
-	return GRPCGateway{
-		SocialClient:     socialClient,
-		AccountClient:    accountClient,
-		PasskeyClient:    passkeyClient,
-		CredentialClient: credentialClient,
-		AgentClient:      agentClient,
-	}
-}
-
 // NewAccountGateway builds the production account-owned settings gateway.
 func NewAccountGateway(socialClient SocialClient, accountClient AccountClient, passkeyClient PasskeyClient) GRPCGateway {
 	return GRPCGateway{

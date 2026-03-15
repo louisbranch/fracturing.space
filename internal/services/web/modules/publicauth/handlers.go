@@ -41,11 +41,11 @@ func newHandlers(config handlersConfig) handlers {
 	}
 	passkeys := config.Passkeys
 	if passkeys == nil {
-		passkeys = publicauthapp.NewPasskeyService(nil, "")
+		passkeys = publicauthapp.NewPasskeyService(nil)
 	}
 	recovery := config.Recovery
 	if recovery == nil {
-		recovery = publicauthapp.NewRecoveryService(nil, "")
+		recovery = publicauthapp.NewRecoveryService(nil)
 	}
 	return handlers{
 		Base:        publichandler.NewBaseFromPrincipal(config.Principal),

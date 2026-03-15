@@ -23,38 +23,34 @@ func buildProtectedModules(
 	opts ProtectedModuleOptions,
 ) []module.Module {
 	base := modulehandler.NewBaseFromPrincipal(requestPrincipal)
-
-	protected := []module.Module{
-		dashboard.Compose(dashboard.CompositionConfig{
-			Base:          base,
-			UserHubClient: deps.Dashboard.UserHubClient,
-			StatusClient:  deps.Dashboard.StatusClient,
-		}),
-		settings.Compose(settings.CompositionConfig{
-			Base:             base,
-			FlashMeta:        opts.RequestSchemePolicy,
-			DashboardSync:    opts.DashboardSync,
-			SocialClient:     deps.Settings.SocialClient,
-			AccountClient:    deps.Settings.AccountClient,
-			PasskeyClient:    deps.Settings.PasskeyClient,
-			CredentialClient: deps.Settings.CredentialClient,
-			AgentClient:      deps.Settings.AgentClient,
-		}),
+	dashboardOptions := dashboard.ProtectedSurfaceOptions{
+		Base: base,
 	}
-	if deps.Notifications.NotificationClient != nil {
-		protected = append(protected, notifications.Compose(notifications.CompositionConfig{
-			Base:               base,
-			NotificationClient: deps.Notifications.NotificationClient,
-		}))
+	settingsOptions := settings.ProtectedSurfaceOptions{
+		Base:          base,
+		FlashMeta:     opts.RequestSchemePolicy,
+		DashboardSync: opts.DashboardSync,
 	}
-	if campaignsModule, ok := campaigns.ComposeProtected(campaigns.ProtectedSurfaceOptions{
+	notificationsOptions := notifications.ProtectedSurfaceOptions{
+		Base: base,
+	}
+	campaignsOptions := campaigns.ProtectedSurfaceOptions{
 		Base:             base,
 		PlayFallbackPort: opts.PlayFallbackPort,
 		PlayLaunchGrant:  opts.PlayLaunchGrant,
 		RequestMeta:      opts.RequestSchemePolicy,
 		DashboardSync:    opts.DashboardSync,
 		AssetBaseURL:     deps.AssetBaseURL,
-	}, deps.Campaigns); ok {
+	}
+
+	protected := []module.Module{
+		dashboard.ComposeProtected(dashboardOptions, deps.Dashboard),
+		settings.ComposeProtected(settingsOptions, deps.Settings),
+	}
+	if notificationsModule, ok := notifications.ComposeProtected(notificationsOptions, deps.Notifications); ok {
+		protected = append(protected, notificationsModule)
+	}
+	if campaignsModule, ok := campaigns.ComposeProtected(campaignsOptions, deps.Campaigns); ok {
 		protected = append(protected, campaignsModule)
 	}
 	return protected

@@ -23,10 +23,3 @@ type Module interface {
 	ID() string
 	Mount() (Mount, error)
 }
-
-// HealthReporter is an optional interface for modules that can report their
-// operational availability. Modules with gateway dependencies implement this
-// so the registry can derive service health without centralizing client knowledge.
-type HealthReporter interface {
-	Healthy() bool
-}

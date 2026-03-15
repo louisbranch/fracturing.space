@@ -114,21 +114,6 @@ func TestMountReturnsServiceUnavailableWhenAuthServiceMissing(t *testing.T) {
 	}
 }
 
-func TestModuleHealthyReflectsGatewayState(t *testing.T) {
-	t.Parallel()
-
-	if New(Config{}).Healthy() {
-		t.Fatalf("New(Config{}).Healthy() = true, want false")
-	}
-	gateway := &moduleGatewayStub{}
-	if !New(Config{
-		Service: profileapp.NewService(gateway),
-		Healthy: profileapp.IsGatewayHealthy(gateway),
-	}).Healthy() {
-		t.Fatalf("expected configured gateway to be healthy")
-	}
-}
-
 func mountProfileModule(
 	t *testing.T,
 	gateway profileapp.Gateway,
@@ -147,7 +132,6 @@ func mountProfileModule(
 			nil,
 			nil,
 		),
-		Healthy: profileapp.IsGatewayHealthy(gateway),
 	}).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

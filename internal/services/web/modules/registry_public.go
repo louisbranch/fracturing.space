@@ -17,21 +17,21 @@ func defaultPublicModules(deps Dependencies, requestPrincipal principal.Principa
 		RequestMeta: opts.RequestSchemePolicy,
 		AuthBaseURL: deps.PublicAuth.AuthBaseURL,
 	})
-	publicModules = append(publicModules,
-		discovery.Compose(discovery.CompositionConfig{
-			DiscoveryClient: deps.Discovery.DiscoveryClient,
-		}),
-		profile.Compose(profile.CompositionConfig{
-			AuthClient:   deps.Profile.AuthClient,
-			SocialClient: deps.Profile.SocialClient,
-			AssetBaseURL: deps.AssetBaseURL,
-			Principal:    requestPrincipal,
-		}),
-		invite.ComposePublic(invite.PublicSurfaceOptions{
-			RequestMeta:   opts.RequestSchemePolicy,
-			Principal:     requestPrincipal,
-			DashboardSync: opts.DashboardSync,
-		}, deps.Invite),
-	)
+	if discoveryModule, ok := discovery.ComposePublic(discovery.PublicSurfaceOptions{}, deps.Discovery); ok {
+		publicModules = append(publicModules, discoveryModule)
+	}
+	if profileModule, ok := profile.ComposePublic(profile.PublicSurfaceOptions{
+		AssetBaseURL: deps.AssetBaseURL,
+		Principal:    requestPrincipal,
+	}, deps.Profile); ok {
+		publicModules = append(publicModules, profileModule)
+	}
+	if inviteModule, ok := invite.ComposePublic(invite.PublicSurfaceOptions{
+		RequestMeta:   opts.RequestSchemePolicy,
+		Principal:     requestPrincipal,
+		DashboardSync: opts.DashboardSync,
+	}, deps.Invite); ok {
+		publicModules = append(publicModules, inviteModule)
+	}
 	return publicModules
 }

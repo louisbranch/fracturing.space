@@ -107,7 +107,7 @@ func (a *agentStub) DeleteAgent(_ context.Context, req *aiv1.DeleteAgentRequest,
 func TestNewGRPCGatewayWithoutConfiguredClientsFailsClosed(t *testing.T) {
 	t.Parallel()
 
-	gateway := NewGRPCGateway(nil, nil, nil, nil, nil)
+	gateway := GRPCGateway{}
 	_, err := gateway.LoadProfile(context.Background(), "user-1")
 	if err == nil {
 		t.Fatalf("expected unavailable error")
@@ -120,7 +120,7 @@ func TestNewGRPCGatewayWithoutConfiguredClientsFailsClosed(t *testing.T) {
 func TestGRPCGatewayReportsSurfaceHealthFromConfiguredClients(t *testing.T) {
 	t.Parallel()
 
-	accountOnly := NewGRPCGateway(socialStub{}, &accountStub{}, nil, nil, nil)
+	accountOnly := NewAccountGateway(socialStub{}, &accountStub{}, nil)
 	if !settingsapp.IsAccountGatewayHealthy(accountOnly) {
 		t.Fatalf("IsAccountGatewayHealthy(accountOnly) = false, want true")
 	}
@@ -128,7 +128,7 @@ func TestGRPCGatewayReportsSurfaceHealthFromConfiguredClients(t *testing.T) {
 		t.Fatalf("IsAIGatewayHealthy(accountOnly) = true, want false")
 	}
 
-	aiKeysOnly := NewGRPCGateway(nil, nil, nil, &credentialStub{}, nil)
+	aiKeysOnly := NewAIGateway(&credentialStub{}, nil)
 	if !settingsapp.IsAIKeyGatewayHealthy(aiKeysOnly) {
 		t.Fatalf("IsAIKeyGatewayHealthy(aiKeysOnly) = false, want true")
 	}
@@ -136,7 +136,7 @@ func TestGRPCGatewayReportsSurfaceHealthFromConfiguredClients(t *testing.T) {
 		t.Fatalf("IsAIAgentGatewayHealthy(aiKeysOnly) = true, want false")
 	}
 
-	agentsReady := NewGRPCGateway(nil, nil, nil, &credentialStub{}, &agentStub{})
+	agentsReady := NewAIGateway(&credentialStub{}, &agentStub{})
 	if !settingsapp.IsAIAgentGatewayHealthy(agentsReady) {
 		t.Fatalf("IsAIAgentGatewayHealthy(agentsReady) = false, want true")
 	}
@@ -149,7 +149,13 @@ func TestGRPCGatewayMapsProfileAndLocale(t *testing.T) {
 	passkeys := passkeyStub{}
 	credentials := &credentialStub{}
 	agents := &agentStub{}
-	gateway := NewGRPCGateway(socialStub{}, account, passkeys, credentials, agents)
+	gateway := GRPCGateway{
+		SocialClient:     socialStub{},
+		AccountClient:    account,
+		PasskeyClient:    passkeys,
+		CredentialClient: credentials,
+		AgentClient:      agents,
+	}
 	profile, err := gateway.LoadProfile(context.Background(), "user-1")
 	if err != nil {
 		t.Fatalf("LoadProfile() error = %v", err)

@@ -38,18 +38,33 @@ func Compose(config CompositionConfig) module.Module {
 		RequestMeta:   config.RequestMeta,
 		Principal:     config.Principal,
 		DashboardSync: config.DashboardSync,
-		Healthy:       gateway != nil,
 	})
 }
 
-// ComposePublic composes the public invite surface from the invite-owned
-// dependency bundle plus request-scoped cross-cutting options.
-func ComposePublic(options PublicSurfaceOptions, deps Dependencies) module.Module {
-	return Compose(CompositionConfig{
+// ComposePublic composes the public invite surface when required dependencies are
+// available. The registry can use this to hide optional invite routes instead of
+// keeping a fail-closed fallback.
+func ComposePublic(options PublicSurfaceOptions, deps Dependencies) (module.Module, bool) {
+	if !deps.configured() {
+		return nil, false
+	}
+	return Compose(newCompositionConfig(options, deps)), true
+}
+
+// newCompositionConfig projects startup dependencies and shared options into invite
+// composition input.
+func newCompositionConfig(options PublicSurfaceOptions, deps Dependencies) CompositionConfig {
+	return CompositionConfig{
 		RequestMeta:   options.RequestMeta,
 		Principal:     options.Principal,
 		DashboardSync: options.DashboardSync,
 		InviteClient:  deps.InviteClient,
 		AuthClient:    deps.AuthClient,
-	})
+	}
+}
+
+// configured reports whether the invite dependency set has the clients required
+// for production-safe mounting.
+func (deps Dependencies) configured() bool {
+	return deps.InviteClient != nil && deps.AuthClient != nil
 }

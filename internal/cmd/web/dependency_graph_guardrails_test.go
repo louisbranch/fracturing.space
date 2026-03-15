@@ -14,7 +14,7 @@ func TestDependencyGraphUsesServiceOwnedDescriptorsAndOnlyStatusProto(t *testing
 	assertImportPresent(t, "dependency_graph.go", "github.com/louisbranch/fracturing.space/internal/services/web")
 	assertImportPresent(t, "dependency_graph.go", "github.com/louisbranch/fracturing.space/api/gen/go/status/v1")
 	assertImportsDoNotContainPrefixExcept(t, "dependency_graph.go", "github.com/louisbranch/fracturing.space/api/gen/go/", "github.com/louisbranch/fracturing.space/api/gen/go/status/v1")
-	assertFuncCallsSelector(t, "dependency_graph.go", "dependencyRequirements", "web", "StartupDependencyDescriptors")
+	assertFuncCallsSelector(t, "dependency_graph.go", "dependencyRequirementsWithResolvers", "web", "StartupDependencyDescriptors")
 }
 
 func assertFuncCallsSelector(t *testing.T, path, funcName, recvName, selector string) {

@@ -54,11 +54,6 @@ func New(config Config) Module {
 // ID returns a stable module identifier.
 func (Module) ID() string { return "settings" }
 
-// Healthy reports whether any settings surface is available to mount.
-func (m Module) Healthy() bool {
-	return m.availability.any()
-}
-
 // Mount wires settings route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()

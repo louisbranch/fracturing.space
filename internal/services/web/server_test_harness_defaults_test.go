@@ -1,6 +1,7 @@
 package web
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
+	"google.golang.org/grpc"
 )
 
 func TestNewDependencyBundleKeepsPartialModuleDependenciesExplicit(t *testing.T) {
@@ -190,6 +192,10 @@ func defaultDiscoveryClient() fakeWebDiscoveryClient {
 
 func defaultForkClient() fakeWebForkClient {
 	return fakeWebForkClient{}
+}
+
+func (fakeWebDiscoveryClient) ListDiscoveryEntries(_ context.Context, _ *discoveryv1.ListDiscoveryEntriesRequest, _ ...grpc.CallOption) (*discoveryv1.ListDiscoveryEntriesResponse, error) {
+	return &discoveryv1.ListDiscoveryEntriesResponse{}, nil
 }
 
 type fakeWebDiscoveryClient struct {

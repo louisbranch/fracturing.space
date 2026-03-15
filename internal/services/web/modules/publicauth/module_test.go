@@ -14,17 +14,17 @@ import (
 	"google.golang.org/grpc"
 )
 
-func TestModuleHealthyReflectsGatewayState(t *testing.T) {
-	if got := New(Config{}).ID(); got != "public" {
-		t.Fatalf("ID() = %q, want %q", got, "public")
+func TestShellModuleIDDefaultsToPublic(t *testing.T) {
+	if got := NewShell(Config{}).ID(); got != "public" {
+		t.Fatalf("NewShell(Config{}).ID() = %q, want %q", got, "public")
 	}
 	if got := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "").ID(); got != "public" {
-		t.Fatalf("ID() = %q, want %q", got, "public")
+		t.Fatalf("newModuleFromGateway(...).ID() = %q, want %q", got, "public")
 	}
 }
 
 func TestPasskeyRegisterStartAcceptsUsername(t *testing.T) {
-	m := newModuleFromGateway(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "")
+	m := newModuleFromGatewayWithFactory(publicauthgateway.NewGRPCGateway(fakeAuthClient{}), "", NewPasskeys)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -41,15 +41,15 @@ func TestSurfaceSelectionControlsModuleIdentityAndPrefix(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name       string
-		surface    Surface
-		wantID     string
-		wantPrefix string
+		name          string
+		moduleFactory func(Config) Module
+		wantID        string
+		wantPrefix    string
 	}{
-		{name: "default", surface: "", wantID: "public", wantPrefix: routepath.Root},
-		{name: "shell", surface: SurfaceShell, wantID: "public", wantPrefix: routepath.Root},
-		{name: "passkeys", surface: SurfacePasskeys, wantID: "public-passkeys", wantPrefix: routepath.PasskeysPrefix},
-		{name: "auth redirect", surface: SurfaceAuthRedirect, wantID: "public-auth-redirect", wantPrefix: routepath.AuthPrefix},
+		{name: "default", moduleFactory: NewShell, wantID: "public", wantPrefix: routepath.Root},
+		{name: "shell", moduleFactory: NewShell, wantID: "public", wantPrefix: routepath.Root},
+		{name: "passkeys", moduleFactory: NewPasskeys, wantID: "public-passkeys", wantPrefix: routepath.PasskeysPrefix},
+		{name: "auth redirect", moduleFactory: NewAuthRedirect, wantID: "public-auth-redirect", wantPrefix: routepath.AuthPrefix},
 	}
 
 	for _, tc := range tests {
@@ -57,7 +57,7 @@ func TestSurfaceSelectionControlsModuleIdentityAndPrefix(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			m := newModuleFromGateway(nil, "", withRequestMeta(requestmeta.SchemePolicy{}), withSurface(tc.surface))
+			m := newModuleFromGatewayWithFactory(nil, "", tc.moduleFactory, withRequestMeta(requestmeta.SchemePolicy{}))
 			if got := m.ID(); got != tc.wantID {
 				t.Fatalf("ID() = %q, want %q", got, tc.wantID)
 			}

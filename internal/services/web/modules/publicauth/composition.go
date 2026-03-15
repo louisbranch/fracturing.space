@@ -16,7 +16,6 @@ type CompositionConfig struct {
 	Principal   principal.PrincipalResolver
 	RequestMeta requestmeta.SchemePolicy
 	AuthBaseURL string
-	Surface     Surface
 }
 
 // SurfaceSetConfig owns the startup wiring required to construct the stable
@@ -29,45 +28,57 @@ type SurfaceSetConfig struct {
 	AuthBaseURL string
 }
 
-// Compose builds the production publicauth module from area-owned startup
-// dependencies.
-func Compose(config CompositionConfig) module.Module {
+// compose builds one production publicauth module from shared startup
+// composition config and applies the provided surface constructor.
+func compose(config CompositionConfig, build func(Config) Module) module.Module {
 	gateway := publicauthgateway.NewGRPCGateway(config.AuthClient)
-	return New(Config{
+	m := Config{
 		PageService:    publicauthapp.NewPageService(config.AuthBaseURL),
 		SessionService: publicauthapp.NewSessionService(gateway, config.AuthBaseURL),
-		PasskeyService: publicauthapp.NewPasskeyService(gateway, config.AuthBaseURL),
-		Recovery:       publicauthapp.NewRecoveryService(gateway, config.AuthBaseURL),
+		PasskeyService: publicauthapp.NewPasskeyService(gateway),
+		Recovery:       publicauthapp.NewRecoveryService(gateway),
 		Principal:      config.Principal,
 		RequestMeta:    config.RequestMeta,
-		Surface:        config.Surface,
-	})
+	}
+	return build(m)
+}
+
+// ComposeShell builds the shell/public routes module.
+func ComposeShell(config CompositionConfig) module.Module {
+	return compose(config, NewShell)
+}
+
+// ComposePasskeys builds the passkey routes module.
+func ComposePasskeys(config CompositionConfig) module.Module {
+	return compose(config, NewPasskeys)
+}
+
+// ComposeAuthRedirect builds the auth-redirect routes module.
+func ComposeAuthRedirect(config CompositionConfig) module.Module {
+	return compose(config, NewAuthRedirect)
 }
 
 // ComposeSurfaceSet builds the stable publicauth module set in area-owned
 // order so the central registry only declares public module ordering.
 func ComposeSurfaceSet(config SurfaceSetConfig) []module.Module {
 	return []module.Module{
-		Compose(CompositionConfig{
+		ComposeShell(CompositionConfig{
 			AuthClient:  config.AuthClient,
 			Principal:   config.Principal,
 			RequestMeta: config.RequestMeta,
 			AuthBaseURL: config.AuthBaseURL,
-			Surface:     SurfaceShell,
 		}),
-		Compose(CompositionConfig{
+		ComposePasskeys(CompositionConfig{
 			AuthClient:  config.AuthClient,
 			Principal:   config.Principal,
 			RequestMeta: config.RequestMeta,
 			AuthBaseURL: config.AuthBaseURL,
-			Surface:     SurfacePasskeys,
 		}),
-		Compose(CompositionConfig{
+		ComposeAuthRedirect(CompositionConfig{
 			AuthClient:  config.AuthClient,
 			Principal:   config.Principal,
 			RequestMeta: config.RequestMeta,
 			AuthBaseURL: config.AuthBaseURL,
-			Surface:     SurfaceAuthRedirect,
 		}),
 	}
 }

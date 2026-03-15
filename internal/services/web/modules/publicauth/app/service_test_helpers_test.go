@@ -13,8 +13,8 @@ func newService(gateway testGateway, authBaseURL string) testServiceBundle {
 	return testServiceBundle{
 		PageService:     NewPageService(authBaseURL),
 		SessionService:  NewSessionService(gateway, authBaseURL),
-		PasskeyService:  NewPasskeyService(gateway, authBaseURL),
-		RecoveryService: NewRecoveryService(gateway, authBaseURL),
+		PasskeyService:  NewPasskeyService(gateway),
+		RecoveryService: NewRecoveryService(gateway),
 	}
 }
 

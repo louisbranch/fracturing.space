@@ -13,14 +13,12 @@ import (
 type Module struct {
 	service dashboardapp.Service
 	base    modulehandler.Base
-	healthy bool
 }
 
 // Config defines constructor dependencies for a dashboard module.
 type Config struct {
 	Service dashboardapp.Service
 	Base    modulehandler.Base
-	Healthy bool
 }
 
 // New returns a dashboard module with explicit dependencies.
@@ -32,18 +30,11 @@ func New(config Config) Module {
 	return Module{
 		service: service,
 		base:    config.Base,
-		healthy: config.Healthy,
 	}
 }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "dashboard" }
-
-// Healthy reports whether the dashboard module has an operational runtime
-// service backing its transport surface.
-func (m Module) Healthy() bool {
-	return m.healthy
-}
 
 // Mount wires dashboard route handlers.
 func (m Module) Mount() (module.Mount, error) {

@@ -12,7 +12,6 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
-	settingsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/gateway"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
@@ -211,7 +210,7 @@ func TestMountRedirectsSettingsRootToFirstAvailableSurface(t *testing.T) {
 	}{
 		{
 			name: "locale when profile unavailable",
-			gateway: settingsgateway.NewGRPCGateway(
+			gateway: testSettingsGateway(
 				nil,
 				&accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
 				nil,
@@ -222,12 +221,12 @@ func TestMountRedirectsSettingsRootToFirstAvailableSurface(t *testing.T) {
 		},
 		{
 			name:     "ai keys when account unavailable",
-			gateway:  settingsgateway.NewGRPCGateway(nil, nil, nil, &credentialClientStub{}, nil),
+			gateway:  testSettingsGateway(nil, nil, nil, &credentialClientStub{}, nil),
 			expected: routepath.AppSettingsAIKeys,
 		},
 		{
 			name:     "ai agents when only agents surface available",
-			gateway:  settingsgateway.NewGRPCGateway(nil, nil, nil, &credentialClientStub{}, &agentClientStub{}),
+			gateway:  testSettingsGateway(nil, nil, nil, &credentialClientStub{}, &agentClientStub{}),
 			expected: routepath.AppSettingsAIKeys,
 		},
 	}
@@ -263,47 +262,13 @@ func TestModuleIDReturnsSettings(t *testing.T) {
 	}
 }
 
-func TestModuleHealthyAndSchemePolicyOptions(t *testing.T) {
+func TestModuleSchemePolicyOptions(t *testing.T) {
 	t.Parallel()
-
-	if New(Config{}).Healthy() {
-		t.Fatalf("New().Healthy() = true, want false for degraded module")
-	}
 
 	scheme := requestmeta.SchemePolicy{TrustForwardedProto: true}
 	module := newSettingsModuleFromGateways(newPopulatedFakeGateway(), nil, settingsTestBase(), withFlashMeta(scheme))
-
-	if !module.Healthy() {
-		t.Fatalf("module.Healthy() = false, want true")
-	}
 	if module.flashMeta != scheme {
 		t.Fatalf("module.flashMeta = %+v, want %+v", module.flashMeta, scheme)
-	}
-}
-
-func TestModuleHealthyWhenAnySettingsSurfaceIsAvailable(t *testing.T) {
-	t.Parallel()
-
-	if !newSettingsModuleFromGateways(
-		settingsgateway.NewGRPCGateway(
-			nil,
-			&accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
-			nil,
-			nil,
-			nil,
-		),
-		nil,
-		settingsTestBase(),
-	).Healthy() {
-		t.Fatalf("locale-only settings module = false, want true")
-	}
-
-	if !newSettingsModuleFromGateways(
-		settingsgateway.NewGRPCGateway(nil, nil, nil, &credentialClientStub{}, nil),
-		nil,
-		settingsTestBase(),
-	).Healthy() {
-		t.Fatalf("ai-only settings module = false, want true")
 	}
 }
 
@@ -316,7 +281,13 @@ func TestMountUsesDependenciesSocialClientWhenGatewayNotProvided(t *testing.T) {
 		Bio:    "From dependencies",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := newSettingsModuleFromGateways(settingsgateway.NewGRPCGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), nil, settingsTestBase())
+	m := newSettingsModuleFromGateways(testSettingsGateway(
+		social,
+		account,
+		&passkeyClientStub{},
+		&credentialClientStub{},
+		&agentClientStub{},
+	), nil, settingsTestBase())
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -339,7 +310,7 @@ func TestMountSettingsProfileFailsClosedWhenSocialClientMissing(t *testing.T) {
 	t.Parallel()
 
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := newSettingsModuleFromGateways(settingsgateway.NewGRPCGateway(nil, account, nil, nil, nil), nil, settingsTestBase())
+	m := newSettingsModuleFromGateways(testSettingsGateway(nil, account, nil, nil, nil), nil, settingsTestBase())
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -359,7 +330,7 @@ func TestMountSettingsLocaleFailsClosedWhenAccountClientMissing(t *testing.T) {
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Name: "Remote Name"}}}
-	m := newSettingsModuleFromGateways(settingsgateway.NewGRPCGateway(social, nil, nil, nil, nil), nil, settingsTestBase())
+	m := newSettingsModuleFromGateways(testSettingsGateway(social, nil, nil, nil, nil), nil, settingsTestBase())
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -379,7 +350,7 @@ func TestMountSettingsAIKeysFailsClosedWhenCredentialClientMissing(t *testing.T)
 	t.Parallel()
 
 	social := &socialClientStub{getResp: &socialv1.GetUserProfileResponse{UserProfile: &socialv1.UserProfile{UserId: "user-1", Name: "Remote Name"}}}
-	m := newSettingsModuleFromGateways(settingsgateway.NewGRPCGateway(social, nil, nil, nil, nil), nil, settingsTestBase())
+	m := newSettingsModuleFromGateways(testSettingsGateway(social, nil, nil, nil, nil), nil, settingsTestBase())
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -543,13 +514,7 @@ func TestMountHidesUnavailableSettingsLinksFromMenu(t *testing.T) {
 	t.Parallel()
 
 	m := newSettingsModuleFromGateways(
-		settingsgateway.NewGRPCGateway(
-			nil,
-			&accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}},
-			nil,
-			nil,
-			nil,
-		),
+		testSettingsGateway(nil, &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_EN_US}}}, nil, nil, nil),
 		nil,
 		settingsTestBase(),
 	)
@@ -722,7 +687,7 @@ func TestMountProfilePostUsesDependenciesSocialClientWhenGatewayNotProvided(t *t
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := newSettingsModuleFromGateways(settingsgateway.NewGRPCGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), nil, settingsTestBase())
+	m := newSettingsModuleFromGateways(testSettingsGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), nil, settingsTestBase())
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -774,7 +739,7 @@ func TestMountProfilePostBlankPronounsSavesUnspecifiedPronouns(t *testing.T) {
 		Bio:           "Before",
 	}}}
 	account := &accountClientStub{getResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "remote-user", Locale: commonv1.Locale_LOCALE_EN_US}}}
-	m := newSettingsModuleFromGateways(settingsgateway.NewGRPCGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), nil, settingsTestBase())
+	m := newSettingsModuleFromGateways(testSettingsGateway(social, account, &passkeyClientStub{}, &credentialClientStub{}, &agentClientStub{}), nil, settingsTestBase())
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

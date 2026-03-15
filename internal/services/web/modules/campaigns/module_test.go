@@ -39,17 +39,6 @@ func TestModuleIDReturnsCampaigns(t *testing.T) {
 	}
 }
 
-func TestModuleHealthyReflectsGatewayState(t *testing.T) {
-	t.Parallel()
-
-	if New(Config{}).Healthy() {
-		t.Fatalf("New().Healthy() = true, want false for degraded module")
-	}
-	if !New(configWithGateway(fakeGateway{}, modulehandler.NewTestBase(), nil)).Healthy() {
-		t.Fatalf("New(Config{...}).Healthy() = false, want true")
-	}
-}
-
 func TestMapCampaignCharacterCreationStepToProtoGatewayExport(t *testing.T) {
 	t.Parallel()
 

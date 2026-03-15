@@ -77,17 +77,6 @@ func TestModuleIDReturnsNotifications(t *testing.T) {
 	}
 }
 
-func TestModuleHealthyReflectsGatewayState(t *testing.T) {
-	t.Parallel()
-
-	if New(Config{}).Healthy() {
-		t.Fatalf("New().Healthy() = true, want false for degraded module")
-	}
-	if !newNotificationsModule(fakeGateway{}).Healthy() {
-		t.Fatalf("New(Config{...}).Healthy() = false, want true")
-	}
-}
-
 func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	t.Parallel()
 
@@ -408,6 +397,5 @@ func newNotificationsModule(gateway notificationsapp.Gateway) Module {
 	return New(Config{
 		Service: notificationsapp.NewService(gateway),
 		Base:    notificationsTestBase(),
-		Healthy: notificationsapp.IsGatewayHealthy(gateway),
 	})
 }

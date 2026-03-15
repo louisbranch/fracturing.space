@@ -9,7 +9,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
-	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
@@ -38,25 +37,11 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	if err := entrypoint.ParseConfig(&cfg); err != nil {
 		return Config{}, err
 	}
-	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
-	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
-	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
-	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
-	cfg.DiscoveryAddr = serviceaddr.OrDefaultGRPCAddr(cfg.DiscoveryAddr, serviceaddr.ServiceDiscovery)
-	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
-	cfg.UserHubAddr = serviceaddr.OrDefaultGRPCAddr(cfg.UserHubAddr, serviceaddr.ServiceUserHub)
-	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
+	applyDependencyAddressDefaults(&cfg)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
 	fs.StringVar(&cfg.PlayHTTPAddr, "play-http-addr", cfg.PlayHTTPAddr, "Play HTTP listen address")
-	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "Auth service gRPC address")
-	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "Social service gRPC address")
-	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
-	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "AI service gRPC address")
-	fs.StringVar(&cfg.DiscoveryAddr, "discovery-addr", cfg.DiscoveryAddr, "Discovery service gRPC address")
-	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "Notifications service gRPC address")
-	fs.StringVar(&cfg.UserHubAddr, "userhub-addr", cfg.UserHubAddr, "Userhub service gRPC address")
-	fs.StringVar(&cfg.StatusAddr, "status-addr", cfg.StatusAddr, "Status service gRPC address")
+	applyDependencyAddressFlags(fs, &cfg)
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
 	fs.BoolVar(&cfg.TrustForwardedProto, "trust-forwarded-proto", cfg.TrustForwardedProto, "Trust X-Forwarded-Proto when resolving request scheme")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {

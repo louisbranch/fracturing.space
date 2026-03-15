@@ -4,8 +4,11 @@ import (
 	"context"
 	"testing"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	userhubv1 "github.com/louisbranch/fracturing.space/api/gen/go/userhub/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/dashboard"
@@ -27,8 +30,8 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	})
 	public := built.Public
 	protected := built.Protected
-	if len(public) != 6 {
-		t.Fatalf("public module count = %d, want %d", len(public), 6)
+	if len(public) != 3 {
+		t.Fatalf("public module count = %d, want %d", len(public), 3)
 	}
 	if len(protected) != 2 {
 		t.Fatalf("protected module count = %d, want %d", len(protected), 2)
@@ -43,20 +46,96 @@ func TestDefaultModulesIncludeOnlyStableAreas(t *testing.T) {
 	if got := public[2].ID(); got != "public-auth-redirect" {
 		t.Fatalf("default public module[2] id = %q, want %q", got, "public-auth-redirect")
 	}
-	if got := public[3].ID(); got != "discovery" {
-		t.Fatalf("default public module[3] id = %q, want %q", got, "discovery")
-	}
-	if got := public[4].ID(); got != "profile" {
-		t.Fatalf("default public module[4] id = %q, want %q", got, "profile")
-	}
-	if got := public[5].ID(); got != "invite" {
-		t.Fatalf("default public module[5] id = %q, want %q", got, "invite")
-	}
 	if got := protected[0].ID(); got != "dashboard" {
 		t.Fatalf("default protected module[0] id = %q, want %q", got, "dashboard")
 	}
 	if got := protected[1].ID(); got != "settings" {
 		t.Fatalf("default protected module[1] id = %q, want %q", got, "settings")
+	}
+}
+
+func TestDefaultPublicModulesExposeDiscoveryProfileInviteWhenDependenciesAreConfigured(t *testing.T) {
+	t.Parallel()
+
+	conn := &grpc.ClientConn{}
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
+		Dependencies: Dependencies{
+			AssetBaseURL: "https://cdn.example.com/assets",
+			Discovery: DiscoveryDependencies{
+				DiscoveryClient: discoveryv1.NewDiscoveryServiceClient(conn),
+			},
+			Profile: ProfileDependencies{
+				AuthClient:   authv1.NewAuthServiceClient(conn),
+				SocialClient: socialv1.NewSocialServiceClient(conn),
+			},
+			Invite: InviteDependencies{
+				AuthClient:   authv1.NewAuthServiceClient(conn),
+				InviteClient: gamev1.NewInviteServiceClient(conn),
+			},
+		},
+		Principal:        principal.Principal{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
+	if len(built.Public) != 6 {
+		t.Fatalf("public module count = %d, want %d", len(built.Public), 6)
+	}
+	if got := built.Public[3].ID(); got != "discovery" {
+		t.Fatalf("public module[3] id = %q, want %q", got, "discovery")
+	}
+	if got := built.Public[4].ID(); got != "profile" {
+		t.Fatalf("public module[4] id = %q, want %q", got, "profile")
+	}
+	if got := built.Public[5].ID(); got != "invite" {
+		t.Fatalf("public module[5] id = %q, want %q", got, "invite")
+	}
+}
+
+func TestPublicProfileModuleCanRenderWithOnlyAuthDependency(t *testing.T) {
+	t.Parallel()
+
+	conn := &grpc.ClientConn{}
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
+		Dependencies: Dependencies{
+			AssetBaseURL: "https://cdn.example.com/assets",
+			Profile: ProfileDependencies{
+				AuthClient: authv1.NewAuthServiceClient(conn),
+			},
+		},
+		Principal:        principal.Principal{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
+	if len(built.Public) != 4 {
+		t.Fatalf("public module count = %d, want %d", len(built.Public), 4)
+	}
+	if got := built.Public[3].ID(); got != "profile" {
+		t.Fatalf("public module[3] id = %q, want %q", got, "profile")
+	}
+}
+
+func TestDefaultPublicModulesIncludeOnlyConfiguredOptionalSurfaces(t *testing.T) {
+	t.Parallel()
+
+	conn := &grpc.ClientConn{}
+	reg := NewRegistryBuilder()
+	built := reg.Build(RegistryInput{
+		Dependencies: Dependencies{
+			Discovery: DiscoveryDependencies{
+				DiscoveryClient: discoveryv1.NewDiscoveryServiceClient(conn),
+			},
+		},
+		Principal:        principal.Principal{},
+		PublicOptions:    PublicModuleOptions{},
+		ProtectedOptions: ProtectedModuleOptions{},
+	})
+	if len(built.Public) != 4 {
+		t.Fatalf("public module count = %d, want %d", len(built.Public), 4)
+	}
+	if got := built.Public[3].ID(); got != "discovery" {
+		t.Fatalf("public module[3] id = %q, want %q", got, "discovery")
 	}
 }
 
@@ -115,8 +194,8 @@ func TestRegistryBuildComposesExpectedModules(t *testing.T) {
 		PublicOptions:    PublicModuleOptions{},
 		ProtectedOptions: ProtectedModuleOptions{},
 	})
-	if len(built.Public) != 6 {
-		t.Fatalf("public module count = %d, want 6", len(built.Public))
+	if len(built.Public) != 3 {
+		t.Fatalf("public module count = %d, want 3", len(built.Public))
 	}
 	if len(built.Protected) != 2 {
 		t.Fatalf("protected module count = %d, want 2", len(built.Protected))
@@ -197,25 +276,6 @@ func TestNewSharedServicesReturnsSyncerWhenDashboardDependenciesConfigured(t *te
 	})
 	if _, ok := shared.dashboardSync.(*dashboardsync.Syncer); !ok {
 		t.Fatalf("dashboardSync = %T, want *dashboardsync.Syncer", shared.dashboardSync)
-	}
-}
-
-func TestCapitalizeLabel(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		input string
-		want  string
-	}{
-		{input: "", want: ""},
-		{input: "game", want: "Game"},
-		{input: "Game", want: "Game"},
-		{input: "userhub", want: "Userhub"},
-	}
-	for _, tc := range tests {
-		if got := capitalizeLabel(tc.input); got != tc.want {
-			t.Fatalf("capitalizeLabel(%q) = %q, want %q", tc.input, got, tc.want)
-		}
 	}
 }
 

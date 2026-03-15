@@ -9,7 +9,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
-func TestParseRecoveryStartInputTrimsFields(t *testing.T) {
+func TestParseRecoveryStartInputPreservesRawFields(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodPost, "/login/recovery/start", strings.NewReader(`{"username":" louis ","recovery_code":" code-1 "}`))
@@ -18,12 +18,12 @@ func TestParseRecoveryStartInputTrimsFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseRecoveryStartInput() error = %v", err)
 	}
-	if input.Username != "louis" || input.RecoveryCode != "code-1" {
-		t.Fatalf("input = %+v, want trimmed values", input)
+	if input.Username != " louis " || input.RecoveryCode != " code-1 " {
+		t.Fatalf("input = %+v, want raw values", input)
 	}
 }
 
-func TestParseRecoveryFinishInputTrimsFields(t *testing.T) {
+func TestParseRecoveryFinishInputPreservesRawFields(t *testing.T) {
 	t.Parallel()
 
 	req := httptest.NewRequest(http.MethodPost, "/login/recovery/finish", strings.NewReader(`{"recovery_session_id":" rec-1 ","session_id":" sess-1 ","pending_id":" pending-1 ","next":" /invite/inv-1 ","credential":{"id":"cred-1"}}`))
@@ -32,8 +32,8 @@ func TestParseRecoveryFinishInputTrimsFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("parseRecoveryFinishInput() error = %v", err)
 	}
-	if input.RecoverySessionID != "rec-1" || input.SessionID != "sess-1" || input.PendingID != "pending-1" || input.NextPath != "/invite/inv-1" {
-		t.Fatalf("input = %+v, want trimmed values", input)
+	if input.RecoverySessionID != " rec-1 " || input.SessionID != " sess-1 " || input.PendingID != " pending-1 " || input.NextPath != "/invite/inv-1" {
+		t.Fatalf("input = %+v, want preserved values", input)
 	}
 	if string(input.Credential) != `{"id":"cred-1"}` {
 		t.Fatalf("Credential = %s", string(input.Credential))
