@@ -17,10 +17,11 @@ func TestDirectAppendEventUsageIsRestrictedToMaintenancePaths(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	grpcRoot := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc")
 	allowed := map[string]struct{}{
-		"internal/services/game/api/grpc/game/domain_adapter.go":        {},
-		"internal/services/game/api/grpc/game/event_application.go":     {},
-		"internal/services/game/api/grpc/game/fork_application.go":      {},
-		"internal/services/game/api/grpc/game/fork_application_fork.go": {},
+		"internal/services/game/api/grpc/game/domain_adapter.go":                      {},
+		"internal/services/game/api/grpc/game/eventtransport/event_application.go":    {},
+		"internal/services/game/api/grpc/game/forktransport/fork_application.go":      {},
+		"internal/services/game/api/grpc/game/forktransport/fork_application_fork.go": {},
+		"internal/services/game/api/grpc/game/forktransport/fork_event_replay.go":     {},
 	}
 
 	var violations []string
@@ -105,7 +106,7 @@ func TestSessionGateCommandExecutorUsageIsRestrictedToGateApplications(t *testin
 	repoRoot := repoRootFromThisFile(t)
 	gameRoot := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game")
 	allowed := map[string]struct{}{
-		"internal/services/game/api/grpc/game/session_gate_application.go": {},
+		"internal/services/game/api/grpc/game/sessiontransport/session_gate_application.go": {},
 	}
 
 	var violations []string
@@ -150,8 +151,8 @@ func TestSessionGateCommandExecutorUsageIsRestrictedToGateApplications(t *testin
 func TestSessionApplicationWriteFlowsUseSessionCommandExecutor(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	applicationFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "session_lifecycle_application.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "session_spotlight_application.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "sessiontransport", "session_lifecycle_application.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "sessiontransport", "session_spotlight_application.go"),
 	}
 
 	var violations []string
@@ -223,10 +224,64 @@ func TestParticipantAndCharacterTransportHelpersDoNotLiveInRootPackage(t *testin
 	t.Fatalf("legacy transport helpers still live in the root game package:\n%s", strings.Join(violations, "\n"))
 }
 
+func TestInteractionServiceHandlersDoNotAccessStoresDirectly(t *testing.T) {
+	repoRoot := repoRootFromThisFile(t)
+	serviceFiles := []string{
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "interaction_service.go"),
+	}
+
+	var violations []string
+	for _, path := range serviceFiles {
+		lines, err := selectorUsageLines(path, []string{"s", "stores"})
+		if err != nil {
+			t.Fatalf("scan %s: %v", path, err)
+		}
+		relPath, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			t.Fatalf("relative path %s: %v", path, err)
+		}
+		for _, line := range lines {
+			violations = append(violations, fmt.Sprintf("%s:%d", filepath.ToSlash(relPath), line))
+		}
+	}
+
+	sort.Strings(violations)
+	if len(violations) == 0 {
+		return
+	}
+	t.Fatalf("interaction service handlers access stores directly:\n%s", strings.Join(violations, "\n"))
+}
+
+func TestInteractionServiceUsesApplicationBoundary(t *testing.T) {
+	repoRoot := repoRootFromThisFile(t)
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "interaction_service.go")
+
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	if strings.Contains(source, "type InteractionService struct {\n\tcampaignv1.UnimplementedInteractionServiceServer\n\tstores ") {
+		relPath, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			t.Fatalf("relative path %s: %v", path, err)
+		}
+		t.Fatalf("%s still carries full Stores; use interactionApplication instead", filepath.ToSlash(relPath))
+	}
+	if !strings.Contains(source, "app interactionApplication") {
+		relPath, err := filepath.Rel(repoRoot, path)
+		if err != nil {
+			t.Fatalf("relative path %s: %v", path, err)
+		}
+		t.Fatalf("%s no longer exposes the interaction application boundary", filepath.ToSlash(relPath))
+	}
+}
+
 func TestSessionAndInteractionApplicationsUseFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	paths := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "session_application.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "sessiontransport", "session_application.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "sessiontransport", "communication_application.go"),
 		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "interaction_application.go"),
 	}
 
@@ -235,7 +290,7 @@ func TestSessionAndInteractionApplicationsUseFocusedPolicyDependencies(t *testin
 		if err != nil {
 			t.Fatalf("read %s: %v", path, err)
 		}
-		if strings.Contains(string(content), "auth         Stores") {
+		if strings.Contains(string(content), "auth         Stores") || strings.Contains(string(content), "auth        Stores") {
 			relPath, err := filepath.Rel(repoRoot, path)
 			if err != nil {
 				t.Fatalf("relative path %s: %v", path, err)
@@ -247,7 +302,7 @@ func TestSessionAndInteractionApplicationsUseFocusedPolicyDependencies(t *testin
 
 func TestCampaignApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -264,7 +319,7 @@ func TestCampaignApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 
 func TestCampaignReadinessApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_readiness_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_readiness_application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -281,7 +336,7 @@ func TestCampaignReadinessApplicationUsesFocusedPolicyDependencies(t *testing.T)
 
 func TestCampaignServiceUsesApplicationAndReadinessBoundaries(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_service.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -314,9 +369,9 @@ func TestCampaignServiceUsesApplicationAndReadinessBoundaries(t *testing.T) {
 func TestCampaignServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	serviceFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_service_read.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_service_list.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_readiness_service.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_service_read.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_service_list.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_readiness_service.go"),
 	}
 
 	var violations []string
@@ -343,7 +398,7 @@ func TestCampaignServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestCampaignAIServiceUsesApplicationBoundary(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_ai_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -369,9 +424,9 @@ func TestCampaignAIServiceUsesApplicationBoundary(t *testing.T) {
 func TestCampaignAIServiceHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	serviceFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_ai_service_issue_grant.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_ai_service_auth_state.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaign_ai_service_binding_usage.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service_issue_grant.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service_auth_state.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "campaigntransport", "campaign_ai_service_binding_usage.go"),
 	}
 
 	var violations []string
@@ -398,7 +453,7 @@ func TestCampaignAIServiceHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestParticipantApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "participant_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "participanttransport", "participant_application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -415,14 +470,14 @@ func TestParticipantApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 
 func TestParticipantServiceUsesApplicationBoundary(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "participant_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "participanttransport", "participant_service.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	source := string(content)
-	if strings.Contains(source, "type ParticipantService struct {\n\tcampaignv1.UnimplementedParticipantServiceServer\n\tstores ") {
+	if strings.Contains(source, "type Service struct {\n\tcampaignv1.UnimplementedParticipantServiceServer\n\tstores ") {
 		relPath, err := filepath.Rel(repoRoot, path)
 		if err != nil {
 			t.Fatalf("relative path %s: %v", path, err)
@@ -440,7 +495,7 @@ func TestParticipantServiceUsesApplicationBoundary(t *testing.T) {
 
 func TestParticipantServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "participant_service_read.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "participanttransport", "participant_service_read.go")
 
 	lines, err := selectorUsageLines(path, []string{"s", "stores"})
 	if err != nil {
@@ -463,7 +518,7 @@ func TestParticipantServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestCharacterApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "character_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "charactertransport", "character_application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -480,14 +535,14 @@ func TestCharacterApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 
 func TestCharacterServiceUsesApplicationBoundary(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "character_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "charactertransport", "character_service.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	source := string(content)
-	if strings.Contains(source, "type CharacterService struct {\n\tcampaignv1.UnimplementedCharacterServiceServer\n\tstores ") {
+	if strings.Contains(source, "type Service struct {\n\tcampaignv1.UnimplementedCharacterServiceServer\n\tstores ") {
 		relPath, err := filepath.Rel(repoRoot, path)
 		if err != nil {
 			t.Fatalf("relative path %s: %v", path, err)
@@ -505,7 +560,7 @@ func TestCharacterServiceUsesApplicationBoundary(t *testing.T) {
 
 func TestCharacterServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "character_service_read.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "charactertransport", "character_service_read.go")
 
 	lines, err := selectorUsageLines(path, []string{"s", "stores"})
 	if err != nil {
@@ -528,7 +583,7 @@ func TestCharacterServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestForkApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "fork_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "forktransport", "fork_application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -545,14 +600,14 @@ func TestForkApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 
 func TestForkServiceUsesApplicationBoundary(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "fork_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "forktransport", "fork_service.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("read %s: %v", path, err)
 	}
 	source := string(content)
-	if strings.Contains(source, "type ForkService struct {\n\tcampaignv1.UnimplementedForkServiceServer\n\tstores ") {
+	if strings.Contains(source, "type Service struct {\n\tcampaignv1.UnimplementedForkServiceServer\n\tstores ") {
 		relPath, err := filepath.Rel(repoRoot, path)
 		if err != nil {
 			t.Fatalf("relative path %s: %v", path, err)
@@ -570,7 +625,7 @@ func TestForkServiceUsesApplicationBoundary(t *testing.T) {
 
 func TestForkServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "fork_service_read.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "forktransport", "fork_service_read.go")
 
 	lines, err := selectorUsageLines(path, []string{"s", "stores"})
 	if err != nil {
@@ -593,7 +648,7 @@ func TestForkServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestForkApplicationForkUsesReplaySeam(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "fork_application_fork.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "forktransport", "fork_application_fork.go")
 
 	targets := [][]string{
 		{"a", "stores", "Event", "ListEvents"},
@@ -624,7 +679,7 @@ func TestForkApplicationForkUsesReplaySeam(t *testing.T) {
 
 func TestSnapshotApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "snapshot_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "snapshottransport", "snapshot_application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -641,7 +696,7 @@ func TestSnapshotApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 
 func TestSnapshotServiceHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "snapshot_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "snapshottransport", "snapshot_service.go")
 
 	lines, err := selectorUsageLines(path, []string{"s", "stores"})
 	if err != nil {
@@ -664,7 +719,7 @@ func TestSnapshotServiceHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestEventApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "event_application.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "eventtransport", "event_application.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -682,9 +737,9 @@ func TestEventApplicationUsesFocusedPolicyDependencies(t *testing.T) {
 func TestEventServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	serviceFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "event_list_service.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "event_subscribe_service.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "timeline_service.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "eventtransport", "event_list_service.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "eventtransport", "event_subscribe_service.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "eventtransport", "timeline_service.go"),
 	}
 
 	var violations []string
@@ -711,7 +766,7 @@ func TestEventServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 
 func TestAuthorizationServiceUsesApplicationBoundary(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "authorization_service.go")
+	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "authorizationtransport", "authorization_service.go")
 
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -737,8 +792,8 @@ func TestAuthorizationServiceUsesApplicationBoundary(t *testing.T) {
 func TestAuthorizationServiceHandlersDoNotEvaluateDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	serviceFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "authorization_can_service.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "authorization_batch_service.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "authorizationtransport", "authorization_can_service.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "authorizationtransport", "authorization_batch_service.go"),
 	}
 
 	var violations []string
@@ -766,9 +821,9 @@ func TestAuthorizationServiceHandlersDoNotEvaluateDirectly(t *testing.T) {
 func TestSessionServiceReadHandlersDoNotAccessStoresDirectly(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	serviceFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "session_service_lifecycle.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "session_service_spotlight.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "session_service_user.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "sessiontransport", "session_service_lifecycle.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "sessiontransport", "session_service_spotlight.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "sessiontransport", "session_service_user.go"),
 	}
 
 	var violations []string

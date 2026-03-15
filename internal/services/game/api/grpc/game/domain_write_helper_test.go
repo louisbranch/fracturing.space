@@ -13,9 +13,50 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// fakeDomainEngine is a test double for the domain engine, used by tests
+// that need to capture commands and optionally persist events via a store.
+type fakeDomainEngine struct {
+	store         storage.EventStore
+	result        engine.Result
+	resultsByType map[command.Type]engine.Result
+	calls         int
+	lastCommand   command.Command
+	commands      []command.Command
+}
+
+func (f *fakeDomainEngine) Execute(ctx context.Context, cmd command.Command) (engine.Result, error) {
+	f.calls++
+	f.lastCommand = cmd
+	f.commands = append(f.commands, cmd)
+
+	result := f.result
+	if len(f.resultsByType) > 0 {
+		if selected, ok := f.resultsByType[cmd.Type]; ok {
+			result = selected
+		}
+	}
+	if f.store == nil {
+		return result, nil
+	}
+	if len(result.Decision.Events) == 0 {
+		return result, nil
+	}
+	stored := make([]event.Event, 0, len(result.Decision.Events))
+	for _, evt := range result.Decision.Events {
+		storedEvent, err := f.store.AppendEvent(ctx, evt)
+		if err != nil {
+			return engine.Result{}, err
+		}
+		stored = append(stored, storedEvent)
+	}
+	result.Decision.Events = stored
+	return result, nil
+}
 
 type fakeDomainExecutor struct {
 	result engine.Result

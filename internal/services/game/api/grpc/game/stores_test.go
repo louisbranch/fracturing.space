@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
@@ -29,8 +31,9 @@ func TestStoresValidate(t *testing.T) {
 		for _, name := range []string{
 			"Campaign", "Participant", "ClaimIndex", "Invite",
 			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
-			"SessionSpotlight", "SessionInteraction", "Scene", "SceneCharacter", "SceneGate",
-			"SceneSpotlight", "SceneInteraction", "Event", "Audit", "Statistics",
+			"SessionSpotlight", "SessionInteraction", "Scene", "SceneCharacter",
+			"SceneGate", "SceneSpotlight", "SceneInteraction",
+			"Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
 			"Write.Executor", "Write.Runtime", "Events",
 		} {
@@ -55,31 +58,29 @@ func TestStoresValidate(t *testing.T) {
 
 func TestNewStoresFromProjection(t *testing.T) {
 	projectionStore := &projectionStoreBundleStub{
-		CampaignStore:            newFakeCampaignStore(),
-		ParticipantStore:         newFakeParticipantStore(),
+		CampaignStore:            gametest.NewFakeCampaignStore(),
+		ParticipantStore:         gametest.NewFakeParticipantStore(),
 		ClaimIndexStore:          stubClaimIndex{},
-		InviteStore:              newFakeInviteStore(),
-		CharacterStore:           newFakeCharacterStore(),
-		SessionStore:             newFakeSessionStore(),
-		SessionGateStore:         &fakeSessionGateStore{},
-		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
-		SessionInteractionStore:  stubSessionInteractionStore{},
+		InviteStore:              gametest.NewFakeInviteStore(),
+		CharacterStore:           gametest.NewFakeCharacterStore(),
+		SessionStore:             gametest.NewFakeSessionStore(),
+		SessionGateStore:         &gametest.FakeSessionGateStore{},
+		SessionSpotlightStore:    &gametest.FakeSessionSpotlightStore{},
 		SceneStore:               stubSceneStore{},
 		SceneCharacterStore:      stubSceneCharacterStore{},
 		SceneGateStore:           stubSceneGateStore{},
 		SceneSpotlightStore:      stubSceneSpotlightStore{},
-		SceneInteractionStore:    stubSceneInteractionStore{},
-		CampaignForkStore:        &fakeCampaignForkStore{},
-		StatisticsStore:          &fakeStatisticsStore{},
+		CampaignForkStore:        &gametest.FakeCampaignForkStore{},
+		StatisticsStore:          &gametest.FakeStatisticsStore{},
 		SnapshotStore:            stubSnapshot{},
 		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
 	}
 
 	stores := NewStoresFromProjection(StoresFromProjectionConfig{
 		ProjectionStore: projectionStore,
-		SystemStores:    SystemStores{Daggerheart: &fakeDaggerheartStore{}},
+		SystemStores:    SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}},
 		EventStore: eventAuditStoreStub{
-			EventStore:      newFakeEventStore(),
+			EventStore:      gametest.NewFakeEventStore(),
 			AuditEventStore: stubAudit{},
 		},
 		ContentStore: stubDaggerheartContent{},
@@ -104,22 +105,20 @@ func TestNewStoresFromProjection(t *testing.T) {
 
 func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
 	projectionStore := &projectionStoreBundleStub{
-		CampaignStore:            newFakeCampaignStore(),
-		ParticipantStore:         newFakeParticipantStore(),
+		CampaignStore:            gametest.NewFakeCampaignStore(),
+		ParticipantStore:         gametest.NewFakeParticipantStore(),
 		ClaimIndexStore:          stubClaimIndex{},
-		InviteStore:              newFakeInviteStore(),
-		CharacterStore:           newFakeCharacterStore(),
-		SessionStore:             newFakeSessionStore(),
-		SessionGateStore:         &fakeSessionGateStore{},
-		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
-		SessionInteractionStore:  stubSessionInteractionStore{},
+		InviteStore:              gametest.NewFakeInviteStore(),
+		CharacterStore:           gametest.NewFakeCharacterStore(),
+		SessionStore:             gametest.NewFakeSessionStore(),
+		SessionGateStore:         &gametest.FakeSessionGateStore{},
+		SessionSpotlightStore:    &gametest.FakeSessionSpotlightStore{},
 		SceneStore:               stubSceneStore{},
 		SceneCharacterStore:      stubSceneCharacterStore{},
 		SceneGateStore:           stubSceneGateStore{},
 		SceneSpotlightStore:      stubSceneSpotlightStore{},
-		SceneInteractionStore:    stubSceneInteractionStore{},
-		CampaignForkStore:        &fakeCampaignForkStore{},
-		StatisticsStore:          &fakeStatisticsStore{},
+		CampaignForkStore:        &gametest.FakeCampaignForkStore{},
+		StatisticsStore:          &gametest.FakeStatisticsStore{},
 		SnapshotStore:            stubSnapshot{},
 		ProjectionWatermarkStore: stubProjectionWatermarkStore{},
 	}
@@ -128,7 +127,7 @@ func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
 		explicitAudit := stubAudit{}
 		stores := NewStoresFromProjection(StoresFromProjectionConfig{
 			ProjectionStore: projectionStore,
-			EventStore:      newFakeEventStore(),
+			EventStore:      gametest.NewFakeEventStore(),
 			AuditStore:      explicitAudit,
 		})
 
@@ -140,7 +139,7 @@ func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
 	t.Run("non-audit event store does not infer audit store", func(t *testing.T) {
 		stores := NewStoresFromProjection(StoresFromProjectionConfig{
 			ProjectionStore: projectionStore,
-			EventStore:      newFakeEventStore(),
+			EventStore:      gametest.NewFakeEventStore(),
 		})
 		if stores.Audit != nil {
 			t.Fatalf("stores.Audit = %T, want nil", stores.Audit)
@@ -151,26 +150,26 @@ func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
 // validStores returns a Stores with all fields populated using minimal stubs.
 func validStores() Stores {
 	return Stores{
-		Campaign:           newFakeCampaignStore(),
-		Participant:        newFakeParticipantStore(),
+		Campaign:           gametest.NewFakeCampaignStore(),
+		Participant:        gametest.NewFakeParticipantStore(),
 		ClaimIndex:         stubClaimIndex{},
-		Invite:             newFakeInviteStore(),
-		Character:          newFakeCharacterStore(),
-		SystemStores:       SystemStores{Daggerheart: &fakeDaggerheartStore{}},
-		Session:            newFakeSessionStore(),
-		SessionGate:        &fakeSessionGateStore{},
-		SessionSpotlight:   &fakeSessionSpotlightStore{},
-		SessionInteraction: stubSessionInteractionStore{},
+		Invite:             gametest.NewFakeInviteStore(),
+		Character:          gametest.NewFakeCharacterStore(),
+		SystemStores:       SystemStores{Daggerheart: &gametest.FakeDaggerheartStore{}},
+		Session:            gametest.NewFakeSessionStore(),
+		SessionGate:        &gametest.FakeSessionGateStore{},
+		SessionSpotlight:   &gametest.FakeSessionSpotlightStore{},
+		SessionInteraction: &gametest.FakeSessionInteractionStore{},
 		Scene:              stubSceneStore{},
 		SceneCharacter:     stubSceneCharacterStore{},
 		SceneGate:          stubSceneGateStore{},
 		SceneSpotlight:     stubSceneSpotlightStore{},
 		SceneInteraction:   stubSceneInteractionStore{},
-		Event:              newFakeEventStore(),
+		Event:              gametest.NewFakeEventStore(),
 		Audit:              stubAudit{},
-		Statistics:         &fakeStatisticsStore{},
+		Statistics:         &gametest.FakeStatisticsStore{},
 		Snapshot:           stubSnapshot{},
-		CampaignFork:       &fakeCampaignForkStore{},
+		CampaignFork:       &gametest.FakeCampaignForkStore{},
 		DaggerheartContent: stubDaggerheartContent{},
 		Write:              domainwriteexec.WritePath{Executor: fakeDomainExecutor{}, Runtime: domainwrite.NewRuntime()},
 		Events:             event.NewRegistry(),
@@ -239,9 +238,6 @@ type stubSceneStore struct{ storage.SceneStore }
 type stubSceneCharacterStore struct{ storage.SceneCharacterStore }
 type stubSceneGateStore struct{ storage.SceneGateStore }
 type stubSceneSpotlightStore struct{ storage.SceneSpotlightStore }
-type stubSessionInteractionStore struct {
-	storage.SessionInteractionStore
-}
 type stubSceneInteractionStore struct{ storage.SceneInteractionStore }
 
 type projectionStoreBundleStub struct {
@@ -251,13 +247,13 @@ type projectionStoreBundleStub struct {
 	storage.InviteStore
 	storage.CharacterStore
 	storage.SessionStore
+	storage.SessionInteractionStore
 	storage.SnapshotStore
 	storage.CampaignForkStore
 	storage.StatisticsStore
 	storage.ProjectionWatermarkStore
 	storage.SessionGateStore
 	storage.SessionSpotlightStore
-	storage.SessionInteractionStore
 	storage.SceneStore
 	storage.SceneCharacterStore
 	storage.SceneGateStore

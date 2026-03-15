@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/invitetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -145,10 +146,10 @@ func TestEnumConversions(t *testing.T) {
 		t.Fatal("expected unspecified campaign access")
 	}
 
-	if inviteStatusToProto(invite.StatusPending) != campaignv1.InviteStatus_PENDING {
+	if invitetransport.InviteStatusToProto(invite.StatusPending) != campaignv1.InviteStatus_PENDING {
 		t.Fatal("expected pending invite status")
 	}
-	if inviteStatusFromProto(campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED) != invite.StatusUnspecified {
+	if invitetransport.InviteStatusFromProto(campaignv1.InviteStatus_INVITE_STATUS_UNSPECIFIED) != invite.StatusUnspecified {
 		t.Fatal("expected unspecified invite status")
 	}
 
@@ -206,7 +207,7 @@ func TestInviteStatusToProto(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := inviteStatusToProto(tt.input); got != tt.expect {
+			if got := invitetransport.InviteStatusToProto(tt.input); got != tt.expect {
 				t.Fatalf("got %v, want %v", got, tt.expect)
 			}
 		})
@@ -227,7 +228,7 @@ func TestInviteStatusFromProto(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := inviteStatusFromProto(tt.input); got != tt.expect {
+			if got := invitetransport.InviteStatusFromProto(tt.input); got != tt.expect {
 				t.Fatalf("got %v, want %v", got, tt.expect)
 			}
 		})
@@ -274,7 +275,7 @@ func TestInviteToProto(t *testing.T) {
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
 	updated := created.Add(time.Hour)
 
-	inv := inviteToProto(storage.InviteRecord{
+	inv := invitetransport.InviteToProto(storage.InviteRecord{
 		ID:                     "inv-1",
 		CampaignID:             "camp-1",
 		ParticipantID:          "part-1",

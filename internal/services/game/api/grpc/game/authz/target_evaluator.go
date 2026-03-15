@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -59,8 +58,8 @@ func EvaluateCanParticipantGovernanceTargetWithStores(
 	if targetParticipantID == "" {
 		targetParticipantID = strings.TrimSpace(target.GetResourceId())
 	}
-	targetAccess := participanttransport.CampaignAccessFromProto(target.GetTargetCampaignAccess())
-	requestedAccess := participanttransport.CampaignAccessFromProto(target.GetRequestedCampaignAccess())
+	targetAccess := campaignAccessFromProto(target.GetTargetCampaignAccess())
+	requestedAccess := campaignAccessFromProto(target.GetRequestedCampaignAccess())
 	participantOperation := target.GetParticipantOperation()
 
 	if targetParticipantID != "" && targetAccess == participant.CampaignAccessUnspecified && participants != nil {

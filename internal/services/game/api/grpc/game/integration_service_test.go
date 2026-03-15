@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -123,13 +125,13 @@ func TestAckIntegrationOutboxEvent_RejectsUnspecifiedOutcome(t *testing.T) {
 }
 
 type fakeIntegrationOutboxEventStore struct {
-	*fakeEventStore
+	*gametest.FakeEventStore
 	outbox map[string]storage.IntegrationOutboxEvent
 }
 
 func newFakeIntegrationOutboxEventStore() *fakeIntegrationOutboxEventStore {
 	return &fakeIntegrationOutboxEventStore{
-		fakeEventStore: newFakeEventStore(),
+		FakeEventStore: gametest.NewFakeEventStore(),
 		outbox:         make(map[string]storage.IntegrationOutboxEvent),
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
@@ -82,8 +83,8 @@ func TestFindCampaignParticipantAndAITurnToken(t *testing.T) {
 func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 	t.Parallel()
 
-	participantStore := newFakeParticipantStore()
-	participantStore.participants["camp-1"] = map[string]storage.ParticipantRecord{
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["camp-1"] = map[string]storage.ParticipantRecord{
 		"gm-ai":    {ID: "gm-ai", CampaignID: "camp-1", Role: participant.RoleGM, Controller: participant.ControllerAI},
 		"gm-human": {ID: "gm-human", CampaignID: "camp-1", Role: participant.RoleGM, Controller: participant.ControllerHuman},
 	}
@@ -185,22 +186,22 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligible(t *testing.T) {
 	t.Parallel()
 
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	participantStore := newFakeParticipantStore()
-	sessionInteractionStore := &fakeSessionInteractionStore{}
+	campaignStore := gametest.NewFakeCampaignStore()
+	sessionStore := gametest.NewFakeSessionStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	sessionInteractionStore := &gametest.FakeSessionInteractionStore{}
 
-	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{
+	campaignStore.Campaigns["camp-1"] = storage.CampaignRecord{
 		ID:        "camp-1",
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeAI,
 		AIAgentID: "agent-1",
 	}
-	sessionStore.sessions["camp-1"] = map[string]storage.SessionRecord{
+	sessionStore.Sessions["camp-1"] = map[string]storage.SessionRecord{
 		"sess-1": {ID: "sess-1", CampaignID: "camp-1", Status: session.StatusActive},
 	}
-	sessionStore.activeSession["camp-1"] = "sess-1"
-	participantStore.participants["camp-1"] = map[string]storage.ParticipantRecord{
+	sessionStore.ActiveSession["camp-1"] = "sess-1"
+	participantStore.Participants["camp-1"] = map[string]storage.ParticipantRecord{
 		"gm-ai": {ID: "gm-ai", CampaignID: "camp-1", Role: participant.RoleGM, Controller: participant.ControllerAI},
 	}
 
@@ -211,7 +212,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 			Participant:        participantStore,
 			SessionInteraction: sessionInteractionStore,
 		},
-		fixedIDGenerator("unused"),
+		gametest.FixedIDGenerator("unused"),
 	)
 
 	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.active_scene_set", "", "")
@@ -222,7 +223,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 		t.Fatalf("mismatch status = %v, want idle", state.GetStatus())
 	}
 
-	sessionInteractionStore.values = map[string]storage.SessionInteraction{
+	sessionInteractionStore.Values = map[string]storage.SessionInteraction{
 		"camp-1:sess-1": {
 			CampaignID:               "camp-1",
 			SessionID:                "sess-1",

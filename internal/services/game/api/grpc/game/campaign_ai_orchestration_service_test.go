@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -54,12 +55,12 @@ func TestNewCampaignAIOrchestrationServiceRejectsInvalidRequests(t *testing.T) {
 func TestCampaignAIOrchestrationServiceQueueReturnsIdleWhenSessionIsNotEligible(t *testing.T) {
 	t.Parallel()
 
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	participantStore := newFakeParticipantStore()
-	sessionInteractionStore := &fakeSessionInteractionStore{}
+	campaignStore := gametest.NewFakeCampaignStore()
+	sessionStore := gametest.NewFakeSessionStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	sessionInteractionStore := &gametest.FakeSessionInteractionStore{}
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	campaignStore.Campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    bridge.SystemIDDaggerheart,
@@ -67,11 +68,11 @@ func TestCampaignAIOrchestrationServiceQueueReturnsIdleWhenSessionIsNotEligible(
 		GmMode:    campaign.GmModeAI,
 		AIAgentID: "agent-1",
 	}
-	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+	sessionStore.Sessions["c1"] = map[string]storage.SessionRecord{
 		"sess-1": {ID: "sess-1", CampaignID: "c1", Status: session.StatusActive},
 	}
-	sessionStore.activeSession["c1"] = "sess-1"
-	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+	sessionStore.ActiveSession["c1"] = "sess-1"
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
 		"gm-ai": {
 			ID:         "gm-ai",
 			CampaignID: "c1",
@@ -103,10 +104,10 @@ func TestCampaignAIOrchestrationServiceQueueReturnsIdleWhenSessionIsNotEligible(
 func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *testing.T) {
 	t.Parallel()
 
-	campaignStore := newFakeCampaignStore()
-	sessionStore := newFakeSessionStore()
-	sessionInteractionStore := &fakeSessionInteractionStore{
-		values: map[string]storage.SessionInteraction{
+	campaignStore := gametest.NewFakeCampaignStore()
+	sessionStore := gametest.NewFakeSessionStore()
+	sessionInteractionStore := &gametest.FakeSessionInteractionStore{
+		Values: map[string]storage.SessionInteraction{
 			"c1:sess-1": {
 				CampaignID: "c1",
 				SessionID:  "sess-1",
@@ -118,15 +119,15 @@ func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *te
 		},
 	}
 
-	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+	campaignStore.Campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		System: bridge.SystemIDDaggerheart,
 		Status: campaign.StatusActive,
 	}
-	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+	sessionStore.Sessions["c1"] = map[string]storage.SessionRecord{
 		"sess-1": {ID: "sess-1", CampaignID: "c1", Status: session.StatusActive},
 	}
-	sessionStore.activeSession["c1"] = "sess-1"
+	sessionStore.ActiveSession["c1"] = "sess-1"
 
 	svc := NewCampaignAIOrchestrationService(Stores{
 		Campaign:           campaignStore,

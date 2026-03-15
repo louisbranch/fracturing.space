@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
@@ -48,5 +49,5 @@ func TestJournalAdapterBatchAppend_RejectsNonBatchStore(t *testing.T) {
 
 // nonBatchEventStore implements storage.EventStore but not batchAppender.
 type nonBatchEventStore struct {
-	fakeEventStore
+	gametest.FakeEventStore
 }

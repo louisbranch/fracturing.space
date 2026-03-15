@@ -1,6 +1,6 @@
 # Game gRPC Package Split
 
-Status: **in progress** — M0 complete, M1–M7 pending.
+Status: **complete** — all milestones (M0–M7) done.
 
 ## Motivation
 
@@ -28,59 +28,51 @@ Two foundation packages that cross-cutting code depends on:
 Root dropped from 143 to ~124 source files. 21 old files deleted, ~55 root
 callers updated.
 
-## Remaining Milestones
-
-Each milestone is one PR. Tests pass at each boundary.
-
 ### M1: Extract `game/gametest/`
 
-Shared test infrastructure (fakes, builder, runtime, fixtures) becomes an
-exported non-test package so each entity subpackage can import it without
-duplicating ~1468 lines of fake stores.
-
-Files to extract:
-
-- `fakes_test.go` → `gametest/fakes.go`
-- `testutil_test.go` → `gametest/builder.go`
-- `main_test.go` runtime init → `gametest/runtime.go`
-- `campaign_fixtures_test.go` → `gametest/campaign_fixtures.go`
-- `participant_fixtures_test.go` → `gametest/participant_fixtures.go`
+Shared test infrastructure (fakes, builder, runtime, fixtures) moved to an
+exported non-test package. ~1468 lines of fake stores, fixtures, and helpers
+reused by all entity subpackages.
 
 ### M2: Extract invite + scene
 
-Most self-contained entities:
-
-- **`invitetransport/`** — all `invite_*.go` files (~11 source + test files).
-- **`scenetransport/`** — all `scene_*.go` files (~12 source + test files).
-
-Root `stores.go` gains `InviteDeps()`, `SceneDeps()` factory methods.
+- **`invitetransport/`** — invite lifecycle, claim, revoke, list.
+- **`scenetransport/`** — scene CRUD, character membership.
 
 ### M3: Extract fork + snapshot + event/timeline
 
-- **`forktransport/`** — ~12 files.
-- **`snapshottransport/`** — ~11 files.
-- **`eventtransport/`** — ~19 files (event + timeline).
+- **`forktransport/`** — campaign fork management.
+- **`snapshottransport/`** — character snapshot CRUD.
+- **`eventtransport/`** — event timeline, replay, append.
 
 ### M4: Extract participant + character
 
-- **`participanttransport/`** — ~14 files. Imports `game/authz/` for telemetry.
-- **`charactertransport/`** — ~16 files. `characterworkflow/` stays as-is.
+- **`participanttransport/`** — participant lifecycle, social, access.
+- **`charactertransport/`** — character CRUD, profile management.
 
 ### M5: Extract session + communication
 
-- **`sessiontransport/`** — ~22 files. Communication goes here because
+- **`sessiontransport/`** — session lifecycle, gates, spotlight, and
+  communication context/control. Communication lives here because
   `communicationApplication` embeds `sessionApplication`.
 
 ### M6: Extract campaign + authorization service
 
-- **`campaigntransport/`** — ~29 files. Campaign AI service is campaign-scoped.
-- **`authorizationtransport/`** — ~8 files. Imports `game/authz/`.
+- **`campaigntransport/`** — 22 source files + 6 test files. Campaign AI service
+  is campaign-scoped. `NewClearCampaignAIBindingFunc` exported for participant
+  service cross-cutting use.
+- **`authorizationtransport/`** — 4 source files + 1 test file + doc.go. Deps
+  struct with Campaign, Participant, Character, Audit stores; delegates to
+  `authz.Evaluator`.
 
 ### M7: Root cleanup
 
-Final root contents (~30 files): `stores.go`, domain adapters, system/statistics
-/integration services, architecture tests. Update architecture tests for new
-directory structure. Remove dead re-exports.
+Root reduced to 23 files: `stores*.go` (dependency container), domain/system
+adapters, integration/statistics/system services, architecture tests, and
+`doc.go`. Removed dead test infrastructure (`testStoresBuilder`, `fakeDomainEngine`,
+`testRuntime`, `mustJSON`), deleted empty `main_test.go`, fixed stale
+architecture test path (`event_application.go` → `eventtransport/`), and updated
+`doc.go` to reflect post-extraction package layout.
 
 ## Import DAG
 

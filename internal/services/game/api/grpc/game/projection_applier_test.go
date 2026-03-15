@@ -6,6 +6,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -22,8 +24,8 @@ import (
 func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign:    newFakeCampaignStore(),
-		Participant: newFakeParticipantStore(),
+		Campaign:    gametest.NewFakeCampaignStore(),
+		Participant: gametest.NewFakeParticipantStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
@@ -107,8 +109,8 @@ func TestStoresApplier_ApplyCampaignAndParticipant(t *testing.T) {
 func TestStoresApplier_ApplyParticipantUpdated(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign:    newFakeCampaignStore(),
-		Participant: newFakeParticipantStore(),
+		Campaign:    gametest.NewFakeCampaignStore(),
+		Participant: gametest.NewFakeParticipantStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
@@ -195,8 +197,8 @@ func TestStoresApplier_ApplyParticipantUpdated(t *testing.T) {
 func TestStoresApplier_ApplyParticipantLeft(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign:    newFakeCampaignStore(),
-		Participant: newFakeParticipantStore(),
+		Campaign:    gametest.NewFakeCampaignStore(),
+		Participant: gametest.NewFakeParticipantStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
@@ -284,8 +286,8 @@ func TestStoresApplier_ApplyParticipantLeft(t *testing.T) {
 func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign:    newFakeCampaignStore(),
-		Participant: newFakeParticipantStore(),
+		Campaign:    gametest.NewFakeCampaignStore(),
+		Participant: gametest.NewFakeParticipantStore(),
 		ClaimIndex:  newFakeClaimIndexStore(),
 	}
 	registries, err := engine.BuildRegistries()
@@ -428,8 +430,8 @@ func TestStoresApplier_ApplyParticipantBindUnbindAndSeatReassign(t *testing.T) {
 func TestStoresApplier_ApplyCampaignUpdatedAndSessionLifecycle(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign: newFakeCampaignStore(),
-		Session:  newFakeSessionStore(),
+		Campaign: gametest.NewFakeCampaignStore(),
+		Session:  gametest.NewFakeSessionStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 1, 0, 0, 0, time.UTC)
@@ -545,7 +547,7 @@ func TestStoresApplier_ApplyCampaignUpdatedAndSessionLifecycle(t *testing.T) {
 func TestStoresApplier_ApplyCampaignUpdated_CoverAssetID(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign: newFakeCampaignStore(),
+		Campaign: gametest.NewFakeCampaignStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 1, 0, 0, 0, time.UTC)
@@ -604,7 +606,7 @@ func TestStoresApplier_ApplyCampaignUpdated_CoverAssetID(t *testing.T) {
 func TestStoresApplier_ApplySessionGateLifecycle(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		SessionGate: newFakeSessionGateStore(),
+		SessionGate: gametest.NewFakeSessionGateStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 2, 0, 0, 0, time.UTC)
@@ -678,7 +680,7 @@ func TestStoresApplier_ApplySessionGateLifecycle(t *testing.T) {
 func TestStoresApplier_ApplySessionSpotlightSetAndClear(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		SessionSpotlight: newFakeSessionSpotlightStore(),
+		SessionSpotlight: gametest.NewFakeSessionSpotlightStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 3, 0, 0, 0, time.UTC)
@@ -737,8 +739,8 @@ func TestStoresApplier_ApplySessionSpotlightSetAndClear(t *testing.T) {
 func TestStoresApplier_ApplyInviteLifecycle(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign: newFakeCampaignStore(),
-		Invite:   newFakeInviteStore(),
+		Campaign: gametest.NewFakeCampaignStore(),
+		Invite:   gametest.NewFakeInviteStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 4, 0, 0, 0, time.UTC)
@@ -884,8 +886,8 @@ func TestStoresApplier_ApplyInviteLifecycle(t *testing.T) {
 func TestStoresApplier_ApplyInviteUpdated(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign: newFakeCampaignStore(),
-		Invite:   newFakeInviteStore(),
+		Campaign: gametest.NewFakeCampaignStore(),
+		Invite:   gametest.NewFakeInviteStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 5, 0, 0, 0, time.UTC)
@@ -971,7 +973,7 @@ func TestStoresApplier_ApplyInviteUpdated(t *testing.T) {
 func TestStoresApplier_ApplyCampaignForked(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		CampaignFork: newFakeCampaignForkStore(),
+		CampaignFork: gametest.NewFakeCampaignForkStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 6, 0, 0, 0, time.UTC)
@@ -1016,8 +1018,8 @@ func TestStoresApplier_ApplyCampaignForked(t *testing.T) {
 func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		Campaign:  newFakeCampaignStore(),
-		Character: newFakeCharacterStore(),
+		Campaign:  gametest.NewFakeCampaignStore(),
+		Character: gametest.NewFakeCharacterStore(),
 	}
 	applier := stores.Applier()
 	now := time.Date(2026, 2, 14, 6, 30, 0, 0, time.UTC)
@@ -1129,7 +1131,7 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 func TestStoresApplier_ApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: gametest.NewFakeDaggerheartStore()},
 	}
 	applier := stores.Applier()
 
