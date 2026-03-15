@@ -21,20 +21,11 @@ type Module struct {
 	requestMeta    requestmeta.SchemePolicy
 	id             string
 	prefix         string
-	registerRoutes func(*http.ServeMux, handlers)
+	routeRegister  routeRegisterFunc
 }
 
-// Surface classifies which route subset this module instance mounts.
-// Composition selects the surface directly so route ownership stays in the root
-// publicauth package instead of wrapper packages.
-type Surface string
-
-const (
-	SurfaceAll          Surface = "all"
-	SurfaceShell        Surface = "shell"
-	SurfacePasskeys     Surface = "passkeys"
-	SurfaceAuthRedirect Surface = "auth-redirect"
-)
+// routeRegisterFunc is the route registration function for one public surface.
+type routeRegisterFunc func(*http.ServeMux, handlers)
 
 // Config defines constructor dependencies for a publicauth module.
 type Config struct {
@@ -44,12 +35,26 @@ type Config struct {
 	Recovery       publicauthapp.RecoveryService
 	Principal      principal.PrincipalResolver
 	RequestMeta    requestmeta.SchemePolicy
-	Surface        Surface
 }
 
-// New returns a publicauth module with explicit dependencies.
-func New(config Config) Module {
-	id, prefix, register := resolveSurface(config.Surface)
+// NewShell constructs the shell/public routes surface.
+func NewShell(config Config) Module {
+	return newModule("public", routepath.Root, registerShellRoutes, config)
+}
+
+// NewPasskeys constructs the passkey-focused routes surface.
+func NewPasskeys(config Config) Module {
+	return newModule("public-passkeys", routepath.PasskeysPrefix, registerPasskeyRoutes, config)
+}
+
+// NewAuthRedirect constructs the auth-redirect surface.
+func NewAuthRedirect(config Config) Module {
+	return newModule("public-auth-redirect", routepath.AuthPrefix, registerAuthRedirectRoutes, config)
+}
+
+// newModule wires a publicauth module from composition dependencies and route
+// registration.
+func newModule(id string, prefix string, routeRegister routeRegisterFunc, config Config) Module {
 	return Module{
 		pageService:    config.PageService,
 		sessionService: config.SessionService,
@@ -59,23 +64,7 @@ func New(config Config) Module {
 		requestMeta:    config.RequestMeta,
 		id:             id,
 		prefix:         prefix,
-		registerRoutes: register,
-	}
-}
-
-// resolveSurface converts surface selection into mount metadata.
-func resolveSurface(surface Surface) (string, string, func(*http.ServeMux, handlers)) {
-	switch surface {
-	case SurfaceShell:
-		return "public", routepath.Root, registerShellRoutes
-	case SurfacePasskeys:
-		return "public-passkeys", routepath.PasskeysPrefix, registerPasskeyRoutes
-	case SurfaceAuthRedirect:
-		return "public-auth-redirect", routepath.AuthPrefix, registerAuthRedirectRoutes
-	case SurfaceAll, "":
-		return "public", routepath.Root, registerRoutes
-	default:
-		return "public", routepath.Root, registerRoutes
+		routeRegister:  routeRegister,
 	}
 }
 
@@ -99,10 +88,8 @@ func (m Module) Mount() (module.Mount, error) {
 		Policy:    m.requestMeta,
 		Principal: m.principal,
 	})
-	if m.registerRoutes != nil {
-		m.registerRoutes(mux, h)
-	} else {
-		registerRoutes(mux, h)
+	if m.routeRegister != nil {
+		m.routeRegister(mux, h)
 	}
 	prefix := strings.TrimSpace(m.prefix)
 	if prefix == "" {

@@ -49,69 +49,61 @@ type recoveryFinishInput struct {
 	Credential        json.RawMessage `json:"credential"`
 }
 
-// parsePasskeyCredentialInput parses and normalizes passkey credential payloads.
+// parsePasskeyCredentialInput decodes a passkey credential payload.
 func parsePasskeyCredentialInput(r *http.Request) (passkeyCredentialInput, error) {
 	var payload passkeyCredentialInput
 	if err := decodeJSONBodyStrict(r, &payload); err != nil {
 		return passkeyCredentialInput{}, err
 	}
-	return passkeyCredentialInput{
-		SessionID:  strings.TrimSpace(payload.SessionID),
-		PendingID:  strings.TrimSpace(payload.PendingID),
-		NextPath:   strings.TrimSpace(payload.NextPath),
-		Credential: payload.Credential,
-	}, nil
+	return payload, nil
 }
 
-// parsePasskeyRegisterStartInput parses and normalizes passkey register-start input.
+// parsePasskeyRegisterStartInput decodes passkey register-start payloads.
 func parsePasskeyRegisterStartInput(r *http.Request) (passkeyRegisterStartInput, error) {
 	var payload passkeyRegisterStartInput
 	if err := decodeJSONBodyStrict(r, &payload); err != nil {
 		return passkeyRegisterStartInput{}, err
 	}
-	return passkeyRegisterStartInput{Username: strings.TrimSpace(payload.Username)}, nil
+	return payload, nil
 }
 
-// parseUsernameCheckInput parses and normalizes username availability input.
+// parseUsernameCheckInput decodes username availability payloads.
 func parseUsernameCheckInput(r *http.Request) (usernameCheckInput, error) {
 	var payload usernameCheckInput
 	if err := decodeJSONBodyStrict(r, &payload); err != nil {
 		return usernameCheckInput{}, err
 	}
-	return usernameCheckInput{Username: strings.TrimSpace(payload.Username)}, nil
+	return payload, nil
 }
 
-// parsePasskeyLoginStartInput parses and normalizes passkey login-start input.
+// parsePasskeyLoginStartInput decodes passkey login-start payloads.
 func parsePasskeyLoginStartInput(r *http.Request) (passkeyLoginStartInput, error) {
 	var payload passkeyLoginStartInput
 	if err := decodeJSONBodyStrict(r, &payload); err != nil {
 		return passkeyLoginStartInput{}, err
 	}
-	return passkeyLoginStartInput{Username: strings.TrimSpace(payload.Username)}, nil
+	return payload, nil
 }
 
-// parseRecoveryStartInput parses and normalizes recovery start input.
+// parseRecoveryStartInput decodes recovery-start payloads.
 func parseRecoveryStartInput(r *http.Request) (recoveryStartInput, error) {
 	var payload recoveryStartInput
 	if err := decodeJSONBodyStrict(r, &payload); err != nil {
 		return recoveryStartInput{}, err
 	}
-	return recoveryStartInput{
-		Username:     strings.TrimSpace(payload.Username),
-		RecoveryCode: strings.TrimSpace(payload.RecoveryCode),
-	}, nil
+	return payload, nil
 }
 
-// parseRecoveryFinishInput parses and normalizes recovery finish input.
+// parseRecoveryFinishInput decodes recovery-finish payloads and trims next path.
 func parseRecoveryFinishInput(r *http.Request) (recoveryFinishInput, error) {
 	var payload recoveryFinishInput
 	if err := decodeJSONBodyStrict(r, &payload); err != nil {
 		return recoveryFinishInput{}, err
 	}
 	return recoveryFinishInput{
-		RecoverySessionID: strings.TrimSpace(payload.RecoverySessionID),
-		SessionID:         strings.TrimSpace(payload.SessionID),
-		PendingID:         strings.TrimSpace(payload.PendingID),
+		RecoverySessionID: payload.RecoverySessionID,
+		SessionID:         payload.SessionID,
+		PendingID:         payload.PendingID,
 		NextPath:          strings.TrimSpace(payload.NextPath),
 		Credential:        payload.Credential,
 	}, nil

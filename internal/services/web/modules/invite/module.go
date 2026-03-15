@@ -20,7 +20,6 @@ type Module struct {
 	requestMeta requestmeta.SchemePolicy
 	principal   principal.PrincipalResolver
 	sync        DashboardSync
-	healthy     bool
 }
 
 // Config defines constructor dependencies for the invite module.
@@ -29,7 +28,6 @@ type Config struct {
 	RequestMeta   requestmeta.SchemePolicy
 	Principal     principal.PrincipalResolver
 	DashboardSync DashboardSync
-	Healthy       bool
 }
 
 // New returns an invite module with explicit dependencies.
@@ -47,18 +45,11 @@ func New(config Config) Module {
 		requestMeta: config.RequestMeta,
 		principal:   config.Principal,
 		sync:        sync,
-		healthy:     config.Healthy,
 	}
 }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "invite" }
-
-// Healthy reports whether the invite module has an operational runtime service
-// backing its transport surface.
-func (m Module) Healthy() bool {
-	return m.healthy
-}
 
 // Mount wires public invite route handlers.
 func (m Module) Mount() (module.Mount, error) {

@@ -15,7 +15,6 @@ type Module struct {
 	service      profileapp.Service
 	assetBaseURL string
 	principal    principal.PrincipalResolver
-	healthy      bool
 }
 
 // Config defines constructor dependencies for a profile module.
@@ -23,7 +22,6 @@ type Config struct {
 	Service      profileapp.Service
 	AssetBaseURL string
 	Principal    principal.PrincipalResolver
-	Healthy      bool
 }
 
 // New returns a profile module with explicit dependencies.
@@ -36,18 +34,11 @@ func New(config Config) Module {
 		service:      service,
 		assetBaseURL: config.AssetBaseURL,
 		principal:    config.Principal,
-		healthy:      config.Healthy,
 	}
 }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "profile" }
-
-// Healthy reports whether the profile module has an operational runtime service
-// backing its transport surface.
-func (m Module) Healthy() bool {
-	return m.healthy
-}
 
 // Mount wires public profile route handlers.
 func (m Module) Mount() (module.Mount, error) {

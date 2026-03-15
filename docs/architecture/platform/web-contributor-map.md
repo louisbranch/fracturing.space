@@ -40,6 +40,9 @@ Canonical implementation path: `internal/services/web/`.
 - `internal/services/web/platform/*`: shared transport helpers only. Start with package `doc.go` and package-local tests before editing those seams.
 - `internal/services/web/templates`: shared shell and layout primitives. If one area's page set becomes a hotspot, move that set under the owning area instead of extending the shared package indefinitely.
 
+For area-owned public surfaces that are optional by dependency, prefer `ComposePublic`-style constructors that return `(module.Module, bool)` from `composition.go` so the registry can explicitly include or omit whole routes based on configured clients.
+For protected surfaces, prefer `ComposeProtected` constructors that centralize shared options and dependency mapping in `composition.go`, then gate optional protected surfaces (like notifications) in the registry based on explicit `configured` checks.
+
 ## Where changes usually belong
 
 - New route or changed route contract: owning module `routes*.go`, `module.go`, and the matching owned file in `routepath/`.
@@ -78,6 +81,7 @@ The boundary guardrails prefer AST/package invariants and constructor contracts 
   `internal/services/web/server_test_harness_defaults_test.go`
   `internal/services/web/server_test_harness_helpers_test.go`
 - Startup dependency policy and runtime wiring:
+  `internal/services/web/dependencies_test.go`
   `internal/cmd/web/web_test.go`
 - Shared request-state and transport helpers:
   `internal/services/web/principal/requeststate_test.go`

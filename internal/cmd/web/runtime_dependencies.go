@@ -44,7 +44,25 @@ func bootstrapRuntimeDependenciesWithConnFactory(
 	reporter *platformstatus.Reporter,
 	newConn managedConnFactory,
 ) (runtimeDependencies, error) {
-	requirements, err := dependencyRequirements(cfg, reporter)
+	return bootstrapRuntimeDependenciesWithConnFactoryWithResolvers(
+		ctx,
+		cfg,
+		reporter,
+		newConn,
+		dependencyAddressResolverDefaults(),
+	)
+}
+
+// bootstrapRuntimeDependenciesWithConnFactoryWithResolvers allows resolver overrides
+// in tests while retaining runtime dependency assembly behavior.
+func bootstrapRuntimeDependenciesWithConnFactoryWithResolvers(
+	ctx context.Context,
+	cfg Config,
+	reporter *platformstatus.Reporter,
+	newConn managedConnFactory,
+	resolvers map[string]dependencyAddressResolver,
+) (runtimeDependencies, error) {
+	requirements, err := dependencyRequirementsWithResolvers(cfg, reporter, resolvers)
 	if err != nil {
 		return runtimeDependencies{}, fmt.Errorf("resolve web dependency requirements: %w", err)
 	}

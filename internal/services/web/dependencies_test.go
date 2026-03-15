@@ -1,6 +1,7 @@
 package web
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -199,8 +200,53 @@ func TestValidateRequiredDependencyBundleRejectsIncompleteRequiredDependency(t *
 	if err == nil {
 		t.Fatal("expected incomplete dependency error")
 	}
+	var validationErr StartupDependencyValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("validateRequiredDependencyBundle() error type = %T, want StartupDependencyValidationError", err)
+	}
 	if got := err.Error(); got == "" || !containsAll(got, []string{DependencyNameSocial, "principal.social"}) {
 		t.Fatalf("validateRequiredDependencyBundle() error = %q, want social completeness detail", got)
+	}
+}
+
+func TestValidateRequiredDependencyBundleReportsAllMissingDependencies(t *testing.T) {
+	t.Parallel()
+
+	bundle := NewDependencyBundle("")
+	BindAuthDependency(&bundle, &grpc.ClientConn{})
+
+	err := validateRequiredDependencyBundle(&bundle)
+	if err == nil {
+		t.Fatal("expected incomplete dependency error")
+	}
+	var validationErr StartupDependencyValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("validateRequiredDependencyBundle() error type = %T, want StartupDependencyValidationError", err)
+	}
+	if len(validationErr.Issues) != 2 {
+		t.Fatalf("validation issue count = %d, want 2", len(validationErr.Issues))
+	}
+	gotSocial := false
+	gotGame := false
+	for _, issue := range validationErr.Issues {
+		switch issue.Name {
+		case DependencyNameSocial:
+			gotSocial = true
+			if !containsAll(strings.Join(issue.Missing, ","), []string{"principal.social", "modules.profile.social"}) {
+				t.Fatalf("social issue missing = %v, want principal.social and modules.profile.social", issue.Missing)
+			}
+		case DependencyNameGame:
+			gotGame = true
+			if !containsAll(strings.Join(issue.Missing, ","), []string{"modules.campaigns.campaign", "modules.campaigns.participant"}) {
+				t.Fatalf("game issue missing = %v, want campaign and participant client", issue.Missing)
+			}
+		}
+	}
+	if !gotSocial {
+		t.Fatalf("validation issues = %#v, want social issue", validationErr.Issues)
+	}
+	if !gotGame {
+		t.Fatalf("validation issues = %#v, want game issue", validationErr.Issues)
 	}
 }
 

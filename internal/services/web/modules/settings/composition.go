@@ -23,6 +23,14 @@ type CompositionConfig struct {
 	AgentClient      settingsgateway.AgentClient
 }
 
+// ProtectedSurfaceOptions carries the cross-cutting inputs the protected registry is
+// allowed to pass into settings composition.
+type ProtectedSurfaceOptions struct {
+	Base          modulehandler.Base
+	FlashMeta     requestmeta.SchemePolicy
+	DashboardSync DashboardSync
+}
+
 // Compose builds the production settings module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
@@ -58,4 +66,25 @@ func Compose(config CompositionConfig) module.Module {
 		FlashMeta:     config.FlashMeta,
 		DashboardSync: config.DashboardSync,
 	})
+}
+
+// ComposeProtected composes the protected settings surface from module-owned
+// startup dependencies and shared cross-cutting inputs.
+func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) module.Module {
+	return Compose(newCompositionConfig(options, deps))
+}
+
+// newCompositionConfig projects startup dependencies into settings composition
+// input.
+func newCompositionConfig(options ProtectedSurfaceOptions, deps Dependencies) CompositionConfig {
+	return CompositionConfig{
+		Base:             options.Base,
+		FlashMeta:        options.FlashMeta,
+		DashboardSync:    options.DashboardSync,
+		SocialClient:     deps.SocialClient,
+		AccountClient:    deps.AccountClient,
+		PasskeyClient:    deps.PasskeyClient,
+		CredentialClient: deps.CredentialClient,
+		AgentClient:      deps.AgentClient,
+	}
 }

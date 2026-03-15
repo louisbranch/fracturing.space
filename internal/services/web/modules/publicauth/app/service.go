@@ -51,8 +51,7 @@ func NewSessionService(gateway SessionGateway, authBaseURL string) SessionServic
 }
 
 // NewPasskeyService wires passkey-only public auth flows behind input validation.
-func NewPasskeyService(gateway PasskeyGateway, authBaseURL string) PasskeyService {
-	_ = authBaseURL
+func NewPasskeyService(gateway PasskeyGateway) PasskeyService {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}
@@ -60,8 +59,7 @@ func NewPasskeyService(gateway PasskeyGateway, authBaseURL string) PasskeyServic
 }
 
 // NewRecoveryService wires recovery-only public auth flows behind input validation.
-func NewRecoveryService(gateway RecoveryGateway, authBaseURL string) RecoveryService {
-	_ = authBaseURL
+func NewRecoveryService(gateway RecoveryGateway) RecoveryService {
 	if gateway == nil {
 		gateway = unavailableGateway{}
 	}

@@ -23,22 +23,6 @@ func TestModuleIDReturnsDashboard(t *testing.T) {
 	}
 }
 
-func TestModuleHealthyReflectsGatewayState(t *testing.T) {
-	t.Parallel()
-
-	if New(Config{}).Healthy() {
-		t.Fatalf("New().Healthy() = true, want false for degraded module")
-	}
-	gateway := &fakeGateway{}
-	if !New(Config{
-		Service: dashboardapp.NewService(gateway, nil, nil),
-		Base:    modulehandler.NewTestBase(),
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
-	}).Healthy() {
-		t.Fatalf("New(Config{...}).Healthy() = false, want true")
-	}
-}
-
 func TestMountServesDashboardGet(t *testing.T) {
 	t.Parallel()
 
@@ -154,7 +138,6 @@ func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 	m := New(Config{
 		Service: dashboardapp.NewService(gateway, nil, nil),
 		Base:    base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 	mount, err := m.Mount()
 	if err != nil {
@@ -191,7 +174,6 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 	m := New(Config{
 		Service: dashboardapp.NewService(gateway, nil, nil),
 		Base:    base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 	mount, err := m.Mount()
 	if err != nil {
@@ -235,7 +217,6 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 	m := New(Config{
 		Service: dashboardapp.NewService(gateway, nil, nil),
 		Base:    base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 	mount, err := m.Mount()
 	if err != nil {
@@ -272,7 +253,6 @@ func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 	m := New(Config{
 		Service: dashboardapp.NewService(gateway, nil, nil),
 		Base:    base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 	mount, err := m.Mount()
 	if err != nil {
@@ -307,7 +287,6 @@ func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.
 	m := New(Config{
 		Service: dashboardapp.NewService(gateway, nil, nil),
 		Base:    base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 	mount, err := m.Mount()
 	if err != nil {
@@ -350,7 +329,6 @@ func TestMountRendersActiveSessionsBlockWithMultipleJoinLinks(t *testing.T) {
 	m := New(Config{
 		Service: dashboardapp.NewService(gateway, nil, nil),
 		Base:    base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 	mount, err := m.Mount()
 	if err != nil {
@@ -406,7 +384,6 @@ func TestMountRendersCampaignStartNudgesBlock(t *testing.T) {
 	m := New(Config{
 		Service: dashboardapp.NewService(gateway, nil, nil),
 		Base:    base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 	mount, err := m.Mount()
 	if err != nil {

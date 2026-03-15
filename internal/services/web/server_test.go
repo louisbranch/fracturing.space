@@ -2,6 +2,7 @@ package web
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -29,6 +30,39 @@ func TestNewHandlerRequiresDependencies(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected error for missing dependencies")
 	}
+	if got := err.Error(); got == "" || !strings.Contains(got, "web dependencies are required") {
+		t.Fatalf("NewHandler() error = %q, want missing dependencies detail", got)
+	}
+}
+
+func TestNewHandlerReturnsAggregatedDependencyErrors(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewHandler(Config{
+		Dependencies: &DependencyBundle{},
+	})
+	if err == nil {
+		t.Fatal("expected validation error for incomplete dependencies")
+	}
+	var validationErr StartupDependencyValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("NewHandler() error type = %T, want StartupDependencyValidationError", err)
+	}
+	if len(validationErr.Issues) != 3 {
+		t.Fatalf("validation issue count = %d, want 3", len(validationErr.Issues))
+	}
+	for _, want := range []string{DependencyNameAuth, DependencyNameSocial, DependencyNameGame} {
+		found := false
+		for _, issue := range validationErr.Issues {
+			if issue.Name == want {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("validation issues = %#v, want %q", validationErr.Issues, want)
+		}
+	}
 }
 
 func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
@@ -42,15 +76,15 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	publicReq := httptest.NewRequest(http.MethodGet, "/discover/campaigns", nil)
 	publicRR := httptest.NewRecorder()
 	h.ServeHTTP(publicRR, publicReq)
-	if publicRR.Code != http.StatusOK {
-		t.Fatalf("public status = %d, want %d", publicRR.Code, http.StatusOK)
+	if publicRR.Code != http.StatusNotFound {
+		t.Fatalf("public status = %d, want %d", publicRR.Code, http.StatusNotFound)
 	}
 
 	publicProfileReq := httptest.NewRequest(http.MethodGet, "/u/alice", nil)
 	publicProfileRR := httptest.NewRecorder()
 	h.ServeHTTP(publicProfileRR, publicProfileReq)
-	if publicProfileRR.Code != http.StatusServiceUnavailable {
-		t.Fatalf("public profile status = %d, want %d", publicProfileRR.Code, http.StatusServiceUnavailable)
+	if publicProfileRR.Code != http.StatusNotFound {
+		t.Fatalf("public profile status = %d, want %d", publicProfileRR.Code, http.StatusNotFound)
 	}
 
 	protectedReq := httptest.NewRequest(http.MethodGet, "/app/settings/profile", nil)
@@ -241,7 +275,14 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 func TestNewHandlerCanonicalizesDiscoveryRoot(t *testing.T) {
 	t.Parallel()
 
-	h, err := newTestHandler(Config{})
+	h, err := newTestHandler(Config{
+		Dependencies: newDependencyBundle(
+			principal.Dependencies{},
+			modules.Dependencies{
+				Discovery: modules.DiscoveryDependencies{DiscoveryClient: defaultDiscoveryClient()},
+			},
+		),
+	})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}

@@ -23,6 +23,12 @@ type CompositionConfig struct {
 	StatusClient  statusv1.StatusServiceClient
 }
 
+// ProtectedSurfaceOptions carries the cross-cutting inputs the protected registry is
+// allowed to pass into dashboard composition.
+type ProtectedSurfaceOptions struct {
+	Base modulehandler.Base
+}
+
 // Compose builds the production dashboard module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
@@ -33,9 +39,23 @@ func Compose(config CompositionConfig) module.Module {
 			nil,
 			StatusHealthProvider(config.StatusClient, nil),
 		),
-		Base:    config.Base,
-		Healthy: dashboardapp.IsGatewayHealthy(gateway),
+		Base: config.Base,
 	})
+}
+
+// ComposeProtected composes the protected dashboard surface from module-owned
+// startup dependencies and shared cross-cutting inputs.
+func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) module.Module {
+	return Compose(newCompositionConfig(options, deps))
+}
+
+// newCompositionConfig projects startup dependencies into dashboard composition input.
+func newCompositionConfig(options ProtectedSurfaceOptions, deps Dependencies) CompositionConfig {
+	return CompositionConfig{
+		Base:          options.Base,
+		UserHubClient: deps.UserHubClient,
+		StatusClient:  deps.StatusClient,
+	}
 }
 
 // statusHealthTimeout caps a per-request status service query.

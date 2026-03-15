@@ -47,11 +47,6 @@ func New(config Config) Module {
 // ID returns a stable module identifier.
 func (Module) ID() string { return "campaigns" }
 
-// Healthy reports whether the campaigns module has an operational gateway.
-func (m Module) Healthy() bool {
-	return m.mountErr == nil
-}
-
 // Mount wires campaign route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	if m.mountErr != nil {

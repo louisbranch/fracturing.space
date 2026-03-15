@@ -10,8 +10,8 @@ func newConfigFromGateway(gateway gatewayServices, authBaseURL string) Config {
 	return Config{
 		PageService:    publicauthapp.NewPageService(authBaseURL),
 		SessionService: publicauthapp.NewSessionService(gateway, authBaseURL),
-		PasskeyService: publicauthapp.NewPasskeyService(gateway, authBaseURL),
-		Recovery:       publicauthapp.NewRecoveryService(gateway, authBaseURL),
+		PasskeyService: publicauthapp.NewPasskeyService(gateway),
+		Recovery:       publicauthapp.NewRecoveryService(gateway),
 	}
 }
 
@@ -27,16 +27,27 @@ func withPrincipal(requestPrincipal principal.PrincipalResolver) func(*Config) {
 	}
 }
 
-func withSurface(surface Surface) func(*Config) {
-	return func(config *Config) {
-		config.Surface = surface
-	}
-}
-
 func newModuleFromGateway(gateway gatewayServices, authBaseURL string, opts ...func(*Config)) Module {
 	config := newConfigFromGateway(gateway, authBaseURL)
 	for _, opt := range opts {
 		opt(&config)
 	}
-	return New(config)
+	return newModuleFromConfig(config)
+}
+
+func newModuleFromConfig(config Config) Module {
+	return NewShell(config)
+}
+
+func newModuleFromGatewayWithFactory(
+	gateway gatewayServices,
+	authBaseURL string,
+	newModule func(Config) Module,
+	opts ...func(*Config),
+) Module {
+	config := newConfigFromGateway(gateway, authBaseURL)
+	for _, opt := range opts {
+		opt(&config)
+	}
+	return newModule(config)
 }

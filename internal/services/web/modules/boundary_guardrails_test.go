@@ -132,10 +132,10 @@ func TestPublicAuthSurfaceServicesStaySplitEndToEnd(t *testing.T) {
 	assertStructFieldType(t, "publicauth/handlers.go", "handlersConfig", "Principal", "principal.PrincipalResolver")
 	assertFuncCallsSelector(t, "publicauth/handlers.go", "newHandlers", "publichandler", "NewBaseFromPrincipal")
 
-	assertFuncCallsSelector(t, "publicauth/composition.go", "Compose", "publicauthapp", "NewPageService")
-	assertFuncCallsSelector(t, "publicauth/composition.go", "Compose", "publicauthapp", "NewSessionService")
-	assertFuncCallsSelector(t, "publicauth/composition.go", "Compose", "publicauthapp", "NewPasskeyService")
-	assertFuncCallsSelector(t, "publicauth/composition.go", "Compose", "publicauthapp", "NewRecoveryService")
+	assertFuncCallsSelector(t, "publicauth/composition.go", "compose", "publicauthapp", "NewPageService")
+	assertFuncCallsSelector(t, "publicauth/composition.go", "compose", "publicauthapp", "NewSessionService")
+	assertFuncCallsSelector(t, "publicauth/composition.go", "compose", "publicauthapp", "NewPasskeyService")
+	assertFuncCallsSelector(t, "publicauth/composition.go", "compose", "publicauthapp", "NewRecoveryService")
 	assertFuncExists(t, "publicauth/composition.go", "ComposeSurfaceSet")
 
 	assertTypeExists(t, "publicauth/app/service.go", "pageService")
@@ -176,8 +176,8 @@ func TestRegistryUsesAreaOwnedCompositionEntrypoints(t *testing.T) {
 	t.Parallel()
 
 	assertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "publicauth", "ComposeSurfaceSet")
-	assertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "discovery", "Compose")
-	assertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "profile", "Compose")
+	assertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "discovery", "ComposePublic")
+	assertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "profile", "ComposePublic")
 	assertFuncCallsSelector(t, "registry_public.go", "defaultPublicModules", "invite", "ComposePublic")
 	assertFuncDoesNotCallSelector(t, "registry_public.go", "defaultPublicModules", "publicauthgateway", "NewGRPCGateway")
 	assertFuncDoesNotCallSelector(t, "registry_public.go", "defaultPublicModules", "profilegateway", "NewGRPCGateway")
@@ -185,9 +185,10 @@ func TestRegistryUsesAreaOwnedCompositionEntrypoints(t *testing.T) {
 	assertFuncDoesNotCallSelector(t, "registry_public.go", "defaultPublicModules", "dashboardsync", "New")
 
 	assertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "modulehandler", "NewBaseFromPrincipal")
-	assertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "dashboard", "Compose")
-	assertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "settings", "Compose")
+	assertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "dashboard", "ComposeProtected")
+	assertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "settings", "ComposeProtected")
 	assertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "campaigns", "ComposeProtected")
+	assertFuncCallsSelector(t, "registry_protected.go", "buildProtectedModules", "notifications", "ComposeProtected")
 	assertFuncDoesNotCallSelector(t, "registry_protected.go", "buildProtectedModules", "dashboardgateway", "NewGRPCGateway")
 	assertFuncDoesNotCallSelector(t, "registry_protected.go", "buildProtectedModules", "settingsgateway", "NewGRPCGateway")
 	assertFuncDoesNotCallSelector(t, "registry_protected.go", "buildProtectedModules", "campaigngateway", "NewGRPCGateway")

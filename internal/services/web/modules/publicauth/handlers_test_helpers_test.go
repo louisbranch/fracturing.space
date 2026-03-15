@@ -25,8 +25,8 @@ func newHandlersFromGateway(
 	return newHandlers(handlersConfig{
 		Pages:     publicauthapp.NewPageService(authBaseURL),
 		Session:   publicauthapp.NewSessionService(gateway, authBaseURL),
-		Passkeys:  publicauthapp.NewPasskeyService(gateway, authBaseURL),
-		Recovery:  publicauthapp.NewRecoveryService(gateway, authBaseURL),
+		Passkeys:  publicauthapp.NewPasskeyService(gateway),
+		Recovery:  publicauthapp.NewRecoveryService(gateway),
 		Policy:    policy,
 		Principal: resolver,
 	})
