@@ -356,6 +356,47 @@ func (a interactionApplication) EndScenePlayerPhase(ctx context.Context, campaig
 	return a.GetInteractionState(ctx, campaignID)
 }
 
+func (a interactionApplication) CommitSceneGMOutput(ctx context.Context, campaignID string, in *campaignv1.CommitSceneGMOutputRequest) (*campaignv1.InteractionState, error) {
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return nil, err
+	}
+	text := strings.TrimSpace(in.GetText())
+	if text == "" {
+		return nil, status.Error(codes.InvalidArgument, "text is required")
+	}
+	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpSessionAction); err != nil {
+		return nil, err
+	}
+	activeSession, currentSessionInteraction, err := a.requireActiveSessionInteraction(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	if err := requireAuthoritativeGMActor(actor, currentSessionInteraction); err != nil {
+		return nil, err
+	}
+	_, currentSceneInteraction, err := a.requireActiveSceneForGM(ctx, campaignID, activeSession.ID, sceneID, currentSessionInteraction)
+	if err != nil {
+		return nil, err
+	}
+	if currentSceneInteraction.PhaseOpen && currentSceneInteraction.PhaseStatus == scene.PlayerPhaseStatusPlayers {
+		return nil, status.Error(codes.FailedPrecondition, "scene player phase is open")
+	}
+	payload := scene.GMOutputCommittedPayload{
+		SceneID:       ids.SceneID(sceneID),
+		ParticipantID: ids.ParticipantID(actor.ID),
+		Text:          text,
+	}
+	if err := a.executeSceneCommand(ctx, commandTypeSceneGMOutputCommit, campaignID, activeSession.ID, sceneID, payload, "scene.gm_output.commit"); err != nil {
+		return nil, err
+	}
+	return a.GetInteractionState(ctx, campaignID)
+}
+
 func (a interactionApplication) AcceptScenePlayerPhase(ctx context.Context, campaignID string, in *campaignv1.AcceptScenePlayerPhaseRequest) (*campaignv1.InteractionState, error) {
 	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
 	if err != nil {
@@ -570,7 +611,7 @@ func (a interactionApplication) RetryAIGMTurn(ctx context.Context, campaignID st
 	if sessionInteraction.AITurn.Status != session.AITurnStatusFailed || strings.TrimSpace(sessionInteraction.AITurn.TurnToken) == "" {
 		return nil, status.Error(codes.FailedPrecondition, "session does not have a failed ai gm turn")
 	}
-	eligible, err := a.aiTurnEligibility(ctx, campaignRecord, activeSession, sessionInteraction)
+	eligible, err := a.aiTurnEligibility(ctx, campaignRecord, activeSession, sessionInteraction, sessionInteraction.AITurn.SourceEventType)
 	if err != nil {
 		return nil, err
 	}
@@ -743,10 +784,11 @@ func (a interactionApplication) loadSceneState(ctx context.Context, campaignID s
 		Name:        sceneRecord.Name,
 		Description: sceneRecord.Description,
 		Characters:  characters,
+		GmOutput:    sceneGMOutputToProto(sceneInteraction),
 	}, sceneInteraction, nil
 }
 
-func (a interactionApplication) requireActiveScenePhase(
+func (a interactionApplication) requireActiveSceneForGM(
 	ctx context.Context,
 	campaignID string,
 	activeSessionID string,
@@ -779,6 +821,20 @@ func (a interactionApplication) requireActiveScenePhase(
 			ActingParticipantIDs: []string{},
 			Slots:                []storage.ScenePlayerSlot{},
 		}
+	}
+	return sceneRecord, sceneInteraction, nil
+}
+
+func (a interactionApplication) requireActiveScenePhase(
+	ctx context.Context,
+	campaignID string,
+	activeSessionID string,
+	sceneID string,
+	sessionInteraction storage.SessionInteraction,
+) (storage.SceneRecord, storage.SceneInteraction, error) {
+	sceneRecord, sceneInteraction, err := a.requireActiveSceneForGM(ctx, campaignID, activeSessionID, sceneID, sessionInteraction)
+	if err != nil {
+		return storage.SceneRecord{}, storage.SceneInteraction{}, err
 	}
 	if !sceneInteraction.PhaseOpen || strings.TrimSpace(sceneInteraction.PhaseID) == "" {
 		return storage.SceneRecord{}, storage.SceneInteraction{}, status.Error(codes.FailedPrecondition, "scene player phase is not open")
@@ -1077,7 +1133,9 @@ func (a interactionApplication) aiTurnEligibility(
 	campaignRecord storage.CampaignRecord,
 	activeSession storage.SessionRecord,
 	sessionInteraction storage.SessionInteraction,
+	sourceEventType string,
 ) (aiTurnEligibilityResult, error) {
+	bootstrap := strings.TrimSpace(sourceEventType) == string(session.EventTypeStarted)
 	if campaignRecord.GmMode != campaign.GmModeAI && campaignRecord.GmMode != campaign.GmModeHybrid {
 		return aiTurnEligibilityResult{reason: "campaign gm mode does not support ai orchestration"}, nil
 	}
@@ -1090,7 +1148,7 @@ func (a interactionApplication) aiTurnEligibility(
 	if sessionInteraction.OOCPaused {
 		return aiTurnEligibilityResult{reason: "session is paused for out-of-character discussion"}, nil
 	}
-	if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" {
+	if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" && !bootstrap {
 		return aiTurnEligibilityResult{reason: "session has no active scene"}, nil
 	}
 	if strings.TrimSpace(sessionInteraction.GMAuthorityParticipantID) == "" {
@@ -1108,6 +1166,9 @@ func (a interactionApplication) aiTurnEligibility(
 	}
 	if owner.Controller != participant.ControllerAI {
 		return aiTurnEligibilityResult{reason: "gm authority participant is not ai-controlled"}, nil
+	}
+	if strings.TrimSpace(sessionInteraction.ActiveSceneID) == "" {
+		return aiTurnEligibilityResult{ok: true, ownerParticipant: owner}, nil
 	}
 	sceneInteraction, err := a.stores.SceneInteraction.GetSceneInteraction(ctx, campaignRecord.ID, sessionInteraction.ActiveSceneID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
@@ -1206,6 +1267,20 @@ func sceneInteractionToProto(interaction storage.SceneInteraction) *campaignv1.S
 		ActingParticipantIds: actingParticipants,
 		Slots:                slots,
 	}
+}
+
+func sceneGMOutputToProto(interaction storage.SceneInteraction) *campaignv1.InteractionGMOutput {
+	if strings.TrimSpace(interaction.GMOutputText) == "" {
+		return nil
+	}
+	output := &campaignv1.InteractionGMOutput{
+		Text:          interaction.GMOutputText,
+		ParticipantId: interaction.GMOutputParticipantID,
+	}
+	if interaction.GMOutputUpdatedAt != nil {
+		output.UpdatedAt = timestamppb.New(*interaction.GMOutputUpdatedAt)
+	}
+	return output
 }
 
 func scenePhaseStatusToProto(status scene.PlayerPhaseStatus) campaignv1.ScenePhaseStatus {

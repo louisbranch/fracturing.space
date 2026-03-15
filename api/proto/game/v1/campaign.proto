@@ -316,9 +316,6 @@ message IssueCampaignAISessionGrantRequest {
 
   // Expected active session ID.
   string session_id = 2;
-
-  // Expected bound AI agent ID.
-  string ai_agent_id = 3;
 }
 
 message IssueCampaignAISessionGrantResponse {
@@ -332,12 +329,13 @@ message AISessionGrant {
   string grant_id = 2;
   string campaign_id = 3;
   string session_id = 4;
-  string ai_agent_id = 5;
   uint64 auth_epoch = 6;
   google.protobuf.Timestamp issued_at = 7;
   google.protobuf.Timestamp expires_at = 8;
   // User ID context at issuance time when available.
   string issued_for_user_id = 9;
+  // Optional AI GM participant identity fixed for this grant.
+  string participant_id = 10;
 }
 
 message GetCampaignAIBindingUsageRequest {
@@ -362,4 +360,5 @@ message GetCampaignAIAuthStateResponse {
   string ai_agent_id = 2;
   string active_session_id = 3;
   uint64 auth_epoch = 4;
+  string participant_id = 5;
 }

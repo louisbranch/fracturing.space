@@ -5,7 +5,7 @@ nav_order: 3
 has_children: true
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-12"
+last_reviewed: "2026-03-13"
 ---
 
 # Platform surfaces
@@ -14,6 +14,7 @@ Service-boundary and transport-boundary architecture documentation.
 
 - [Campaign authorization model](campaign-authorization-model.md)
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
+- [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)
 - [Interaction surfaces](interaction-surfaces.md)
 - [Identity and OAuth](identity-and-oauth.md)
 - [Web passkey recovery and device enrollment](web-passkey-recovery-and-device-enrollment.md)

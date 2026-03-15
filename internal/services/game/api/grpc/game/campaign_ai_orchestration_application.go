@@ -40,7 +40,7 @@ func (a campaignAIOrchestrationApplication) QueueAIGMTurn(
 	if activeSession == nil || strings.TrimSpace(activeSession.ID) != strings.TrimSpace(sessionID) {
 		return aiTurnToProto(storage.SessionAITurn{Status: session.AITurnStatusIdle}), nil
 	}
-	eligible, err := a.interaction.aiTurnEligibility(ctx, campaignRecord, *activeSession, sessionInteraction)
+	eligible, err := a.interaction.aiTurnEligibility(ctx, campaignRecord, *activeSession, sessionInteraction, sourceEventType)
 	if err != nil {
 		return nil, err
 	}

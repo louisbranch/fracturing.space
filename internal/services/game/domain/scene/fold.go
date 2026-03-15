@@ -29,6 +29,7 @@ func FoldHandledTypes() []event.Type {
 		EventTypePlayerPhaseRevisionsRequested,
 		EventTypePlayerPhaseAccepted,
 		EventTypePlayerPhaseEnded,
+		EventTypeGMOutputCommitted,
 	}
 }
 
@@ -227,6 +228,13 @@ func Fold(state State, evt event.Event) (State, error) {
 		state.PlayerPhaseActingCharacters = nil
 		state.PlayerPhaseActingParticipants = nil
 		state.PlayerPhaseSlots = nil
+	case EventTypeGMOutputCommitted:
+		var payload GMOutputCommittedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("scene fold %s: %w", evt.Type, err)
+		}
+		state.GMOutputText = payload.Text
+		state.GMOutputParticipantID = payload.ParticipantID
 	}
 	// Unknown event types are silently ignored so that replay remains
 	// forward-compatible when new events are added before the fold is updated.

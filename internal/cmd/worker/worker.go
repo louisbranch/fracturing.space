@@ -16,6 +16,7 @@ import (
 type Config struct {
 	Port              int           `env:"FRACTURING_SPACE_WORKER_PORT" envDefault:"8089"`
 	AuthAddr          string        `env:"FRACTURING_SPACE_WORKER_AUTH_ADDR"`
+	AIAddr            string        `env:"FRACTURING_SPACE_WORKER_AI_ADDR"`
 	GameAddr          string        `env:"FRACTURING_SPACE_WORKER_GAME_ADDR"`
 	NotificationsAddr string        `env:"FRACTURING_SPACE_WORKER_NOTIFICATIONS_ADDR"`
 	SocialAddr        string        `env:"FRACTURING_SPACE_WORKER_SOCIAL_ADDR"`
@@ -36,12 +37,14 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 		return Config{}, err
 	}
 	cfg.AuthAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AuthAddr, serviceaddr.ServiceAuth)
+	cfg.AIAddr = serviceaddr.OrDefaultGRPCAddr(cfg.AIAddr, serviceaddr.ServiceAI)
 	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
 	cfg.NotificationsAddr = serviceaddr.OrDefaultGRPCAddr(cfg.NotificationsAddr, serviceaddr.ServiceNotifications)
 	cfg.SocialAddr = serviceaddr.OrDefaultGRPCAddr(cfg.SocialAddr, serviceaddr.ServiceSocial)
 	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 	fs.IntVar(&cfg.Port, "port", cfg.Port, "The worker health gRPC server port")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "The auth gRPC server address")
+	fs.StringVar(&cfg.AIAddr, "ai-addr", cfg.AIAddr, "The ai gRPC server address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "The game gRPC server address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "The notifications gRPC server address")
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "The social gRPC server address")
@@ -67,6 +70,7 @@ func Run(ctx context.Context, cfg Config) error {
 			cfg.StatusAddr,
 			entrypoint.Capability("worker.processing", platformstatus.Operational),
 			entrypoint.Capability("worker.auth.integration", platformstatus.Operational),
+			entrypoint.Capability("worker.ai.integration", platformstatus.Operational),
 			entrypoint.Capability("worker.game.integration", platformstatus.Operational),
 			entrypoint.Capability("worker.notifications.integration", platformstatus.Operational),
 			entrypoint.Capability("worker.social.integration", platformstatus.Operational),
@@ -76,6 +80,7 @@ func Run(ctx context.Context, cfg Config) error {
 		return workerserver.Run(ctx, workerserver.RuntimeConfig{
 			Port:              cfg.Port,
 			AuthAddr:          cfg.AuthAddr,
+			AIAddr:            cfg.AIAddr,
 			GameAddr:          cfg.GameAddr,
 			NotificationsAddr: cfg.NotificationsAddr,
 			SocialAddr:        cfg.SocialAddr,

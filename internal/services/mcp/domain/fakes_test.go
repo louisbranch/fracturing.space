@@ -92,6 +92,30 @@ func (f *fakeSessionClient) EndSession(ctx context.Context, _ *statev1.EndSessio
 	return f.endResp, f.endErr
 }
 
+// fakeSceneClient implements statev1.SceneServiceClient for testing.
+type fakeSceneClient struct {
+	statev1.SceneServiceClient
+
+	createResp *statev1.CreateSceneResponse
+	createErr  error
+	listResp   *statev1.ListScenesResponse
+	listErr    error
+	createCtx  context.Context
+	lastCreate *statev1.CreateSceneRequest
+	lastList   *statev1.ListScenesRequest
+}
+
+func (f *fakeSceneClient) CreateScene(ctx context.Context, req *statev1.CreateSceneRequest, _ ...grpc.CallOption) (*statev1.CreateSceneResponse, error) {
+	f.createCtx = ctx
+	f.lastCreate = req
+	return f.createResp, f.createErr
+}
+
+func (f *fakeSceneClient) ListScenes(_ context.Context, req *statev1.ListScenesRequest, _ ...grpc.CallOption) (*statev1.ListScenesResponse, error) {
+	f.lastList = req
+	return f.listResp, f.listErr
+}
+
 // fakeInteractionClient implements statev1.InteractionServiceClient for testing.
 type fakeInteractionClient struct {
 	statev1.InteractionServiceClient
@@ -108,6 +132,8 @@ type fakeInteractionClient struct {
 	yieldErr           error
 	unyieldResp        *statev1.UnyieldScenePlayerPhaseResponse
 	unyieldErr         error
+	commitGMOutputResp *statev1.CommitSceneGMOutputResponse
+	commitGMOutputErr  error
 	endPhaseResp       *statev1.EndScenePlayerPhaseResponse
 	endPhaseErr        error
 	pauseOOCResp       *statev1.PauseSessionForOOCResponse
@@ -126,6 +152,7 @@ type fakeInteractionClient struct {
 	submitPostCtx      context.Context
 	yieldCtx           context.Context
 	unyieldCtx         context.Context
+	commitGMOutputCtx  context.Context
 	endPhaseCtx        context.Context
 	pauseOOCCtx        context.Context
 	postOOCCtx         context.Context
@@ -138,6 +165,7 @@ type fakeInteractionClient struct {
 	lastSubmitRequest  *statev1.SubmitScenePlayerPostRequest
 	lastYieldRequest   *statev1.YieldScenePlayerPhaseRequest
 	lastUnyieldRequest *statev1.UnyieldScenePlayerPhaseRequest
+	lastCommitRequest  *statev1.CommitSceneGMOutputRequest
 	lastEndRequest     *statev1.EndScenePlayerPhaseRequest
 	lastPauseRequest   *statev1.PauseSessionForOOCRequest
 	lastPostRequest    *statev1.PostSessionOOCRequest
@@ -180,6 +208,12 @@ func (f *fakeInteractionClient) UnyieldScenePlayerPhase(ctx context.Context, req
 	f.unyieldCtx = ctx
 	f.lastUnyieldRequest = req
 	return f.unyieldResp, f.unyieldErr
+}
+
+func (f *fakeInteractionClient) CommitSceneGMOutput(ctx context.Context, req *statev1.CommitSceneGMOutputRequest, _ ...grpc.CallOption) (*statev1.CommitSceneGMOutputResponse, error) {
+	f.commitGMOutputCtx = ctx
+	f.lastCommitRequest = req
+	return f.commitGMOutputResp, f.commitGMOutputErr
 }
 
 func (f *fakeInteractionClient) EndScenePlayerPhase(ctx context.Context, req *statev1.EndScenePlayerPhaseRequest, _ ...grpc.CallOption) (*statev1.EndScenePlayerPhaseResponse, error) {

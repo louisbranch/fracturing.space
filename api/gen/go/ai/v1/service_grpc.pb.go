@@ -668,6 +668,109 @@ var InvocationService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	CampaignOrchestrationService_RunCampaignTurn_FullMethodName = "/ai.v1.CampaignOrchestrationService/RunCampaignTurn"
+)
+
+// CampaignOrchestrationServiceClient is the client API for CampaignOrchestrationService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CampaignOrchestrationServiceClient interface {
+	RunCampaignTurn(ctx context.Context, in *RunCampaignTurnRequest, opts ...grpc.CallOption) (*RunCampaignTurnResponse, error)
+}
+
+type campaignOrchestrationServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCampaignOrchestrationServiceClient(cc grpc.ClientConnInterface) CampaignOrchestrationServiceClient {
+	return &campaignOrchestrationServiceClient{cc}
+}
+
+func (c *campaignOrchestrationServiceClient) RunCampaignTurn(ctx context.Context, in *RunCampaignTurnRequest, opts ...grpc.CallOption) (*RunCampaignTurnResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(RunCampaignTurnResponse)
+	err := c.cc.Invoke(ctx, CampaignOrchestrationService_RunCampaignTurn_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CampaignOrchestrationServiceServer is the server API for CampaignOrchestrationService service.
+// All implementations must embed UnimplementedCampaignOrchestrationServiceServer
+// for forward compatibility.
+type CampaignOrchestrationServiceServer interface {
+	RunCampaignTurn(context.Context, *RunCampaignTurnRequest) (*RunCampaignTurnResponse, error)
+	mustEmbedUnimplementedCampaignOrchestrationServiceServer()
+}
+
+// UnimplementedCampaignOrchestrationServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedCampaignOrchestrationServiceServer struct{}
+
+func (UnimplementedCampaignOrchestrationServiceServer) RunCampaignTurn(context.Context, *RunCampaignTurnRequest) (*RunCampaignTurnResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunCampaignTurn not implemented")
+}
+func (UnimplementedCampaignOrchestrationServiceServer) mustEmbedUnimplementedCampaignOrchestrationServiceServer() {
+}
+func (UnimplementedCampaignOrchestrationServiceServer) testEmbeddedByValue() {}
+
+// UnsafeCampaignOrchestrationServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CampaignOrchestrationServiceServer will
+// result in compilation errors.
+type UnsafeCampaignOrchestrationServiceServer interface {
+	mustEmbedUnimplementedCampaignOrchestrationServiceServer()
+}
+
+func RegisterCampaignOrchestrationServiceServer(s grpc.ServiceRegistrar, srv CampaignOrchestrationServiceServer) {
+	// If the following call pancis, it indicates UnimplementedCampaignOrchestrationServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&CampaignOrchestrationService_ServiceDesc, srv)
+}
+
+func _CampaignOrchestrationService_RunCampaignTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RunCampaignTurnRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignOrchestrationServiceServer).RunCampaignTurn(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignOrchestrationService_RunCampaignTurn_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignOrchestrationServiceServer).RunCampaignTurn(ctx, req.(*RunCampaignTurnRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// CampaignOrchestrationService_ServiceDesc is the grpc.ServiceDesc for CampaignOrchestrationService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CampaignOrchestrationService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ai.v1.CampaignOrchestrationService",
+	HandlerType: (*CampaignOrchestrationServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "RunCampaignTurn",
+			Handler:    _CampaignOrchestrationService_RunCampaignTurn_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "ai/v1/service.proto",
+}
+
+const (
 	ProviderGrantService_StartProviderConnect_FullMethodName  = "/ai.v1.ProviderGrantService/StartProviderConnect"
 	ProviderGrantService_FinishProviderConnect_FullMethodName = "/ai.v1.ProviderGrantService/FinishProviderConnect"
 	ProviderGrantService_ListProviderGrants_FullMethodName    = "/ai.v1.ProviderGrantService/ListProviderGrants"

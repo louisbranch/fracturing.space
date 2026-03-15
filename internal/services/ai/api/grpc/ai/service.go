@@ -7,8 +7,10 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
 const (
@@ -112,6 +114,7 @@ type Service struct {
 	aiv1.UnimplementedCredentialServiceServer
 	aiv1.UnimplementedAgentServiceServer
 	aiv1.UnimplementedInvocationServiceServer
+	aiv1.UnimplementedCampaignOrchestrationServiceServer
 	aiv1.UnimplementedProviderGrantServiceServer
 	aiv1.UnimplementedAccessRequestServiceServer
 
@@ -124,7 +127,10 @@ type Service struct {
 	gameCampaignAIClient       gamev1.CampaignAIServiceClient
 	providerOAuthAdapters      map[providergrant.Provider]ProviderOAuthAdapter
 	providerInvocationAdapters map[providergrant.Provider]ProviderInvocationAdapter
+	providerToolAdapters       map[providergrant.Provider]orchestration.Provider
 	providerModelAdapters      map[providergrant.Provider]ProviderModelAdapter
+	campaignTurnRunner         orchestration.CampaignTurnRunner
+	sessionGrantConfig         *aisessiongrant.Config
 	sealer                     SecretSealer
 
 	clock       func() time.Time
@@ -180,6 +186,10 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 	if modelAdapter, ok := defaultOpenAIAdapter.(ProviderModelAdapter); ok {
 		providerModelAdapters[providergrant.ProviderOpenAI] = modelAdapter
 	}
+	providerToolAdapters := map[providergrant.Provider]orchestration.Provider{}
+	if toolAdapter, ok := defaultOpenAIAdapter.(orchestration.Provider); ok {
+		providerToolAdapters[providergrant.ProviderOpenAI] = toolAdapter
+	}
 	return &Service{
 		credentialStore:     credentialStore,
 		agentStore:          agentStore,
@@ -193,6 +203,7 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 		providerInvocationAdapters: map[providergrant.Provider]ProviderInvocationAdapter{
 			providergrant.ProviderOpenAI: defaultOpenAIAdapter,
 		},
+		providerToolAdapters:  providerToolAdapters,
 		providerModelAdapters: providerModelAdapters,
 		sealer:                sealer,
 		clock:                 time.Now,
@@ -231,12 +242,45 @@ func (s *Service) SetOpenAIInvocationAdapter(adapter ProviderInvocationAdapter) 
 		s.providerInvocationAdapters = make(map[providergrant.Provider]ProviderInvocationAdapter)
 	}
 	s.providerInvocationAdapters[providergrant.ProviderOpenAI] = adapter
+	if toolAdapter, ok := adapter.(orchestration.Provider); ok {
+		if s.providerToolAdapters == nil {
+			s.providerToolAdapters = make(map[providergrant.Provider]orchestration.Provider)
+		}
+		s.providerToolAdapters[providergrant.ProviderOpenAI] = toolAdapter
+	}
 	if modelAdapter, ok := adapter.(ProviderModelAdapter); ok {
 		if s.providerModelAdapters == nil {
 			s.providerModelAdapters = make(map[providergrant.Provider]ProviderModelAdapter)
 		}
 		s.providerModelAdapters[providergrant.ProviderOpenAI] = modelAdapter
 	}
+}
+
+// SetOpenAICampaignTurnAdapter overrides the OpenAI tool-capable campaign adapter.
+func (s *Service) SetOpenAICampaignTurnAdapter(adapter orchestration.Provider) {
+	if s == nil || adapter == nil {
+		return
+	}
+	if s.providerToolAdapters == nil {
+		s.providerToolAdapters = make(map[providergrant.Provider]orchestration.Provider)
+	}
+	s.providerToolAdapters[providergrant.ProviderOpenAI] = adapter
+}
+
+// SetCampaignTurnRunner overrides the campaign-turn orchestration runner.
+func (s *Service) SetCampaignTurnRunner(runner orchestration.CampaignTurnRunner) {
+	if s == nil || runner == nil {
+		return
+	}
+	s.campaignTurnRunner = runner
+}
+
+// SetAISessionGrantConfig sets the validated session-grant config used by the internal campaign-turn path.
+func (s *Service) SetAISessionGrantConfig(cfg aisessiongrant.Config) {
+	if s == nil {
+		return
+	}
+	s.sessionGrantConfig = &cfg
 }
 
 // SetOpenAIModelAdapter overrides the OpenAI model-listing adapter.

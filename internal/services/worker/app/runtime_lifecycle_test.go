@@ -27,6 +27,7 @@ func (fn loopRunnerFunc) Run(ctx context.Context) error {
 func TestNormalizeRuntimeConfigDefaults(t *testing.T) {
 	cfg, err := normalizeRuntimeConfig(RuntimeConfig{
 		AuthAddr:          "auth:8083",
+		AIAddr:            "ai:8087",
 		GameAddr:          "game:8082",
 		NotificationsAddr: "notifications:8088",
 		SocialAddr:        "social:8090",
@@ -45,6 +46,7 @@ func TestNormalizeRuntimeConfigDefaults(t *testing.T) {
 func TestNewRuntimeRequiresContext(t *testing.T) {
 	_, err := NewRuntime(nil, RuntimeConfig{
 		AuthAddr:          "auth:8083",
+		AIAddr:            "ai:8087",
 		GameAddr:          "game:8082",
 		NotificationsAddr: "notifications:8088",
 		SocialAddr:        "social:8090",
@@ -58,6 +60,7 @@ func TestNewRuntimeRequiresContext(t *testing.T) {
 func TestRunRequiresContext(t *testing.T) {
 	err := Run(nil, RuntimeConfig{
 		AuthAddr:          "auth:8083",
+		AIAddr:            "ai:8087",
 		GameAddr:          "game:8082",
 		NotificationsAddr: "notifications:8088",
 		SocialAddr:        "social:8090",
@@ -84,9 +87,20 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 			wantErr: "auth address is required",
 		},
 		{
+			name: "missing ai",
+			cfg: RuntimeConfig{
+				AuthAddr:          "auth:8083",
+				GameAddr:          "game:8082",
+				NotificationsAddr: "notifications:8088",
+				SocialAddr:        "social:8090",
+			},
+			wantErr: "ai address is required",
+		},
+		{
 			name: "missing game",
 			cfg: RuntimeConfig{
 				AuthAddr:          "auth:8083",
+				AIAddr:            "ai:8087",
 				NotificationsAddr: "notifications:8088",
 				SocialAddr:        "social:8090",
 			},
@@ -96,6 +110,7 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 			name: "missing notifications",
 			cfg: RuntimeConfig{
 				AuthAddr:   "auth:8083",
+				AIAddr:     "ai:8087",
 				GameAddr:   "game:8082",
 				SocialAddr: "social:8090",
 			},
@@ -105,6 +120,7 @@ func TestNormalizeRuntimeConfigRequiresAddresses(t *testing.T) {
 			name: "missing social",
 			cfg: RuntimeConfig{
 				AuthAddr:          "auth:8083",
+				AIAddr:            "ai:8087",
 				GameAddr:          "game:8082",
 				NotificationsAddr: "notifications:8088",
 			},
@@ -172,7 +188,7 @@ func (lifecycleSocialServer) SyncDirectoryUser(context.Context, *socialv1.SyncDi
 	return &socialv1.SyncDirectoryUserResponse{}, nil
 }
 
-func startLifecycleDependencyServers(t *testing.T) (string, string, string, string) {
+func startLifecycleDependencyServers(t *testing.T) (string, string, string, string, string) {
 	t.Helper()
 
 	startServer := func(register func(*grpc.Server), label string) string {
@@ -196,21 +212,23 @@ func startLifecycleDependencyServers(t *testing.T) (string, string, string, stri
 	authAddr := startServer(func(server *grpc.Server) {
 		authv1.RegisterAuthServiceServer(server, lifecycleAuthServer{})
 	}, "auth")
+	aiAddr := startServer(func(server *grpc.Server) {}, "ai")
 	socialAddr := startServer(func(server *grpc.Server) {
 		socialv1.RegisterSocialServiceServer(server, lifecycleSocialServer{})
 	}, "social")
 	gameAddr := startServer(func(server *grpc.Server) {}, "game")
 	notificationsAddr := startServer(func(server *grpc.Server) {}, "notifications")
-	return authAddr, gameAddr, notificationsAddr, socialAddr
+	return authAddr, aiAddr, gameAddr, notificationsAddr, socialAddr
 }
 
 func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 	stubManagedConn(t)
-	authAddr, gameAddr, notificationsAddr, socialAddr := startLifecycleDependencyServers(t)
+	authAddr, aiAddr, gameAddr, notificationsAddr, socialAddr := startLifecycleDependencyServers(t)
 
 	srv, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
 		AuthAddr:          authAddr,
+		AIAddr:            aiAddr,
 		GameAddr:          gameAddr,
 		NotificationsAddr: notificationsAddr,
 		SocialAddr:        socialAddr,
@@ -228,11 +246,12 @@ func TestNewRuntimeBuildsAndCloses(t *testing.T) {
 
 func TestNewRuntime_UsesOptionalManagedConnsForGameAndNotifications(t *testing.T) {
 	modes := recordManagedConnModes(t)
-	authAddr, _, _, socialAddr := startLifecycleDependencyServers(t)
+	authAddr, _, _, _, socialAddr := startLifecycleDependencyServers(t)
 
 	srv, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
 		AuthAddr:          authAddr,
+		AIAddr:            "127.0.0.1:3",
 		GameAddr:          "127.0.0.1:1",
 		NotificationsAddr: "127.0.0.1:2",
 		SocialAddr:        socialAddr,
@@ -245,6 +264,7 @@ func TestNewRuntime_UsesOptionalManagedConnsForGameAndNotifications(t *testing.T
 
 	assertManagedConnMode(t, modes, "auth", platformgrpc.ModeRequired)
 	assertManagedConnMode(t, modes, "social", platformgrpc.ModeRequired)
+	assertManagedConnMode(t, modes, "ai", platformgrpc.ModeOptional)
 	assertManagedConnMode(t, modes, "game", platformgrpc.ModeOptional)
 	assertManagedConnMode(t, modes, "notifications", platformgrpc.ModeOptional)
 }
@@ -292,11 +312,12 @@ func TestRuntimeServeStopsOnContextCancellation(t *testing.T) {
 
 func TestRuntimeServeRequiresContext(t *testing.T) {
 	stubManagedConn(t)
-	authAddr, gameAddr, notificationsAddr, socialAddr := startLifecycleDependencyServers(t)
+	authAddr, aiAddr, gameAddr, notificationsAddr, socialAddr := startLifecycleDependencyServers(t)
 
 	runtime, err := NewRuntime(context.Background(), RuntimeConfig{
 		Port:              freeWorkerTCPPort(t),
 		AuthAddr:          authAddr,
+		AIAddr:            aiAddr,
 		GameAddr:          gameAddr,
 		NotificationsAddr: notificationsAddr,
 		SocialAddr:        socialAddr,

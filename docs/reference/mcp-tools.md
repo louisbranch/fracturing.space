@@ -2,7 +2,7 @@
 title: "MCP tools"
 parent: "Reference"
 nav_order: 2
-last_reviewed: "2026-03-12"
+last_reviewed: "2026-03-13"
 ---
 
 # MCP tools
@@ -43,6 +43,10 @@ Exact MCP tool names currently registered by the server.
 - `session_action_roll`
 - `session_roll_outcome_apply`
 
+## Scenes
+
+- `scene_create`
+
 ## Interaction
 
 - `interaction_active_scene_set`
@@ -50,7 +54,10 @@ Exact MCP tool names currently registered by the server.
 - `interaction_scene_player_post_submit`
 - `interaction_scene_player_phase_yield`
 - `interaction_scene_player_phase_unyield`
+- `interaction_scene_player_phase_accept`
+- `interaction_scene_player_revisions_request`
 - `interaction_scene_player_phase_end`
+- `interaction_scene_gm_output_commit`
 - `interaction_ooc_pause`
 - `interaction_ooc_post`
 - `interaction_ooc_ready_mark`

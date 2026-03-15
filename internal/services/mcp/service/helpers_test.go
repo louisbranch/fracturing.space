@@ -848,12 +848,14 @@ func TestMCPRegistrationModules(t *testing.T) {
 		mcpDaggerheartToolsModuleName,
 		mcpCampaignToolsModuleName,
 		mcpSessionToolsModuleName,
+		mcpSceneToolsModuleName,
 		mcpInteractionToolsModuleName,
 		mcpForkToolsModuleName,
 		mcpEventToolsModuleName,
 		mcpContextToolsModuleName,
 		mcpCampaignResourceModuleName,
 		mcpSessionResourceModuleName,
+		mcpSceneResourceModuleName,
 		mcpInteractionResourceModuleName,
 		mcpEventResourceModuleName,
 		mcpContextResourceModuleName,
@@ -879,12 +881,14 @@ func TestMCPRegistrationModulesAreIsolated(t *testing.T) {
 		mcpDaggerheartToolsModuleName:    6,
 		mcpCampaignToolsModuleName:       15,
 		mcpSessionToolsModuleName:        2,
-		mcpInteractionToolsModuleName:    13,
+		mcpSceneToolsModuleName:          1,
+		mcpInteractionToolsModuleName:    14,
 		mcpForkToolsModuleName:           2,
 		mcpEventToolsModuleName:          1,
 		mcpContextToolsModuleName:        1,
 		mcpCampaignResourceModuleName:    4,
 		mcpSessionResourceModuleName:     1,
+		mcpSceneResourceModuleName:       1,
 		mcpInteractionResourceModuleName: 1,
 		mcpEventResourceModuleName:       1,
 		mcpContextResourceModuleName:     1,
@@ -961,6 +965,7 @@ func TestRegisterInteractionToolsRegistersAllInteractionToolNames(t *testing.T) 
 		"interaction_scene_player_post_submit",
 		"interaction_scene_player_phase_yield",
 		"interaction_scene_player_phase_unyield",
+		"interaction_scene_gm_output_commit",
 		"interaction_scene_player_phase_accept",
 		"interaction_scene_player_revisions_request",
 		"interaction_scene_player_phase_end",
@@ -981,6 +986,27 @@ func TestRegisterInteractionResourcesAddsInteractionResourceTemplate(t *testing.
 	registerInteractionResources(target, nil, func() domain.Context { return domain.Context{} })
 
 	if !reflect.DeepEqual(target.resourceTemplates, []string{"campaign://{campaign_id}/interaction"}) {
+		t.Fatalf("resource templates = %v", target.resourceTemplates)
+	}
+}
+
+func TestRegisterSceneToolsAddsSceneCreateTool(t *testing.T) {
+	target := &fakeMCPRegistrationTarget{}
+
+	if err := registerSceneTools(target, nil, func() domain.Context { return domain.Context{} }, nil); err != nil {
+		t.Fatalf("registerSceneTools() error = %v", err)
+	}
+	if !reflect.DeepEqual(target.tools, []string{"scene_create"}) {
+		t.Fatalf("scene tools = %v", target.tools)
+	}
+}
+
+func TestRegisterSceneResourcesAddsSceneResourceTemplate(t *testing.T) {
+	target := &fakeMCPRegistrationTarget{}
+
+	registerSceneResources(target, nil)
+
+	if !reflect.DeepEqual(target.resourceTemplates, []string{"campaign://{campaign_id}/sessions/{session_id}/scenes"}) {
 		t.Fatalf("resource templates = %v", target.resourceTemplates)
 	}
 }

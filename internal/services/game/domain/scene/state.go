@@ -57,6 +57,10 @@ type State struct {
 	PlayerPhaseActingParticipants map[ids.ParticipantID]bool
 	// PlayerPhaseSlots stores the latest participant-owned slot state for the phase.
 	PlayerPhaseSlots map[ids.ParticipantID]PlayerPhaseSlot
+	// GMOutputText stores the latest committed GM narration for the scene.
+	GMOutputText string
+	// GMOutputParticipantID stores which participant committed the latest narration.
+	GMOutputParticipantID ids.ParticipantID
 }
 
 // HasPC returns true if the scene contains at least one character whose ID

@@ -29,6 +29,7 @@ const (
 	CommandTypePlayerPhaseAccept           command.Type = "scene.player_phase.accept"
 	CommandTypePlayerPhaseRequestRevisions command.Type = "scene.player_phase.request_revisions"
 	CommandTypePlayerPhaseEnd              command.Type = "scene.player_phase.end"
+	CommandTypeGMOutputCommit              command.Type = "scene.gm_output.commit"
 
 	EventTypeCreated                       event.Type = "scene.created"
 	EventTypeUpdated                       event.Type = "scene.updated"
@@ -48,6 +49,7 @@ const (
 	EventTypePlayerPhaseRevisionsRequested event.Type = "scene.player_phase_revisions_requested"
 	EventTypePlayerPhaseAccepted           event.Type = "scene.player_phase_accepted"
 	EventTypePlayerPhaseEnded              event.Type = "scene.player_phase_ended"
+	EventTypeGMOutputCommitted             event.Type = "scene.gm_output_committed"
 
 	rejectionCodeSceneIDRequired                      = "SCENE_ID_REQUIRED"
 	rejectionCodeSceneNameRequired                    = "SCENE_NAME_REQUIRED"
@@ -75,6 +77,8 @@ const (
 	rejectionCodeScenePlayerPhaseParticipantNotActing = "SCENE_PLAYER_PHASE_PARTICIPANT_NOT_ACTING"
 	rejectionCodeScenePlayerPhaseSummaryRequired      = "SCENE_PLAYER_PHASE_SUMMARY_REQUIRED"
 	rejectionCodeScenePlayerPhaseRevisionRequired     = "SCENE_PLAYER_PHASE_REVISION_REQUIRED"
+	rejectionCodeSceneGMOutputRequired                = "SCENE_GM_OUTPUT_REQUIRED"
+	rejectionCodeSceneGMOutputParticipantRequired     = "SCENE_GM_OUTPUT_PARTICIPANT_REQUIRED"
 )
 
 // Decide returns the decision for a scene command against the current scene
@@ -123,6 +127,8 @@ func Decide(scenes map[ids.SceneID]State, cmd command.Command, now func() time.T
 		return decidePlayerPhaseRequestRevisions(scenes, cmd, now)
 	case CommandTypePlayerPhaseEnd:
 		return decidePlayerPhaseEnd(scenes, cmd, now)
+	case CommandTypeGMOutputCommit:
+		return decideGMOutputCommit(scenes, cmd, now)
 	default:
 		return command.Reject(command.Rejection{
 			Code:    command.RejectionCodeCommandTypeUnsupported,

@@ -170,3 +170,36 @@ func TestOpenAIOAuthConfigFromEnvBuildsConfigWhenComplete(t *testing.T) {
 		t.Fatalf("redirect_uri = %q", cfg.RedirectURI)
 	}
 }
+
+func TestAISessionGrantConfigFromEnvReturnsNilWhenUnset(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER", "")
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE", "")
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY", "")
+	t.Setenv("FRACTURING_SPACE_AI_SESSION_GRANT_TTL", "")
+
+	cfg, err := aiSessionGrantConfigFromEnv()
+	if err != nil {
+		t.Fatalf("ai session grant config from env: %v", err)
+	}
+	if cfg != nil {
+		t.Fatalf("expected nil config, got %+v", cfg)
+	}
+}
+
+func TestAISessionGrantConfigFromEnvBuildsConfigWhenComplete(t *testing.T) {
+	setAISessionGrantEnv(t)
+
+	cfg, err := aiSessionGrantConfigFromEnv()
+	if err != nil {
+		t.Fatalf("ai session grant config from env: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if cfg.Issuer != "fracturing-space-game" {
+		t.Fatalf("issuer = %q", cfg.Issuer)
+	}
+	if cfg.Audience != "fracturing-space-ai" {
+		t.Fatalf("audience = %q", cfg.Audience)
+	}
+}

@@ -103,6 +103,7 @@ func newServer(conn *grpc.ClientConn) (*Server, error) {
 	characterClient := statev1.NewCharacterServiceClient(conn)
 	snapshotClient := statev1.NewSnapshotServiceClient(conn)
 	sessionClient := statev1.NewSessionServiceClient(conn)
+	sceneClient := statev1.NewSceneServiceClient(conn)
 	interactionClient := statev1.NewInteractionServiceClient(conn)
 	forkClient := statev1.NewForkServiceClient(conn)
 	eventClient := statev1.NewEventServiceClient(conn)
@@ -129,6 +130,7 @@ func newServer(conn *grpc.ClientConn) (*Server, error) {
 			characterClient:   characterClient,
 			snapshotClient:    snapshotClient,
 			sessionClient:     sessionClient,
+			sceneClient:       sceneClient,
 			interactionClient: interactionClient,
 			forkClient:        forkClient,
 			eventClient:       eventClient,

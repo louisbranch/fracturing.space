@@ -126,6 +126,8 @@ func integrationOutboxEventsForEvent(evt event.Event) ([]storage.IntegrationOutb
 		return buildInviteClaimedOutboxEvent(evt)
 	case invite.EventTypeDeclined:
 		return buildInviteDeclinedOutboxEvent(evt)
+	case session.EventTypeStarted:
+		return buildAIGMTurnRequestedOutboxEvent(evt)
 	case session.EventTypeActiveSceneSet:
 		return buildAIGMTurnRequestedOutboxEvent(evt)
 	case session.EventTypeGMAuthoritySet:

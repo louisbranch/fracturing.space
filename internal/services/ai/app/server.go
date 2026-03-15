@@ -17,6 +17,7 @@ import (
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -136,15 +137,26 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		service.SetOpenAIOAuthAdapter(aiservice.NewOpenAIOAuthAdapter(*cfg.OpenAIOAuthConfig))
 	}
 	if cfg.OpenAIResponsesURL != "" {
-		service.SetOpenAIInvocationAdapter(aiservice.NewOpenAIInvokeAdapter(aiservice.OpenAIInvokeConfig{
+		adapter := aiservice.NewOpenAIInvokeAdapter(aiservice.OpenAIInvokeConfig{
 			ResponsesURL: cfg.OpenAIResponsesURL,
-		}))
+		})
+		service.SetOpenAIInvocationAdapter(adapter)
+		if toolAdapter, ok := adapter.(orchestration.Provider); ok {
+			service.SetOpenAICampaignTurnAdapter(toolAdapter)
+		}
+	}
+	if cfg.SessionGrantConfig != nil {
+		service.SetAISessionGrantConfig(*cfg.SessionGrantConfig)
+	}
+	if strings.TrimSpace(cfg.MCPURL) != "" {
+		service.SetCampaignTurnRunner(orchestration.NewRunner(orchestration.NewMCPDialer(cfg.MCPURL, nil), 8))
 	}
 
 	healthServer := health.NewServer()
 	aiv1.RegisterCredentialServiceServer(grpcServer, service)
 	aiv1.RegisterAgentServiceServer(grpcServer, service)
 	aiv1.RegisterInvocationServiceServer(grpcServer, service)
+	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, service)
 	aiv1.RegisterProviderGrantServiceServer(grpcServer, service)
 	aiv1.RegisterAccessRequestServiceServer(grpcServer, service)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
@@ -152,6 +164,7 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	healthServer.SetServingStatus("ai.v1.CredentialService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.AgentService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.InvocationService", grpc_health_v1.HealthCheckResponse_SERVING)
+	healthServer.SetServingStatus("ai.v1.CampaignOrchestrationService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.ProviderGrantService", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.AccessRequestService", grpc_health_v1.HealthCheckResponse_SERVING)
 

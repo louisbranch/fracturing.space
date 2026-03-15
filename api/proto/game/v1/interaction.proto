@@ -28,6 +28,8 @@ service InteractionService {
   rpc UnyieldScenePlayerPhase(UnyieldScenePlayerPhaseRequest) returns (UnyieldScenePlayerPhaseResponse);
   // Ends the active scene's current player phase early under GM control.
   rpc EndScenePlayerPhase(EndScenePlayerPhaseRequest) returns (EndScenePlayerPhaseResponse);
+  // Commits one authoritative GM narration/update to the active scene.
+  rpc CommitSceneGMOutput(CommitSceneGMOutputRequest) returns (CommitSceneGMOutputResponse);
   // Accepts the submitted player phase after GM review and returns to GM control.
   rpc AcceptScenePlayerPhase(AcceptScenePlayerPhaseRequest) returns (AcceptScenePlayerPhaseResponse);
   // Returns one or more participant slots for correction while preserving the current phase state.
@@ -75,12 +77,19 @@ message InteractionCharacter {
   string owner_participant_id = 3;
 }
 
+message InteractionGMOutput {
+  string text = 1;
+  string participant_id = 2;
+  google.protobuf.Timestamp updated_at = 3;
+}
+
 message InteractionScene {
   string scene_id = 1;
   string session_id = 2;
   string name = 3;
   string description = 4;
   repeated InteractionCharacter characters = 5;
+  InteractionGMOutput gm_output = 6;
 }
 
 enum ScenePhaseStatus {
@@ -227,6 +236,16 @@ message EndScenePlayerPhaseRequest {
 }
 
 message EndScenePlayerPhaseResponse {
+  InteractionState state = 1;
+}
+
+message CommitSceneGMOutputRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string text = 3;
+}
+
+message CommitSceneGMOutputResponse {
   InteractionState state = 1;
 }
 

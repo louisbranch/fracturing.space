@@ -310,17 +310,20 @@ type ScenePlayerSlot struct {
 
 // SceneInteraction captures authoritative scene-level player phase state.
 type SceneInteraction struct {
-	CampaignID           string
-	SceneID              string
-	SessionID            string
-	PhaseOpen            bool
-	PhaseID              string
-	PhaseStatus          scene.PlayerPhaseStatus
-	FrameText            string
-	ActingCharacterIDs   []string
-	ActingParticipantIDs []string
-	Slots                []ScenePlayerSlot
-	UpdatedAt            time.Time
+	CampaignID            string
+	SceneID               string
+	SessionID             string
+	PhaseOpen             bool
+	PhaseID               string
+	PhaseStatus           scene.PlayerPhaseStatus
+	FrameText             string
+	ActingCharacterIDs    []string
+	ActingParticipantIDs  []string
+	Slots                 []ScenePlayerSlot
+	GMOutputText          string
+	GMOutputParticipantID string
+	GMOutputUpdatedAt     *time.Time
+	UpdatedAt             time.Time
 }
 
 // SceneInteractionReader provides read-only access to scene interaction state.

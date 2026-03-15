@@ -179,6 +179,7 @@ func TestInteractionMetadataBuilders(t *testing.T) {
 		{name: "submit post", tool: InteractionSubmitScenePlayerPostTool(), wantName: "interaction_scene_player_post_submit"},
 		{name: "yield", tool: InteractionYieldScenePlayerPhaseTool(), wantName: "interaction_scene_player_phase_yield"},
 		{name: "unyield", tool: InteractionUnyieldScenePlayerPhaseTool(), wantName: "interaction_scene_player_phase_unyield"},
+		{name: "commit gm output", tool: InteractionCommitSceneGMOutputTool(), wantName: "interaction_scene_gm_output_commit"},
 		{name: "accept phase", tool: InteractionAcceptScenePlayerPhaseTool(), wantName: "interaction_scene_player_phase_accept"},
 		{name: "request revisions", tool: InteractionRequestScenePlayerRevisionsTool(), wantName: "interaction_scene_player_revisions_request"},
 		{name: "end phase", tool: InteractionEndScenePlayerPhaseTool(), wantName: "interaction_scene_player_phase_end"},
@@ -227,6 +228,32 @@ func TestInteractionStartScenePlayerPhaseHandlerUsesExplicitScene(t *testing.T) 
 	}
 	if len(client.lastStartRequest.GetCharacterIds()) != 2 || output.ActiveScene.SceneID != "scene-1" {
 		t.Fatalf("request/output mismatch: %#v %#v", client.lastStartRequest, output)
+	}
+}
+
+func TestInteractionCommitSceneGMOutputHandlerUsesFallbackScene(t *testing.T) {
+	client := &fakeInteractionClient{
+		getResp:            &statev1.GetInteractionStateResponse{State: testInteractionState()},
+		commitGMOutputResp: &statev1.CommitSceneGMOutputResponse{State: testInteractionState()},
+	}
+	handler := InteractionCommitSceneGMOutputHandler(client, func() Context {
+		return Context{CampaignID: "camp-1", ParticipantID: "gm-ai"}
+	}, nil)
+
+	_, output, err := handler(context.Background(), &mcp.CallToolRequest{}, InteractionCommitSceneGMOutputInput{
+		Text: "  The torches flicker.  ",
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if client.lastGetRequest == nil || client.lastCommitRequest == nil {
+		t.Fatalf("requests = %#v %#v", client.lastGetRequest, client.lastCommitRequest)
+	}
+	if client.lastCommitRequest.GetSceneId() != "scene-1" || client.lastCommitRequest.GetText() != "The torches flicker." {
+		t.Fatalf("commit request = %#v", client.lastCommitRequest)
+	}
+	if output.ActiveScene.SceneID != "scene-1" {
+		t.Fatalf("output = %#v", output)
 	}
 }
 

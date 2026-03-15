@@ -46,7 +46,10 @@
         "result.resourceTemplates[4].mimeType": "application/json",
         "result.resourceTemplates[5].uriTemplate": "campaign://{campaign_id}/sessions",
         "result.resourceTemplates[5].name": "session_list",
-        "result.resourceTemplates[5].mimeType": "application/json"
+        "result.resourceTemplates[5].mimeType": "application/json",
+        "result.resourceTemplates[6].uriTemplate": "campaign://{campaign_id}/sessions/{session_id}/scenes",
+        "result.resourceTemplates[6].name": "scene_list",
+        "result.resourceTemplates[6].mimeType": "application/json"
       }
     }
   ]

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 )
 
@@ -338,5 +339,95 @@ func TestOpenAIInvokeAdapterListModelsValidationAndError(t *testing.T) {
 	}
 	if _, err := adapter.ListModels(context.Background(), ProviderListModelsInput{CredentialSecret: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
 		t.Fatalf("error = %v, want list models provider error", err)
+	}
+}
+
+func TestOpenAIInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost || r.URL.Path != "/v1/responses" {
+			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
+		}
+		var body struct {
+			Tools []struct {
+				Name       string         `json:"name"`
+				Parameters map[string]any `json:"parameters"`
+			} `json:"tools"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatalf("decode request body: %v", err)
+		}
+		if len(body.Tools) != 2 {
+			t.Fatalf("tools len = %d, want 2", len(body.Tools))
+		}
+		if body.Tools[0].Name != "duality_rules_version" {
+			t.Fatalf("tool[0].name = %q", body.Tools[0].Name)
+		}
+		if body.Tools[0].Parameters["type"] != "object" {
+			t.Fatalf("tool[0].parameters.type = %#v", body.Tools[0].Parameters["type"])
+		}
+		props, ok := body.Tools[0].Parameters["properties"].(map[string]any)
+		if !ok {
+			t.Fatalf("tool[0].parameters.properties type = %T", body.Tools[0].Parameters["properties"])
+		}
+		if len(props) != 0 {
+			t.Fatalf("tool[0].parameters.properties = %#v, want empty object", props)
+		}
+		if body.Tools[0].Parameters["additionalProperties"] != false {
+			t.Fatalf("tool[0].parameters.additionalProperties = %#v", body.Tools[0].Parameters["additionalProperties"])
+		}
+		props, ok = body.Tools[1].Parameters["properties"].(map[string]any)
+		if !ok || len(props) != 1 {
+			t.Fatalf("tool[1].parameters.properties = %#v", body.Tools[1].Parameters["properties"])
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"id":          "resp-1",
+			"output_text": "Scene established.",
+			"output": []map[string]any{
+				{
+					"type": "message",
+					"content": []map[string]any{
+						{
+							"type": "output_text",
+							"text": "Scene established.",
+						},
+					},
+				},
+			},
+		})
+	}))
+	defer server.Close()
+
+	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+		ResponsesURL: server.URL + "/v1/responses",
+		HTTPClient:   server.Client(),
+	}}
+	res, err := adapter.Run(context.Background(), orchestration.ProviderInput{
+		Model:            "gpt-4.1-mini",
+		Prompt:           "Start the scene.",
+		CredentialSecret: "sk-1",
+		Tools: []orchestration.Tool{
+			{
+				Name:        "duality_rules_version",
+				Description: "Describe the ruleset",
+				InputSchema: map[string]any{"type": "object"},
+			},
+			{
+				Name:        "scene_create",
+				Description: "Create a scene",
+				InputSchema: map[string]any{
+					"type": "object",
+					"properties": map[string]any{
+						"name": map[string]any{"type": "string"},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "Scene established." {
+		t.Fatalf("output_text = %q", res.OutputText)
 	}
 }

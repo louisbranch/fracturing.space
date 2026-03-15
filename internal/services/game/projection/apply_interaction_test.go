@@ -99,6 +99,36 @@ func TestApplyScenePlayerPhaseStartedInitializesPhaseStateAndSlots(t *testing.T)
 	}
 }
 
+func TestApplySceneGMOutputCommittedStoresLatestNarration(t *testing.T) {
+	t.Parallel()
+
+	store := newFakeSceneInteractionStore()
+	applier := Applier{SceneInteraction: store}
+	now := time.Date(2026, 3, 13, 10, 10, 0, 0, time.UTC)
+
+	err := applier.applySceneGMOutputCommitted(context.Background(), event.Event{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+		SceneID:    "scene-1",
+		Timestamp:  now,
+	}, scene.GMOutputCommittedPayload{
+		SceneID:       ids.SceneID("scene-1"),
+		ParticipantID: ids.ParticipantID("gm-ai"),
+		Text:          "The chamber falls quiet.",
+	})
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+
+	got := store.interactions["camp-1:scene-1"]
+	if got.GMOutputText != "The chamber falls quiet." || got.GMOutputParticipantID != "gm-ai" {
+		t.Fatalf("gm output = %#v", got)
+	}
+	if got.GMOutputUpdatedAt == nil || !got.GMOutputUpdatedAt.Equal(now) {
+		t.Fatalf("gm output updated at = %#v, want %v", got.GMOutputUpdatedAt, now)
+	}
+}
+
 func TestApplyScenePlayerPhaseReviewLifecycle(t *testing.T) {
 	t.Parallel()
 

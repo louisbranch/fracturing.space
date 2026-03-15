@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	anyllm "github.com/mozilla-ai/any-llm-go"
 	anyllmopenai "github.com/mozilla-ai/any-llm-go/providers/openai"
 )
@@ -198,6 +199,99 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 	return ProviderInvokeResult{OutputText: outputText}, nil
 }
 
+// Run executes one OpenAI Responses API step with native tool calling.
+func (a *openAIInvokeAdapter) Run(ctx context.Context, input orchestration.ProviderInput) (orchestration.ProviderOutput, error) {
+	credentialSecret := strings.TrimSpace(input.CredentialSecret)
+	model := strings.TrimSpace(input.Model)
+	if credentialSecret == "" {
+		return orchestration.ProviderOutput{}, fmt.Errorf("credential secret is required")
+	}
+	if model == "" {
+		return orchestration.ProviderOutput{}, fmt.Errorf("model is required")
+	}
+
+	tools := make([]map[string]any, 0, len(input.Tools))
+	for _, tool := range input.Tools {
+		name := strings.TrimSpace(tool.Name)
+		if name == "" {
+			continue
+		}
+		tools = append(tools, map[string]any{
+			"type":        "function",
+			"name":        name,
+			"description": strings.TrimSpace(tool.Description),
+			"parameters":  openAIToolSchema(tool.InputSchema),
+		})
+	}
+
+	body := map[string]any{
+		"model":               model,
+		"tools":               tools,
+		"parallel_tool_calls": true,
+	}
+	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
+		body["instructions"] = instructions
+	}
+	if convo := strings.TrimSpace(input.ConversationID); convo != "" {
+		body["previous_response_id"] = convo
+		items := make([]map[string]any, 0, len(input.Results))
+		for _, item := range input.Results {
+			items = append(items, map[string]any{
+				"type":    "function_call_output",
+				"call_id": strings.TrimSpace(item.CallID),
+				"output":  item.Output,
+			})
+		}
+		body["input"] = items
+	} else {
+		prompt := strings.TrimSpace(input.Prompt)
+		if prompt == "" {
+			return orchestration.ProviderOutput{}, fmt.Errorf("prompt is required")
+		}
+		body["input"] = []map[string]any{{
+			"role": "user",
+			"content": []map[string]any{{
+				"type": "input_text",
+				"text": prompt,
+			}},
+		}}
+	}
+
+	payload, err := a.responsesRequest(ctx, body, credentialSecret)
+	if err != nil {
+		return orchestration.ProviderOutput{}, err
+	}
+	out := orchestration.ProviderOutput{
+		ConversationID: strings.TrimSpace(payload.ID),
+		OutputText:     strings.TrimSpace(payload.OutputText),
+		ToolCalls:      make([]orchestration.ProviderToolCall, 0, len(payload.Output)),
+	}
+	for _, item := range payload.Output {
+		if strings.TrimSpace(item.Type) == "function_call" {
+			out.ToolCalls = append(out.ToolCalls, orchestration.ProviderToolCall{
+				CallID:    strings.TrimSpace(item.CallID),
+				Name:      strings.TrimSpace(item.Name),
+				Arguments: strings.TrimSpace(item.Arguments),
+			})
+			continue
+		}
+		if out.OutputText != "" {
+			continue
+		}
+		for _, content := range item.Content {
+			if strings.TrimSpace(content.Text) == "" {
+				continue
+			}
+			out.OutputText = strings.TrimSpace(content.Text)
+			break
+		}
+	}
+	if out.OutputText == "" && len(out.ToolCalls) == 0 {
+		return orchestration.ProviderOutput{}, fmt.Errorf("responses output missing text and tool calls")
+	}
+	return out, nil
+}
+
 func (a *openAIInvokeAdapter) invokeResponsesAPI(ctx context.Context, responsesURL string, input ProviderInvokeInput) (ProviderInvokeResult, error) {
 	requestPayload := map[string]any{
 		"model": input.Model,
@@ -206,40 +300,9 @@ func (a *openAIInvokeAdapter) invokeResponsesAPI(ctx context.Context, responsesU
 	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
 		requestPayload["instructions"] = instructions
 	}
-	requestBody, err := json.Marshal(requestPayload)
+	payload, err := a.responsesRequest(ctx, requestPayload, input.CredentialSecret)
 	if err != nil {
-		return ProviderInvokeResult{}, fmt.Errorf("marshal invoke request: %w", err)
-	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, responsesURL, bytes.NewReader(requestBody))
-	if err != nil {
-		return ProviderInvokeResult{}, fmt.Errorf("build invoke request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(input.CredentialSecret))
-
-	res, err := a.cfg.HTTPClient.Do(req)
-	if err != nil {
-		return ProviderInvokeResult{}, fmt.Errorf("invoke request failed: %w", err)
-	}
-	defer res.Body.Close()
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		body, err := io.ReadAll(io.LimitReader(res.Body, 4096))
-		if err != nil {
-			return ProviderInvokeResult{}, fmt.Errorf("read invoke error body: %w", err)
-		}
-		return ProviderInvokeResult{}, fmt.Errorf("invoke request status %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	var payload struct {
-		OutputText string `json:"output_text"`
-		Output     []struct {
-			Content []struct {
-				Text string `json:"text"`
-			} `json:"content"`
-		} `json:"output"`
-	}
-	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
-		return ProviderInvokeResult{}, fmt.Errorf("decode invoke response: %w", err)
+		return ProviderInvokeResult{}, err
 	}
 	outputText := strings.TrimSpace(payload.OutputText)
 	if outputText == "" {
@@ -259,6 +322,57 @@ func (a *openAIInvokeAdapter) invokeResponsesAPI(ctx context.Context, responsesU
 		return ProviderInvokeResult{}, fmt.Errorf("invoke response missing output text")
 	}
 	return ProviderInvokeResult{OutputText: outputText}, nil
+}
+
+func openAIToolSchema(schema any) map[string]any {
+	value := cloneSchemaMap(schema)
+	if value == nil {
+		return map[string]any{
+			"type":                 "object",
+			"properties":           map[string]any{},
+			"additionalProperties": false,
+		}
+	}
+	if strings.TrimSpace(stringValue(value["type"])) == "" {
+		value["type"] = "object"
+	}
+	if strings.EqualFold(stringValue(value["type"]), "object") {
+		props, ok := value["properties"].(map[string]any)
+		if !ok || props == nil {
+			value["properties"] = map[string]any{}
+		}
+		if _, ok := value["additionalProperties"]; !ok {
+			value["additionalProperties"] = false
+		}
+	}
+	return value
+}
+
+func cloneSchemaMap(schema any) map[string]any {
+	if schema == nil {
+		return nil
+	}
+	if value, ok := schema.(map[string]any); ok {
+		clone := make(map[string]any, len(value))
+		for key, item := range value {
+			clone[key] = item
+		}
+		return clone
+	}
+	data, err := json.Marshal(schema)
+	if err != nil {
+		return nil
+	}
+	var value map[string]any
+	if err := json.Unmarshal(data, &value); err != nil {
+		return nil
+	}
+	return value
+}
+
+func stringValue(value any) string {
+	text, _ := value.(string)
+	return text
 }
 
 func (a *openAIInvokeAdapter) ListModels(ctx context.Context, input ProviderListModelsInput) ([]ProviderModel, error) {
@@ -388,4 +502,51 @@ func asString(value any) string {
 	default:
 		return ""
 	}
+}
+
+type openAIResponsesPayload struct {
+	ID         string `json:"id"`
+	OutputText string `json:"output_text"`
+	Output     []struct {
+		Type      string `json:"type"`
+		Name      string `json:"name"`
+		Arguments string `json:"arguments"`
+		CallID    string `json:"call_id"`
+		Content   []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	} `json:"output"`
+}
+
+func (a *openAIInvokeAdapter) responsesRequest(ctx context.Context, body map[string]any, secret string) (openAIResponsesPayload, error) {
+	requestBody, err := json.Marshal(body)
+	if err != nil {
+		return openAIResponsesPayload{}, fmt.Errorf("marshal invoke request: %w", err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimSpace(a.cfg.ResponsesURL), bytes.NewReader(requestBody))
+	if err != nil {
+		return openAIResponsesPayload{}, fmt.Errorf("build invoke request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(secret))
+
+	res, err := a.cfg.HTTPClient.Do(req)
+	if err != nil {
+		return openAIResponsesPayload{}, fmt.Errorf("invoke request failed: %w", err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		body, err := io.ReadAll(io.LimitReader(res.Body, 4096))
+		if err != nil {
+			return openAIResponsesPayload{}, fmt.Errorf("read invoke error body: %w", err)
+		}
+		return openAIResponsesPayload{}, fmt.Errorf("invoke request status %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var payload openAIResponsesPayload
+	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
+		return openAIResponsesPayload{}, fmt.Errorf("decode invoke response: %w", err)
+	}
+	return payload, nil
 }

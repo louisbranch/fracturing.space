@@ -23,9 +23,5 @@ func (s *CampaignAIService) IssueCampaignAISessionGrant(ctx context.Context, in 
 	if err != nil {
 		return nil, err
 	}
-	aiAgentID, err := validate.RequiredID(in.GetAiAgentId(), "ai agent id")
-	if err != nil {
-		return nil, err
-	}
-	return s.app.IssueCampaignAISessionGrant(ctx, campaignID, sessionID, aiAgentID)
+	return s.app.IssueCampaignAISessionGrant(ctx, campaignID, sessionID)
 }

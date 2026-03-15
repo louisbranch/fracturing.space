@@ -2,11 +2,17 @@ package game
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
+	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -94,6 +100,7 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 		campaign    storage.CampaignRecord
 		interaction storage.SessionInteraction
 		sceneState  map[string]storage.SceneInteraction
+		source      string
 		wantOK      bool
 		wantReason  string
 	}{
@@ -131,6 +138,17 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 			wantOK:      true,
 		},
 		{
+			name:     "bootstrap without active scene is eligible",
+			campaign: storage.CampaignRecord{ID: "camp-1", GmMode: campaign.GmModeAI, AIAgentID: "agent-1"},
+			interaction: storage.SessionInteraction{
+				CampaignID:               "camp-1",
+				SessionID:                "sess-1",
+				GMAuthorityParticipantID: "gm-ai",
+			},
+			source: "session.started",
+			wantOK: true,
+		},
+		{
 			name:     "gm review is eligible",
 			campaign: storage.CampaignRecord{ID: "camp-1", GmMode: campaign.GmModeAI, AIAgentID: "agent-1"},
 			interaction: storage.SessionInteraction{
@@ -166,7 +184,7 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 					},
 				},
 			}
-			got, err := app.aiTurnEligibility(context.Background(), tc.campaign, storage.SessionRecord{ID: "sess-1"}, tc.interaction)
+			got, err := app.aiTurnEligibility(context.Background(), tc.campaign, storage.SessionRecord{ID: "sess-1"}, tc.interaction, tc.source)
 			if err != nil {
 				t.Fatalf("aiTurnEligibility error = %v", err)
 			}
@@ -189,7 +207,32 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 	campaignStore := gametest.NewFakeCampaignStore()
 	sessionStore := gametest.NewFakeSessionStore()
 	participantStore := gametest.NewFakeParticipantStore()
-	sessionInteractionStore := &gametest.FakeSessionInteractionStore{}
+	sessionInteractionStore := gametest.NewFakeSessionInteractionStore()
+	now := time.Date(2026, 3, 13, 12, 0, 0, 0, time.UTC)
+	token := aiTurnToken("sess-1", "gm-ai", "session.started", "", "")
+	payload, err := json.Marshal(session.AITurnQueuedPayload{
+		SessionID:          "sess-1",
+		TurnToken:          token,
+		OwnerParticipantID: "gm-ai",
+		SourceEventType:    "session.started",
+	})
+	if err != nil {
+		t.Fatalf("marshal ai turn payload: %v", err)
+	}
+	domain := &fakeDomainEngine{resultsByType: map[command.Type]engine.Result{
+		commandTypeSessionAITurnQueue: {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        session.EventTypeAITurnQueued,
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				EntityType:  "session",
+				EntityID:    "sess-1",
+				PayloadJSON: payload,
+			}),
+		},
+	}}
 
 	campaignStore.Campaigns["camp-1"] = storage.CampaignRecord{
 		ID:        "camp-1",
@@ -211,6 +254,7 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 			Session:            sessionStore,
 			Participant:        participantStore,
 			SessionInteraction: sessionInteractionStore,
+			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: gametest.SetupRuntime()},
 		},
 		gametest.FixedIDGenerator("unused"),
 	)
@@ -237,5 +281,22 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 	}
 	if state.GetStatus() != gamev1.AITurnStatus_AI_TURN_STATUS_IDLE {
 		t.Fatalf("ineligible status = %v, want idle", state.GetStatus())
+	}
+
+	state, err = app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.started", "", "")
+	if err != nil {
+		t.Fatalf("QueueAIGMTurn bootstrap error = %v", err)
+	}
+	if state.GetStatus() != gamev1.AITurnStatus_AI_TURN_STATUS_QUEUED {
+		t.Fatalf("bootstrap status = %v, want queued", state.GetStatus())
+	}
+	if state.GetOwnerParticipantId() != "gm-ai" {
+		t.Fatalf("bootstrap owner participant = %q, want gm-ai", state.GetOwnerParticipantId())
+	}
+	if state.GetSourceEventType() != "session.started" {
+		t.Fatalf("bootstrap source event = %q, want session.started", state.GetSourceEventType())
+	}
+	if state.GetTurnToken() != token {
+		t.Fatalf("bootstrap turn token = %q, want %q", state.GetTurnToken(), token)
 	}
 }

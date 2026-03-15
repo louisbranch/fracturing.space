@@ -88,6 +88,18 @@ var sceneInteractionCommandContracts = []commandContract{
 			ActiveSession: command.AllowedDuringActiveSession(),
 		},
 	},
+	{
+		definition: command.Definition{
+			Type:            CommandTypeGMOutputCommit,
+			Owner:           command.OwnerCore,
+			ValidatePayload: validateGMOutputCommittedPayload,
+			Gate: command.GatePolicy{
+				Scope:         command.GateScopeScene,
+				AllowWhenOpen: true,
+			},
+			ActiveSession: command.AllowedDuringActiveSession(),
+		},
+	},
 }
 
 var sceneInteractionEventContracts = []eventProjectionContract{
@@ -179,6 +191,17 @@ var sceneInteractionEventContracts = []eventProjectionContract{
 		emittable:  true,
 		projection: true,
 	},
+	{
+		definition: event.Definition{
+			Type:            EventTypeGMOutputCommitted,
+			Owner:           event.OwnerCore,
+			Addressing:      event.AddressingPolicyEntityTarget,
+			ValidatePayload: validateGMOutputCommittedPayload,
+			Intent:          event.IntentProjectionAndReplay,
+		},
+		emittable:  true,
+		projection: true,
+	},
 }
 
 func validatePlayerPhaseStartedPayload(raw json.RawMessage) error {
@@ -218,5 +241,10 @@ func validatePlayerPhaseAcceptedPayload(raw json.RawMessage) error {
 
 func validatePlayerPhaseEndedPayload(raw json.RawMessage) error {
 	var payload PlayerPhaseEndedPayload
+	return json.Unmarshal(raw, &payload)
+}
+
+func validateGMOutputCommittedPayload(raw json.RawMessage) error {
+	var payload GMOutputCommittedPayload
 	return json.Unmarshal(raw, &payload)
 }
