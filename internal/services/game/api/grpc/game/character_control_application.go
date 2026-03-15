@@ -134,7 +134,6 @@ func (c characterApplication) applyCharacterControlUpdate(ctx context.Context, c
 			"participant_id":  participantID,
 			"avatar_set_id":   identitySnapshot.avatarSetID,
 			"avatar_asset_id": identitySnapshot.avatarAssetID,
-			"pronouns":        identitySnapshot.pronouns,
 		},
 	}
 	payloadJSON, err := json.Marshal(payload)

@@ -172,6 +172,9 @@ type CharacterReader interface {
 	// ListCharactersByOwnerParticipant returns all characters owned by one participant
 	// within a campaign.
 	ListCharactersByOwnerParticipant(ctx context.Context, campaignID, participantID string) ([]CharacterRecord, error)
+	// ListCharactersByControllerParticipant returns all characters controlled by
+	// one participant within a campaign.
+	ListCharactersByControllerParticipant(ctx context.Context, campaignID, participantID string) ([]CharacterRecord, error)
 	// ListCharacters returns a page of character records for a campaign starting after the page token.
 	ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (CharacterPage, error)
 }

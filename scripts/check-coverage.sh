@@ -15,8 +15,10 @@ run_step() {
 	"$@"
 }
 
-run_step make cover
-run_step make cover-critical-domain
+# check-coverage already runs under the top-level coverage lock, so reuse the
+# core targets here instead of re-entering the public lock-taking wrappers.
+run_step make cover-core
+run_step make cover-critical-domain-core
 
 if [[ "$coverage_check_baseline" != "true" ]]; then
 	echo "Coverage generation checks passed."

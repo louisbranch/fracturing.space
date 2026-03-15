@@ -1014,6 +1014,10 @@ func (s *fakeCharacterStore) ListCharactersByOwnerParticipant(context.Context, s
 	return nil, nil
 }
 
+func (s *fakeCharacterStore) ListCharactersByControllerParticipant(context.Context, string, string) ([]storage.CharacterRecord, error) {
+	return nil, nil
+}
+
 func (s *fakeCharacterStore) ListCharacters(context.Context, string, int, string) (storage.CharacterPage, error) {
 	return storage.CharacterPage{}, nil
 }

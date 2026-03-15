@@ -423,6 +423,19 @@ func (s *CharacterStore) ListCharactersByOwnerParticipant(_ context.Context, cam
 	return result, nil
 }
 
+func (s *CharacterStore) ListCharactersByControllerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	result := make([]storage.CharacterRecord, 0)
+	for key, record := range s.Characters {
+		if !strings.HasPrefix(key, campaignID+":") {
+			continue
+		}
+		if record.ParticipantID == participantID {
+			result = append(result, record)
+		}
+	}
+	return result, nil
+}
+
 func (s *CharacterStore) ListCharacters(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 	return storage.CharacterPage{}, nil
 }

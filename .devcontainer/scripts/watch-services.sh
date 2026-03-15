@@ -189,7 +189,7 @@ start_service discovery
 start_service ai
 start_service notifications
 wait_for_service_log_marker "status" "status server listening at"
-wait_for_service_log_marker "game" "game server listening at"
+wait_for_service_log_marker "game" "game server listening"
 run_catalog_importer_async
 wait_for_service_log_marker "auth" "auth server listening at"
 wait_for_service_log_marker "social" "social server listening at"

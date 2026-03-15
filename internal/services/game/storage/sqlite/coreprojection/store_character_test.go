@@ -179,3 +179,59 @@ func TestCharacterListByOwnerParticipant(t *testing.T) {
 		t.Fatalf("unexpected owner character order: %#v", characters)
 	}
 }
+
+func TestCharacterListByControllerParticipant(t *testing.T) {
+	store := openTestStore(t)
+	now := time.Date(2026, 2, 3, 10, 0, 0, 0, time.UTC)
+	seedCampaign(t, store, "camp-controlled", now)
+	seedParticipant(t, store, "camp-controlled", "part-1", "user-1", now)
+	seedParticipant(t, store, "camp-controlled", "part-2", "user-2", now)
+
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
+		ID:                 "char-b",
+		CampaignID:         "camp-controlled",
+		OwnerParticipantID: "owner-1",
+		ParticipantID:      "part-1",
+		Name:               "Second",
+		Kind:               character.KindPC,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}); err != nil {
+		t.Fatalf("put character b: %v", err)
+	}
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
+		ID:                 "char-a",
+		CampaignID:         "camp-controlled",
+		OwnerParticipantID: "owner-2",
+		ParticipantID:      "part-1",
+		Name:               "First",
+		Kind:               character.KindPC,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}); err != nil {
+		t.Fatalf("put character a: %v", err)
+	}
+	if err := store.PutCharacter(context.Background(), storage.CharacterRecord{
+		ID:                 "char-c",
+		CampaignID:         "camp-controlled",
+		OwnerParticipantID: "owner-3",
+		ParticipantID:      "part-2",
+		Name:               "Other",
+		Kind:               character.KindPC,
+		CreatedAt:          now,
+		UpdatedAt:          now,
+	}); err != nil {
+		t.Fatalf("put character c: %v", err)
+	}
+
+	characters, err := store.ListCharactersByControllerParticipant(context.Background(), "camp-controlled", "part-1")
+	if err != nil {
+		t.Fatalf("list characters by controller: %v", err)
+	}
+	if len(characters) != 2 {
+		t.Fatalf("expected 2 controlled characters, got %d", len(characters))
+	}
+	if characters[0].ID != "char-a" || characters[1].ID != "char-b" {
+		t.Fatalf("unexpected controlled character order: %#v", characters)
+	}
+}

@@ -32,7 +32,6 @@ import (
 type characterIdentitySnapshot struct {
 	avatarSetID   string
 	avatarAssetID string
-	pronouns      string
 }
 
 func (c characterApplication) CreateCharacter(ctx context.Context, campaignID string, in *campaignv1.CreateCharacterRequest) (storage.CharacterRecord, error) {
@@ -88,19 +87,13 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	if pronounsProvided {
 		pronouns = strings.TrimSpace(sharedpronouns.FromProto(pronounsInput))
 	}
-	needsIdentitySnapshot := (avatarSetID == "" && avatarAssetID == "") || !pronounsProvided
-	if needsIdentitySnapshot {
+	if avatarSetID == "" && avatarAssetID == "" {
 		identitySnapshot, err := c.resolveCharacterIdentitySnapshot(ctx, campaignID, defaultParticipantID)
 		if err != nil {
 			return storage.CharacterRecord{}, err
 		}
-		if avatarSetID == "" && avatarAssetID == "" {
-			avatarSetID = identitySnapshot.avatarSetID
-			avatarAssetID = identitySnapshot.avatarAssetID
-		}
-		if !pronounsProvided {
-			pronouns = identitySnapshot.pronouns
-		}
+		avatarSetID = identitySnapshot.avatarSetID
+		avatarAssetID = identitySnapshot.avatarAssetID
 	}
 	if avatarSetID == "" && avatarAssetID == "" {
 		// Defensive fallback: should be unreachable because unassigned identity
@@ -158,9 +151,9 @@ func (c characterApplication) CreateCharacter(ctx context.Context, campaignID st
 	return created, nil
 }
 
-// resolveCharacterIdentitySnapshot returns character identity defaults for one
-// controller participant snapshot. Unassigned controllers intentionally use the
-// blank avatar set and empty pronouns.
+// resolveCharacterIdentitySnapshot returns avatar defaults for one controller
+// participant snapshot. Unassigned controllers intentionally use the blank
+// avatar set.
 func (c characterApplication) resolveCharacterIdentitySnapshot(
 	ctx context.Context,
 	campaignID string,
@@ -169,7 +162,6 @@ func (c characterApplication) resolveCharacterIdentitySnapshot(
 	snapshot := characterIdentitySnapshot{
 		avatarSetID:   assetcatalog.AvatarSetBlankV1,
 		avatarAssetID: "",
-		pronouns:      "",
 	}
 	participantID = strings.TrimSpace(participantID)
 	if participantID == "" {
@@ -190,6 +182,5 @@ func (c characterApplication) resolveCharacterIdentitySnapshot(
 		snapshot.avatarSetID = resolvedSetID
 		snapshot.avatarAssetID = resolvedAssetID
 	}
-	snapshot.pronouns = strings.TrimSpace(participantRecord.Pronouns)
 	return snapshot, nil
 }
