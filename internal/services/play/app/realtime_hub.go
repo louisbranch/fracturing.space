@@ -10,72 +10,31 @@ import (
 	"sync"
 	"time"
 
-	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 	"golang.org/x/net/websocket"
 )
 
-const (
-	maxFramePayloadBytes   = 32 * 1024
-	maxFramesPerSecond     = 50
-	maxDecodeErrorsPerConn = 3
-	maxMessageBodyRunes    = 12000
-	maxClientMessageIDLen  = 128
-)
-
-type wsFrame struct {
-	Type      string          `json:"type"`
-	RequestID string          `json:"request_id,omitempty"`
-	Payload   json.RawMessage `json:"payload"`
-}
-
-type typingPayload struct {
-	Active bool `json:"active"`
-}
-
 type realtimeHub struct {
-	server *Server
+	server  *Server
+	runtime realtimeRuntime
 
 	mu     sync.Mutex
 	rooms  map[string]*campaignRoom
 	closed bool
 }
 
-type campaignRoom struct {
-	hub        *realtimeHub
-	campaignID string
-
-	ctx    context.Context
-	cancel context.CancelFunc
-
-	mu          sync.Mutex
-	sessions    map[*realtimeSession]struct{}
-	lastGameSeq uint64
-}
-
-type realtimeSession struct {
-	userID string
-	peer   *wsPeer
-
-	mu               sync.Mutex
-	room             *campaignRoom
-	campaignID       string
-	participantID    string
-	participantName  string
-	activeSessionID  string
-	chatTypingTimer  *time.Timer
-	draftTypingTimer *time.Timer
-}
-
-type wsPeer struct {
-	mu      sync.Mutex
-	encoder *json.Encoder
-}
-
 func newRealtimeHub(server *Server) *realtimeHub {
+	return newRealtimeHubWithRuntime(server, defaultRealtimeRuntime())
+}
+
+// newRealtimeHubWithRuntime injects runtime hooks for deterministic realtime
+// tests while keeping production callers on the default clock and timers.
+func newRealtimeHubWithRuntime(server *Server, runtime realtimeRuntime) *realtimeHub {
 	return &realtimeHub{
-		server: server,
-		rooms:  map[string]*campaignRoom{},
+		server:  server,
+		runtime: runtime.normalize(),
+		rooms:   map[string]*campaignRoom{},
 	}
 }
 
@@ -138,7 +97,7 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 	}
 	defer h.unregisterSession(session)
 
-	windowStart := time.Now()
+	windowStart := h.runtime.nowTime()
 	framesInWindow := 0
 	decodeErrors := 0
 
@@ -159,7 +118,7 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 			_ = session.peer.writeError(frame.RequestID, "invalid_argument", "payload too large", nil)
 			continue
 		}
-		now := time.Now()
+		now := h.runtime.nowTime()
 		if now.Sub(windowStart) >= time.Second {
 			windowStart = now
 			framesInWindow = 0
@@ -182,7 +141,7 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 			_ = session.peer.writeFrame(wsFrame{
 				Type:      "play.pong",
 				RequestID: frame.RequestID,
-				Payload:   mustJSON(playWSPongPayload{Timestamp: time.Now().UTC().Format(time.RFC3339Nano)}),
+				Payload:   mustJSON(playprotocol.Pong{Timestamp: h.runtime.nowTime().Format(time.RFC3339Nano)}),
 			})
 		default:
 			_ = session.peer.writeError(frame.RequestID, "invalid_argument", "unsupported frame type", nil)
@@ -191,7 +150,7 @@ func (h *realtimeHub) handleWSConn(conn *websocket.Conn, userID string) {
 }
 
 func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSession, frame wsFrame) {
-	var payload playWSConnectPayload
+	var payload playprotocol.ConnectRequest
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "invalid connect payload", nil)
 		return
@@ -202,7 +161,11 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 		return
 	}
 	room := h.room(campaignID)
-	state, err := h.server.loadInteractionState(ctx, campaignID, session.userID)
+	app := h.server.application()
+	state, err := app.interactionState(ctx, playRequest{
+		campaignRequest: campaignRequest{CampaignID: campaignID},
+		UserID:          session.userID,
+	})
 	if err != nil {
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to load interaction state", nil)
 		return
@@ -210,7 +173,7 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 	session.attach(room, state)
 	room.add(session)
 
-	snapshot, err := h.server.buildRoomSnapshot(ctx, campaignID, state, room.latestGameSequence())
+	snapshot, err := app.roomSnapshotFromState(ctx, campaignID, state, room.latestGameSequence())
 	if err != nil {
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to build play snapshot", nil)
 		return
@@ -222,7 +185,7 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 	})
 
 	if sessionID := session.activeSession(); sessionID != "" && payload.LastChatSeq < snapshot.Chat.LatestSequenceID {
-		messages, err := h.server.buildIncrementalChatMessages(ctx, campaignID, sessionID, payload.LastChatSeq)
+		messages, err := app.incrementalChatMessages(ctx, transcript.Scope{CampaignID: campaignID, SessionID: sessionID}, payload.LastChatSeq)
 		if err != nil {
 			_ = session.peer.writeFrame(wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "chat history drifted; reload required"})})
 			return
@@ -230,14 +193,14 @@ func (h *realtimeHub) handleConnect(ctx context.Context, session *realtimeSessio
 		for _, message := range messages {
 			_ = session.peer.writeFrame(wsFrame{
 				Type:    "play.chat.message",
-				Payload: mustJSON(playWSChatMessageEnvelope{Message: message}),
+				Payload: mustJSON(playprotocol.ChatMessageEnvelope{Message: message}),
 			})
 		}
 	}
 }
 
 func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSession, frame wsFrame) {
-	var payload playWSChatSendPayload
+	var payload playprotocol.ChatSendRequest
 	if err := json.Unmarshal(frame.Payload, &payload); err != nil {
 		_ = session.peer.writeError(frame.RequestID, "invalid_argument", "invalid chat payload", nil)
 		return
@@ -262,10 +225,18 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "join an active session before sending chat", nil)
 		return
 	}
-	message, _, err := h.server.transcripts.AppendMessage(ctx, campaignID, sessionID, transcript.MessageActor{
-		ParticipantID: participantID,
-		Name:          participantName,
-	}, body, clientMessageID)
+	result, err := h.server.transcripts.AppendMessage(ctx, transcript.AppendRequest{
+		Scope: transcript.Scope{
+			CampaignID: campaignID,
+			SessionID:  sessionID,
+		},
+		Actor: transcript.MessageActor{
+			ParticipantID: participantID,
+			Name:          participantName,
+		},
+		Body:            body,
+		ClientMessageID: clientMessageID,
+	})
 	if err != nil {
 		_ = session.peer.writeError(frame.RequestID, "unavailable", "failed to persist chat message", nil)
 		return
@@ -277,7 +248,7 @@ func (h *realtimeHub) handleChatSend(ctx context.Context, session *realtimeSessi
 	room.broadcastFrame(wsFrame{
 		Type:      "play.chat.message",
 		RequestID: frame.RequestID,
-		Payload:   mustJSON(playWSChatMessageEnvelope{Message: transcriptMessageToPayload(message)}),
+		Payload:   mustJSON(playprotocol.ChatMessageEnvelope{Message: playprotocol.TranscriptMessage(result.Message)}),
 	})
 }
 
@@ -297,7 +268,7 @@ func (h *realtimeHub) handleTyping(session *realtimeSession, frame wsFrame, fram
 		_ = session.peer.writeError(frame.RequestID, "failed_precondition", "participant identity unavailable", nil)
 		return
 	}
-	room.broadcastFrame(wsFrame{Type: frameType, Payload: mustJSON(playWSTypingPayload{
+	room.broadcastFrame(wsFrame{Type: frameType, Payload: mustJSON(playprotocol.TypingEvent{
 		SessionID:     sessionID,
 		ParticipantID: participantID,
 		Name:          participantName,
@@ -350,200 +321,5 @@ func (h *realtimeHub) unregisterSession(session *realtimeSession) {
 	session.mu.Unlock()
 	if room != nil {
 		room.remove(session)
-	}
-}
-
-func (r *campaignRoom) runProjectionSubscription() {
-	for {
-		stream, err := r.hub.server.events.SubscribeCampaignUpdates(r.ctx, &gamev1.SubscribeCampaignUpdatesRequest{
-			CampaignId:       r.campaignID,
-			Kinds:            []gamev1.CampaignUpdateKind{gamev1.CampaignUpdateKind_CAMPAIGN_UPDATE_KIND_PROJECTION_APPLIED},
-			ProjectionScopes: []string{"campaign_sessions", "campaign_scenes"},
-		})
-		if err != nil {
-			if !sleepUntilRetry(r.ctx, time.Second) {
-				return
-			}
-			continue
-		}
-		for {
-			update, recvErr := stream.Recv()
-			if recvErr != nil {
-				if errors.Is(recvErr, io.EOF) {
-					break
-				}
-				if !sleepUntilRetry(r.ctx, time.Second) {
-					return
-				}
-				break
-			}
-			if update == nil || update.GetProjectionApplied() == nil {
-				continue
-			}
-			r.setLatestGameSequence(update.GetSeq())
-			r.broadcastCurrent()
-		}
-	}
-}
-
-func (r *campaignRoom) add(session *realtimeSession) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.sessions[session] = struct{}{}
-}
-
-func (r *campaignRoom) remove(session *realtimeSession) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	delete(r.sessions, session)
-	if len(r.sessions) != 0 {
-		return
-	}
-	r.cancel()
-	r.hub.mu.Lock()
-	delete(r.hub.rooms, r.campaignID)
-	r.hub.mu.Unlock()
-}
-
-func (r *campaignRoom) setLatestGameSequence(seq uint64) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	if seq > r.lastGameSeq {
-		r.lastGameSeq = seq
-	}
-}
-
-func (r *campaignRoom) latestGameSequence() uint64 {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return r.lastGameSeq
-}
-
-func (r *campaignRoom) sessionsSnapshot() []*realtimeSession {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	values := make([]*realtimeSession, 0, len(r.sessions))
-	for session := range r.sessions {
-		values = append(values, session)
-	}
-	return values
-}
-
-func (r *campaignRoom) broadcastCurrent() {
-	for _, session := range r.sessionsSnapshot() {
-		state, err := r.hub.server.loadInteractionState(r.ctx, r.campaignID, session.userID)
-		if err != nil {
-			_ = session.peer.writeFrame(wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "interaction state changed; reload required"})})
-			continue
-		}
-		session.attach(r, state)
-		snapshot, err := r.hub.server.buildRoomSnapshot(r.ctx, r.campaignID, state, r.latestGameSequence())
-		if err != nil {
-			_ = session.peer.writeFrame(wsFrame{Type: "play.resync", Payload: mustJSON(map[string]string{"reason": "interaction state changed; reload required"})})
-			continue
-		}
-		_ = session.peer.writeFrame(wsFrame{Type: "play.interaction.updated", Payload: mustJSON(snapshot)})
-	}
-}
-
-func (r *campaignRoom) broadcastFrame(frame wsFrame) {
-	for _, session := range r.sessionsSnapshot() {
-		_ = session.peer.writeFrame(frame)
-	}
-}
-
-func (s *realtimeSession) attach(room *campaignRoom, state *gamev1.InteractionState) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.room = room
-	s.campaignID = strings.TrimSpace(room.campaignID)
-	s.participantID = strings.TrimSpace(state.GetViewer().GetParticipantId())
-	s.participantName = strings.TrimSpace(state.GetViewer().GetName())
-	s.activeSessionID = strings.TrimSpace(state.GetActiveSession().GetSessionId())
-}
-
-func (s *realtimeSession) currentRoom() *campaignRoom {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.room
-}
-
-func (s *realtimeSession) activeSession() string {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	return s.activeSessionID
-}
-
-func (s *realtimeSession) chatIdentity() (string, string, string, string, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.room == nil || s.campaignID == "" || s.activeSessionID == "" || s.participantID == "" {
-		return "", "", "", "", false
-	}
-	return s.campaignID, s.activeSessionID, s.participantID, s.participantName, true
-}
-
-func (s *realtimeSession) resetTypingTimer(frameType string, active bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	var timer **time.Timer
-	switch frameType {
-	case "play.chat.typing":
-		timer = &s.chatTypingTimer
-	default:
-		timer = &s.draftTypingTimer
-	}
-	if *timer != nil {
-		(*timer).Stop()
-		*timer = nil
-	}
-	if !active || s.room == nil {
-		return
-	}
-	room := s.room
-	sessionID := s.activeSessionID
-	participantID := s.participantID
-	participantName := s.participantName
-	*timer = time.AfterFunc(typingTTL, func() {
-		room.broadcastFrame(wsFrame{Type: frameType, Payload: mustJSON(playWSTypingPayload{
-			SessionID:     sessionID,
-			ParticipantID: participantID,
-			Name:          participantName,
-			Active:        false,
-		})})
-	})
-}
-
-func (p *wsPeer) writeFrame(frame wsFrame) error {
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	return p.encoder.Encode(frame)
-}
-
-func (p *wsPeer) writeError(requestID string, code string, message string, details map[string]any) error {
-	return p.writeFrame(wsFrame{
-		Type:      "play.error",
-		RequestID: requestID,
-		Payload: mustJSON(playWSErrorEnvelope{Error: playWSError{
-			Code:    code,
-			Message: message,
-			Details: details,
-		}}),
-	})
-}
-
-func mustJSON(value any) json.RawMessage {
-	data, _ := json.Marshal(value)
-	return data
-}
-
-func sleepUntilRetry(ctx context.Context, delay time.Duration) bool {
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return false
-	case <-timer.C:
-		return true
 	}
 }

@@ -34,6 +34,7 @@ matrix:
 - `make web-architecture-check`
 - `make game-architecture-check`
 - `make admin-architecture-check`
+- `make play-architecture-check`
 - `make cover`
 - `make cover-critical-domain`
 

@@ -14,6 +14,7 @@ import (
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 	gogrpc "google.golang.org/grpc"
 	gogrpccodes "google.golang.org/grpc/codes"
@@ -56,7 +57,7 @@ func TestHandleChatHistoryVariants(t *testing.T) {
 		if rr.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 		}
-		var payload playHistoryResponse
+		var payload playprotocol.HistoryResponse
 		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
 			t.Fatalf("decode history response: %v", err)
 		}
@@ -71,6 +72,9 @@ func TestHandleChatHistoryVariants(t *testing.T) {
 		}
 		if transcripts.beforeArgs.limit != 2 {
 			t.Fatalf("limit = %d, want %d", transcripts.beforeArgs.limit, 2)
+		}
+		if transcripts.beforeArgs.scope.CampaignID != "c1" || transcripts.beforeArgs.scope.SessionID != "s1" {
+			t.Fatalf("history scope = %#v, want campaign c1 session s1", transcripts.beforeArgs.scope)
 		}
 	})
 
@@ -118,7 +122,7 @@ func TestHandleChatHistoryVariants(t *testing.T) {
 		if rr.Code != http.StatusOK {
 			t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 		}
-		var payload playHistoryResponse
+		var payload playprotocol.HistoryResponse
 		if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
 			t.Fatalf("decode history response: %v", err)
 		}
@@ -133,26 +137,26 @@ func TestInteractionMutationHandlersProxyRequests(t *testing.T) {
 
 	cases := []struct {
 		name       string
+		path       string
 		body       string
 		wantMethod string
-		call       func(*Server, http.ResponseWriter, *http.Request)
 	}{
-		{name: "set active scene", body: `{}`, wantMethod: "SetActiveScene", call: (*Server).handleSetActiveScene},
-		{name: "start scene player phase", body: `{}`, wantMethod: "StartScenePlayerPhase", call: (*Server).handleStartScenePlayerPhase},
-		{name: "submit scene player post", body: `{}`, wantMethod: "SubmitScenePlayerPost", call: (*Server).handleSubmitScenePlayerPost},
-		{name: "yield scene player phase", body: `{}`, wantMethod: "YieldScenePlayerPhase", call: (*Server).handleYieldScenePlayerPhase},
-		{name: "unyield scene player phase", body: `{}`, wantMethod: "UnyieldScenePlayerPhase", call: (*Server).handleUnyieldScenePlayerPhase},
-		{name: "end scene player phase", body: `{}`, wantMethod: "EndScenePlayerPhase", call: (*Server).handleEndScenePlayerPhase},
-		{name: "commit scene gm output", body: `{}`, wantMethod: "CommitSceneGMOutput", call: (*Server).handleCommitSceneGMOutput},
-		{name: "accept scene player phase", body: `{}`, wantMethod: "AcceptScenePlayerPhase", call: (*Server).handleAcceptScenePlayerPhase},
-		{name: "request scene player revisions", body: `{}`, wantMethod: "RequestScenePlayerRevisions", call: (*Server).handleRequestScenePlayerRevisions},
-		{name: "pause session for ooc", body: `{}`, wantMethod: "PauseSessionForOOC", call: (*Server).handlePauseSessionForOOC},
-		{name: "post session ooc", body: `{}`, wantMethod: "PostSessionOOC", call: (*Server).handlePostSessionOOC},
-		{name: "mark ooc ready", wantMethod: "MarkOOCReadyToResume", call: (*Server).handleMarkOOCReadyToResume},
-		{name: "clear ooc ready", wantMethod: "ClearOOCReadyToResume", call: (*Server).handleClearOOCReadyToResume},
-		{name: "resume from ooc", wantMethod: "ResumeFromOOC", call: (*Server).handleResumeFromOOC},
-		{name: "set gm authority", body: `{}`, wantMethod: "SetSessionGMAuthority", call: (*Server).handleSetSessionGMAuthority},
-		{name: "retry ai gm turn", body: `{}`, wantMethod: "RetryAIGMTurn", call: (*Server).handleRetryAIGMTurn},
+		{name: "set active scene", path: "/api/campaigns/c1/interaction/set-active-scene", body: `{}`, wantMethod: "SetActiveScene"},
+		{name: "start scene player phase", path: "/api/campaigns/c1/interaction/start-scene-player-phase", body: `{}`, wantMethod: "StartScenePlayerPhase"},
+		{name: "submit scene player post", path: "/api/campaigns/c1/interaction/submit-scene-player-post", body: `{}`, wantMethod: "SubmitScenePlayerPost"},
+		{name: "yield scene player phase", path: "/api/campaigns/c1/interaction/yield-scene-player-phase", body: `{}`, wantMethod: "YieldScenePlayerPhase"},
+		{name: "unyield scene player phase", path: "/api/campaigns/c1/interaction/unyield-scene-player-phase", body: `{}`, wantMethod: "UnyieldScenePlayerPhase"},
+		{name: "end scene player phase", path: "/api/campaigns/c1/interaction/end-scene-player-phase", body: `{}`, wantMethod: "EndScenePlayerPhase"},
+		{name: "commit scene gm output", path: "/api/campaigns/c1/interaction/commit-scene-gm-output", body: `{}`, wantMethod: "CommitSceneGMOutput"},
+		{name: "accept scene player phase", path: "/api/campaigns/c1/interaction/accept-scene-player-phase", body: `{}`, wantMethod: "AcceptScenePlayerPhase"},
+		{name: "request scene player revisions", path: "/api/campaigns/c1/interaction/request-scene-player-revisions", body: `{}`, wantMethod: "RequestScenePlayerRevisions"},
+		{name: "pause session for ooc", path: "/api/campaigns/c1/interaction/pause-session-for-ooc", body: `{}`, wantMethod: "PauseSessionForOOC"},
+		{name: "post session ooc", path: "/api/campaigns/c1/interaction/post-session-ooc", body: `{}`, wantMethod: "PostSessionOOC"},
+		{name: "mark ooc ready", path: "/api/campaigns/c1/interaction/mark-ooc-ready-to-resume", wantMethod: "MarkOOCReadyToResume"},
+		{name: "clear ooc ready", path: "/api/campaigns/c1/interaction/clear-ooc-ready-to-resume", wantMethod: "ClearOOCReadyToResume"},
+		{name: "resume from ooc", path: "/api/campaigns/c1/interaction/resume-from-ooc", wantMethod: "ResumeFromOOC"},
+		{name: "set gm authority", path: "/api/campaigns/c1/interaction/set-session-gm-authority", body: `{}`, wantMethod: "SetSessionGMAuthority"},
+		{name: "retry ai gm turn", path: "/api/campaigns/c1/interaction/retry-ai-gm-turn", body: `{}`, wantMethod: "RetryAIGMTurn"},
 	}
 
 	for _, tc := range cases {
@@ -163,13 +167,16 @@ func TestInteractionMutationHandlersProxyRequests(t *testing.T) {
 			interaction := newRecordingInteractionClient(playTestState())
 			transcripts := &scriptTranscriptStore{latest: 11}
 			server := newAuthedPlayServer(interaction, transcripts)
+			handler, err := server.newHandler(testPlayLaunchGrantConfig(t))
+			if err != nil {
+				t.Fatalf("newHandler() error = %v", err)
+			}
 
-			req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/test", strings.NewReader(tc.body))
-			req.SetPathValue("campaignID", "c1")
+			req := httptest.NewRequest(http.MethodPost, "http://play.example.com"+tc.path, strings.NewReader(tc.body))
 			req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
 			rr := httptest.NewRecorder()
 
-			tc.call(server, rr, req)
+			handler.ServeHTTP(rr, req)
 
 			if rr.Code != http.StatusOK {
 				t.Fatalf("status = %d, want %d body=%s", rr.Code, http.StatusOK, rr.Body.String())
@@ -181,7 +188,7 @@ func TestInteractionMutationHandlersProxyRequests(t *testing.T) {
 				t.Fatalf("campaign_id = %q, want %q", interaction.lastCampaignID, "c1")
 			}
 
-			var payload playRoomSnapshot
+			var payload playprotocol.RoomSnapshot
 			if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
 				t.Fatalf("decode interaction response: %v", err)
 			}
@@ -199,12 +206,15 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 		t.Parallel()
 
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		handler, err := server.newHandler(testPlayLaunchGrantConfig(t))
+		if err != nil {
+			t.Fatalf("newHandler() error = %v", err)
+		}
 		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/set-active-scene", strings.NewReader(`{"unknown":true}`))
-		req.SetPathValue("campaignID", "c1")
 		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
 		rr := httptest.NewRecorder()
 
-		server.handleSetActiveScene(rr, req)
+		handler.ServeHTTP(rr, req)
 
 		assertJSONError(t, rr, http.StatusBadRequest, "invalid json body")
 	})
@@ -213,11 +223,14 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 		t.Parallel()
 
 		server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
+		handler, err := server.newHandler(testPlayLaunchGrantConfig(t))
+		if err != nil {
+			t.Fatalf("newHandler() error = %v", err)
+		}
 		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/set-active-scene", strings.NewReader(`{}`))
-		req.SetPathValue("campaignID", "c1")
 		rr := httptest.NewRecorder()
 
-		server.handleSetActiveScene(rr, req)
+		handler.ServeHTTP(rr, req)
 
 		assertJSONError(t, rr, http.StatusUnauthorized, "authentication required")
 	})
@@ -228,12 +241,15 @@ func TestInteractionMutationRejectsInvalidJSONAndAuthFailures(t *testing.T) {
 		interaction := newRecordingInteractionClient(playTestState())
 		interaction.mutationErr = gogrpcstatus.Error(gogrpccodes.InvalidArgument, "bad scene")
 		server := newAuthedPlayServer(interaction, &scriptTranscriptStore{})
+		handler, err := server.newHandler(testPlayLaunchGrantConfig(t))
+		if err != nil {
+			t.Fatalf("newHandler() error = %v", err)
+		}
 		req := httptest.NewRequest(http.MethodPost, "http://play.example.com/api/campaigns/c1/interaction/set-active-scene", strings.NewReader(`{}`))
-		req.SetPathValue("campaignID", "c1")
 		req.AddCookie(&http.Cookie{Name: playSessionCookieName, Value: "ps-1"})
 		rr := httptest.NewRecorder()
 
-		server.handleSetActiveScene(rr, req)
+		handler.ServeHTTP(rr, req)
 
 		assertJSONError(t, rr, http.StatusBadRequest, "bad scene")
 	})
@@ -243,7 +259,7 @@ func TestNewHandlerRegistersHealthAndRealtimeRoutes(t *testing.T) {
 	t.Parallel()
 
 	server := newAuthedPlayServer(newRecordingInteractionClient(playTestState()), &scriptTranscriptStore{})
-	handler, err := server.newHandler(Config{LaunchGrant: testPlayLaunchGrantConfig(t)})
+	handler, err := server.newHandler(testPlayLaunchGrantConfig(t))
 	if err != nil {
 		t.Fatalf("newHandler() error = %v", err)
 	}
@@ -277,9 +293,12 @@ func TestPlayHelpers(t *testing.T) {
 			System: &gamev1.GameSystemInfo{Id: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART, Name: "Daggerheart", Version: "v1"},
 		}}
 
-		system, err := server.loadSystemMetadata(context.Background(), "c1", "user-1")
+		system, err := server.application().systemMetadata(context.Background(), playRequest{
+			campaignRequest: campaignRequest{CampaignID: "c1"},
+			UserID:          "user-1",
+		})
 		if err != nil {
-			t.Fatalf("loadSystemMetadata() error = %v", err)
+			t.Fatalf("systemMetadata() error = %v", err)
 		}
 		if system.ID != "daggerheart" || system.Name != "Daggerheart" || system.Version != "v1" {
 			t.Fatalf("system = %#v", system)
@@ -413,7 +432,7 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 		peer:   &wsPeer{encoder: json.NewEncoder(&buffer)},
 	}
 
-	connectPayload := mustJSON(playWSConnectPayload{CampaignID: "c1", LastChatSeq: 0})
+	connectPayload := mustJSON(playprotocol.ConnectRequest{CampaignID: "c1", LastChatSeq: 0})
 	hub.handleConnect(context.Background(), session, wsFrame{Type: "play.connect", RequestID: "req-1", Payload: connectPayload})
 
 	frames := drainWSFrames(t, &buffer)
@@ -440,14 +459,14 @@ func TestRealtimeConnectTypingAndChatSend(t *testing.T) {
 	hub.handleChatSend(context.Background(), session, wsFrame{
 		Type:      "play.chat.send",
 		RequestID: "req-3",
-		Payload:   mustJSON(playWSChatSendPayload{Body: "Fresh message", ClientMessageID: "cm-2"}),
+		Payload:   mustJSON(playprotocol.ChatSendRequest{Body: "Fresh message", ClientMessageID: "cm-2"}),
 	})
 	chatFrames := drainWSFrames(t, &buffer)
 	if len(chatFrames) != 1 || chatFrames[0].Type != "play.chat.message" {
 		t.Fatalf("chat frames = %#v", chatFrames)
 	}
-	if transcripts.appendArgs.body != "Fresh message" {
-		t.Fatalf("append body = %q, want %q", transcripts.appendArgs.body, "Fresh message")
+	if transcripts.appendArgs.request.Body != "Fresh message" {
+		t.Fatalf("append body = %q, want %q", transcripts.appendArgs.request.Body, "Fresh message")
 	}
 
 	hub.Close()
@@ -474,28 +493,28 @@ func TestRealtimeChatSendRequiresActiveSession(t *testing.T) {
 	hub.handleConnect(context.Background(), session, wsFrame{
 		Type:      "play.connect",
 		RequestID: "req-1",
-		Payload:   mustJSON(playWSConnectPayload{CampaignID: "c1"}),
+		Payload:   mustJSON(playprotocol.ConnectRequest{CampaignID: "c1"}),
 	})
 	_ = drainWSFrames(t, &buffer)
 
 	hub.handleChatSend(context.Background(), session, wsFrame{
 		Type:      "play.chat.send",
 		RequestID: "req-2",
-		Payload:   mustJSON(playWSChatSendPayload{Body: "Fresh message", ClientMessageID: "cm-2"}),
+		Payload:   mustJSON(playprotocol.ChatSendRequest{Body: "Fresh message", ClientMessageID: "cm-2"}),
 	})
 
 	frames := drainWSFrames(t, &buffer)
 	if len(frames) != 1 || frames[0].Type != "play.error" {
 		t.Fatalf("chat frames = %#v", frames)
 	}
-	var payload playWSErrorEnvelope
+	var payload playprotocol.ErrorEnvelope
 	if err := json.Unmarshal(frames[0].Payload, &payload); err != nil {
 		t.Fatalf("decode error payload: %v", err)
 	}
 	if payload.Error.Message != "join an active session before sending chat" {
 		t.Fatalf("error message = %q", payload.Error.Message)
 	}
-	if transcripts.appendArgs.sessionID != "" || transcripts.appendArgs.body != "" {
+	if transcripts.appendArgs.request.Scope.SessionID != "" || transcripts.appendArgs.request.Body != "" {
 		t.Fatalf("append args = %#v, want zero value", transcripts.appendArgs)
 	}
 }
@@ -556,7 +575,7 @@ func TestRealtimeRoomLifecycleAndBroadcasts(t *testing.T) {
 	}
 
 	session.resetTypingTimer("play.chat.typing", true)
-	time.Sleep(typingTTL + 200*time.Millisecond)
+	time.Sleep(defaultTypingTTL + 200*time.Millisecond)
 	frames = drainWSFrames(t, &buffer)
 	if len(frames) != 1 || frames[0].Type != "play.chat.typing" {
 		t.Fatalf("typing expiry frames = %#v", frames)
@@ -754,42 +773,32 @@ type scriptTranscriptStore struct {
 	appendMessage transcript.Message
 	appendErr     error
 	beforeArgs    struct {
-		campaignID string
-		sessionID  string
-		before     int64
-		limit      int
+		scope  transcript.Scope
+		before int64
+		limit  int
 	}
 	appendArgs struct {
-		campaignID      string
-		sessionID       string
-		actor           transcript.MessageActor
-		body            string
-		clientMessageID string
+		request transcript.AppendRequest
 	}
 }
 
-func (s *scriptTranscriptStore) LatestSequence(context.Context, string, string) (int64, error) {
+func (s *scriptTranscriptStore) LatestSequence(context.Context, transcript.Scope) (int64, error) {
 	return s.latest, s.latestErr
 }
 
-func (s *scriptTranscriptStore) AppendMessage(_ context.Context, campaignID string, sessionID string, actor transcript.MessageActor, body string, clientMessageID string) (transcript.Message, bool, error) {
-	s.appendArgs.campaignID = campaignID
-	s.appendArgs.sessionID = sessionID
-	s.appendArgs.actor = actor
-	s.appendArgs.body = body
-	s.appendArgs.clientMessageID = clientMessageID
-	return s.appendMessage, false, s.appendErr
+func (s *scriptTranscriptStore) AppendMessage(_ context.Context, req transcript.AppendRequest) (transcript.AppendResult, error) {
+	s.appendArgs.request = req
+	return transcript.AppendResult{Message: s.appendMessage}, s.appendErr
 }
 
-func (s *scriptTranscriptStore) HistoryAfter(context.Context, string, string, int64) ([]transcript.Message, error) {
+func (s *scriptTranscriptStore) HistoryAfter(context.Context, transcript.HistoryAfterQuery) ([]transcript.Message, error) {
 	return s.after, s.afterErr
 }
 
-func (s *scriptTranscriptStore) HistoryBefore(_ context.Context, campaignID string, sessionID string, before int64, limit int) ([]transcript.Message, error) {
-	s.beforeArgs.campaignID = campaignID
-	s.beforeArgs.sessionID = sessionID
-	s.beforeArgs.before = before
-	s.beforeArgs.limit = limit
+func (s *scriptTranscriptStore) HistoryBefore(_ context.Context, query transcript.HistoryBeforeQuery) ([]transcript.Message, error) {
+	s.beforeArgs.scope = query.Scope
+	s.beforeArgs.before = query.BeforeSequenceID
+	s.beforeArgs.limit = query.Limit
 	return s.before, s.beforeErr
 }
 

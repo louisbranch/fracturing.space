@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { mergeMessages, resolveCampaignId, sessionLabel } from "./utils";
+import { formatSessionLabel } from "./view_models";
+import { mergeMessages, normalizeSnapshot, resolveCampaignId } from "./utils";
 
 describe("resolveCampaignId", () => {
   it("extracts the campaign identifier from the play route", () => {
@@ -47,10 +48,67 @@ describe("mergeMessages", () => {
   });
 });
 
-describe("sessionLabel", () => {
+describe("formatSessionLabel", () => {
   it("returns a fallback label only when no active session exists", () => {
-    expect(sessionLabel()).toBe("No active session");
-    expect(sessionLabel({ session_id: "sess-1", name: "" })).toBe("Untitled session");
-    expect(sessionLabel({ session_id: "sess-1", name: "The Old Man" })).toBe("The Old Man");
+    expect(formatSessionLabel()).toBe("No active session");
+    expect(formatSessionLabel({ session_id: "sess-1", name: "" })).toBe("Untitled session");
+    expect(formatSessionLabel({ session_id: "sess-1", name: "The Old Man" })).toBe("The Old Man");
+  });
+});
+
+describe("normalizeSnapshot", () => {
+  it("fills missing repeated fields from realtime payloads", () => {
+    const snapshot = normalizeSnapshot(
+      {
+        campaign_id: "camp-1",
+        interaction_state: {
+          campaign_id: "camp-1",
+          campaign_name: "Guildhouse",
+          gm_authority_participant_id: "gm-1",
+        },
+        system: { id: "daggerheart", version: "1.0.0", name: "Daggerheart" },
+        chat: { session_id: "sess-1", latest_sequence_id: 2, messages: [], history_url: "/history" },
+        realtime: { url: "/realtime", protocol_version: 1 },
+      },
+      {
+        interaction_state: {
+          campaign_id: "camp-1",
+          campaign_name: "Guildhouse",
+          gm_authority_participant_id: "gm-1",
+          player_phase: {
+            phase_id: "phase-1",
+            status: 2,
+            frame_text: "",
+            acting_character_ids: undefined as never,
+            acting_participant_ids: undefined as never,
+            slots: [
+              {
+                participant_id: "player-1",
+                summary_text: "",
+                character_ids: undefined as never,
+                yielded: false,
+                review_status: 0,
+                review_reason: "",
+                review_character_ids: undefined as never,
+              },
+            ],
+          },
+          ooc: {
+            open: true,
+            posts: undefined as never,
+            ready_to_resume_participant_ids: undefined as never,
+          },
+        },
+        latest_game_sequence: 4,
+        chat: { session_id: "sess-1", latest_sequence_id: 2, messages: [], history_url: "/history" },
+      },
+    );
+
+    expect(snapshot.interaction_state.player_phase?.acting_character_ids).toEqual([]);
+    expect(snapshot.interaction_state.player_phase?.acting_participant_ids).toEqual([]);
+    expect(snapshot.interaction_state.player_phase?.slots[0]?.character_ids).toEqual([]);
+    expect(snapshot.interaction_state.player_phase?.slots[0]?.review_character_ids).toEqual([]);
+    expect(snapshot.interaction_state.ooc?.posts).toEqual([]);
+    expect(snapshot.interaction_state.ooc?.ready_to_resume_participant_ids).toEqual([]);
   });
 });

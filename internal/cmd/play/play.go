@@ -3,15 +3,22 @@ package play
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
 
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	playapp "github.com/louisbranch/fracturing.space/internal/services/play/app"
+	playsqlite "github.com/louisbranch/fracturing.space/internal/services/play/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
+	gogrpc "google.golang.org/grpc"
 )
 
 // Config holds play command configuration.
@@ -67,16 +74,19 @@ func Run(ctx context.Context, cfg Config) error {
 		)
 		defer stopReporter()
 
-		server, err := playapp.NewServer(ctx, playapp.Config{
+		resources, deps, err := openRuntimeDependencies(ctx, cfg)
+		if err != nil {
+			return fmt.Errorf("open play dependencies: %w", err)
+		}
+		defer func() { _ = resources.Close() }()
+
+		server, err := playapp.NewServer(playapp.Config{
 			HTTPAddr:            cfg.HTTPAddr,
 			WebHTTPAddr:         cfg.WebHTTPAddr,
-			AuthAddr:            cfg.AuthAddr,
-			GameAddr:            cfg.GameAddr,
-			DBPath:              cfg.DBPath,
 			PlayUIDevServerURL:  cfg.PlayUIDevServerURL,
 			RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
 			LaunchGrant:         launchGrantCfg,
-		})
+		}, deps)
 		if err != nil {
 			return fmt.Errorf("init play server: %w", err)
 		}
@@ -86,4 +96,78 @@ func Run(ctx context.Context, cfg Config) error {
 		}
 		return nil
 	})
+}
+
+type runtimeDependencies struct {
+	authMC *platformgrpc.ManagedConn
+	gameMC *platformgrpc.ManagedConn
+	store  *playsqlite.Store
+	closed bool
+}
+
+func openRuntimeDependencies(ctx context.Context, cfg Config) (runtimeDependencies, playapp.Dependencies, error) {
+	authMC, err := platformgrpc.NewManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "auth",
+		Addr: cfg.AuthAddr,
+		Mode: platformgrpc.ModeRequired,
+	})
+	if err != nil {
+		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("connect auth: %w", err)
+	}
+	gameMC, err := platformgrpc.NewManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "game",
+		Addr: cfg.GameAddr,
+		Mode: platformgrpc.ModeRequired,
+		DialOpts: append(
+			platformgrpc.LenientDialOptions(),
+			gogrpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServicePlay)),
+			gogrpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServicePlay)),
+		),
+	})
+	if err != nil {
+		_ = authMC.Close()
+		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("connect game: %w", err)
+	}
+	store, err := playsqlite.Open(cfg.DBPath)
+	if err != nil {
+		_ = gameMC.Close()
+		_ = authMC.Close()
+		return runtimeDependencies{}, playapp.Dependencies{}, fmt.Errorf("open play transcript store: %w", err)
+	}
+	resources := runtimeDependencies{
+		authMC: authMC,
+		gameMC: gameMC,
+		store:  store,
+	}
+	return resources, playapp.Dependencies{
+		Auth:        authv1.NewAuthServiceClient(authMC.Conn()),
+		Interaction: gamev1.NewInteractionServiceClient(gameMC.Conn()),
+		Campaign:    gamev1.NewCampaignServiceClient(gameMC.Conn()),
+		System:      gamev1.NewSystemServiceClient(gameMC.Conn()),
+		Events:      gamev1.NewEventServiceClient(gameMC.Conn()),
+		Transcripts: store,
+	}, nil
+}
+
+func (r *runtimeDependencies) Close() error {
+	if r == nil || r.closed {
+		return nil
+	}
+	r.closed = true
+	return errors.Join(
+		closeIfPresent(r.store),
+		closeIfPresent(r.gameMC),
+		closeIfPresent(r.authMC),
+	)
+}
+
+type closer interface {
+	Close() error
+}
+
+func closeIfPresent(value closer) error {
+	if value == nil {
+		return nil
+	}
+	return value.Close()
 }
