@@ -26,6 +26,16 @@ func TestLucideNameNotificationIcons(t *testing.T) {
 		want string
 	}{
 		{
+			name: "invites",
+			id:   commonv1.IconId_ICON_ID_INVITES,
+			want: "user-plus",
+		},
+		{
+			name: "message",
+			id:   commonv1.IconId_ICON_ID_MESSAGE,
+			want: "mail",
+		},
+		{
 			name: "notification",
 			id:   commonv1.IconId_ICON_ID_NOTIFICATION,
 			want: "bell",
@@ -59,5 +69,17 @@ func TestLucideNameLocaleIcon(t *testing.T) {
 func TestLucideSpriteIncludesLocaleSymbol(t *testing.T) {
 	if !strings.Contains(LucideSprite(), `id="lucide-languages"`) {
 		t.Fatalf("LucideSprite() missing locale icon symbol")
+	}
+}
+
+func TestLucideSpriteIncludesUpdatedInviteAndMessageSymbols(t *testing.T) {
+	sprite := LucideSprite()
+	for _, symbolID := range []string{
+		`id="lucide-user-plus"`,
+		`id="lucide-mail"`,
+	} {
+		if !strings.Contains(sprite, symbolID) {
+			t.Fatalf("LucideSprite() missing symbol %s", symbolID)
+		}
 	}
 }

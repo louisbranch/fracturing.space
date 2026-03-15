@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/shared/i18nhttp"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -36,6 +37,9 @@ func TestNotificationListViewUsesRendererAndSkipsBlankIDs(t *testing.T) {
 	}
 	if items[0].Title != "Rendered title" {
 		t.Fatalf("Title = %q, want %q", items[0].Title, "Rendered title")
+	}
+	if items[0].IconID != commonv1.IconId_ICON_ID_MESSAGE {
+		t.Fatalf("IconID = %v, want %v", items[0].IconID, commonv1.IconId_ICON_ID_MESSAGE)
 	}
 	if items[0].Body != "Rendered body" {
 		t.Fatalf("Body = %q, want %q", items[0].Body, "Rendered body")
@@ -80,6 +84,9 @@ func TestNotificationDetailViewUsesRendererAndReturnsNilForBlankID(t *testing.T)
 	if view.Title != "Rendered title" {
 		t.Fatalf("Title = %q, want %q", view.Title, "Rendered title")
 	}
+	if view.IconID != commonv1.IconId_ICON_ID_MESSAGE {
+		t.Fatalf("IconID = %v, want %v", view.IconID, commonv1.IconId_ICON_ID_MESSAGE)
+	}
 	if view.Body != "Rendered body" {
 		t.Fatalf("Body = %q, want %q", view.Body, "Rendered body")
 	}
@@ -97,4 +104,71 @@ type stubNotificationCopyRenderer struct {
 
 func (s stubNotificationCopyRenderer) RenderInApp(webtemplates.Localizer, notificationsapp.NotificationSummary) notificationCopy {
 	return s.copy
+}
+
+func TestNotificationMessageIconIDUsesKnownMappingsAndFallback(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name        string
+		messageType string
+		want        commonv1.IconId
+	}{
+		{name: "invite", messageType: "campaign.invite.created.v1", want: commonv1.IconId_ICON_ID_INVITES},
+		{name: "campaign fallback", messageType: "campaign.updated.v1", want: commonv1.IconId_ICON_ID_CAMPAIGN},
+		{name: "onboarding", messageType: "auth.onboarding.welcome.v1", want: commonv1.IconId_ICON_ID_PROFILE},
+		{name: "system message", messageType: "system.message.v1", want: commonv1.IconId_ICON_ID_MESSAGE},
+		{name: "unknown fallback", messageType: "custom.topic", want: commonv1.IconId_ICON_ID_MESSAGE},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			if got := notificationMessageIconID(tc.messageType); got != tc.want {
+				t.Fatalf("notificationMessageIconID(%q) = %v, want %v", tc.messageType, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNotificationsSideMenuBuildsSharedMenuItems(t *testing.T) {
+	t.Parallel()
+
+	loc := webi18n.Printer(language.English)
+	items := []NotificationListItemView{
+		{
+			ID:        "n1",
+			IconID:    commonv1.IconId_ICON_ID_MESSAGE,
+			Title:     "Welcome",
+			DetailURL: routepath.AppNotification("n1"),
+		},
+		{
+			ID:        "n2",
+			IconID:    commonv1.IconId_ICON_ID_INVITES,
+			Title:     "Campaign invitation",
+			DetailURL: routepath.AppNotification("n2"),
+		},
+	}
+
+	menu := notificationsSideMenu(routepath.AppNotification("n2"), items, loc)
+	if menu == nil {
+		t.Fatal("notificationsSideMenu() = nil, want menu")
+	}
+	if menu.CurrentPath != routepath.AppNotification("n2") {
+		t.Fatalf("CurrentPath = %q, want %q", menu.CurrentPath, routepath.AppNotification("n2"))
+	}
+	if len(menu.Items) != 2 {
+		t.Fatalf("len(menu.Items) = %d, want 2", len(menu.Items))
+	}
+	if menu.Items[0].URL != routepath.AppNotification("n1") {
+		t.Fatalf("menu.Items[0].URL = %q, want %q", menu.Items[0].URL, routepath.AppNotification("n1"))
+	}
+	if menu.Items[1].IconID != commonv1.IconId_ICON_ID_INVITES {
+		t.Fatalf("menu.Items[1].IconID = %v, want %v", menu.Items[1].IconID, commonv1.IconId_ICON_ID_INVITES)
+	}
+	if !menu.Items[1].MatchExact {
+		t.Fatal("menu.Items[1].MatchExact = false, want true")
+	}
 }

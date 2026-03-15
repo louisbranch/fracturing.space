@@ -4,9 +4,11 @@ import (
 	"strings"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // now returns the current time using the injected nowFunc, defaulting to time.Now
@@ -32,6 +34,7 @@ func (h handlers) notificationListView(items []notificationsapp.NotificationSumm
 		rendered := h.copyRenderer().RenderInApp(loc, item)
 		rows = append(rows, NotificationListItemView{
 			ID:           itemID,
+			IconID:       notificationMessageIconID(item.MessageType),
 			Title:        rendered.Title,
 			Body:         rendered.Body,
 			SourceLabel:  notificationSourceLabel(item.Source, loc),
@@ -53,6 +56,7 @@ func (h handlers) notificationDetailView(item notificationsapp.NotificationSumma
 	rendered := h.copyRenderer().RenderInApp(loc, item)
 	return &NotificationDetailView{
 		ID:           itemID,
+		IconID:       notificationMessageIconID(item.MessageType),
 		Title:        rendered.Title,
 		Body:         rendered.Body,
 		Facts:        rendered.Facts,
@@ -123,4 +127,48 @@ func notificationCreatedLabel(createdAt time.Time, now time.Time, loc Localizer)
 		return T(loc, "game.notifications.time.day_ago")
 	}
 	return T(loc, "game.notifications.time.days_ago", days)
+}
+
+// notificationMessageIconID maps notification message types to shared content icons.
+func notificationMessageIconID(messageType string) commonv1.IconId {
+	messageType = strings.ToLower(strings.TrimSpace(messageType))
+	switch {
+	case strings.HasPrefix(messageType, "campaign.invite."):
+		return commonv1.IconId_ICON_ID_INVITES
+	case strings.HasPrefix(messageType, "campaign."):
+		return commonv1.IconId_ICON_ID_CAMPAIGN
+	case strings.HasPrefix(messageType, "auth.onboarding."):
+		return commonv1.IconId_ICON_ID_PROFILE
+	case strings.HasPrefix(messageType, "system.message."):
+		return commonv1.IconId_ICON_ID_MESSAGE
+	default:
+		return commonv1.IconId_ICON_ID_MESSAGE
+	}
+}
+
+// notificationsSideMenu builds the shared app side menu from notification rows.
+func notificationsSideMenu(currentPath string, items []NotificationListItemView, loc webtemplates.Localizer) *webtemplates.AppSideMenu {
+	if len(items) == 0 {
+		return nil
+	}
+	menuItems := make([]webtemplates.AppSideMenuItem, 0, len(items))
+	for _, item := range items {
+		detailURL := strings.TrimSpace(item.DetailURL)
+		if detailURL == "" {
+			continue
+		}
+		menuItems = append(menuItems, webtemplates.AppSideMenuItem{
+			Label:      notificationItemTitle(item, loc),
+			URL:        detailURL,
+			MatchExact: true,
+			IconID:     item.IconID,
+		})
+	}
+	if len(menuItems) == 0 {
+		return nil
+	}
+	return &webtemplates.AppSideMenu{
+		CurrentPath: strings.TrimSpace(currentPath),
+		Items:       menuItems,
+	}
 }

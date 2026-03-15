@@ -266,6 +266,12 @@ const lucideSprite = `<svg xmlns="http://www.w3.org/2000/svg" style="display:non
     <path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7" />
     <rect x="2" y="4" width="20" height="16" rx="2" />
   </symbol>
+  <symbol id="lucide-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+    <circle cx="9" cy="7" r="4" />
+    <path d="M19 8v6" />
+    <path d="M22 11h-6" />
+  </symbol>
   <symbol id="lucide-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M12 8V4H8" />
     <rect width="16" height="12" x="4" y="8" rx="2" />

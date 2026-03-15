@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/icons"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
@@ -39,6 +40,15 @@ func TestMountServesNotificationsGet(t *testing.T) {
 	}
 	if !strings.Contains(body, "Welcome to Fracturing Space") {
 		t.Fatalf("body missing rendered notification title: %q", body)
+	}
+	if !strings.Contains(body, `data-app-side-menu-item="/app/notifications/n1"`) {
+		t.Fatalf("body missing notifications side-menu item: %q", body)
+	}
+	if !strings.Contains(body, `href="#`+icons.LucideSymbolID("mail")+`"`) {
+		t.Fatalf("body missing message icon: %q", body)
+	}
+	if strings.Contains(body, `data-notification-unread="true"`) {
+		t.Fatalf("body should no longer render bespoke inbox rows: %q", body)
 	}
 }
 
@@ -117,7 +127,23 @@ func TestMountRejectsNotificationsNonGet(t *testing.T) {
 func TestMountServesNotificationDetailRoute(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{getItem: testNotificationSummary("n1", true)}, Base: notificationsTestBase()})
+	listItem := testNotificationSummary("n1", false)
+	detailItem := notificationsapp.NotificationSummary{
+		ID:          "n1",
+		MessageType: "system.message.v1",
+		PayloadJSON: `{"title":"Detail view title","body":"Detail body."}`,
+		Read:        false,
+	}
+	m := New(Config{Gateway: fakeGateway{
+		listItems: []notificationsapp.NotificationSummary{listItem},
+		getItem:   detailItem,
+		openItem: notificationsapp.NotificationSummary{
+			ID:          "n1",
+			MessageType: "system.message.v1",
+			PayloadJSON: `{"title":"Opened title","body":"Opened body."}`,
+			Read:        true,
+		},
+	}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -132,8 +158,18 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 	if !strings.Contains(body, "notification-open") {
 		t.Fatalf("body missing detail container marker: %q", body)
 	}
-	if !strings.Contains(body, "Welcome to Fracturing Space") {
+	if !strings.Contains(body, "Detail view title") {
 		t.Fatalf("body missing rendered detail title: %q", body)
+	}
+	// Invariant: GET detail remains read-only; only POST /open performs acknowledgment.
+	if strings.Contains(body, "Opened title") {
+		t.Fatalf("body unexpectedly rendered open-route content on GET detail: %q", body)
+	}
+	if !strings.Contains(body, `class="menu-active" href="/app/notifications/n1"`) {
+		t.Fatalf("body missing active side-menu item: %q", body)
+	}
+	if !strings.Contains(body, `href="#`+icons.LucideSymbolID("mail")+`"`) {
+		t.Fatalf("body missing message icon: %q", body)
 	}
 }
 
@@ -156,12 +192,17 @@ func TestMountServesInviteNotificationDetailActions(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	m := New(Config{Gateway: fakeGateway{getItem: notificationsapp.NotificationSummary{
+	inviteItem := notificationsapp.NotificationSummary{
 		ID:          "n1",
 		MessageType: "campaign.invite.created.v1",
 		PayloadJSON: string(payloadJSON),
 		Read:        true,
-	}}, Base: notificationsTestBase()})
+	}
+	m := New(Config{Gateway: fakeGateway{
+		listItems: []notificationsapp.NotificationSummary{inviteItem},
+		getItem:   inviteItem,
+		openItem:  inviteItem,
+	}, Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -181,6 +222,7 @@ func TestMountServesInviteNotificationDetailActions(t *testing.T) {
 		"@gm",
 		`href="/invite/inv-1"`,
 		`View invitation`,
+		`href="#` + icons.LucideSymbolID("user-plus") + `"`,
 	} {
 		if !strings.Contains(body, needle) {
 			t.Fatalf("body missing %q: %q", needle, body)

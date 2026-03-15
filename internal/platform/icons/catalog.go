@@ -190,6 +190,11 @@ var catalog = []Definition{
 		Description: "Campaign invitations and membership requests.",
 	},
 	{
+		ID:          commonv1.IconId_ICON_ID_MESSAGE,
+		Name:        "Message",
+		Description: "Mailbox-style messages and generic notification content.",
+	},
+	{
 		ID:          commonv1.IconId_ICON_ID_NOTIFICATION,
 		Name:        "Notification",
 		Description: "Inbox notifications and update alerts.",
