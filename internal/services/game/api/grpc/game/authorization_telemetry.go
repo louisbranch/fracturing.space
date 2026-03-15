@@ -2,7 +2,7 @@ package game
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -84,6 +84,6 @@ func emitAuthzDecisionTelemetry(ctx context.Context, evt authzDecisionEvent) {
 		SpanID:       spanID,
 		Attributes:   attributes,
 	}); err != nil {
-		log.Printf("audit emit %s: %v", authzEventDecisionName, err)
+		slog.Error("audit emit failed", "event", authzEventDecisionName, "error", err)
 	}
 }

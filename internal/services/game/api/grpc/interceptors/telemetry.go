@@ -2,7 +2,7 @@ package interceptors
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -74,7 +74,7 @@ func AuditInterceptor(store storage.AuditEventStore) grpc.UnaryServerInterceptor
 			},
 		})
 		if emitErr != nil {
-			log.Printf("audit emit %s: %v", info.FullMethod, emitErr)
+			slog.Error("audit emit failed", "method", info.FullMethod, "error", emitErr)
 		}
 
 		return resp, err
@@ -133,7 +133,7 @@ func StreamAuditInterceptor(store storage.AuditEventStore) grpc.StreamServerInte
 			},
 		})
 		if emitErr != nil {
-			log.Printf("stream audit emit %s: %v", info.FullMethod, emitErr)
+			slog.Error("audit emit failed", "method", info.FullMethod, "error", emitErr)
 		}
 
 		return err

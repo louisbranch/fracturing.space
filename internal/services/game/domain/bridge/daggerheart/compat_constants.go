@@ -2,7 +2,9 @@ package daggerheart
 
 import "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
 
-// Compatibility constants used by gRPC application mappings during migration.
+// Compatibility constants re-exported from internal/mechanics for gRPC
+// application mappings. Remove when gRPC transport packages import
+// internal/mechanics directly or define their own boundary constants.
 const (
 	HPMin        = mechanics.HPMin
 	HPMaxCap     = mechanics.HPMaxCap

@@ -2,7 +2,8 @@ package server
 
 import (
 	"context"
-	"log"
+	"fmt"
+	"log/slog"
 	"time"
 
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -48,7 +49,7 @@ func (s *Server) Serve(ctx context.Context) error {
 	)
 	defer stopAncillaryWorkers()
 
-	log.Printf("game server listening at %v", s.listener.Addr())
+	slog.Info("game server listening", "addr", s.listener.Addr())
 	return runGRPCServeLoop(
 		ctx,
 		func() error {
@@ -83,7 +84,7 @@ func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) fun
 			projectionApplyOutboxShadowWorkerInterval,
 			projectionApplyOutboxShadowWorkerBatch,
 			time.Now,
-			log.Printf,
+			slogInfof,
 		)
 	})
 }
@@ -108,7 +109,7 @@ func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
 			projectionApplyOutboxWorkerInterval,
 			projectionApplyOutboxWorkerBatch,
 			time.Now,
-			log.Printf,
+			slogInfof,
 		)
 	})
 }
@@ -214,6 +215,11 @@ func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
 		return
 	}
 	if err := mc.Close(); err != nil {
-		log.Printf("close %s managed conn: %v", name, err)
+		slog.Error("close managed conn", "name", name, "error", err)
 	}
+}
+
+// slogInfof adapts slog.Info for callers that accept a printf-style callback.
+func slogInfof(format string, args ...any) {
+	slog.Info(fmt.Sprintf(format, args...))
 }

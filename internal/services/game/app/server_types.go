@@ -2,7 +2,7 @@ package server
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"net"
 	"time"
 
@@ -39,12 +39,6 @@ type Server struct {
 // SQLite-specific types.
 type projectionApplyOutboxShadowProcessor = storage.ProjectionApplyOutboxShadowProcessor
 type projectionApplyOutboxProcessor = storage.ProjectionApplyOutboxProcessor
-
-// projectionApplyStore is the projection-store contract needed by outbox apply
-// wiring. It combines exactly-once apply with system-adapter store binding.
-type projectionApplyStore interface {
-	storage.ProjectionApplyExactlyOnceStore
-}
 
 type eventBackend interface {
 	storage.EventStore
@@ -99,17 +93,17 @@ func (b *storageBundle) Close() {
 	}
 	if b.events != nil {
 		if err := b.events.Close(); err != nil {
-			log.Printf("close event store: %v", err)
+			slog.Error("close event store", "error", err)
 		}
 	}
 	if b.projections != nil {
 		if err := b.projections.Close(); err != nil {
-			log.Printf("close projection store: %v", err)
+			slog.Error("close projection store", "error", err)
 		}
 	}
 	if b.content != nil {
 		if err := b.content.Close(); err != nil {
-			log.Printf("close content store: %v", err)
+			slog.Error("close content store", "error", err)
 		}
 	}
 }

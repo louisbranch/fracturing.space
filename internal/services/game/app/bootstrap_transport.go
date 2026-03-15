@@ -2,7 +2,7 @@ package server
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -117,7 +117,7 @@ func (b defaultTransportBootstrapper) Bootstrap(
 var _ transportBootstrapper = defaultTransportBootstrapper{}
 
 func startupLogf(format string, args ...any) {
-	log.Printf(format, args...)
+	slog.Info(fmt.Sprintf(format, args...))
 }
 
 func newStatusServiceClient(conn grpc.ClientConnInterface) statusv1.StatusServiceClient {

@@ -19,6 +19,10 @@ func TestNormalizeSystemNamespace(t *testing.T) {
 		{name: "leading trailing specials trimmed", input: "-alpha-", want: "alpha"},
 		{name: "digits preserved", input: "system1", want: "system1"},
 		{name: "legacy prefix with hyphens", input: "GAME_SYSTEM_My-System", want: "my_system"},
+		{name: "unicode-cyrillic", input: "система", want: ""},
+		{name: "unicode-emoji", input: "game🎲system", want: "game_system"},
+		{name: "unicode-mixed", input: "café-system", want: "caf_system"},
+		{name: "unicode-accented", input: "naïve", want: "na_ve"},
 	}
 
 	for _, tt := range tests {

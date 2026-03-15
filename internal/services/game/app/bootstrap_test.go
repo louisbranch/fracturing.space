@@ -57,8 +57,8 @@ func TestNormalizeServerBootstrapConfigDefaults(t *testing.T) {
 func TestServerBootstrapListensAndClosesOnOpenStorageFailure(t *testing.T) {
 	rawListener := &trackedListener{}
 	bootstrap := newServerBootstrapWithConfig(serverBootstrapConfig{
-		loadEnv: func() serverEnv {
-			return serverEnv{}
+		loadEnv: func() (serverEnv, error) {
+			return serverEnv{}, nil
 		},
 		listen: func(_ string, _ string) (net.Listener, error) {
 			return rawListener, nil

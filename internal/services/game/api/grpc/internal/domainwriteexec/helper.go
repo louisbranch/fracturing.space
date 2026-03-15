@@ -2,7 +2,7 @@ package domainwriteexec
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -98,11 +98,14 @@ func setDefaultOnRejection(options *domainwrite.Options, deps Deps) {
 					"message":        info.Message,
 				},
 			}); err != nil {
-				log.Printf("audit emit domain rejection: %v", err)
+				slog.Error("audit emit domain rejection", "error", err)
 			}
 			return
 		}
-		log.Printf("domain rejection campaign_id=%s command_type=%s rejection_code=%s",
-			info.CampaignID, info.CommandType, info.Code)
+		slog.Warn("domain rejection",
+			"campaign_id", info.CampaignID,
+			"command_type", info.CommandType,
+			"rejection_code", info.Code,
+		)
 	}
 }
