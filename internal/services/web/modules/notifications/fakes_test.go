@@ -2,7 +2,10 @@ package notifications
 
 import (
 	"context"
+	"encoding/json"
 
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 )
 
@@ -57,7 +60,18 @@ func testNotificationSummary(id string, read bool) notificationsapp.Notification
 	return notificationsapp.NotificationSummary{
 		ID:          id,
 		MessageType: "system.message.v1",
-		PayloadJSON: `{"title":"Welcome to Fracturing Space","body":"Your account is ready. Sign-in method: passkey."}`,
-		Read:        read,
+		PayloadJSON: mustNotificationPayloadJSON(notificationpayload.InAppPayload{
+			Title: platformi18n.NewCopyRef("notification.onboarding_welcome.title"),
+			Body:  platformi18n.NewCopyRef("notification.onboarding_welcome.body", "passkey"),
+		}),
+		Read: read,
 	}
+}
+
+func mustNotificationPayloadJSON(payload notificationpayload.InAppPayload) string {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }

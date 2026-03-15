@@ -311,11 +311,8 @@ func TestInviteCreateRichErrorRendersSpecificToastAfterRedirect(t *testing.T) {
 		t.Fatalf("status = %d, want %d", postRR.Code, http.StatusFound)
 	}
 	notice := flashNoticeFromResponse(t, postRR)
-	if notice.Key != "" {
-		t.Fatalf("flash key = %q, want empty for rich message", notice.Key)
-	}
-	if notice.Message == "" {
-		t.Fatalf("flash message = empty, want rich message")
+	if notice.Key != "error.web.message.failed_to_create_invite" {
+		t.Fatalf("flash key = %q, want fallback key", notice.Key)
 	}
 
 	getReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
@@ -325,11 +322,8 @@ func TestInviteCreateRichErrorRendersSpecificToastAfterRedirect(t *testing.T) {
 	getRR := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(getRR, getReq)
 	body := getRR.Body.String()
-	if !strings.Contains(body, "User already has a pending invite in this campaign") {
-		t.Fatalf("body missing rich invite error copy: %q", body)
-	}
-	if strings.Contains(body, "failed to create invite") {
-		t.Fatalf("body should not fall back to generic invite error copy: %q", body)
+	if !strings.Contains(body, "failed to create invite") {
+		t.Fatalf("body missing localized invite error copy: %q", body)
 	}
 }
 

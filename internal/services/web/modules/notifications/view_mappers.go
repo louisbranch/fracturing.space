@@ -5,6 +5,7 @@ import (
 	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
@@ -70,21 +71,21 @@ func (h handlers) notificationDetailView(item notificationsapp.NotificationSumma
 }
 
 // notificationTitle centralizes this web behavior in one helper seam.
-func notificationTitle(value string, loc Localizer) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
+func notificationTitle(value platformi18n.CopyRef, loc Localizer) string {
+	resolved := strings.TrimSpace(platformi18n.ResolveCopy(loc, value))
+	if resolved == "" {
 		return T(loc, "game.notifications.topic_unknown")
 	}
-	return value
+	return resolved
 }
 
 // notificationBody centralizes this web behavior in one helper seam.
-func notificationBody(value string, loc Localizer) string {
-	value = strings.TrimSpace(value)
-	if value == "" {
+func notificationBody(value platformi18n.CopyRef, loc Localizer) string {
+	resolved := strings.TrimSpace(platformi18n.ResolveCopy(loc, value))
+	if resolved == "" {
 		return T(loc, "game.notifications.detail_empty")
 	}
-	return value
+	return resolved
 }
 
 // notificationSourceLabel centralizes this web behavior in one helper seam.

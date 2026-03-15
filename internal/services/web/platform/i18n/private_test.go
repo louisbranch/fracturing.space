@@ -105,11 +105,11 @@ func TestLocalizeErrorUsesLocalizationKeyWhenAvailable(t *testing.T) {
 		t.Fatalf("LocalizeError(localized) = %q, want %q", got, "Settings service unavailable")
 	}
 
-	if got := LocalizeError(nil, errors.New("boom")); got != "boom" {
-		t.Fatalf("LocalizeError(no-localizer) = %q, want %q", got, "boom")
+	if got := LocalizeError(nil, errors.New("boom")); got != "Internal Server Error" {
+		t.Fatalf("LocalizeError(no-localizer) = %q, want %q", got, "Internal Server Error")
 	}
-	if got := LocalizeError(loc, apperrors.E(apperrors.KindUnavailable, "fallback")); got != "fallback" {
-		t.Fatalf("LocalizeError(no-key) = %q, want %q", got, "fallback")
+	if got := LocalizeError(loc, apperrors.E(apperrors.KindUnavailable, "fallback")); got != "Service Unavailable" {
+		t.Fatalf("LocalizeError(no-key) = %q, want %q", got, "Service Unavailable")
 	}
 }
 

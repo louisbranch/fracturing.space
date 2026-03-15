@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"strings"
 
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	_ "github.com/louisbranch/fracturing.space/internal/platform/i18n/catalog"
 	notificationsdomain "github.com/louisbranch/fracturing.space/internal/services/notifications/domain"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
@@ -43,9 +44,24 @@ type Input struct {
 type Output struct {
 	Title        string
 	BodyText     string
-	Facts        []notificationpayload.PayloadFact
-	Actions      []notificationpayload.PayloadAction
+	Facts        []OutputFact
+	Actions      []OutputAction
 	EmailSubject string
+}
+
+// OutputFact is localized detail metadata ready for one notification channel.
+type OutputFact struct {
+	Label string
+	Value string
+}
+
+// OutputAction is one localized notification CTA ready for one channel.
+type OutputAction struct {
+	Label    string
+	Kind     string
+	TargetID string
+	Method   string
+	Style    string
 }
 
 // Localizer is the minimal message-printer contract required by the renderer.
@@ -61,7 +77,7 @@ type onboardingPayload struct {
 func Render(loc Localizer, input Input) Output {
 	if input.Channel == ChannelInApp {
 		if payload, ok := notificationpayload.ParseInAppPayload(input.PayloadJSON); ok {
-			return outputFromInAppPayload(payload)
+			return outputFromInAppPayload(loc, payload)
 		}
 	}
 	switch normalizeToken(input.MessageType) {
@@ -72,12 +88,29 @@ func Render(loc Localizer, input Input) Output {
 	}
 }
 
-func outputFromInAppPayload(payload notificationpayload.InAppPayload) Output {
+func outputFromInAppPayload(loc Localizer, payload notificationpayload.InAppPayload) Output {
+	facts := make([]OutputFact, 0, len(payload.Facts))
+	for _, fact := range payload.Facts {
+		facts = append(facts, OutputFact{
+			Label: platformi18n.ResolveCopy(loc, fact.Label),
+			Value: fact.Value,
+		})
+	}
+	actions := make([]OutputAction, 0, len(payload.Actions))
+	for _, action := range payload.Actions {
+		actions = append(actions, OutputAction{
+			Label:    platformi18n.ResolveCopy(loc, action.Label),
+			Kind:     action.Kind,
+			TargetID: action.TargetID,
+			Method:   action.Method,
+			Style:    action.Style,
+		})
+	}
 	return Output{
-		Title:    payload.Title,
-		BodyText: payload.Body,
-		Facts:    payload.Facts,
-		Actions:  payload.Actions,
+		Title:    platformi18n.ResolveCopy(loc, payload.Title),
+		BodyText: platformi18n.ResolveCopy(loc, payload.Body),
+		Facts:    facts,
+		Actions:  actions,
 	}
 }
 

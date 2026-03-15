@@ -96,6 +96,7 @@ func (g participantReadGateway) CampaignParticipant(ctx context.Context, campaig
 	if err != nil {
 		return campaignapp.CampaignParticipant{}, apperrors.MapGRPCTransportError(err, apperrors.GRPCStatusMapping{
 			FallbackKind:    apperrors.KindUnknown,
+			FallbackKey:     "error.web.message.failed_to_load_participant",
 			FallbackMessage: "failed to load participant",
 		})
 	}

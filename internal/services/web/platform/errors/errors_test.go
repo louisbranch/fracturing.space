@@ -116,6 +116,7 @@ func TestMapGRPCTransportErrorMapsGrpcStatusToKinds(t *testing.T) {
 			name:            "unauthenticated maps to unauthorized",
 			err:             status.Error(codes.Unauthenticated, "expired token"),
 			fallbackKind:    KindInvalidInput,
+			fallbackKey:     "public.error.invalid_input",
 			fallbackMessage: "fallback invalid",
 			wantKind:        KindUnauthorized,
 			wantStatus:      http.StatusUnauthorized,
@@ -124,6 +125,7 @@ func TestMapGRPCTransportErrorMapsGrpcStatusToKinds(t *testing.T) {
 			name:            "permission denied maps to forbidden",
 			err:             status.Error(codes.PermissionDenied, "forbidden"),
 			fallbackKind:    KindInvalidInput,
+			fallbackKey:     "public.error.invalid_input",
 			fallbackMessage: "fallback invalid",
 			wantKind:        KindForbidden,
 			wantStatus:      http.StatusForbidden,
@@ -132,6 +134,7 @@ func TestMapGRPCTransportErrorMapsGrpcStatusToKinds(t *testing.T) {
 			name:            "not found maps to not found",
 			err:             status.Error(codes.NotFound, "missing"),
 			fallbackKind:    KindInvalidInput,
+			fallbackKey:     "public.error.invalid_input",
 			fallbackMessage: "fallback invalid",
 			wantKind:        KindNotFound,
 			wantStatus:      http.StatusNotFound,
@@ -140,6 +143,7 @@ func TestMapGRPCTransportErrorMapsGrpcStatusToKinds(t *testing.T) {
 			name:            "unavailable maps to unavailable",
 			err:             status.Error(codes.Unavailable, "backend down"),
 			fallbackKind:    KindInvalidInput,
+			fallbackKey:     "public.error.invalid_input",
 			fallbackMessage: "fallback invalid",
 			wantKind:        KindUnavailable,
 			wantStatus:      http.StatusServiceUnavailable,
@@ -148,6 +152,7 @@ func TestMapGRPCTransportErrorMapsGrpcStatusToKinds(t *testing.T) {
 			name:            "non-grpc errors fallback to policy",
 			err:             errors.New("backend exploded"),
 			fallbackKind:    KindUnknown,
+			fallbackKey:     "public.error.unknown",
 			fallbackMessage: "generic fallback",
 			wantKind:        KindUnknown,
 			wantStatus:      http.StatusInternalServerError,
@@ -208,6 +213,7 @@ func TestMapGRPCTransportErrorPassesThroughAppErrors(t *testing.T) {
 	input := E(KindForbidden, "forbidden")
 	got := MapGRPCTransportError(input, GRPCStatusMapping{
 		FallbackKind: KindInvalidInput,
+		FallbackKey:  "error.web.message.failed_to_load_profile",
 	})
 	var gotErr Error
 	if !errors.As(got, &gotErr) {
@@ -216,4 +222,19 @@ func TestMapGRPCTransportErrorPassesThroughAppErrors(t *testing.T) {
 	if gotErr.Kind != KindForbidden || gotErr.Message != "forbidden" {
 		t.Fatalf("MapGRPCTransportError() = %#v", gotErr)
 	}
+}
+
+func TestMapGRPCTransportErrorRequiresFallbackKey(t *testing.T) {
+	t.Parallel()
+
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic when fallback key is missing")
+		}
+	}()
+
+	_ = MapGRPCTransportError(status.Error(codes.Internal, "boom"), GRPCStatusMapping{
+		FallbackKind:    KindUnknown,
+		FallbackMessage: "generic fallback",
+	})
 }

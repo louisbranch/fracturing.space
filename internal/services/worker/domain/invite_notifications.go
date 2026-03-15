@@ -9,6 +9,7 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -336,12 +337,16 @@ func createNotification(ctx context.Context, notifications workerNotificationCli
 }
 
 func inviteCreatedMessagePayload(inviteID, campaignName, participantName, inviterUsername string) notificationpayload.InAppPayload {
-	body := "Review this invitation to respond."
+	body := platformi18n.NewCopyRef("notification.campaign_invite.created.body_review")
 	if inviterUsername = strings.TrimSpace(inviterUsername); inviterUsername != "" && strings.TrimSpace(campaignName) != "" {
-		body = "@" + inviterUsername + " invited you to join " + strings.TrimSpace(campaignName) + "."
+		body = platformi18n.NewCopyRef(
+			"notification.campaign_invite.created.body_summary",
+			inviterUsername,
+			strings.TrimSpace(campaignName),
+		)
 	}
 	return notificationpayload.InAppPayload{
-		Title:   "Campaign invitation",
+		Title:   platformi18n.NewCopyRef("notification.campaign_invite.created.title"),
 		Body:    body,
 		Facts:   inviteFacts(campaignName, participantName, inviterUsername),
 		Actions: []notificationpayload.PayloadAction{notificationpayload.ViewInvitationAction(inviteID)},
@@ -350,22 +355,32 @@ func inviteCreatedMessagePayload(inviteID, campaignName, participantName, invite
 
 func inviteOutcomeMessagePayload(messageType, campaignID, campaignName, participantName, recipientUsername string) notificationpayload.InAppPayload {
 	recipient := strings.TrimSpace(recipientUsername)
-	body := "An invitation was updated."
-	title := "Invitation update"
+	body := platformi18n.NewCopyRef("notification.campaign_invite.updated.body")
+	title := platformi18n.NewCopyRef("notification.campaign_invite.updated.title")
 	switch strings.TrimSpace(messageType) {
 	case gameintegration.InviteNotificationAcceptedMessageType:
-		title = "Invitation accepted"
+		title = platformi18n.NewCopyRef("notification.campaign_invite.accepted.title")
 		if recipient != "" && participantName != "" && campaignName != "" {
-			body = "@" + recipient + " accepted " + participantName + " in " + campaignName + "."
+			body = platformi18n.NewCopyRef(
+				"notification.campaign_invite.accepted.body_summary",
+				recipient,
+				participantName,
+				campaignName,
+			)
 		} else {
-			body = "A campaign invitation was accepted."
+			body = platformi18n.NewCopyRef("notification.campaign_invite.accepted.body")
 		}
 	case gameintegration.InviteNotificationDeclinedMessageType:
-		title = "Invitation declined"
+		title = platformi18n.NewCopyRef("notification.campaign_invite.declined.title")
 		if recipient != "" && participantName != "" && campaignName != "" {
-			body = "@" + recipient + " declined to participate as " + participantName + " in " + campaignName + "."
+			body = platformi18n.NewCopyRef(
+				"notification.campaign_invite.declined.body_summary",
+				recipient,
+				participantName,
+				campaignName,
+			)
 		} else {
-			body = "A campaign invitation was declined."
+			body = platformi18n.NewCopyRef("notification.campaign_invite.declined.body")
 		}
 	}
 	return notificationpayload.InAppPayload{
@@ -379,13 +394,22 @@ func inviteOutcomeMessagePayload(messageType, campaignID, campaignName, particip
 func inviteFacts(campaignName, participantName, inviterUsername string) []notificationpayload.PayloadFact {
 	facts := make([]notificationpayload.PayloadFact, 0, 3)
 	if campaignName = strings.TrimSpace(campaignName); campaignName != "" {
-		facts = append(facts, notificationpayload.PayloadFact{Label: "Campaign", Value: campaignName})
+		facts = append(facts, notificationpayload.PayloadFact{
+			Label: platformi18n.NewCopyRef("notification.fact.campaign"),
+			Value: campaignName,
+		})
 	}
 	if participantName = strings.TrimSpace(participantName); participantName != "" {
-		facts = append(facts, notificationpayload.PayloadFact{Label: "Seat", Value: participantName})
+		facts = append(facts, notificationpayload.PayloadFact{
+			Label: platformi18n.NewCopyRef("notification.fact.seat"),
+			Value: participantName,
+		})
 	}
 	if inviterUsername = strings.TrimSpace(inviterUsername); inviterUsername != "" {
-		facts = append(facts, notificationpayload.PayloadFact{Label: "Invited by", Value: "@" + inviterUsername})
+		facts = append(facts, notificationpayload.PayloadFact{
+			Label: platformi18n.NewCopyRef("notification.fact.invited_by"),
+			Value: "@" + inviterUsername,
+		})
 	}
 	return facts
 }

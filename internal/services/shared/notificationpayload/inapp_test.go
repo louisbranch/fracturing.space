@@ -6,10 +6,10 @@ func TestParseInAppPayloadDropsUnsupportedActions(t *testing.T) {
 	t.Parallel()
 
 	payload, ok := ParseInAppPayload(`{
-		"title":"Campaign invitation",
+		"title":{"key":"notification.campaign_invite.created.title"},
 		"actions":[
-			{"label":"View invitation","kind":"public_invite_view","target_id":"inv-1","method":"get","style":"primary"},
-			{"label":"Bad action","kind":"external","target_id":"https://example.com"}
+			{"label":{"key":"notification.action.view_invitation"},"kind":"public_invite_view","target_id":"inv-1","method":"get","style":"primary"},
+			{"label":{"key":"notification.action.bad"},"kind":"external","target_id":"https://example.com"}
 		]
 	}`)
 	if !ok {
@@ -27,12 +27,12 @@ func TestActionConstructorsReturnCanonicalActions(t *testing.T) {
 	t.Parallel()
 
 	viewInvite := ViewInvitationAction(" inv-1 ")
-	if viewInvite.Label != "View invitation" || viewInvite.Kind != ActionKindPublicInviteView || viewInvite.TargetID != "inv-1" || viewInvite.Method != ActionMethodGet || viewInvite.Style != ActionStylePrimary {
+	if viewInvite.Label.Key != "notification.action.view_invitation" || viewInvite.Kind != ActionKindPublicInviteView || viewInvite.TargetID != "inv-1" || viewInvite.Method != ActionMethodGet || viewInvite.Style != ActionStylePrimary {
 		t.Fatalf("view invite action = %+v, want canonical invite action", viewInvite)
 	}
 
 	openCampaign := OpenCampaignAction(" camp-1 ")
-	if openCampaign.Label != "Open campaign" || openCampaign.Kind != ActionKindAppCampaignOpen || openCampaign.TargetID != "camp-1" || openCampaign.Method != ActionMethodGet || openCampaign.Style != ActionStylePrimary {
+	if openCampaign.Label.Key != "notification.action.open_campaign" || openCampaign.Kind != ActionKindAppCampaignOpen || openCampaign.TargetID != "camp-1" || openCampaign.Method != ActionMethodGet || openCampaign.Style != ActionStylePrimary {
 		t.Fatalf("open campaign action = %+v, want canonical campaign action", openCampaign)
 	}
 }

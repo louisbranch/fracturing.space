@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
@@ -75,11 +77,14 @@ func (staticGateway) ListNotifications(context.Context, string) ([]notifications
 	return []notificationsapp.NotificationSummary{{
 		ID:          "notification-1",
 		MessageType: "system.message.v1",
-		PayloadJSON: `{"title":"Welcome to Fracturing Space","body":"Your account is ready. Sign-in method: passkey."}`,
-		Source:      "system",
-		Read:        false,
-		CreatedAt:   staticGatewayFixedTime,
-		UpdatedAt:   staticGatewayFixedTime,
+		PayloadJSON: mustNotificationPayloadJSON(notificationpayload.InAppPayload{
+			Title: platformi18n.NewCopyRef("notification.onboarding_welcome.title"),
+			Body:  platformi18n.NewCopyRef("notification.onboarding_welcome.body", "passkey"),
+		}),
+		Source:    "system",
+		Read:      false,
+		CreatedAt: staticGatewayFixedTime,
+		UpdatedAt: staticGatewayFixedTime,
 	}}, nil
 }
 
