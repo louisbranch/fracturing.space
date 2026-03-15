@@ -37,7 +37,7 @@ func TestLoginCookieAllowsProtectedRoute(t *testing.T) {
 		t.Fatalf("expected non-empty session cookie value")
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.Header.Set("Cookie", setCookie)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -84,15 +84,15 @@ func TestLogoutCookieRelocksProtectedRoute(t *testing.T) {
 	if cleared.MaxAge > 0 {
 		t.Fatalf("cookie max-age = %d, want immediate expiration", cleared.MaxAge)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.Header.Set("Cookie", clearedCookie)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F" {
-		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns")
 	}
 }
 
@@ -103,15 +103,15 @@ func TestProtectedRouteRejectsUnknownSessionCookie(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.AddCookie(&http.Cookie{Name: "web_session", Value: "missing-session"})
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F" {
-		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns")
 	}
 }
 
@@ -142,14 +142,14 @@ func TestLogoutRevokesPreviouslyIssuedSessionCookie(t *testing.T) {
 		t.Fatalf("logout status = %d, want %d", logoutRR.Code, http.StatusFound)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	req.Header.Set("Cookie", originalCookie)
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns%2F" {
-		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns%2F")
+	if got := rr.Header().Get("Location"); got != "/login?next=%2Fapp%2Fcampaigns" {
+		t.Fatalf("Location = %q, want %q", got, "/login?next=%2Fapp%2Fcampaigns")
 	}
 }

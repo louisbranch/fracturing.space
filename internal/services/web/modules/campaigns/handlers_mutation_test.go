@@ -674,7 +674,7 @@ func TestRequestContextWithUserIDBehavior(t *testing.T) {
 	t.Parallel()
 
 	h := newHandlersFromConfig(serviceConfigWithGateway(fakeGateway{}), modulehandler.NewBase(nil, nil, nil), "", nil)
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	ctx, _ := h.RequestContextAndUserID(req)
 	if md, ok := metadata.FromOutgoingContext(ctx); ok && len(md.Get(grpcmeta.UserIDHeader)) > 0 {
 		t.Fatalf("unexpected user metadata when resolver is nil")

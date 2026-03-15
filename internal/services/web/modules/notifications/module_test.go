@@ -26,7 +26,7 @@ func TestMountServesNotificationsGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.Notifications, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppNotifications, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -61,7 +61,7 @@ func TestMountServesNotificationsHead(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodHead, routepath.Notifications, nil)
+	req := httptest.NewRequest(http.MethodHead, routepath.AppNotifications, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -96,7 +96,7 @@ func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.Notifications, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppNotifications, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusServiceUnavailable {
@@ -335,7 +335,7 @@ func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.Notifications, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppNotifications, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusNotFound {
@@ -359,7 +359,7 @@ func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.Notifications, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppNotifications, nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)

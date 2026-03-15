@@ -74,5 +74,5 @@ func (m Module) Mount() (module.Mount, error) {
 		Sync:         m.sync,
 	})
 	registerRoutes(mux, h)
-	return module.Mount{Prefix: routepath.SettingsPrefix, Handler: mux}, nil
+	return module.Mount{Prefix: routepath.SettingsPrefix, CanonicalRoot: true, Handler: mux}, nil
 }

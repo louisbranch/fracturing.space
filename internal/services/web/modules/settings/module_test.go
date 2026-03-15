@@ -168,7 +168,7 @@ func TestMountRedirectsSettingsRootToProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	for _, path := range []string{routepath.AppSettings, routepath.SettingsPrefix} {
+	for _, path := range []string{routepath.AppSettings} {
 		req := httptest.NewRequest(http.MethodGet, path, nil)
 		rr := httptest.NewRecorder()
 		mount.Handler.ServeHTTP(rr, req)
@@ -189,7 +189,7 @@ func TestMountSettingsRootHTMXUsesHXRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.SettingsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppSettings, nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)

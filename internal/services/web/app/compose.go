@@ -67,16 +67,37 @@ func mountModule(
 	if root == nil || feature == nil {
 		return nil
 	}
-	if previous, ok := seen[prefix]; ok {
-		return fmt.Errorf("module %q duplicates prefix %q owned by module %q", feature.ID(), prefix, previous)
+	if err := claimRoute(seen, prefix, feature.ID()); err != nil {
+		return err
 	}
-	seen[prefix] = feature.ID()
 
 	handler := mount.Handler
 	if wrap != nil {
 		handler = wrap(handler)
 	}
+	handler = canonicalizeTrailingSlash(prefix, mount.CanonicalRoot, handler)
+
+	if mount.CanonicalRoot {
+		rootPath := strings.TrimSuffix(prefix, "/")
+		if rootPath == "" || rootPath == routepath.Root {
+			return fmt.Errorf("module %q has invalid canonical root for prefix %q", feature.ID(), prefix)
+		}
+		if err := claimRoute(seen, rootPath, feature.ID()); err != nil {
+			return err
+		}
+		root.Handle(rootPath, handler)
+	}
+
 	root.Handle(prefix, handler)
+	return nil
+}
+
+// claimRoute preserves one-owner route claims during app composition so module collisions fail fast.
+func claimRoute(seen map[string]string, pattern string, owner string) error {
+	if previous, ok := seen[pattern]; ok {
+		return fmt.Errorf("module %q duplicates prefix %q owned by module %q", owner, pattern, previous)
+	}
+	seen[pattern] = owner
 	return nil
 }
 
@@ -127,10 +148,47 @@ func resolveMount(feature module.Module) (module.Mount, string, error) {
 	if prefix == "" {
 		return module.Mount{}, "", fmt.Errorf("mount module %q: prefix is required", feature.ID())
 	}
+	if prefix == routepath.Root && mount.CanonicalRoot {
+		return module.Mount{}, "", fmt.Errorf("mount module %q: root mount cannot claim canonical root", feature.ID())
+	}
 	if mount.Handler == nil {
 		return module.Mount{}, "", fmt.Errorf("mount module %q: handler is required", feature.ID())
 	}
 	return mount, prefix, nil
+}
+
+// canonicalizeTrailingSlash redirects owned slashful requests to the slashless browser URL before downstream module handling.
+func canonicalizeTrailingSlash(prefix string, canonicalRoot bool, next http.Handler) http.Handler {
+	if next == nil {
+		next = http.NotFoundHandler()
+	}
+	if prefix == routepath.Root {
+		return next
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r == nil || r.URL == nil {
+			next.ServeHTTP(w, r)
+			return
+		}
+		path := strings.TrimSpace(r.URL.Path)
+		if path == "" || path == routepath.Root || !strings.HasSuffix(path, "/") {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if path == prefix && !canonicalRoot {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		location := strings.TrimSuffix(path, "/")
+		if location == "" {
+			location = routepath.Root
+		}
+		if query := strings.TrimSpace(r.URL.RawQuery); query != "" {
+			location += "?" + query
+		}
+		httpx.WriteCanonicalRedirect(w, r, location)
+	})
 }
 
 // requireAuth wraps handlers with session-backed auth checks and redirects to

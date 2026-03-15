@@ -23,6 +23,9 @@ func TestTopLevelRouteConstants(t *testing.T) {
 	if DashboardPrefix != "/app/dashboard/" {
 		t.Fatalf("DashboardPrefix = %q", DashboardPrefix)
 	}
+	if Discover != "/discover" {
+		t.Fatalf("Discover = %q", Discover)
+	}
 	if AppCampaignsNew != "/app/campaigns/new" {
 		t.Fatalf("AppCampaignsNew = %q", AppCampaignsNew)
 	}
@@ -188,9 +191,6 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	}
 	if UserProfilePattern != "/u/{username}" {
 		t.Fatalf("UserProfilePattern = %q", UserProfilePattern)
-	}
-	if UserProfilePatternWithTrailingSlash != "/u/{username}/" {
-		t.Fatalf("UserProfilePatternWithTrailingSlash = %q", UserProfilePatternWithTrailingSlash)
 	}
 	if UserProfileRestPattern != "/u/{username}/{rest...}" {
 		t.Fatalf("UserProfileRestPattern = %q", UserProfileRestPattern)

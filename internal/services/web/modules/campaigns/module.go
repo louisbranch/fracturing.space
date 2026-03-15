@@ -64,7 +64,7 @@ func (m Module) Mount() (module.Mount, error) {
 		Workflows:        m.workflows,
 	})
 	registerStableRoutes(mux, h)
-	return module.Mount{Prefix: routepath.CampaignsPrefix, Handler: mux}, nil
+	return module.Mount{Prefix: routepath.CampaignsPrefix, CanonicalRoot: true, Handler: mux}, nil
 }
 
 // validateHandlerServices enforces fail-fast route wiring once campaigns is selected for mounting.

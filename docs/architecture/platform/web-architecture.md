@@ -47,8 +47,8 @@ Required properties:
 
 - Route declarations are module-owned and explicit.
 - Canonical browser endpoints come from `routepath` constants/builders.
-- `routepath/` stays split by owned surface (`campaigns.go`, `settings.go`,
-  `notifications.go`, etc.) instead of one cross-area route constant file.
+- Browser URLs owned by `web` are canonically slashless; trailing-slash module prefixes are composition-only subtree mounts and must redirect when a module owns an exact root page.
+- `routepath/` stays split by owned surface (`campaigns.go`, `settings.go`, `notifications.go`, etc.) instead of one cross-area route constant file.
 - Route-param guards are centralized in reusable helpers (for example
   `withCampaignID`, `withCampaignAndCharacterID`) instead of repeated inline
   path extraction in handlers.

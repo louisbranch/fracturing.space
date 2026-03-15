@@ -36,7 +36,6 @@ func TestRegisterRoutesNotificationsPathAndMethodContracts(t *testing.T) {
 		wantAllow  string
 	}{
 		{name: "notifications root", method: http.MethodGet, path: routepath.AppNotifications, wantStatus: http.StatusOK},
-		{name: "notifications slash root", method: http.MethodGet, path: routepath.Notifications, wantStatus: http.StatusOK},
 		{name: "notifications head", method: http.MethodHead, path: routepath.AppNotifications, wantStatus: http.StatusOK},
 		{name: "notifications post rejected", method: http.MethodPost, path: routepath.AppNotifications, wantStatus: http.StatusMethodNotAllowed},
 		{name: "notification detail", method: http.MethodGet, path: routepath.AppNotification("notification-1"), wantStatus: http.StatusOK},

@@ -10,7 +10,6 @@ import (
 // registerAccountRoutes wires profile, locale, and security settings routes.
 func registerAccountRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettings, h.redirectSettingsRoot)
-	mux.HandleFunc(http.MethodGet+" "+routepath.SettingsPrefix+"{$}", h.redirectSettingsRoot)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsProfile, h.handleProfileGet)
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppSettingsProfile, h.handleProfilePost)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppSettingsLocale, h.handleLocaleGet)

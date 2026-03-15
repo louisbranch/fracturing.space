@@ -42,7 +42,7 @@ func TestMountServesDashboardGet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -92,7 +92,7 @@ func TestMountDashboardHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -125,7 +125,7 @@ func TestMountRendersUnavailableStatusNoticeWhenDashboardDataFails(t *testing.T)
 		t.Fatalf("Mount() error = %v", err)
 	}
 
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
@@ -150,7 +150,7 @@ func TestMountRendersPendingProfileBlockFromUserHubState(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
@@ -182,7 +182,7 @@ func TestMountHidesPendingProfileBlockWhenSocialStateIsDegraded(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
@@ -221,7 +221,7 @@ func TestMountRendersCampaignAdventureBlockWhenNoDraftOrActiveCampaignExists(t *
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
@@ -253,7 +253,7 @@ func TestMountHidesCampaignAdventureBlockWhenDraftOrActiveCampaignExists(t *test
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
@@ -283,7 +283,7 @@ func TestMountHidesCampaignAdventureBlockWhenCampaignStateIsDegraded(t *testing.
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
@@ -321,7 +321,7 @@ func TestMountRendersActiveSessionsBlockWithMultipleJoinLinks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 
@@ -372,7 +372,7 @@ func TestMountRendersCampaignStartNudgesBlock(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.DashboardPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppDashboard, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 

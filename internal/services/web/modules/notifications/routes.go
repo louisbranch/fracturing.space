@@ -13,7 +13,6 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 		return
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppNotifications, h.handleIndex)
-	mux.HandleFunc(http.MethodGet+" "+routepath.Notifications, h.handleIndex)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppNotificationPattern, h.withNotificationID(h.handleDetail))
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppNotificationOpenPattern, httpx.MethodNotAllowed(http.MethodPost))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppNotificationOpenPattern, h.withNotificationID(h.handleOpen))

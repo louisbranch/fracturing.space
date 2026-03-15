@@ -40,5 +40,5 @@ func (m Module) Mount() (module.Mount, error) {
 	svc := notificationsapp.NewService(m.gateway)
 	h := newHandlers(svc, m.base)
 	registerRoutes(mux, h)
-	return module.Mount{Prefix: routepath.Notifications, Handler: mux}, nil
+	return module.Mount{Prefix: routepath.Notifications, CanonicalRoot: true, Handler: mux}, nil
 }

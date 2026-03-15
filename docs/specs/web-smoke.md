@@ -13,6 +13,8 @@ Quick regression coverage for web route and shell contracts:
 
 - landing + login pages render with expected auth entrypoints,
 - login recovery and recovery-code acknowledgement surfaces remain registered,
+- trailing-slash route variants redirect to slashless canonical URLs for owned
+  web roots before auth or feature-local redirects run,
 - protected campaign route ownership keeps `/app/campaigns/{id}` canonical,
 - authenticated users can traverse critical app routes (dashboard, campaigns,
   campaign creation surfaces, settings, settings security, notifications),
@@ -116,6 +118,25 @@ async page => {
   page.setDefaultTimeout(10000);
 
   const origin = page.url().replace(/\/[^/]*$/, "");
+
+  const slashRedirectChecks = [
+    { path: "/discover/", wantLocation: "/discover" },
+    { path: "/app/dashboard/", wantLocation: "/app/dashboard" },
+    { path: "/app/campaigns/", wantLocation: "/app/campaigns" },
+    { path: "/app/settings/", wantLocation: "/app/settings" },
+    { path: "/app/notifications/", wantLocation: "/app/notifications" },
+  ];
+
+  for (const check of slashRedirectChecks) {
+    const response = await page.request.get(origin + check.path, { maxRedirects: 0 });
+    if (response.status() !== 308) {
+      throw new Error("Expected " + check.path + " status 308, got: " + response.status());
+    }
+    const location = response.headers()["location"] || "";
+    if (location !== check.wantLocation) {
+      throw new Error("Expected " + check.path + " Location " + check.wantLocation + ", got: " + location);
+    }
+  }
 
   const deprecatedResponse = await page.request.get(origin + "/campaigns/camp-123", { maxRedirects: 0 });
   if (deprecatedResponse.status() !== 404) {

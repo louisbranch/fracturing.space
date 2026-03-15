@@ -20,7 +20,6 @@ func registerStableCampaignOverviewRoutes(mux *http.ServeMux, h handlers) {
 		return
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaigns, h.handleIndex)
-	mux.HandleFunc(http.MethodGet+" "+routepath.CampaignsPrefix+"{$}", h.handleIndex)
 
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignsNew, h.handleStartNewCampaign)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignsCreate, h.handleCreateCampaign)

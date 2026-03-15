@@ -85,7 +85,6 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 		wantLoc    string
 	}{
 		{name: "campaigns root", method: http.MethodGet, path: routepath.AppCampaigns, wantStatus: http.StatusOK},
-		{name: "campaigns slash root", method: http.MethodGet, path: routepath.CampaignsPrefix, wantStatus: http.StatusOK},
 		{name: "campaign new get", method: http.MethodGet, path: routepath.AppCampaignsNew, wantStatus: http.StatusOK},
 		{name: "campaign create get", method: http.MethodGet, path: routepath.AppCampaignsCreate, wantStatus: http.StatusOK},
 		{name: "campaign overview head", method: http.MethodHead, path: routepath.AppCampaign("c1"), wantStatus: http.StatusOK},

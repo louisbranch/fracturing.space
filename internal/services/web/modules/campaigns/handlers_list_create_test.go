@@ -54,7 +54,7 @@ func TestMountCampaignsPageRendersCardGridWithCover(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -102,7 +102,7 @@ func TestMountCampaignsPageEscapesCampaignIDsInCardLinks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -138,7 +138,7 @@ func TestMountCampaignsPageRendersCardIconsFromCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -167,7 +167,7 @@ func TestMountCampaignsPageRendersHeadingWithStartLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -194,7 +194,7 @@ func TestMountCampaignsPageOmitsBreadcrumbsAtRoot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -216,7 +216,7 @@ func TestMountCampaignsHTMXRendersHeadingWithStartLink(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -259,7 +259,7 @@ func TestMountCampaignStartNewGetRendersChoiceCards(t *testing.T) {
 		`data-campaign-start-option="browse"`,
 		`data-campaign-start-divider="or"`,
 		`class="divider lg:divider-horizontal`,
-		`href="/discover/"`,
+		`href="/discover"`,
 		`data-campaign-start-option="scratch"`,
 		`href="/app/campaigns/create"`,
 	} {

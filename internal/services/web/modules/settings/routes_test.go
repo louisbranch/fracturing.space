@@ -69,7 +69,6 @@ func TestRegisterRoutesSettingsPathAndMethodContracts(t *testing.T) {
 		wantAllow  string
 	}{
 		{name: "settings root", method: http.MethodGet, path: routepath.AppSettings, wantStatus: http.StatusFound},
-		{name: "settings slash root", method: http.MethodGet, path: routepath.SettingsPrefix, wantStatus: http.StatusFound},
 		{name: "profile get", method: http.MethodGet, path: routepath.AppSettingsProfile, wantStatus: http.StatusOK},
 		{name: "profile head", method: http.MethodHead, path: routepath.AppSettingsProfile, wantStatus: http.StatusOK},
 		{name: "security get", method: http.MethodGet, path: routepath.AppSettingsSecurity, wantStatus: http.StatusOK},

@@ -26,8 +26,9 @@ type ResolveLanguage func(*http.Request) string
 
 // Mount describes a module route mount.
 type Mount struct {
-	Prefix  string
-	Handler http.Handler
+	Prefix        string
+	CanonicalRoot bool
+	Handler       http.Handler
 }
 
 // Module declares the minimum contract required by web composition.
