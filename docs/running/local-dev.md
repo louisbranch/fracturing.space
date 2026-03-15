@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-13"
 ---
 
 # Local development (Go)
@@ -35,7 +35,8 @@ watch-based runtime automatically after attach.
 - The catalog importer automatically retries transient SQLite busy/locked failures during startup.
 
 The default watcher set starts `status`, `game`, `auth`, `social`, `discovery`,
-`ai`, `notifications`, `userhub`, `worker`, `mcp`, `admin`, `chat`, and `web`.
+`ai`, `notifications`, `userhub`, `worker`, `mcp`, `admin`, `play`,
+and `web`.
 Game reports catalog-backed capabilities as degraded until import completes, then
 re-evaluates and promotes them to operational automatically.
 
@@ -68,7 +69,7 @@ Watcher logs:
 - `.tmp/dev/social.log`
 - `.tmp/dev/mcp.log`
 - `.tmp/dev/admin.log`
-- `.tmp/dev/chat.log`
+- `.tmp/dev/play.log`
 - `.tmp/dev/ai.log`
 - `.tmp/dev/notifications.log`
 - `.tmp/dev/worker.log`
@@ -92,7 +93,7 @@ go run ./cmd/notifications
 go run ./cmd/worker
 go run ./cmd/mcp
 go run ./cmd/admin
-go run ./cmd/chat
+go run ./cmd/play
 go run ./cmd/ai
 go run ./cmd/web
 ```
@@ -120,11 +121,42 @@ AES key (16/24/32 bytes) before startup.
 - Social gRPC: `localhost:8090`
 - MCP HTTP: `http://localhost:8085/mcp/health`
 - Admin: `http://localhost:8081`
-- Chat: `http://localhost:8086`
+- Play: `http://localhost:8094/up`
 - AI gRPC: `localhost:8087`
 - Notifications gRPC: `localhost:8088`
 - Worker gRPC health: `localhost:8089`
 - Web login: `http://localhost:8080/login`
+
+In devcontainer watcher mode, the game handoff uses the direct play port
+(`localhost:8094`) rather than `play.localhost:8080` because Caddy is not in
+front of the watcher processes.
+
+## Play SPA dev server
+
+`play` serves embedded assets by default. For frontend-only iteration, run the
+SPA workspace directly and point `play` at the browser-reachable dev server
+origin:
+
+```sh
+cd internal/services/play/ui
+npm install
+npm run dev -- --host 0.0.0.0 --port 5173
+```
+
+Set `FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL=http://localhost:5173` before
+starting `cmd/play` or the devcontainer watchers. When unset, `play` serves the
+checked-in build under `internal/services/play/ui/dist`.
+
+In devcontainer watcher mode without `FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`,
+the `play` watcher now rebuilds the embedded UI bundle automatically before it
+recompiles the Go service. Frontend changes under
+`internal/services/play/ui/src/` should therefore show up without a separate
+manual `npm run build`.
+
+In devcontainer mode, port `5173` is forwarded to the host so the browser can
+reach the Vite server directly. After changing `.env` for
+`FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`, restart the watchers with
+`make down && make up`.
 
 ## Demo data
 

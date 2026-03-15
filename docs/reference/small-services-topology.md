@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 14
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-13"
 ---
 
 # Small Services Topology
@@ -18,10 +18,10 @@ Runtime and ownership map for service processes outside `web`, `game`, and
 | --- | --- | --- | --- |
 | AI | `cmd/ai` | `internal/cmd/ai` | `internal/services/ai/app` |
 | Auth | `cmd/auth` | `internal/cmd/auth` | `internal/services/auth/app` |
-| Chat | `cmd/chat` | `internal/cmd/chat` | `internal/services/chat/app` |
 | Discovery | `cmd/discovery` | `internal/cmd/discovery` | `internal/services/discovery/app` |
 | MCP | `cmd/mcp` | `internal/cmd/mcp` | `internal/services/mcp/service` |
 | Notifications | `cmd/notifications` | `internal/cmd/notifications` | `internal/services/notifications/app` |
+| Play | `cmd/play` | `internal/cmd/play` | `internal/services/play/app` |
 | Social | `cmd/social` | `internal/cmd/social` | `internal/services/social/app` |
 | Status | `cmd/status` | `internal/cmd/status` | `internal/services/status/app` |
 | Userhub | `cmd/userhub` | `internal/cmd/userhub` | `internal/services/userhub/app` |
@@ -36,6 +36,16 @@ Runtime and ownership map for service processes outside `web`, `game`, and
   - `api`: gRPC API server only.
   - `worker`: email-delivery worker only.
   - `all`: API + worker in one process.
+- Play runtime role:
+  - browser-facing active-play surface
+  - serves the SPA shell and embedded play assets (or a configured Vite dev
+    server origin in local UI development)
+  - validates web-to-play launch grants and issues host-scoped `play_session`
+    cookies
+  - owns active-play websocket transport, durable human transcript storage, and
+    typing/presence fanout without becoming gameplay authority
+  - replaces the removed standalone chat runtime; transcript transport now
+    lives inside `play`
 - MCP transport modes:
   - `stdio`: local MCP host integration.
   - `http`: HTTP/SSE transport boundary.

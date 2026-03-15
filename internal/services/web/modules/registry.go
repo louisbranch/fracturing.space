@@ -1,6 +1,7 @@
 package modules
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
@@ -55,8 +56,11 @@ type PublicModuleOptions struct {
 
 // ProtectedModuleOptions controls variant behavior for protected module composition.
 type ProtectedModuleOptions struct {
-	// ChatFallbackPort is the derived chat service port passed to the campaigns module.
-	ChatFallbackPort string
+	// PlayFallbackPort is the derived play service port used when no subdomain router is present.
+	PlayFallbackPort string
+
+	// PlayLaunchGrant signs redirects from the web campaign game route to play.
+	PlayLaunchGrant playlaunchgrant.Config
 
 	// RequestSchemePolicy controls scheme resolution for scheme-sensitive behavior in protected modules.
 	RequestSchemePolicy requestmeta.SchemePolicy

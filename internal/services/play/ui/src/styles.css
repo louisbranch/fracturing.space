@@ -1,0 +1,98 @@
+@import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: abyss --default;
+}
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body,
+  #root {
+    min-height: 100%;
+  }
+
+  body {
+    margin: 0;
+    min-width: 320px;
+    font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
+    background:
+      radial-gradient(circle at top left, rgb(120 119 198 / 0.16), transparent 22rem),
+      radial-gradient(circle at bottom right, rgb(21 128 61 / 0.16), transparent 26rem),
+      linear-gradient(180deg, #05080f 0%, #0b1220 48%, #081018 100%);
+    color: oklch(var(--bc));
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  .font-display {
+    font-family: "Cinzel", "Iowan Old Style", "Palatino Linotype", serif;
+    letter-spacing: -0.025em;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+}
+
+@layer components {
+  .play-shell {
+    @apply mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8;
+  }
+
+  .play-hero {
+    @apply hero overflow-hidden rounded-box border border-base-300/70 bg-base-200/85 shadow-2xl shadow-black/20 backdrop-blur;
+  }
+
+  .play-hero-body {
+    @apply hero-content w-full max-w-none flex-col items-start gap-6 px-6 py-8 lg:flex-row lg:items-start lg:justify-between;
+  }
+
+  .play-badge-row {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  .play-workspace {
+    @apply grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_24rem];
+  }
+
+  .play-column {
+    @apply flex min-w-0 flex-col gap-6;
+  }
+
+  .play-panel {
+    @apply card border border-base-300/70 bg-base-200/85 shadow-xl shadow-black/10 backdrop-blur;
+  }
+
+  .play-panel-body {
+    @apply card-body gap-5;
+  }
+
+  .play-panel-head {
+    @apply flex flex-col gap-3 md:flex-row md:items-start md:justify-between;
+  }
+
+  .play-eyebrow {
+    @apply text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55;
+  }
+
+  .play-prose {
+    @apply text-sm leading-6 text-base-content/72;
+  }
+
+  .play-sticky {
+    @apply xl:sticky xl:top-4;
+  }
+
+  .play-scroll-list {
+    @apply max-h-[30rem] space-y-3 overflow-auto pr-1;
+  }
+}

@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = ".tmp/dev/air/play"
+
+[build]
+cmd = "bash .devcontainer/scripts/build-play-service.sh"
+bin = ".tmp/dev/bin/play"
+full_bin = "bash .devcontainer/scripts/run-with-retry.sh .tmp/dev/bin/play"
+delay = 300
+include_ext = ["go", "js", "tpl", "tmpl", "html", "sql", "yaml", "yml", "json"]
+exclude_dir = [".git", ".tmp", "api/gen", "data"]
+
+[log]
+time = true
+
+[misc]
+clean_on_exit = true

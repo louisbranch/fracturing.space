@@ -50,7 +50,7 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 			func(*http.Request) string { return "en" },
 			func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Ada"} },
 		),
-		ChatHTTPAddr:        "127.0.0.1:9002",
+		PlayHTTPAddr:        "127.0.0.1:9004",
 		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: true},
 		RegistryBuilder:     reg,
 	})
@@ -83,9 +83,9 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 	if got := reg.input.Principal.ResolveRequestViewer(req).DisplayName; got != "Ada" {
 		t.Fatalf("RegistryInput.Principal.ResolveRequestViewer().DisplayName = %q, want %q", got, "Ada")
 	}
-	wantPort := websupport.ResolveChatFallbackPort("127.0.0.1:9002")
-	if reg.input.ProtectedOptions.ChatFallbackPort != wantPort {
-		t.Fatalf("ProtectedOptions.ChatFallbackPort = %q, want %q", reg.input.ProtectedOptions.ChatFallbackPort, wantPort)
+	wantPlayPort := websupport.ResolveHTTPFallbackPort("127.0.0.1:9004")
+	if reg.input.ProtectedOptions.PlayFallbackPort != wantPlayPort {
+		t.Fatalf("ProtectedOptions.PlayFallbackPort = %q, want %q", reg.input.ProtectedOptions.PlayFallbackPort, wantPlayPort)
 	}
 }
 

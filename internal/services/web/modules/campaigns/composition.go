@@ -1,12 +1,14 @@
 package campaigns
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
 // CampaignClient keeps composition ownership on the generated campaign client
@@ -59,7 +61,9 @@ type InviteClient interface {
 // registry package.
 type CompositionConfig struct {
 	Base             modulehandler.Base
-	ChatFallbackPort string
+	PlayFallbackPort string
+	PlayLaunchGrant  playlaunchgrant.Config
+	RequestMeta      requestmeta.SchemePolicy
 	DashboardSync    DashboardSync
 	AssetBaseURL     string
 
@@ -84,7 +88,9 @@ type CompositionConfig struct {
 // registry is allowed to pass into campaign composition.
 type ProtectedSurfaceOptions struct {
 	Base             modulehandler.Base
-	ChatFallbackPort string
+	PlayFallbackPort string
+	PlayLaunchGrant  playlaunchgrant.Config
+	RequestMeta      requestmeta.SchemePolicy
 	DashboardSync    DashboardSync
 	AssetBaseURL     string
 }
@@ -99,7 +105,9 @@ func Compose(config CompositionConfig) module.Module {
 	return New(Config{
 		Services:         newHandlerServices(serviceConfig),
 		Base:             config.Base,
-		ChatFallbackPort: config.ChatFallbackPort,
+		PlayFallbackPort: config.PlayFallbackPort,
+		PlayLaunchGrant:  config.PlayLaunchGrant,
+		RequestMeta:      config.RequestMeta,
 		Workflows:        workflows,
 		DashboardSync:    config.DashboardSync,
 	})
@@ -111,7 +119,9 @@ func Compose(config CompositionConfig) module.Module {
 func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (module.Module, bool) {
 	config := CompositionConfig{
 		Base:                     options.Base,
-		ChatFallbackPort:         options.ChatFallbackPort,
+		PlayFallbackPort:         options.PlayFallbackPort,
+		PlayLaunchGrant:          options.PlayLaunchGrant,
+		RequestMeta:              options.RequestMeta,
 		DashboardSync:            options.DashboardSync,
 		AssetBaseURL:             options.AssetBaseURL,
 		CampaignClient:           deps.CampaignClient,

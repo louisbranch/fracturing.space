@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-09"
+last_reviewed: "2026-03-13"
 ---
 
 # System Architecture
@@ -16,7 +16,7 @@ shape.
 
 Fracturing.Space is organized into four layers:
 
-- **Transport**: service entrypoints (`cmd/game`, `cmd/auth`, `cmd/social`, `cmd/discovery`, `cmd/ai`, `cmd/notifications`, `cmd/status`, `cmd/userhub`, `cmd/worker`, `cmd/mcp`, `cmd/chat`, `cmd/admin`, `cmd/web`).
+- **Transport**: service entrypoints (`cmd/game`, `cmd/auth`, `cmd/social`, `cmd/discovery`, `cmd/ai`, `cmd/notifications`, `cmd/status`, `cmd/userhub`, `cmd/worker`, `cmd/mcp`, `cmd/play`, `cmd/admin`, `cmd/web`).
 - **Platform**: shared infrastructure (`internal/platform/`).
 - **Domain**: game/auth/social domain logic under `internal/services/*/domain`.
 - **Storage**: service-owned SQLite adapters and data files.
@@ -38,7 +38,7 @@ auth/social domain services.
 - **Status** (`internal/services/status/`): capability health and override state authority.
 - **Userhub** (`internal/services/userhub/`): experience read-model aggregation.
 - **Worker** (`internal/services/worker/`): asynchronous outbox and scheduled processing runtime, including worker-owned delivery of game invite notification intents.
-- **Chat** (`internal/services/chat/`): optional session-scoped realtime transcript delivery for human participants. It is not the authority for gameplay routing, AI pacing, or rules-affecting communication state.
+- **Play** (`internal/services/play/`): browser-facing active-play surface, websocket transport, and durable human transcript storage. The legacy standalone `chat` runtime has been retired; transcript transport now lives inside `play`.
 
 Each service owns transport, orchestration, domain logic, and storage adapters
 within its boundary.
@@ -46,9 +46,9 @@ within its boundary.
 Interaction and transcript boundary:
 
 - `game` owns authoritative active-play state through `game.v1.InteractionService`: active scene, scene player phases, OOC pause/resume, and AI turn pacing.
-- `chat` owns optional human-only session transcript transport: websocket fanout, per-connection subscriptions, sequencing, and history.
-- `chat` validates campaign/session membership through game/auth, but it does not consume or broadcast gameplay workflow state.
-- `web` must render active play from game-owned interaction state and may use chat only as a separate optional transcript surface.
+- `play` owns browser-facing active-play transport: launch/session exchange, websocket fanout, human transcript storage, reconnect cursors, and typing indicators.
+- `play` validates campaign access through auth/game, but it does not become gameplay authority.
+- `web` owns the authenticated shell and launches `/app/campaigns/{id}/game` into `play`.
 
 Authenticated surface: canonical `/app/*` routes (`/app/dashboard`, `/app/campaigns`, `/app/campaigns/{id}/*`, `/app/notifications`, `/app/settings/*`).
 

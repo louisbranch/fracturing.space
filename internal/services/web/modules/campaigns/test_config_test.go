@@ -1,6 +1,9 @@
 package campaigns
 
 import (
+	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
@@ -106,7 +109,8 @@ func configWithGateway(gateway testGatewayBundle, base modulehandler.Base, workf
 	return Config{
 		Services:         newHandlerServices(serviceConfigWithGateway(gateway)),
 		Base:             base,
-		ChatFallbackPort: "",
+		PlayFallbackPort: "",
+		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),
 		Workflows:        workflows,
 	}
 }
@@ -119,20 +123,10 @@ func configWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, base modulehandler
 	return Config{
 		Services:         newHandlerServices(serviceConfigWithGRPCDeps(deps, "")),
 		Base:             base,
-		ChatFallbackPort: "",
+		PlayFallbackPort: "",
+		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),
 		Workflows:        workflows,
 	}
-}
-
-func configWithGatewayAndChatFallback(
-	gateway testGatewayBundle,
-	base modulehandler.Base,
-	workflows campaignworkflow.Registry,
-	chatFallbackPort string,
-) Config {
-	cfg := configWithGateway(gateway, base, workflows)
-	cfg.ChatFallbackPort = chatFallbackPort
-	return cfg
 }
 
 func configWithGatewayAndSync(
@@ -144,4 +138,14 @@ func configWithGatewayAndSync(
 	cfg := configWithGateway(gateway, base, workflows)
 	cfg.DashboardSync = sync
 	return cfg
+}
+
+func fakePlayLaunchGrantConfig() playlaunchgrant.Config {
+	return playlaunchgrant.Config{
+		Issuer:   "issuer-test",
+		Audience: "audience-test",
+		HMACKey:  []byte("0123456789abcdef0123456789abcdef"),
+		TTL:      time.Minute,
+		Now:      func() time.Time { return time.Date(2026, 3, 13, 16, 0, 0, 0, time.UTC) },
+	}
 }

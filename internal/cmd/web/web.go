@@ -11,6 +11,7 @@ import (
 	entrypoint "github.com/louisbranch/fracturing.space/internal/platform/cmd"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
@@ -18,7 +19,7 @@ import (
 // Config holds command inputs for web startup.
 type Config struct {
 	HTTPAddr            string `env:"FRACTURING_SPACE_WEB_HTTP_ADDR" envDefault:"localhost:8080"`
-	ChatHTTPAddr        string `env:"FRACTURING_SPACE_CHAT_HTTP_ADDR" envDefault:"localhost:8086"`
+	PlayHTTPAddr        string `env:"FRACTURING_SPACE_PLAY_HTTP_ADDR" envDefault:"localhost:8094"`
 	TrustForwardedProto bool   `env:"FRACTURING_SPACE_WEB_TRUST_FORWARDED_PROTO" envDefault:"false"`
 	AuthAddr            string `env:"FRACTURING_SPACE_AUTH_ADDR"`
 	SocialAddr          string `env:"FRACTURING_SPACE_SOCIAL_ADDR"`
@@ -47,7 +48,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	cfg.StatusAddr = serviceaddr.OrDefaultGRPCAddr(cfg.StatusAddr, serviceaddr.ServiceStatus)
 
 	fs.StringVar(&cfg.HTTPAddr, "http-addr", cfg.HTTPAddr, "HTTP listen address")
-	fs.StringVar(&cfg.ChatHTTPAddr, "chat-http-addr", cfg.ChatHTTPAddr, "Chat HTTP listen address")
+	fs.StringVar(&cfg.PlayHTTPAddr, "play-http-addr", cfg.PlayHTTPAddr, "Play HTTP listen address")
 	fs.StringVar(&cfg.AuthAddr, "auth-addr", cfg.AuthAddr, "Auth service gRPC address")
 	fs.StringVar(&cfg.SocialAddr, "social-addr", cfg.SocialAddr, "Social service gRPC address")
 	fs.StringVar(&cfg.GameAddr, "game-addr", cfg.GameAddr, "Game service gRPC address")
@@ -78,8 +79,12 @@ func Run(ctx context.Context, cfg Config) error {
 			return err
 		}
 		defer runtimeDeps.close()
+		playLaunchGrantCfg, err := playlaunchgrant.LoadConfigFromEnv(nil)
+		if err != nil {
+			return fmt.Errorf("load play launch grant config: %w", err)
+		}
 
-		server, err := web.NewServer(ctx, cfg.serverConfig(runtimeDeps.bundle))
+		server, err := web.NewServer(ctx, cfg.serverConfig(runtimeDeps.bundle, playLaunchGrantCfg))
 		if err != nil {
 			return fmt.Errorf("init web server: %w", err)
 		}
@@ -93,11 +98,12 @@ func Run(ctx context.Context, cfg Config) error {
 
 // serverConfig maps command config and assembled runtime dependencies into the
 // web server constructor contract.
-func (cfg Config) serverConfig(deps web.DependencyBundle) web.Config {
+func (cfg Config) serverConfig(deps web.DependencyBundle, playLaunchGrant playlaunchgrant.Config) web.Config {
 	return web.Config{
 		HTTPAddr:            cfg.HTTPAddr,
-		ChatHTTPAddr:        cfg.ChatHTTPAddr,
+		PlayHTTPAddr:        cfg.PlayHTTPAddr,
 		Logger:              slog.Default(),
+		PlayLaunchGrant:     playLaunchGrant,
 		RequestSchemePolicy: requestmeta.SchemePolicy{TrustForwardedProto: cfg.TrustForwardedProto},
 		Dependencies:        &deps,
 	}

@@ -1,25 +1,25 @@
 package campaigns
 
 import (
-	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-func TestMountCampaignGameRouteRendersNavbarBackButton(t *testing.T) {
+func TestMountCampaignGameRouteRedirectsToPlayHost(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGatewayAndChatFallback(fakeGateway{items: []campaignapp.CampaignSummary{{
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{
 		ID:            "c1",
 		Name:          "The Guildhouse",
 		CoverImageURL: "/static/campaign-covers/abandoned_castle_courtyard.png",
-	}}}, modulehandler.NewTestBase(), nil, "8086"))
+	}}}, modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil), nil))
 
 	mount, err := m.Mount()
 	if err != nil {
@@ -29,55 +29,47 @@ func TestMountCampaignGameRouteRendersNavbarBackButton(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignGame("c1"), nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusSeeOther)
 	}
-	body := rr.Body.String()
-	for _, marker := range []string{
-		`data-campaign-game-page="true"`,
-		`data-campaign-game-title="The Guildhouse Game"`,
-		`href="/app/campaigns/c1"`,
-		`id="game-scene-roster"`,
-		`id="game-player-phase"`,
-		`id="game-ooc-summary"`,
-		`id="game-player-slots"`,
-		`Players acting`,
-		`id="campaign-game-bootstrap"`,
-		`class="navbar-start"`,
-		`class="navbar-end"`,
-		`class="btn btn-ghost"`,
-		`Back to Campaign`,
-		`class="grid grid-cols-1 gap-4 xl:grid-cols-[20rem_minmax(0,1fr)_18rem]"`,
-		`class="card border border-base-300 bg-base-100 shadow-xl"`,
-	} {
-		if !strings.Contains(body, marker) {
-			t.Fatalf("body missing chat page marker %q: %q", marker, body)
-		}
-	}
-	// Invariant: drawer is removed — no drawer classes should be present.
-	for _, absent := range []string{
-		`drawer-toggle`,
-		`drawer-side`,
-		`chat-drawer-shell`,
-		`id="game-transcript"`,
-		`id="game-persona-select"`,
-		`id="game-request-handoff"`,
-		`/static/campaign-chat.js`,
-	} {
-		if strings.Contains(body, absent) {
-			t.Fatalf("body unexpectedly contains removed drawer marker %q", absent)
-		}
-	}
-	// Invariant: dedicated chat route must not render default app chrome shell wrappers.
-	if strings.Contains(body, `id="main"`) || strings.Contains(body, `data-nav-item="true"`) {
-		t.Fatalf("chat route unexpectedly rendered app chrome: %q", body)
+	location := rr.Header().Get("Location")
+	if !strings.HasPrefix(location, "http://play.example.com/campaigns/c1?launch=") {
+		t.Fatalf("Location = %q, want play host handoff", location)
 	}
 }
 
-func TestMountCampaignGameRouteHTMXRedirectsToFullPage(t *testing.T) {
+func TestMountCampaignGameRouteRedirectsToPlayPortForLoopbackHosts(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewTestBase(), nil))
+	cfg := configWithGateway(
+		fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}},
+		modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil),
+		nil,
+	)
+	cfg.PlayFallbackPort = "8094"
+	m := New(cfg)
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://localhost:8080"+routepath.AppCampaignGame("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusSeeOther)
+	}
+	location := rr.Header().Get("Location")
+	if !strings.HasPrefix(location, "http://localhost:8094/campaigns/c1?launch=") {
+		t.Fatalf("Location = %q, want localhost play-port handoff", location)
+	}
+}
+
+func TestMountCampaignGameRouteHTMXRedirectsToPlayHost(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}}, modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -91,22 +83,21 @@ func TestMountCampaignGameRouteHTMXRedirectsToFullPage(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignGame("c1") {
-		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignGame("c1"))
+	if got := rr.Header().Get("HX-Redirect"); !strings.HasPrefix(got, "http://play.example.com/campaigns/c1?launch=") {
+		t.Fatalf("HX-Redirect = %q, want play host handoff", got)
 	}
 }
 
-func TestMountCampaignGameRouteHandlesGameSurfaceFailure(t *testing.T) {
+func TestMountCampaignGameRouteHandlesLaunchGrantFailure(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGateway(
-		fakeGateway{
-			items:          []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
-			gameSurfaceErr: errors.New("surface unavailable"),
-		},
-		modulehandler.NewTestBase(),
+	cfg := configWithGateway(
+		fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}}},
+		modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil),
 		nil,
-	))
+	)
+	cfg.PlayLaunchGrant = playlaunchgrant.Config{}
+	m := New(cfg)
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

@@ -42,7 +42,7 @@ wait_for_services_ready() {
     "userhub"
     "mcp"
     "admin"
-    "chat"
+    "play"
     "worker"
     "web"
   )
@@ -59,7 +59,7 @@ wait_for_services_ready() {
     "userhub server listening at"
     "Starting MCP HTTP server"
     "admin listening on"
-    "chat server listening on"
+    "play server listening"
     "worker server listening at"
     "web server listening"
   )

@@ -38,8 +38,9 @@ Quick regression coverage for web route and shell contracts:
     when intentionally running unauthenticated-only checks.
 - Critical dependency stack:
   - CI runs this spec against a connected stack (`auth`, `social`,
-    `notifications`, `ai`, `game`, `userhub`, `web`) so authenticated route
-    journeys are validated as successful user-facing flows.
+    `notifications`, `ai`, `game`, `userhub`, `play`, `web`) so authenticated
+    route journeys and the `/app/campaigns/{id}/game` handoff are validated as
+    successful user-facing flows.
 
 ## Automation
 
@@ -492,7 +493,7 @@ async page => {
     { path: "/app/campaigns/" + campaignID + "/characters/create", selectors: ["#campaign-character-create", '[data-campaign-character-create-page="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/sessions", selectors: ["#campaign-sessions", '[data-campaign-session-start-form="true"]'] },
     { path: "/app/campaigns/" + campaignID + "/invites", selectors: ["#campaign-invites", '[data-campaign-invite-create-form="true"]'] },
-    { path: "/app/campaigns/" + campaignID + "/game", selectors: ['[data-campaign-chat-page="true"]'] },
+    { path: "/app/campaigns/" + campaignID + "/game", selectors: ["#root"] },
   ];
 
   for (const check of campaignRouteChecks) {

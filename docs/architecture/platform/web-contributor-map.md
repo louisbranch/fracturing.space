@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 11
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-09"
+last_reviewed: "2026-03-13"
 ---
 
 # Web Contributor Map
@@ -85,8 +85,9 @@ Canonical implementation path: `internal/services/web/`.
   duplicate app-owned workflow registry, root-owned workflow contract,
   production alias wall, and broad flat gateway client bag are gone, and the
   campaign detail handlers and module-owned markup now live under
-  `campaigns/render`, while list/start/create/chat pages live under the root
-  `campaigns` package. Character-creation assembly and step parsing now live in
+  `campaigns/render`, while list/start/create pages live under the root
+  `campaigns` package and `/app/campaigns/{id}/game` is only a launcher into
+  `play`. Character-creation assembly and step parsing now live in
   `campaigns/workflow/service.go`, and production module wiring now passes
   read/mutation/authz seams explicitly, including test module construction.
   The remaining contributor caution is mostly app/gateway size and route-surface

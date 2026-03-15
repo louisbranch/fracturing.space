@@ -39,12 +39,12 @@
       "grpc_port": 8091
     },
     {
-      "name": "chat",
-      "http_port": 8086,
+      "name": "play",
+      "http_port": 8094,
       "public_routes": [
         {
-          "host_prefix": "chat",
-          "http_port": 8086
+          "host_prefix": "play",
+          "http_port": 8094
         }
       ]
     },

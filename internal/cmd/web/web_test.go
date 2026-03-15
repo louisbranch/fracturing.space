@@ -13,6 +13,7 @@ import (
 	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
 	"google.golang.org/grpc"
@@ -52,8 +53,8 @@ func TestParseConfigDefaults(t *testing.T) {
 	if cfg.GameAddr != "game:8082" {
 		t.Fatalf("GameAddr = %q, want %q", cfg.GameAddr, "game:8082")
 	}
-	if cfg.ChatHTTPAddr != "localhost:8086" {
-		t.Fatalf("ChatHTTPAddr = %q, want %q", cfg.ChatHTTPAddr, "localhost:8086")
+	if cfg.PlayHTTPAddr != "localhost:8094" {
+		t.Fatalf("PlayHTTPAddr = %q, want %q", cfg.PlayHTTPAddr, "localhost:8094")
 	}
 	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("AuthAddr = %q, want %q", cfg.AuthAddr, "auth:8083")
@@ -104,16 +105,16 @@ func TestParseConfigOverrideGameAddr(t *testing.T) {
 	}
 }
 
-func TestParseConfigOverrideChatHTTPAddr(t *testing.T) {
+func TestParseConfigOverridePlayHTTPAddr(t *testing.T) {
 	t.Parallel()
 
 	fs := flag.NewFlagSet("web", flag.ContinueOnError)
-	cfg, err := ParseConfig(fs, []string{"-chat-http-addr", "127.0.0.1:18086"})
+	cfg, err := ParseConfig(fs, []string{"-play-http-addr", "127.0.0.1:18094"})
 	if err != nil {
 		t.Fatalf("ParseConfig() error = %v", err)
 	}
-	if cfg.ChatHTTPAddr != "127.0.0.1:18086" {
-		t.Fatalf("ChatHTTPAddr = %q, want %q", cfg.ChatHTTPAddr, "127.0.0.1:18086")
+	if cfg.PlayHTTPAddr != "127.0.0.1:18094" {
+		t.Fatalf("PlayHTTPAddr = %q, want %q", cfg.PlayHTTPAddr, "127.0.0.1:18094")
 	}
 }
 
@@ -490,17 +491,22 @@ func TestConfigServerConfigMapsRuntimeDependencies(t *testing.T) {
 
 	cfg := Config{
 		HTTPAddr:            "127.0.0.1:8080",
-		ChatHTTPAddr:        "127.0.0.1:8086",
+		PlayHTTPAddr:        "127.0.0.1:8094",
 		TrustForwardedProto: true,
 	}
 	deps := web.DependencyBundle{}
 
-	serverCfg := cfg.serverConfig(deps)
+	serverCfg := cfg.serverConfig(deps, playlaunchgrant.Config{
+		Issuer:   "issuer-test",
+		Audience: "audience-test",
+		HMACKey:  []byte("0123456789abcdef0123456789abcdef"),
+		TTL:      time.Minute,
+	})
 	if serverCfg.HTTPAddr != cfg.HTTPAddr {
 		t.Fatalf("HTTPAddr = %q, want %q", serverCfg.HTTPAddr, cfg.HTTPAddr)
 	}
-	if serverCfg.ChatHTTPAddr != cfg.ChatHTTPAddr {
-		t.Fatalf("ChatHTTPAddr = %q, want %q", serverCfg.ChatHTTPAddr, cfg.ChatHTTPAddr)
+	if serverCfg.PlayHTTPAddr != cfg.PlayHTTPAddr {
+		t.Fatalf("PlayHTTPAddr = %q, want %q", serverCfg.PlayHTTPAddr, cfg.PlayHTTPAddr)
 	}
 	if !serverCfg.RequestSchemePolicy.TrustForwardedProto {
 		t.Fatalf("TrustForwardedProto = false, want true")

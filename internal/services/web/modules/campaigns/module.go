@@ -5,9 +5,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/module"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -15,7 +17,9 @@ import (
 type Module struct {
 	services         handlerServices
 	base             modulehandler.Base
-	chatFallbackPort string
+	playFallbackPort string
+	playLaunchGrant  playlaunchgrant.Config
+	requestMeta      requestmeta.SchemePolicy
 	workflows        campaignworkflow.Registry
 	sync             DashboardSync
 	mountErr         error
@@ -25,7 +29,9 @@ type Module struct {
 type Config struct {
 	Services         handlerServices
 	Base             modulehandler.Base
-	ChatFallbackPort string
+	PlayFallbackPort string
+	PlayLaunchGrant  playlaunchgrant.Config
+	RequestMeta      requestmeta.SchemePolicy
 	Workflows        campaignworkflow.Registry
 	DashboardSync    DashboardSync
 }
@@ -35,7 +41,9 @@ func New(config Config) Module {
 	return Module{
 		services:         config.Services,
 		base:             config.Base,
-		chatFallbackPort: config.ChatFallbackPort,
+		playFallbackPort: config.PlayFallbackPort,
+		playLaunchGrant:  config.PlayLaunchGrant,
+		requestMeta:      config.RequestMeta,
 		workflows:        config.Workflows,
 		sync:             config.DashboardSync,
 		mountErr:         validateHandlerServices(config.Services),
@@ -59,7 +67,9 @@ func (m Module) Mount() (module.Mount, error) {
 	h := newHandlers(handlersConfig{
 		Services:         m.services,
 		Base:             m.base,
-		ChatFallbackPort: m.chatFallbackPort,
+		PlayFallbackPort: m.playFallbackPort,
+		PlayLaunchGrant:  m.playLaunchGrant,
+		RequestMeta:      m.requestMeta,
 		Sync:             m.sync,
 		Workflows:        m.workflows,
 	})

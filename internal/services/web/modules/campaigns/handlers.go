@@ -4,9 +4,11 @@ import (
 	"context"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
 // DashboardSync exposes dashboard refresh hooks needed by campaign mutations.
@@ -39,7 +41,9 @@ type handlers struct {
 	authorization     campaignapp.CampaignAuthorizationService
 	creationPages     campaignworkflow.PageService
 	creationMutation  campaignworkflow.MutationService
-	chatFallbackPort  string
+	playFallbackPort  string
+	playLaunchGrant   playlaunchgrant.Config
+	requestMeta       requestmeta.SchemePolicy
 	nowFunc           func() time.Time
 	sync              DashboardSync
 }
@@ -71,7 +75,9 @@ type handlerServices struct {
 type handlersConfig struct {
 	Services         handlerServices
 	Base             modulehandler.Base
-	ChatFallbackPort string
+	PlayFallbackPort string
+	PlayLaunchGrant  playlaunchgrant.Config
+	RequestMeta      requestmeta.SchemePolicy
 	Sync             DashboardSync
 	Workflows        campaignworkflow.Registry
 }
@@ -130,7 +136,9 @@ func newHandlers(config handlersConfig) handlers {
 		authorization:     services.Authorization,
 		creationPages:     campaignworkflow.NewPageService(services.CreationPages, workflowMap),
 		creationMutation:  campaignworkflow.NewMutationService(services.CreationFlow, workflowMap),
-		chatFallbackPort:  config.ChatFallbackPort,
+		playFallbackPort:  config.PlayFallbackPort,
+		playLaunchGrant:   config.PlayLaunchGrant,
+		requestMeta:       config.RequestMeta,
 		nowFunc:           time.Now,
 		sync:              config.Sync,
 	}
@@ -141,7 +149,6 @@ func newHandlers(config handlersConfig) handlers {
 func newHandlersFromConfig(
 	serviceConfig campaignapp.ServiceConfig,
 	base modulehandler.Base,
-	chatFallbackPort string,
 	sync DashboardSync,
 	workflows ...campaignworkflow.Registry,
 ) handlers {
@@ -150,11 +157,10 @@ func newHandlersFromConfig(
 		workflowMap = workflows[0]
 	}
 	return newHandlers(handlersConfig{
-		Services:         newHandlerServices(serviceConfig),
-		Base:             base,
-		ChatFallbackPort: chatFallbackPort,
-		Sync:             sync,
-		Workflows:        workflowMap,
+		Services:  newHandlerServices(serviceConfig),
+		Base:      base,
+		Sync:      sync,
+		Workflows: workflowMap,
 	})
 }
 

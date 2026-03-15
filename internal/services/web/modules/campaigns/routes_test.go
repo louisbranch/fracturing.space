@@ -15,17 +15,20 @@ func newRouteTestServiceConfig(gw fakeGateway) campaignapp.ServiceConfig {
 	return serviceConfigWithGateway(gw)
 }
 
+func newRouteHandlers(gw fakeGateway, base modulehandler.Base) handlers {
+	return newHandlers(handlersConfig{
+		Services:        newHandlerServices(newRouteTestServiceConfig(gw)),
+		Base:            base,
+		PlayLaunchGrant: fakePlayLaunchGrantConfig(),
+	})
+}
+
 func TestRegisterRoutesHandlesNilMux(t *testing.T) {
 	t.Parallel()
 
 	registerStableRoutes(
 		nil,
-		newHandlersFromConfig(
-			newRouteTestServiceConfig(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}),
-			modulehandler.NewTestBase(),
-			"",
-			nil,
-		),
+		newRouteHandlers(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}}}, modulehandler.NewTestBase()),
 	)
 }
 
@@ -63,16 +66,11 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 	mux := http.NewServeMux()
 	registerStableRoutes(
 		mux,
-		newHandlersFromConfig(
-			newRouteTestServiceConfig(fakeGateway{
-				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
-				participants: []campaignapp.CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
-				characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
-			}),
-			modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil),
-			"",
-			nil,
-		),
+		newRouteHandlers(fakeGateway{
+			items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+			participants: []campaignapp.CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
+			characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
+		}, modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil)),
 	)
 
 	tests := []struct {
@@ -131,27 +129,22 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 	mux := http.NewServeMux()
 	registerStableRoutes(
 		mux,
-		newHandlersFromConfig(
-			newRouteTestServiceConfig(fakeGateway{
-				items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
-				participants: []campaignapp.CampaignParticipant{{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"}},
-				participant:  campaignapp.CampaignParticipant{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
-				sessions:     []campaignapp.CampaignSession{{ID: "sess-1", Name: "Session One"}},
-				invites:      []campaignapp.CampaignInvite{{ID: "inv-1", ParticipantID: "p-1", RecipientUserID: "user-123", Status: "Pending"}},
-				characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
-					Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
-					NextStep: 1,
-				},
-				authorizationDecision: campaignapp.AuthorizationDecision{
-					Evaluated:           true,
-					Allowed:             true,
-					ActorCampaignAccess: "Owner",
-				},
-			}),
-			modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil),
-			"",
-			nil,
-		),
+		newRouteHandlers(fakeGateway{
+			items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
+			participants: []campaignapp.CampaignParticipant{{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"}},
+			participant:  campaignapp.CampaignParticipant{ID: "p-1", Name: "Owner", Role: "GM", CampaignAccess: "Owner"},
+			sessions:     []campaignapp.CampaignSession{{ID: "sess-1", Name: "Session One"}},
+			invites:      []campaignapp.CampaignInvite{{ID: "inv-1", ParticipantID: "p-1", RecipientUserID: "user-123", Status: "Pending"}},
+			characterCreationProgress: campaignapp.CampaignCharacterCreationProgress{
+				Steps:    []campaignapp.CampaignCharacterCreationStep{{Step: 1, Key: "class_subclass", Complete: false}},
+				NextStep: 1,
+			},
+			authorizationDecision: campaignapp.AuthorizationDecision{
+				Evaluated:           true,
+				Allowed:             true,
+				ActorCampaignAccess: "Owner",
+			},
+		}, modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil)),
 	)
 
 	tests := []struct {
@@ -178,7 +171,7 @@ func TestRegisterStableRoutesExposeWorkspaceAndMutationRoutes(t *testing.T) {
 		{name: "session detail", method: http.MethodGet, path: routepath.AppCampaignSession("c1", "sess-1"), wantStatus: http.StatusOK},
 		{name: "invites", method: http.MethodGet, path: routepath.AppCampaignInvites("c1"), wantStatus: http.StatusOK},
 		{name: "invite search", method: http.MethodPost, path: routepath.AppCampaignInviteSearch("c1"), body: `{"query":"al"}`, wantStatus: http.StatusOK},
-		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusOK},
+		{name: "game", method: http.MethodGet, path: routepath.AppCampaignGame("c1"), wantStatus: http.StatusSeeOther},
 		{name: "participant update", method: http.MethodPost, path: routepath.AppCampaignParticipantEdit("c1", "p-1"), body: "name=Owner&role=gm&pronouns=they%2Fthem", wantStatus: http.StatusFound},
 		{name: "participant create submit", method: http.MethodPost, path: routepath.AppCampaignParticipantCreate("c1"), body: "name=Pending+Seat&role=player&campaign_access=member", wantStatus: http.StatusFound},
 		{name: "character update", method: http.MethodPost, path: routepath.AppCampaignCharacterEdit("c1", "char-1"), body: "name=Hero&pronouns=they%2Fthem", wantStatus: http.StatusFound},

@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-12"
+last_reviewed: "2026-03-13"
 ---
 
 # Interaction Surfaces
@@ -14,6 +14,10 @@ last_reviewed: "2026-03-12"
 Define the authoritative browser and API contract for active play now that
 scene interaction is modeled as explicit session and scene state instead of
 chat streams, personas, and legacy handoff workflows.
+
+`web` owns the launcher route (`/app/campaigns/{id}/game`), but `play` owns the
+browser-facing active-play surface after handoff. `game.v1.InteractionService`
+remains the authority either way.
 
 ## Core model
 
@@ -83,6 +87,8 @@ event model. They remain transport concerns.
 
 ## Browser responsibilities
 
+The active-play browser surface is served by `play`.
+
 The browser game route should render state in terms of scenes, phases, and OOC
 status rather than transcript routing controls.
 
@@ -106,3 +112,6 @@ Session chat may remain as an optional human websocket/transcript sidecar, but
 it is not an active-play authority surface. Any future transcript work must
 consume interaction state as input rather than trying to infer scene flow from
 free-form chat.
+
+Typing indicators, human chat fanout, and reconnect cursors are `play`
+transport concerns, not `game` domain authority.

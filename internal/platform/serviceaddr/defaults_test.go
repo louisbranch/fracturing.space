@@ -32,7 +32,7 @@ func TestDefaultHTTPAddr(t *testing.T) {
 		ServiceWeb:    "web:8080",
 		ServiceAdmin:  "admin:8081",
 		ServiceMCP:    "mcp:8085",
-		ServiceChat:   "chat:8086",
+		ServicePlay:   "play:8094",
 		ServiceJaeger: "jaeger:16686",
 	}
 	for service, want := range cases {

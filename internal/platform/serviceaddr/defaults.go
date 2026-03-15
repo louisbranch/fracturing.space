@@ -17,14 +17,14 @@ const (
 	ServiceDiscovery = "discovery"
 	// ServiceAuth is the auth service identity.
 	ServiceAuth = "auth"
-	// ServiceChat is the chat HTTP service identity.
-	ServiceChat = "chat"
 	// ServiceGame is the game gRPC service identity.
 	ServiceGame = "game"
 	// ServiceJaeger is the jaeger HTTP service identity.
 	ServiceJaeger = "jaeger"
 	// ServiceMCP is the MCP HTTP service identity.
 	ServiceMCP = "mcp"
+	// ServicePlay is the play HTTP service identity.
+	ServicePlay = "play"
 	// ServiceNotifications is the notifications service identity.
 	ServiceNotifications = "notifications"
 	// ServiceUserHub is the userhub gRPC service identity.
@@ -54,7 +54,7 @@ var httpPorts = map[string]int{
 	ServiceAdmin:  8081,
 	ServiceAuth:   8084,
 	ServiceMCP:    8085,
-	ServiceChat:   8086,
+	ServicePlay:   8094,
 	ServiceJaeger: 16686,
 }
 

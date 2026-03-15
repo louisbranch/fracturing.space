@@ -309,12 +309,9 @@ func TestCampaignListCreateTemplatesAreAreaOwned(t *testing.T) {
 	assertFileContains(t, "campaigns/page.templ", "templ CampaignListFragment(")
 }
 
-func TestCampaignChatAndCreationTemplatesAreAreaOwned(t *testing.T) {
+func TestCampaignCreationTemplatesAreAreaOwned(t *testing.T) {
 	t.Parallel()
 
-	assertFileContains(t, "campaigns/handlers_chat.go", "CampaignChatPage(")
-	assertFileDoesNotContain(t, "campaigns/handlers_chat.go", "webtemplates.CampaignChatPage(")
-	assertFileContains(t, "campaigns/chat_page.templ", "templ CampaignChatPage(")
 	assertFileContains(t, "campaigns/handlers_creation_page.go", "campaignrender.CharacterCreationPage(")
 	assertFileDoesNotContain(t, "campaigns/handlers_creation_page.go", "webtemplates.CharacterCreationPage(")
 	assertFileContains(t, "campaigns/render/character_creation.templ", "templ CharacterCreationPage(")
@@ -461,7 +458,9 @@ func TestCampaignServiceConstructorUsesExplicitCapabilityConfig(t *testing.T) {
 	assertFileContains(t, "campaigns/app/service_ai_binding.go", "func (s automationReadService) campaignAIBindingSettings(")
 	assertFileContains(t, "campaigns/app/service_ai_binding.go", "func (s automationMutationService) updateCampaignAIBinding(")
 	assertFileDoesNotContain(t, "campaigns/handlers_chat.go", "h.workspace.CampaignGameSurface(")
-	assertFileContains(t, "campaigns/handlers_chat.go", "h.game.CampaignGameSurface(")
+	assertFileDoesNotContain(t, "campaigns/handlers_chat.go", "h.game.CampaignGameSurface(")
+	assertFileContains(t, "campaigns/handlers_chat.go", "playlaunchgrant.Issue(")
+	assertFileContains(t, "campaigns/handlers_chat.go", "playorigin.PlayURL(")
 	assertFileDoesNotContain(t, "campaigns/handlers_detail_participants.go", "h.automationReads.CampaignAIBindingEditor(")
 	assertFileContains(t, "campaigns/handlers_detail_overview.go", "h.automationReads.CampaignAIBindingSummary(ctx, campaignID, page.workspace.AIAgentID, page.workspace.GMMode)")
 	assertFileContains(t, "campaigns/handlers_detail_overview.go", "h.automationReads.CampaignAIBindingSettings(ctx, campaignID, page.workspace.AIAgentID)")

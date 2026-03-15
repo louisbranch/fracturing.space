@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-13"
 ---
 
 # Configuration
@@ -114,11 +114,18 @@ For web-login-first local flows, many contributors set
 - `FRACTURING_SPACE_JOIN_GRANT_PRIVATE_KEY`: base64 Ed25519 private key for signing (auth). Generate with `go run ./cmd/join-grant-key`.
 - `FRACTURING_SPACE_JOIN_GRANT_TTL`: join grant TTL. Default: `5m`.
 
+### Play launch grants
+
+- `FRACTURING_SPACE_PLAY_LAUNCH_GRANT_ISSUER`: issuer claim used by `web` to sign and `play` to validate browser handoff grants. Default: `fracturing-space-web`.
+- `FRACTURING_SPACE_PLAY_LAUNCH_GRANT_AUDIENCE`: audience claim used by `web` to sign and `play` to validate browser handoff grants. Default: `fracturing-space-play`.
+- `FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY`: base64 HMAC key for play launch grant signing/verification (must decode to at least 32 bytes).
+- `FRACTURING_SPACE_PLAY_LAUNCH_GRANT_TTL`: play launch grant TTL. Default: `2m`.
+
 ### MCP
 
 Internal gRPC dependencies default to Compose service DNS names (`service:port`). For direct local binary workflows, override these values to `localhost` in `.env.local`.
 
-- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, web, chat, and AI services. Default: `game:8082`.
+- `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, web, play, and AI services. Default: `game:8082`.
 - `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for MCP when using HTTP transport. Default: `localhost:8085`.
 - `FRACTURING_SPACE_MCP_TRANSPORT`: transport type (`stdio` or `http`). Default: `stdio`.
 - `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`: comma-separated allowed Host/Origin values for MCP HTTP. Defaults to loopback-only when unset.
@@ -137,7 +144,6 @@ Internal gRPC dependencies default to Compose service DNS names (`service:port`)
 ### Web
 
 - `FRACTURING_SPACE_WEB_HTTP_ADDR`: HTTP bind address for the web login server. Default: `localhost:8080`.
-- `FRACTURING_SPACE_CHAT_HTTP_ADDR`: chat HTTP bind address for optional session-chat websocket transport. Default: `localhost:8086`.
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL`: external auth base URL for login redirects.
 - `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server. Default: `auth:8083`.
 - `FRACTURING_SPACE_NOTIFICATIONS_ADDR`: notifications gRPC address used by the web login server. Default: `notifications:8088`.
@@ -147,6 +153,17 @@ Internal gRPC dependencies default to Compose service DNS names (`service:port`)
 - `FRACTURING_SPACE_WEB_AUTH_TOKEN_URL`: internal auth token endpoint for server-to-server code exchange. Defaults to `{AuthBaseURL}/token`.
 - `FRACTURING_SPACE_ASSET_BASE_URL`: external base URL for campaign cover and avatar assets (object storage/CDN origin).
 - `FRACTURING_SPACE_ASSET_VERSION`: version prefix for generated asset keys. Default: `v1`.
+
+### Play
+
+- `FRACTURING_SPACE_PLAY_HTTP_ADDR`: HTTP bind address for the browser-facing play service. Default: `:8094`.
+- `FRACTURING_SPACE_PLAY_DB_PATH`: SQLite path for play-owned transcript storage. Default: `data/play.db`.
+- `FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`: optional Vite dev-server URL used instead of embedded assets in local UI development. Leave unset for normal Compose and production runs.
+- `FRACTURING_SPACE_PLAY_TRUST_FORWARDED_PROTO`: trust `X-Forwarded-Proto` when resolving external scheme for redirects and cookies. Default: `false`.
+
+Compose note:
+
+- The default Compose deployment mounts the shared data volume at `/data` and should point `FRACTURING_SPACE_PLAY_DB_PATH` there (for example `/data/play.db`) so play-owned transcript history remains durable across restarts.
 
 ### Docker + Caddy (Compose defaults)
 
@@ -213,7 +230,7 @@ omitted. Command-line flags take precedence over env values.
 The web server (`cmd/web`) accepts the following flags:
 
 - `-http-addr`: HTTP server address. Default: `localhost:8080`
-- `-chat-http-addr`: Chat HTTP server address. Default: `localhost:8086`
+- `-play-http-addr`: Play HTTP server address used for direct browser handoff fallback. Default: `localhost:8094`
 - `-auth-addr`: auth gRPC dependency address. Default: `auth:8083`
 - `-social-addr`: social gRPC dependency address. Default: `social:8090`
 - `-game-addr`: game gRPC dependency address. Default: `game:8082`
@@ -225,7 +242,7 @@ The web server (`cmd/web`) accepts the following flags:
 ### Address Overrides
 
 The web server accepts flags for HTTP and upstream dependency addresses. If
-`FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_CHAT_HTTP_ADDR`,
+`FRACTURING_SPACE_WEB_HTTP_ADDR`, `FRACTURING_SPACE_PLAY_HTTP_ADDR`,
 `FRACTURING_SPACE_AUTH_ADDR`, `FRACTURING_SPACE_SOCIAL_ADDR`,
 `FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_AI_ADDR`,
 `FRACTURING_SPACE_NOTIFICATIONS_ADDR`, or `FRACTURING_SPACE_USERHUB_ADDR` are
@@ -233,26 +250,28 @@ set, they provide defaults when matching flags are omitted. Asset URL defaults c
 `FRACTURING_SPACE_ASSET_BASE_URL`. Command-line flags take precedence over env
 values.
 
-## Chat Service Configuration
+## Play Service Configuration
 
 ### Command-line Flags
 
-The chat service (`cmd/chat`) accepts the following flags:
+The play service (`cmd/play`) accepts the following flags:
 
-- `-http-addr`: Chat HTTP server address. Default: `:8086`
+- `-http-addr`: play HTTP server address. Default: `:8094`
+- `-web-http-addr`: web HTTP server address used for browser back-link fallback. Default: `web:8080`
 - `-auth-addr`: auth gRPC dependency address. Default: `auth:8083`
 - `-game-addr`: game gRPC dependency address. Default: `game:8082`
-- `-auth-base-url`: auth HTTP base URL used for token introspection fallback. Default: `http://localhost:8084`
-- `-oauth-resource-secret`: OAuth introspection resource secret.
+- `-db-path`: play SQLite database path. Default: `data/play.db`
+- `-ui-dev-server-url`: optional Vite dev-server URL for local SPA development.
+- `-trust-forwarded-proto`: trust `X-Forwarded-Proto` for redirect/cookie scheme resolution. Default: `false`
 
 ### Address Overrides
 
-The chat service accepts flags for HTTP and upstream dependency addresses. If
-`FRACTURING_SPACE_CHAT_HTTP_ADDR`, `FRACTURING_SPACE_AUTH_ADDR`,
-`FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
-`FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET` are set, they provide defaults
-when matching flags are omitted. Command-line flags take precedence over env
-values.
+The play service accepts flags for HTTP and upstream dependency addresses. If
+`FRACTURING_SPACE_PLAY_HTTP_ADDR`, `FRACTURING_SPACE_WEB_HTTP_ADDR`,
+`FRACTURING_SPACE_AUTH_ADDR`, `FRACTURING_SPACE_GAME_ADDR`,
+`FRACTURING_SPACE_PLAY_DB_PATH`, or
+`FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL` are set, they provide defaults when
+matching flags are omitted. Command-line flags take precedence over env values.
 
 ## AI Service Configuration
 
