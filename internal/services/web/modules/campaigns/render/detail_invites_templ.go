@@ -596,35 +596,37 @@ func invitesFragment(view InvitesPageView, loc Localizer) templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<label class=\"form-control\"><span class=\"label\"><span class=\"label-text\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var36 string
-			templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign_invites.field_public_url"))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 92, Col: 84}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</span></span> <input class=\"input input-bordered input-sm w-full\" type=\"text\" readonly value=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var37 string
-			templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(invite.PublicURL)
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 94, Col: 105}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "\" data-campaign-invite-public-url=\"true\"></label> ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
+			if invite.PublicURL != "" {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 59, "<label class=\"form-control\"><span class=\"label\"><span class=\"label-text\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var36 string
+				templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign_invites.field_public_url"))
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 93, Col: 85}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 60, "</span></span> <input class=\"input input-bordered input-sm w-full\" type=\"text\" readonly value=\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				var templ_7745c5c3_Var37 string
+				templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(invite.PublicURL)
+				if templ_7745c5c3_Err != nil {
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 95, Col: 106}
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 61, "\" data-campaign-invite-public-url=\"true\"></label> ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
 			if view.CanManageInvites && campaignInviteCanRevoke(invite.Status) {
 				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 62, "<div class=\"card-actions justify-end\">")
@@ -639,7 +641,7 @@ func invitesFragment(view InvitesPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var38 string
 					templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.tooltip_actions_locked"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 99, Col: 101}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 101, Col: 101}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 					if templ_7745c5c3_Err != nil {
@@ -652,7 +654,7 @@ func invitesFragment(view InvitesPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var39 string
 					templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign_invites.submit_revoke"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 100, Col: 174}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 102, Col: 174}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 					if templ_7745c5c3_Err != nil {
@@ -670,7 +672,7 @@ func invitesFragment(view InvitesPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var40 templ.SafeURL
 					templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignInviteRevoke(view.CampaignID))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 103, Col: 89}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 105, Col: 89}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 					if templ_7745c5c3_Err != nil {
@@ -683,7 +685,7 @@ func invitesFragment(view InvitesPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var41 string
 					templ_7745c5c3_Var41, templ_7745c5c3_Err = templ.JoinStringErrs(invite.ID)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 104, Col: 66}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 106, Col: 66}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var41))
 					if templ_7745c5c3_Err != nil {
@@ -696,7 +698,7 @@ func invitesFragment(view InvitesPageView, loc Localizer) templ.Component {
 					var templ_7745c5c3_Var42 string
 					templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign_invites.submit_revoke"))
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 105, Col: 163}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_invites.templ`, Line: 107, Col: 163}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 					if templ_7745c5c3_Err != nil {

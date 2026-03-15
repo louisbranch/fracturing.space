@@ -13,10 +13,24 @@ type NotificationListItemView struct {
 	DetailURL    string
 }
 
+type NotificationFactView struct {
+	Label string
+	Value string
+}
+
+type NotificationActionView struct {
+	Label   string
+	URL     string
+	Method  string
+	Primary bool
+}
+
 type NotificationDetailView struct {
 	ID           string
 	Title        string
 	Body         string
+	Facts        []NotificationFactView
+	Actions      []NotificationActionView
 	SourceLabel  string
 	CreatedLabel string
 	Read         bool
@@ -69,6 +83,17 @@ func notificationDetailAvailable(view NotificationsPageView) bool {
 	return view.Selected != nil && strings.TrimSpace(view.Selected.ID) != ""
 }
 
+func notificationActionClass(action NotificationActionView) string {
+	if action.Primary {
+		return "btn btn-primary"
+	}
+	return "btn btn-outline"
+}
+
+func notificationActionUsesPost(action NotificationActionView) bool {
+	return strings.EqualFold(strings.TrimSpace(action.Method), "POST")
+}
+
 templ NotificationsFragment(view NotificationsPageView, loc Localizer) {
 	<section id="notifications-root" class="grid gap-6 lg:grid-cols-[22rem_1fr]">
 		<aside class="space-y-3" aria-label={ notificationListAriaLabel(loc) }>
@@ -99,6 +124,29 @@ templ NotificationsFragment(view NotificationsPageView, loc Localizer) {
 					<p class="whitespace-pre-wrap text-sm opacity-85">{ notificationItemBody(NotificationListItemView{Body: view.Selected.Body}, loc) }</p>
 					if notificationItemMeta(NotificationListItemView{SourceLabel: view.Selected.SourceLabel, CreatedLabel: view.Selected.CreatedLabel}) != "" {
 						<p class="text-xs opacity-60">{ notificationItemMeta(NotificationListItemView{SourceLabel: view.Selected.SourceLabel, CreatedLabel: view.Selected.CreatedLabel}) }</p>
+					}
+					if len(view.Selected.Facts) > 0 {
+						<div class="grid gap-3 rounded-xl bg-base-200 p-4">
+							for _, fact := range view.Selected.Facts {
+								<div class="grid gap-1">
+									<p class="text-xs uppercase tracking-[0.16em] opacity-60">{ fact.Label }</p>
+									<p class="text-sm font-medium">{ fact.Value }</p>
+								</div>
+							}
+						</div>
+					}
+					if len(view.Selected.Actions) > 0 {
+						<div class="card-actions justify-start gap-3">
+							for _, action := range view.Selected.Actions {
+								if notificationActionUsesPost(action) {
+									<form method="post" action={ action.URL }>
+										<button class={ notificationActionClass(action) } type="submit">{ action.Label }</button>
+									</form>
+								} else {
+									<a class={ notificationActionClass(action) } href={ action.URL }>{ action.Label }</a>
+								}
+							}
+						</div>
 					}
 				} else {
 					<p class="text-sm opacity-80">{ T(loc, "game.notifications.no_selection") }</p>

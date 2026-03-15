@@ -20,18 +20,6 @@ type InviteNotificationOutboxPayload struct {
 	NotificationKind string `json:"notification_kind"`
 }
 
-// InviteNotificationPayload is the notifications-service payload rendered by
-// web notification surfaces.
-type InviteNotificationPayload struct {
-	InviteID          string `json:"invite_id"`
-	CampaignID        string `json:"campaign_id"`
-	CampaignName      string `json:"campaign_name"`
-	ParticipantID     string `json:"participant_id"`
-	ParticipantName   string `json:"participant_name"`
-	InviterUsername   string `json:"inviter_username,omitempty"`
-	RecipientUsername string `json:"recipient_username,omitempty"`
-}
-
 func InviteCreatedNotificationDedupeKey(inviteID string) string {
 	return "invite:" + inviteID + ":created"
 }

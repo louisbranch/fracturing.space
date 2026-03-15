@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 )
@@ -150,6 +151,43 @@ func TestRenderUnknownTopicFallsBack(t *testing.T) {
 	}
 	if out.BodyText != "You have a new notification." {
 		t.Fatalf("body = %q, want %q", out.BodyText, "You have a new notification.")
+	}
+}
+
+func TestRenderInAppUsesCanonicalPayload(t *testing.T) {
+	t.Parallel()
+
+	out := Render(nil, Input{
+		MessageType: "campaign.invite.created.v1",
+		PayloadJSON: `{"title":"Campaign invitation","body":"This invitation is addressed to you. You can accept or decline it now.","facts":[{"label":"Campaign","value":"Skyfall"},{"label":"Seat","value":"Scout"}],"actions":[{"label":"View invitation","kind":"public_invite_view","target_id":"inv-1","method":"GET","style":"primary"}]}`,
+		Channel:     ChannelInApp,
+	})
+
+	if out.Title != "Campaign invitation" {
+		t.Fatalf("title = %q, want %q", out.Title, "Campaign invitation")
+	}
+	if out.BodyText != "This invitation is addressed to you. You can accept or decline it now." {
+		t.Fatalf("body = %q, want canonical payload body", out.BodyText)
+	}
+	if len(out.Facts) != 2 || out.Facts[0].Value != "Skyfall" {
+		t.Fatalf("facts = %+v, want canonical payload facts", out.Facts)
+	}
+	if len(out.Actions) != 1 || out.Actions[0].Kind != notificationpayload.ActionKindPublicInviteView || out.Actions[0].TargetID != "inv-1" || out.Actions[0].Method != notificationpayload.ActionMethodGet {
+		t.Fatalf("actions = %+v, want canonical payload action", out.Actions)
+	}
+}
+
+func TestRenderInAppMalformedCanonicalPayloadFallsBack(t *testing.T) {
+	t.Parallel()
+
+	out := Render(nil, Input{
+		MessageType: "campaign.invite.created.v1",
+		PayloadJSON: `{"title":"Campaign invitation","actions":[{"label":"Accept invitation"}`,
+		Channel:     ChannelInApp,
+	})
+
+	if out.Title != "Notification" || out.BodyText != "You have a new notification." {
+		t.Fatalf("fallback = %+v, want generic copy", out)
 	}
 }
 

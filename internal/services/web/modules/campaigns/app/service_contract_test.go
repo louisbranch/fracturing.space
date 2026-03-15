@@ -279,6 +279,49 @@ func TestUnavailableGatewayFailsClosedForAllMethods(t *testing.T) {
 	assertUnavailable(t, gw.ResetCharacterCreationWorkflow(ctx, "c1", "char-1"), "ResetCharacterCreationWorkflow")
 }
 
+func TestCampaignInvitesSortsByStatusOrderThenID(t *testing.T) {
+	t.Parallel()
+
+	svc := newService(&campaignGatewayStub{
+		authorizationDecision: AuthorizationDecision{Evaluated: true, Allowed: true},
+		campaignInvites: []CampaignInvite{
+			{ID: "inv-4", Status: "Revoked"},
+			{ID: "inv-2", Status: "Declined"},
+			{ID: "inv-5", Status: "Claimed"},
+			{ID: "inv-1", Status: "Pending"},
+			{ID: "inv-3", Status: "Pending"},
+		},
+	})
+
+	invites, err := svc.inviteReadService.CampaignInvites(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("CampaignInvites() error = %v", err)
+	}
+	if len(invites) != 5 {
+		t.Fatalf("len(invites) = %d, want 5", len(invites))
+	}
+
+	got := []string{
+		invites[0].ID + ":" + invites[0].Status,
+		invites[1].ID + ":" + invites[1].Status,
+		invites[2].ID + ":" + invites[2].Status,
+		invites[3].ID + ":" + invites[3].Status,
+		invites[4].ID + ":" + invites[4].Status,
+	}
+	want := []string{
+		"inv-1:Pending",
+		"inv-3:Pending",
+		"inv-5:Claimed",
+		"inv-2:Declined",
+		"inv-4:Revoked",
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("invites[%d] = %q, want %q (full order: %+v)", i, got[i], want[i], got)
+		}
+	}
+}
+
 func TestListingProjectionHelpersProvideDeterministicFallbacks(t *testing.T) {
 	t.Parallel()
 

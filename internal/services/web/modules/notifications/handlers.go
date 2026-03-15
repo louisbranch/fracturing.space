@@ -84,10 +84,6 @@ func (h handlers) handleOpen(w http.ResponseWriter, r *http.Request, notificatio
 	if openID == "" {
 		openID = notificationID
 	}
-	if primaryActionURL := notificationPrimaryActionURL(item); primaryActionURL != "" {
-		httpx.WriteRedirect(w, r, primaryActionURL)
-		return
-	}
 	httpx.WriteRedirect(w, r, routepath.AppNotification(openID))
 }
 
