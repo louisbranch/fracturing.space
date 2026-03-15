@@ -239,6 +239,9 @@ func TestLaunchStarterRejectsUnavailableTemplate(t *testing.T) {
 	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
 		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
 	}
+	if got := apperrors.LocalizationKey(err); got != "error.web.message.starter_template_is_unavailable" {
+		t.Fatalf("LocalizationKey(err) = %q, want %q", got, "error.web.message.starter_template_is_unavailable")
+	}
 }
 
 func TestLaunchStarterRejectsUnavailableAgentSelection(t *testing.T) {

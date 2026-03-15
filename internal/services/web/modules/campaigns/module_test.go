@@ -175,6 +175,88 @@ func TestMountStarterLaunchForksCampaignAndRedirects(t *testing.T) {
 	}
 }
 
+func TestMountStarterLaunchRendersTranslatedUnavailableTemplateToast(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		starterPreview: campaignapp.CampaignStarterPreview{
+			EntryID:              "starter:merchants-gambit",
+			Title:                "The Merchant's Gambit",
+			Description:          "A solo intrigue adventure.",
+			CampaignTheme:        "The Grand Exchange hums with rumor and leverage.",
+			Hook:                 "A priceless relic will change hands by sunset.",
+			PlaystyleLabel:       "Bard face",
+			CharacterName:        "Lucan Reed",
+			CharacterSummary:     "A loreborne Bard who reads a room before anyone notices.",
+			System:               "Daggerheart",
+			Difficulty:           "Beginner",
+			Duration:             "1 session",
+			GmMode:               "AI",
+			Players:              "1",
+			Tags:                 []string{"intrigue"},
+			AIAgentOptions:       []campaignapp.CampaignAIAgentOption{{ID: "agent-1", Label: "GM Agent", Enabled: true}},
+			HasAvailableAIAgents: true,
+		},
+		starterLaunchErr: apperrors.EK(
+			apperrors.KindUnavailable,
+			"error.web.message.starter_template_is_unavailable",
+			"starter template is unavailable",
+		),
+	}, modulehandler.NewTestBase(), nil))
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	form := url.Values{"ai_agent_id": {"agent-1"}}
+	postReq := httptest.NewRequest(http.MethodPost, routepath.AppCampaignStarterLaunch("starter:merchants-gambit"), strings.NewReader(form.Encode()))
+	postReq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	postRR := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(postRR, postReq)
+
+	if postRR.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", postRR.Code, http.StatusFound)
+	}
+	if got := postRR.Header().Get("Location"); got != routepath.AppCampaignStarter("starter:merchants-gambit") {
+		t.Fatalf("location = %q, want %q", got, routepath.AppCampaignStarter("starter:merchants-gambit"))
+	}
+	cookie := responseCookieByName(postRR, flashnotice.CookieName)
+	if cookie == nil {
+		t.Fatalf("expected %q cookie", flashnotice.CookieName)
+	}
+
+	flashReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaignStarter("starter:merchants-gambit"), nil)
+	flashReq.AddCookie(cookie)
+	flashRR := httptest.NewRecorder()
+	notice, ok := flashnotice.ReadAndClear(flashRR, flashReq)
+	if !ok {
+		t.Fatalf("ReadAndClear() ok = false, want true")
+	}
+	if notice.Kind != flashnotice.KindError {
+		t.Fatalf("notice.Kind = %q, want %q", notice.Kind, flashnotice.KindError)
+	}
+	if notice.Key != "error.web.message.starter_template_is_unavailable" {
+		t.Fatalf("notice.Key = %q, want %q", notice.Key, "error.web.message.starter_template_is_unavailable")
+	}
+
+	getReq := httptest.NewRequest(http.MethodGet, routepath.AppCampaignStarter("starter:merchants-gambit"), nil)
+	getReq.AddCookie(cookie)
+	getRR := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(getRR, getReq)
+
+	if getRR.Code != http.StatusOK {
+		t.Fatalf("GET status = %d, want %d", getRR.Code, http.StatusOK)
+	}
+	body := getRR.Body.String()
+	if !strings.Contains(body, "starter template is unavailable right now") {
+		t.Fatalf("body missing translated starter-template toast: %q", body)
+	}
+	// Invariant: flash-backed starter launch errors must render localized copy instead of leaking the raw key.
+	if strings.Contains(body, "error.web.message.starter_template_is_unavailable") {
+		t.Fatalf("body leaked raw starter-template localization key: %q", body)
+	}
+}
+
 func TestMountRejectsMissingRequiredServices(t *testing.T) {
 	t.Parallel()
 
