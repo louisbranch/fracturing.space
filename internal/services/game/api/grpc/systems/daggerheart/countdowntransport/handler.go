@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
@@ -83,7 +84,7 @@ func (h *Handler) CreateCountdown(ctx context.Context, in *pb.DaggerheartCreateC
 	if _, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err == nil {
 		return CreateResult{}, status.Error(codes.FailedPrecondition, "countdown already exists")
 	} else if !errors.Is(err, storage.ErrNotFound) {
-		return CreateResult{}, handleDomainError(err)
+		return CreateResult{}, grpcerror.HandleDomainError(err)
 	}
 
 	payloadJSON, err := json.Marshal(daggerheart.CountdownCreatePayload{
@@ -152,7 +153,7 @@ func (h *Handler) UpdateCountdown(ctx context.Context, in *pb.DaggerheartUpdateC
 
 	storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 	if err != nil {
-		return UpdateResult{}, handleDomainError(err)
+		return UpdateResult{}, grpcerror.HandleDomainError(err)
 	}
 	var override *int
 	if in.Current != nil {
@@ -226,7 +227,7 @@ func (h *Handler) DeleteCountdown(ctx context.Context, in *pb.DaggerheartDeleteC
 		return DeleteResult{}, err
 	}
 	if _, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, countdownID); err != nil {
-		return DeleteResult{}, handleDomainError(err)
+		return DeleteResult{}, grpcerror.HandleDomainError(err)
 	}
 
 	payloadJSON, err := json.Marshal(daggerheart.CountdownDeletePayload{
@@ -277,20 +278,20 @@ func (h *Handler) requireDependencies() error {
 func (h *Handler) validateCampaignSession(ctx context.Context, campaignID, sessionID string, operation campaign.CampaignOperation, unsupportedMessage string) error {
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return handleDomainError(err)
+		return grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, operation); err != nil {
-		return handleDomainError(err)
+		return grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, unsupportedMessage); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, unsupportedMessage); err != nil {
 		return err
 	}
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return handleDomainError(err)
+		return grpcerror.HandleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	return ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID)
+	return daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID)
 }

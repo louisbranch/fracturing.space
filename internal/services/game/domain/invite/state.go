@@ -18,5 +18,5 @@ type State struct {
 	// CreatedByParticipantID stores who issued the invite for auditability.
 	CreatedByParticipantID ids.ParticipantID
 	// Status is the current lifecycle phase of the invite.
-	Status string
+	Status Status
 }

@@ -1,6 +1,7 @@
 package coreprojection
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -14,7 +15,7 @@ func dbInviteToDomain(row db.Invite) (storage.InviteRecord, error) {
 		RecipientUserID:        row.RecipientUserID,
 		Status:                 enumFromStorage(row.Status, invite.NormalizeStatus),
 		CreatedByParticipantID: row.CreatedByParticipantID,
-		CreatedAt:              fromMillis(row.CreatedAt),
-		UpdatedAt:              fromMillis(row.UpdatedAt),
+		CreatedAt:              sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:              sqliteutil.FromMillis(row.UpdatedAt),
 	}, nil
 }

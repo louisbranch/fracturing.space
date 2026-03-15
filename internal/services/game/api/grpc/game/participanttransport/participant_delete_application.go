@@ -29,7 +29,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
+	policyActor, err := authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants(), campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
@@ -62,7 +62,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 		authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 			Store:      c.auth.Audit,
 			CampaignID: campaignID,
-			Capability: domainauthz.CapabilityManageParticipants,
+			Capability: domainauthz.CapabilityManageParticipants(),
 			Decision:   authz.DecisionDeny,
 			ReasonCode: decision.ReasonCode,
 			Actor:      policyActor,

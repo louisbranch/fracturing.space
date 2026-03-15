@@ -16,7 +16,8 @@ import (
 
 var (
 	// ErrCampaignIDRequired indicates a missing campaign id.
-	ErrCampaignIDRequired = errors.New("campaign id is required")
+	// Canonical definition in domain/ids; re-exported for caller compatibility.
+	ErrCampaignIDRequired = ids.ErrCampaignIDRequired
 	// ErrTypeRequired indicates a missing event type.
 	ErrTypeRequired = errors.New("event type is required")
 	// ErrTypeUnknown indicates an unregistered event type.

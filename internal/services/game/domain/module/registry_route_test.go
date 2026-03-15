@@ -3,6 +3,7 @@ package module
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -67,7 +68,7 @@ func TestRouteCommand_RegistryAndVersionGuards(t *testing.T) {
 	}
 
 	t.Run("nil registry", func(t *testing.T) {
-		_, err := RouteCommand(nil, nil, cmd, nil)
+		_, err := RouteCommand(nil, nil, cmd, time.Now)
 		if !errors.Is(err, ErrRegistryRequired) {
 			t.Fatalf("expected ErrRegistryRequired, got %v", err)
 		}
@@ -78,7 +79,7 @@ func TestRouteCommand_RegistryAndVersionGuards(t *testing.T) {
 		_, err := RouteCommand(registry, nil, command.Command{
 			Type:     command.Type("system.test"),
 			SystemID: "daggerheart",
-		}, nil)
+		}, time.Now)
 		if !errors.Is(err, ErrSystemVersionRequired) {
 			t.Fatalf("expected ErrSystemVersionRequired, got %v", err)
 		}

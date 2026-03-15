@@ -116,23 +116,6 @@ func TestApplyConditionPatch_CreatesStateWhenMissing(t *testing.T) {
 	}
 }
 
-func TestApplyProfileTraitIncrease_KnownTraitsAndUnknownNoOp(t *testing.T) {
-	profile := projectionstore.DaggerheartCharacterProfile{}
-	traits := []string{"agility", "strength", "finesse", "instinct", "presence", "knowledge"}
-	for _, trait := range traits {
-		applyProfileTraitIncrease(&profile, trait)
-	}
-
-	if profile.Agility != 1 || profile.Strength != 1 || profile.Finesse != 1 || profile.Instinct != 1 || profile.Presence != 1 || profile.Knowledge != 1 {
-		t.Fatalf("trait values after increment = %+v, want each trait at 1", profile)
-	}
-
-	applyProfileTraitIncrease(&profile, "unknown")
-	if profile.Agility != 1 || profile.Strength != 1 || profile.Finesse != 1 || profile.Instinct != 1 || profile.Presence != 1 || profile.Knowledge != 1 {
-		t.Fatalf("unknown trait changed profile = %+v", profile)
-	}
-}
-
 func TestAppendUnique_AppendsMissingOnly(t *testing.T) {
 	initial := []string{"card-1", "card-2"}
 	withNew := appendUnique(initial, "card-3")

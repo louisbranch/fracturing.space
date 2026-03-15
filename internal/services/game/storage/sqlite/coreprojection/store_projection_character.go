@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -42,7 +43,7 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 		CampaignID:              c.CampaignID,
 		ID:                      c.ID,
 		OwnerParticipantID:      c.OwnerParticipantID,
-		ControllerParticipantID: toNullString(c.ParticipantID),
+		ControllerParticipantID: sqliteutil.ToNullString(c.ParticipantID),
 		Name:                    c.Name,
 		Kind:                    enumToStorage(c.Kind),
 		Notes:                   c.Notes,
@@ -50,8 +51,8 @@ func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) err
 		AvatarAssetID:           c.AvatarAssetID,
 		Pronouns:                c.Pronouns,
 		AliasesJson:             string(aliasesJSON),
-		CreatedAt:               toMillis(c.CreatedAt),
-		UpdatedAt:               toMillis(c.UpdatedAt),
+		CreatedAt:               sqliteutil.ToMillis(c.CreatedAt),
+		UpdatedAt:               sqliteutil.ToMillis(c.UpdatedAt),
 	})
 }
 
@@ -240,7 +241,7 @@ func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize 
 		Characters: make([]storage.CharacterRecord, 0, pageSize),
 	}
 
-	characters, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Character) string {
+	characters, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.Character) string {
 		return row.ID
 	}, dbCharacterToDomain)
 	if err != nil {

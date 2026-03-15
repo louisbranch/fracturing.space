@@ -28,7 +28,7 @@ func RequirePolicy(ctx context.Context, deps PolicyDeps, capability domainauthz.
 
 // RequireReadPolicy ensures the actor can access campaign-scoped reads.
 func RequireReadPolicy(ctx context.Context, deps PolicyDeps, campaignRecord storage.CampaignRecord) error {
-	return RequirePolicy(ctx, deps, domainauthz.CapabilityReadCampaign, campaignRecord)
+	return RequirePolicy(ctx, deps, domainauthz.CapabilityReadCampaign(), campaignRecord)
 }
 
 // RequirePolicyActor ensures access and returns the resolved participant actor.
@@ -71,7 +71,7 @@ func RequireCharacterMutationPolicy(
 	campaignRecord storage.CampaignRecord,
 	characterID string,
 ) (storage.ParticipantRecord, error) {
-	actor, reasonCode, err := AuthorizePolicyActorWithParticipantStore(ctx, deps.Participant, domainauthz.CapabilityMutateCharacters, campaignRecord)
+	actor, reasonCode, err := AuthorizePolicyActorWithParticipantStore(ctx, deps.Participant, domainauthz.CapabilityMutateCharacters(), campaignRecord)
 	characterAttributes := map[string]any{
 		"character_id": strings.TrimSpace(characterID),
 	}
@@ -79,7 +79,7 @@ func RequireCharacterMutationPolicy(
 		EmitDecisionTelemetry(ctx, DecisionEvent{
 			Store:           deps.Audit,
 			CampaignID:      campaignRecord.ID,
-			Capability:      domainauthz.CapabilityMutateCharacters,
+			Capability:      domainauthz.CapabilityMutateCharacters(),
 			Decision:        DecisionDeny,
 			ReasonCode:      reasonCode,
 			Actor:           actor,
@@ -94,7 +94,7 @@ func RequireCharacterMutationPolicy(
 		EmitDecisionTelemetry(ctx, DecisionEvent{
 			Store:           deps.Audit,
 			CampaignID:      campaignRecord.ID,
-			Capability:      domainauthz.CapabilityMutateCharacters,
+			Capability:      domainauthz.CapabilityMutateCharacters(),
 			Decision:        decision,
 			ReasonCode:      reasonCode,
 			Actor:           actor,
@@ -106,7 +106,7 @@ func RequireCharacterMutationPolicy(
 		EmitDecisionTelemetry(ctx, DecisionEvent{
 			Store:           deps.Audit,
 			CampaignID:      campaignRecord.ID,
-			Capability:      domainauthz.CapabilityMutateCharacters,
+			Capability:      domainauthz.CapabilityMutateCharacters(),
 			Decision:        DecisionAllow,
 			ReasonCode:      reasonCode,
 			Actor:           actor,
@@ -119,7 +119,7 @@ func RequireCharacterMutationPolicy(
 		EmitDecisionTelemetry(ctx, DecisionEvent{
 			Store:           deps.Audit,
 			CampaignID:      campaignRecord.ID,
-			Capability:      domainauthz.CapabilityMutateCharacters,
+			Capability:      domainauthz.CapabilityMutateCharacters(),
 			Decision:        DecisionDeny,
 			ReasonCode:      ReasonErrorOwnerResolution,
 			Actor:           actor,
@@ -134,7 +134,7 @@ func RequireCharacterMutationPolicy(
 		EmitDecisionTelemetry(ctx, DecisionEvent{
 			Store:      deps.Audit,
 			CampaignID: campaignRecord.ID,
-			Capability: domainauthz.CapabilityMutateCharacters,
+			Capability: domainauthz.CapabilityMutateCharacters(),
 			Decision:   DecisionDeny,
 			ReasonCode: ownershipDecision.ReasonCode,
 			Actor:      actor,
@@ -149,7 +149,7 @@ func RequireCharacterMutationPolicy(
 	EmitDecisionTelemetry(ctx, DecisionEvent{
 		Store:           deps.Audit,
 		CampaignID:      campaignRecord.ID,
-		Capability:      domainauthz.CapabilityMutateCharacters,
+		Capability:      domainauthz.CapabilityMutateCharacters(),
 		Decision:        DecisionAllow,
 		ReasonCode:      ownershipDecision.ReasonCode,
 		Actor:           actor,

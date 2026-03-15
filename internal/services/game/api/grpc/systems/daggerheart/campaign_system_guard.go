@@ -1,31 +1,33 @@
 package daggerheart
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"context"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
-// campaignSupportsDaggerheart reports whether a campaign record belongs to the
+// SessionGateStore is the read contract used by EnsureNoOpenSessionGate.
+type SessionGateStore = guard.SessionGateStore
+
+// CampaignSupportsDaggerheart reports whether a campaign record belongs to the
 // Daggerheart system.
-func campaignSupportsDaggerheart(record storage.CampaignRecord) bool {
-	systemID, ok := bridge.NormalizeSystemID(record.System.String())
-	return ok && systemID == bridge.SystemIDDaggerheart
+func CampaignSupportsDaggerheart(record storage.CampaignRecord) bool {
+	return guard.CampaignSupportsDaggerheart(record)
 }
 
-// requireDaggerheartSystem enforces that a campaign belongs to Daggerheart.
-func requireDaggerheartSystem(record storage.CampaignRecord, unsupportedMessage string) error {
-	if campaignSupportsDaggerheart(record) {
-		return nil
-	}
-	return status.Error(codes.FailedPrecondition, unsupportedMessage)
+// RequireDaggerheartSystem enforces that a campaign belongs to Daggerheart.
+func RequireDaggerheartSystem(record storage.CampaignRecord, unsupportedMessage string) error {
+	return guard.RequireDaggerheartSystem(record, unsupportedMessage)
 }
 
-// requireDaggerheartSystemf enforces Daggerheart with a formatted error message.
-func requireDaggerheartSystemf(record storage.CampaignRecord, unsupportedFormat string, args ...any) error {
-	if campaignSupportsDaggerheart(record) {
-		return nil
-	}
-	return status.Errorf(codes.FailedPrecondition, unsupportedFormat, args...)
+// RequireDaggerheartSystemf enforces Daggerheart with a formatted error message.
+func RequireDaggerheartSystemf(record storage.CampaignRecord, unsupportedFormat string, args ...any) error {
+	return guard.RequireDaggerheartSystemf(record, unsupportedFormat, args...)
+}
+
+// EnsureNoOpenSessionGate returns an error if a session gate is currently open
+// for the given campaign and session.
+func EnsureNoOpenSessionGate(ctx context.Context, store SessionGateStore, campaignID, sessionID string) error {
+	return guard.EnsureNoOpenSessionGate(ctx, store, campaignID, sessionID)
 }

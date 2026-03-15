@@ -3,6 +3,7 @@ package sqlitemigrate
 import (
 	"database/sql"
 	"testing"
+	"time"
 
 	"testing/fstest"
 
@@ -18,7 +19,7 @@ func TestApplyMigrationsRecordsApplied(t *testing.T) {
 		},
 	}
 
-	if err := ApplyMigrations(db, migrations, ""); err != nil {
+	if err := ApplyMigrations(db, migrations, "", time.Now); err != nil {
 		t.Fatalf("apply migrations: %v", err)
 	}
 
@@ -40,7 +41,7 @@ func TestApplyMigrationsSkipsAlreadyApplied(t *testing.T) {
 			Data: []byte("-- +migrate Up\nCREATE TABLE items(id TEXT PRIMARY KEY);"),
 		},
 	}
-	if err := ApplyMigrations(db, first, ""); err != nil {
+	if err := ApplyMigrations(db, first, "", time.Now); err != nil {
 		t.Fatalf("apply initial migrations: %v", err)
 	}
 
@@ -49,7 +50,7 @@ func TestApplyMigrationsSkipsAlreadyApplied(t *testing.T) {
 			Data: []byte("-- +migrate Up\nCREATE TABLE items(id TEXT PRIMARY KEY);"),
 		},
 	}
-	if err := ApplyMigrations(db, second, ""); err != nil {
+	if err := ApplyMigrations(db, second, "", time.Now); err != nil {
 		t.Fatalf("re-apply migrations should be idempotent: %v", err)
 	}
 
@@ -67,7 +68,7 @@ func TestApplyMigrationsDoesNotRecordFailedMigration(t *testing.T) {
 			Data: []byte("-- +migrate Up\nCREAT table things(id INT);"),
 		},
 	}
-	if err := ApplyMigrations(db, bad, ""); err == nil {
+	if err := ApplyMigrations(db, bad, "", time.Now); err == nil {
 		t.Fatalf("expected bad migration to fail")
 	}
 
@@ -81,7 +82,7 @@ func TestApplyMigrationsDoesNotRecordFailedMigration(t *testing.T) {
 			Data: []byte("-- +migrate Up\nCREATE TABLE things(id INTEGER PRIMARY KEY);"),
 		},
 	}
-	if err := ApplyMigrations(db, good, ""); err != nil {
+	if err := ApplyMigrations(db, good, "", time.Now); err != nil {
 		t.Fatalf("apply fixed migration: %v", err)
 	}
 
@@ -100,7 +101,7 @@ func TestApplyMigrationsRespectsMigrationRoot(t *testing.T) {
 		},
 	}
 
-	if err := ApplyMigrations(db, migrations, "events"); err != nil {
+	if err := ApplyMigrations(db, migrations, "events", time.Now); err != nil {
 		t.Fatalf("apply migrations with root: %v", err)
 	}
 

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
 )
 
@@ -64,8 +65,8 @@ func (s *Store) PutUserProfile(ctx context.Context, profile storage.UserProfile)
 		avatarAssetID,
 		bio,
 		pronouns,
-		toMillis(createdAt),
-		toMillis(updatedAt),
+		sqliteutil.ToMillis(createdAt),
+		sqliteutil.ToMillis(updatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put user profile: %w", err)
@@ -112,7 +113,7 @@ func (s *Store) GetUserProfileByUserID(ctx context.Context, userID string) (stor
 		}
 		return storage.UserProfile{}, fmt.Errorf("get user profile by user id: %w", err)
 	}
-	record.CreatedAt = fromMillis(createdAt)
-	record.UpdatedAt = fromMillis(updatedAt)
+	record.CreatedAt = sqliteutil.FromMillis(createdAt)
+	record.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	return record, nil
 }

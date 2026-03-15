@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
@@ -75,7 +76,7 @@ func (h *Handler) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateA
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
 		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
 	}
 
@@ -86,7 +87,7 @@ func (h *Handler) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateA
 		if _, err := h.deps.Session.GetSession(ctx, campaignID, sessionID); err != nil {
 			return nil, grpcerror.HandleDomainError(err)
 		}
-		if err := ensureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
+		if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -167,7 +168,7 @@ func (h *Handler) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateA
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
 		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
 	}
 
@@ -177,7 +178,7 @@ func (h *Handler) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateA
 	}
 	currentSessionID := strings.TrimSpace(current.SessionID)
 	if currentSessionID != "" {
-		if err := ensureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, currentSessionID); err != nil {
+		if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, currentSessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -223,7 +224,7 @@ func (h *Handler) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateA
 		if _, err := h.deps.Session.GetSession(ctx, campaignID, sessionID); err != nil {
 			return nil, grpcerror.HandleDomainError(err)
 		}
-		if err := ensureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
+		if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -294,7 +295,7 @@ func (h *Handler) DeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteA
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
 		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
 	}
 
@@ -305,7 +306,7 @@ func (h *Handler) DeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteA
 	sessionID := strings.TrimSpace(current.SessionID)
 	sceneID := strings.TrimSpace(in.GetSceneId())
 	if sessionID != "" {
-		if err := ensureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
+		if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.Gate, campaignID, sessionID); err != nil {
 			return nil, err
 		}
 	}
@@ -356,7 +357,7 @@ func (h *Handler) GetAdversary(ctx context.Context, in *pb.DaggerheartGetAdversa
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
 		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
 	}
 	adversary, err := h.deps.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
@@ -384,7 +385,7 @@ func (h *Handler) ListAdversaries(ctx context.Context, in *pb.DaggerheartListAdv
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
 		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart adversaries"); err != nil {
 		return nil, err
 	}
 	sessionID := ""

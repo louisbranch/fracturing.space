@@ -37,6 +37,7 @@ func Fold(state State, evt event.Event) (State, error) {
 		state.GameSystem = GameSystem(payload.GameSystem)
 		state.GmMode = GmMode(payload.GmMode)
 		state.Status = StatusDraft
+		state.ThemePrompt = strings.TrimSpace(payload.ThemePrompt)
 		state.CoverAssetID = strings.TrimSpace(payload.CoverAssetID)
 		state.CoverSetID = strings.TrimSpace(payload.CoverSetID)
 	case EventTypeUpdated:

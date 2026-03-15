@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
 	socialusername "github.com/louisbranch/fracturing.space/internal/services/social/username"
 )
@@ -51,8 +52,8 @@ func (s *Store) PutDirectoryUser(ctx context.Context, user storage.DirectoryUser
 		 WHERE user_directory.username <> excluded.username`,
 		userID,
 		username,
-		toMillis(createdAt),
-		toMillis(updatedAt),
+		sqliteutil.ToMillis(createdAt),
+		sqliteutil.ToMillis(updatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put directory user: %w", err)

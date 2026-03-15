@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -168,12 +169,12 @@ func putSessionGateWithQueries(ctx context.Context, queries *db.Queries, gate st
 		GateType:            gate.GateType,
 		Status:              strings.TrimSpace(string(gate.Status)),
 		Reason:              gate.Reason,
-		CreatedAt:           toMillis(gate.CreatedAt),
+		CreatedAt:           sqliteutil.ToMillis(gate.CreatedAt),
 		CreatedByActorType:  gate.CreatedByActorType,
 		CreatedByActorID:    gate.CreatedByActorID,
-		ResolvedAt:          toNullMillis(gate.ResolvedAt),
-		ResolvedByActorType: toNullString(gate.ResolvedByActorType),
-		ResolvedByActorID:   toNullString(gate.ResolvedByActorID),
+		ResolvedAt:          sqliteutil.ToNullMillis(gate.ResolvedAt),
+		ResolvedByActorType: sqliteutil.ToNullString(gate.ResolvedByActorType),
+		ResolvedByActorID:   sqliteutil.ToNullString(gate.ResolvedByActorID),
 		ResponseAuthority:   metadata.ResponseAuthority,
 		MetadataExtraJson:   metadataExtraJSON,
 		ResolutionDecision:  resolution.Decision,
@@ -305,13 +306,13 @@ func loadSessionGateWithQueries(ctx context.Context, queries *db.Queries, row db
 		GateType:           row.GateType,
 		Status:             session.GateStatus(strings.ToLower(strings.TrimSpace(row.Status))),
 		Reason:             row.Reason,
-		CreatedAt:          fromMillis(row.CreatedAt),
+		CreatedAt:          sqliteutil.FromMillis(row.CreatedAt),
 		CreatedByActorType: row.CreatedByActorType,
 		CreatedByActorID:   row.CreatedByActorID,
 		Metadata:           metadata,
 		Progress:           progress,
 		Resolution:         resolution,
-		ResolvedAt:         fromNullMillis(row.ResolvedAt),
+		ResolvedAt:         sqliteutil.FromNullMillis(row.ResolvedAt),
 	}
 	if row.ResolvedByActorType.Valid {
 		gate.ResolvedByActorType = row.ResolvedByActorType.String
@@ -347,7 +348,7 @@ func sessionGateResponsesToProgressRows(rows []db.ListSessionGateResponsesRow) (
 			ActorID:       row.ActorID,
 		}
 		if row.RecordedAt.Valid {
-			response.RecordedAt = fromMillis(row.RecordedAt.Int64).UTC().Format(time.RFC3339Nano)
+			response.RecordedAt = sqliteutil.FromMillis(row.RecordedAt.Int64).UTC().Format(time.RFC3339Nano)
 		}
 		responses = append(responses, response)
 	}
@@ -363,7 +364,7 @@ func sessionGateRecordedAtToNullMillis(value string) (sql.NullInt64, error) {
 	if err != nil {
 		return sql.NullInt64{}, err
 	}
-	return sql.NullInt64{Int64: toMillis(recordedAt.UTC()), Valid: true}, nil
+	return sql.NullInt64{Int64: sqliteutil.ToMillis(recordedAt.UTC()), Valid: true}, nil
 }
 
 func marshalOptionalJSONBytes(value map[string]any, message string) ([]byte, error) {

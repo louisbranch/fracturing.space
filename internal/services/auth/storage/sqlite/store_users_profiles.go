@@ -9,6 +9,7 @@ import (
 	"time"
 
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite/db"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/user"
@@ -231,7 +232,7 @@ func normalizeUserPutParams(u user.User) (db.PutUserParams, error) {
 
 	var recoveryReservedUntil sql.NullInt64
 	if u.RecoveryReservedUntil != nil {
-		recoveryReservedUntil = sql.NullInt64{Int64: toMillis(u.RecoveryReservedUntil.UTC()), Valid: true}
+		recoveryReservedUntil = sql.NullInt64{Int64: sqliteutil.ToMillis(u.RecoveryReservedUntil.UTC()), Valid: true}
 	}
 
 	return db.PutUserParams{
@@ -241,9 +242,9 @@ func normalizeUserPutParams(u user.User) (db.PutUserParams, error) {
 		RecoveryCodeHash:          strings.TrimSpace(u.RecoveryCodeHash),
 		RecoveryReservedSessionID: strings.TrimSpace(u.RecoveryReservedSessionID),
 		RecoveryReservedUntil:     recoveryReservedUntil,
-		RecoveryCodeUpdatedAt:     toMillis(u.RecoveryCodeUpdatedAt.UTC()),
-		CreatedAt:                 toMillis(u.CreatedAt.UTC()),
-		UpdatedAt:                 toMillis(u.UpdatedAt.UTC()),
+		RecoveryCodeUpdatedAt:     sqliteutil.ToMillis(u.RecoveryCodeUpdatedAt.UTC()),
+		CreatedAt:                 sqliteutil.ToMillis(u.CreatedAt.UTC()),
+		UpdatedAt:                 sqliteutil.ToMillis(u.UpdatedAt.UTC()),
 	}, nil
 }
 
@@ -257,7 +258,7 @@ func (s *Store) GetAuthStatistics(ctx context.Context, since *time.Time) (storag
 
 	var sinceValue any
 	if since != nil {
-		sinceValue = toMillis(*since)
+		sinceValue = sqliteutil.ToMillis(*since)
 	}
 
 	var count int64

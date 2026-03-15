@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -28,8 +29,8 @@ func (s *Store) PutDaggerheartLootEntry(ctx context.Context, entry contentstore.
 		Name:        entry.Name,
 		Roll:        int64(entry.Roll),
 		Description: entry.Description,
-		CreatedAt:   toMillis(entry.CreatedAt),
-		UpdatedAt:   toMillis(entry.UpdatedAt),
+		CreatedAt:   sqliteutil.ToMillis(entry.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(entry.UpdatedAt),
 	})
 }
 
@@ -108,8 +109,8 @@ func (s *Store) PutDaggerheartDamageType(ctx context.Context, entry contentstore
 		ID:          entry.ID,
 		Name:        entry.Name,
 		Description: entry.Description,
-		CreatedAt:   toMillis(entry.CreatedAt),
-		UpdatedAt:   toMillis(entry.UpdatedAt),
+		CreatedAt:   sqliteutil.ToMillis(entry.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(entry.UpdatedAt),
 	})
 }
 
@@ -188,8 +189,8 @@ func (s *Store) PutDaggerheartDomain(ctx context.Context, domain contentstore.Da
 		ID:          domain.ID,
 		Name:        domain.Name,
 		Description: domain.Description,
-		CreatedAt:   toMillis(domain.CreatedAt),
-		UpdatedAt:   toMillis(domain.UpdatedAt),
+		CreatedAt:   sqliteutil.ToMillis(domain.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(domain.UpdatedAt),
 	})
 }
 
@@ -273,8 +274,8 @@ func (s *Store) PutDaggerheartDomainCard(ctx context.Context, card contentstore.
 		RecallCost:  int64(card.RecallCost),
 		UsageLimit:  card.UsageLimit,
 		FeatureText: card.FeatureText,
-		CreatedAt:   toMillis(card.CreatedAt),
-		UpdatedAt:   toMillis(card.UpdatedAt),
+		CreatedAt:   sqliteutil.ToMillis(card.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(card.UpdatedAt),
 	})
 }
 

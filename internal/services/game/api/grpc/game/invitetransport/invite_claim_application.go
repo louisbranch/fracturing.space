@@ -136,13 +136,13 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	if !inviteState.Created {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.NotFound, "invite not found")
 	}
-	if inviteState.Status == string(invite.StatusClaimed) {
+	if inviteState.Status == invite.StatusClaimed {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, "invite already claimed")
 	}
-	if inviteState.Status == string(invite.StatusDeclined) {
+	if inviteState.Status == invite.StatusDeclined {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, "invite already declined")
 	}
-	if inviteState.Status == string(invite.StatusRevoked) {
+	if inviteState.Status == invite.StatusRevoked {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, status.Error(codes.FailedPrecondition, "invite already revoked")
 	}
 

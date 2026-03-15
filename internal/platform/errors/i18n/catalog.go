@@ -14,9 +14,11 @@ import (
 type Code = string
 
 // Catalog maps error codes to message templates for a specific locale.
+// Templates are pre-compiled at catalog construction time.
 type Catalog struct {
-	locale   string
-	messages map[Code]string
+	locale    string
+	messages  map[Code]string
+	templates map[Code]*template.Template
 }
 
 var (
@@ -54,27 +56,25 @@ func (c *Catalog) Locale() string {
 // Format renders the message template with the given metadata.
 // Falls back to the error code itself if no template is found.
 // Templates are always executed even with nil/empty metadata to ensure
-// consistent output (template variables without metadata render as empty).
+// consistent output (template variables without metadata render as zero values).
 func (c *Catalog) Format(code Code, metadata map[string]string) string {
-	tmpl, ok := c.messages[code]
+	t, ok := c.templates[code]
 	if !ok {
+		// Fall back to the raw message if the template failed to compile,
+		// or to the error code if no message exists at all.
+		if raw, exists := c.messages[code]; exists {
+			return raw
+		}
 		return code
 	}
 
-	// Ensure metadata is non-nil for template execution
 	if metadata == nil {
 		metadata = map[string]string{}
 	}
 
-	// Parse and execute the template
-	t, err := template.New("msg").Parse(tmpl)
-	if err != nil {
-		return tmpl
-	}
-
 	var buf bytes.Buffer
 	if err := t.Execute(&buf, metadata); err != nil {
-		return tmpl
+		return c.messages[code]
 	}
 	return buf.String()
 }
@@ -90,14 +90,22 @@ func RegisterCatalog(locale string, cat *Catalog) {
 }
 
 // NewCatalog creates a new catalog with the given locale and messages.
+// Templates are pre-compiled and configured with missingkey=zero so that
+// missing metadata keys render as zero values rather than "<no value>".
 func NewCatalog(locale string, messages map[Code]string) *Catalog {
 	cloned := make(map[Code]string, len(messages))
+	templates := make(map[Code]*template.Template, len(messages))
 	for key, value := range messages {
 		cloned[key] = value
+		t, err := template.New(string(key)).Option("missingkey=zero").Parse(value)
+		if err == nil {
+			templates[key] = t
+		}
 	}
 	return &Catalog{
-		locale:   locale,
-		messages: cloned,
+		locale:    locale,
+		messages:  cloned,
+		templates: templates,
 	}
 }
 

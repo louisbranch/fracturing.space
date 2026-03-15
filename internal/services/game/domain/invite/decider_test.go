@@ -77,7 +77,7 @@ func TestDecideInviteClaim_EmitsInviteClaimedEvent(t *testing.T) {
 		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","user_id":" user-1 ","jti":" jwt-1 "}`),
 	}
 
-	decision := Decide(State{Created: true, Status: "pending"}, cmd, func() time.Time { return now })
+	decision := Decide(State{Created: true, Status: statusPending}, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -133,7 +133,7 @@ func TestDecideInviteRevoke_EmitsInviteRevokedEvent(t *testing.T) {
 		PayloadJSON: []byte(`{"invite_id":"inv-1"}`),
 	}
 
-	decision := Decide(State{Created: true, Status: "pending"}, cmd, func() time.Time { return now })
+	decision := Decide(State{Created: true, Status: statusPending}, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -179,7 +179,7 @@ func TestDecideInviteUpdate_EmitsInviteUpdatedEvent(t *testing.T) {
 		PayloadJSON: []byte(`{"invite_id":"inv-1","status":"REVOKED"}`),
 	}
 
-	decision := Decide(State{Created: true, Status: "pending"}, cmd, func() time.Time { return now })
+	decision := Decide(State{Created: true, Status: statusPending}, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -217,7 +217,7 @@ func TestDecide_UnrecognizedCommandTypeRejected(t *testing.T) {
 	decision := Decide(State{}, command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("invite.nonexistent"),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -231,7 +231,7 @@ func TestDecide_MalformedCreatePayloadRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("invite.create"),
 		PayloadJSON: []byte(`{corrupt`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}

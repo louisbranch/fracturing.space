@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -23,8 +24,8 @@ func (s *Store) Put(ctx context.Context, c storage.CampaignRecord) error {
 		return fmt.Errorf("campaign id is required")
 	}
 
-	completedAt := toNullMillis(c.CompletedAt)
-	archivedAt := toNullMillis(c.ArchivedAt)
+	completedAt := sqliteutil.ToNullMillis(c.CompletedAt)
+	archivedAt := sqliteutil.ToNullMillis(c.ArchivedAt)
 
 	return s.q.PutCampaign(ctx, db.PutCampaignParams{
 		ID:               c.ID,
@@ -42,8 +43,8 @@ func (s *Store) Put(ctx context.Context, c storage.CampaignRecord) error {
 		CoverSetID:       c.CoverSetID,
 		AiAgentID:        c.AIAgentID,
 		AiAuthEpoch:      int64(c.AIAuthEpoch),
-		CreatedAt:        toMillis(c.CreatedAt),
-		UpdatedAt:        toMillis(c.UpdatedAt),
+		CreatedAt:        sqliteutil.ToMillis(c.CreatedAt),
+		UpdatedAt:        sqliteutil.ToMillis(c.UpdatedAt),
 		CompletedAt:      completedAt,
 		ArchivedAt:       archivedAt,
 	})
@@ -93,7 +94,7 @@ func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (stora
 		if err != nil {
 			return storage.CampaignPage{}, fmt.Errorf("list campaigns: %w", err)
 		}
-		campaigns, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.ListAllCampaignsRow) string {
+		campaigns, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.ListAllCampaignsRow) string {
 			return row.ID
 		}, dbListAllCampaignsRowToDomain)
 		if err != nil {
@@ -109,7 +110,7 @@ func (s *Store) List(ctx context.Context, pageSize int, pageToken string) (stora
 		if err != nil {
 			return storage.CampaignPage{}, fmt.Errorf("list campaigns: %w", err)
 		}
-		campaigns, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.ListCampaignsRow) string {
+		campaigns, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.ListCampaignsRow) string {
 			return row.ID
 		}, dbListCampaignsRowToDomain)
 		if err != nil {

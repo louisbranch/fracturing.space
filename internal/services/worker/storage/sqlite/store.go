@@ -29,7 +29,7 @@ func Open(path string) (*Store, error) {
 	}
 
 	store := &Store{sqlDB: sqlDB}
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, ""); err != nil {
+	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, "", time.Now); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}

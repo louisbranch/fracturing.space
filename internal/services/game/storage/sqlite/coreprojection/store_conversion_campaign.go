@@ -3,6 +3,7 @@ package coreprojection
 import (
 	"database/sql"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -49,11 +50,11 @@ func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error
 		CoverSetID:       row.CoverSetID,
 		AIAgentID:        row.AIAgentID,
 		AIAuthEpoch:      uint64(row.AIAuthEpoch),
-		CreatedAt:        fromMillis(row.CreatedAt),
-		UpdatedAt:        fromMillis(row.UpdatedAt),
+		CreatedAt:        sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:        sqliteutil.FromMillis(row.UpdatedAt),
 	}
-	c.CompletedAt = fromNullMillis(row.CompletedAt)
-	c.ArchivedAt = fromNullMillis(row.ArchivedAt)
+	c.CompletedAt = sqliteutil.FromNullMillis(row.CompletedAt)
+	c.ArchivedAt = sqliteutil.FromNullMillis(row.ArchivedAt)
 
 	return c, nil
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -30,7 +31,7 @@ func (s *Store) PutScene(ctx context.Context, rec storage.SceneRecord) error {
 	}
 
 	active := boolToInt(rec.Active)
-	endedAt := toNullMillis(rec.EndedAt)
+	endedAt := sqliteutil.ToNullMillis(rec.EndedAt)
 
 	_, err := s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO scenes (campaign_id, scene_id, session_id, name, description, active, created_at, updated_at, ended_at)
@@ -43,7 +44,7 @@ func (s *Store) PutScene(ctx context.Context, rec storage.SceneRecord) error {
 		   updated_at = excluded.updated_at,
 		   ended_at = excluded.ended_at`,
 		rec.CampaignID, rec.SceneID, rec.SessionID, rec.Name, rec.Description,
-		active, toMillis(rec.CreatedAt), toMillis(rec.UpdatedAt), endedAt,
+		active, sqliteutil.ToMillis(rec.CreatedAt), sqliteutil.ToMillis(rec.UpdatedAt), endedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("put scene: %w", err)
@@ -66,7 +67,7 @@ func (s *Store) EndScene(ctx context.Context, campaignID, sceneID string, endedA
 		return fmt.Errorf("scene id is required")
 	}
 
-	endedAtMillis := toMillis(endedAt)
+	endedAtMillis := sqliteutil.ToMillis(endedAt)
 	result, err := s.projectionQueryable().ExecContext(ctx,
 		`UPDATE scenes SET active = 0, updated_at = ?, ended_at = ? WHERE campaign_id = ? AND scene_id = ?`,
 		endedAtMillis, endedAtMillis, campaignID, sceneID,
@@ -287,9 +288,9 @@ func scanSceneRow(row *sql.Row) (storage.SceneRecord, error) {
 		return storage.SceneRecord{}, fmt.Errorf("scan scene: %w", err)
 	}
 	rec.Active = intToBool(active)
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
-	rec.EndedAt = fromNullMillis(endedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+	rec.EndedAt = sqliteutil.FromNullMillis(endedAt)
 	return rec, nil
 }
 
@@ -304,8 +305,8 @@ func scanSceneRows(rows *sql.Rows) (storage.SceneRecord, error) {
 		return storage.SceneRecord{}, fmt.Errorf("scan scene: %w", err)
 	}
 	rec.Active = intToBool(active)
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
-	rec.EndedAt = fromNullMillis(endedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+	rec.EndedAt = sqliteutil.FromNullMillis(endedAt)
 	return rec, nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/eventtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/forktransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/interactiontransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/invitetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/scenetransport"
@@ -203,7 +204,23 @@ func buildServiceDescriptors(
 	})
 	campaignAIService := campaigntransport.NewCampaignAIService(campaignDeps)
 	campaignAIOrchestrationService := gamegrpc.NewCampaignAIOrchestrationService(stores)
-	interactionService := gamegrpc.NewInteractionService(stores)
+	interactionService := interactiontransport.NewInteractionService(interactiontransport.Deps{
+		Auth: authz.PolicyDeps{
+			Participant: stores.Participant,
+			Character:   stores.Character,
+			Audit:       stores.Audit,
+		},
+		Campaign:           stores.Campaign,
+		Participant:        stores.Participant,
+		Character:          stores.Character,
+		Session:            stores.Session,
+		SessionInteraction: stores.SessionInteraction,
+		Scene:              stores.Scene,
+		SceneCharacter:     stores.SceneCharacter,
+		SceneInteraction:   stores.SceneInteraction,
+		Write:              stores.Write,
+		Applier:            stores.Applier(),
+	})
 
 	descriptors := []grpcServiceDescriptor{
 		{

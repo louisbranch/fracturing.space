@@ -72,6 +72,9 @@ func (r *FoldRouter[S]) FoldHandledTypes() []event.Type {
 // This is a top-level generic function because Go disallows method-level type
 // parameters on generic types.
 func HandleFold[S, P any](r *FoldRouter[S], t event.Type, fn func(S, P) error) {
+	if _, exists := r.handlers[t]; exists {
+		panic(fmt.Sprintf("duplicate fold handler for event type %s", t))
+	}
 	r.handlers[t] = func(s S, evt event.Event) error {
 		var payload P
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {

@@ -5,15 +5,18 @@ import (
 	"time"
 )
 
+// IntegrationOutboxStatus represents the lifecycle state of an outbox entry.
+type IntegrationOutboxStatus = string
+
 const (
 	// IntegrationOutboxStatusPending is ready for leasing and processing.
-	IntegrationOutboxStatusPending = "pending"
+	IntegrationOutboxStatusPending IntegrationOutboxStatus = "pending"
 	// IntegrationOutboxStatusLeased is currently leased by one worker.
-	IntegrationOutboxStatusLeased = "leased"
+	IntegrationOutboxStatusLeased IntegrationOutboxStatus = "leased"
 	// IntegrationOutboxStatusSucceeded finished successfully.
-	IntegrationOutboxStatusSucceeded = "succeeded"
+	IntegrationOutboxStatusSucceeded IntegrationOutboxStatus = "succeeded"
 	// IntegrationOutboxStatusDead exhausted retries and needs operator action.
-	IntegrationOutboxStatusDead = "dead"
+	IntegrationOutboxStatusDead IntegrationOutboxStatus = "dead"
 )
 
 // IntegrationOutboxEvent is one durable game-owned integration work item.

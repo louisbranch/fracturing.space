@@ -1,29 +1,12 @@
 package coreprojection
 
 import (
-	"database/sql"
 	"errors"
 	"strings"
 
 	sqlite "modernc.org/sqlite"
 	sqlite3 "modernc.org/sqlite/lib"
 )
-
-func toNullString(value string) sql.NullString {
-	if strings.TrimSpace(value) == "" {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: value, Valid: true}
-}
-
-func isSQLiteBusyError(err error) bool {
-	var sqliteErr *sqlite.Error
-	if !errors.As(err, &sqliteErr) {
-		return false
-	}
-	code := sqliteErr.Code()
-	return code == sqlite3.SQLITE_BUSY || code == sqlite3.SQLITE_LOCKED
-}
 
 func isParticipantUserConflict(err error) bool {
 	if !isConstraintLikeError(err) {

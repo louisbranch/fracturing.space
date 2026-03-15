@@ -1,6 +1,6 @@
 package dice
 
-import "math/rand"
+import "math/rand/v2"
 
 // RollDice rolls dice based on the provided request.
 //
@@ -45,7 +45,7 @@ func RollDice(request Request) (Result, error) {
 		return Result{}, ErrMissingDice
 	}
 
-	rng := rand.New(rand.NewSource(request.Seed))
+	rng := rand.New(rand.NewPCG(uint64(request.Seed), 0))
 	rolls := make([]Roll, 0, len(request.Dice))
 	total := 0
 
@@ -115,5 +115,5 @@ func RollWithRng(rng *rand.Rand, specs []Spec) (Result, error) {
 
 // rollDie rolls a single die with the provided number of sides.
 func rollDie(rng *rand.Rand, sides int) int {
-	return rng.Intn(sides) + 1
+	return rng.IntN(sides) + 1
 }

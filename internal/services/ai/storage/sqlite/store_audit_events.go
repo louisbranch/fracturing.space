@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -53,7 +54,7 @@ INSERT INTO ai_audit_events (
 		strings.TrimSpace(record.AgentID),
 		strings.TrimSpace(record.AccessRequestID),
 		strings.TrimSpace(record.Outcome),
-		toMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put audit event: %w", err)
@@ -84,11 +85,11 @@ func (s *Store) ListAuditEventsByOwner(ctx context.Context, ownerUserID string, 
 		createdBeforeMillis *int64
 	)
 	if filter.CreatedAfter != nil {
-		value := toMillis(filter.CreatedAfter.UTC())
+		value := sqliteutil.ToMillis(filter.CreatedAfter.UTC())
 		createdAfterMillis = &value
 	}
 	if filter.CreatedBefore != nil {
-		value := toMillis(filter.CreatedBefore.UTC())
+		value := sqliteutil.ToMillis(filter.CreatedBefore.UTC())
 		createdBeforeMillis = &value
 	}
 	if createdAfterMillis != nil && createdBeforeMillis != nil && *createdAfterMillis > *createdBeforeMillis {
@@ -165,7 +166,7 @@ LIMIT ?
 			AgentID:         agentID,
 			AccessRequestID: requestID,
 			Outcome:         outcome,
-			CreatedAt:       fromMillis(createdAtRaw),
+			CreatedAt:       sqliteutil.FromMillis(createdAtRaw),
 		})
 	}
 	if err := rows.Err(); err != nil {

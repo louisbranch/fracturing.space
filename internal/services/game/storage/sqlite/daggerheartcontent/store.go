@@ -24,10 +24,6 @@ var (
 	_ contentstore.DaggerheartCatalogReadinessStore = (*Store)(nil)
 )
 
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
 // Open opens a SQLite content catalog store at the provided path.
 func Open(path string) (*Store, error) {
 	return openStore(path)
@@ -58,36 +54,10 @@ func openStore(path string) (*Store, error) {
 		q:     db.New(sqlDB),
 	}
 
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.ContentFS, "content"); err != nil {
+	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.ContentFS, "content", time.Now); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
 
 	return store, nil
-}
-
-func mapPageRows[Row any, Item any](
-	rows []Row,
-	pageSize int,
-	rowID func(Row) string,
-	mapRow func(Row) (Item, error),
-) ([]Item, string, error) {
-	capHint := pageSize
-	if capHint > len(rows) {
-		capHint = len(rows)
-	}
-	items := make([]Item, 0, capHint)
-
-	for i, row := range rows {
-		if i >= pageSize {
-			return items, rowID(rows[pageSize-1]), nil
-		}
-		item, err := mapRow(row)
-		if err != nil {
-			return nil, "", err
-		}
-		items = append(items, item)
-	}
-
-	return items, "", nil
 }

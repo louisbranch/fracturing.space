@@ -62,7 +62,7 @@ func runEventListTests(t *testing.T, grpcAddr string, authAddr string) {
 			ActorType:   "system",
 			EntityType:  "campaign",
 			EntityId:    campaignID,
-			PayloadJson: []byte("{}"),
+			PayloadJson: []byte(`{"content":"test note"}`),
 		}); err != nil {
 			t.Fatalf("append note event %d: %v", i, err)
 		}

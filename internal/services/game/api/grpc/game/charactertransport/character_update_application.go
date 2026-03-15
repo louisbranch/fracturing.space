@@ -114,7 +114,7 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 
 	var policyActor storage.ParticipantRecord
 	if transferOwnershipRequested {
-		policyActor, err = authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
+		policyActor, err = authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityTransferCharacterOwnership(), campaignRecord)
 		if err != nil {
 			return storage.CharacterRecord{}, err
 		}

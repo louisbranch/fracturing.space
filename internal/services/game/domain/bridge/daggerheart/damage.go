@@ -13,6 +13,10 @@ const (
 	DamageMassive
 )
 
+// MaxDamageMarks is the maximum number of HP marks a single damage event can
+// inflict (massive damage = 4 marks).
+const MaxDamageMarks = 4
+
 // DamageType represents damage categories in Daggerheart.
 type DamageType int
 
@@ -67,7 +71,7 @@ func EvaluateDamage(amount, majorThreshold, severeThreshold int, opts DamageOpti
 		return DamageResult{Severity: DamageNone, Marks: 0}, nil
 	}
 	if opts.EnableMassiveDamage && amount >= severeThreshold*2 {
-		return DamageResult{Severity: DamageMassive, Marks: 4}, nil
+		return DamageResult{Severity: DamageMassive, Marks: MaxDamageMarks}, nil
 	}
 	if amount >= severeThreshold {
 		return DamageResult{Severity: DamageSevere, Marks: 3}, nil

@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -385,17 +386,17 @@ func (h *Handler) validateCharacterPreconditions(ctx context.Context, campaignID
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return projectionstore.DaggerheartCharacterProfile{}, handleDomainError(err)
+		return projectionstore.DaggerheartCharacterProfile{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return projectionstore.DaggerheartCharacterProfile{}, handleDomainError(err)
+		return projectionstore.DaggerheartCharacterProfile{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystemf(record, "campaign system does not support daggerheart %s", operationName); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystemf(record, "campaign system does not support daggerheart %s", operationName); err != nil {
 		return projectionstore.DaggerheartCharacterProfile{}, err
 	}
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return projectionstore.DaggerheartCharacterProfile{}, handleDomainError(err)
+		return projectionstore.DaggerheartCharacterProfile{}, grpcerror.HandleDomainError(err)
 	}
 	return profile, nil
 }
@@ -403,17 +404,17 @@ func (h *Handler) validateCharacterPreconditions(ctx context.Context, campaignID
 func (h *Handler) validateLevelUpPreconditions(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error) {
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return projectionstore.DaggerheartCharacterProfile{}, handleDomainError(err)
+		return projectionstore.DaggerheartCharacterProfile{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return projectionstore.DaggerheartCharacterProfile{}, handleDomainError(err)
+		return projectionstore.DaggerheartCharacterProfile{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart level up"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart level up"); err != nil {
 		return projectionstore.DaggerheartCharacterProfile{}, err
 	}
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return projectionstore.DaggerheartCharacterProfile{}, handleDomainError(err)
+		return projectionstore.DaggerheartCharacterProfile{}, grpcerror.HandleDomainError(err)
 	}
 	return profile, nil
 }

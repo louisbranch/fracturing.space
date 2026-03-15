@@ -59,7 +59,7 @@ func (s *Server) Serve(ctx context.Context) error {
 			if s.health != nil {
 				s.health.Shutdown()
 			}
-			s.grpcServer.GracefulStop()
+			platformgrpc.GracefulStopWithTimeout(s.grpcServer, platformgrpc.DefaultGracefulStopTimeout)
 		},
 	)
 }

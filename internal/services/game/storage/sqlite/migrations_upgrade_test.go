@@ -327,7 +327,7 @@ func openMigrationTestDB(t *testing.T) *sql.DB {
 
 func applyMigrationSet(t *testing.T, sqlDB *sql.DB, migrationFS fs.FS, root string) {
 	t.Helper()
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrationFS, root); err != nil {
+	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrationFS, root, time.Now); err != nil {
 		t.Fatalf("apply migrations for %s: %v", root, err)
 	}
 }

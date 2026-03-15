@@ -14,14 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/migrations"
 )
 
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
-
 type OpenOption func(*Store)
 
 // WithProjectionApplyOutboxEnabled toggles enqueueing projection-apply work
@@ -66,7 +58,7 @@ func Open(path string, keyring *integrity.Keyring, registry *event.Registry, opt
 		}
 	}
 
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.EventsFS, "events"); err != nil {
+	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.EventsFS, "events", time.Now); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}

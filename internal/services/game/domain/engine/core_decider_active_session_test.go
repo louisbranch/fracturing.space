@@ -25,7 +25,7 @@ func TestCoreDeciderDecide_BlocksOutOfGameCommandWhenSessionActive(t *testing.T)
 			Session: session.State{Started: true, SessionID: "sess-1"},
 		},
 		command.Command{Type: command.Type("campaign.update")},
-		nil,
+		time.Now,
 	)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
@@ -49,7 +49,7 @@ func TestCoreDeciderDecide_AllowsSessionScopedFamiliesWhenSessionActive(t *testi
 			Session: sessionStateStarted("sess-1"),
 		},
 		command.Command{Type: command.Type("session.end"), PayloadJSON: []byte(`{}`)},
-		nil,
+		time.Now,
 	)
 	if len(decision.Rejections) == 0 {
 		t.Fatal("expected route-level rejection from session decider")
@@ -84,7 +84,7 @@ func TestCoreDeciderDecide_BlockedMessageIncludesSessionID(t *testing.T) {
 			Type:        command.Type("campaign.update"),
 			PayloadJSON: []byte(`{"fields":{"name":"x"}}`),
 		},
-		nil,
+		time.Now,
 	)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
@@ -112,7 +112,7 @@ func TestCoreDeciderDecide_AllowsInGameSystemCharacterCommandWhenSessionActive(t
 			ActorType: command.ActorTypeSystem,
 			SessionID: "sess-1",
 		},
-		nil,
+		time.Now,
 	)
 	if len(decision.Rejections) > 0 {
 		t.Fatalf("rejections = %v, want none", decision.Rejections)

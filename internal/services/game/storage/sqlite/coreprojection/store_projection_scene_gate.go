@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -50,8 +51,8 @@ func (s *Store) PutSceneGate(ctx context.Context, gate storage.SceneGate) error 
 		   resolved_by_actor_id = excluded.resolved_by_actor_id,
 		   resolution_json = excluded.resolution_json`,
 		gate.CampaignID, gate.SceneID, gate.GateID, gate.GateType, status, gate.Reason,
-		toMillis(gate.CreatedAt), gate.CreatedByActorType, gate.CreatedByActorID,
-		toNullMillis(gate.ResolvedAt), toNullString(gate.ResolvedByActorType), toNullString(gate.ResolvedByActorID),
+		sqliteutil.ToMillis(gate.CreatedAt), gate.CreatedByActorType, gate.CreatedByActorID,
+		sqliteutil.ToNullMillis(gate.ResolvedAt), sqliteutil.ToNullString(gate.ResolvedByActorType), sqliteutil.ToNullString(gate.ResolvedByActorID),
 		gate.MetadataJSON, gate.ResolutionJSON,
 	)
 	if err != nil {
@@ -133,8 +134,8 @@ func scanSceneGateRow(row *sql.Row) (storage.SceneGate, error) {
 		return storage.SceneGate{}, fmt.Errorf("scan scene gate: %w", err)
 	}
 	gate.Status = session.GateStatus(strings.ToLower(strings.TrimSpace(status)))
-	gate.CreatedAt = fromMillis(createdAt)
-	gate.ResolvedAt = fromNullMillis(resolvedAt)
+	gate.CreatedAt = sqliteutil.FromMillis(createdAt)
+	gate.ResolvedAt = sqliteutil.FromNullMillis(resolvedAt)
 	if resolvedByActorType.Valid {
 		gate.ResolvedByActorType = resolvedByActorType.String
 	}

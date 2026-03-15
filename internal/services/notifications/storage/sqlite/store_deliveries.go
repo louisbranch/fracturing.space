@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/storage"
 )
 
@@ -51,7 +52,7 @@ WHERE channel = ?
   AND next_attempt_at <= ?
 ORDER BY next_attempt_at ASC, notification_id ASC
 LIMIT ?
-`, channel, storage.DeliveryStatusPending, storage.DeliveryStatusFailed, toMillis(now.UTC()), limit)
+`, channel, storage.DeliveryStatusPending, storage.DeliveryStatusFailed, sqliteutil.ToMillis(now.UTC()), limit)
 	if err != nil {
 		return nil, fmt.Errorf("list pending deliveries: %w", err)
 	}
@@ -100,7 +101,7 @@ func (s *Store) MarkDeliveryRetry(ctx context.Context, notificationID string, ch
 UPDATE notification_deliveries
 SET status = ?, attempt_count = ?, next_attempt_at = ?, last_error = ?, updated_at = ?, delivered_at = NULL
 WHERE notification_id = ? AND channel = ?
-`, storage.DeliveryStatusFailed, attemptCount, toMillis(nextAttemptAt.UTC()), lastError, toMillis(now), notificationID, channel)
+`, storage.DeliveryStatusFailed, attemptCount, sqliteutil.ToMillis(nextAttemptAt.UTC()), lastError, sqliteutil.ToMillis(now), notificationID, channel)
 	if err != nil {
 		return fmt.Errorf("mark delivery retry: %w", err)
 	}
@@ -139,7 +140,7 @@ func (s *Store) MarkDeliverySucceeded(ctx context.Context, notificationID string
 UPDATE notification_deliveries
 SET status = ?, updated_at = ?, delivered_at = ?, last_error = ''
 WHERE notification_id = ? AND channel = ?
-`, storage.DeliveryStatusDelivered, toMillis(now), toMillis(now), notificationID, channel)
+`, storage.DeliveryStatusDelivered, sqliteutil.ToMillis(now), sqliteutil.ToMillis(now), notificationID, channel)
 	if err != nil {
 		return fmt.Errorf("mark delivery succeeded: %w", err)
 	}

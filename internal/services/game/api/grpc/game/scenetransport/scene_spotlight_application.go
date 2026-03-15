@@ -34,7 +34,7 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 	if err != nil {
 		return err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return err
 	}
 
@@ -81,7 +81,7 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 	if err != nil {
 		return err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return err
 	}
 

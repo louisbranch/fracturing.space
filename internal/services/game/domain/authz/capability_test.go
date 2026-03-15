@@ -1,6 +1,37 @@
 package authz
 
-import "testing"
+import (
+	"testing"
+)
+
+func TestCapabilityAccessors_ReturnValidCapabilities(t *testing.T) {
+	accessors := []struct {
+		name string
+		fn   func() Capability
+		want string
+	}{
+		{"ReadCampaign", CapabilityReadCampaign, "read_campaign"},
+		{"ReadInvites", CapabilityReadInvites, "read_invite"},
+		{"ManageCampaign", CapabilityManageCampaign, "manage_campaign"},
+		{"ManageParticipants", CapabilityManageParticipants, "manage_participant"},
+		{"ManageInvites", CapabilityManageInvites, "manage_invite"},
+		{"ManageSessions", CapabilityManageSessions, "manage_session"},
+		{"MutateCharacters", CapabilityMutateCharacters, "mutate_character"},
+		{"ManageCharacters", CapabilityManageCharacters, "manage_character"},
+		{"TransferCharacterOwnership", CapabilityTransferCharacterOwnership, "transfer_ownership_character"},
+	}
+	for _, tc := range accessors {
+		t.Run(tc.name, func(t *testing.T) {
+			cap := tc.fn()
+			if !cap.Valid() {
+				t.Fatalf("%s returned invalid capability", tc.name)
+			}
+			if got := cap.Label(); got != tc.want {
+				t.Fatalf("%s Label() = %q, want %q", tc.name, got, tc.want)
+			}
+		})
+	}
+}
 
 func TestCapabilityLabel(t *testing.T) {
 	tests := []struct {

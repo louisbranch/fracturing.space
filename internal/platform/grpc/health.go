@@ -73,10 +73,12 @@ func waitForHealthWithBackoff(
 			}
 		}
 
+		timer := time.NewTimer(backoff)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return fmt.Errorf("wait for gRPC health: %w", ctx.Err())
-		case <-time.After(backoff):
+		case <-timer.C:
 		}
 
 		if backoff < maxBackoff {

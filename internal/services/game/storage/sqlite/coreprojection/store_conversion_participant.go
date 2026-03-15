@@ -1,6 +1,7 @@
 package coreprojection
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -33,8 +34,8 @@ func participantRowDataToDomain(row participantRowData) (storage.ParticipantReco
 		AvatarSetID:    row.AvatarSetID,
 		AvatarAssetID:  row.AvatarAssetID,
 		Pronouns:       row.Pronouns,
-		CreatedAt:      fromMillis(row.CreatedAt),
-		UpdatedAt:      fromMillis(row.UpdatedAt),
+		CreatedAt:      sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:      sqliteutil.FromMillis(row.UpdatedAt),
 	}, nil
 }
 

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -70,8 +71,8 @@ ON CONFLICT(id) DO UPDATE SET
 		record.CredentialID,
 		record.ProviderGrantID,
 		record.Status,
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
 	)
 	if err != nil {
 		if isUniqueConstraintError(err) {
@@ -122,8 +123,8 @@ WHERE id = ?
 		}
 		return storage.AgentRecord{}, fmt.Errorf("get agent: %w", err)
 	}
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	return rec, nil
 }
 
@@ -190,8 +191,8 @@ LIMIT ?
 		); err != nil {
 			return storage.AgentPage{}, fmt.Errorf("scan agent row: %w", err)
 		}
-		rec.CreatedAt = fromMillis(createdAt)
-		rec.UpdatedAt = fromMillis(updatedAt)
+		rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+		rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 		page.Agents = append(page.Agents, rec)
 	}
 	if err := rows.Err(); err != nil {

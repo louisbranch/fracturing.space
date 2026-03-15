@@ -16,16 +16,22 @@ func decideSpotlightSet(cmd command.Command, now func() time.Time) command.Decis
 	if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
 		return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
 	}
-	spotlightType := strings.TrimSpace(payload.SpotlightType)
-	characterID := strings.TrimSpace(payload.CharacterID.String())
-	if spotlightType == "" {
+	normalizedType, err := NormalizeSpotlightType(payload.SpotlightType)
+	if err != nil {
 		return command.Reject(command.Rejection{
-			Code:    rejectionCodeSessionSpotlightTypeRequired,
-			Message: "spotlight type is required",
+			Code:    rejectionCodeSessionSpotlightTypeInvalid,
+			Message: err.Error(),
+		})
+	}
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	if err := ValidateSpotlightTarget(normalizedType, characterID); err != nil {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeSessionSpotlightTargetInvalid,
+			Message: err.Error(),
 		})
 	}
 
-	normalizedPayload := SpotlightSetPayload{SpotlightType: spotlightType, CharacterID: ids.CharacterID(characterID)}
+	normalizedPayload := SpotlightSetPayload{SpotlightType: string(normalizedType), CharacterID: ids.CharacterID(characterID)}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
 	evt := command.NewEvent(cmd, EventTypeSpotlightSet, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
 

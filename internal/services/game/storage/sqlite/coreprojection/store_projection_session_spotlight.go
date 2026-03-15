@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -35,7 +36,7 @@ func (s *Store) PutSessionSpotlight(ctx context.Context, spotlight storage.Sessi
 		SessionID:          spotlight.SessionID,
 		SpotlightType:      spotlightType,
 		CharacterID:        spotlight.CharacterID,
-		UpdatedAt:          toMillis(spotlight.UpdatedAt),
+		UpdatedAt:          sqliteutil.ToMillis(spotlight.UpdatedAt),
 		UpdatedByActorType: spotlight.UpdatedByActorType,
 		UpdatedByActorID:   spotlight.UpdatedByActorID,
 	})

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -34,8 +35,8 @@ func (s *Store) PutDaggerheartHeritage(ctx context.Context, heritage contentstor
 		Name:         heritage.Name,
 		Kind:         heritage.Kind,
 		FeaturesJson: string(featuresJSON),
-		CreatedAt:    toMillis(heritage.CreatedAt),
-		UpdatedAt:    toMillis(heritage.UpdatedAt),
+		CreatedAt:    sqliteutil.ToMillis(heritage.CreatedAt),
+		UpdatedAt:    sqliteutil.ToMillis(heritage.UpdatedAt),
 	})
 }
 
@@ -122,8 +123,8 @@ func (s *Store) PutDaggerheartExperience(ctx context.Context, experience content
 		ID:          experience.ID,
 		Name:        experience.Name,
 		Description: experience.Description,
-		CreatedAt:   toMillis(experience.CreatedAt),
-		UpdatedAt:   toMillis(experience.UpdatedAt),
+		CreatedAt:   sqliteutil.ToMillis(experience.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(experience.UpdatedAt),
 	})
 }
 

@@ -521,7 +521,7 @@ func deleteString(values []string, target string) []string {
 	if target == "" || len(values) == 0 {
 		return values
 	}
-	filtered := values[:0]
+	filtered := make([]string, 0, len(values))
 	for _, value := range values {
 		if value != target {
 			filtered = append(filtered, value)

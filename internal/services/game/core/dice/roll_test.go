@@ -1,7 +1,7 @@
 package dice
 
 import (
-	"math/rand"
+	"math/rand/v2"
 	"testing"
 )
 
@@ -147,7 +147,7 @@ func TestRollDice_Determinism(t *testing.T) {
 }
 
 func TestRollWithRng(t *testing.T) {
-	rng := rand.New(rand.NewSource(42))
+	rng := rand.New(rand.NewPCG(42, 0))
 	specs := []Spec{
 		{Sides: 6, Count: 2},
 	}

@@ -77,6 +77,21 @@ func TestAdapterRouter_HandlerErrorPropagates(t *testing.T) {
 	}
 }
 
+func TestHandleAdapter_PanicsOnDuplicateEventType(t *testing.T) {
+	router := NewAdapterRouter()
+	HandleAdapter(router, event.Type("test.event"), func(_ context.Context, _ event.Event, _ testAdapterPayload) error {
+		return nil
+	})
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for duplicate adapter handler registration")
+		}
+	}()
+	HandleAdapter(router, event.Type("test.event"), func(_ context.Context, _ event.Event, _ testAdapterPayload) error {
+		return nil
+	})
+}
+
 func TestAdapterRouter_HandledTypes(t *testing.T) {
 	router := NewAdapterRouter()
 	HandleAdapter(router, event.Type("b.event"), func(_ context.Context, _ event.Event, _ testAdapterPayload) error {

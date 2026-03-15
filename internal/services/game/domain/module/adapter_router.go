@@ -43,6 +43,9 @@ func (r *AdapterRouter) HandledTypes() []event.Type {
 // handlers that need the raw event (e.g. to access envelope fields like
 // CampaignID or Timestamp), the event.Event is also passed through.
 func HandleAdapter[P any](r *AdapterRouter, t event.Type, fn func(context.Context, event.Event, P) error) {
+	if _, exists := r.handlers[t]; exists {
+		panic(fmt.Sprintf("duplicate adapter handler for event type %s", t))
+	}
 	r.handlers[t] = func(ctx context.Context, evt event.Event) error {
 		var payload P
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {

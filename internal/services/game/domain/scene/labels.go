@@ -1,37 +1,29 @@
 package scene
 
-import (
-	"fmt"
-	"strings"
-)
+import "github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 
 // SpotlightType identifies who has the spotlight within a scene.
-type SpotlightType string
+//
+// Canonical definition lives in domain/session. This alias keeps scene-package
+// callers and external references (storage, projection, transport) working
+// without import changes.
+type SpotlightType = session.SpotlightType
 
 const (
-	SpotlightTypeGM        SpotlightType = "gm"
-	SpotlightTypeCharacter SpotlightType = "character"
+	SpotlightTypeGM        = session.SpotlightTypeGM
+	SpotlightTypeCharacter = session.SpotlightTypeCharacter
 )
 
 // NormalizeSpotlightType validates and normalizes a spotlight type value.
+//
+// Delegates to session.NormalizeSpotlightType which owns the canonical logic.
 func NormalizeSpotlightType(value string) (SpotlightType, error) {
-	trimmed := strings.ToLower(strings.TrimSpace(value))
-	if trimmed == "" {
-		return "", fmt.Errorf("spotlight type is required")
-	}
-	switch SpotlightType(trimmed) {
-	case SpotlightTypeGM, SpotlightTypeCharacter:
-		return SpotlightType(trimmed), nil
-	default:
-		return "", fmt.Errorf("spotlight type %q is not supported", value)
-	}
+	return session.NormalizeSpotlightType(value)
 }
 
 // NormalizeGateType validates and normalizes a gate type value.
+//
+// Delegates to session.NormalizeGateType which owns the canonical logic.
 func NormalizeGateType(value string) (string, error) {
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return "", fmt.Errorf("gate type is required")
-	}
-	return strings.ToLower(trimmed), nil
+	return session.NormalizeGateType(value)
 }

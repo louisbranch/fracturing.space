@@ -33,11 +33,11 @@ func Fold(state State, evt event.Event) (State, error) {
 		state.ParticipantID = ids.ParticipantID(payload.ParticipantID)
 		state.RecipientUserID = ids.UserID(payload.RecipientUserID)
 		state.CreatedByParticipantID = ids.ParticipantID(payload.CreatedByParticipantID)
-		status := payload.Status
-		if normalized, ok := NormalizeStatusLabel(payload.Status); ok {
-			status = normalized
+		if normalized, ok := NormalizeStatus(payload.Status); ok {
+			state.Status = normalized
+		} else {
+			state.Status = Status(payload.Status)
 		}
-		state.Status = status
 	case EventTypeClaimed:
 		var payload ClaimPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
@@ -77,11 +77,11 @@ func Fold(state State, evt event.Event) (State, error) {
 			state.InviteID = ids.InviteID(payload.InviteID)
 		}
 		if payload.Status != "" {
-			status := payload.Status
-			if normalized, ok := NormalizeStatusLabel(payload.Status); ok {
-				status = normalized
+			if normalized, ok := NormalizeStatus(payload.Status); ok {
+				state.Status = normalized
+			} else {
+				state.Status = Status(payload.Status)
 			}
-			state.Status = status
 		}
 	}
 	// Unknown event types are silently ignored so that replay remains

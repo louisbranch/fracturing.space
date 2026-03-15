@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
@@ -108,9 +109,9 @@ ON CONFLICT(dedupe_key) DO NOTHING
 		outboxEvent.DedupeKey,
 		outboxEvent.Status,
 		outboxEvent.AttemptCount,
-		toMillis(outboxEvent.NextAttemptAt.UTC()),
-		toMillis(outboxEvent.CreatedAt.UTC()),
-		toMillis(outboxEvent.UpdatedAt.UTC()),
+		sqliteutil.ToMillis(outboxEvent.NextAttemptAt.UTC()),
+		sqliteutil.ToMillis(outboxEvent.CreatedAt.UTC()),
+		sqliteutil.ToMillis(outboxEvent.UpdatedAt.UTC()),
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue integration outbox event: %w", err)
@@ -358,11 +359,11 @@ func scanIntegrationOutboxEvent(scan integrationOutboxScanner) (storage.Integrat
 	); err != nil {
 		return storage.IntegrationOutboxEvent{}, err
 	}
-	outboxEvent.NextAttemptAt = fromMillis(nextAttemptAtMS)
-	outboxEvent.LeaseExpiresAt = fromNullMillis(leaseExpiresAtMS)
-	outboxEvent.ProcessedAt = fromNullMillis(processedAtMS)
-	outboxEvent.CreatedAt = fromMillis(createdAtMS)
-	outboxEvent.UpdatedAt = fromMillis(updatedAtMS)
+	outboxEvent.NextAttemptAt = sqliteutil.FromMillis(nextAttemptAtMS)
+	outboxEvent.LeaseExpiresAt = sqliteutil.FromNullMillis(leaseExpiresAtMS)
+	outboxEvent.ProcessedAt = sqliteutil.FromNullMillis(processedAtMS)
+	outboxEvent.CreatedAt = sqliteutil.FromMillis(createdAtMS)
+	outboxEvent.UpdatedAt = sqliteutil.FromMillis(updatedAtMS)
 	return outboxEvent, nil
 }
 
@@ -411,9 +412,9 @@ ORDER BY next_attempt_at ASC, created_at ASC, id ASC
 LIMIT ?
 `,
 		storage.IntegrationOutboxStatusPending,
-		toMillis(now),
+		sqliteutil.ToMillis(now),
 		storage.IntegrationOutboxStatusLeased,
-		toMillis(now),
+		sqliteutil.ToMillis(now),
 		limit,
 	)
 	if err != nil {
@@ -460,13 +461,13 @@ AND (
 `,
 			storage.IntegrationOutboxStatusLeased,
 			consumer,
-			toMillis(leaseExpiresAt),
-			toMillis(now),
+			sqliteutil.ToMillis(leaseExpiresAt),
+			sqliteutil.ToMillis(now),
 			id,
 			storage.IntegrationOutboxStatusPending,
-			toMillis(now),
+			sqliteutil.ToMillis(now),
 			storage.IntegrationOutboxStatusLeased,
-			toMillis(now),
+			sqliteutil.ToMillis(now),
 		)
 		if updateErr != nil {
 			return nil, fmt.Errorf("lease integration outbox event %s: %w", id, updateErr)
@@ -546,8 +547,8 @@ AND status = ?
 AND lease_owner = ?
 `,
 		storage.IntegrationOutboxStatusSucceeded,
-		toMillis(processedAt),
-		toMillis(processedAt),
+		sqliteutil.ToMillis(processedAt),
+		sqliteutil.ToMillis(processedAt),
 		id,
 		storage.IntegrationOutboxStatusLeased,
 		consumer,
@@ -603,9 +604,9 @@ AND status = ?
 AND lease_owner = ?
 `,
 		storage.IntegrationOutboxStatusPending,
-		toMillis(nextAttemptAt.UTC()),
+		sqliteutil.ToMillis(nextAttemptAt.UTC()),
 		strings.TrimSpace(lastError),
-		toMillis(now),
+		sqliteutil.ToMillis(now),
 		id,
 		storage.IntegrationOutboxStatusLeased,
 		consumer,
@@ -661,8 +662,8 @@ AND lease_owner = ?
 `,
 		storage.IntegrationOutboxStatusDead,
 		strings.TrimSpace(lastError),
-		toMillis(processedAt),
-		toMillis(processedAt),
+		sqliteutil.ToMillis(processedAt),
+		sqliteutil.ToMillis(processedAt),
 		id,
 		storage.IntegrationOutboxStatusLeased,
 		consumer,
@@ -678,20 +679,4 @@ AND lease_owner = ?
 		return storage.ErrNotFound
 	}
 	return nil
-}
-
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
-
-func fromNullMillis(value sql.NullInt64) *time.Time {
-	if !value.Valid {
-		return nil
-	}
-	t := fromMillis(value.Int64)
-	return &t
 }

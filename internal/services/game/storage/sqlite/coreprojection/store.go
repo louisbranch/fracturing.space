@@ -13,32 +13,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/migrations"
 )
 
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-// fromMillis reverses toMillis for persisted millisecond timestamps.
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
-
-// toNullMillis maps optional domain times to sql.NullInt64 for nullable DB columns.
-func toNullMillis(value *time.Time) sql.NullInt64 {
-	if value == nil {
-		return sql.NullInt64{}
-	}
-	return sql.NullInt64{Int64: toMillis(*value), Valid: true}
-}
-
-// fromNullMillis maps nullable SQL timestamps back into optional domain time values.
-func fromNullMillis(value sql.NullInt64) *time.Time {
-	if !value.Valid {
-		return nil
-	}
-	t := fromMillis(value.Int64)
-	return &t
-}
-
 // Store provides a SQLite-backed store implementing all storage interfaces.
 type Store struct {
 	sqlDB *sql.DB
@@ -108,7 +82,7 @@ func openStore(path string, migrationFS fs.FS, migrationRoot string) (*Store, er
 // runMigrations executes embedded SQL migrations from the provided migration set.
 // Files are sorted lexicographically to make startup behavior deterministic.
 func runMigrations(sqlDB *sql.DB, migrationFS fs.FS, migrationRoot string) error {
-	return sqlitemigrate.ApplyMigrations(sqlDB, migrationFS, migrationRoot)
+	return sqlitemigrate.ApplyMigrations(sqlDB, migrationFS, migrationRoot, time.Now)
 }
 
 // extractUpMigration extracts the Up migration portion from a migration file.

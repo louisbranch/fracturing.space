@@ -1,6 +1,7 @@
 package coreprojection
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -27,7 +28,7 @@ func dbCharacterToDomain(row db.Character) (storage.CharacterRecord, error) {
 		AvatarAssetID:      row.AvatarAssetID,
 		Pronouns:           row.Pronouns,
 		Aliases:            aliases,
-		CreatedAt:          fromMillis(row.CreatedAt),
-		UpdatedAt:          fromMillis(row.UpdatedAt),
+		CreatedAt:          sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:          sqliteutil.FromMillis(row.UpdatedAt),
 	}, nil
 }

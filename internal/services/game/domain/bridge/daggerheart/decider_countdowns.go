@@ -19,9 +19,7 @@ func decideRestTake(snapshotState SnapshotState, cmd command.Command, now func()
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	if now == nil {
-		now = time.Now
-	}
+	now = command.NowFunc(now)
 	payload.RestType = strings.TrimSpace(payload.RestType)
 	if payload.LongTermCountdown != nil {
 		if rejection := countdownUpdateSnapshotRejection(snapshotState, *payload.LongTermCountdown); rejection != nil {

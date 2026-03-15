@@ -10,12 +10,14 @@ import (
 
 	coreencoding "github.com/louisbranch/fracturing.space/internal/services/game/core/encoding"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/naming"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 var (
 	// ErrCampaignIDRequired indicates a missing campaign id.
-	ErrCampaignIDRequired = errors.New("campaign id is required")
+	// Canonical definition in domain/ids; re-exported for caller compatibility.
+	ErrCampaignIDRequired = ids.ErrCampaignIDRequired
 	// ErrTypeRequired indicates a missing command type.
 	ErrTypeRequired = errors.New("command type is required")
 	// ErrTypeUnknown indicates an unregistered command type.
@@ -123,15 +125,17 @@ func TargetEntity(entityType, payloadField string) TargetEntityPolicy {
 }
 
 // ActorType identifies the actor who initiated the command.
-type ActorType string
+// The canonical definition lives in the event package; this alias keeps
+// existing command-layer callers working without import changes.
+type ActorType = event.ActorType
 
 const (
 	// ActorTypeSystem indicates a system-originated command.
-	ActorTypeSystem ActorType = "system"
+	ActorTypeSystem = event.ActorTypeSystem
 	// ActorTypeParticipant indicates a participant-originated command.
-	ActorTypeParticipant ActorType = "participant"
+	ActorTypeParticipant = event.ActorTypeParticipant
 	// ActorTypeGM indicates a GM-originated command.
-	ActorTypeGM ActorType = "gm"
+	ActorTypeGM = event.ActorTypeGM
 )
 
 // Command captures the canonical envelope used by the domain engine.

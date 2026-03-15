@@ -59,7 +59,7 @@ func TestCoreDeciderDecide_RoutesSystemCommandOnSuccess(t *testing.T) {
 			SystemID:      "stub",
 			SystemVersion: "v1",
 		},
-		nil,
+		time.Now,
 	)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("rejections = %d, want 0 (%v)", len(decision.Rejections), decision.Rejections)

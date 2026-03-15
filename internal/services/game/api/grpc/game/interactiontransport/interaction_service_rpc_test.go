@@ -1,4 +1,4 @@
-package game
+package interactiontransport
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
@@ -143,8 +144,12 @@ func newInteractionServiceHarness() *interactionServiceHarness {
 	return h
 }
 
-func (h *interactionServiceHarness) stores() Stores {
-	return Stores{
+func (h *interactionServiceHarness) deps() Deps {
+	return Deps{
+		Auth: authz.PolicyDeps{
+			Participant: h.participants,
+			Character:   h.characters,
+		},
 		Campaign:           h.campaign,
 		Participant:        h.participants,
 		Character:          h.characters,
@@ -157,7 +162,7 @@ func (h *interactionServiceHarness) stores() Stores {
 }
 
 func (h *interactionServiceHarness) service() *InteractionService {
-	return NewInteractionService(h.stores())
+	return NewInteractionService(h.deps())
 }
 
 func (h *interactionServiceHarness) serviceWithSuccessfulWrite(t *testing.T) *InteractionService {
@@ -165,14 +170,14 @@ func (h *interactionServiceHarness) serviceWithSuccessfulWrite(t *testing.T) *In
 
 	runtime := testWriteRuntime(t)
 	runtime.SetInlineApplyEnabled(false)
-	stores := h.stores()
-	stores.Write = domainwriteexec.WritePath{
+	deps := h.deps()
+	deps.Write = domainwriteexec.WritePath{
 		Executor: fakeDomainExecutor{
 			result: testAcceptedDomainResult(),
 		},
 		Runtime: runtime,
 	}
-	return NewInteractionService(stores)
+	return NewInteractionService(deps)
 }
 
 func testAcceptedDomainResult() engine.Result {
@@ -1075,7 +1080,8 @@ func TestInteractionApplicationSetActiveScenePreservesOwningAIGMTurn(t *testing.
 	}
 	runtime := domainwrite.NewRuntime()
 	runtime.SetInlineApplyEnabled(false)
-	app := newInteractionApplicationWithDependencies(Stores{
+	app := newInteractionApplicationWithDependencies(Deps{
+		Auth:               authz.PolicyDeps{Participant: h.participants, Character: h.characters},
 		Campaign:           h.campaign,
 		Participant:        h.participants,
 		Character:          h.characters,
@@ -1159,7 +1165,8 @@ func TestInteractionApplicationSetActiveSceneClearsAIGMTurnForDifferentActor(t *
 	}
 	runtime := domainwrite.NewRuntime()
 	runtime.SetInlineApplyEnabled(false)
-	app := newInteractionApplicationWithDependencies(Stores{
+	app := newInteractionApplicationWithDependencies(Deps{
+		Auth:               authz.PolicyDeps{Participant: h.participants, Character: h.characters},
 		Campaign:           h.campaign,
 		Participant:        h.participants,
 		Character:          h.characters,
@@ -1265,9 +1272,11 @@ func TestInteractionServiceRetryAIGMTurnRequiresFailedTurn(t *testing.T) {
 func TestInteractionServiceGetInteractionStateRequiresVisibleCampaign(t *testing.T) {
 	t.Parallel()
 
-	svc := NewInteractionService(Stores{
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewInteractionService(Deps{
+		Auth:        authz.PolicyDeps{Participant: participantStore},
 		Campaign:    interactionActiveCampaignStore("c1"),
-		Participant: gametest.NewFakeParticipantStore(),
+		Participant: participantStore,
 	})
 
 	_, err := svc.GetInteractionState(context.Background(), &gamev1.GetInteractionStateRequest{CampaignId: "c1"})

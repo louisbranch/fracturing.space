@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -42,7 +43,7 @@ func (s *Store) PutAccessRequest(ctx context.Context, record storage.AccessReque
 
 	var reviewedAt sql.NullInt64
 	if record.ReviewedAt != nil {
-		reviewedAt = sql.NullInt64{Int64: toMillis(*record.ReviewedAt), Valid: true}
+		reviewedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.ReviewedAt), Valid: true}
 	}
 
 	_, err := s.sqlDB.ExecContext(ctx, `
@@ -70,8 +71,8 @@ ON CONFLICT(id) DO UPDATE SET
 		record.Status,
 		strings.TrimSpace(record.ReviewerUserID),
 		strings.TrimSpace(record.ReviewNote),
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
 		reviewedAt,
 	)
 	if err != nil {
@@ -382,7 +383,7 @@ WHERE owner_user_id = ? AND id = ?
 UPDATE ai_access_requests
 SET status = ?, reviewer_user_id = ?, review_note = ?, reviewed_at = ?, updated_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'pending'
-`, status, reviewerUserID, strings.TrimSpace(reviewNote), toMillis(reviewedAt.UTC()), toMillis(reviewedAt.UTC()), ownerUserID, accessRequestID)
+`, status, reviewerUserID, strings.TrimSpace(reviewNote), sqliteutil.ToMillis(reviewedAt.UTC()), sqliteutil.ToMillis(reviewedAt.UTC()), ownerUserID, accessRequestID)
 	if err != nil {
 		return fmt.Errorf("review access request: %w", err)
 	}
@@ -445,7 +446,7 @@ WHERE owner_user_id = ? AND id = ?
 UPDATE ai_access_requests
 SET status = ?, reviewer_user_id = ?, review_note = ?, updated_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'approved'
-`, status, reviewerUserID, strings.TrimSpace(reviewNote), toMillis(revokedAt.UTC()), ownerUserID, accessRequestID)
+`, status, reviewerUserID, strings.TrimSpace(reviewNote), sqliteutil.ToMillis(revokedAt.UTC()), ownerUserID, accessRequestID)
 	if err != nil {
 		return fmt.Errorf("revoke access request: %w", err)
 	}

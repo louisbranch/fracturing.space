@@ -263,7 +263,7 @@ func foldGoldUpdated(state *SnapshotState, payload GoldUpdatedPayload) error {
 func foldDomainCardAcquired(state *SnapshotState, payload DomainCardAcquiredPayload) error {
 	touchCharacter(state, payload.CharacterID)
 	if profile, ok := state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))]; ok {
-		profile.DomainCardIDs = append(profile.DomainCardIDs, payload.CardID)
+		profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, payload.CardID)
 		state.CharacterProfiles[ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))] = profile
 	}
 	return nil

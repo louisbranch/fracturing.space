@@ -1,4 +1,4 @@
-package game
+package interactiontransport
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
@@ -32,10 +33,25 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// Deps groups the dependencies for the interaction transport surface.
+type Deps struct {
+	Auth               authz.PolicyDeps
+	Campaign           storage.CampaignStore
+	Participant        storage.ParticipantStore
+	Character          storage.CharacterStore
+	Session            storage.SessionStore
+	SessionInteraction storage.SessionInteractionStore
+	Scene              storage.SceneStore
+	SceneCharacter     storage.SceneCharacterStore
+	SceneInteraction   storage.SceneInteractionStore
+	Write              domainwriteexec.WritePath
+	Applier            projection.Applier
+}
+
 // interactionApplication coordinates the scene-phase interaction service over
 // projection-backed state plus explicit domain writes.
 type interactionApplication struct {
-	auth        policyDependencies
+	auth        authz.PolicyDeps
 	stores      interactionApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -54,23 +70,23 @@ type interactionApplicationStores struct {
 }
 
 func newInteractionApplicationWithDependencies(
-	stores Stores,
+	deps Deps,
 	idGenerator func() (string, error),
 ) interactionApplication {
 	return interactionApplication{
-		auth: newPolicyDependencies(stores),
+		auth: deps.Auth,
 		stores: interactionApplicationStores{
-			Campaign:           stores.Campaign,
-			Participant:        stores.Participant,
-			Character:          stores.Character,
-			Session:            stores.Session,
-			SessionInteraction: stores.SessionInteraction,
-			Scene:              stores.Scene,
-			SceneCharacter:     stores.SceneCharacter,
-			SceneInteraction:   stores.SceneInteraction,
+			Campaign:           deps.Campaign,
+			Participant:        deps.Participant,
+			Character:          deps.Character,
+			Session:            deps.Session,
+			SessionInteraction: deps.SessionInteraction,
+			Scene:              deps.Scene,
+			SceneCharacter:     deps.SceneCharacter,
+			SceneInteraction:   deps.SceneInteraction,
 		},
-		write:       stores.Write,
-		applier:     stores.Applier(),
+		write:       deps.Write,
+		applier:     deps.Applier,
 		idGenerator: idGenerator,
 	}
 }
@@ -674,7 +690,7 @@ func (a interactionApplication) loadViewerCampaign(ctx context.Context, campaign
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
 	}
-	actor, err := requirePolicyActorWithDependencies(ctx, a.auth, domainauthz.CapabilityReadCampaign, campaignRecord)
+	actor, err := authz.RequirePolicyActor(ctx, a.auth, domainauthz.CapabilityReadCampaign(), campaignRecord)
 	if err != nil {
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
 	}
@@ -686,7 +702,7 @@ func (a interactionApplication) requireManageSessions(ctx context.Context, campa
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	return campaignRecord, nil

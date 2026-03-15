@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/storage"
 )
 
@@ -159,7 +160,7 @@ WHERE n.recipient_user_id = ?
   AND (n.created_at < ? OR (n.created_at = ? AND n.id < ?))
 ORDER BY n.created_at DESC, n.id DESC
 LIMIT ?
-`, recipientUserID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered, toMillis(tokenCreatedAt), toMillis(tokenCreatedAt), pageToken, limit)
+`, recipientUserID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered, sqliteutil.ToMillis(tokenCreatedAt), sqliteutil.ToMillis(tokenCreatedAt), pageToken, limit)
 	if err != nil {
 		return storage.NotificationPage{}, fmt.Errorf("list notifications with token: %w", err)
 	}
@@ -225,7 +226,7 @@ WHERE recipient_user_id = ?
       AND d.channel = ?
       AND d.status = ?
   )
-`, toMillis(now), toMillis(now), recipientUserID, notificationID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered)
+`, sqliteutil.ToMillis(now), sqliteutil.ToMillis(now), recipientUserID, notificationID, storage.DeliveryChannelInApp, storage.DeliveryStatusDelivered)
 	if err != nil {
 		return storage.NotificationRecord{}, fmt.Errorf("mark notification read: %w", err)
 	}
@@ -256,7 +257,7 @@ WHERE n.recipient_user_id = ?
 		}
 		return time.Time{}, fmt.Errorf("lookup notification cursor: %w", err)
 	}
-	return fromMillis(createdAtMillis), nil
+	return sqliteutil.FromMillis(createdAtMillis), nil
 }
 
 // GetNotificationByRecipientAndID loads one recipient notification by id.

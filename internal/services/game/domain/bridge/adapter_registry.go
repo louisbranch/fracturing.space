@@ -40,6 +40,8 @@ var (
 	ErrAdapterRegistryNil = errors.New("adapter registry is nil")
 	// ErrAdapterRequired indicates a nil adapter was provided for registration.
 	ErrAdapterRequired = errors.New("adapter is required")
+	// ErrAdapterIDRequired indicates adapter registration omitted an ID.
+	ErrAdapterIDRequired = errors.New("adapter id is required")
 	// ErrAdapterVersionRequired indicates adapter registration omitted a version.
 	ErrAdapterVersionRequired = errors.New("adapter version is required")
 	// ErrAdapterAlreadyRegistered indicates adapter registration duplicated ID+version.
@@ -64,18 +66,22 @@ func (r *AdapterRegistry) Register(adapter Adapter) error {
 	if adapter == nil {
 		return ErrAdapterRequired
 	}
+	id := strings.TrimSpace(adapter.ID())
+	if id == "" {
+		return fmt.Errorf("%w", ErrAdapterIDRequired)
+	}
 	version := strings.TrimSpace(adapter.Version())
 	if version == "" {
-		return fmt.Errorf("%w: system %s", ErrAdapterVersionRequired, adapter.ID())
+		return fmt.Errorf("%w: system %s", ErrAdapterVersionRequired, id)
 	}
-	key := systemKey{ID: adapter.ID(), Version: version}
+	key := systemKey{ID: id, Version: version}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if _, exists := r.adapters[key]; exists {
-		return fmt.Errorf("%w: system %s version %s", ErrAdapterAlreadyRegistered, adapter.ID(), version)
+		return fmt.Errorf("%w: system %s version %s", ErrAdapterAlreadyRegistered, id, version)
 	}
-	if _, exists := r.defaults[adapter.ID()]; !exists {
-		r.defaults[adapter.ID()] = version
+	if _, exists := r.defaults[id]; !exists {
+		r.defaults[id] = version
 	}
 	r.adapters[key] = adapter
 	return nil

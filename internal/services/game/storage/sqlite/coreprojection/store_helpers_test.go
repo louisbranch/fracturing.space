@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -18,30 +19,30 @@ func TestMillisHelpers(t *testing.T) {
 		t.Fatalf("load location: %v", err)
 	}
 	value := time.Date(2026, 2, 1, 9, 0, 0, 0, loc)
-	if toMillis(value) != value.UTC().UnixMilli() {
+	if sqliteutil.ToMillis(value) != value.UTC().UnixMilli() {
 		t.Fatalf("expected millis to match UTC unix millis")
 	}
 
-	round := fromMillis(toMillis(value))
+	round := sqliteutil.FromMillis(sqliteutil.ToMillis(value))
 	if !round.Equal(value.UTC()) {
 		t.Fatalf("expected round trip UTC time, got %v", round)
 	}
 }
 
 func TestNullMillisHelpers(t *testing.T) {
-	if got := toNullMillis(nil); got.Valid {
+	if got := sqliteutil.ToNullMillis(nil); got.Valid {
 		t.Fatal("expected nil time to produce invalid NullInt64")
 	}
-	if got := fromNullMillis(sql.NullInt64{}); got != nil {
+	if got := sqliteutil.FromNullMillis(sql.NullInt64{}); got != nil {
 		t.Fatal("expected invalid NullInt64 to return nil time")
 	}
 
 	value := time.Date(2026, 2, 1, 9, 0, 0, 0, time.UTC)
-	wrapped := toNullMillis(&value)
+	wrapped := sqliteutil.ToNullMillis(&value)
 	if !wrapped.Valid {
 		t.Fatal("expected valid null millis")
 	}
-	unwrapped := fromNullMillis(wrapped)
+	unwrapped := sqliteutil.FromNullMillis(wrapped)
 	if unwrapped == nil || !unwrapped.Equal(value) {
 		t.Fatalf("expected round trip time, got %v", unwrapped)
 	}
@@ -135,13 +136,13 @@ func TestBoolIntHelpers(t *testing.T) {
 }
 
 func TestToNullString(t *testing.T) {
-	if got := toNullString(""); got.Valid {
+	if got := sqliteutil.ToNullString(""); got.Valid {
 		t.Fatal("expected empty string to produce invalid NullString")
 	}
-	if got := toNullString("  "); got.Valid {
+	if got := sqliteutil.ToNullString("  "); got.Valid {
 		t.Fatal("expected whitespace-only string to produce invalid NullString")
 	}
-	got := toNullString("hello")
+	got := sqliteutil.ToNullString("hello")
 	if !got.Valid || got.String != "hello" {
 		t.Fatalf("expected valid NullString with value 'hello', got valid=%v string=%q", got.Valid, got.String)
 	}

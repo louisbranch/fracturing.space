@@ -1,10 +1,6 @@
 package daggerheart
 
-import (
-	"strings"
-
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
-)
+import "strings"
 
 func applyLevelUpToCharacterProfile(profile *CharacterProfile, payload LevelUpAppliedPayload) {
 	if profile == nil {
@@ -60,13 +56,4 @@ func applyCharacterProfileTraitIncrease(profile *CharacterProfile, trait string)
 	case "knowledge":
 		profile.Knowledge++
 	}
-}
-
-func applyProfileTraitIncrease(profile *projectionstore.DaggerheartCharacterProfile, trait string) {
-	if profile == nil {
-		return
-	}
-	typed := CharacterProfileFromStorage(*profile)
-	applyCharacterProfileTraitIncrease(&typed, trait)
-	*profile = typed.ToStorage(profile.CampaignID, profile.CharacterID)
 }

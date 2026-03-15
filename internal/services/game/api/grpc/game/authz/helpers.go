@@ -70,22 +70,9 @@ func MergeAttributes(attributes ...map[string]any) map[string]any {
 	return merged
 }
 
-// PolicyCapabilityLabel returns a human-readable label for a capability.
+// PolicyCapabilityLabel returns a stable label for audit and telemetry.
+// It delegates to Capability.Label() which generates the canonical
+// "action_resource" form (e.g. "mutate_character", "manage_participant").
 func PolicyCapabilityLabel(capability domainauthz.Capability) string {
-	switch capability {
-	case domainauthz.CapabilityManageParticipants:
-		return "manage_participants"
-	case domainauthz.CapabilityManageInvites:
-		return "manage_invites"
-	case domainauthz.CapabilityManageSessions:
-		return "manage_sessions"
-	case domainauthz.CapabilityMutateCharacters:
-		return "manage_characters"
-	case domainauthz.CapabilityManageCampaign:
-		return "manage_campaign"
-	case domainauthz.CapabilityReadCampaign:
-		return "read_campaign"
-	default:
-		return capability.Label()
-	}
+	return capability.Label()
 }

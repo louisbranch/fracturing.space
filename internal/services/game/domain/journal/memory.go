@@ -7,11 +7,13 @@ import (
 	"sync"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 var (
 	// ErrCampaignIDRequired indicates a missing campaign id.
-	ErrCampaignIDRequired = errors.New("campaign id is required")
+	// Canonical definition in domain/ids; re-exported for caller compatibility.
+	ErrCampaignIDRequired = ids.ErrCampaignIDRequired
 )
 
 // Memory stores events in memory for tests and local use.

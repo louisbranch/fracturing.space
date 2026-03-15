@@ -101,22 +101,3 @@ type ProjectionStore interface {
 	StatisticsStore
 	ProjectionWatermarkStore
 }
-
-// Store is a composite interface for all persistence concerns used across event
-// sourcing, projection application, and queries. System-specific stores are
-// accessed via explicit provider seams on the concrete implementation.
-type Store interface {
-	CampaignStore
-	ParticipantStore
-	ClaimIndexStore
-	CharacterStore
-	InviteStore
-	SessionStore
-	SessionInteractionStore
-	EventStore
-	AuditEventStore
-	StatisticsStore
-	SnapshotStore
-	CampaignForkStore
-	Close() error
-}

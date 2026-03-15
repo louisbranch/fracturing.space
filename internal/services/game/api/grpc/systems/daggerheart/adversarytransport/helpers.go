@@ -8,7 +8,6 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
-	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	bridgeDaggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
@@ -48,35 +47,6 @@ const (
 	defaultAdversaryMajor   = daggerheartprofile.AdversaryDefaultMajor
 	defaultAdversarySevere  = daggerheartprofile.AdversaryDefaultSevere
 )
-
-func campaignSupportsDaggerheart(record storage.CampaignRecord) bool {
-	systemID, ok := systembridge.NormalizeSystemID(record.System.String())
-	return ok && systemID == systembridge.SystemIDDaggerheart
-}
-
-func requireDaggerheartSystem(record storage.CampaignRecord, unsupportedMessage string) error {
-	if campaignSupportsDaggerheart(record) {
-		return nil
-	}
-	return status.Error(codes.FailedPrecondition, unsupportedMessage)
-}
-
-func ensureNoOpenSessionGate(ctx context.Context, store SessionGateStore, campaignID, sessionID string) error {
-	if store == nil {
-		return status.Error(codes.Internal, "session gate store is not configured")
-	}
-	if strings.TrimSpace(campaignID) == "" || strings.TrimSpace(sessionID) == "" {
-		return nil
-	}
-	gate, err := store.GetOpenSessionGate(ctx, campaignID, sessionID)
-	if err == nil {
-		return status.Errorf(codes.FailedPrecondition, "session gate is open: %s", gate.GateID)
-	}
-	if errors.Is(err, storage.ErrNotFound) {
-		return nil
-	}
-	return grpcerror.Internal("load session gate", err)
-}
 
 func adversaryToProto(adversary projectionstore.DaggerheartAdversary) *pb.DaggerheartAdversary {
 	var sessionID *wrapperspb.StringValue

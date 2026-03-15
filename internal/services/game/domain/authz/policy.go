@@ -63,20 +63,52 @@ func (c Capability) Valid() bool {
 }
 
 // Canonical capabilities used by campaign policy checks.
-var (
-	CapabilityReadCampaign               = Capability{Action: ActionRead, Resource: ResourceCampaign}
-	CapabilityReadParticipants           = Capability{Action: ActionRead, Resource: ResourceParticipant}
-	CapabilityReadCharacters             = Capability{Action: ActionRead, Resource: ResourceCharacter}
-	CapabilityReadSessions               = Capability{Action: ActionRead, Resource: ResourceSession}
-	CapabilityReadInvites                = Capability{Action: ActionRead, Resource: ResourceInvite}
-	CapabilityManageCampaign             = Capability{Action: ActionManage, Resource: ResourceCampaign}
-	CapabilityManageParticipants         = Capability{Action: ActionManage, Resource: ResourceParticipant}
-	CapabilityManageInvites              = Capability{Action: ActionManage, Resource: ResourceInvite}
-	CapabilityManageSessions             = Capability{Action: ActionManage, Resource: ResourceSession}
-	CapabilityMutateCharacters           = Capability{Action: ActionMutate, Resource: ResourceCharacter}
-	CapabilityManageCharacters           = Capability{Action: ActionManage, Resource: ResourceCharacter}
-	CapabilityTransferCharacterOwnership = Capability{Action: ActionTransferOwnership, Resource: ResourceCharacter}
-)
+// Accessor functions prevent accidental reassignment of policy constants.
+
+// CapabilityReadCampaign returns the campaign read capability.
+func CapabilityReadCampaign() Capability {
+	return Capability{Action: ActionRead, Resource: ResourceCampaign}
+}
+
+// CapabilityReadInvites returns the invite read capability.
+func CapabilityReadInvites() Capability {
+	return Capability{Action: ActionRead, Resource: ResourceInvite}
+}
+
+// CapabilityManageCampaign returns the campaign manage capability.
+func CapabilityManageCampaign() Capability {
+	return Capability{Action: ActionManage, Resource: ResourceCampaign}
+}
+
+// CapabilityManageParticipants returns the participant manage capability.
+func CapabilityManageParticipants() Capability {
+	return Capability{Action: ActionManage, Resource: ResourceParticipant}
+}
+
+// CapabilityManageInvites returns the invite manage capability.
+func CapabilityManageInvites() Capability {
+	return Capability{Action: ActionManage, Resource: ResourceInvite}
+}
+
+// CapabilityManageSessions returns the session manage capability.
+func CapabilityManageSessions() Capability {
+	return Capability{Action: ActionManage, Resource: ResourceSession}
+}
+
+// CapabilityMutateCharacters returns the character mutate capability.
+func CapabilityMutateCharacters() Capability {
+	return Capability{Action: ActionMutate, Resource: ResourceCharacter}
+}
+
+// CapabilityManageCharacters returns the character manage capability.
+func CapabilityManageCharacters() Capability {
+	return Capability{Action: ActionManage, Resource: ResourceCharacter}
+}
+
+// CapabilityTransferCharacterOwnership returns the character ownership transfer capability.
+func CapabilityTransferCharacterOwnership() Capability {
+	return Capability{Action: ActionTransferOwnership, Resource: ResourceCharacter}
+}
 
 // PolicyDecision reports if authorization is allowed and why.
 type PolicyDecision struct {
@@ -208,7 +240,7 @@ func CanCampaignAccess(access participant.CampaignAccess, capability Capability)
 // CanCharacterMutation checks baseline role access and member ownership guard for
 // character mutations.
 func CanCharacterMutation(access participant.CampaignAccess, actorParticipantID, ownerParticipantID ids.ParticipantID) PolicyDecision {
-	decision := CanCampaignAccess(access, CapabilityMutateCharacters)
+	decision := CanCampaignAccess(access, CapabilityMutateCharacters())
 	if !decision.Allowed {
 		return decision
 	}
@@ -226,7 +258,7 @@ func CanCharacterMutation(access participant.CampaignAccess, actorParticipantID,
 // CanParticipantMutation evaluates baseline participant-governance mutation
 // access and manager owner-target guard rails.
 func CanParticipantMutation(actorAccess participant.CampaignAccess, targetAccess participant.CampaignAccess) PolicyDecision {
-	decision := CanCampaignAccess(actorAccess, CapabilityManageParticipants)
+	decision := CanCampaignAccess(actorAccess, CapabilityManageParticipants())
 	if !decision.Allowed {
 		return decision
 	}

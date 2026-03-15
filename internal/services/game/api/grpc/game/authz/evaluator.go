@@ -79,7 +79,7 @@ func (e Evaluator) Evaluate(ctx context.Context, in *campaignv1.CanRequest) (*ca
 
 	extraAttributes := ExtraAttributesForReason(ctx, reasonCode)
 	if reasonCode != ReasonAllowAdminOverride {
-		if capability == domainauthz.CapabilityMutateCharacters {
+		if capability == domainauthz.CapabilityMutateCharacters() {
 			ownerParticipantID, evaluateOwnership, resolveErr := ResolveCanCharacterOwnerParticipantIDWithCharacterStore(ctx, e.stores.Character, campaignID, in.GetTarget())
 			if resolveErr != nil {
 				EmitDecisionTelemetry(ctx, DecisionEvent{
@@ -122,7 +122,7 @@ func (e Evaluator) Evaluate(ctx context.Context, in *campaignv1.CanRequest) (*ca
 			}
 		}
 
-		if capability == domainauthz.CapabilityManageParticipants {
+		if capability == domainauthz.CapabilityManageParticipants() {
 			decision, participantAttributes, evaluated, evaluationErr := EvaluateCanParticipantGovernanceTargetWithStores(
 				ctx,
 				e.stores.Participant,

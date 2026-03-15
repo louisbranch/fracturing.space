@@ -69,7 +69,7 @@ func TestDecideSessionStart_MissingSessionIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"session_id":"  "}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -89,7 +89,8 @@ func TestDecideSessionStart_MissingSessionNameRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"  "}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
+	decision := Decide(State{}, cmd, func() time.Time { return now })
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -109,7 +110,7 @@ func TestDecideSessionStart_WhenAlreadyStarted_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"session_id":"sess-1"}`),
 	}
 
-	decision := Decide(State{Started: true}, cmd, nil)
+	decision := Decide(State{Started: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -172,7 +173,7 @@ func TestDecideSessionEnd_WhenNotStartedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"session_id":"sess-1"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -192,7 +193,7 @@ func TestDecideSessionEnd_MissingSessionIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"session_id":"  "}`),
 	}
 
-	decision := Decide(State{Started: true}, cmd, nil)
+	decision := Decide(State{Started: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -357,7 +358,7 @@ func TestDecideSessionGateOpen_MissingGateIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":" ","gate_type":"gm_consequence"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -378,7 +379,7 @@ func TestDecideSessionGateOpen_MissingGateTypeRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":"gate-1","gate_type":"  "}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -399,7 +400,7 @@ func TestDecideSessionGateOpen_WhenAlreadyOpenRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":"gate-2","gate_type":"decision"}`),
 	}
 
-	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, nil)
+	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -420,7 +421,7 @@ func TestDecideSessionGateResolve_MissingGateIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":" ","decision":"approve"}`),
 	}
 
-	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, nil)
+	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -491,7 +492,7 @@ func TestDecideSessionGateRespond_MissingParticipantRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":" ","decision":"ready"}`),
 	}
 
-	decision := Decide(State{GateOpen: true, GateID: "gate-1", GateType: "decision"}, cmd, nil)
+	decision := Decide(State{GateOpen: true, GateID: "gate-1", GateType: "decision"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -512,7 +513,7 @@ func TestDecideSessionGateAbandon_MissingGateIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":" ","reason":"timeout"}`),
 	}
 
-	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, nil)
+	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -537,7 +538,7 @@ func TestDecideSessionGateRespond_RejectsEmptyWorkflowResponse(t *testing.T) {
 		GateOpen: true,
 		GateID:   "gate-1",
 		GateType: "decision",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -570,7 +571,7 @@ func TestDecideSessionGateRespond_RejectsIneligibleParticipantFromFoldedMetadata
 		GateID:           "gate-1",
 		GateType:         "decision",
 		GateMetadataJSON: metadataJSON,
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -591,7 +592,7 @@ func TestDecideSessionGateResolve_RejectsMismatchedActiveGate(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":"gate-2","decision":"approve"}`),
 	}
 
-	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, nil)
+	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -659,15 +660,57 @@ func TestDecideSessionSpotlightSet_MissingTypeRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"spotlight_type":"  "}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
-	if decision.Rejections[0].Code != rejectionCodeSessionSpotlightTypeRequired {
-		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeSessionSpotlightTypeRequired)
+	if decision.Rejections[0].Code != rejectionCodeSessionSpotlightTypeInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeSessionSpotlightTypeInvalid)
+	}
+}
+
+func TestDecideSessionSpotlightSet_InvalidTypeRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("session.spotlight_set"),
+		ActorType:   command.ActorTypeSystem,
+		SessionID:   "sess-1",
+		PayloadJSON: []byte(`{"spotlight_type":"invalid"}`),
+	}
+
+	decision := Decide(State{}, cmd, time.Now)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeSessionSpotlightTypeInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeSessionSpotlightTypeInvalid)
+	}
+}
+
+func TestDecideSessionSpotlightSet_CharacterWithoutCharacterIDRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("session.spotlight_set"),
+		ActorType:   command.ActorTypeSystem,
+		SessionID:   "sess-1",
+		PayloadJSON: []byte(`{"spotlight_type":"character","character_id":""}`),
+	}
+
+	decision := Decide(State{}, cmd, time.Now)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeSessionSpotlightTargetInvalid {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeSessionSpotlightTargetInvalid)
 	}
 }
 
@@ -719,7 +762,7 @@ func TestDecide_UnrecognizedCommandTypeRejected(t *testing.T) {
 	decision := Decide(State{}, command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("session.nonexistent"),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -733,7 +776,7 @@ func TestDecide_MalformedStartPayloadRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("session.start"),
 		PayloadJSON: []byte(`{corrupt`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}

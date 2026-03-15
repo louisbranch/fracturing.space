@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -52,8 +53,8 @@ func (s *Store) PutDaggerheartEnvironment(ctx context.Context, env contentstore.
 		PotentialAdversaryIdsJson: string(adversariesJSON),
 		FeaturesJson:              string(featuresJSON),
 		PromptsJson:               string(promptsJSON),
-		CreatedAt:                 toMillis(env.CreatedAt),
-		UpdatedAt:                 toMillis(env.UpdatedAt),
+		CreatedAt:                 sqliteutil.ToMillis(env.CreatedAt),
+		UpdatedAt:                 sqliteutil.ToMillis(env.UpdatedAt),
 	})
 }
 
@@ -190,7 +191,7 @@ func (s *Store) PutDaggerheartContentString(ctx context.Context, entry contentst
 		Field:       entry.Field,
 		Locale:      entry.Locale,
 		Text:        entry.Text,
-		CreatedAt:   toMillis(createdAt),
-		UpdatedAt:   toMillis(updatedAt),
+		CreatedAt:   sqliteutil.ToMillis(createdAt),
+		UpdatedAt:   sqliteutil.ToMillis(updatedAt),
 	})
 }

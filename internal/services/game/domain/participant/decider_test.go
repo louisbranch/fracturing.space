@@ -79,7 +79,7 @@ func TestDecideParticipantJoin_DefaultsControllerAndAccess(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"GM"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -107,7 +107,7 @@ func TestDecideParticipantJoin_WhenAlreadyJoined_ReturnsRejection(t *testing.T) 
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER"}`),
 	}
 
-	decision := Decide(State{Joined: true}, cmd, nil)
+	decision := Decide(State{Joined: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -127,7 +127,7 @@ func TestDecideParticipantJoin_MissingParticipantID_ReturnsRejection(t *testing.
 		PayloadJSON: []byte(`{"participant_id":"  ","name":"Alice","role":"PLAYER"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -147,7 +147,7 @@ func TestDecideParticipantJoin_MissingName_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"  ","role":"PLAYER"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -167,7 +167,7 @@ func TestDecideParticipantJoin_InvalidRole_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"ALIEN"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -187,7 +187,7 @@ func TestDecideParticipantJoin_InvalidController_ReturnsRejection(t *testing.T) 
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER","controller":"ALIEN"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -207,7 +207,7 @@ func TestDecideParticipantJoin_InvalidAccess_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER","campaign_access":"ALIEN"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -227,7 +227,7 @@ func TestDecideParticipantJoin_AIControllerRequiresGMRole(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Oracle","role":"PLAYER","controller":"AI","campaign_access":"MEMBER"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -247,7 +247,7 @@ func TestDecideParticipantJoin_AIControllerRequiresMemberAccess(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Oracle","role":"GM","controller":"AI","campaign_access":"OWNER"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -267,7 +267,7 @@ func TestDecideParticipantJoin_AIControllerForbidsUserID(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -344,7 +344,7 @@ func TestDecideParticipantUpdate_AIControllerRequiresGMRole(t *testing.T) {
 		Role:           "player",
 		Controller:     "human",
 		CampaignAccess: "member",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -369,7 +369,7 @@ func TestDecideParticipantUpdate_AIControllerRequiresMemberAccess(t *testing.T) 
 		Role:           "gm",
 		Controller:     "human",
 		CampaignAccess: "owner",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -395,7 +395,7 @@ func TestDecideParticipantUpdate_AIControllerForbidsUserID(t *testing.T) {
 		Role:           "gm",
 		Controller:     "human",
 		CampaignAccess: "member",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -420,7 +420,7 @@ func TestDecideParticipantUpdate_CanTransitionToCompliantAIState(t *testing.T) {
 		Role:           "gm",
 		Controller:     "human",
 		CampaignAccess: "member",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -449,7 +449,7 @@ func TestDecideParticipantUpdate_CanTransitionFromAIToHuman(t *testing.T) {
 		Role:           "gm",
 		Controller:     "ai",
 		CampaignAccess: "member",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -473,7 +473,7 @@ func TestDecideParticipantUpdate_EmptyFieldsRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{}}`),
 	}
 
-	decision := Decide(State{Joined: true}, cmd, nil)
+	decision := Decide(State{Joined: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -493,7 +493,7 @@ func TestDecideParticipantUpdate_InvalidFieldRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"unknown":"value"}}`),
 	}
 
-	decision := Decide(State{Joined: true}, cmd, nil)
+	decision := Decide(State{Joined: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -513,7 +513,7 @@ func TestDecideParticipantUpdate_WhenNotJoinedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","fields":{"name":"Alice"}}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -573,7 +573,7 @@ func TestDecideParticipantLeave_WhenNotJoinedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -593,7 +593,7 @@ func TestDecideParticipantLeave_MissingParticipantIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":" "}`),
 	}
 
-	decision := Decide(State{Joined: true}, cmd, nil)
+	decision := Decide(State{Joined: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -650,7 +650,7 @@ func TestDecideParticipantBind_MissingUserIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":" "}`),
 	}
 
-	decision := Decide(State{Joined: true}, cmd, nil)
+	decision := Decide(State{Joined: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -670,7 +670,7 @@ func TestDecideParticipantBind_AlreadyClaimedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
 	}
 
-	decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, nil)
+	decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -690,7 +690,7 @@ func TestDecideParticipantBind_WhenNotJoinedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -710,7 +710,7 @@ func TestDecideParticipantBind_AIControllerIdentityLocked(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
 	}
 
-	decision := Decide(State{Joined: true, Controller: "AI"}, cmd, nil)
+	decision := Decide(State{Joined: true, Controller: "AI"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -770,7 +770,7 @@ func TestDecideParticipantUnbind_UserIDMismatchRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
 	}
 
-	decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, nil)
+	decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -790,7 +790,7 @@ func TestDecideParticipantUnbind_AIControllerIdentityLocked(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1"}`),
 	}
 
-	decision := Decide(State{Joined: true, Controller: "AI", UserID: "user-1"}, cmd, nil)
+	decision := Decide(State{Joined: true, Controller: "AI", UserID: "user-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -865,7 +865,7 @@ func TestDecideSeatReassign_PriorUserMismatchRejected(t *testing.T) {
 				PayloadJSON: []byte(`{"participant_id":"p-1","prior_user_id":"user-2","user_id":"user-3"}`),
 			}
 
-			decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, nil)
+			decision := Decide(State{Joined: true, UserID: "user-1"}, cmd, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}
@@ -892,7 +892,7 @@ func TestDecideSeatReassign_MissingUserIDRejected(t *testing.T) {
 				PayloadJSON: []byte(`{"participant_id":"p-1","user_id":" "}`),
 			}
 
-			decision := Decide(State{Joined: true}, cmd, nil)
+			decision := Decide(State{Joined: true}, cmd, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}
@@ -919,7 +919,7 @@ func TestDecideSeatReassign_AIControllerIdentityLocked(t *testing.T) {
 				PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-2"}`),
 			}
 
-			decision := Decide(State{Joined: true, Controller: "AI"}, cmd, nil)
+			decision := Decide(State{Joined: true, Controller: "AI"}, cmd, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}
@@ -951,7 +951,7 @@ func TestDecideParticipantJoin_DefaultsAvatarSelection(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","name":"Alice","role":"PLAYER"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -996,7 +996,7 @@ func TestDecideParticipantUpdate_UserIDClearedSetsBlankAvatar(t *testing.T) {
 		UserID:        "user-1",
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "007",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1027,7 +1027,7 @@ func TestDecideParticipantJoin_InvalidAvatarSetRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1","name":"Alice","role":"PLAYER","avatar_set_id":"missing"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -1053,7 +1053,7 @@ func TestDecideParticipantUpdate_AvatarSetAlsoNormalizesAvatarAsset(t *testing.T
 		Joined:        true,
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "missing",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -1088,7 +1088,7 @@ func TestDecideParticipantUpdate_InvalidAvatarAssetRejected(t *testing.T) {
 		UserID:        "user-1",
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "apothecary_journeyman",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -1104,7 +1104,7 @@ func TestDecide_UnrecognizedCommandTypeRejected(t *testing.T) {
 	decision := Decide(State{}, command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("participant.nonexistent"),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1118,7 +1118,7 @@ func TestDecide_MalformedJoinPayloadRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		PayloadJSON: []byte(`{corrupt`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1132,7 +1132,7 @@ func TestDecide_MalformedBindPayloadRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.bind"),
 		PayloadJSON: []byte(`{corrupt`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1146,7 +1146,7 @@ func TestDecide_MalformedUnbindPayloadRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.unbind"),
 		PayloadJSON: []byte(`{corrupt`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1165,7 +1165,7 @@ func TestDecide_MalformedSeatReassignPayloadRejected(t *testing.T) {
 				CampaignID:  "camp-1",
 				Type:        cmdType,
 				PayloadJSON: []byte(`{corrupt`),
-			}, nil)
+			}, time.Now)
 			if len(decision.Rejections) != 1 {
 				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 			}
@@ -1181,7 +1181,7 @@ func TestDecideParticipantBind_MissingParticipantIDRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.bind"),
 		PayloadJSON: []byte(`{"participant_id":" ","user_id":"user-2"}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1195,7 +1195,7 @@ func TestDecideParticipantUnbind_MissingParticipantIDRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.unbind"),
 		PayloadJSON: []byte(`{"participant_id":" ","user_id":"user-2"}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1214,7 +1214,7 @@ func TestDecideSeatReassign_MissingParticipantIDRejected(t *testing.T) {
 				CampaignID:  "camp-1",
 				Type:        cmdType,
 				PayloadJSON: []byte(`{"participant_id":" ","user_id":"user-2"}`),
-			}, nil)
+			}, time.Now)
 			if len(decision.Rejections) != 1 {
 				t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 			}
@@ -1258,7 +1258,7 @@ func TestDecideParticipantActiveGuards_LeftParticipantRejected(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			decision := Decide(State{Joined: true, Left: true, UserID: "user-1"}, test.cmd, nil)
+			decision := Decide(State{Joined: true, Left: true, UserID: "user-1"}, test.cmd, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}

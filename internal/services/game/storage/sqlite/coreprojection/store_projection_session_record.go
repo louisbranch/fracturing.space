@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -96,15 +97,15 @@ func putSessionWithQueries(ctx context.Context, queries *db.Queries, sess storag
 		}
 	}
 
-	endedAt := toNullMillis(sess.EndedAt)
+	endedAt := sqliteutil.ToNullMillis(sess.EndedAt)
 
 	if err := queries.PutSession(ctx, db.PutSessionParams{
 		CampaignID: sess.CampaignID,
 		ID:         sess.ID,
 		Name:       sess.Name,
 		Status:     enumToStorage(sess.Status),
-		StartedAt:  toMillis(sess.StartedAt),
-		UpdatedAt:  toMillis(sess.UpdatedAt),
+		StartedAt:  sqliteutil.ToMillis(sess.StartedAt),
+		UpdatedAt:  sqliteutil.ToMillis(sess.UpdatedAt),
 		EndedAt:    endedAt,
 	}); err != nil {
 		return fmt.Errorf("put session: %w", err)
@@ -148,8 +149,8 @@ func endSessionWithQueries(ctx context.Context, queries *db.Queries, campaignID,
 
 		if err := queries.UpdateSessionStatus(ctx, db.UpdateSessionStatusParams{
 			Status:     enumToStorage(sess.Status),
-			UpdatedAt:  toMillis(sess.UpdatedAt),
-			EndedAt:    toNullMillis(sess.EndedAt),
+			UpdatedAt:  sqliteutil.ToMillis(sess.UpdatedAt),
+			EndedAt:    sqliteutil.ToNullMillis(sess.EndedAt),
 			CampaignID: campaignID,
 			ID:         sessionID,
 		}); err != nil {
@@ -275,7 +276,7 @@ func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize in
 		Sessions: make([]storage.SessionRecord, 0, pageSize),
 	}
 
-	sessions, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Session) string {
+	sessions, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.Session) string {
 		return row.ID
 	}, dbSessionToDomain)
 	if err != nil {

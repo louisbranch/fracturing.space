@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -30,7 +31,7 @@ func (s *Store) PutSceneCharacter(ctx context.Context, rec storage.SceneCharacte
 		`INSERT INTO scene_characters (campaign_id, scene_id, character_id, added_at)
 		 VALUES (?, ?, ?, ?)
 		 ON CONFLICT (campaign_id, scene_id, character_id) DO NOTHING`,
-		rec.CampaignID, rec.SceneID, rec.CharacterID, toMillis(rec.AddedAt),
+		rec.CampaignID, rec.SceneID, rec.CharacterID, sqliteutil.ToMillis(rec.AddedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put scene character: %w", err)
@@ -99,7 +100,7 @@ func (s *Store) ListSceneCharacters(ctx context.Context, campaignID, sceneID str
 		if err := rows.Scan(&rec.CampaignID, &rec.SceneID, &rec.CharacterID, &addedAt); err != nil {
 			return nil, fmt.Errorf("scan scene character: %w", err)
 		}
-		rec.AddedAt = fromMillis(addedAt)
+		rec.AddedAt = sqliteutil.FromMillis(addedAt)
 		result = append(result, rec)
 	}
 	if err := rows.Err(); err != nil {

@@ -3,6 +3,7 @@ package charactermutationtransport
 import (
 	"testing"
 
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -11,11 +12,11 @@ import (
 
 func TestRequireDaggerheartSystemf(t *testing.T) {
 	record := storage.CampaignRecord{System: systembridge.SystemIDDaggerheart}
-	if err := requireDaggerheartSystemf(record, "unsupported %s", "operation"); err != nil {
-		t.Fatalf("requireDaggerheartSystemf returned error: %v", err)
+	if err := daggerheartguard.RequireDaggerheartSystemf(record, "unsupported %s", "operation"); err != nil {
+		t.Fatalf("RequireDaggerheartSystemf returned error: %v", err)
 	}
 
-	err := requireDaggerheartSystemf(storage.CampaignRecord{System: systembridge.SystemID("other")}, "unsupported %s", "operation")
+	err := daggerheartguard.RequireDaggerheartSystemf(storage.CampaignRecord{System: systembridge.SystemID("other")}, "unsupported %s", "operation")
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}

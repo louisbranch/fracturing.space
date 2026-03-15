@@ -10,19 +10,12 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite/migrations"
 	msqlite "modernc.org/sqlite"
 	sqlite3lib "modernc.org/sqlite/lib"
 )
-
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
 
 func encodeScopes(scopes []string) (string, error) {
 	if len(scopes) == 0 {
@@ -89,7 +82,7 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) runMigrations() error {
-	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "")
+	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "", time.Now)
 }
 
 func extractUpMigration(content string) string {
@@ -148,18 +141,18 @@ func scanProviderGrantRow(row *sql.Row) (storage.ProviderGrantRecord, error) {
 		return storage.ProviderGrantRecord{}, err
 	}
 	rec.GrantedScopes = scopes
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if revokedAt.Valid {
-		value := fromMillis(revokedAt.Int64)
+		value := sqliteutil.FromMillis(revokedAt.Int64)
 		rec.RevokedAt = &value
 	}
 	if expiresAt.Valid {
-		value := fromMillis(expiresAt.Int64)
+		value := sqliteutil.FromMillis(expiresAt.Int64)
 		rec.ExpiresAt = &value
 	}
 	if lastRefreshedAt.Valid {
-		value := fromMillis(lastRefreshedAt.Int64)
+		value := sqliteutil.FromMillis(lastRefreshedAt.Int64)
 		rec.LastRefreshedAt = &value
 	}
 	return rec, nil
@@ -194,11 +187,11 @@ func scanProviderConnectSessionRow(row *sql.Row) (storage.ProviderConnectSession
 		return storage.ProviderConnectSessionRecord{}, err
 	}
 	rec.RequestedScopes = scopes
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
-	rec.ExpiresAt = fromMillis(expiresAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
+	rec.ExpiresAt = sqliteutil.FromMillis(expiresAt)
 	if completedAt.Valid {
-		value := fromMillis(completedAt.Int64)
+		value := sqliteutil.FromMillis(completedAt.Int64)
 		rec.CompletedAt = &value
 	}
 	return rec, nil
@@ -236,18 +229,18 @@ func scanProviderGrantRows(rows *sql.Rows) (storage.ProviderGrantRecord, error) 
 		return storage.ProviderGrantRecord{}, err
 	}
 	rec.GrantedScopes = scopes
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if revokedAt.Valid {
-		value := fromMillis(revokedAt.Int64)
+		value := sqliteutil.FromMillis(revokedAt.Int64)
 		rec.RevokedAt = &value
 	}
 	if expiresAt.Valid {
-		value := fromMillis(expiresAt.Int64)
+		value := sqliteutil.FromMillis(expiresAt.Int64)
 		rec.ExpiresAt = &value
 	}
 	if lastRefreshedAt.Valid {
-		value := fromMillis(lastRefreshedAt.Int64)
+		value := sqliteutil.FromMillis(lastRefreshedAt.Int64)
 		rec.LastRefreshedAt = &value
 	}
 	return rec, nil
@@ -276,10 +269,10 @@ func scanAccessRequestRow(row *sql.Row) (storage.AccessRequestRecord, error) {
 	); err != nil {
 		return storage.AccessRequestRecord{}, err
 	}
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if reviewedAt.Valid {
-		value := fromMillis(reviewedAt.Int64)
+		value := sqliteutil.FromMillis(reviewedAt.Int64)
 		rec.ReviewedAt = &value
 	}
 	return rec, nil
@@ -308,10 +301,10 @@ func scanAccessRequestRows(rows *sql.Rows) (storage.AccessRequestRecord, error) 
 	); err != nil {
 		return storage.AccessRequestRecord{}, err
 	}
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if reviewedAt.Valid {
-		value := fromMillis(reviewedAt.Int64)
+		value := sqliteutil.FromMillis(reviewedAt.Int64)
 		rec.ReviewedAt = &value
 	}
 	return rec, nil

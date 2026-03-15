@@ -171,6 +171,30 @@ func TestFoldRouter_HandlerErrorPropagates(t *testing.T) {
 	}
 }
 
+func TestHandleFold_PanicsOnDuplicateEventType(t *testing.T) {
+	router := NewFoldRouter(func(v any) (*foldRouterState, error) {
+		if v == nil {
+			return &foldRouterState{}, nil
+		}
+		s, ok := v.(*foldRouterState)
+		if !ok {
+			return nil, errors.New("type mismatch")
+		}
+		return s, nil
+	})
+	HandleFold(router, event.Type("test.counter"), func(s *foldRouterState, p foldCounterPayload) error {
+		return nil
+	})
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for duplicate fold handler registration")
+		}
+	}()
+	HandleFold(router, event.Type("test.counter"), func(s *foldRouterState, p foldCounterPayload) error {
+		return nil
+	})
+}
+
 func TestFoldRouter_FoldHandledTypes(t *testing.T) {
 	router := NewFoldRouter(func(v any) (*foldRouterState, error) {
 		if v == nil {

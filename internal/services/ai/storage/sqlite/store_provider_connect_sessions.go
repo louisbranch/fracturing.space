@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -45,7 +46,7 @@ func (s *Store) PutProviderConnectSession(ctx context.Context, record storage.Pr
 	}
 	var completedAt sql.NullInt64
 	if record.CompletedAt != nil {
-		completedAt = sql.NullInt64{Int64: toMillis(*record.CompletedAt), Valid: true}
+		completedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.CompletedAt), Valid: true}
 	}
 
 	_, err = s.sqlDB.ExecContext(ctx, `
@@ -70,9 +71,9 @@ ON CONFLICT(id) DO UPDATE SET
 		scopesJSON,
 		record.StateHash,
 		record.CodeVerifierCiphertext,
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
-		toMillis(record.ExpiresAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.ExpiresAt),
 		completedAt,
 	)
 	if err != nil {
@@ -132,7 +133,7 @@ func (s *Store) CompleteProviderConnectSession(ctx context.Context, ownerUserID 
 UPDATE ai_provider_connect_sessions
 SET status = 'completed', updated_at = ?, completed_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'pending'
-`, toMillis(updatedAt), toMillis(completedAt.UTC()), ownerUserID, connectSessionID)
+`, sqliteutil.ToMillis(updatedAt), sqliteutil.ToMillis(completedAt.UTC()), ownerUserID, connectSessionID)
 	if err != nil {
 		return fmt.Errorf("complete provider connect session: %w", err)
 	}

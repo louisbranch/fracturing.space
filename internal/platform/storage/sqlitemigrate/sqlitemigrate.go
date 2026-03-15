@@ -14,7 +14,8 @@ import (
 const migrationTable = "schema_migrations"
 
 // ApplyMigrations executes embedded migrations from migrationRoot at most once per file.
-func ApplyMigrations(sqlDB *sql.DB, migrationFS fs.FS, migrationRoot string) error {
+// The now function provides the clock for recording when each migration was applied.
+func ApplyMigrations(sqlDB *sql.DB, migrationFS fs.FS, migrationRoot string, now func() time.Time) error {
 	if sqlDB == nil {
 		return fmt.Errorf("sql db is required")
 	}
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS %s (
 		if _, err := tx.Exec(
 			fmt.Sprintf("INSERT OR IGNORE INTO %s (name, applied_at) VALUES (?, ?)", migrationTable),
 			filePath,
-			time.Now().UTC().UnixMilli(),
+			now().UTC().UnixMilli(),
 		); err != nil {
 			_ = tx.Rollback()
 			return fmt.Errorf("record migration %s: %w", file, err)

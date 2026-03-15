@@ -21,8 +21,8 @@ func TestFormatFallbacks(t *testing.T) {
 	if cat.Format("unknown", nil) != "unknown" {
 		t.Fatal("expected code fallback when template missing")
 	}
-	if cat.Format("code", nil) != "hello <no value>" {
-		t.Fatal("expected template to render missing metadata")
+	if cat.Format("code", nil) != "hello " {
+		t.Fatal("expected template to render missing metadata as zero value")
 	}
 }
 

@@ -36,7 +36,7 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open sqlite store: %w", err)
 	}
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, ""); err != nil {
+	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, "", time.Now); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("apply play sqlite migrations: %w", err)
 	}

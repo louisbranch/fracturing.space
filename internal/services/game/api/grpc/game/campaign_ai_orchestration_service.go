@@ -6,6 +6,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/interactiontransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -15,7 +16,7 @@ import (
 // writes for AI-owned GM turns.
 type CampaignAIOrchestrationService struct {
 	campaignv1.UnimplementedCampaignAIOrchestrationServiceServer
-	app campaignAIOrchestrationApplication
+	app interactiontransport.AIOrchestrationApplication
 }
 
 func NewCampaignAIOrchestrationService(stores Stores) *CampaignAIOrchestrationService {

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 )
 
@@ -45,7 +46,7 @@ func putWebSessionWithExecutor(ctx context.Context, exec execContexter, session 
 	}
 	var revokedAt sql.NullInt64
 	if normalized.RevokedAt != nil {
-		revokedAt = sql.NullInt64{Int64: toMillis(normalized.RevokedAt.UTC()), Valid: true}
+		revokedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(normalized.RevokedAt.UTC()), Valid: true}
 	}
 	_, err = exec.ExecContext(ctx, `
 INSERT INTO web_sessions (id, user_id, created_at, expires_at, revoked_at)
@@ -55,7 +56,7 @@ ON CONFLICT(id) DO UPDATE SET
   created_at = excluded.created_at,
   expires_at = excluded.expires_at,
   revoked_at = excluded.revoked_at
-`, normalized.ID, normalized.UserID, toMillis(normalized.CreatedAt.UTC()), toMillis(normalized.ExpiresAt.UTC()), revokedAt)
+`, normalized.ID, normalized.UserID, sqliteutil.ToMillis(normalized.CreatedAt.UTC()), sqliteutil.ToMillis(normalized.ExpiresAt.UTC()), revokedAt)
 	if err != nil {
 		return fmt.Errorf("Put web session: %w", err)
 	}
@@ -89,10 +90,10 @@ WHERE id = ?
 		}
 		return storage.WebSession{}, fmt.Errorf("Get web session: %w", err)
 	}
-	session.CreatedAt = fromMillis(createdAt)
-	session.ExpiresAt = fromMillis(expiresAt)
+	session.CreatedAt = sqliteutil.FromMillis(createdAt)
+	session.ExpiresAt = sqliteutil.FromMillis(expiresAt)
 	if revokedAt.Valid {
-		value := fromMillis(revokedAt.Int64)
+		value := sqliteutil.FromMillis(revokedAt.Int64)
 		session.RevokedAt = &value
 	}
 	return session, nil
@@ -113,7 +114,7 @@ func (s *Store) RevokeWebSession(ctx context.Context, id string, revokedAt time.
 	if revokedAt.IsZero() {
 		revokedAt = time.Now().UTC()
 	}
-	res, err := s.sqlDB.ExecContext(ctx, `UPDATE web_sessions SET revoked_at = ? WHERE id = ?`, toMillis(revokedAt.UTC()), id)
+	res, err := s.sqlDB.ExecContext(ctx, `UPDATE web_sessions SET revoked_at = ? WHERE id = ?`, sqliteutil.ToMillis(revokedAt.UTC()), id)
 	if err != nil {
 		return fmt.Errorf("Revoke web session: %w", err)
 	}
@@ -142,7 +143,7 @@ func (s *Store) RevokeWebSessionsByUser(ctx context.Context, userID string, revo
 	if revokedAt.IsZero() {
 		revokedAt = time.Now().UTC()
 	}
-	_, err := s.sqlDB.ExecContext(ctx, `UPDATE web_sessions SET revoked_at = ? WHERE user_id = ?`, toMillis(revokedAt.UTC()), userID)
+	_, err := s.sqlDB.ExecContext(ctx, `UPDATE web_sessions SET revoked_at = ? WHERE user_id = ?`, sqliteutil.ToMillis(revokedAt.UTC()), userID)
 	if err != nil {
 		return fmt.Errorf("Revoke web sessions by user: %w", err)
 	}
@@ -160,7 +161,7 @@ func (s *Store) DeleteExpiredWebSessions(ctx context.Context, now time.Time) err
 	if now.IsZero() {
 		now = time.Now().UTC()
 	}
-	_, err := s.sqlDB.ExecContext(ctx, `DELETE FROM web_sessions WHERE expires_at <= ?`, toMillis(now.UTC()))
+	_, err := s.sqlDB.ExecContext(ctx, `DELETE FROM web_sessions WHERE expires_at <= ?`, sqliteutil.ToMillis(now.UTC()))
 	if err != nil {
 		return fmt.Errorf("Delete expired web sessions: %w", err)
 	}

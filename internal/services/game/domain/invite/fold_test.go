@@ -30,13 +30,13 @@ func TestFoldInviteCreatedSetsFields(t *testing.T) {
 	if updated.CreatedByParticipantID != "gm-1" {
 		t.Fatalf("created by participant id = %s, want %s", updated.CreatedByParticipantID, "gm-1")
 	}
-	if updated.Status != "pending" {
+	if updated.Status != statusPending {
 		t.Fatalf("status = %s, want %s", updated.Status, "pending")
 	}
 }
 
 func TestFoldInviteClaimedUpdatesStatus(t *testing.T) {
-	state := State{Created: true, InviteID: "inv-1", Status: "pending"}
+	state := State{Created: true, InviteID: "inv-1", Status: statusPending}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("invite.claimed"),
 		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","user_id":"user-1","jti":"jwt-1"}`),
@@ -44,13 +44,13 @@ func TestFoldInviteClaimedUpdatesStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if updated.Status != "claimed" {
+	if updated.Status != statusClaimed {
 		t.Fatalf("status = %s, want %s", updated.Status, "claimed")
 	}
 }
 
 func TestFoldInviteRevokedUpdatesStatus(t *testing.T) {
-	state := State{Created: true, InviteID: "inv-1", Status: "pending"}
+	state := State{Created: true, InviteID: "inv-1", Status: statusPending}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("invite.revoked"),
 		PayloadJSON: []byte(`{"invite_id":"inv-1"}`),
@@ -58,13 +58,13 @@ func TestFoldInviteRevokedUpdatesStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if updated.Status != "revoked" {
+	if updated.Status != statusRevoked {
 		t.Fatalf("status = %s, want %s", updated.Status, "revoked")
 	}
 }
 
 func TestFoldInviteUpdatedSetsStatus(t *testing.T) {
-	state := State{Created: true, InviteID: "inv-1", Status: "pending"}
+	state := State{Created: true, InviteID: "inv-1", Status: statusPending}
 	updated, err := Fold(state, event.Event{
 		Type:        event.Type("invite.updated"),
 		PayloadJSON: []byte(`{"invite_id":"inv-1","status":"revoked"}`),
@@ -72,8 +72,40 @@ func TestFoldInviteUpdatedSetsStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if updated.Status != "revoked" {
+	if updated.Status != statusRevoked {
 		t.Fatalf("status = %s, want %s", updated.Status, "revoked")
+	}
+}
+
+func TestFoldInviteCreatedPreservesUnknownStatus(t *testing.T) {
+	state := State{}
+	updated, err := Fold(state, event.Event{
+		Type:        event.Type("invite.created"),
+		PayloadJSON: []byte(`{"invite_id":"inv-1","participant_id":"p-1","status":"custom_status"}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Invariant: unrecognized status values are preserved verbatim so that
+	// replay does not discard data introduced by newer event producers.
+	if updated.Status != Status("custom_status") {
+		t.Fatalf("status = %s, want custom_status", updated.Status)
+	}
+}
+
+func TestFoldInviteUpdatedPreservesUnknownStatus(t *testing.T) {
+	state := State{Created: true, InviteID: "inv-1", Status: statusPending}
+	updated, err := Fold(state, event.Event{
+		Type:        event.Type("invite.updated"),
+		PayloadJSON: []byte(`{"invite_id":"inv-1","status":"custom_status"}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// Invariant: unrecognized status values are preserved verbatim so that
+	// replay does not discard data introduced by newer event producers.
+	if updated.Status != Status("custom_status") {
+		t.Fatalf("status = %s, want custom_status", updated.Status)
 	}
 }
 
@@ -86,7 +118,7 @@ func TestFoldInviteCreatedNormalizesStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if updated.Status != "pending" {
+	if updated.Status != statusPending {
 		t.Fatalf("status = %s, want %s", updated.Status, "pending")
 	}
 }
