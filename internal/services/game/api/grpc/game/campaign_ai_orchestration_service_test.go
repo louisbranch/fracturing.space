@@ -1,0 +1,173 @@
+package game
+
+import (
+	"context"
+	"testing"
+
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"google.golang.org/grpc/codes"
+)
+
+func TestNewCampaignAIOrchestrationServiceRejectsInvalidRequests(t *testing.T) {
+	t.Parallel()
+
+	svc := NewCampaignAIOrchestrationService(Stores{})
+	ctx := context.Background()
+
+	tests := []struct {
+		name string
+		run  func() error
+	}{
+		{name: "queue nil", run: func() error { _, err := svc.QueueAIGMTurn(ctx, nil); return err }},
+		{name: "queue missing campaign", run: func() error {
+			_, err := svc.QueueAIGMTurn(ctx, &gamev1.QueueAIGMTurnRequest{SessionId: "sess-1"})
+			return err
+		}},
+		{name: "start missing token", run: func() error {
+			_, err := svc.StartAIGMTurn(ctx, &gamev1.StartAIGMTurnRequest{CampaignId: "c1", SessionId: "sess-1"})
+			return err
+		}},
+		{name: "fail missing token", run: func() error {
+			_, err := svc.FailAIGMTurn(ctx, &gamev1.FailAIGMTurnRequest{CampaignId: "c1", SessionId: "sess-1"})
+			return err
+		}},
+		{name: "complete missing token", run: func() error {
+			_, err := svc.CompleteAIGMTurn(ctx, &gamev1.CompleteAIGMTurnRequest{CampaignId: "c1", SessionId: "sess-1"})
+			return err
+		}},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			assertStatusCode(t, tc.run(), codes.InvalidArgument)
+		})
+	}
+}
+
+func TestCampaignAIOrchestrationServiceQueueReturnsIdleWhenSessionIsNotEligible(t *testing.T) {
+	t.Parallel()
+
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	participantStore := newFakeParticipantStore()
+	sessionInteractionStore := &fakeSessionInteractionStore{}
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:        "c1",
+		Name:      "Test Campaign",
+		System:    bridge.SystemIDDaggerheart,
+		Status:    campaign.StatusActive,
+		GmMode:    campaign.GmModeAI,
+		AIAgentID: "agent-1",
+	}
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"sess-1": {ID: "sess-1", CampaignID: "c1", Status: session.StatusActive},
+	}
+	sessionStore.activeSession["c1"] = "sess-1"
+	participantStore.participants["c1"] = map[string]storage.ParticipantRecord{
+		"gm-ai": {
+			ID:         "gm-ai",
+			CampaignID: "c1",
+			Role:       participant.RoleGM,
+			Controller: participant.ControllerAI,
+		},
+	}
+
+	svc := NewCampaignAIOrchestrationService(Stores{
+		Campaign:           campaignStore,
+		Session:            sessionStore,
+		Participant:        participantStore,
+		SessionInteraction: sessionInteractionStore,
+	})
+
+	resp, err := svc.QueueAIGMTurn(context.Background(), &gamev1.QueueAIGMTurnRequest{
+		CampaignId:      "c1",
+		SessionId:       "sess-1",
+		SourceEventType: "scene.player_phase_ended",
+	})
+	if err != nil {
+		t.Fatalf("QueueAIGMTurn error = %v", err)
+	}
+	if resp.GetAiTurn().GetStatus() != gamev1.AITurnStatus_AI_TURN_STATUS_IDLE {
+		t.Fatalf("ai turn status = %v, want idle", resp.GetAiTurn().GetStatus())
+	}
+}
+
+func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *testing.T) {
+	t.Parallel()
+
+	campaignStore := newFakeCampaignStore()
+	sessionStore := newFakeSessionStore()
+	sessionInteractionStore := &fakeSessionInteractionStore{
+		values: map[string]storage.SessionInteraction{
+			"c1:sess-1": {
+				CampaignID: "c1",
+				SessionID:  "sess-1",
+				AITurn: storage.SessionAITurn{
+					Status:    session.AITurnStatusQueued,
+					TurnToken: "turn-1",
+				},
+			},
+		},
+	}
+
+	campaignStore.campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		System: bridge.SystemIDDaggerheart,
+		Status: campaign.StatusActive,
+	}
+	sessionStore.sessions["c1"] = map[string]storage.SessionRecord{
+		"sess-1": {ID: "sess-1", CampaignID: "c1", Status: session.StatusActive},
+	}
+	sessionStore.activeSession["c1"] = "sess-1"
+
+	svc := NewCampaignAIOrchestrationService(Stores{
+		Campaign:           campaignStore,
+		Session:            sessionStore,
+		SessionInteraction: sessionInteractionStore,
+	})
+
+	_, err := svc.StartAIGMTurn(context.Background(), &gamev1.StartAIGMTurnRequest{
+		CampaignId: "c1",
+		SessionId:  "sess-1",
+		TurnToken:  "turn-1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+
+	_, err = svc.FailAIGMTurn(context.Background(), &gamev1.FailAIGMTurnRequest{
+		CampaignId: "c1",
+		SessionId:  "sess-1",
+		TurnToken:  "turn-1",
+		LastError:  "boom",
+	})
+	assertStatusCode(t, err, codes.Internal)
+
+	_, err = svc.CompleteAIGMTurn(context.Background(), &gamev1.CompleteAIGMTurnRequest{
+		CampaignId: "c1",
+		SessionId:  "sess-1",
+		TurnToken:  "turn-1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestCampaignAIOrchestrationApplicationCampaignSupportsAI(t *testing.T) {
+	t.Parallel()
+
+	app := campaignAIOrchestrationApplication{}
+	if !app.campaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeAI}) {
+		t.Fatal("gm mode ai should be supported")
+	}
+	if !app.campaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeHybrid}) {
+		t.Fatal("gm mode hybrid should be supported")
+	}
+	if app.campaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeHuman}) {
+		t.Fatal("gm mode human should not be supported")
+	}
+}

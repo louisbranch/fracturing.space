@@ -20,10 +20,34 @@ import (
 
 func sessionManagerParticipantStore(campaignID string) *fakeParticipantStore {
 	store := newFakeParticipantStore()
-	store.participants[campaignID] = map[string]storage.ParticipantRecord{
-		"manager-1": managerParticipantRecord(campaignID, "manager-1"),
-	}
+	record := managerParticipantRecord(campaignID, "manager-1")
+	record.Role = participant.RoleGM
+	record.Controller = participant.ControllerHuman
+	store.participants[campaignID] = map[string]storage.ParticipantRecord{"manager-1": record}
 	return store
+}
+
+type fakeSessionInteractionStore struct {
+	values map[string]storage.SessionInteraction
+}
+
+func (s *fakeSessionInteractionStore) GetSessionInteraction(_ context.Context, campaignID, sessionID string) (storage.SessionInteraction, error) {
+	if s == nil || s.values == nil {
+		return storage.SessionInteraction{}, storage.ErrNotFound
+	}
+	value, ok := s.values[campaignID+":"+sessionID]
+	if !ok {
+		return storage.SessionInteraction{}, storage.ErrNotFound
+	}
+	return value, nil
+}
+
+func (s *fakeSessionInteractionStore) PutSessionInteraction(_ context.Context, interaction storage.SessionInteraction) error {
+	if s.values == nil {
+		s.values = make(map[string]storage.SessionInteraction)
+	}
+	s.values[interaction.CampaignID+":"+interaction.SessionID] = interaction
+	return nil
 }
 
 func TestStartSession_NilRequest(t *testing.T) {
@@ -121,6 +145,7 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	sessionInteractionStore := &fakeSessionInteractionStore{}
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
@@ -132,36 +157,53 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 		GmMode: campaign.GmModeHuman,
 	}
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
-		Decision: command.Accept(
-			event.Event{
+		Decision: command.Accept(),
+	}, resultsByType: map[command.Type]engine.Result{
+		"session.start": {
+			Decision: command.Accept(
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("campaign.updated"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					EntityType:  "campaign",
+					EntityID:    "c1",
+					PayloadJSON: []byte(`{"fields":{"status":"active"}}`),
+				},
+				event.Event{
+					CampaignID:  "c1",
+					Type:        event.Type("session.started"),
+					Timestamp:   now,
+					ActorType:   event.ActorTypeSystem,
+					SessionID:   "session-123",
+					EntityType:  "session",
+					EntityID:    "session-123",
+					PayloadJSON: []byte(`{"session_id":"session-123","session_name":"First Session"}`),
+				},
+			),
+		},
+		"session.gm_authority.set": {
+			Decision: command.Accept(event.Event{
 				CampaignID:  "c1",
-				Type:        event.Type("campaign.updated"),
-				Timestamp:   now,
-				ActorType:   event.ActorTypeSystem,
-				EntityType:  "campaign",
-				EntityID:    "c1",
-				PayloadJSON: []byte(`{"fields":{"status":"active"}}`),
-			},
-			event.Event{
-				CampaignID:  "c1",
-				Type:        event.Type("session.started"),
+				Type:        event.Type("session.gm_authority_set"),
 				Timestamp:   now,
 				ActorType:   event.ActorTypeSystem,
 				SessionID:   "session-123",
 				EntityType:  "session",
 				EntityID:    "session-123",
-				PayloadJSON: []byte(`{"session_id":"session-123","session_name":"First Session"}`),
-			},
-		),
+				PayloadJSON: []byte(`{"session_id":"session-123","participant_id":"manager-1"}`),
+			}),
+		},
 	}}
 
 	svc := newSessionServiceWithDependencies(
 		Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Campaign:           campaignStore,
+			Session:            sessionStore,
+			Participant:        participantStore,
+			SessionInteraction: sessionInteractionStore,
+			Event:              eventStore,
+			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		fixedClock(now),
 		fixedIDGenerator("session-123"),
@@ -183,17 +225,20 @@ func TestStartSession_Success_ActivatesDraftCampaign(t *testing.T) {
 	if resp.Session.Status != statev1.SessionStatus_SESSION_ACTIVE {
 		t.Errorf("Session Status = %v, want %v", resp.Session.Status, statev1.SessionStatus_SESSION_ACTIVE)
 	}
-	if domain.calls != 1 {
-		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
 	}
-	if got := len(eventStore.events["c1"]); got != 2 {
-		t.Fatalf("expected 2 events, got %d", got)
+	if got := len(eventStore.events["c1"]); got != 3 {
+		t.Fatalf("expected 3 events, got %d", got)
 	}
 	if eventStore.events["c1"][0].Type != event.Type("campaign.updated") {
 		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("campaign.updated"))
 	}
 	if eventStore.events["c1"][1].Type != event.Type("session.started") {
 		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][1].Type, event.Type("session.started"))
+	}
+	if eventStore.events["c1"][2].Type != event.Type("session.gm_authority_set") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][2].Type, event.Type("session.gm_authority_set"))
 	}
 
 	// Verify campaign was activated
@@ -207,30 +252,48 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	sessionInteractionStore := &fakeSessionInteractionStore{}
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
-		Decision: command.Accept(event.Event{
-			CampaignID:  "c1",
-			Type:        event.Type("session.started"),
-			Timestamp:   now,
-			ActorType:   event.ActorTypeSystem,
-			SessionID:   "session-123",
-			EntityType:  "session",
-			EntityID:    "session-123",
-			PayloadJSON: []byte(`{"session_id":"session-123"}`),
-		}),
+		Decision: command.Accept(),
+	}, resultsByType: map[command.Type]engine.Result{
+		"session.start": {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("session.started"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "session-123",
+				EntityType:  "session",
+				EntityID:    "session-123",
+				PayloadJSON: []byte(`{"session_id":"session-123"}`),
+			}),
+		},
+		"session.gm_authority.set": {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("session.gm_authority_set"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "session-123",
+				EntityType:  "session",
+				EntityID:    "session-123",
+				PayloadJSON: []byte(`{"session_id":"session-123","participant_id":"manager-1"}`),
+			}),
+		},
 	}}
 
 	svc := newSessionServiceWithDependencies(
 		Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Campaign:           campaignStore,
+			Session:            sessionStore,
+			Participant:        participantStore,
+			SessionInteraction: sessionInteractionStore,
+			Event:              eventStore,
+			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		fixedClock(now),
 		fixedIDGenerator("session-123"),
@@ -243,11 +306,14 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	if resp.Session == nil {
 		t.Fatal("StartSession response has nil session")
 	}
-	if got := len(eventStore.events["c1"]); got != 1 {
-		t.Fatalf("expected 1 event, got %d", got)
+	if got := len(eventStore.events["c1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
 	}
 	if eventStore.events["c1"][0].Type != event.Type("session.started") {
 		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][0].Type, event.Type("session.started"))
+	}
+	if eventStore.events["c1"][1].Type != event.Type("session.gm_authority_set") {
+		t.Fatalf("event type = %s, want %s", eventStore.events["c1"][1].Type, event.Type("session.gm_authority_set"))
 	}
 }
 
@@ -255,31 +321,49 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	sessionStore := newFakeSessionStore()
 	participantStore := sessionManagerParticipantStore("c1")
+	sessionInteractionStore := &fakeSessionInteractionStore{}
 	eventStore := newFakeEventStore()
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
 
 	domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
-		Decision: command.Accept(event.Event{
-			CampaignID:  "c1",
-			Type:        event.Type("session.started"),
-			Timestamp:   now,
-			ActorType:   event.ActorTypeSystem,
-			SessionID:   "session-123",
-			EntityType:  "session",
-			EntityID:    "session-123",
-			PayloadJSON: []byte(`{"session_id":"session-123","session_name":"First Session"}`),
-		}),
+		Decision: command.Accept(),
+	}, resultsByType: map[command.Type]engine.Result{
+		"session.start": {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("session.started"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "session-123",
+				EntityType:  "session",
+				EntityID:    "session-123",
+				PayloadJSON: []byte(`{"session_id":"session-123","session_name":"First Session"}`),
+			}),
+		},
+		"session.gm_authority.set": {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("session.gm_authority_set"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "session-123",
+				EntityType:  "session",
+				EntityID:    "session-123",
+				PayloadJSON: []byte(`{"session_id":"session-123","participant_id":"manager-1"}`),
+			}),
+		},
 	}}
 
 	svc := newSessionServiceWithDependencies(
 		Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			Participant: participantStore,
-			Event:       eventStore,
-			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Campaign:           campaignStore,
+			Session:            sessionStore,
+			Participant:        participantStore,
+			SessionInteraction: sessionInteractionStore,
+			Event:              eventStore,
+			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
 		fixedClock(now),
 		fixedIDGenerator("session-123"),
@@ -292,11 +376,11 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 	if err != nil {
 		t.Fatalf("StartSession returned error: %v", err)
 	}
-	if domain.calls != 1 {
-		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called twice, got %d", domain.calls)
 	}
-	if domain.lastCommand.Type != command.Type("session.start") {
-		t.Fatalf("command type = %s, want %s", domain.lastCommand.Type, "session.start")
+	if len(domain.commands) == 0 || domain.commands[0].Type != command.Type("session.start") {
+		t.Fatalf("first command type = %v, want %s", domain.commands, "session.start")
 	}
 }
 

@@ -80,19 +80,16 @@ Required properties:
   them instead of loading a full collection and rediscovering one row in
   transport or render code.
 - Transport layers must not approximate permissions from UI fallback logic.
-- Chat/game UI routes must consume game-owned communication context for stream
-  visibility, persona selection, and scene/session awareness; browser code must
-  not derive those rules from transcript bodies.
+- Chat/game UI routes must consume game-owned interaction state for active scene
+  awareness, player-phase status, and OOC state; browser code must not derive
+  gameplay authority from transcript bodies.
 - Campaign AI automation controls should remain a dedicated campaign automation capability seam; do not couple AI binding UI to participant edit pages just because the GM seat may be AI-controlled.
 - Campaign detail pages should render through the area-owned
   `internal/services/web/modules/campaigns/render` seam, not new page-specific `templates` models.
-- Browser controls must treat persona selection as message presentation state;
-  participant-scoped controls such as gate responses still come from
-  authoritative game workflow state.
 - The canonical campaign game route (`/app/campaigns/{campaign_id}/game`) is a
   server-rendered game surface that bootstraps `CampaignGameSurface` metadata
-  from the game communication service and uses chat websocket delivery only for
-  transcript and realtime state updates.
+  from `game.v1.InteractionService`. Optional human chat is a separate
+  transport-only surface and must not drive active-play workflow.
 
 ## Principal identity seam
 

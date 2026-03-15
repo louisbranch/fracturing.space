@@ -49,7 +49,7 @@ func gateWorkflowExtraMetadata(metadata map[string]any) map[string]any {
 	extra := make(map[string]any, len(metadata))
 	for key, value := range metadata {
 		switch key {
-		case gateWorkflowEligibleParticipantIDsKey, gateWorkflowOptionsKey, gateWorkflowResponseAuthorityKey:
+		case gateWorkflowEligibleParticipantIDsKey, gateWorkflowResponseAuthorityKey:
 			continue
 		default:
 			extra[key] = value
@@ -70,34 +70,6 @@ func gateWorkflowCloneMap(values map[string]any) map[string]any {
 		cloned[key] = value
 	}
 	return cloned
-}
-
-func gateWorkflowOptionsForReadyCheck(value any) ([]string, error) {
-	if value == nil {
-		return []string{"ready", "wait"}, nil
-	}
-	options, err := gateWorkflowStringSlice(value, gateWorkflowOptionsKey)
-	if err != nil {
-		return nil, err
-	}
-	if len(options) == 0 {
-		return []string{"ready", "wait"}, nil
-	}
-	if len(options) != 2 || !gateWorkflowContains(options, "ready") || !gateWorkflowContains(options, "wait") {
-		return nil, fmt.Errorf("ready_check options must be exactly [\"ready\", \"wait\"]")
-	}
-	return []string{"ready", "wait"}, nil
-}
-
-func gateWorkflowOptionsForVote(value any) ([]string, error) {
-	options, err := gateWorkflowStringSlice(value, gateWorkflowOptionsKey)
-	if err != nil {
-		return nil, err
-	}
-	if len(options) == 1 {
-		return nil, fmt.Errorf("vote options must contain at least two choices when provided")
-	}
-	return options, nil
 }
 
 func gateWorkflowResponseAuthority(value any, defaultValue string) (string, error) {

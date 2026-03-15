@@ -12,7 +12,7 @@ last_reviewed: "2026-03-09"
 ## Purpose
 
 Define the canonical boundary contract for AI game-master control across user
-credentials, campaign state authority, and chat relay behavior.
+credentials, game-owned interaction authority, and AI execution.
 
 ## Responsibilities
 
@@ -23,17 +23,19 @@ credentials, campaign state authority, and chat relay behavior.
 - Game service:
   - Source of truth for campaign-to-agent binding.
   - Source of truth for active campaign session.
+  - Source of truth for active-play scene/player-phase/OOC state.
   - Source of truth for `ai_auth_epoch` revocation state.
   - Issues signed campaign AI session grants.
 - Chat service:
-  - Consumes game-owned communication context to know which streams/personas are available to each participant connection.
-  - Filters participant traffic into AI relay flow.
-  - Filters AI responses back to campaign participants.
-  - Maintains room AI relay context and refreshes grants.
+  - Provides optional human-only session transcript transport.
+  - Validates campaign/session membership for websocket rooms.
+  - Is not part of AI pacing, turn submission, or AI response relay.
 - AI service:
   - Executes provider calls and orchestration (subagents, MCP augmentation,
     usage accounting).
   - Validates campaign AI session grants before processing turns.
+  - Uses MCP tools/resources to inspect and mutate authoritative game state
+    once GM automation is enabled for a campaign flow.
 
 ## Internal API Boundary
 
@@ -48,10 +50,9 @@ This surface is not a public end-user API. Calls are restricted by
 `x-fracturing-space-service-id` and the game-side allowlist
 (`FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST`).
 
-Game also exposes `game.v1.CommunicationService` for transport/UI surfaces that
-need caller-specific stream visibility and persona eligibility. AI grant flow
-and communication context remain separate contracts: the former authorizes AI
-execution, the latter authorizes participant-facing communication routing.
+Game active-play pacing is exposed through `game.v1.InteractionService`. Chat
+may remain as a separate human transcript surface, but it does not participate
+in AI turn authority.
 
 ## Session Grant Model
 
@@ -64,9 +65,8 @@ Session grants are short-lived signed tokens with claims:
 - `issued_for_user_id` (optional)
 - `jti` / issue + expiry timestamps
 
-The game service issues one grant per room AI context refresh. Chat reuses that
-grant for turn submit/subscribe calls until expiry or invalidation. AI does not
-need to re-authorize through game every turn when the grant remains valid.
+The game service issues grants for AI execution flows owned by game and AI.
+Chat does not request or cache grants.
 
 ## Revocation and Invalidation
 
@@ -99,30 +99,29 @@ Agent bind eligibility requires both:
 
 1. Owner binds an `ai_agent_id` to a campaign.
 2. Game persists binding and advances auth epoch.
-3. Chat joins/syncs room AI context from game and requests a session grant.
-4. Chat buffers ordinary participant transcript locally; it does not submit every
-   chat message to AI.
-5. A new GM handoff request is the default pacing trigger. When chat opens a new
-   `gm_handoff` control gate in an AI-enabled room, it submits one buffered turn
-   payload to AI with `session_grant`.
-6. AI validates token signature/claims and checks auth state (`agent/session/epoch`).
-7. AI executes provider turn and streams results.
-8. Chat forwards AI outputs to campaign participants.
+3. Game interaction state reaches an AI-owned decision point, typically when a
+   player phase closes and authority returns to the GM.
+4. Game or an orchestration worker assembles AI input from authoritative
+   interaction state and requests a session grant when needed.
+5. AI validates token signature/claims and checks auth state (`agent/session/epoch`).
+6. AI executes provider work, using MCP resources for reads and MCP tools for
+   authoritative game-state mutations as needed.
+7. Game/web surfaces present the resulting GM output through the active-play
+   interaction model after those interaction-owned writes are committed.
 
 Current pacing note:
 
-- The buffered handoff payload is a chat-owned aggregate of recent participant
-  transcript plus optional handoff reason text.
-- This is a transitional transport contract. The long-term authority seam is
-  still an explicit game-owned control workflow plus a richer AI input contract,
-  not per-message relay.
+- Human chat transcript is explicitly non-authoritative for AI pacing.
+- AI inputs come from committed interaction state, not buffered websocket chat.
+- AI control should converge on MCP-driven game mutations rather than direct
+  transcript-to-state writes.
 
 ## Failure Behavior
 
 - Missing/invalid/expired grant: AI rejects turn with permission error.
 - Stale epoch/session/agent mismatch: AI rejects as stale precondition.
-- Missing binding or inactive session: game refuses grant issuance; chat keeps
-  relay disabled for that room.
+- Missing binding or inactive session: game refuses grant issuance and no AI
+  turn runs for that interaction state.
 
 ## Session Start Readiness in AI Modes
 
@@ -139,3 +138,5 @@ session-readiness blocker codes and session start must remain blocked.
 - Built-in first-party AI can use the same `ai_agent_id` + grant contract.
 - Provider-specific orchestration (prompt policy, subagents, MCP tools, audit)
   remains AI-service owned and does not leak into game/chat boundaries.
+- Any future AI debug or thought-stream surface is AI-service owned, dev/operator
+  only, and separate from the human session transcript.

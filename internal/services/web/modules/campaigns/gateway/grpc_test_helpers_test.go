@@ -37,7 +37,7 @@ type testGatewayBundle interface {
 // broad read fixtures without reintroducing that dependency bag to production.
 type GRPCGatewayReadDeps struct {
 	Campaign           CampaignReadClient
-	Communication      CommunicationClient
+	Interaction        InteractionClient
 	Agent              AgentClient
 	Participant        ParticipantReadClient
 	Character          CharacterReadClient
@@ -91,7 +91,7 @@ type GRPCGateway struct {
 }
 
 func NewGRPCGateway(deps GRPCGatewayDeps) testGatewayBundle {
-	if deps.CatalogRead.Campaign == nil || deps.GameRead.Communication == nil || deps.ParticipantRead.Participant == nil ||
+	if deps.CatalogRead.Campaign == nil || deps.GameRead.Interaction == nil || deps.ParticipantRead.Participant == nil ||
 		deps.CharacterRead.Character == nil || deps.CharacterRead.DaggerheartContent == nil ||
 		deps.SessionRead.Session == nil || deps.SessionRead.Campaign == nil ||
 		deps.InviteRead.Invite == nil || deps.InviteRead.Participant == nil || deps.InviteRead.Social == nil || deps.InviteRead.Auth == nil ||
@@ -108,7 +108,7 @@ func NewGRPCGateway(deps GRPCGatewayDeps) testGatewayBundle {
 	return GRPCGateway{
 		Read: GRPCGatewayReadDeps{
 			Campaign:           deps.CatalogRead.Campaign,
-			Communication:      deps.GameRead.Communication,
+			Interaction:        deps.GameRead.Interaction,
 			Agent:              deps.AutomationRead.Agent,
 			Participant:        deps.ParticipantRead.Participant,
 			Character:          deps.CharacterRead.Character,
@@ -165,7 +165,7 @@ func (g GRPCGateway) workspaceRead() campaignapp.CampaignWorkspaceReadGateway {
 }
 
 func (g GRPCGateway) gameRead() campaignapp.CampaignGameReadGateway {
-	return gameReadGateway{read: GameReadDeps{Communication: g.Read.Communication}}
+	return gameReadGateway{read: GameReadDeps{Interaction: g.Read.Interaction}}
 }
 
 func (g GRPCGateway) participantRead() campaignapp.CampaignParticipantReadGateway {

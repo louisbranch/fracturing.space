@@ -20,48 +20,64 @@ type fakeCampaignClient struct {
 	createErr     error
 }
 
-type fakeWebCommunicationClient struct {
-	response *statev1.GetCommunicationContextResponse
+type fakeWebInteractionClient struct {
+	response *statev1.GetInteractionStateResponse
 	err      error
 }
 
-func (f fakeWebCommunicationClient) GetCommunicationContext(context.Context, *statev1.GetCommunicationContextRequest, ...grpc.CallOption) (*statev1.GetCommunicationContextResponse, error) {
+func (f fakeWebInteractionClient) GetInteractionState(context.Context, *statev1.GetInteractionStateRequest, ...grpc.CallOption) (*statev1.GetInteractionStateResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
 	if f.response != nil {
 		return f.response, nil
 	}
-	return &statev1.GetCommunicationContextResponse{
-		Context: &statev1.CommunicationContext{
-			CampaignId:       "c1",
-			CampaignName:     "Campaign",
-			DefaultStreamId:  "campaign:c1:table",
-			DefaultPersonaId: "participant:p1",
-			Participant: &statev1.CommunicationParticipant{
+	return &statev1.GetInteractionStateResponse{
+		State: &statev1.InteractionState{
+			Viewer: &statev1.InteractionViewer{
 				ParticipantId: "p1",
 				Name:          "Owner",
 				Role:          statev1.ParticipantRole_PLAYER,
 			},
-			ActiveSession: &statev1.CommunicationSession{
+			ActiveSession: &statev1.InteractionSession{
 				SessionId: "sess-1",
 				Name:      "Session One",
 			},
-			Streams: []*statev1.CommunicationStream{
-				{
-					StreamId:  "campaign:c1:table",
-					Kind:      statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_TABLE,
-					Scope:     statev1.CommunicationStreamScope_COMMUNICATION_STREAM_SCOPE_SESSION,
-					SessionId: "sess-1",
-					Label:     "Table",
+			ActiveScene: &statev1.InteractionScene{
+				SceneId:     "scene-1",
+				SessionId:   "sess-1",
+				Name:        "Bridge",
+				Description: "The bridge shudders under the party's weight.",
+				Characters: []*statev1.InteractionCharacter{
+					{
+						CharacterId:        "char-1",
+						Name:               "Aria",
+						OwnerParticipantId: "p1",
+					},
 				},
 			},
-			Personas: []*statev1.CommunicationPersona{
-				{
-					PersonaId:     "participant:p1",
-					Kind:          statev1.CommunicationPersonaKind_COMMUNICATION_PERSONA_KIND_PARTICIPANT,
-					ParticipantId: "p1",
-					DisplayName:   "Owner",
+			PlayerPhase: &statev1.ScenePlayerPhase{
+				PhaseId:              "phase-1",
+				Status:               statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_PLAYERS,
+				FrameText:            "The bridge starts to crack. What do you do?",
+				ActingCharacterIds:   []string{"char-1"},
+				ActingParticipantIds: []string{"p1"},
+				Slots: []*statev1.ScenePlayerSlot{
+					{
+						ParticipantId: "p1",
+						SummaryText:   "Aria braces against the railing and looks for a safe crossing.",
+						CharacterIds:  []string{"char-1"},
+						Yielded:       true,
+					},
+				},
+			},
+			Ooc: &statev1.OOCState{
+				Posts: []*statev1.OOCPost{
+					{
+						PostId:        "ooc-1",
+						ParticipantId: "p1",
+						Body:          "Quick ruling check before we commit.",
+					},
 				},
 			},
 		},

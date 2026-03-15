@@ -3,6 +3,7 @@ package campaigns
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -30,22 +31,30 @@ func (h handlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID 
 		return
 	}
 	view := CampaignChatView{
-		CampaignID:       campaignID,
-		CampaignName:     page.workspace.Name,
-		BackURL:          routepath.AppCampaign(campaignID),
-		ChatFallbackPort: strings.TrimSpace(h.chatFallbackPort),
-		BootstrapJSON:    string(bootstrapJSON),
-		ParticipantName:  surface.Participant.Name,
-		ParticipantRole:  surface.Participant.Role,
-		SessionName:      surface.SessionName,
-		DefaultStreamID:  surface.DefaultStreamID,
-		DefaultPersonaID: surface.DefaultPersonaID,
-		GateSummary:      campaignGameGateSummary(surface.ActiveSessionGate),
-		SpotlightSummary: campaignGameSpotlightSummary(surface.ActiveSessionSpotlight),
-		ActiveGateType:   activeGateType(surface.ActiveSessionGate),
-		ActiveGateStatus: activeGateStatus(surface.ActiveSessionGate),
-		Streams:          campaignGameStreamViews(surface.Streams, surface.DefaultStreamID),
-		Personas:         campaignGamePersonaViews(surface.Personas, surface.DefaultPersonaID),
+		CampaignID:           campaignID,
+		CampaignName:         page.workspace.Name,
+		BackURL:              routepath.AppCampaign(campaignID),
+		BootstrapJSON:        string(bootstrapJSON),
+		ParticipantName:      surface.Participant.Name,
+		ParticipantRole:      surface.Participant.Role,
+		SessionName:          surface.SessionName,
+		SceneName:            campaignGameSceneName(surface.ActiveScene),
+		SceneDescription:     campaignGameSceneDescription(surface.ActiveScene),
+		PhaseStatus:          campaignGamePhaseStatus(surface.PlayerPhase),
+		PhaseLabel:           campaignGamePhaseLabel(surface.PlayerPhase),
+		PhaseFrame:           campaignGamePhaseFrame(surface.PlayerPhase),
+		OOCSummary:           campaignGameOOCSummary(surface.OOC),
+		HasOpenOOC:           surface.OOC.Open,
+		ActingCharacters:     campaignGameCharacterViews(surface.ActiveScene, surface.PlayerPhase),
+		SceneCharacters:      campaignGameSceneCharacters(surface.ActiveScene),
+		Slots:                campaignGameSlotViews(surface),
+		OOCPosts:             campaignGameOOCPostViews(surface),
+		YieldedParticipants:  append([]string(nil), campaignGameYieldedParticipants(surface)...),
+		OOCReadyParticipants: append([]string(nil), surface.OOC.ReadyToResumeParticipantIDs...),
+		GMAuthorityLabel:     campaignGameGMAuthorityLabel(surface),
+		AITurnStatus:         campaignGameAITurnStatus(surface),
+		AITurnSummary:        campaignGameAITurnSummary(surface),
+		AITurnError:          campaignGameAITurnError(surface),
 	}
 	h.writeCampaignChatHTML(w, r, view, page.lang, page.loc)
 }
@@ -67,112 +76,254 @@ func (h handlers) writeCampaignChatHTML(
 	}
 }
 
-// campaignGameStreamViews maps app-layer stream context into the template view
-// model so the page renders authoritative game-owned routing metadata.
-func campaignGameStreamViews(streams []campaignapp.CampaignGameStream, defaultStreamID string) []CampaignChatStreamView {
-	if len(streams) == 0 {
-		return []CampaignChatStreamView{}
+// campaignGameSceneName keeps template fallbacks centralized for scene titles.
+func campaignGameSceneName(scene *campaignapp.CampaignGameScene) string {
+	if scene == nil {
+		return ""
 	}
-	views := make([]CampaignChatStreamView, 0, len(streams))
-	defaultStreamID = strings.TrimSpace(defaultStreamID)
-	for _, stream := range streams {
-		label := strings.TrimSpace(stream.Label)
-		if label == "" {
-			label = strings.TrimSpace(stream.ID)
-		}
-		secondary := strings.TrimSpace(stream.Scope)
-		if strings.TrimSpace(stream.SceneID) != "" {
-			secondary = "scene · " + strings.TrimSpace(stream.SceneID)
-		} else if strings.TrimSpace(stream.SessionID) != "" {
-			secondary = "session · " + strings.TrimSpace(stream.SessionID)
-		}
-		views = append(views, CampaignChatStreamView{
-			StreamID:      strings.TrimSpace(stream.ID),
-			Label:         label,
-			Kind:          strings.TrimSpace(stream.Kind),
-			Scope:         strings.TrimSpace(stream.Scope),
-			SecondaryText: secondary,
-			Active:        strings.TrimSpace(stream.ID) == defaultStreamID,
+	return strings.TrimSpace(scene.Name)
+}
+
+// campaignGameSceneDescription trims optional scene copy for presentation.
+func campaignGameSceneDescription(scene *campaignapp.CampaignGameScene) string {
+	if scene == nil {
+		return ""
+	}
+	return strings.TrimSpace(scene.Description)
+}
+
+// campaignGamePhaseLabel maps interaction phase state into page copy.
+func campaignGamePhaseLabel(phase *campaignapp.CampaignGamePlayerPhase) string {
+	if phase == nil {
+		return "GM turn"
+	}
+	switch campaignGamePhaseStatus(phase) {
+	case "players":
+		return "Players acting"
+	case "gm_review":
+		return "GM reviewing"
+	case "gm":
+		return "GM turn"
+	default:
+		return "Scene phase"
+	}
+}
+
+// campaignGamePhaseStatus keeps phase-status fallback logic in one view seam.
+func campaignGamePhaseStatus(phase *campaignapp.CampaignGamePlayerPhase) string {
+	if phase == nil {
+		return "gm"
+	}
+	status := strings.TrimSpace(phase.Status)
+	if status == "" {
+		return "gm"
+	}
+	return status
+}
+
+// campaignGamePhaseFrame exposes the current scene frame text for the page.
+func campaignGamePhaseFrame(phase *campaignapp.CampaignGamePlayerPhase) string {
+	if phase == nil {
+		return ""
+	}
+	return strings.TrimSpace(phase.FrameText)
+}
+
+// campaignGameOOCSummary condenses OOC state into a small table-status label.
+func campaignGameOOCSummary(ooc campaignapp.CampaignGameOOCState) string {
+	if !ooc.Open {
+		return "In character"
+	}
+	if ready := len(ooc.ReadyToResumeParticipantIDs); ready > 0 {
+		return "OOC paused · ready " + strconv.Itoa(ready)
+	}
+	return "OOC paused"
+}
+
+// campaignGameGMAuthorityLabel keeps GM-owner copy stable for the game page.
+func campaignGameGMAuthorityLabel(surface campaignapp.CampaignGameSurface) string {
+	if participantID := strings.TrimSpace(surface.GMAuthorityParticipantID); participantID != "" {
+		return participantID
+	}
+	return "Unassigned"
+}
+
+// campaignGameAITurnStatus centralizes the page-level AI-turn status fallback.
+func campaignGameAITurnStatus(surface campaignapp.CampaignGameSurface) string {
+	status := strings.TrimSpace(surface.AITurn.Status)
+	if status == "" {
+		return "idle"
+	}
+	return status
+}
+
+// campaignGameAITurnSummary condenses AI-turn state into a small status label.
+func campaignGameAITurnSummary(surface campaignapp.CampaignGameSurface) string {
+	switch campaignGameAITurnStatus(surface) {
+	case "queued":
+		return "Queued for AI GM resolution"
+	case "running":
+		return "AI GM is resolving the scene"
+	case "failed":
+		return "AI GM turn failed"
+	case "idle":
+		return "No AI GM turn queued"
+	default:
+		return "AI GM state unavailable"
+	}
+}
+
+// campaignGameAITurnError exposes the latest AI-turn failure copy for the page.
+func campaignGameAITurnError(surface campaignapp.CampaignGameSurface) string {
+	return strings.TrimSpace(surface.AITurn.LastError)
+}
+
+// campaignGameSceneCharacters maps scene roster data into template-ready views.
+func campaignGameSceneCharacters(scene *campaignapp.CampaignGameScene) []CampaignChatCharacterView {
+	if scene == nil || len(scene.Characters) == 0 {
+		return []CampaignChatCharacterView{}
+	}
+	views := make([]CampaignChatCharacterView, 0, len(scene.Characters))
+	for _, character := range scene.Characters {
+		views = append(views, CampaignChatCharacterView{
+			CharacterID:        strings.TrimSpace(character.ID),
+			Name:               firstNonEmpty(character.Name, character.ID),
+			OwnerParticipantID: strings.TrimSpace(character.OwnerParticipantID),
 		})
 	}
 	return views
 }
 
-// campaignGamePersonaViews maps app-layer persona options into the template
-// view model so the surface can render allowed speaking identities.
-func campaignGamePersonaViews(personas []campaignapp.CampaignGamePersona, defaultPersonaID string) []CampaignChatPersonaView {
-	if len(personas) == 0 {
-		return []CampaignChatPersonaView{}
+// campaignGameCharacterViews annotates the scene roster with active acting state.
+func campaignGameCharacterViews(scene *campaignapp.CampaignGameScene, phase *campaignapp.CampaignGamePlayerPhase) []CampaignChatCharacterView {
+	views := campaignGameSceneCharacters(scene)
+	if len(views) == 0 || phase == nil {
+		return views
 	}
-	views := make([]CampaignChatPersonaView, 0, len(personas))
-	defaultPersonaID = strings.TrimSpace(defaultPersonaID)
-	for _, persona := range personas {
-		displayName := strings.TrimSpace(persona.DisplayName)
-		if displayName == "" {
-			displayName = strings.TrimSpace(persona.ID)
+	active := make(map[string]struct{}, len(phase.ActingCharacterIDs))
+	for _, characterID := range phase.ActingCharacterIDs {
+		characterID = strings.TrimSpace(characterID)
+		if characterID == "" {
+			continue
 		}
-		kindLabel := strings.TrimSpace(persona.Kind)
-		if strings.TrimSpace(persona.CharacterID) != "" {
-			kindLabel = strings.TrimSpace(persona.Kind) + " · " + strings.TrimSpace(persona.CharacterID)
+		active[characterID] = struct{}{}
+	}
+	for i := range views {
+		_, views[i].Active = active[views[i].CharacterID]
+	}
+	return views
+}
+
+// campaignGameSlotViews projects participant-owned slots into page cards.
+func campaignGameSlotViews(surface campaignapp.CampaignGameSurface) []CampaignChatPlayerSlotView {
+	if surface.PlayerPhase == nil || len(surface.PlayerPhase.Slots) == 0 {
+		return []CampaignChatPlayerSlotView{}
+	}
+	characterNames := make(map[string]string)
+	if surface.ActiveScene != nil {
+		for _, character := range surface.ActiveScene.Characters {
+			characterNames[strings.TrimSpace(character.ID)] = firstNonEmpty(character.Name, character.ID)
 		}
-		views = append(views, CampaignChatPersonaView{
-			PersonaID:   strings.TrimSpace(persona.ID),
-			DisplayName: displayName,
-			KindLabel:   kindLabel,
-			Active:      strings.TrimSpace(persona.ID) == defaultPersonaID,
+	}
+	views := make([]CampaignChatPlayerSlotView, 0, len(surface.PlayerPhase.Slots))
+	for _, slot := range surface.PlayerPhase.Slots {
+		characters := make([]string, 0, len(slot.CharacterIDs))
+		for _, characterID := range slot.CharacterIDs {
+			characterID = strings.TrimSpace(characterID)
+			if characterID == "" {
+				continue
+			}
+			characters = append(characters, firstNonEmpty(characterNames[characterID], characterID))
+		}
+		reviewCharacters := make([]string, 0, len(slot.ReviewCharacterIDs))
+		for _, characterID := range slot.ReviewCharacterIDs {
+			characterID = strings.TrimSpace(characterID)
+			if characterID == "" {
+				continue
+			}
+			reviewCharacters = append(reviewCharacters, firstNonEmpty(characterNames[characterID], characterID))
+		}
+		participantID := strings.TrimSpace(slot.ParticipantID)
+		reviewStatus := normalizeCampaignGameSlotReviewStatus(slot.ReviewStatus)
+		reviewLabel, reviewBadgeClass := campaignGameSlotReviewLabel(reviewStatus)
+		views = append(views, CampaignChatPlayerSlotView{
+			ParticipantID:        participantID,
+			SummaryText:          strings.TrimSpace(slot.SummaryText),
+			CharacterLabel:       strings.Join(characters, ", "),
+			Yielded:              slot.Yielded,
+			ReviewStatus:         reviewStatus,
+			ReviewLabel:          reviewLabel,
+			ReviewReason:         strings.TrimSpace(slot.ReviewReason),
+			ReviewCharacterLabel: strings.Join(reviewCharacters, ", "),
+			ReviewBadgeClass:     reviewBadgeClass,
+			Viewer:               participantID == strings.TrimSpace(surface.Participant.ID),
 		})
 	}
 	return views
 }
 
-// campaignGameGateSummary provides a compact reader-facing gate label for the
-// initial server-rendered game surface.
-func campaignGameGateSummary(gate *campaignapp.CampaignGameGate) string {
-	if gate == nil {
-		return "No active gate"
+// campaignGameOOCPostViews maps the session OOC overlay into transcript rows.
+func campaignGameOOCPostViews(surface campaignapp.CampaignGameSurface) []CampaignChatOOCPostView {
+	if len(surface.OOC.Posts) == 0 {
+		return []CampaignChatOOCPostView{}
 	}
-	summary := strings.TrimSpace(gate.Type)
-	if summary == "" {
-		summary = "gate"
+	views := make([]CampaignChatOOCPostView, 0, len(surface.OOC.Posts))
+	for _, post := range surface.OOC.Posts {
+		participantID := strings.TrimSpace(post.ParticipantID)
+		views = append(views, CampaignChatOOCPostView{
+			ParticipantID: participantID,
+			Body:          strings.TrimSpace(post.Body),
+			Viewer:        participantID == strings.TrimSpace(surface.Participant.ID),
+		})
 	}
-	if strings.TrimSpace(gate.Status) != "" {
-		summary += " · " + strings.TrimSpace(gate.Status)
-	}
-	if strings.TrimSpace(gate.Reason) != "" {
-		summary += " · " + strings.TrimSpace(gate.Reason)
-	}
-	return summary
+	return views
 }
 
-// campaignGameSpotlightSummary provides a compact reader-facing spotlight label
-// for the initial server-rendered game surface.
-func campaignGameSpotlightSummary(spotlight *campaignapp.CampaignGameSpotlight) string {
-	if spotlight == nil {
-		return "No active spotlight"
+// firstNonEmpty prefers explicit labels while preserving stable ID fallbacks.
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
 	}
-	summary := strings.TrimSpace(spotlight.Type)
-	if summary == "" {
-		summary = "spotlight"
-	}
-	if strings.TrimSpace(spotlight.CharacterID) != "" {
-		summary += " · " + strings.TrimSpace(spotlight.CharacterID)
-	}
-	return summary
+	return ""
 }
 
-// activeGateType exposes the normalized active gate type for template state.
-func activeGateType(gate *campaignapp.CampaignGameGate) string {
-	if gate == nil {
-		return ""
+// normalizeCampaignGameSlotReviewStatus keeps slot-review fallbacks consistent.
+func normalizeCampaignGameSlotReviewStatus(status string) string {
+	status = strings.TrimSpace(status)
+	if status == "" {
+		return "open"
 	}
-	return strings.TrimSpace(gate.Type)
+	return status
 }
 
-// activeGateStatus exposes the normalized active gate status for template
-// state.
-func activeGateStatus(gate *campaignapp.CampaignGameGate) string {
-	if gate == nil {
-		return ""
+// campaignGameSlotReviewLabel maps review state into compact badge copy.
+func campaignGameSlotReviewLabel(status string) (label string, badgeClass string) {
+	switch normalizeCampaignGameSlotReviewStatus(status) {
+	case "under_review":
+		return "Under review", "badge-outline"
+	case "accepted":
+		return "Accepted", "badge-success"
+	case "changes_requested":
+		return "Changes requested", "badge-warning"
+	default:
+		return "Open", "badge-ghost"
 	}
-	return strings.TrimSpace(gate.Status)
+}
+
+// campaignGameYieldedParticipants exposes yielded participants for the page state.
+func campaignGameYieldedParticipants(surface campaignapp.CampaignGameSurface) []string {
+	if surface.PlayerPhase == nil {
+		return []string{}
+	}
+	yielded := make([]string, 0, len(surface.PlayerPhase.Slots))
+	for _, slot := range surface.PlayerPhase.Slots {
+		if strings.TrimSpace(slot.ParticipantID) == "" || !slot.Yielded {
+			continue
+		}
+		yielded = append(yielded, strings.TrimSpace(slot.ParticipantID))
+	}
+	return yielded
 }

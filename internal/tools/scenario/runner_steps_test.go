@@ -21,6 +21,7 @@ type testEnvFixture struct {
 	env               scenarioEnv
 	eventClient       *fakeEventClient
 	sessionClient     *fakeSessionClient
+	interactionClient *fakeInteractionClient
 	daggerheartClient *fakeDaggerheartClient
 }
 
@@ -66,6 +67,9 @@ func testEnv() testEnvFixture {
 					Character: &gamev1.Character{Id: "char-" + req.GetName()},
 				}, nil
 			},
+			update: func(context.Context, *gamev1.UpdateCharacterRequest, ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error) {
+				return &gamev1.UpdateCharacterResponse{}, nil
+			},
 			patchProfile: func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
 				return &gamev1.PatchCharacterProfileResponse{}, nil
 			},
@@ -83,7 +87,25 @@ func testEnv() testEnvFixture {
 			},
 		},
 		sessionClient: sessionClient,
-		eventClient:   eventClient,
+		interactionClient: &fakeInteractionClient{
+			getState: func(_ context.Context, _ *gamev1.GetInteractionStateRequest, _ ...grpc.CallOption) (*gamev1.GetInteractionStateResponse, error) {
+				return &gamev1.GetInteractionStateResponse{
+					State: &gamev1.InteractionState{
+						PlayerPhase: &gamev1.ScenePlayerPhase{
+							Status:               gamev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM,
+							ActingCharacterIds:   []string{},
+							ActingParticipantIds: []string{},
+							Slots:                []*gamev1.ScenePlayerSlot{},
+						},
+						Ooc: &gamev1.OOCState{
+							Posts:                       []*gamev1.OOCPost{},
+							ReadyToResumeParticipantIds: []string{},
+						},
+					},
+				}, nil
+			},
+		},
+		eventClient: eventClient,
 		snapshotClient: &fakeSnapshotClient{
 			patchState: func(_ context.Context, _ *gamev1.PatchCharacterStateRequest, _ ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error) {
 				return &gamev1.PatchCharacterStateResponse{}, nil
@@ -95,6 +117,7 @@ func testEnv() testEnvFixture {
 		env:               env,
 		eventClient:       eventClient,
 		sessionClient:     sessionClient,
+		interactionClient: env.interactionClient.(*fakeInteractionClient),
 		daggerheartClient: dhClient,
 	}
 }
@@ -159,12 +182,17 @@ func TestRunParticipantStepDefaults(t *testing.T) {
 }
 
 func TestRunCharacterStepControlParticipant(t *testing.T) {
+	var updateRequest *gamev1.UpdateCharacterRequest
 	var controlRequest *gamev1.SetDefaultControlRequest
 	characterClient := &fakeCharacterClient{
 		create: func(_ context.Context, req *gamev1.CreateCharacterRequest, _ ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
 			return &gamev1.CreateCharacterResponse{
 				Character: &gamev1.Character{Id: "character-1"},
 			}, nil
+		},
+		update: func(_ context.Context, req *gamev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error) {
+			updateRequest = req
+			return &gamev1.UpdateCharacterResponse{}, nil
 		},
 		patchProfile: func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
 			return &gamev1.PatchCharacterProfileResponse{}, nil
@@ -201,6 +229,12 @@ func TestRunCharacterStepControlParticipant(t *testing.T) {
 	if controlRequest == nil {
 		t.Fatal("expected SetDefaultControl request")
 	}
+	if updateRequest == nil {
+		t.Fatal("expected UpdateCharacter request")
+	}
+	if got := updateRequest.GetOwnerParticipantId(); got == nil || got.GetValue() != "participant-1" {
+		t.Fatalf("owner_participant_id = %v, want participant-1", got)
+	}
 	if got := controlRequest.GetParticipantId(); got == nil || got.GetValue() != "participant-1" {
 		t.Fatalf("participant_id = %v, want participant-1", got)
 	}
@@ -213,6 +247,9 @@ func TestRunCharacterStepControlGM(t *testing.T) {
 			return &gamev1.CreateCharacterResponse{
 				Character: &gamev1.Character{Id: "character-1"},
 			}, nil
+		},
+		update: func(_ context.Context, _ *gamev1.UpdateCharacterRequest, _ ...grpc.CallOption) (*gamev1.UpdateCharacterResponse, error) {
+			return &gamev1.UpdateCharacterResponse{}, nil
 		},
 		patchProfile: func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
 			return &gamev1.PatchCharacterProfileResponse{}, nil

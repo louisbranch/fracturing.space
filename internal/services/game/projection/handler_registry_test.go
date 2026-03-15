@@ -60,19 +60,21 @@ func TestHandlerRegistry_AllEntriesHaveApply(t *testing.T) {
 
 func TestCheckMissingStores_AllPresent(t *testing.T) {
 	applier := Applier{
-		Campaign:         newProjectionCampaignStore(),
-		Character:        newFakeCharacterStore(),
-		CampaignFork:     newFakeCampaignForkStore(),
-		Invite:           newFakeInviteStore(),
-		Participant:      newProjectionParticipantStore(),
-		Session:          &fakeSessionStore{},
-		SessionGate:      newFakeSessionGateStore(),
-		SessionSpotlight: newFakeSessionSpotlightStore(),
-		Scene:            newFakeSceneStore(),
-		SceneCharacter:   newFakeSceneCharacterStore(),
-		SceneGate:        newFakeSceneGateStore(),
-		SceneSpotlight:   newFakeSceneSpotlightStore(),
-		Adapters:         bridge.NewAdapterRegistry(),
+		Campaign:           newProjectionCampaignStore(),
+		Character:          newFakeCharacterStore(),
+		CampaignFork:       newFakeCampaignForkStore(),
+		Invite:             newFakeInviteStore(),
+		Participant:        newProjectionParticipantStore(),
+		Session:            &fakeSessionStore{},
+		SessionGate:        newFakeSessionGateStore(),
+		SessionSpotlight:   newFakeSessionSpotlightStore(),
+		SessionInteraction: newFakeSessionInteractionStore(),
+		Scene:              newFakeSceneStore(),
+		SceneCharacter:     newFakeSceneCharacterStore(),
+		SceneGate:          newFakeSceneGateStore(),
+		SceneSpotlight:     newFakeSceneSpotlightStore(),
+		SceneInteraction:   newFakeSceneInteractionStore(),
+		Adapters:           bridge.NewAdapterRegistry(),
 	}
 	missing := checkMissingStores(needCampaign|needCharacter|needParticipant, applier)
 	if len(missing) > 0 {
@@ -106,19 +108,21 @@ func TestValidateStorePreconditions_ReportsNilStores(t *testing.T) {
 
 func TestValidateStorePreconditions_PassesWhenAllConfigured(t *testing.T) {
 	applier := Applier{
-		Campaign:         newProjectionCampaignStore(),
-		Character:        newFakeCharacterStore(),
-		CampaignFork:     newFakeCampaignForkStore(),
-		Invite:           newFakeInviteStore(),
-		Participant:      newProjectionParticipantStore(),
-		Session:          &fakeSessionStore{},
-		SessionGate:      newFakeSessionGateStore(),
-		SessionSpotlight: newFakeSessionSpotlightStore(),
-		Scene:            newFakeSceneStore(),
-		SceneCharacter:   newFakeSceneCharacterStore(),
-		SceneGate:        newFakeSceneGateStore(),
-		SceneSpotlight:   newFakeSceneSpotlightStore(),
-		Adapters:         bridge.NewAdapterRegistry(),
+		Campaign:           newProjectionCampaignStore(),
+		Character:          newFakeCharacterStore(),
+		CampaignFork:       newFakeCampaignForkStore(),
+		Invite:             newFakeInviteStore(),
+		Participant:        newProjectionParticipantStore(),
+		Session:            &fakeSessionStore{},
+		SessionGate:        newFakeSessionGateStore(),
+		SessionSpotlight:   newFakeSessionSpotlightStore(),
+		SessionInteraction: newFakeSessionInteractionStore(),
+		Scene:              newFakeSceneStore(),
+		SceneCharacter:     newFakeSceneCharacterStore(),
+		SceneGate:          newFakeSceneGateStore(),
+		SceneSpotlight:     newFakeSceneSpotlightStore(),
+		SceneInteraction:   newFakeSceneInteractionStore(),
+		Adapters:           bridge.NewAdapterRegistry(),
 	}
 	if err := applier.ValidateStorePreconditions(); err != nil {
 		t.Fatalf("expected no error, got: %v", err)

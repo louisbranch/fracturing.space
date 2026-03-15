@@ -1,10 +1,44 @@
 package scenario
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestDefaultConfig(t *testing.T) {
+	cfg := DefaultConfig()
+	if cfg.GRPCAddr != "localhost:8080" {
+		t.Fatalf("grpc addr = %q, want %q", cfg.GRPCAddr, "localhost:8080")
+	}
+	if cfg.Timeout != 10*time.Second {
+		t.Fatalf("timeout = %v, want %v", cfg.Timeout, 10*time.Second)
+	}
+	if cfg.Assertions != AssertionStrict {
+		t.Fatalf("assertions = %v, want %v", cfg.Assertions, AssertionStrict)
+	}
+	if cfg.Verbose {
+		t.Fatal("verbose = true, want false")
+	}
+	if !cfg.ValidateComments {
+		t.Fatal("validate comments = false, want true")
+	}
+}
+
+func TestNewRunnerRequiresGRPCAddr(t *testing.T) {
+	_, err := NewRunner(context.Background(), Config{})
+	if err == nil || !strings.Contains(err.Error(), "grpc address is required") {
+		t.Fatalf("expected grpc address error, got %v", err)
+	}
+}
+
+func TestRunFileReturnsRunnerSetupError(t *testing.T) {
+	err := RunFile(context.Background(), Config{}, "ignored.lua")
+	if err == nil || !strings.Contains(err.Error(), "grpc address is required") {
+		t.Fatalf("expected grpc address error, got %v", err)
+	}
+}
 
 func TestNewRunnerWithDeps_EmptyUserID(t *testing.T) {
 	auth := &fakeAuthProvider{userID: ""}

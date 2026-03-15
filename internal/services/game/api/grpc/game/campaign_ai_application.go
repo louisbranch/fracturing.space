@@ -66,7 +66,7 @@ func (a campaignAIApplication) IssueCampaignAISessionGrant(
 		return nil, err
 	}
 	if campaignRecord.GmMode != campaign.GmModeAI && campaignRecord.GmMode != campaign.GmModeHybrid {
-		return nil, status.Error(codes.FailedPrecondition, "campaign gm mode does not support ai relay")
+		return nil, status.Error(codes.FailedPrecondition, "campaign gm mode does not support ai orchestration")
 	}
 	boundAgentID := strings.TrimSpace(campaignRecord.AIAgentID)
 	if boundAgentID == "" {

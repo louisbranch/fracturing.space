@@ -110,9 +110,9 @@ service CampaignService {
   rpc ClearCampaignAIBinding(ClearCampaignAIBindingRequest) returns (ClearCampaignAIBindingResponse);
 }
 
-// CampaignAIService provides internal-only Game<=>AI/Game<=>Chat campaign AI contracts.
+// CampaignAIService provides internal-only Game<=>AI campaign AI contracts.
 service CampaignAIService {
-  // Issues a session-scoped grant for AI turn relay.
+  // Issues a session-scoped grant for AI orchestration.
   rpc IssueCampaignAISessionGrant(IssueCampaignAISessionGrantRequest) returns (IssueCampaignAISessionGrantResponse);
 
   // Internal read for AI-service usage guards.

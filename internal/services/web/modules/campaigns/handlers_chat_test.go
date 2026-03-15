@@ -1,6 +1,7 @@
 package campaigns
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -34,21 +35,19 @@ func TestMountCampaignGameRouteRendersNavbarBackButton(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`data-campaign-game-page="true"`,
-		`data-campaign-chat-title="The Guildhouse Game"`,
+		`data-campaign-game-title="The Guildhouse Game"`,
 		`href="/app/campaigns/c1"`,
-		`data-chat-fallback-port="8086"`,
-		`id="game-transcript"`,
-		`<textarea id="game-message-input"`,
-		`maxlength="12000"`,
-		`id="game-persona-select"`,
-		`id="game-request-handoff"`,
+		`id="game-scene-roster"`,
+		`id="game-player-phase"`,
+		`id="game-ooc-summary"`,
+		`id="game-player-slots"`,
+		`Players acting`,
 		`id="campaign-game-bootstrap"`,
-		`src="/static/campaign-chat.js"`,
 		`class="navbar-start"`,
 		`class="navbar-end"`,
 		`class="btn btn-ghost"`,
 		`Back to Campaign`,
-		`class="grid grid-cols-1 gap-4 xl:grid-cols-[18rem_minmax(0,1fr)_18rem]"`,
+		`class="grid grid-cols-1 gap-4 xl:grid-cols-[20rem_minmax(0,1fr)_18rem]"`,
 		`class="card border border-base-300 bg-base-100 shadow-xl"`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -60,6 +59,10 @@ func TestMountCampaignGameRouteRendersNavbarBackButton(t *testing.T) {
 		`drawer-toggle`,
 		`drawer-side`,
 		`chat-drawer-shell`,
+		`id="game-transcript"`,
+		`id="game-persona-select"`,
+		`id="game-request-handoff"`,
+		`/static/campaign-chat.js`,
 	} {
 		if strings.Contains(body, absent) {
 			t.Fatalf("body unexpectedly contains removed drawer marker %q", absent)
@@ -90,5 +93,30 @@ func TestMountCampaignGameRouteHTMXRedirectsToFullPage(t *testing.T) {
 	}
 	if got := rr.Header().Get("HX-Redirect"); got != routepath.AppCampaignGame("c1") {
 		t.Fatalf("HX-Redirect = %q, want %q", got, routepath.AppCampaignGame("c1"))
+	}
+}
+
+func TestMountCampaignGameRouteHandlesGameSurfaceFailure(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(
+		fakeGateway{
+			items:          []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+			gameSurfaceErr: errors.New("surface unavailable"),
+		},
+		modulehandler.NewTestBase(),
+		nil,
+	))
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignGame("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusInternalServerError)
 	}
 }

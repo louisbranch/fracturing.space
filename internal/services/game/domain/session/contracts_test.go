@@ -20,6 +20,17 @@ func TestFoldHandledTypes_ReturnsSessionEventContract(t *testing.T) {
 		EventTypeGateAbandoned,
 		EventTypeSpotlightSet,
 		EventTypeSpotlightCleared,
+		EventTypeActiveSceneSet,
+		EventTypeGMAuthoritySet,
+		EventTypeOOCPaused,
+		EventTypeOOCPosted,
+		EventTypeOOCReadyMarked,
+		EventTypeOOCReadyCleared,
+		EventTypeOOCResumed,
+		EventTypeAITurnQueued,
+		EventTypeAITurnRunning,
+		EventTypeAITurnFailed,
+		EventTypeAITurnCleared,
 	}
 
 	if got := FoldHandledTypes(); !testcontracts.EqualSlices(got, want) {
@@ -47,6 +58,17 @@ func TestDeciderHandledCommands_ReturnsSessionCommandContract(t *testing.T) {
 		CommandTypeGateAbandon,
 		CommandTypeSpotlightSet,
 		CommandTypeSpotlightClear,
+		CommandTypeActiveSceneSet,
+		CommandTypeGMAuthoritySet,
+		CommandTypeOOCPause,
+		CommandTypeOOCPost,
+		CommandTypeOOCReadyMark,
+		CommandTypeOOCReadyClear,
+		CommandTypeOOCResume,
+		CommandTypeAITurnQueue,
+		CommandTypeAITurnStart,
+		CommandTypeAITurnFail,
+		CommandTypeAITurnClear,
 	}
 
 	if got := DeciderHandledCommands(); !testcontracts.EqualSlices(got, want) {

@@ -8,13 +8,6 @@ import (
 	"time"
 )
 
-const aiSessionGrantRefreshLead = 5 * time.Second
-const (
-	chatStreamSystemLabel  = "System"
-	chatStreamTableLabel   = "Table"
-	chatStreamControlLabel = "Control"
-)
-
 func newWSSession(userID string, peer *wsPeer) *wsSession {
 	return &wsSession{
 		userID: userID,
@@ -22,7 +15,7 @@ func newWSSession(userID string, peer *wsPeer) *wsSession {
 	}
 }
 
-func (s *wsSession) setRoom(next *campaignRoom) *campaignRoom {
+func (s *wsSession) setRoom(next *sessionRoom) *sessionRoom {
 	s.mu.Lock()
 	previous := s.room
 	s.room = next
@@ -30,37 +23,30 @@ func (s *wsSession) setRoom(next *campaignRoom) *campaignRoom {
 	return previous
 }
 
-func (s *wsSession) currentRoom() *campaignRoom {
+func (s *wsSession) currentRoom() *sessionRoom {
 	s.mu.Lock()
 	room := s.room
 	s.mu.Unlock()
 	return room
 }
 
-func (s *wsSession) setCommunicationState(ctx communicationContext) {
-	state := wsCommunicationState{
-		participantID:    strings.TrimSpace(ctx.ParticipantID),
-		defaultStreamID:  strings.TrimSpace(ctx.DefaultStreamID),
-		defaultPersonaID: strings.TrimSpace(ctx.DefaultPersonaID),
-		streamsByID:      make(map[string]chatStream, len(ctx.Streams)),
-		personasByID:     make(map[string]chatPersona, len(ctx.Personas)),
+func (s *wsSession) setJoinState(welcome joinWelcome) {
+	state := wsJoinState{
+		participantID:   strings.TrimSpace(welcome.ParticipantID),
+		participantName: strings.TrimSpace(welcome.ParticipantName),
 	}
-	for _, stream := range ctx.Streams {
-		if streamID := strings.TrimSpace(stream.StreamID); streamID != "" {
-			state.streamsByID[streamID] = stream
-		}
+	if state.participantID == "" {
+		state.participantID = strings.TrimSpace(s.userID)
 	}
-	for _, persona := range ctx.Personas {
-		if personaID := strings.TrimSpace(persona.PersonaID); personaID != "" {
-			state.personasByID[personaID] = persona
-		}
+	if state.participantName == "" {
+		state.participantName = state.participantID
 	}
 	s.mu.Lock()
 	s.state = state
 	s.mu.Unlock()
 }
 
-func (s *wsSession) communicationState() wsCommunicationState {
+func (s *wsSession) joinState() wsJoinState {
 	s.mu.Lock()
 	state := s.state
 	s.mu.Unlock()
@@ -82,225 +68,86 @@ func (p *wsPeer) writeFrame(frame wsFrame) error {
 	return p.encoder.Encode(frame)
 }
 
+type transcriptStore interface {
+	LatestSequence(campaignID string, sessionID string) int64
+	AppendMessage(campaignID string, sessionID string, actor messageActor, body string, clientMessageID string) (chatMessage, bool)
+	HistoryAfter(campaignID string, sessionID string, afterSequenceID int64) []chatMessage
+	HistoryBefore(campaignID string, sessionID string, beforeSequenceID int64, limit int) []chatMessage
+}
+
 type roomHub struct {
 	mu    sync.Mutex
-	rooms map[string]*campaignRoom
+	rooms map[string]*sessionRoom
+	store transcriptStore
 }
 
 func newRoomHub() *roomHub {
-	return &roomHub{rooms: make(map[string]*campaignRoom)}
+	return &roomHub{
+		rooms: make(map[string]*sessionRoom),
+		store: newInMemoryTranscriptStore(),
+	}
 }
 
-func (h *roomHub) room(campaignID string) *campaignRoom {
+func (h *roomHub) room(campaignID string, sessionID string) *sessionRoom {
+	key := roomKey(campaignID, sessionID)
+
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
-	room, ok := h.rooms[campaignID]
+	room, ok := h.rooms[key]
 	if ok {
 		return room
 	}
 
-	room = newCampaignRoom(campaignID)
-	h.rooms[campaignID] = room
+	room = newSessionRoom(campaignID, sessionID, h.store)
+	h.rooms[key] = room
 	return room
 }
 
-func (h *roomHub) roomIfExists(campaignID string) *campaignRoom {
-	h.mu.Lock()
-	room := h.rooms[campaignID]
-	h.mu.Unlock()
-	return room
+type sessionRoom struct {
+	mu          sync.Mutex
+	campaignID  string
+	sessionID   string
+	store       transcriptStore
+	subscribers map[*wsPeer]*wsSession
 }
 
-type campaignRoom struct {
-	mu                      sync.Mutex
-	campaignID              string
-	sessionID               string
-	gmMode                  string
-	aiAgentID               string
-	aiAuthEpoch             uint64
-	aiSessionGrant          string
-	aiGrantExpiresAt        time.Time
-	nextSequence            int64
-	messagesByStream        map[string][]chatMessage
-	messageLog              []chatMessage
-	idempotencyBy           map[string]chatMessage
-	idempotencyOrder        []string
-	activeSessionGate       *chatSessionGate
-	activeSessionSpotlight  *chatSessionSpotlight
-	aiLastSubmittedSequence int64
-	subscribers             map[*wsPeer]roomSubscription
-}
-
-type roomSubscription struct {
-	session        *wsSession
-	visibleStreams map[string]struct{}
-}
-
-func newCampaignRoom(campaignID string) *campaignRoom {
-	return &campaignRoom{
-		campaignID:       campaignID,
-		sessionID:        defaultSessionID,
-		messagesByStream: make(map[string][]chatMessage),
-		idempotencyBy:    make(map[string]chatMessage),
-		subscribers:      make(map[*wsPeer]roomSubscription),
+func newSessionRoom(campaignID string, sessionID string, store transcriptStore) *sessionRoom {
+	return &sessionRoom{
+		campaignID:  strings.TrimSpace(campaignID),
+		sessionID:   strings.TrimSpace(sessionID),
+		store:       store,
+		subscribers: make(map[*wsPeer]*wsSession),
 	}
 }
 
-func (r *campaignRoom) join(session *wsSession, streamIDs []string) int64 {
+func (r *sessionRoom) join(session *wsSession) int64 {
 	if session == nil || session.peer == nil {
 		return 0
 	}
 	r.mu.Lock()
-	r.subscribers[session.peer] = roomSubscription{
-		session:        session,
-		visibleStreams: streamIDSet(streamIDs),
-	}
-	latest := r.nextSequence
+	r.subscribers[session.peer] = session
 	r.mu.Unlock()
-	return latest
+	return r.latestSequenceID()
 }
 
-func (r *campaignRoom) updateSessionSubscription(session *wsSession, streamIDs []string) {
-	if session == nil || session.peer == nil {
-		return
+func (r *sessionRoom) joinWithHistory(session *wsSession, afterSequenceID int64) (int64, []chatMessage) {
+	if r == nil || r.store == nil {
+		return 0, nil
 	}
-	r.mu.Lock()
-	subscription, ok := r.subscribers[session.peer]
-	if ok {
-		subscription.session = session
-		subscription.visibleStreams = streamIDSet(streamIDs)
-		r.subscribers[session.peer] = subscription
-	}
-	r.mu.Unlock()
-}
 
-func (r *campaignRoom) setSessionID(sessionID string) {
-	sessionID = strings.TrimSpace(sessionID)
-	r.mu.Lock()
-	if r.sessionID != sessionID {
-		r.aiSessionGrant = ""
-		r.aiGrantExpiresAt = time.Time{}
-		r.activeSessionGate = nil
-		r.activeSessionSpotlight = nil
-		r.aiLastSubmittedSequence = r.nextSequence
-	}
-	r.sessionID = sessionID
-	r.mu.Unlock()
-}
-
-func (r *campaignRoom) setAIBinding(gmMode string, aiAgentID string) {
-	r.mu.Lock()
-	normalizedMode := strings.ToLower(strings.TrimSpace(gmMode))
-	normalizedAgentID := strings.TrimSpace(aiAgentID)
-	if r.gmMode != normalizedMode || r.aiAgentID != normalizedAgentID {
-		r.aiSessionGrant = ""
-		r.aiGrantExpiresAt = time.Time{}
-		r.aiLastSubmittedSequence = r.nextSequence
-	}
-	r.gmMode = normalizedMode
-	r.aiAgentID = normalizedAgentID
-	r.mu.Unlock()
-}
-
-func (r *campaignRoom) setControlState(gate *chatSessionGate, spotlight *chatSessionSpotlight) {
-	r.mu.Lock()
-	r.activeSessionGate = cloneChatSessionGate(gate)
-	r.activeSessionSpotlight = cloneChatSessionSpotlight(spotlight)
-	r.mu.Unlock()
-}
-
-func (r *campaignRoom) activeSessionGateState() *chatSessionGate {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	return cloneChatSessionGate(r.activeSessionGate)
-}
 
-func (r *campaignRoom) activeSessionSpotlightState() *chatSessionSpotlight {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	return cloneChatSessionSpotlight(r.activeSessionSpotlight)
-}
-
-func (r *campaignRoom) aiRelayEnabled() bool {
-	r.mu.Lock()
-	enabled := r.aiAgentID != "" && (r.gmMode == "ai" || r.gmMode == "hybrid" || r.gmMode == "gm_mode_ai" || r.gmMode == "gm_mode_hybrid")
-	r.mu.Unlock()
-	return enabled
-}
-
-func (r *campaignRoom) aiAgentIDValue() string {
-	r.mu.Lock()
-	value := r.aiAgentID
-	r.mu.Unlock()
-	return value
-}
-
-func (r *campaignRoom) gmModeValue() string {
-	r.mu.Lock()
-	value := r.gmMode
-	r.mu.Unlock()
-	return value
-}
-
-func (r *campaignRoom) setAISessionGrant(token string, authEpoch uint64, expiresAt time.Time) {
-	r.mu.Lock()
-	r.aiSessionGrant = strings.TrimSpace(token)
-	r.aiAuthEpoch = authEpoch
-	if expiresAt.IsZero() {
-		r.aiGrantExpiresAt = time.Time{}
-	} else {
-		r.aiGrantExpiresAt = expiresAt.UTC()
+	latest := r.store.LatestSequence(r.campaignID, r.sessionID)
+	history := r.store.HistoryAfter(r.campaignID, r.sessionID, afterSequenceID)
+	if session != nil && session.peer != nil {
+		r.subscribers[session.peer] = session
 	}
-	r.mu.Unlock()
+	return latest, history
 }
 
-func (r *campaignRoom) clearAISessionGrant() {
-	r.mu.Lock()
-	r.aiSessionGrant = ""
-	r.aiGrantExpiresAt = time.Time{}
-	r.mu.Unlock()
-}
-
-func (r *campaignRoom) aiSessionGrantValue() string {
-	r.mu.Lock()
-	value := r.aiSessionGrant
-	r.mu.Unlock()
-	return value
-}
-
-func (r *campaignRoom) aiRelayReady() bool {
-	r.mu.Lock()
-	enabled := r.aiAgentID != "" &&
-		(r.gmMode == "ai" || r.gmMode == "hybrid" || r.gmMode == "gm_mode_ai" || r.gmMode == "gm_mode_hybrid") &&
-		strings.TrimSpace(r.aiSessionGrant) != ""
-	if enabled && !r.aiGrantExpiresAt.IsZero() {
-		refreshAt := r.aiGrantExpiresAt.Add(-aiSessionGrantRefreshLead)
-		if !time.Now().UTC().Before(refreshAt) {
-			r.aiSessionGrant = ""
-			r.aiGrantExpiresAt = time.Time{}
-			enabled = false
-		}
-	}
-	r.mu.Unlock()
-	return enabled
-}
-
-func (r *campaignRoom) currentSessionID() string {
-	r.mu.Lock()
-	id := r.sessionID
-	r.mu.Unlock()
-	return id
-}
-
-func (r *campaignRoom) latestSequenceID() int64 {
-	r.mu.Lock()
-	seq := r.nextSequence
-	r.mu.Unlock()
-	return seq
-}
-
-func (r *campaignRoom) leave(session *wsSession) bool {
+func (r *sessionRoom) leave(session *wsSession) bool {
 	if session == nil || session.peer == nil {
 		return false
 	}
@@ -311,7 +158,7 @@ func (r *campaignRoom) leave(session *wsSession) bool {
 	return empty
 }
 
-func (r *campaignRoom) subscribersSnapshot() []*wsPeer {
+func (r *sessionRoom) subscribersSnapshot() []*wsPeer {
 	r.mu.Lock()
 	subscribers := make([]*wsPeer, 0, len(r.subscribers))
 	for subscriber := range r.subscribers {
@@ -321,222 +168,119 @@ func (r *campaignRoom) subscribersSnapshot() []*wsPeer {
 	return subscribers
 }
 
-func (r *campaignRoom) sessionsSnapshot() []*wsSession {
-	r.mu.Lock()
-	sessions := make([]*wsSession, 0, len(r.subscribers))
-	for _, subscription := range r.subscribers {
-		if subscription.session != nil {
-			sessions = append(sessions, subscription.session)
-		}
+func (r *sessionRoom) latestSequenceID() int64 {
+	if r == nil || r.store == nil {
+		return 0
 	}
-	r.mu.Unlock()
-	return sessions
+	return r.store.LatestSequence(r.campaignID, r.sessionID)
 }
 
-func (r *campaignRoom) appendMessage(actor messageActor, body string, clientMessageID string, streamID string) (chatMessage, bool, []*wsPeer) {
+func (r *sessionRoom) appendMessage(actor messageActor, body string, clientMessageID string) (chatMessage, bool, []*wsPeer) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	if existing, ok := r.idempotencyBy[clientMessageID]; ok {
-		return existing, true, nil
+	msg, duplicate := r.store.AppendMessage(r.campaignID, r.sessionID, actor, body, clientMessageID)
+	if duplicate {
+		return msg, true, nil
+	}
+	subscribers := make([]*wsPeer, 0, len(r.subscribers))
+	for subscriber := range r.subscribers {
+		subscribers = append(subscribers, subscriber)
+	}
+	return msg, false, subscribers
+}
+
+func (r *sessionRoom) historyBefore(beforeSequenceID int64, limit int) []chatMessage {
+	if r == nil || r.store == nil {
+		return nil
+	}
+	return r.store.HistoryBefore(r.campaignID, r.sessionID, beforeSequenceID, limit)
+}
+
+func (r *sessionRoom) historyAfter(afterSequenceID int64) []chatMessage {
+	if r == nil || r.store == nil {
+		return nil
+	}
+	return r.store.HistoryAfter(r.campaignID, r.sessionID, afterSequenceID)
+}
+
+type inMemoryTranscriptStore struct {
+	mu    sync.Mutex
+	rooms map[string]*inMemoryTranscriptRoom
+}
+
+type inMemoryTranscriptRoom struct {
+	nextSequence     int64
+	messageLog       []chatMessage
+	idempotencyBy    map[string]chatMessage
+	idempotencyOrder []string
+}
+
+func newInMemoryTranscriptStore() *inMemoryTranscriptStore {
+	return &inMemoryTranscriptStore{
+		rooms: make(map[string]*inMemoryTranscriptRoom),
+	}
+}
+
+func (s *inMemoryTranscriptStore) LatestSequence(campaignID string, sessionID string) int64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.roomLocked(campaignID, sessionID).nextSequence
+}
+
+func (s *inMemoryTranscriptStore) AppendMessage(campaignID string, sessionID string, actor messageActor, body string, clientMessageID string) (chatMessage, bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	room := s.roomLocked(campaignID, sessionID)
+	if existing, ok := room.idempotencyBy[clientMessageID]; ok {
+		return existing, true
 	}
 
-	r.nextSequence++
+	room.nextSequence++
 	actor.ParticipantID = strings.TrimSpace(actor.ParticipantID)
 	if actor.ParticipantID == "" {
 		actor.ParticipantID = "participant"
 	}
-	if strings.TrimSpace(actor.Name) == "" {
+	actor.Name = strings.TrimSpace(actor.Name)
+	if actor.Name == "" {
 		actor.Name = actor.ParticipantID
 	}
-	streamID = strings.TrimSpace(streamID)
-	if streamID == "" {
-		streamID = chatDefaultStreamID(r.campaignID)
-	}
+
 	msg := chatMessage{
 		MessageID:       fmt.Sprintf("msg_%d", time.Now().UnixNano()),
-		CampaignID:      r.campaignID,
-		SessionID:       r.sessionID,
-		SequenceID:      r.nextSequence,
+		CampaignID:      strings.TrimSpace(campaignID),
+		SessionID:       strings.TrimSpace(sessionID),
+		SequenceID:      room.nextSequence,
 		SentAt:          time.Now().UTC().Format(time.RFC3339),
-		Kind:            "text",
-		StreamID:        streamID,
 		Actor:           actor,
-		Body:            body,
-		ClientMessageID: clientMessageID,
+		Body:            strings.TrimSpace(body),
+		ClientMessageID: strings.TrimSpace(clientMessageID),
 	}
 
-	r.messagesByStream[streamID] = append(r.messagesByStream[streamID], msg)
-	if len(r.messagesByStream[streamID]) > maxRoomMessages {
-		r.messagesByStream[streamID] = r.messagesByStream[streamID][len(r.messagesByStream[streamID])-maxRoomMessages:]
-	}
-	r.messageLog = append(r.messageLog, msg)
-	if len(r.messageLog) > maxRoomMessages {
-		r.messageLog = r.messageLog[len(r.messageLog)-maxRoomMessages:]
+	room.messageLog = append(room.messageLog, msg)
+	if len(room.messageLog) > maxRoomMessages {
+		room.messageLog = room.messageLog[len(room.messageLog)-maxRoomMessages:]
 	}
 
-	r.idempotencyBy[clientMessageID] = msg
-	r.idempotencyOrder = append(r.idempotencyOrder, clientMessageID)
-	if len(r.idempotencyOrder) > maxIdempotencyRecord {
-		evict := r.idempotencyOrder[0]
-		r.idempotencyOrder = r.idempotencyOrder[1:]
-		delete(r.idempotencyBy, evict)
+	room.idempotencyBy[msg.ClientMessageID] = msg
+	room.idempotencyOrder = append(room.idempotencyOrder, msg.ClientMessageID)
+	if len(room.idempotencyOrder) > maxIdempotencyRecord {
+		evict := room.idempotencyOrder[0]
+		room.idempotencyOrder = room.idempotencyOrder[1:]
+		delete(room.idempotencyBy, evict)
 	}
 
-	return msg, false, r.subscribersForStreamLocked(streamID)
+	return msg, false
 }
 
-func (r *campaignRoom) appendAIGMMessage(sessionID string, body string, correlationMessageID string) (chatMessage, bool, []*wsPeer) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (s *inMemoryTranscriptStore) HistoryBefore(campaignID string, sessionID string, beforeSequenceID int64, limit int) []chatMessage {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	key := ""
-	if strings.TrimSpace(correlationMessageID) != "" {
-		key = "ai:" + strings.TrimSpace(correlationMessageID)
-		if existing, ok := r.idempotencyBy[key]; ok {
-			return existing, true, nil
-		}
-	}
-
-	r.nextSequence++
-	normalizedSessionID := strings.TrimSpace(sessionID)
-	if normalizedSessionID == "" {
-		normalizedSessionID = r.sessionID
-	}
-	if normalizedSessionID == "" {
-		normalizedSessionID = defaultSessionID
-	}
-	msg := chatMessage{
-		MessageID:  fmt.Sprintf("ai_%d", time.Now().UnixNano()),
-		CampaignID: r.campaignID,
-		SessionID:  normalizedSessionID,
-		SequenceID: r.nextSequence,
-		SentAt:     time.Now().UTC().Format(time.RFC3339),
-		Kind:       "ai",
-		StreamID:   chatDefaultStreamID(r.campaignID),
-		Actor: messageActor{
-			ParticipantID: "ai_gm",
-			PersonaID:     "participant:ai_gm",
-			Mode:          "participant",
-			Name:          "AI GM",
-		},
-		Body: body,
-	}
-	r.messagesByStream[msg.StreamID] = append(r.messagesByStream[msg.StreamID], msg)
-	if len(r.messagesByStream[msg.StreamID]) > maxRoomMessages {
-		r.messagesByStream[msg.StreamID] = r.messagesByStream[msg.StreamID][len(r.messagesByStream[msg.StreamID])-maxRoomMessages:]
-	}
-	r.messageLog = append(r.messageLog, msg)
-	if len(r.messageLog) > maxRoomMessages {
-		r.messageLog = r.messageLog[len(r.messageLog)-maxRoomMessages:]
-	}
-	if key != "" {
-		r.idempotencyBy[key] = msg
-		r.idempotencyOrder = append(r.idempotencyOrder, key)
-		if len(r.idempotencyOrder) > maxIdempotencyRecord {
-			evict := r.idempotencyOrder[0]
-			r.idempotencyOrder = r.idempotencyOrder[1:]
-			delete(r.idempotencyBy, evict)
-		}
-	}
-	return msg, false, r.subscribersForStreamLocked(msg.StreamID)
-}
-
-type aiTurnSubmission struct {
-	body                 string
-	correlationMessageID string
-	highestSequenceID    int64
-}
-
-func (r *campaignRoom) pendingAITurnSubmission(handoffReason string) (aiTurnSubmission, bool) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	selected := make([]chatMessage, 0, maxAITurnMessages)
-	var correlationMessageID string
-	var highestSequenceID int64
-	for _, msg := range r.messageLog {
-		if msg.SequenceID <= r.aiLastSubmittedSequence {
-			continue
-		}
-		if msg.Kind != "text" {
-			continue
-		}
-		if msg.StreamID == chatSystemStreamID(r.campaignID) || msg.StreamID == chatControlStreamID(r.campaignID) {
-			continue
-		}
-		selected = append(selected, msg)
-		if len(selected) > maxAITurnMessages {
-			selected = selected[len(selected)-maxAITurnMessages:]
-		}
-		correlationMessageID = msg.MessageID
-		if msg.SequenceID > highestSequenceID {
-			highestSequenceID = msg.SequenceID
-		}
-	}
-
-	reason := strings.TrimSpace(handoffReason)
-	if len(selected) == 0 && reason == "" {
-		return aiTurnSubmission{}, false
-	}
-
-	var builder strings.Builder
-	builder.WriteString("GM handoff requested.\n\n")
-	if len(selected) > 0 {
-		builder.WriteString("Recent participant transcript:\n")
-		for _, msg := range selected {
-			line := fmt.Sprintf("[%s] %s: %s\n", aiTurnStreamLabel(r.campaignID, msg.StreamID), aiTurnActorLabel(msg.Actor), msg.Body)
-			if builder.Len()+len(line) > maxAITurnBodyBytes {
-				break
-			}
-			builder.WriteString(line)
-		}
-	}
-	if reason != "" {
-		if builder.Len() > 0 {
-			builder.WriteString("\n")
-		}
-		builder.WriteString("Handoff reason:\n")
-		remaining := maxAITurnBodyBytes - builder.Len()
-		if remaining > 0 && len(reason) > remaining {
-			reason = reason[:remaining]
-		}
-		builder.WriteString(reason)
-	}
-
-	body := strings.TrimSpace(builder.String())
-	if body == "" {
-		return aiTurnSubmission{}, false
-	}
-	return aiTurnSubmission{
-		body:                 body,
-		correlationMessageID: correlationMessageID,
-		highestSequenceID:    highestSequenceID,
-	}, true
-}
-
-func (r *campaignRoom) markAITurnSubmitted(highestSequenceID int64) {
-	if highestSequenceID <= 0 {
-		return
-	}
-	r.mu.Lock()
-	if highestSequenceID > r.aiLastSubmittedSequence {
-		r.aiLastSubmittedSequence = highestSequenceID
-	}
-	r.mu.Unlock()
-}
-
-func (r *campaignRoom) historyBefore(streamID string, beforeSequenceID int64, limit int) []chatMessage {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	streamID = strings.TrimSpace(streamID)
-	if streamID == "" {
-		streamID = chatDefaultStreamID(r.campaignID)
-	}
-
+	room := s.roomLocked(campaignID, sessionID)
 	history := make([]chatMessage, 0, limit)
-	for _, msg := range r.messagesByStream[streamID] {
+	for _, msg := range room.messageLog {
 		if msg.SequenceID < beforeSequenceID {
 			history = append(history, msg)
 		}
@@ -547,95 +291,33 @@ func (r *campaignRoom) historyBefore(streamID string, beforeSequenceID int64, li
 	return history
 }
 
-func (r *campaignRoom) subscribersForStreamLocked(streamID string) []*wsPeer {
-	subscribers := make([]*wsPeer, 0, len(r.subscribers))
-	for subscriber, subscription := range r.subscribers {
-		if _, ok := subscription.visibleStreams[streamID]; ok {
-			subscribers = append(subscribers, subscriber)
+func (s *inMemoryTranscriptStore) HistoryAfter(campaignID string, sessionID string, afterSequenceID int64) []chatMessage {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	room := s.roomLocked(campaignID, sessionID)
+	history := make([]chatMessage, 0, len(room.messageLog))
+	for _, msg := range room.messageLog {
+		if msg.SequenceID > afterSequenceID {
+			history = append(history, msg)
 		}
 	}
-	return subscribers
+	return history
 }
 
-func streamIDSet(streamIDs []string) map[string]struct{} {
-	set := make(map[string]struct{}, len(streamIDs))
-	for _, streamID := range streamIDs {
-		normalized := strings.TrimSpace(streamID)
-		if normalized == "" {
-			continue
-		}
-		set[normalized] = struct{}{}
+func (s *inMemoryTranscriptStore) roomLocked(campaignID string, sessionID string) *inMemoryTranscriptRoom {
+	key := roomKey(campaignID, sessionID)
+	room, ok := s.rooms[key]
+	if ok {
+		return room
 	}
-	return set
+	room = &inMemoryTranscriptRoom{
+		idempotencyBy: make(map[string]chatMessage),
+	}
+	s.rooms[key] = room
+	return room
 }
 
-func chatSystemStreamID(campaignID string) string {
-	return "campaign:" + campaignID + ":system"
-}
-
-func chatDefaultStreamID(campaignID string) string {
-	return "campaign:" + campaignID + ":table"
-}
-
-func chatControlStreamID(campaignID string) string {
-	return "campaign:" + campaignID + ":control"
-}
-
-func aiTurnStreamLabel(campaignID string, streamID string) string {
-	switch streamID {
-	case chatDefaultStreamID(campaignID):
-		return "table"
-	case chatSystemStreamID(campaignID):
-		return "system"
-	case chatControlStreamID(campaignID):
-		return "control"
-	default:
-		return strings.TrimSpace(streamID)
-	}
-}
-
-func aiTurnActorLabel(actor messageActor) string {
-	name := strings.TrimSpace(actor.Name)
-	if name == "" {
-		name = strings.TrimSpace(actor.ParticipantID)
-	}
-	if strings.TrimSpace(actor.Mode) == "character" {
-		return name + " (character)"
-	}
-	return name
-}
-
-func cloneChatSessionGate(gate *chatSessionGate) *chatSessionGate {
-	if gate == nil {
-		return nil
-	}
-	cloned := &chatSessionGate{
-		GateID:   gate.GateID,
-		GateType: gate.GateType,
-		Status:   gate.Status,
-		Reason:   gate.Reason,
-	}
-	if len(gate.Metadata) > 0 {
-		cloned.Metadata = make(map[string]any, len(gate.Metadata))
-		for key, value := range gate.Metadata {
-			cloned.Metadata[key] = value
-		}
-	}
-	if len(gate.Progress) > 0 {
-		cloned.Progress = make(map[string]any, len(gate.Progress))
-		for key, value := range gate.Progress {
-			cloned.Progress[key] = value
-		}
-	}
-	return cloned
-}
-
-func cloneChatSessionSpotlight(spotlight *chatSessionSpotlight) *chatSessionSpotlight {
-	if spotlight == nil {
-		return nil
-	}
-	return &chatSessionSpotlight{
-		Type:        spotlight.Type,
-		CharacterID: spotlight.CharacterID,
-	}
+func roomKey(campaignID string, sessionID string) string {
+	return strings.TrimSpace(campaignID) + "::" + strings.TrimSpace(sessionID)
 }

@@ -15,8 +15,8 @@ type gateWorkflow interface {
 	deriveResolution(*GateProgress)
 }
 
-// gateWorkflowBase holds workflow metadata shared by all gate types so
-// ready-check, vote, and generic flows do not repeatedly parse raw maps.
+// gateWorkflowBase holds workflow metadata shared by gate types so generic
+// gate handling does not repeatedly parse raw maps.
 type gateWorkflowBase struct {
 	extraMetadata          map[string]any
 	eligibleParticipantIDs []string

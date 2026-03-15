@@ -10,8 +10,8 @@
 // Capability groups:
 //   - campaign, participant, character, invite:
 //     campaign governance, roster, and profile lifecycle
-//   - session, scene, communication:
-//     active play, gates, spotlight, and communication control
+//   - session, scene, interaction:
+//     active play, gates, spotlight, and scene-phase interaction state
 //   - fork, snapshot, event, timeline:
 //     replay-oriented reads, branching, and audit/history surfaces
 //   - authorization:

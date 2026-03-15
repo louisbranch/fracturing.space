@@ -60,10 +60,12 @@ func (s Stores) projectionRequirements() []dependencyRequirement {
 		{name: "Session", configured: s.Session != nil},
 		{name: "SessionGate", configured: s.SessionGate != nil},
 		{name: "SessionSpotlight", configured: s.SessionSpotlight != nil},
+		{name: "SessionInteraction", configured: s.SessionInteraction != nil},
 		{name: "Scene", configured: s.Scene != nil},
 		{name: "SceneCharacter", configured: s.SceneCharacter != nil},
 		{name: "SceneGate", configured: s.SceneGate != nil},
 		{name: "SceneSpotlight", configured: s.SceneSpotlight != nil},
+		{name: "SceneInteraction", configured: s.SceneInteraction != nil},
 		{name: "CampaignFork", configured: s.CampaignFork != nil},
 	}
 }

@@ -1,56 +1,86 @@
 package app
 
-// CampaignGameParticipant stores the current viewer's communication identity.
+// CampaignGameParticipant stores the current viewer's interaction identity.
 type CampaignGameParticipant struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 	Role string `json:"role"`
 }
 
-// CampaignGameStream stores one visible communication stream for the game surface.
-type CampaignGameStream struct {
-	ID        string `json:"id"`
-	Kind      string `json:"kind"`
-	Scope     string `json:"scope"`
-	SessionID string `json:"sessionId"`
-	SceneID   string `json:"sceneId"`
-	Label     string `json:"label"`
+// CampaignGameCharacter stores one visible scene character on the game surface.
+type CampaignGameCharacter struct {
+	ID                 string `json:"id"`
+	Name               string `json:"name"`
+	OwnerParticipantID string `json:"ownerParticipantId"`
 }
 
-// CampaignGamePersona stores one available speaking persona for the viewer.
-type CampaignGamePersona struct {
-	ID            string `json:"id"`
-	Kind          string `json:"kind"`
+// CampaignGameScene stores the active scene snapshot shown on the game surface.
+type CampaignGameScene struct {
+	ID          string                  `json:"id"`
+	SessionID   string                  `json:"sessionId"`
+	Name        string                  `json:"name"`
+	Description string                  `json:"description"`
+	Characters  []CampaignGameCharacter `json:"characters"`
+}
+
+// CampaignGamePlayerSlot stores one participant-owned slot in the current
+// player phase, including GM review state.
+type CampaignGamePlayerSlot struct {
+	ParticipantID      string   `json:"participantId"`
+	SummaryText        string   `json:"summaryText"`
+	CharacterIDs       []string `json:"characterIds"`
+	UpdatedAtUnix      int64    `json:"updatedAtUnix"`
+	Yielded            bool     `json:"yielded"`
+	ReviewStatus       string   `json:"reviewStatus"`
+	ReviewReason       string   `json:"reviewReason"`
+	ReviewCharacterIDs []string `json:"reviewCharacterIds"`
+}
+
+// CampaignGamePlayerPhase stores the active scene player-phase state.
+type CampaignGamePlayerPhase struct {
+	PhaseID              string                   `json:"phaseId"`
+	Status               string                   `json:"status"`
+	FrameText            string                   `json:"frameText"`
+	ActingCharacterIDs   []string                 `json:"actingCharacterIds"`
+	ActingParticipantIDs []string                 `json:"actingParticipantIds"`
+	Slots                []CampaignGamePlayerSlot `json:"slots"`
+}
+
+// CampaignGameOOCPost stores one append-only OOC message on the game surface.
+type CampaignGameOOCPost struct {
+	PostID        string `json:"postId"`
 	ParticipantID string `json:"participantId"`
-	CharacterID   string `json:"characterId"`
-	DisplayName   string `json:"displayName"`
+	Body          string `json:"body"`
+	CreatedAtUnix int64  `json:"createdAtUnix"`
 }
 
-// CampaignGameGate stores the authoritative active session gate state exposed to communication surfaces.
-type CampaignGameGate struct {
-	ID       string         `json:"id"`
-	Type     string         `json:"type"`
-	Status   string         `json:"status"`
-	Reason   string         `json:"reason"`
-	Metadata map[string]any `json:"metadata"`
-	Progress map[string]any `json:"progress"`
+// CampaignGameOOCState stores the session-level OOC pause state.
+type CampaignGameOOCState struct {
+	Open                        bool                  `json:"open"`
+	Posts                       []CampaignGameOOCPost `json:"posts"`
+	ReadyToResumeParticipantIDs []string              `json:"readyToResumeParticipantIds"`
 }
 
-// CampaignGameSpotlight stores the authoritative active session spotlight state.
-type CampaignGameSpotlight struct {
-	Type        string `json:"type"`
-	CharacterID string `json:"characterId"`
+// CampaignGameAITurn stores the session-level AI GM turn state on the game surface.
+type CampaignGameAITurn struct {
+	Status             string `json:"status"`
+	TurnToken          string `json:"turnToken"`
+	OwnerParticipantID string `json:"ownerParticipantId"`
+	SourceEventType    string `json:"sourceEventType"`
+	SourceSceneID      string `json:"sourceSceneId"`
+	SourcePhaseID      string `json:"sourcePhaseId"`
+	LastError          string `json:"lastError"`
 }
 
-// CampaignGameSurface stores the game-surface communication context consumed by the web route.
+// CampaignGameSurface stores the game-surface interaction context consumed by
+// the web route.
 type CampaignGameSurface struct {
-	Participant            CampaignGameParticipant `json:"participant"`
-	SessionID              string                  `json:"sessionId"`
-	SessionName            string                  `json:"sessionName"`
-	DefaultStreamID        string                  `json:"defaultStreamId"`
-	DefaultPersonaID       string                  `json:"defaultPersonaId"`
-	ActiveSessionGate      *CampaignGameGate       `json:"activeSessionGate"`
-	ActiveSessionSpotlight *CampaignGameSpotlight  `json:"activeSessionSpotlight"`
-	Streams                []CampaignGameStream    `json:"streams"`
-	Personas               []CampaignGamePersona   `json:"personas"`
+	Participant              CampaignGameParticipant  `json:"participant"`
+	SessionID                string                   `json:"sessionId"`
+	SessionName              string                   `json:"sessionName"`
+	ActiveScene              *CampaignGameScene       `json:"activeScene"`
+	PlayerPhase              *CampaignGamePlayerPhase `json:"playerPhase"`
+	OOC                      CampaignGameOOCState     `json:"ooc"`
+	GMAuthorityParticipantID string                   `json:"gmAuthorityParticipantId"`
+	AITurn                   CampaignGameAITurn       `json:"aiTurn"`
 }

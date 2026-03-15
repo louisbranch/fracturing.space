@@ -53,10 +53,12 @@ type projectionBackend interface {
 	storage.ProjectionStore
 	storage.SessionGateStore
 	storage.SessionSpotlightStore
+	storage.SessionInteractionStore
 	storage.SceneStore
 	storage.SceneCharacterStore
 	storage.SceneGateStore
 	storage.SceneSpotlightStore
+	storage.SceneInteractionStore
 	storage.ProjectionApplyExactlyOnceStore
 	Close() error
 	DaggerheartProjectionStore() projectionstore.Store

@@ -267,8 +267,8 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	if bundle.Modules.Campaigns.CampaignClient == nil {
 		t.Fatal("expected campaign client")
 	}
-	if bundle.Modules.Campaigns.CommunicationClient == nil {
-		t.Fatal("expected campaign communication client")
+	if bundle.Modules.Campaigns.InteractionClient == nil {
+		t.Fatal("expected campaign interaction client")
 	}
 	if bundle.Modules.Campaigns.AuthClient == nil {
 		t.Fatal("expected campaign auth client")

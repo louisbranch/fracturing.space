@@ -27,7 +27,7 @@ type WorkspaceReadDeps struct {
 
 // GameReadDeps keeps game-surface query dependencies explicit.
 type GameReadDeps struct {
-	Communication CommunicationClient
+	Interaction InteractionClient
 }
 
 // ParticipantReadDeps keeps participant query dependencies explicit.
@@ -163,7 +163,7 @@ type workspaceReadGateway struct {
 	assetBaseURL string
 }
 
-// gameReadGateway maps game-surface reads from communication state.
+// gameReadGateway maps game-surface reads from interaction state.
 type gameReadGateway struct {
 	read GameReadDeps
 }
@@ -287,7 +287,7 @@ func NewWorkspaceReadGateway(readDeps WorkspaceReadDeps, assetBaseURL string) ca
 // NewGameReadGateway builds the game-surface read adapter from explicit
 // dependencies.
 func NewGameReadGateway(readDeps GameReadDeps) campaignapp.CampaignGameReadGateway {
-	if readDeps.Communication == nil {
+	if readDeps.Interaction == nil {
 		return nil
 	}
 	return gameReadGateway{read: readDeps}

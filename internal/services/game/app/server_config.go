@@ -22,7 +22,7 @@ type serverEnv struct {
 	ProjectionApplyOutboxEnabled             bool          `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED"     envDefault:"false"`
 	ProjectionApplyOutboxShadowWorkerEnabled bool          `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED" envDefault:"false"`
 	ProjectionApplyOutboxWorkerEnabled       bool          `env:"FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED" envDefault:"false"`
-	InternalServiceAllowlist                 string        `env:"FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,chat,worker"`
+	InternalServiceAllowlist                 string        `env:"FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,worker"`
 	StartupTimeout                           time.Duration `env:"FRACTURING_SPACE_GAME_STARTUP_TIMEOUT"            envDefault:"60s"`
 }
 

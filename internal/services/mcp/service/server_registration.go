@@ -23,16 +23,18 @@ type mcpRegistrationModule struct {
 }
 
 const (
-	mcpDaggerheartToolsModuleName = "daggerheart-tools"
-	mcpCampaignToolsModuleName    = "campaign-tools"
-	mcpSessionToolsModuleName     = "session-tools"
-	mcpForkToolsModuleName        = "fork-tools"
-	mcpEventToolsModuleName       = "event-tools"
-	mcpContextToolsModuleName     = "context-tools"
-	mcpCampaignResourceModuleName = "campaign-resources"
-	mcpSessionResourceModuleName  = "session-resources"
-	mcpEventResourceModuleName    = "event-resources"
-	mcpContextResourceModuleName  = "context-resources"
+	mcpDaggerheartToolsModuleName    = "daggerheart-tools"
+	mcpCampaignToolsModuleName       = "campaign-tools"
+	mcpSessionToolsModuleName        = "session-tools"
+	mcpInteractionToolsModuleName    = "interaction-tools"
+	mcpForkToolsModuleName           = "fork-tools"
+	mcpEventToolsModuleName          = "event-tools"
+	mcpContextToolsModuleName        = "context-tools"
+	mcpCampaignResourceModuleName    = "campaign-resources"
+	mcpSessionResourceModuleName     = "session-resources"
+	mcpInteractionResourceModuleName = "interaction-resources"
+	mcpEventResourceModuleName       = "event-resources"
+	mcpContextResourceModuleName     = "context-resources"
 )
 
 type mcpRegistrationClients struct {
@@ -42,6 +44,7 @@ type mcpRegistrationClients struct {
 	characterClient   statev1.CharacterServiceClient
 	snapshotClient    statev1.SnapshotServiceClient
 	sessionClient     statev1.SessionServiceClient
+	interactionClient statev1.InteractionServiceClient
 	forkClient        statev1.ForkServiceClient
 	eventClient       statev1.EventServiceClient
 }
@@ -101,6 +104,15 @@ var mcpToolRegistrars = []mcpToolRegistrar{
 	newMCPToolRegistrar[domain.CharacterStatePatchInput, domain.CharacterStatePatchResult](),
 	newMCPToolRegistrar[domain.SessionStartInput, domain.SessionStartResult](),
 	newMCPToolRegistrar[domain.SessionEndInput, domain.SessionEndResult](),
+	newMCPToolRegistrar[domain.InteractionSetActiveSceneInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionStartScenePlayerPhaseInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionSubmitScenePlayerPostInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionScenePhaseInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionAcceptScenePlayerPhaseInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionRequestScenePlayerRevisionsInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionEndScenePlayerPhaseInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionPauseOOCInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionPostOOCInput, domain.InteractionStateResult](),
 	newMCPToolRegistrar[domain.EventListInput, domain.EventListResult](),
 	newMCPToolRegistrar[domain.CampaignForkInput, domain.CampaignForkResult](),
 	newMCPToolRegistrar[domain.CampaignLineageInput, domain.CampaignLineageResult](),
@@ -149,6 +161,13 @@ func newMCPRegistrationModules(
 			},
 		},
 		{
+			name: mcpInteractionToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerInteractionTools(registrar, clients.interactionClient, server.getContext, notify)
+			},
+		},
+		{
 			name: mcpForkToolsModuleName,
 			kind: mcpRegistrationKindTools,
 			register: func(registrar mcpRegistrationTarget) error {
@@ -182,6 +201,14 @@ func newMCPRegistrationModules(
 			kind: mcpRegistrationKindResources,
 			register: func(registrar mcpRegistrationTarget) error {
 				registerSessionResources(registrar, clients.sessionClient)
+				return nil
+			},
+		},
+		{
+			name: mcpInteractionResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerInteractionResources(registrar, clients.interactionClient, server.getContext)
 				return nil
 			},
 		},

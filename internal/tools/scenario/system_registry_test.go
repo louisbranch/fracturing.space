@@ -1,124 +1,96 @@
 package scenario
 
 import (
-	"context"
 	"strings"
 	"testing"
 
-	"github.com/Shopify/go-lua"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 )
 
-func TestValidateScenarioSystemRegistry(t *testing.T) {
-	t.Run("valid registry", func(t *testing.T) {
-		registry := map[string]scenarioSystemRegistration{
-			"DAGGERHEART": validScenarioSystemRegistration("DAGGERHEART", commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART),
-		}
-		if err := validateScenarioSystemRegistry(registry); err != nil {
-			t.Fatalf("validateScenarioSystemRegistry: %v", err)
-		}
-	})
+func TestRegisteredScenarioSystemIDsReturnsNormalizedList(t *testing.T) {
+	t.Parallel()
 
-	t.Run("requires explicit id", func(t *testing.T) {
-		registry := map[string]scenarioSystemRegistration{
-			"DAGGERHEART": func() scenarioSystemRegistration {
-				registration := validScenarioSystemRegistration("DAGGERHEART", commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
-				registration.id = ""
-				return registration
-			}(),
-		}
-		err := validateScenarioSystemRegistry(registry)
-		if err == nil || !strings.Contains(err.Error(), "empty id") {
-			t.Fatalf("expected empty id validation error, got %v", err)
-		}
-	})
-
-	t.Run("rejects unspecified game system", func(t *testing.T) {
-		registry := map[string]scenarioSystemRegistration{
-			"DAGGERHEART": validScenarioSystemRegistration("DAGGERHEART", commonv1.GameSystem_GAME_SYSTEM_UNSPECIFIED),
-		}
-		err := validateScenarioSystemRegistry(registry)
-		if err == nil || !strings.Contains(err.Error(), "GAME_SYSTEM_UNSPECIFIED") {
-			t.Fatalf("expected unspecified game system error, got %v", err)
-		}
-	})
-
-	t.Run("requires step runner", func(t *testing.T) {
-		registry := map[string]scenarioSystemRegistration{
-			"DAGGERHEART": func() scenarioSystemRegistration {
-				registration := validScenarioSystemRegistration("DAGGERHEART", commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
-				registration.runStep = nil
-				return registration
-			}(),
-		}
-		err := validateScenarioSystemRegistry(registry)
-		if err == nil || !strings.Contains(err.Error(), "step runner") {
-			t.Fatalf("expected step runner error, got %v", err)
-		}
-	})
-
-	t.Run("requires non-empty step kinds", func(t *testing.T) {
-		registry := map[string]scenarioSystemRegistration{
-			"DAGGERHEART": func() scenarioSystemRegistration {
-				registration := validScenarioSystemRegistration("DAGGERHEART", commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
-				registration.stepKinds = map[string]struct{}{}
-				return registration
-			}(),
-		}
-		err := validateScenarioSystemRegistry(registry)
-		if err == nil || !strings.Contains(err.Error(), "step kind") {
-			t.Fatalf("expected step kind validation error, got %v", err)
-		}
-	})
-
-	t.Run("rejects duplicate method names in one system", func(t *testing.T) {
-		registry := map[string]scenarioSystemRegistration{
-			"DAGGERHEART": func() scenarioSystemRegistration {
-				registration := validScenarioSystemRegistration("DAGGERHEART", commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
-				registration.dslMethods = append(registration.dslMethods, lua.RegistryFunction{
-					Name:     registration.dslMethods[0].Name,
-					Function: stubLuaMethod,
-				})
-				return registration
-			}(),
-		}
-		err := validateScenarioSystemRegistry(registry)
-		if err == nil || !strings.Contains(err.Error(), "duplicated in system") {
-			t.Fatalf("expected duplicate method validation error, got %v", err)
-		}
-	})
-
-	t.Run("rejects unknown game system value", func(t *testing.T) {
-		registry := map[string]scenarioSystemRegistration{
-			"DAGGERHEART": validScenarioSystemRegistration("DAGGERHEART", commonv1.GameSystem(42)),
-		}
-		err := validateScenarioSystemRegistry(registry)
-		if err == nil || !strings.Contains(err.Error(), "unknown game system value") {
-			t.Fatalf("expected unknown game system error, got %v", err)
-		}
-	})
-}
-
-func validScenarioSystemRegistration(id string, gameSystem commonv1.GameSystem) scenarioSystemRegistration {
-	methodName := strings.ToLower(id) + "_method"
-	stepKind := strings.ToLower(id) + "_step"
-	return scenarioSystemRegistration{
-		id:         id,
-		gameSystem: gameSystem,
-		dslMethods: []lua.RegistryFunction{
-			{Name: methodName, Function: stubLuaMethod},
-		},
-		stepKinds: map[string]struct{}{
-			stepKind: {},
-		},
-		runStep: stubSystemStepRunner,
+	ids := registeredScenarioSystemIDs()
+	if len(ids) == 0 {
+		t.Fatalf("registeredScenarioSystemIDs() returned no ids")
+	}
+	if ids[0] != "DAGGERHEART" {
+		t.Fatalf("registeredScenarioSystemIDs()[0] = %q, want DAGGERHEART", ids[0])
 	}
 }
 
-func stubSystemStepRunner(_ *Runner, _ context.Context, _ *scenarioState, _ Step) error {
-	return nil
+func TestRegisteredScenarioSystemMethodsReturnsKnownDaggerheartHandle(t *testing.T) {
+	t.Parallel()
+
+	methods := registeredScenarioSystemMethods()
+	if len(methods) == 0 {
+		t.Fatalf("registeredScenarioSystemMethods() returned no methods")
+	}
+	found := false
+	for _, method := range methods {
+		if method.Name == "action_roll" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("registeredScenarioSystemMethods() did not include action_roll")
+	}
 }
 
-func stubLuaMethod(_ *lua.State) int {
-	return 0
+func TestRegisteredSystemsForStepKindAndKnownStepKinds(t *testing.T) {
+	t.Parallel()
+
+	ok, err := isKnownScenarioSystemStepKind("action_roll")
+	if err != nil {
+		t.Fatalf("isKnownScenarioSystemStepKind() error = %v", err)
+	}
+	if !ok {
+		t.Fatalf("isKnownScenarioSystemStepKind(action_roll) = false, want true")
+	}
+
+	systems, err := registeredSystemsForStepKind("action_roll")
+	if err != nil {
+		t.Fatalf("registeredSystemsForStepKind() error = %v", err)
+	}
+	if len(systems) != 1 || systems[0] != "DAGGERHEART" {
+		t.Fatalf("registeredSystemsForStepKind(action_roll) = %v, want [DAGGERHEART]", systems)
+	}
+}
+
+func TestRegisteredScenarioSystemIDHelpers(t *testing.T) {
+	t.Parallel()
+
+	got, err := registeredScenarioSystemIDForGameSystem(commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART)
+	if err != nil {
+		t.Fatalf("registeredScenarioSystemIDForGameSystem() error = %v", err)
+	}
+	if got != "DAGGERHEART" {
+		t.Fatalf("registeredScenarioSystemIDForGameSystem() = %q, want DAGGERHEART", got)
+	}
+
+	systemID, gameSystem, err := registeredScenarioSystemIDForValue("daggerheart")
+	if err != nil {
+		t.Fatalf("registeredScenarioSystemIDForValue() error = %v", err)
+	}
+	if systemID != "DAGGERHEART" || gameSystem != commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART {
+		t.Fatalf("registeredScenarioSystemIDForValue() = (%q, %v), want (DAGGERHEART, DAGGERHEART)", systemID, gameSystem)
+	}
+}
+
+func TestScenarioSystemForStateAndUnsupportedError(t *testing.T) {
+	t.Parallel()
+
+	registration, ok, err := scenarioSystemForState(&scenarioState{campaignSystem: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART})
+	if err != nil {
+		t.Fatalf("scenarioSystemForState() error = %v", err)
+	}
+	if !ok || registration.id != "DAGGERHEART" {
+		t.Fatalf("scenarioSystemForState() = (%+v, %v), want DAGGERHEART/true", registration, ok)
+	}
+
+	err = unsupportedScenarioSystemError("missing")
+	if err == nil || !strings.Contains(err.Error(), "registered systems: DAGGERHEART") {
+		t.Fatalf("unsupportedScenarioSystemError() = %v, want registered systems hint", err)
+	}
 }

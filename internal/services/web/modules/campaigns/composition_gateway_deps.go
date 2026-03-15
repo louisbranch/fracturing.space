@@ -21,7 +21,7 @@ func newGatewayDeps(config CompositionConfig) campaigngateway.GRPCGatewayDeps {
 			Campaign: config.CampaignClient,
 		},
 		GameRead: campaigngateway.GameReadDeps{
-			Communication: config.CommunicationClient,
+			Interaction: config.InteractionClient,
 		},
 		ParticipantRead: campaigngateway.ParticipantReadDeps{
 			Participant: config.ParticipantClient,

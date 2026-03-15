@@ -38,12 +38,15 @@
         "result.resourceTemplates[2].uriTemplate": "campaign://{campaign_id}/events",
         "result.resourceTemplates[2].name": "campaign_events",
         "result.resourceTemplates[2].mimeType": "application/json",
-        "result.resourceTemplates[3].uriTemplate": "campaign://{campaign_id}/participants",
-        "result.resourceTemplates[3].name": "participant_list",
+        "result.resourceTemplates[3].uriTemplate": "campaign://{campaign_id}/interaction",
+        "result.resourceTemplates[3].name": "interaction_state",
         "result.resourceTemplates[3].mimeType": "application/json",
-        "result.resourceTemplates[4].uriTemplate": "campaign://{campaign_id}/sessions",
-        "result.resourceTemplates[4].name": "session_list",
-        "result.resourceTemplates[4].mimeType": "application/json"
+        "result.resourceTemplates[4].uriTemplate": "campaign://{campaign_id}/participants",
+        "result.resourceTemplates[4].name": "participant_list",
+        "result.resourceTemplates[4].mimeType": "application/json",
+        "result.resourceTemplates[5].uriTemplate": "campaign://{campaign_id}/sessions",
+        "result.resourceTemplates[5].name": "session_list",
+        "result.resourceTemplates[5].mimeType": "application/json"
       }
     }
   ]

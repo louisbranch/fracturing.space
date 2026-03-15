@@ -64,7 +64,7 @@ type CompositionConfig struct {
 	AssetBaseURL     string
 
 	CampaignClient           CampaignClient
-	CommunicationClient      campaigngateway.CommunicationClient
+	InteractionClient        campaigngateway.InteractionClient
 	DiscoveryClient          DiscoveryClient
 	AgentClient              campaigngateway.AgentClient
 	ParticipantClient        ParticipantClient
@@ -114,7 +114,7 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 		DashboardSync:            options.DashboardSync,
 		AssetBaseURL:             options.AssetBaseURL,
 		CampaignClient:           deps.CampaignClient,
-		CommunicationClient:      deps.CommunicationClient,
+		InteractionClient:        deps.InteractionClient,
 		DiscoveryClient:          deps.DiscoveryClient,
 		AgentClient:              deps.AgentClient,
 		ParticipantClient:        deps.ParticipantClient,
@@ -138,7 +138,7 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 // required for production composition.
 func (config CompositionConfig) configured() bool {
 	return config.CampaignClient != nil &&
-		config.CommunicationClient != nil &&
+		config.InteractionClient != nil &&
 		config.DiscoveryClient != nil &&
 		config.AgentClient != nil &&
 		config.ParticipantClient != nil &&

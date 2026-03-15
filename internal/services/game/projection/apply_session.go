@@ -22,13 +22,24 @@ func (a Applier) applySessionStarted(ctx context.Context, evt event.Event, paylo
 	if err != nil {
 		return err
 	}
-	return a.Session.PutSession(ctx, storage.SessionRecord{
+	if err := a.Session.PutSession(ctx, storage.SessionRecord{
 		ID:         sessionID,
 		CampaignID: string(evt.CampaignID),
 		Name:       strings.TrimSpace(payload.SessionName),
 		Status:     session.StatusActive,
 		StartedAt:  startedAt,
 		UpdatedAt:  startedAt,
+	}); err != nil {
+		return err
+	}
+	if a.SessionInteraction == nil {
+		return nil
+	}
+	return a.SessionInteraction.PutSessionInteraction(ctx, storage.SessionInteraction{
+		CampaignID:                  string(evt.CampaignID),
+		SessionID:                   sessionID,
+		ReadyToResumeParticipantIDs: []string{},
+		UpdatedAt:                   startedAt,
 	})
 }
 
@@ -45,7 +56,18 @@ func (a Applier) applySessionEnded(ctx context.Context, evt event.Event, payload
 		return err
 	}
 	_, _, err = a.Session.EndSession(ctx, string(evt.CampaignID), sessionID, endedAt)
-	return err
+	if err != nil {
+		return err
+	}
+	if a.SessionInteraction == nil {
+		return nil
+	}
+	return a.SessionInteraction.PutSessionInteraction(ctx, storage.SessionInteraction{
+		CampaignID:                  string(evt.CampaignID),
+		SessionID:                   sessionID,
+		ReadyToResumeParticipantIDs: []string{},
+		UpdatedAt:                   endedAt,
+	})
 }
 
 func (a Applier) applySessionGateOpened(ctx context.Context, evt event.Event, payload session.GateOpenedPayload) error {

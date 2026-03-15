@@ -144,17 +144,27 @@ func (f *campaignGatewayStub) CampaignGameSurface(_ context.Context, campaignID 
 	if strings.TrimSpace(surface.Participant.Role) == "" {
 		surface.Participant.Role = "Player"
 	}
-	if len(surface.Streams) == 0 {
-		surface.Streams = []CampaignGameStream{{ID: "campaign:" + campaignID + ":table", Kind: "table", Scope: "session", SessionID: surface.SessionID, Label: "Table"}}
+	if surface.ActiveScene == nil {
+		surface.ActiveScene = &CampaignGameScene{
+			ID:        "scene-1",
+			SessionID: surface.SessionID,
+			Name:      "Bridge Watch",
+			Characters: []CampaignGameCharacter{
+				{ID: "char-1", Name: "Aria", OwnerParticipantID: surface.Participant.ID},
+			},
+		}
 	}
-	if len(surface.Personas) == 0 {
-		surface.Personas = []CampaignGamePersona{{ID: "participant:" + surface.Participant.ID, Kind: "participant", ParticipantID: surface.Participant.ID, DisplayName: surface.Participant.Name}}
+	if surface.PlayerPhase == nil {
+		surface.PlayerPhase = &CampaignGamePlayerPhase{
+			PhaseID:              "phase-1",
+			Status:               "players",
+			ActingCharacterIDs:   []string{"char-1"},
+			ActingParticipantIDs: []string{surface.Participant.ID},
+			Slots:                []CampaignGamePlayerSlot{},
+		}
 	}
-	if strings.TrimSpace(surface.DefaultStreamID) == "" {
-		surface.DefaultStreamID = surface.Streams[0].ID
-	}
-	if strings.TrimSpace(surface.DefaultPersonaID) == "" {
-		surface.DefaultPersonaID = surface.Personas[0].ID
+	if len(surface.OOC.Posts) == 0 {
+		surface.OOC.Posts = []CampaignGameOOCPost{}
 	}
 	return surface, nil
 }

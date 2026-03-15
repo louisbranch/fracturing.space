@@ -50,6 +50,27 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 		return storage.SessionRecord{}, err
 	}
 
+	participants, err := a.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
+	if err != nil {
+		return storage.SessionRecord{}, grpcerror.Internal("list campaign participants", err)
+	}
+	defaultAuthority, err := defaultGMAuthorityParticipant(c, participants)
+	if err != nil {
+		return storage.SessionRecord{}, grpcerror.Internal("resolve default gm authority", err)
+	}
+	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
+		CommandType: commandTypeSessionGMAuthoritySet,
+		CampaignID:  campaignID,
+		SessionID:   sessionID,
+		Payload: session.GMAuthoritySetPayload{
+			SessionID:     ids.SessionID(sessionID),
+			ParticipantID: ids.ParticipantID(defaultAuthority.ID),
+		},
+		Options: domainwrite.RequireEvents("session.gm_authority.set did not emit an event"),
+	}); err != nil {
+		return storage.SessionRecord{}, err
+	}
+
 	sess, err := a.stores.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
 		return storage.SessionRecord{}, grpcerror.Internal("load session", err)

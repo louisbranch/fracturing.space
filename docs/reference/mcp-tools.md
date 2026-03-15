@@ -2,7 +2,7 @@
 title: "MCP tools"
 parent: "Reference"
 nav_order: 2
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-12"
 ---
 
 # MCP tools
@@ -42,6 +42,20 @@ Exact MCP tool names currently registered by the server.
 - `session_end`
 - `session_action_roll`
 - `session_roll_outcome_apply`
+
+## Interaction
+
+- `interaction_active_scene_set`
+- `interaction_scene_player_phase_start`
+- `interaction_scene_player_post_submit`
+- `interaction_scene_player_phase_yield`
+- `interaction_scene_player_phase_unyield`
+- `interaction_scene_player_phase_end`
+- `interaction_ooc_pause`
+- `interaction_ooc_post`
+- `interaction_ooc_ready_mark`
+- `interaction_ooc_ready_clear`
+- `interaction_ooc_resume`
 
 ## Daggerheart utilities
 

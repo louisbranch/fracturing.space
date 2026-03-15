@@ -21,6 +21,14 @@ func TestFoldHandledTypes_ReturnsSceneEventContract(t *testing.T) {
 		EventTypeGateAbandoned,
 		EventTypeSpotlightSet,
 		EventTypeSpotlightCleared,
+		EventTypePlayerPhaseStarted,
+		EventTypePlayerPhasePosted,
+		EventTypePlayerPhaseYielded,
+		EventTypePlayerPhaseReviewStarted,
+		EventTypePlayerPhaseUnyielded,
+		EventTypePlayerPhaseRevisionsRequested,
+		EventTypePlayerPhaseAccepted,
+		EventTypePlayerPhaseEnded,
 	}
 
 	if got := FoldHandledTypes(); !testcontracts.EqualSlices(got, want) {
@@ -52,6 +60,13 @@ func TestDeciderHandledCommands_ReturnsSceneCommandContract(t *testing.T) {
 		CommandTypeGateAbandon,
 		CommandTypeSpotlightSet,
 		CommandTypeSpotlightClear,
+		CommandTypePlayerPhaseStart,
+		CommandTypePlayerPhasePost,
+		CommandTypePlayerPhaseYield,
+		CommandTypePlayerPhaseUnyield,
+		CommandTypePlayerPhaseAccept,
+		CommandTypePlayerPhaseRequestRevisions,
+		CommandTypePlayerPhaseEnd,
 	}
 
 	if got := DeciderHandledCommands(); !testcontracts.EqualSlices(got, want) {

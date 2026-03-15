@@ -56,8 +56,8 @@ func TestBindDependenciesWireOwnedModuleClients(t *testing.T) {
 	if deps.Campaigns.CampaignClient == nil {
 		t.Fatal("Campaigns.CampaignClient = nil, want client")
 	}
-	if deps.Campaigns.CommunicationClient == nil {
-		t.Fatal("Campaigns.CommunicationClient = nil, want client")
+	if deps.Campaigns.InteractionClient == nil {
+		t.Fatal("Campaigns.InteractionClient = nil, want client")
 	}
 	if deps.Campaigns.ParticipantClient == nil {
 		t.Fatal("Campaigns.ParticipantClient = nil, want client")

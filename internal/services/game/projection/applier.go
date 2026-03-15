@@ -38,6 +38,8 @@ type Applier struct {
 	SessionGate storage.SessionGateStore
 	// SessionSpotlight writes session spotlight state.
 	SessionSpotlight storage.SessionSpotlightStore
+	// SessionInteraction writes active-scene and OOC interaction state.
+	SessionInteraction storage.SessionInteractionStore
 	// Scene writes scene metadata read models.
 	Scene storage.SceneStore
 	// SceneCharacter writes scene character membership.
@@ -46,6 +48,8 @@ type Applier struct {
 	SceneGate storage.SceneGateStore
 	// SceneSpotlight writes scene spotlight state.
 	SceneSpotlight storage.SceneSpotlightStore
+	// SceneInteraction writes scene player-phase state.
+	SceneInteraction storage.SceneInteractionStore
 	// Adapters holds extension-specific projection hooks including
 	// system event application and character profile updates.
 	Adapters *bridge.AdapterRegistry

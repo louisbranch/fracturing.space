@@ -1,6 +1,7 @@
 package scene
 
 import (
+	"encoding/json"
 	"reflect"
 	"testing"
 
@@ -257,5 +258,49 @@ func TestFold_CorruptPayload_ReturnsError(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected error for corrupt payload on %s", evtType)
 		}
+	}
+}
+
+func TestFold_PlayerPhasePostedClearsYieldedAndReviewState(t *testing.T) {
+	t.Parallel()
+
+	state := State{
+		PlayerPhaseID: "phase-1",
+		PlayerPhaseSlots: map[ids.ParticipantID]PlayerPhaseSlot{
+			"p1": {
+				ParticipantID:      "p1",
+				Yielded:            true,
+				ReviewStatus:       PlayerPhaseSlotReviewStatusChangesRequested,
+				ReviewReason:       "Fix this.",
+				ReviewCharacterIDs: []ids.CharacterID{"c1"},
+			},
+		},
+	}
+	payloadJSON, err := json.Marshal(PlayerPhasePostedPayload{
+		ParticipantID: "p1",
+		CharacterIDs:  []ids.CharacterID{"c1"},
+		SummaryText:   "Corrected action.",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	state, err = Fold(state, event.Event{Type: EventTypePlayerPhasePosted, PayloadJSON: payloadJSON})
+	if err != nil {
+		t.Fatalf("fold: %v", err)
+	}
+
+	slot := state.PlayerPhaseSlots["p1"]
+	if slot.Yielded {
+		t.Fatal("slot yielded = true, want false after repost")
+	}
+	if slot.ReviewStatus != PlayerPhaseSlotReviewStatusOpen {
+		t.Fatalf("review status = %q, want %q", slot.ReviewStatus, PlayerPhaseSlotReviewStatusOpen)
+	}
+	if slot.ReviewReason != "" {
+		t.Fatalf("review reason = %q, want empty", slot.ReviewReason)
+	}
+	if len(slot.ReviewCharacterIDs) != 0 {
+		t.Fatalf("review character ids = %#v, want empty", slot.ReviewCharacterIDs)
 	}
 }

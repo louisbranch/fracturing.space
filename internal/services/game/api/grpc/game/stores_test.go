@@ -29,8 +29,8 @@ func TestStoresValidate(t *testing.T) {
 		for _, name := range []string{
 			"Campaign", "Participant", "ClaimIndex", "Invite",
 			"Character", "SystemStores.Daggerheart", "Session", "SessionGate",
-			"SessionSpotlight", "Scene", "SceneCharacter", "SceneGate",
-			"SceneSpotlight", "Event", "Audit", "Statistics",
+			"SessionSpotlight", "SessionInteraction", "Scene", "SceneCharacter", "SceneGate",
+			"SceneSpotlight", "SceneInteraction", "Event", "Audit", "Statistics",
 			"Snapshot", "CampaignFork", "DaggerheartContent",
 			"Write.Executor", "Write.Runtime", "Events",
 		} {
@@ -63,10 +63,12 @@ func TestNewStoresFromProjection(t *testing.T) {
 		SessionStore:             newFakeSessionStore(),
 		SessionGateStore:         &fakeSessionGateStore{},
 		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
+		SessionInteractionStore:  stubSessionInteractionStore{},
 		SceneStore:               stubSceneStore{},
 		SceneCharacterStore:      stubSceneCharacterStore{},
 		SceneGateStore:           stubSceneGateStore{},
 		SceneSpotlightStore:      stubSceneSpotlightStore{},
+		SceneInteractionStore:    stubSceneInteractionStore{},
 		CampaignForkStore:        &fakeCampaignForkStore{},
 		StatisticsStore:          &fakeStatisticsStore{},
 		SnapshotStore:            stubSnapshot{},
@@ -110,10 +112,12 @@ func TestNewStoresFromProjection_AuditStoreSelection(t *testing.T) {
 		SessionStore:             newFakeSessionStore(),
 		SessionGateStore:         &fakeSessionGateStore{},
 		SessionSpotlightStore:    &fakeSessionSpotlightStore{},
+		SessionInteractionStore:  stubSessionInteractionStore{},
 		SceneStore:               stubSceneStore{},
 		SceneCharacterStore:      stubSceneCharacterStore{},
 		SceneGateStore:           stubSceneGateStore{},
 		SceneSpotlightStore:      stubSceneSpotlightStore{},
+		SceneInteractionStore:    stubSceneInteractionStore{},
 		CampaignForkStore:        &fakeCampaignForkStore{},
 		StatisticsStore:          &fakeStatisticsStore{},
 		SnapshotStore:            stubSnapshot{},
@@ -156,10 +160,12 @@ func validStores() Stores {
 		Session:            newFakeSessionStore(),
 		SessionGate:        &fakeSessionGateStore{},
 		SessionSpotlight:   &fakeSessionSpotlightStore{},
+		SessionInteraction: stubSessionInteractionStore{},
 		Scene:              stubSceneStore{},
 		SceneCharacter:     stubSceneCharacterStore{},
 		SceneGate:          stubSceneGateStore{},
 		SceneSpotlight:     stubSceneSpotlightStore{},
+		SceneInteraction:   stubSceneInteractionStore{},
 		Event:              newFakeEventStore(),
 		Audit:              stubAudit{},
 		Statistics:         &fakeStatisticsStore{},
@@ -233,6 +239,10 @@ type stubSceneStore struct{ storage.SceneStore }
 type stubSceneCharacterStore struct{ storage.SceneCharacterStore }
 type stubSceneGateStore struct{ storage.SceneGateStore }
 type stubSceneSpotlightStore struct{ storage.SceneSpotlightStore }
+type stubSessionInteractionStore struct {
+	storage.SessionInteractionStore
+}
+type stubSceneInteractionStore struct{ storage.SceneInteractionStore }
 
 type projectionStoreBundleStub struct {
 	storage.CampaignStore
@@ -247,10 +257,12 @@ type projectionStoreBundleStub struct {
 	storage.ProjectionWatermarkStore
 	storage.SessionGateStore
 	storage.SessionSpotlightStore
+	storage.SessionInteractionStore
 	storage.SceneStore
 	storage.SceneCharacterStore
 	storage.SceneGateStore
 	storage.SceneSpotlightStore
+	storage.SceneInteractionStore
 }
 
 type eventAuditStoreStub struct {

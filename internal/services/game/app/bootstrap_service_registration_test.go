@@ -2,6 +2,10 @@ package server
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 
 	"google.golang.org/grpc"
@@ -54,6 +58,27 @@ func TestRegisterHealthStatuses_SetsServingForDescriptors(t *testing.T) {
 		}
 		if response.GetStatus() != grpc_health_v1.HealthCheckResponse_SERVING {
 			t.Fatalf("health status %q = %v, want SERVING", service, response.GetStatus())
+		}
+	}
+}
+
+func TestBuildServiceDescriptors_ExcludesLegacyInteractionTransport(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "bootstrap_service_registration.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	for _, legacyMarker := range []string{
+		"Register" + "Commun" + "icationServiceServer",
+		"New" + "Commun" + "icationService",
+	} {
+		if strings.Contains(source, legacyMarker) {
+			t.Fatalf("%s still references removed communication registration", filepath.Base(path))
 		}
 	}
 }

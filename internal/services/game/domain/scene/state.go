@@ -2,6 +2,22 @@ package scene
 
 import "github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 
+type PlayerPhaseStatus string
+
+const (
+	PlayerPhaseStatusPlayers  PlayerPhaseStatus = "players"
+	PlayerPhaseStatusGMReview PlayerPhaseStatus = "gm_review"
+)
+
+type PlayerPhaseSlotReviewStatus string
+
+const (
+	PlayerPhaseSlotReviewStatusOpen             PlayerPhaseSlotReviewStatus = "open"
+	PlayerPhaseSlotReviewStatusUnderReview      PlayerPhaseSlotReviewStatus = "under_review"
+	PlayerPhaseSlotReviewStatusAccepted         PlayerPhaseSlotReviewStatus = "accepted"
+	PlayerPhaseSlotReviewStatusChangesRequested PlayerPhaseSlotReviewStatus = "changes_requested"
+)
+
 // State captures the replayed scene context for a single narrative scope.
 //
 // Each scene is an independent sub-session boundary with its own character
@@ -28,6 +44,19 @@ type State struct {
 	SpotlightType SpotlightType
 	// SpotlightCharacterID tracks the focused character in spotlight workflows.
 	SpotlightCharacterID ids.CharacterID
+	// PlayerPhaseID identifies the currently open player phase, when any.
+	PlayerPhaseID string
+	// PlayerPhaseFrameText stores the GM frame text for the open player phase.
+	PlayerPhaseFrameText string
+	// PlayerPhaseStatus stores whether the open phase is accepting player input
+	// or waiting on GM review.
+	PlayerPhaseStatus PlayerPhaseStatus
+	// PlayerPhaseActingCharacters stores the selected acting characters for the open player phase.
+	PlayerPhaseActingCharacters []ids.CharacterID
+	// PlayerPhaseActingParticipants stores the participants currently allowed to act in the open player phase.
+	PlayerPhaseActingParticipants map[ids.ParticipantID]bool
+	// PlayerPhaseSlots stores the latest participant-owned slot state for the phase.
+	PlayerPhaseSlots map[ids.ParticipantID]PlayerPhaseSlot
 }
 
 // HasPC returns true if the scene contains at least one character whose ID
@@ -39,4 +68,15 @@ func (s State) HasPC(pcs map[ids.CharacterID]bool) bool {
 		}
 	}
 	return false
+}
+
+// PlayerPhaseSlot stores one participant-owned submission slot in the open player phase.
+type PlayerPhaseSlot struct {
+	ParticipantID      ids.ParticipantID
+	CharacterIDs       []ids.CharacterID
+	SummaryText        string
+	Yielded            bool
+	ReviewStatus       PlayerPhaseSlotReviewStatus
+	ReviewReason       string
+	ReviewCharacterIDs []ids.CharacterID
 }

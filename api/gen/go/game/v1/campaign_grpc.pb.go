@@ -537,9 +537,9 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
-// CampaignAIService provides internal-only Game<=>AI/Game<=>Chat campaign AI contracts.
+// CampaignAIService provides internal-only Game<=>AI campaign AI contracts.
 type CampaignAIServiceClient interface {
-	// Issues a session-scoped grant for AI turn relay.
+	// Issues a session-scoped grant for AI orchestration.
 	IssueCampaignAISessionGrant(ctx context.Context, in *IssueCampaignAISessionGrantRequest, opts ...grpc.CallOption) (*IssueCampaignAISessionGrantResponse, error)
 	// Internal read for AI-service usage guards.
 	GetCampaignAIBindingUsage(ctx context.Context, in *GetCampaignAIBindingUsageRequest, opts ...grpc.CallOption) (*GetCampaignAIBindingUsageResponse, error)
@@ -589,9 +589,9 @@ func (c *campaignAIServiceClient) GetCampaignAIAuthState(ctx context.Context, in
 // All implementations must embed UnimplementedCampaignAIServiceServer
 // for forward compatibility.
 //
-// CampaignAIService provides internal-only Game<=>AI/Game<=>Chat campaign AI contracts.
+// CampaignAIService provides internal-only Game<=>AI campaign AI contracts.
 type CampaignAIServiceServer interface {
-	// Issues a session-scoped grant for AI turn relay.
+	// Issues a session-scoped grant for AI orchestration.
 	IssueCampaignAISessionGrant(context.Context, *IssueCampaignAISessionGrantRequest) (*IssueCampaignAISessionGrantResponse, error)
 	// Internal read for AI-service usage guards.
 	GetCampaignAIBindingUsage(context.Context, *GetCampaignAIBindingUsageRequest) (*GetCampaignAIBindingUsageResponse, error)

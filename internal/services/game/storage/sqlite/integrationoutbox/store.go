@@ -12,6 +12,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -124,6 +126,14 @@ func integrationOutboxEventsForEvent(evt event.Event) ([]storage.IntegrationOutb
 		return buildInviteClaimedOutboxEvent(evt)
 	case invite.EventTypeDeclined:
 		return buildInviteDeclinedOutboxEvent(evt)
+	case session.EventTypeActiveSceneSet:
+		return buildAIGMTurnRequestedOutboxEvent(evt)
+	case session.EventTypeGMAuthoritySet:
+		return buildAIGMTurnRequestedOutboxEvent(evt)
+	case session.EventTypeOOCResumed:
+		return buildAIGMTurnRequestedOutboxEvent(evt)
+	case scene.EventTypePlayerPhaseReviewStarted:
+		return buildAIGMTurnRequestedOutboxEvent(evt)
 	default:
 		return nil, nil
 	}
@@ -219,6 +229,52 @@ func newInviteNotificationOutboxEvent(
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}, nil
+}
+
+func buildAIGMTurnRequestedOutboxEvent(evt event.Event) ([]storage.IntegrationOutboxEvent, error) {
+	payload := gameintegration.AIGMTurnRequestedOutboxPayload{
+		CampaignID:      strings.TrimSpace(string(evt.CampaignID)),
+		SessionID:       strings.TrimSpace(evt.SessionID.String()),
+		SourceEventType: strings.TrimSpace(string(evt.Type)),
+	}
+	switch evt.Type {
+	case session.EventTypeActiveSceneSet:
+		var source session.ActiveSceneSetPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &source); err != nil {
+			return nil, fmt.Errorf("decode session.active_scene_set integration payload: %w", err)
+		}
+		payload.SourceSceneID = strings.TrimSpace(source.ActiveSceneID.String())
+	case scene.EventTypePlayerPhaseReviewStarted:
+		var source scene.PlayerPhaseReviewStartedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &source); err != nil {
+			return nil, fmt.Errorf("decode scene.player_phase_review_started integration payload: %w", err)
+		}
+		payload.SourceSceneID = strings.TrimSpace(source.SceneID.String())
+		payload.SourcePhaseID = strings.TrimSpace(source.PhaseID)
+	}
+	if strings.TrimSpace(payload.CampaignID) == "" || strings.TrimSpace(payload.SessionID) == "" {
+		return nil, nil
+	}
+	outboxEventID, err := id.NewID()
+	if err != nil {
+		return nil, fmt.Errorf("generate integration outbox event id: %w", err)
+	}
+	payloadJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal ai gm turn requested outbox payload: %w", err)
+	}
+	now := evt.Timestamp.UTC()
+	return []storage.IntegrationOutboxEvent{{
+		ID:            outboxEventID,
+		EventType:     gameintegration.AIGMTurnRequestedOutboxEventType,
+		PayloadJSON:   string(payloadJSON),
+		DedupeKey:     gameintegration.AIGMTurnRequestedDedupeKey(outboxEventID),
+		Status:        storage.IntegrationOutboxStatusPending,
+		AttemptCount:  0,
+		NextAttemptAt: now,
+		CreatedAt:     now,
+		UpdatedAt:     now,
+	}}, nil
 }
 
 // EnqueueIntegrationOutboxEvent persists one outbox event directly.

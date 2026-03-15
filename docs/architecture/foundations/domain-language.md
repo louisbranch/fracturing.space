@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 4
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-09"
+last_reviewed: "2026-03-12"
 ---
 
 # Domain Language
@@ -62,11 +62,7 @@ Examples: note additions, canonized facts, scene start/end, reveals.
 
 - **Session gate**: temporary checkpoint blocking action flow until resolved.
 - **Gate response authority**: the domain unit whose response counts toward a
-  gate workflow. Current communication gates count participant responses, not
-  persona responses.
-- **Ready check**: session gate workflow with fixed `ready` / `wait` responses.
-- **Vote**: session gate workflow where responses are explicit option choices,
-  optionally constrained by workflow metadata.
+  gate workflow. Gate responses are participant-scoped, not persona-scoped.
 - **Gate resolution state**: derived workflow summary that indicates whether a
   gate is still collecting responses, is blocked, is ready to resolve, or
   requires manual review.
@@ -88,19 +84,32 @@ The one intentional campaign bootstrap workflow,
 `domain/campaignbootstrap` package so the campaign aggregate decider remains
 campaign-local even though bootstrap emits participant join events atomically.
 
-## Communication terms
+## Interaction terms
 
-- **Communication stream**: game-owned routed channel for transcript delivery
-  and system/control output.
-- **Persona**: speaking identity available to one participant in communication
-  context. A persona changes who a message is presented as, not which
-  participant seat owns rules-affecting decisions.
-- **Participant persona**: the participant speaking as themselves.
-- **Character persona**: the participant speaking as one controlled character.
+- **Active scene**: the one scene in a session that currently owns
+  in-character interaction authority.
+- **Scene player phase**: a scene-scoped interval where one or more selected
+  characters may act before authority returns to the GM.
+- **GM frame**: the authoritative scene prompt that opens a player phase and
+  defines what the current acting set is responding to.
+- **Acting character set**: the characters selected by the GM for the current
+  scene player phase.
+- **Acting participant set**: the participant seats derived from the acting
+  character owners. Interaction authority remains participant-scoped even when
+  presentation is character-oriented.
+- **Participant action post**: one participant-owned action summary committed
+  during the current scene player phase.
+- **Yield**: explicit participant signal that their contribution to the current
+  scene player phase is complete. Yields are revokable until the phase closes.
+- **Session OOC overlay**: a session-level out-of-character pause used for
+  participant and GM discussion while scene play is suspended.
 
-Current persona scope is intentionally narrow: participant-self plus eligible
-controlled characters. GM/NPC/temporary-mask personas are future extensions,
-not current core vocabulary.
+## Transcript transport terms
+
+- **Session chat**: optional session-scoped human transcript transport. It is
+  not authoritative for active play.
+- **Transcript entry**: one ordered chat message in the optional session chat
+  sidecar.
 
 ## Operational read-model terms
 

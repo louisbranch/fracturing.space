@@ -8,40 +8,59 @@ import (
 
 // CampaignChatView carries the game chat page state for one campaign workspace.
 type CampaignChatView struct {
-	CampaignID       string
-	CampaignName     string
-	BackURL          string
-	ChatFallbackPort string
-	BootstrapJSON    string
-	ParticipantName  string
-	ParticipantRole  string
-	SessionName      string
-	DefaultStreamID  string
-	DefaultPersonaID string
-	GateSummary      string
-	SpotlightSummary string
-	ActiveGateType   string
-	ActiveGateStatus string
-	Streams          []CampaignChatStreamView
-	Personas         []CampaignChatPersonaView
+	CampaignID           string
+	CampaignName         string
+	BackURL              string
+	BootstrapJSON        string
+	ParticipantName      string
+	ParticipantRole      string
+	SessionName          string
+	SceneName            string
+	SceneDescription     string
+	PhaseStatus          string
+	PhaseLabel           string
+	PhaseFrame           string
+	OOCSummary           string
+	HasOpenOOC           bool
+	ActingCharacters     []CampaignChatCharacterView
+	SceneCharacters      []CampaignChatCharacterView
+	Slots                []CampaignChatPlayerSlotView
+	OOCPosts             []CampaignChatOOCPostView
+	YieldedParticipants  []string
+	OOCReadyParticipants []string
+	GMAuthorityLabel     string
+	AITurnStatus         string
+	AITurnSummary        string
+	AITurnError          string
 }
 
-// CampaignChatStreamView carries one stream selector row for the chat surface.
-type CampaignChatStreamView struct {
-	StreamID      string
-	Label         string
-	Kind          string
-	Scope         string
-	SecondaryText string
-	Active        bool
+// CampaignChatCharacterView carries one visible scene character row.
+type CampaignChatCharacterView struct {
+	CharacterID        string
+	Name               string
+	OwnerParticipantID string
+	Active             bool
 }
 
-// CampaignChatPersonaView carries one persona selector option for the chat surface.
-type CampaignChatPersonaView struct {
-	PersonaID   string
-	DisplayName string
-	KindLabel   string
-	Active      bool
+// CampaignChatPlayerSlotView carries one participant-owned player slot.
+type CampaignChatPlayerSlotView struct {
+	ParticipantID        string
+	SummaryText          string
+	CharacterLabel       string
+	Yielded              bool
+	ReviewStatus         string
+	ReviewLabel          string
+	ReviewReason         string
+	ReviewCharacterLabel string
+	ReviewBadgeClass     string
+	Viewer               bool
+}
+
+// CampaignChatOOCPostView carries one append-only OOC post.
+type CampaignChatOOCPostView struct {
+	ParticipantID string
+	Body          string
+	Viewer        bool
 }
 
 // campaignChatName prefers the rendered campaign label and falls back to the route id.
@@ -71,11 +90,6 @@ func campaignChatBackURL(view CampaignChatView) string {
 	return routepath.AppCampaigns
 }
 
-// campaignChatFallbackPort exposes the websocket fallback port to the page shell.
-func campaignChatFallbackPort(view CampaignChatView) string {
-	return strings.TrimSpace(view.ChatFallbackPort)
-}
-
 // campaignChatParticipantLabel keeps participant copy stable with safe fallback text.
 func campaignChatParticipantLabel(view CampaignChatView) string {
 	if strings.TrimSpace(view.ParticipantName) != "" {
@@ -92,26 +106,26 @@ func campaignChatSessionLabel(view CampaignChatView) string {
 	return "No active session"
 }
 
-// campaignChatGateSummary keeps the current gate summary readable when empty.
-func campaignChatGateSummary(view CampaignChatView) string {
-	if strings.TrimSpace(view.GateSummary) != "" {
-		return strings.TrimSpace(view.GateSummary)
+// campaignChatSceneLabel keeps scene copy stable with safe fallback text.
+func campaignChatSceneLabel(view CampaignChatView) string {
+	if strings.TrimSpace(view.SceneName) != "" {
+		return strings.TrimSpace(view.SceneName)
 	}
-	return "No active gate"
+	return "No active scene"
 }
 
-// campaignChatSpotlightSummary keeps the current spotlight summary readable when empty.
-func campaignChatSpotlightSummary(view CampaignChatView) string {
-	if strings.TrimSpace(view.SpotlightSummary) != "" {
-		return strings.TrimSpace(view.SpotlightSummary)
+// campaignChatPhaseSummary keeps the current scene-phase summary readable when empty.
+func campaignChatPhaseSummary(view CampaignChatView) string {
+	if strings.TrimSpace(view.PhaseLabel) != "" {
+		return strings.TrimSpace(view.PhaseLabel)
 	}
-	return "No active spotlight"
+	return "GM turn"
 }
 
-// campaignChatStreamButtonClass preserves the active/inactive stream control styling.
-func campaignChatStreamButtonClass(stream CampaignChatStreamView) string {
-	if stream.Active {
-		return "btn btn-sm btn-primary w-full justify-between"
+// campaignChatOOCSummary keeps the current OOC summary readable when empty.
+func campaignChatOOCSummary(view CampaignChatView) string {
+	if strings.TrimSpace(view.OOCSummary) != "" {
+		return strings.TrimSpace(view.OOCSummary)
 	}
-	return "btn btn-sm btn-ghost w-full justify-between"
+	return "In character"
 }

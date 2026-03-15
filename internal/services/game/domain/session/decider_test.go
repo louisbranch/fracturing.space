@@ -376,7 +376,7 @@ func TestDecideSessionGateOpen_WhenAlreadyOpenRejected(t *testing.T) {
 		Type:        command.Type("session.gate_open"),
 		ActorType:   command.ActorTypeSystem,
 		SessionID:   "sess-1",
-		PayloadJSON: []byte(`{"gate_id":"gate-2","gate_type":"ready_check"}`),
+		PayloadJSON: []byte(`{"gate_id":"gate-2","gate_type":"decision"}`),
 	}
 
 	decision := Decide(State{GateOpen: true, GateID: "gate-1"}, cmd, nil)
@@ -424,7 +424,7 @@ func TestDecideSessionGateRespond_EmitsGateResponseRecordedEvent(t *testing.T) {
 
 	metadataJSON, err := json.Marshal(map[string]any{
 		"eligible_participant_ids": []string{"part-1", "part-2"},
-		"options":                  []string{"ready", "wait"},
+		"topic":                    "consensus",
 	})
 	if err != nil {
 		t.Fatalf("marshal metadata: %v", err)
@@ -432,7 +432,7 @@ func TestDecideSessionGateRespond_EmitsGateResponseRecordedEvent(t *testing.T) {
 	decision := Decide(State{
 		GateOpen:         true,
 		GateID:           "gate-1",
-		GateType:         GateTypeVote,
+		GateType:         "decision",
 		GateMetadataJSON: metadataJSON,
 	}, cmd, func() time.Time { return now })
 	if len(decision.Rejections) != 0 {
@@ -471,7 +471,7 @@ func TestDecideSessionGateRespond_MissingParticipantRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":" ","decision":"ready"}`),
 	}
 
-	decision := Decide(State{GateOpen: true, GateID: "gate-1", GateType: GateTypeReadyCheck}, cmd, nil)
+	decision := Decide(State{GateOpen: true, GateID: "gate-1", GateType: "decision"}, cmd, nil)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -504,19 +504,19 @@ func TestDecideSessionGateAbandon_MissingGateIDRejected(t *testing.T) {
 	}
 }
 
-func TestDecideSessionGateRespond_RejectsInvalidWorkflowResponse(t *testing.T) {
+func TestDecideSessionGateRespond_RejectsEmptyWorkflowResponse(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("session.gate_record_response"),
 		ActorType:   command.ActorTypeSystem,
 		SessionID:   "sess-1",
-		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":"part-1","decision":"later"}`),
+		PayloadJSON: []byte(`{"gate_id":"gate-1","participant_id":"part-1"}`),
 	}
 
 	decision := Decide(State{
 		GateOpen: true,
 		GateID:   "gate-1",
-		GateType: GateTypeReadyCheck,
+		GateType: "decision",
 	}, cmd, nil)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -532,7 +532,7 @@ func TestDecideSessionGateRespond_RejectsInvalidWorkflowResponse(t *testing.T) {
 func TestDecideSessionGateRespond_RejectsIneligibleParticipantFromFoldedMetadata(t *testing.T) {
 	metadataJSON, err := json.Marshal(map[string]any{
 		"eligible_participant_ids": []string{"part-1"},
-		"options":                  []string{"ready", "wait"},
+		"topic":                    "consensus",
 	})
 	if err != nil {
 		t.Fatalf("marshal metadata: %v", err)
@@ -548,7 +548,7 @@ func TestDecideSessionGateRespond_RejectsIneligibleParticipantFromFoldedMetadata
 	decision := Decide(State{
 		GateOpen:         true,
 		GateID:           "gate-1",
-		GateType:         GateTypeVote,
+		GateType:         "decision",
 		GateMetadataJSON: metadataJSON,
 	}, cmd, nil)
 	if len(decision.Events) != 0 {

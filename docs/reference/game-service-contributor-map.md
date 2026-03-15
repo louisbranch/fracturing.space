@@ -29,7 +29,7 @@ check sequence.
 | --- | --- |
 | Change startup wiring, runtime registration, or service exposure | `internal/services/game/app/` |
 | Change gRPC interceptors or shared transport guards | `internal/services/game/api/grpc/interceptors/`, `internal/services/game/api/grpc/internal/` |
-| Change core game transport for campaigns, participants, characters, sessions, scenes, invites, snapshots, forks, events, communication, or authorization | `internal/services/game/api/grpc/game/` |
+| Change core game transport for campaigns, participants, characters, sessions, scenes, invites, snapshots, forks, events, interaction, or authorization | `internal/services/game/api/grpc/game/` |
 | Change core transport protobuf mapping for one capability | `internal/services/game/api/grpc/game/<capability>transport/` |
 | Change Daggerheart deterministic read/mechanics endpoints | `internal/services/game/api/grpc/systems/daggerheart/mechanicstransport/` |
 | Change Daggerheart gameplay mutation/read transport | `internal/services/game/api/grpc/systems/daggerheart/*transport/` and thin root wrappers in `internal/services/game/api/grpc/systems/daggerheart/` |
@@ -66,7 +66,7 @@ the whole package.
 | `campaign` | `decider_create.go`, `decider_update.go`, `decider_lifecycle.go`, `decider_ai.go`, `decider_fork.go` | `decider.go`, `policy.go`, `registry.go`, `fold.go` |
 | `campaignbootstrap` | `workflow.go` | `workflow_test.go`, then `campaign/` and `participant/` as needed |
 | `participant` | `decider_join.go`, `decider_update.go`, `decider_lifecycle.go`, `decider_binding.go` | `decider.go`, `decider_shared.go`, `registry.go`, `fold.go` |
-| `session` | `decider_lifecycle.go`, `decider_gate.go`, `decider_spotlight.go` | `decider.go`, the `gate_workflow_*.go`, `gate_progress_*.go`, and `gate_projection_*.go` families, then `registry.go` and `fold.go` |
+| `session` | `decider_lifecycle.go`, `decider_gate.go`, `decider_spotlight.go`, `decider_interaction.go` | `decider.go`, the `gate_workflow_*.go`, `gate_progress_*.go`, and `gate_projection_*.go` families, then `registry.go` and `fold.go` |
 | `scene` | `decider_lifecycle.go`, `decider_character.go`, `decider_gate.go`, `decider_spotlight.go` | `decider.go`, the `registry_*.go` family, then `fold.go` |
 | `character` | `decider_create.go`, `decider_update.go`, `decider_lifecycle.go` | `decider.go`, `decider_shared.go`, `registry.go`, `fold.go` |
 | `invite` | `decider_create.go`, `decider_claim.go`, `decider_lifecycle.go` | `decider.go`, `registry.go`, `fold.go`, `decline_test.go` for the dedicated decline path |
@@ -87,7 +87,7 @@ Use `internal/services/game/api/grpc/game/` when the change is system-agnostic.
 - Campaigns: `campaign_*application.go`, `campaign_service_*.go`, `campaigntransport/`
 - Participants: `participant_*application.go`, `participant_service_*.go`, `participanttransport/`
 - Characters: `character_*application.go`, `character_service_*.go`, `charactertransport/`, `characterworkflow/`
-- Sessions/scenes/communication: `session_*`, `scene_*`, `communication_*`, `sessiontransport/`
+- Sessions/scenes/interaction: `session_*`, `scene_*`, `interaction_*`, `sessiontransport/`
 - Invites/forks/events/snapshots/authorization: matching `*_application.go` and `*_service*.go` groups
 
 ### Daggerheart transport

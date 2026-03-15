@@ -762,6 +762,13 @@ func TestRegisterToolsNoPanic(t *testing.T) {
 		}
 	})
 
+	t.Run("registerInteractionTools", func(t *testing.T) {
+		err := registerInteractionTools(mcpServerRegistrationAdapter{server: mcpServer}, nil, server.getContext, nil)
+		if err != nil {
+			t.Fatalf("registerInteractionTools: %v", err)
+		}
+	})
+
 	t.Run("registerEventTools", func(t *testing.T) {
 		err := registerEventTools(mcpServerRegistrationAdapter{server: mcpServer}, nil, server.getContext)
 		if err != nil {
@@ -789,6 +796,10 @@ func TestRegisterToolsNoPanic(t *testing.T) {
 
 	t.Run("registerSessionResources", func(t *testing.T) {
 		registerSessionResources(mcpServerRegistrationAdapter{server: mcpServer}, nil)
+	})
+
+	t.Run("registerInteractionResources", func(t *testing.T) {
+		registerInteractionResources(mcpServerRegistrationAdapter{server: mcpServer}, nil, server.getContext)
 	})
 
 	t.Run("registerEventResources", func(t *testing.T) {
@@ -837,11 +848,13 @@ func TestMCPRegistrationModules(t *testing.T) {
 		mcpDaggerheartToolsModuleName,
 		mcpCampaignToolsModuleName,
 		mcpSessionToolsModuleName,
+		mcpInteractionToolsModuleName,
 		mcpForkToolsModuleName,
 		mcpEventToolsModuleName,
 		mcpContextToolsModuleName,
 		mcpCampaignResourceModuleName,
 		mcpSessionResourceModuleName,
+		mcpInteractionResourceModuleName,
 		mcpEventResourceModuleName,
 		mcpContextResourceModuleName,
 	}
@@ -863,16 +876,18 @@ func TestMCPRegistrationModulesAreIsolated(t *testing.T) {
 	)
 
 	expectedCounts := map[string]int{
-		mcpDaggerheartToolsModuleName: 6,
-		mcpCampaignToolsModuleName:    15,
-		mcpSessionToolsModuleName:     2,
-		mcpForkToolsModuleName:        2,
-		mcpEventToolsModuleName:       1,
-		mcpContextToolsModuleName:     1,
-		mcpCampaignResourceModuleName: 4,
-		mcpSessionResourceModuleName:  1,
-		mcpEventResourceModuleName:    1,
-		mcpContextResourceModuleName:  1,
+		mcpDaggerheartToolsModuleName:    6,
+		mcpCampaignToolsModuleName:       15,
+		mcpSessionToolsModuleName:        2,
+		mcpInteractionToolsModuleName:    13,
+		mcpForkToolsModuleName:           2,
+		mcpEventToolsModuleName:          1,
+		mcpContextToolsModuleName:        1,
+		mcpCampaignResourceModuleName:    4,
+		mcpSessionResourceModuleName:     1,
+		mcpInteractionResourceModuleName: 1,
+		mcpEventResourceModuleName:       1,
+		mcpContextResourceModuleName:     1,
 	}
 
 	for _, module := range modules {
@@ -914,6 +929,65 @@ func TestMCPRegistrationModulesAreIsolated(t *testing.T) {
 				t.Fatalf("module %q registered %d items, expected %d", module.name, got, want)
 			}
 		})
+	}
+}
+
+type failingMCPRegistrationTarget struct{}
+
+func (failingMCPRegistrationTarget) AddTool(*mcp.Tool, any) error {
+	return fmt.Errorf("boom")
+}
+
+func (failingMCPRegistrationTarget) AddResourceTemplate(*mcp.ResourceTemplate, mcp.ResourceHandler) {}
+
+func (failingMCPRegistrationTarget) AddResource(*mcp.Resource, mcp.ResourceHandler) {}
+
+func TestRegisterToolRejectsNilTool(t *testing.T) {
+	if err := registerTool(&fakeMCPRegistrationTarget{}, nil, struct{}{}); err == nil {
+		t.Fatal("expected nil tool error")
+	}
+}
+
+func TestRegisterInteractionToolsRegistersAllInteractionToolNames(t *testing.T) {
+	target := &fakeMCPRegistrationTarget{}
+
+	if err := registerInteractionTools(target, nil, func() domain.Context { return domain.Context{} }, nil); err != nil {
+		t.Fatalf("registerInteractionTools() error = %v", err)
+	}
+
+	want := []string{
+		"interaction_active_scene_set",
+		"interaction_scene_player_phase_start",
+		"interaction_scene_player_post_submit",
+		"interaction_scene_player_phase_yield",
+		"interaction_scene_player_phase_unyield",
+		"interaction_scene_player_phase_accept",
+		"interaction_scene_player_revisions_request",
+		"interaction_scene_player_phase_end",
+		"interaction_ooc_pause",
+		"interaction_ooc_post",
+		"interaction_ooc_ready_mark",
+		"interaction_ooc_ready_clear",
+		"interaction_ooc_resume",
+	}
+	if !reflect.DeepEqual(target.tools, want) {
+		t.Fatalf("interaction tools = %v, want %v", target.tools, want)
+	}
+}
+
+func TestRegisterInteractionResourcesAddsInteractionResourceTemplate(t *testing.T) {
+	target := &fakeMCPRegistrationTarget{}
+
+	registerInteractionResources(target, nil, func() domain.Context { return domain.Context{} })
+
+	if !reflect.DeepEqual(target.resourceTemplates, []string{"campaign://{campaign_id}/interaction"}) {
+		t.Fatalf("resource templates = %v", target.resourceTemplates)
+	}
+}
+
+func TestRegisterToolPropagatesRegistrarError(t *testing.T) {
+	if err := registerTool(failingMCPRegistrationTarget{}, domain.InteractionSetActiveSceneTool(), struct{}{}); err == nil {
+		t.Fatal("expected registrar error")
 	}
 }
 

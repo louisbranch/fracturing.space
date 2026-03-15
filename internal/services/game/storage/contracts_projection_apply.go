@@ -77,10 +77,12 @@ type ProjectionApplyTxStore interface {
 	SessionStore
 	SessionGateStore
 	SessionSpotlightStore
+	SessionInteractionStore
 	SceneStore
 	SceneCharacterStore
 	SceneGateStore
 	SceneSpotlightStore
+	SceneInteractionStore
 	ProjectionWatermarkStore
 }
 

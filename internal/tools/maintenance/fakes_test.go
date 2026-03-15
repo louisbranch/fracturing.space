@@ -337,6 +337,14 @@ func (f *fakeProjectionStore) ListSessions(context.Context, string, int, string)
 	return storage.SessionPage{}, fmt.Errorf("not implemented")
 }
 
+func (f *fakeProjectionStore) PutSessionInteraction(context.Context, storage.SessionInteraction) error {
+	return fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) GetSessionInteraction(context.Context, string, string) (storage.SessionInteraction, error) {
+	return storage.SessionInteraction{}, fmt.Errorf("not implemented")
+}
+
 func (f *fakeProjectionStore) PutSnapshot(context.Context, storage.Snapshot) error {
 	return fmt.Errorf("not implemented")
 }

@@ -486,7 +486,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
 			},
 		),
 	})
@@ -547,7 +547,7 @@ func TestAppPageUserDropdownProfileUsesAuthUsernameWhenSocialProfileHasNoUsernam
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
 			},
 		),
 	})
@@ -591,7 +591,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
 			},
 		),
 	})

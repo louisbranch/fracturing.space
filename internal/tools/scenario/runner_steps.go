@@ -8,34 +8,73 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/coreevent"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 var coreStepKinds = map[string]struct{}{
-	"campaign":                 {},
-	"participant":              {},
-	"start_session":            {},
-	"end_session":              {},
-	"character":                {},
-	"prefab":                   {},
-	"set_spotlight":            {},
-	"clear_spotlight":          {},
-	"create_scene":             {},
-	"end_scene":                {},
-	"scene_add_character":      {},
-	"scene_remove_character":   {},
-	"scene_transfer_character": {},
-	"scene_transition":         {},
-	"scene_gate_open":          {},
-	"scene_gate_resolve":       {},
-	"scene_gate_abandon":       {},
-	"scene_set_spotlight":      {},
-	"scene_clear_spotlight":    {},
-	"update_scene":             {},
+	"campaign":                        {},
+	"participant":                     {},
+	"start_session":                   {},
+	"end_session":                     {},
+	"character":                       {},
+	"prefab":                          {},
+	"set_spotlight":                   {},
+	"clear_spotlight":                 {},
+	"create_scene":                    {},
+	"end_scene":                       {},
+	"scene_add_character":             {},
+	"scene_remove_character":          {},
+	"scene_transfer_character":        {},
+	"scene_transition":                {},
+	"scene_gate_open":                 {},
+	"scene_gate_resolve":              {},
+	"scene_gate_abandon":              {},
+	"scene_set_spotlight":             {},
+	"scene_clear_spotlight":           {},
+	"update_scene":                    {},
+	"interaction_set_gm_authority":    {},
+	"interaction_set_active_scene":    {},
+	"interaction_start_player_phase":  {},
+	"interaction_post":                {},
+	"interaction_yield":               {},
+	"interaction_unyield":             {},
+	"interaction_end_player_phase":    {},
+	"interaction_accept_player_phase": {},
+	"interaction_request_revisions":   {},
+	"interaction_pause_ooc":           {},
+	"interaction_post_ooc":            {},
+	"interaction_ready_ooc":           {},
+	"interaction_clear_ready_ooc":     {},
+	"interaction_resume_ooc":          {},
+	"interaction_expect":              {},
 }
 
 func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) error {
-	ctx = withParticipantID(ctx, state.ownerParticipantID)
+	expectedErr, err := parseExpectedStepError(step.Args)
+	if err != nil {
+		return err
+	}
+	err = r.runStepActual(ctx, state, step)
+	if expectedErr == nil {
+		return err
+	}
+	if err == nil {
+		return r.failf("expected %s to fail with gRPC code %s", step.Kind, expectedErr.code.String())
+	}
+	if matchErr := expectedErr.Match(err); matchErr != nil {
+		return r.failf("%s", matchErr.Error())
+	}
+	return nil
+}
+
+func (r *Runner) runStepActual(ctx context.Context, state *scenarioState, step Step) error {
+	var err error
+	ctx, err = r.stepContext(ctx, state, step)
+	if err != nil {
+		return err
+	}
 	if _, ok := coreStepKinds[step.Kind]; ok {
 		if strings.TrimSpace(step.System) != "" {
 			return r.failf("core step %q must not declare a system scope", step.Kind)
@@ -50,6 +89,74 @@ func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) e
 		return r.failf("unknown step kind %q", step.Kind)
 	}
 	return r.runSystemStep(ctx, state, step)
+}
+
+type expectedStepError struct {
+	code     codes.Code
+	contains string
+}
+
+func parseExpectedStepError(args map[string]any) (*expectedStepError, error) {
+	if args == nil {
+		return nil, nil
+	}
+	raw, ok := args["expect_error"]
+	if !ok || raw == nil {
+		return nil, nil
+	}
+	spec, ok := raw.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("expect_error must be a table")
+	}
+	codeText := strings.TrimSpace(optionalString(spec, "code", ""))
+	if codeText == "" {
+		return nil, fmt.Errorf("expect_error code is required")
+	}
+	code, ok := parseGRPCCode(codeText)
+	if !ok {
+		return nil, fmt.Errorf("expect_error code %q is not a recognized gRPC code", codeText)
+	}
+	return &expectedStepError{
+		code:     code,
+		contains: strings.TrimSpace(optionalString(spec, "contains", "")),
+	}, nil
+}
+
+func parseGRPCCode(raw string) (codes.Code, bool) {
+	want := normalizeGRPCCodeName(raw)
+	for code := codes.OK; code <= codes.Unauthenticated; code++ {
+		if normalizeGRPCCodeName(code.String()) == want {
+			return code, true
+		}
+	}
+	return codes.OK, false
+}
+
+func normalizeGRPCCodeName(raw string) string {
+	var b strings.Builder
+	for _, r := range raw {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+		}
+	}
+	return strings.ToLower(b.String())
+}
+
+func (e *expectedStepError) Match(err error) error {
+	if e == nil {
+		return nil
+	}
+	st, ok := status.FromError(err)
+	if !ok {
+		return fmt.Errorf("expected gRPC code %s but step returned non-gRPC error: %v", e.code.String(), err)
+	}
+	if st.Code() != e.code {
+		return fmt.Errorf("expected gRPC code %s, got %s: %v", e.code.String(), st.Code().String(), err)
+	}
+	if e.contains != "" && !strings.Contains(st.Message(), e.contains) {
+		return fmt.Errorf("expected gRPC message containing %q for code %s, got %q", e.contains, e.code.String(), st.Message())
+	}
+	return nil
 }
 
 func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -94,9 +201,63 @@ func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Ste
 		return r.runSceneClearSpotlightStep(ctx, state, step)
 	case "update_scene":
 		return r.runUpdateSceneStep(ctx, state, step)
+	case "interaction_set_gm_authority":
+		return r.runInteractionSetGMAuthorityStep(ctx, state, step)
+	case "interaction_set_active_scene":
+		return r.runInteractionSetActiveSceneStep(ctx, state, step)
+	case "interaction_start_player_phase":
+		return r.runInteractionStartPlayerPhaseStep(ctx, state, step)
+	case "interaction_post":
+		return r.runInteractionPostStep(ctx, state, step)
+	case "interaction_yield":
+		return r.runInteractionYieldStep(ctx, state, step)
+	case "interaction_unyield":
+		return r.runInteractionUnyieldStep(ctx, state, step)
+	case "interaction_end_player_phase":
+		return r.runInteractionEndPlayerPhaseStep(ctx, state, step)
+	case "interaction_accept_player_phase":
+		return r.runInteractionAcceptPlayerPhaseStep(ctx, state, step)
+	case "interaction_request_revisions":
+		return r.runInteractionRequestRevisionsStep(ctx, state, step)
+	case "interaction_pause_ooc":
+		return r.runInteractionPauseOOCStep(ctx, state, step)
+	case "interaction_post_ooc":
+		return r.runInteractionPostOOCStep(ctx, state, step)
+	case "interaction_ready_ooc":
+		return r.runInteractionReadyOOCStep(ctx, state)
+	case "interaction_clear_ready_ooc":
+		return r.runInteractionClearReadyOOCStep(ctx, state)
+	case "interaction_resume_ooc":
+		return r.runInteractionResumeOOCStep(ctx, state)
+	case "interaction_expect":
+		return r.runInteractionExpectStep(ctx, state, step)
 	default:
 		return r.failf("unknown core step kind %q", step.Kind)
 	}
+}
+
+// stepContext resolves the acting participant for one step so scenarios can
+// interleave GM and player-owned writes without modal runner state.
+func (r *Runner) stepContext(ctx context.Context, state *scenarioState, step Step) (context.Context, error) {
+	participantID, err := r.stepParticipantID(state, step)
+	if err != nil {
+		return nil, err
+	}
+	return withParticipantID(ctx, participantID), nil
+}
+
+// stepParticipantID keeps legacy owner-default behavior while allowing an
+// explicit `as` actor override on any step.
+func (r *Runner) stepParticipantID(state *scenarioState, step Step) (string, error) {
+	alias := strings.TrimSpace(optionalString(step.Args, "as", ""))
+	if alias == "" {
+		return state.ownerParticipantID, nil
+	}
+	id, err := participantID(state, alias)
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 func (r *Runner) runSystemStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -470,7 +631,15 @@ func (r *Runner) runCharacterStep(ctx context.Context, state *scenarioState, ste
 			if !ok {
 				return r.failf("unknown participant %q", participantName)
 			}
-			_, err := r.env.characterClient.SetDefaultControl(withParticipantID(ctx, state.ownerParticipantID), &gamev1.SetDefaultControlRequest{
+			_, err := r.env.characterClient.UpdateCharacter(withParticipantID(ctx, state.ownerParticipantID), &gamev1.UpdateCharacterRequest{
+				CampaignId:         state.campaignID,
+				CharacterId:        characterID,
+				OwnerParticipantId: wrapperspb.String(participantID),
+			})
+			if err != nil {
+				return fmt.Errorf("set character owner participant: %w", err)
+			}
+			_, err = r.env.characterClient.SetDefaultControl(withParticipantID(ctx, state.ownerParticipantID), &gamev1.SetDefaultControlRequest{
 				CampaignId:    state.campaignID,
 				CharacterId:   characterID,
 				ParticipantId: wrapperspb.String(participantID),
