@@ -30,15 +30,19 @@ func TestProtoContract_EnumValues(t *testing.T) {
 
 func TestProtoContract_DiscoveryEntryFields(t *testing.T) {
 	entry := &discoveryv1.DiscoveryEntry{
-		EntryId:        "entry-1",
-		Kind:           discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
-		SourceId:       "campaign-1",
-		GmMode:         discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_AI,
-		Intent:         discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_STARTER,
-		Level:          1,
-		CharacterCount: 1,
-		Storyline:      "test storyline",
-		Tags:           []string{"solo", "beginner"},
+		EntryId:                 "entry-1",
+		Kind:                    discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
+		SourceId:                "campaign-1",
+		GmMode:                  discoveryv1.DiscoveryGmMode_DISCOVERY_GM_MODE_AI,
+		Intent:                  discoveryv1.DiscoveryIntent_DISCOVERY_INTENT_STARTER,
+		Level:                   1,
+		CharacterCount:          1,
+		Storyline:               "test storyline",
+		Tags:                    []string{"solo", "beginner"},
+		PreviewHook:             "A dark bell tolls.",
+		PreviewPlaystyleLabel:   "Guardian defender",
+		PreviewCharacterName:    "Mira Vale",
+		PreviewCharacterSummary: "A steadfast guardian.",
 	}
 	if entry.GetEntryId() == "" || entry.GetSourceId() == "" {
 		t.Fatal("entry id/source id round-trip failed")
@@ -51,5 +55,8 @@ func TestProtoContract_DiscoveryEntryFields(t *testing.T) {
 	}
 	if len(entry.GetTags()) != 2 {
 		t.Fatal("tags round-trip failed")
+	}
+	if entry.GetPreviewCharacterName() == "" || entry.GetPreviewHook() == "" {
+		t.Fatal("preview fields round-trip failed")
 	}
 }

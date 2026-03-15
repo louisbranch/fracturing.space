@@ -66,52 +66,12 @@ func (s *Store) CreateDiscoveryEntry(ctx context.Context, entry storage.Discover
 		return fmt.Errorf("storage is not configured")
 	}
 
-	entryID := strings.TrimSpace(entry.EntryID)
-	sourceID := strings.TrimSpace(entry.SourceID)
-	title := strings.TrimSpace(entry.Title)
-	description := strings.TrimSpace(entry.Description)
-	expectedDuration := strings.TrimSpace(entry.ExpectedDurationLabel)
-	storyline := strings.TrimSpace(entry.Storyline)
-	if entryID == "" {
-		return fmt.Errorf("entry id is required")
-	}
-	if sourceID == "" {
-		return fmt.Errorf("source id is required")
-	}
-	if entry.Kind == discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_UNSPECIFIED {
-		return fmt.Errorf("entry kind is required")
-	}
-	if title == "" {
-		return fmt.Errorf("title is required")
-	}
-	if description == "" {
-		return fmt.Errorf("description is required")
-	}
-	if expectedDuration == "" {
-		return fmt.Errorf("expected duration label is required")
-	}
-	if entry.RecommendedParticipantsMin <= 0 {
-		return fmt.Errorf("recommended participants min must be greater than zero")
-	}
-	if entry.RecommendedParticipantsMax < entry.RecommendedParticipantsMin {
-		return fmt.Errorf("recommended participants max must be greater than or equal to min")
+	normalized, err := normalizeEntry(entry)
+	if err != nil {
+		return err
 	}
 
-	createdAt := entry.CreatedAt.UTC()
-	updatedAt := entry.UpdatedAt.UTC()
-	if createdAt.IsZero() && updatedAt.IsZero() {
-		createdAt = time.Now().UTC()
-		updatedAt = createdAt
-	} else {
-		if createdAt.IsZero() {
-			createdAt = updatedAt
-		}
-		if updatedAt.IsZero() {
-			updatedAt = createdAt
-		}
-	}
-
-	_, err := s.sqlDB.ExecContext(
+	_, err = s.sqlDB.ExecContext(
 		ctx,
 		`INSERT INTO discovery_entries (
 		   entry_id,
@@ -130,33 +90,192 @@ func (s *Store) CreateDiscoveryEntry(ctx context.Context, entry storage.Discover
 		   character_count,
 		   storyline,
 		   tags,
+		   preview_hook,
+		   preview_playstyle_label,
+		   preview_character_name,
+		   preview_character_summary,
 		   created_at,
 		   updated_at
-		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		entryID,
-		int32(entry.Kind),
-		sourceID,
-		title,
-		description,
-		entry.RecommendedParticipantsMin,
-		entry.RecommendedParticipantsMax,
-		int32(entry.DifficultyTier),
-		expectedDuration,
-		int32(entry.System),
-		int32(entry.GmMode),
-		int32(entry.Intent),
-		entry.Level,
-		entry.CharacterCount,
-		storyline,
-		tagsToJSON(entry.Tags),
-		toMillis(createdAt),
-		toMillis(updatedAt),
+		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		normalized.EntryID,
+		int32(normalized.Kind),
+		normalized.SourceID,
+		normalized.Title,
+		normalized.Description,
+		normalized.RecommendedParticipantsMin,
+		normalized.RecommendedParticipantsMax,
+		int32(normalized.DifficultyTier),
+		normalized.ExpectedDurationLabel,
+		int32(normalized.System),
+		int32(normalized.GmMode),
+		int32(normalized.Intent),
+		normalized.Level,
+		normalized.CharacterCount,
+		normalized.Storyline,
+		tagsToJSON(normalized.Tags),
+		normalized.PreviewHook,
+		normalized.PreviewPlaystyleLabel,
+		normalized.PreviewCharacterName,
+		normalized.PreviewCharacterSummary,
+		toMillis(normalized.CreatedAt),
+		toMillis(normalized.UpdatedAt),
 	)
 	if err != nil {
 		if isDiscoveryEntryUniqueViolation(err) {
 			return storage.ErrAlreadyExists
 		}
 		return fmt.Errorf("create discovery entry: %w", err)
+	}
+	return nil
+}
+
+// UpsertBuiltinDiscoveryEntry inserts or updates a builtin discovery entry.
+// When the incoming source_id is empty, an existing reconciled source_id is preserved.
+func (s *Store) UpsertBuiltinDiscoveryEntry(ctx context.Context, entry storage.DiscoveryEntry) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+
+	normalized, err := normalizeEntry(entry)
+	if err != nil {
+		return err
+	}
+
+	if normalized.SourceID == "" {
+		current, err := s.GetDiscoveryEntry(ctx, normalized.EntryID)
+		switch {
+		case err == nil:
+			normalized.SourceID = current.SourceID
+			if normalized.CreatedAt.IsZero() {
+				normalized.CreatedAt = current.CreatedAt
+			}
+		case errors.Is(err, storage.ErrNotFound):
+		default:
+			return fmt.Errorf("load existing builtin entry: %w", err)
+		}
+	}
+
+	_, err = s.sqlDB.ExecContext(
+		ctx,
+		`INSERT INTO discovery_entries (
+		   entry_id,
+		   kind,
+		   source_id,
+		   title,
+		   description,
+		   recommended_participants_min,
+		   recommended_participants_max,
+		   difficulty_tier,
+		   expected_duration_label,
+		   system,
+		   gm_mode,
+		   intent,
+		   level,
+		   character_count,
+		   storyline,
+		   tags,
+		   preview_hook,
+		   preview_playstyle_label,
+		   preview_character_name,
+		   preview_character_summary,
+		   created_at,
+		   updated_at
+		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ON CONFLICT(entry_id) DO UPDATE SET
+		   kind = excluded.kind,
+		   source_id = CASE
+		     WHEN excluded.source_id = '' THEN discovery_entries.source_id
+		     ELSE excluded.source_id
+		   END,
+		   title = excluded.title,
+		   description = excluded.description,
+		   recommended_participants_min = excluded.recommended_participants_min,
+		   recommended_participants_max = excluded.recommended_participants_max,
+		   difficulty_tier = excluded.difficulty_tier,
+		   expected_duration_label = excluded.expected_duration_label,
+		   system = excluded.system,
+		   gm_mode = excluded.gm_mode,
+		   intent = excluded.intent,
+		   level = excluded.level,
+		   character_count = excluded.character_count,
+		   storyline = excluded.storyline,
+		   tags = excluded.tags,
+		   preview_hook = excluded.preview_hook,
+		   preview_playstyle_label = excluded.preview_playstyle_label,
+		   preview_character_name = excluded.preview_character_name,
+		   preview_character_summary = excluded.preview_character_summary,
+		   updated_at = excluded.updated_at`,
+		normalized.EntryID,
+		int32(normalized.Kind),
+		normalized.SourceID,
+		normalized.Title,
+		normalized.Description,
+		normalized.RecommendedParticipantsMin,
+		normalized.RecommendedParticipantsMax,
+		int32(normalized.DifficultyTier),
+		normalized.ExpectedDurationLabel,
+		int32(normalized.System),
+		int32(normalized.GmMode),
+		int32(normalized.Intent),
+		normalized.Level,
+		normalized.CharacterCount,
+		normalized.Storyline,
+		tagsToJSON(normalized.Tags),
+		normalized.PreviewHook,
+		normalized.PreviewPlaystyleLabel,
+		normalized.PreviewCharacterName,
+		normalized.PreviewCharacterSummary,
+		toMillis(normalized.CreatedAt),
+		toMillis(normalized.UpdatedAt),
+	)
+	if err != nil {
+		return fmt.Errorf("upsert discovery entry: %w", err)
+	}
+	return nil
+}
+
+// UpdateDiscoveryEntrySourceID updates the reconciled template source_id for one builtin entry.
+func (s *Store) UpdateDiscoveryEntrySourceID(ctx context.Context, entryID string, sourceID string, updatedAt time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+
+	entryID = strings.TrimSpace(entryID)
+	sourceID = strings.TrimSpace(sourceID)
+	if entryID == "" {
+		return fmt.Errorf("entry id is required")
+	}
+	if sourceID == "" {
+		return fmt.Errorf("source id is required")
+	}
+	if updatedAt.IsZero() {
+		updatedAt = time.Now().UTC()
+	}
+
+	result, err := s.sqlDB.ExecContext(
+		ctx,
+		`UPDATE discovery_entries
+		    SET source_id = ?, updated_at = ?
+		  WHERE entry_id = ?`,
+		sourceID,
+		toMillis(updatedAt.UTC()),
+		entryID,
+	)
+	if err != nil {
+		return fmt.Errorf("update discovery entry source id: %w", err)
+	}
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("update discovery entry source id rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return storage.ErrNotFound
 	}
 	return nil
 }
@@ -180,6 +299,7 @@ func (s *Store) GetDiscoveryEntry(ctx context.Context, entryID string) (storage.
 		        recommended_participants_min, recommended_participants_max,
 		        difficulty_tier, expected_duration_label, system,
 		        gm_mode, intent, level, character_count, storyline, tags,
+		        preview_hook, preview_playstyle_label, preview_character_name, preview_character_summary,
 		        created_at, updated_at
 		   FROM discovery_entries
 		  WHERE entry_id = ?`,
@@ -222,6 +342,7 @@ func (s *Store) ListDiscoveryEntries(
 		        recommended_participants_min, recommended_participants_max,
 		        difficulty_tier, expected_duration_label, system,
 		        gm_mode, intent, level, character_count, storyline, tags,
+		        preview_hook, preview_playstyle_label, preview_character_name, preview_character_summary,
 		        created_at, updated_at`
 
 	var (
@@ -308,6 +429,10 @@ func scanEntry(scanner rowScanner) (storage.DiscoveryEntry, error) {
 	var gmMode int32
 	var intent int32
 	var tagsJSON string
+	var previewHook string
+	var previewPlaystyleLabel string
+	var previewCharacterName string
+	var previewCharacterSummary string
 	var createdAt int64
 	var updatedAt int64
 	if err := scanner.Scan(
@@ -327,6 +452,10 @@ func scanEntry(scanner rowScanner) (storage.DiscoveryEntry, error) {
 		&entry.CharacterCount,
 		&entry.Storyline,
 		&tagsJSON,
+		&previewHook,
+		&previewPlaystyleLabel,
+		&previewCharacterName,
+		&previewCharacterSummary,
 		&createdAt,
 		&updatedAt,
 	); err != nil {
@@ -339,8 +468,64 @@ func scanEntry(scanner rowScanner) (storage.DiscoveryEntry, error) {
 	entry.GmMode = discoveryv1.DiscoveryGmMode(gmMode)
 	entry.Intent = discoveryv1.DiscoveryIntent(intent)
 	entry.Tags = tagsFromJSON(tagsJSON)
+	entry.PreviewHook = strings.TrimSpace(previewHook)
+	entry.PreviewPlaystyleLabel = strings.TrimSpace(previewPlaystyleLabel)
+	entry.PreviewCharacterName = strings.TrimSpace(previewCharacterName)
+	entry.PreviewCharacterSummary = strings.TrimSpace(previewCharacterSummary)
 	entry.CreatedAt = fromMillis(createdAt)
 	entry.UpdatedAt = fromMillis(updatedAt)
+	return entry, nil
+}
+
+func normalizeEntry(entry storage.DiscoveryEntry) (storage.DiscoveryEntry, error) {
+	entry.EntryID = strings.TrimSpace(entry.EntryID)
+	entry.SourceID = strings.TrimSpace(entry.SourceID)
+	entry.Title = strings.TrimSpace(entry.Title)
+	entry.Description = strings.TrimSpace(entry.Description)
+	entry.ExpectedDurationLabel = strings.TrimSpace(entry.ExpectedDurationLabel)
+	entry.Storyline = strings.TrimSpace(entry.Storyline)
+	entry.PreviewHook = strings.TrimSpace(entry.PreviewHook)
+	entry.PreviewPlaystyleLabel = strings.TrimSpace(entry.PreviewPlaystyleLabel)
+	entry.PreviewCharacterName = strings.TrimSpace(entry.PreviewCharacterName)
+	entry.PreviewCharacterSummary = strings.TrimSpace(entry.PreviewCharacterSummary)
+	entry.Tags = tagsFromJSON(tagsToJSON(entry.Tags))
+
+	if entry.EntryID == "" {
+		return storage.DiscoveryEntry{}, fmt.Errorf("entry id is required")
+	}
+	if entry.Kind == discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_UNSPECIFIED {
+		return storage.DiscoveryEntry{}, fmt.Errorf("entry kind is required")
+	}
+	if entry.Title == "" {
+		return storage.DiscoveryEntry{}, fmt.Errorf("title is required")
+	}
+	if entry.Description == "" {
+		return storage.DiscoveryEntry{}, fmt.Errorf("description is required")
+	}
+	if entry.ExpectedDurationLabel == "" {
+		return storage.DiscoveryEntry{}, fmt.Errorf("expected duration label is required")
+	}
+	if entry.RecommendedParticipantsMin <= 0 {
+		return storage.DiscoveryEntry{}, fmt.Errorf("recommended participants min must be greater than zero")
+	}
+	if entry.RecommendedParticipantsMax < entry.RecommendedParticipantsMin {
+		return storage.DiscoveryEntry{}, fmt.Errorf("recommended participants max must be greater than or equal to min")
+	}
+	createdAt := entry.CreatedAt.UTC()
+	updatedAt := entry.UpdatedAt.UTC()
+	if createdAt.IsZero() && updatedAt.IsZero() {
+		createdAt = time.Now().UTC()
+		updatedAt = createdAt
+	} else {
+		if createdAt.IsZero() {
+			createdAt = updatedAt
+		}
+		if updatedAt.IsZero() {
+			updatedAt = createdAt
+		}
+	}
+	entry.CreatedAt = createdAt
+	entry.UpdatedAt = updatedAt
 	return entry, nil
 }
 

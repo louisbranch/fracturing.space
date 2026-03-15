@@ -9,6 +9,7 @@ import (
 
 type testGatewayBundle interface {
 	campaignapp.CampaignCatalogReadGateway
+	campaignapp.CampaignStarterGateway
 	campaignapp.CampaignWorkspaceReadGateway
 	campaignapp.CampaignGameReadGateway
 	campaignapp.CampaignParticipantReadGateway
@@ -35,6 +36,9 @@ func serviceConfigWithGateway(gateway testGatewayBundle) campaignapp.ServiceConf
 		Catalog: campaignapp.CatalogServiceConfig{
 			Read:     gateway,
 			Mutation: gateway,
+		},
+		Starter: campaignapp.StarterServiceConfig{
+			Gateway: gateway,
 		},
 		Workspace: campaignapp.WorkspaceServiceConfig{
 			Read: gateway,

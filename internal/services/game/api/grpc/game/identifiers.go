@@ -30,6 +30,7 @@ const (
 	commandTypeParticipantBind                command.Type = commandids.ParticipantBind
 	commandTypeParticipantJoin                command.Type = commandids.ParticipantJoin
 	commandTypeParticipantLeave               command.Type = commandids.ParticipantLeave
+	commandTypeParticipantSeatReassign        command.Type = commandids.ParticipantSeatReassign
 	commandTypeParticipantUpdate              command.Type = commandids.ParticipantUpdate
 	commandTypeSessionEnd                     command.Type = commandids.SessionEnd
 	commandTypeSessionGateAbandon             command.Type = commandids.SessionGateAbandon

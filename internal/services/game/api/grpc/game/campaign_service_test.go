@@ -229,6 +229,82 @@ func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
+func TestCreateCampaign_AllowsOwnerlessPublicStarterTemplate(t *testing.T) {
+	ts := newTestStores()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{
+		store: ts.Event,
+		resultsByType: map[command.Type]engine.Result{
+			commandTypeCampaignCreateWithParticipants: {
+				Decision: command.Accept(
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("campaign.created"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "campaign",
+						EntityID:    "campaign-123",
+						PayloadJSON: []byte(`{"name":"Starter Template","locale":"en-US","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_AI","intent":"STARTER","access_policy":"PUBLIC","theme_prompt":"ownerless template"}`),
+					},
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("participant.joined"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "participant",
+						EntityID:    "participant-owner",
+						PayloadJSON: []byte(`{"participant_id":"participant-owner","name":"Unknown","role":"PLAYER","controller":"HUMAN","campaign_access":"OWNER","pronouns":"they/them"}`),
+					},
+					event.Event{
+						CampaignID:  "campaign-123",
+						Type:        event.Type("participant.joined"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "participant",
+						EntityID:    "participant-ai",
+						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+					},
+				),
+			},
+		},
+	}
+	svc := newCampaignServiceForTest(
+		ts.withDomain(domain).build(),
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		nil,
+	)
+
+	resp, err := svc.CreateCampaign(context.Background(), &statev1.CreateCampaignRequest{
+		Name:         "Starter Template",
+		System:       commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		GmMode:       statev1.GmMode_AI,
+		Intent:       statev1.CampaignIntent_STARTER,
+		AccessPolicy: statev1.CampaignAccessPolicy_PUBLIC,
+		ThemePrompt:  "ownerless template",
+	})
+	if err != nil {
+		t.Fatalf("CreateCampaign returned error: %v", err)
+	}
+	if resp.GetOwnerParticipant().GetUserId() != "" {
+		t.Fatalf("OwnerParticipant UserId = %q, want empty", resp.GetOwnerParticipant().GetUserId())
+	}
+
+	var workflowPayload campaign.CreateWithParticipantsPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &workflowPayload); err != nil {
+		t.Fatalf("decode create workflow payload: %v", err)
+	}
+	if got := workflowPayload.Participants[0].UserID.String(); got != "" {
+		t.Fatalf("owner payload user_id = %q, want empty", got)
+	}
+	if got := workflowPayload.Participants[0].CampaignAccess; got != "OWNER" {
+		t.Fatalf("owner payload campaign_access = %q, want OWNER", got)
+	}
+	if got := workflowPayload.Participants[0].Pronouns; got != sharedpronouns.PronounTheyThem {
+		t.Fatalf("owner payload pronouns = %q, want %q", got, sharedpronouns.PronounTheyThem)
+	}
+}
+
 func TestCreateCampaign_RequiresDomainEngine(t *testing.T) {
 	svc := newCampaignServiceForTest(
 		newTestStores().build(),

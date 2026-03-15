@@ -230,70 +230,25 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	if err != nil {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load invite", err)
 	}
-	a.applyInviteClaimProfileSnapshot(ctx, campaignID, seat.ID, userID, requestID, invocationID, actorID, inviteActorType)
+	applyParticipantProfileSnapshot(
+		ctx,
+		a.write,
+		a.applier,
+		a.stores.Social,
+		campaignID,
+		seat.ID,
+		userID,
+		requestID,
+		invocationID,
+		actorID,
+		inviteActorType,
+	)
 	updatedParticipant, err := a.stores.Participant.GetParticipant(ctx, campaignID, seat.ID)
 	if err != nil {
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("load participant", err)
 	}
 
 	return updatedInvite, updatedParticipant, nil
-}
-
-func (a inviteApplication) applyInviteClaimProfileSnapshot(
-	ctx context.Context,
-	campaignID string,
-	participantID string,
-	userID string,
-	requestID string,
-	invocationID string,
-	actorID string,
-	actorType command.ActorType,
-) {
-	snapshot := loadSocialProfileSnapshot(ctx, a.stores.Social, userID)
-	fields := map[string]string{}
-	if snapshot.Name != "" {
-		fields["name"] = snapshot.Name
-	}
-	if snapshot.Pronouns != "" {
-		fields["pronouns"] = snapshot.Pronouns
-	}
-	if snapshot.AvatarSetID != "" {
-		fields["avatar_set_id"] = snapshot.AvatarSetID
-	}
-	if snapshot.AvatarAssetID != "" {
-		fields["avatar_asset_id"] = snapshot.AvatarAssetID
-	}
-	if len(fields) == 0 {
-		return
-	}
-
-	payloadJSON, err := json.Marshal(participant.UpdatePayload{
-		ParticipantID: ids.ParticipantID(participantID),
-		Fields:        fields,
-	})
-	if err != nil {
-		return
-	}
-
-	_, _ = executeAndApplyDomainCommand(
-		ctx,
-		a.write,
-		a.applier,
-		commandbuild.Core(commandbuild.CoreInput{
-			CampaignID:   campaignID,
-			Type:         commandTypeParticipantUpdate,
-			ActorType:    actorType,
-			ActorID:      actorID,
-			RequestID:    requestID,
-			InvocationID: invocationID,
-			EntityType:   "participant",
-			EntityID:     participantID,
-			PayloadJSON:  payloadJSON,
-		}),
-		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply participant event"),
-		},
-	)
 }
 
 // loadInviteReplayState replays the invite aggregate from the event journal so

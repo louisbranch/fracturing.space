@@ -3,6 +3,7 @@ package app
 // ServiceConfig keeps constructor dependencies explicit by capability.
 type ServiceConfig struct {
 	Catalog             CatalogServiceConfig
+	Starter             StarterServiceConfig
 	Workspace           WorkspaceServiceConfig
 	Game                GameServiceConfig
 	ParticipantRead     ParticipantReadServiceConfig

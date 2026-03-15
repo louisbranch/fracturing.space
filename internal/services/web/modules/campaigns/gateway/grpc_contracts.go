@@ -5,6 +5,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -24,6 +25,16 @@ type CampaignMutationClient interface {
 	UpdateCampaign(context.Context, *statev1.UpdateCampaignRequest, ...grpc.CallOption) (*statev1.UpdateCampaignResponse, error)
 	SetCampaignAIBinding(context.Context, *statev1.SetCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.SetCampaignAIBindingResponse, error)
 	ClearCampaignAIBinding(context.Context, *statev1.ClearCampaignAIBindingRequest, ...grpc.CallOption) (*statev1.ClearCampaignAIBindingResponse, error)
+}
+
+// DiscoveryClient exposes discovery reads required by the protected starter flow.
+type DiscoveryClient interface {
+	GetDiscoveryEntry(context.Context, *discoveryv1.GetDiscoveryEntryRequest, ...grpc.CallOption) (*discoveryv1.GetDiscoveryEntryResponse, error)
+}
+
+// ForkClient exposes campaign forking required by the protected starter flow.
+type ForkClient interface {
+	ForkCampaign(context.Context, *statev1.ForkCampaignRequest, ...grpc.CallOption) (*statev1.ForkCampaignResponse, error)
 }
 
 // CommunicationClient exposes game-owned communication context for the web game surface.

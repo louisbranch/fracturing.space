@@ -69,6 +69,7 @@ func BindDiscoveryDependency(deps *Dependencies, conn *grpc.ClientConn) {
 		return
 	}
 	discovery.BindDependency(&deps.Discovery, conn)
+	campaigns.BindDiscoveryDependency(&deps.Campaigns, conn)
 }
 
 // BindUserHubDependency wires userhub-backed clients into the module

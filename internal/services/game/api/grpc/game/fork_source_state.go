@@ -3,10 +3,13 @@ package game
 import (
 	"context"
 	"errors"
+	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -26,8 +29,17 @@ func (a forkApplication) loadForkSourceState(ctx context.Context, sourceCampaign
 	if err != nil {
 		return forkSourceState{}, grpcerror.EnsureStatus(err)
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
-		return forkSourceState{}, err
+	if sourceCampaign.AccessPolicy == campaign.AccessPolicyPublic {
+		if !copyParticipants {
+			return forkSourceState{}, status.Error(codes.FailedPrecondition, "public campaign forks must copy participants")
+		}
+		if strings.TrimSpace(grpcmeta.UserIDFromContext(ctx)) == "" {
+			return forkSourceState{}, status.Error(codes.Unauthenticated, "authenticated user is required to fork public campaigns")
+		}
+	} else {
+		if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
+			return forkSourceState{}, err
+		}
 	}
 	// Stores.Validate guarantees Session in production wiring; keep a nil guard so
 	// focused unit tests with partial stores remain supported.

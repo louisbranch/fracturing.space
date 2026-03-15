@@ -33,11 +33,12 @@ func TestStableRouteSurfacesOwnExpectedRouteGroups(t *testing.T) {
 	t.Parallel()
 
 	surfaces := stableRouteSurfaces()
-	if len(surfaces) != 6 {
-		t.Fatalf("len(stableRouteSurfaces()) = %d, want 6", len(surfaces))
+	if len(surfaces) != 7 {
+		t.Fatalf("len(stableRouteSurfaces()) = %d, want 7", len(surfaces))
 	}
 	wantIDs := []string{
 		"stable-overview",
+		"stable-starters",
 		"stable-participants",
 		"stable-characters",
 		"stable-character-creation",

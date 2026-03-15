@@ -32,6 +32,7 @@ func registerRouteSurfaces(mux *http.ServeMux, h handlers, surfaces []routeSurfa
 func stableRouteSurfaces() []routeSurface {
 	return []routeSurface{
 		stableCampaignOverviewRoutes(),
+		stableCampaignStarterRoutes(),
 		stableCampaignParticipantRoutes(),
 		stableCampaignCharacterRoutes(),
 		stableCampaignCharacterCreationRoutes(),

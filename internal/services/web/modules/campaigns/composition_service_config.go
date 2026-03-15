@@ -10,6 +10,7 @@ import (
 func newServiceConfigFromGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseURL string) campaignapp.ServiceConfig {
 	return campaignapp.ServiceConfig{
 		Catalog:             newCatalogServiceConfig(deps, assetBaseURL),
+		Starter:             newStarterServiceConfig(deps),
 		Workspace:           newWorkspaceServiceConfig(deps, assetBaseURL),
 		Game:                newGameServiceConfig(deps),
 		ParticipantRead:     newParticipantReadServiceConfig(deps, assetBaseURL),

@@ -61,6 +61,7 @@ func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBund
 func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dependencies {
 	hasCampaignDependency := moduleDeps.Campaigns.CampaignClient != nil ||
 		moduleDeps.Campaigns.CommunicationClient != nil ||
+		moduleDeps.Campaigns.DiscoveryClient != nil ||
 		moduleDeps.Campaigns.ParticipantClient != nil ||
 		moduleDeps.Campaigns.CharacterClient != nil ||
 		moduleDeps.Campaigns.DaggerheartContentClient != nil ||
@@ -69,13 +70,17 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 		moduleDeps.Campaigns.InviteClient != nil ||
 		moduleDeps.Campaigns.SocialClient != nil ||
 		moduleDeps.Campaigns.AuthClient != nil ||
-		moduleDeps.Campaigns.AuthorizationClient != nil
+		moduleDeps.Campaigns.AuthorizationClient != nil ||
+		moduleDeps.Campaigns.ForkClient != nil
 	if hasCampaignDependency {
 		if moduleDeps.Campaigns.CampaignClient == nil {
 			moduleDeps.Campaigns.CampaignClient = defaultCampaignClient()
 		}
 		if moduleDeps.Campaigns.CommunicationClient == nil {
 			moduleDeps.Campaigns.CommunicationClient = defaultCommunicationClient()
+		}
+		if moduleDeps.Campaigns.DiscoveryClient == nil {
+			moduleDeps.Campaigns.DiscoveryClient = defaultDiscoveryClient()
 		}
 		if moduleDeps.Campaigns.ParticipantClient == nil {
 			moduleDeps.Campaigns.ParticipantClient = defaultParticipantClient()
@@ -103,6 +108,9 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 		}
 		if moduleDeps.Campaigns.AuthorizationClient == nil {
 			moduleDeps.Campaigns.AuthorizationClient = defaultAuthorizationClient()
+		}
+		if moduleDeps.Campaigns.ForkClient == nil {
+			moduleDeps.Campaigns.ForkClient = defaultForkClient()
 		}
 	}
 	if moduleDeps.Invite.InviteClient == nil && moduleDeps.Campaigns.InviteClient != nil {

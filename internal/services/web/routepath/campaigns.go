@@ -4,6 +4,9 @@ const (
 	AppCampaigns                              = "/app/campaigns"
 	AppCampaignsNew                           = "/app/campaigns/new"
 	AppCampaignsCreate                        = "/app/campaigns/create"
+	AppCampaignStarters                       = "/app/campaigns/starters"
+	AppCampaignStarterPattern                 = AppCampaignStarters + "/preview/{starterKey}"
+	AppCampaignStarterLaunchPattern           = AppCampaignStarters + "/launch/{starterKey}"
 	CampaignsPrefix                           = "/app/campaigns/"
 	AppCampaignPattern                        = CampaignsPrefix + "{campaignID}"
 	AppCampaignRestPattern                    = CampaignsPrefix + "{campaignID}/{rest...}"
@@ -42,6 +45,16 @@ func AppCampaign(campaignID string) string {
 // AppCampaignEdit returns the campaign edit route.
 func AppCampaignEdit(campaignID string) string {
 	return AppCampaign(campaignID) + "/edit"
+}
+
+// AppCampaignStarter returns the protected starter preview route.
+func AppCampaignStarter(starterKey string) string {
+	return AppCampaignStarters + "/preview/" + escapeSegment(starterKey)
+}
+
+// AppCampaignStarterLaunch returns the protected starter launch route.
+func AppCampaignStarterLaunch(starterKey string) string {
+	return AppCampaignStarters + "/launch/" + escapeSegment(starterKey)
 }
 
 // AppCampaignSessions returns the campaign sessions route.

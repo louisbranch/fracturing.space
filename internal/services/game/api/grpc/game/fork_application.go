@@ -3,6 +3,7 @@ package game
 import (
 	"time"
 
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -21,9 +22,11 @@ type forkApplication struct {
 type forkApplicationStores struct {
 	Campaign     storage.CampaignStore
 	Participant  storage.ParticipantStore
+	Character    storage.CharacterStore
 	Session      storage.SessionStore
 	CampaignFork storage.CampaignForkStore
 	Event        storage.EventStore
+	Social       socialv1.SocialServiceClient
 }
 
 func newForkApplicationWithDependencies(
@@ -36,9 +39,11 @@ func newForkApplicationWithDependencies(
 		stores: forkApplicationStores{
 			Campaign:     stores.Campaign,
 			Participant:  stores.Participant,
+			Character:    stores.Character,
 			Session:      stores.Session,
 			CampaignFork: stores.CampaignFork,
 			Event:        stores.Event,
+			Social:       stores.Social,
 		},
 		eventReplay: forkEventReplay{
 			events:  stores.Event,

@@ -9,7 +9,7 @@ import (
 
 // StarterEntry is the app-layer discovery card model.
 type StarterEntry struct {
-	CampaignID  string
+	EntryID     string
 	Title       string
 	Description string
 	Tags        []string
@@ -21,6 +21,16 @@ type StarterEntry struct {
 	Players     string
 }
 
+// PageStatus describes the public discovery page availability contract.
+type PageStatus string
+
+const (
+	// PageStatusReady means discovery starters were loaded successfully.
+	PageStatusReady PageStatus = "ready"
+	// PageStatusUnavailable means discovery cannot currently provide a usable curated catalog.
+	PageStatusUnavailable PageStatus = "unavailable"
+)
+
 // Gateway loads discovery entries from the backing discovery service.
 type Gateway interface {
 	ListStarterEntries(context.Context) ([]StarterEntry, error)
@@ -28,9 +38,8 @@ type Gateway interface {
 
 // Page is the explicit discovery-page contract returned to transport.
 type Page struct {
-	Entries  []StarterEntry
-	Degraded bool
-	Empty    bool
+	Status  PageStatus
+	Entries []StarterEntry
 }
 
 // Service orchestrates discovery-page loading.
@@ -81,11 +90,17 @@ func (s service) LoadPage(ctx context.Context) Page {
 		if s.logger != nil {
 			s.logger.Printf("discovery: list starter entries: %v", err)
 		}
-		return Page{Degraded: true, Empty: true}
+		return Page{Status: PageStatusUnavailable}
+	}
+	if len(entries) == 0 {
+		if s.logger != nil {
+			s.logger.Printf("discovery: curated starter catalog is unavailable: zero entries returned")
+		}
+		return Page{Status: PageStatusUnavailable}
 	}
 	return Page{
+		Status:  PageStatusReady,
 		Entries: entries,
-		Empty:   len(entries) == 0,
 	}
 }
 

@@ -27,8 +27,8 @@ func newHandlers(base publichandler.Base, service discoveryapp.Service) handlers
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	requestPage := requestresolver.ResolveLocalizedPage(w, r, nil)
 	page := h.service.LoadPage(r.Context())
-	entries := mapEntriesToView(page.Entries)
-	h.writeDiscoveryPage(w, r, requestPage.Localizer, requestPage.Language, entries)
+	view := mapPageToView(page)
+	h.writeDiscoveryPage(w, r, requestPage.Localizer, requestPage.Language, view)
 }
 
 // writeDiscoveryPage writes the discovery page shell and content fragment.
@@ -37,7 +37,7 @@ func (h handlers) writeDiscoveryPage(
 	r *http.Request,
 	loc webtemplates.Localizer,
 	lang string,
-	entries []StarterEntryView,
+	view DiscoveryPageView,
 ) {
 	h.WritePublicPage(
 		w,
@@ -46,6 +46,6 @@ func (h handlers) writeDiscoveryPage(
 		webtemplates.T(loc, "layout.meta_description"),
 		lang,
 		http.StatusOK,
-		DiscoveryFragment(entries, loc),
+		DiscoveryFragment(view, loc),
 	)
 }

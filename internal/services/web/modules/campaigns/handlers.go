@@ -21,6 +21,7 @@ type DashboardSync interface {
 type handlers struct {
 	modulehandler.Base
 	catalog           campaignapp.CampaignCatalogService
+	starters          campaignapp.CampaignStarterService
 	workspace         campaignapp.CampaignWorkspaceService
 	game              campaignapp.CampaignGameService
 	participantReads  campaignapp.CampaignParticipantReadService
@@ -46,6 +47,7 @@ type handlers struct {
 // handlerServices groups the app-facing seams consumed by the transport layer.
 type handlerServices struct {
 	Catalog            campaignapp.CampaignCatalogService
+	Starters           campaignapp.CampaignStarterService
 	Workspace          campaignapp.CampaignWorkspaceService
 	Game               campaignapp.CampaignGameService
 	ParticipantReads   campaignapp.CampaignParticipantReadService
@@ -79,6 +81,7 @@ type handlersConfig struct {
 func newHandlerServices(config campaignapp.ServiceConfig) handlerServices {
 	return handlerServices{
 		Catalog:            campaignapp.NewCatalogService(config.Catalog),
+		Starters:           campaignapp.NewStarterService(config.Starter),
 		Workspace:          campaignapp.NewWorkspaceService(config.Workspace),
 		Game:               campaignapp.NewGameService(config.Game),
 		ParticipantReads:   campaignapp.NewParticipantReadService(config.ParticipantRead, config.Authorization),
@@ -109,6 +112,7 @@ func newHandlers(config handlersConfig) handlers {
 	return handlers{
 		Base:              config.Base,
 		catalog:           services.Catalog,
+		starters:          services.Starters,
 		workspace:         services.Workspace,
 		game:              services.Game,
 		participantReads:  services.ParticipantReads,

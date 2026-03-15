@@ -27,7 +27,7 @@ func TestCreateGetDiscoveryEntryRoundTrip(t *testing.T) {
 	input := storage.DiscoveryEntry{
 		EntryID:                    "starter:camp-1",
 		Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
-		SourceID:                   "camp-1",
+		SourceID:                   "",
 		Title:                      "Sunfall",
 		Description:                "A haunted valley campaign",
 		RecommendedParticipantsMin: 3,
@@ -41,6 +41,10 @@ func TestCreateGetDiscoveryEntryRoundTrip(t *testing.T) {
 		CharacterCount:             1,
 		Storyline:                  "# Test Storyline",
 		Tags:                       []string{"solo", "mystery"},
+		PreviewHook:                "A dark bell tolls across the valley.",
+		PreviewPlaystyleLabel:      "Guardian defender",
+		PreviewCharacterName:       "Mira Vale",
+		PreviewCharacterSummary:    "A steadfast guardian.",
 		CreatedAt:                  now,
 		UpdatedAt:                  now,
 	}
@@ -61,6 +65,9 @@ func TestCreateGetDiscoveryEntryRoundTrip(t *testing.T) {
 	if got.GmMode != input.GmMode || got.Intent != input.Intent {
 		t.Fatalf("gm/intent mismatch: got (%v,%v), want (%v,%v)", got.GmMode, got.Intent, input.GmMode, input.Intent)
 	}
+	if got.PreviewCharacterName != input.PreviewCharacterName || got.PreviewHook != input.PreviewHook {
+		t.Fatalf("preview fields mismatch: got (%q,%q)", got.PreviewCharacterName, got.PreviewHook)
+	}
 }
 
 func TestCreateDiscoveryEntryReturnsAlreadyExistsOnDuplicate(t *testing.T) {
@@ -70,7 +77,7 @@ func TestCreateDiscoveryEntryReturnsAlreadyExistsOnDuplicate(t *testing.T) {
 	input := storage.DiscoveryEntry{
 		EntryID:                    "starter:dup",
 		Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
-		SourceID:                   "camp-dup",
+		SourceID:                   "",
 		Title:                      "Duplicate",
 		Description:                "Duplicate",
 		RecommendedParticipantsMin: 2,
@@ -97,7 +104,7 @@ func TestListDiscoveryEntriesPaginatesAndFiltersByKind(t *testing.T) {
 		{
 			EntryID:                    "entry-1",
 			Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
-			SourceID:                   "camp-1",
+			SourceID:                   "",
 			Title:                      "Starter 1",
 			Description:                "Starter 1",
 			RecommendedParticipantsMin: 1,
@@ -111,7 +118,7 @@ func TestListDiscoveryEntriesPaginatesAndFiltersByKind(t *testing.T) {
 		{
 			EntryID:                    "entry-2",
 			Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
-			SourceID:                   "camp-2",
+			SourceID:                   "",
 			Title:                      "Starter 2",
 			Description:                "Starter 2",
 			RecommendedParticipantsMin: 1,
@@ -125,7 +132,7 @@ func TestListDiscoveryEntriesPaginatesAndFiltersByKind(t *testing.T) {
 		{
 			EntryID:                    "entry-3",
 			Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_STORYLINE,
-			SourceID:                   "story-1",
+			SourceID:                   "",
 			Title:                      "Storyline",
 			Description:                "Storyline",
 			RecommendedParticipantsMin: 1,
@@ -160,6 +167,83 @@ func TestListDiscoveryEntriesPaginatesAndFiltersByKind(t *testing.T) {
 	}
 	if pageTwo.Entries[0].Kind != discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER {
 		t.Fatalf("page two kind = %v, want CAMPAIGN_STARTER", pageTwo.Entries[0].Kind)
+	}
+}
+
+func TestUpsertBuiltinDiscoveryEntryPreservesReconciledSourceID(t *testing.T) {
+	t.Parallel()
+
+	store := openTempStore(t)
+	now := time.Date(2026, time.March, 6, 14, 0, 0, 0, time.UTC)
+	initial := storage.DiscoveryEntry{
+		EntryID:                    "starter:camp-1",
+		Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
+		SourceID:                   "camp-1",
+		Title:                      "Sunfall",
+		Description:                "A haunted valley campaign",
+		RecommendedParticipantsMin: 1,
+		RecommendedParticipantsMax: 1,
+		DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER,
+		ExpectedDurationLabel:      "1 session",
+		System:                     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		CreatedAt:                  now,
+		UpdatedAt:                  now,
+	}
+	if err := store.UpsertBuiltinDiscoveryEntry(context.Background(), initial); err != nil {
+		t.Fatalf("initial upsert: %v", err)
+	}
+
+	updated := initial
+	updated.SourceID = ""
+	updated.Description = "Updated description"
+	updated.PreviewCharacterName = "Mira Vale"
+	if err := store.UpsertBuiltinDiscoveryEntry(context.Background(), updated); err != nil {
+		t.Fatalf("second upsert: %v", err)
+	}
+
+	got, err := store.GetDiscoveryEntry(context.Background(), initial.EntryID)
+	if err != nil {
+		t.Fatalf("get discovery entry: %v", err)
+	}
+	if got.SourceID != "camp-1" {
+		t.Fatalf("source_id = %q, want camp-1", got.SourceID)
+	}
+	if got.Description != "Updated description" {
+		t.Fatalf("description = %q, want updated", got.Description)
+	}
+}
+
+func TestUpdateDiscoveryEntrySourceIDUpdatesSourceID(t *testing.T) {
+	t.Parallel()
+
+	store := openTempStore(t)
+	now := time.Date(2026, time.March, 6, 15, 0, 0, 0, time.UTC)
+	entry := storage.DiscoveryEntry{
+		EntryID:                    "starter:camp-1",
+		Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
+		Title:                      "Sunfall",
+		Description:                "A haunted valley campaign",
+		RecommendedParticipantsMin: 1,
+		RecommendedParticipantsMax: 1,
+		DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER,
+		ExpectedDurationLabel:      "1 session",
+		System:                     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		CreatedAt:                  now,
+		UpdatedAt:                  now,
+	}
+	if err := store.CreateDiscoveryEntry(context.Background(), entry); err != nil {
+		t.Fatalf("create discovery entry: %v", err)
+	}
+	if err := store.UpdateDiscoveryEntrySourceID(context.Background(), entry.EntryID, "camp-1", now.Add(time.Minute)); err != nil {
+		t.Fatalf("update source id: %v", err)
+	}
+
+	got, err := store.GetDiscoveryEntry(context.Background(), entry.EntryID)
+	if err != nil {
+		t.Fatalf("get discovery entry: %v", err)
+	}
+	if got.SourceID != "camp-1" {
+		t.Fatalf("source_id = %q, want camp-1", got.SourceID)
 	}
 }
 

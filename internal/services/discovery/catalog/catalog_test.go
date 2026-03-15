@@ -23,8 +23,8 @@ func TestBuiltinEntries_StarterCampaignShape(t *testing.T) {
 		t.Fatalf("BuiltinEntries: %v", err)
 	}
 	for i, e := range entries {
-		if e.EntryID == "" || e.SourceID == "" {
-			t.Fatalf("entries[%d] missing ids", i)
+		if e.EntryID == "" {
+			t.Fatalf("entries[%d] missing entry id", i)
 		}
 		if e.Kind != discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER {
 			t.Fatalf("entries[%d].kind = %v, want CAMPAIGN_STARTER", i, e.Kind)
@@ -43,6 +43,9 @@ func TestBuiltinEntries_StarterCampaignShape(t *testing.T) {
 		}
 		if e.Storyline == "" {
 			t.Fatalf("entries[%d].storyline is empty", i)
+		}
+		if e.PreviewHook == "" || e.PreviewCharacterName == "" || e.PreviewCharacterSummary == "" {
+			t.Fatalf("entries[%d] missing structured preview data", i)
 		}
 	}
 }
@@ -64,5 +67,28 @@ func TestBuiltinEntries_ReturnsDeepCopies(t *testing.T) {
 	}
 	if b[0].Tags[0] == "mutated" {
 		t.Fatal("tags mutation leaked")
+	}
+}
+
+func TestBuiltinStarters_PremadeCharacterShape(t *testing.T) {
+	starters, err := BuiltinStarters()
+	if err != nil {
+		t.Fatalf("BuiltinStarters: %v", err)
+	}
+	for i, starter := range starters {
+		if starter.Character.Name == "" || starter.Character.ClassID == "" || starter.Character.SubclassID == "" {
+			t.Fatalf("starters[%d] missing premade character identity", i)
+		}
+		if starter.Character.AncestryID == "" || starter.Character.CommunityID == "" {
+			t.Fatalf("starters[%d] missing premade heritage", i)
+		}
+		switch starter.Character.PotionItemID {
+		case "item.minor-health-potion", "item.minor-stamina-potion":
+		default:
+			t.Fatalf("starters[%d].potion_item_id = %q, want allowed starter potion", i, starter.Character.PotionItemID)
+		}
+		if len(starter.Character.DomainCardIDs) == 0 {
+			t.Fatalf("starters[%d] missing domain cards", i)
+		}
 	}
 }

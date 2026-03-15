@@ -16,6 +16,9 @@ func TestPackageServiceAndWorkflowResolverContracts(t *testing.T) {
 	if NewCatalogService(CatalogServiceConfig{}) != nil {
 		t.Fatalf("NewCatalogService() returned non-nil service for missing deps")
 	}
+	if NewStarterService(StarterServiceConfig{}) != nil {
+		t.Fatalf("NewStarterService() returned non-nil service for missing deps")
+	}
 	if NewWorkspaceService(WorkspaceServiceConfig{}) != nil {
 		t.Fatalf("NewWorkspaceService() returned non-nil service for missing deps")
 	}

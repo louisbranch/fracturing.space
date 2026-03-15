@@ -79,8 +79,8 @@ func TestGRPCGatewayFiltersToStarterIntent(t *testing.T) {
 	}
 
 	got := results[0]
-	if got.CampaignID != "starter-1" {
-		t.Errorf("CampaignID = %q, want %q", got.CampaignID, "starter-1")
+	if got.EntryID != "starter-1" {
+		t.Errorf("EntryID = %q, want %q", got.EntryID, "starter-1")
 	}
 	if got.Title != "Starter Adventure" {
 		t.Errorf("Title = %q, want %q", got.Title, "Starter Adventure")

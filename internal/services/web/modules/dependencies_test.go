@@ -105,6 +105,9 @@ func TestBindDependenciesWireOwnedModuleClients(t *testing.T) {
 	if deps.Discovery.DiscoveryClient == nil {
 		t.Fatal("Discovery.DiscoveryClient = nil, want client")
 	}
+	if deps.Campaigns.DiscoveryClient == nil {
+		t.Fatal("Campaigns.DiscoveryClient = nil, want client")
+	}
 
 	BindUserHubDependency(&deps, conn)
 	if deps.Dashboard.UserHubClient == nil {

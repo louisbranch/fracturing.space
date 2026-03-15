@@ -57,7 +57,10 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	}
 
 	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
-	if userID == "" {
+	ownerlessStarterTemplate := userID == "" &&
+		normalized.Intent == campaign.IntentStarter &&
+		normalized.AccessPolicy == campaign.AccessPolicyPublic
+	if userID == "" && !ownerlessStarterTemplate {
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, apperrors.New(
 			apperrors.CodeCampaignCreatorUserMissing,
 			"creator user id is required",
@@ -90,21 +93,25 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 	}
 
 	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
-	creatorDisplayName := strings.TrimSpace(profile.Name)
-	if creatorDisplayName == "" {
-		creatorDisplayName, err = authUsername(
-			ctx,
-			c.authClient,
-			userID,
-			apperrors.New(apperrors.CodeCampaignCreatorUserMissing, "creator user not found"),
-		)
-		if err != nil {
-			return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
+	creatorDisplayName := defaultUnknownParticipantName(defaultLocale)
+	creatorPronouns := defaultUnknownParticipantPronouns()
+	if !ownerlessStarterTemplate {
+		creatorDisplayName = strings.TrimSpace(profile.Name)
+		if creatorDisplayName == "" {
+			creatorDisplayName, err = authUsername(
+				ctx,
+				c.authClient,
+				userID,
+				apperrors.New(apperrors.CodeCampaignCreatorUserMissing, "creator user not found"),
+			)
+			if err != nil {
+				return storage.CampaignRecord{}, storage.ParticipantRecord{}, err
+			}
 		}
-	}
-	creatorPronouns := strings.TrimSpace(profile.Pronouns)
-	if creatorPronouns == "" && userID != "" {
-		creatorPronouns = defaultUnknownParticipantPronouns()
+		creatorPronouns = strings.TrimSpace(profile.Pronouns)
+		if creatorPronouns == "" {
+			creatorPronouns = defaultUnknownParticipantPronouns()
+		}
 	}
 
 	creatorRole := "GM"

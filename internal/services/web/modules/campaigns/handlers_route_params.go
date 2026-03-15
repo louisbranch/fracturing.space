@@ -26,6 +26,11 @@ func (h handlers) routeSessionID(r *http.Request) (string, bool) {
 	return routeparam.Read(r, "sessionID")
 }
 
+// routeStarterKey centralizes protected starter route-param extraction.
+func (h handlers) routeStarterKey(r *http.Request) (string, bool) {
+	return routeparam.Read(r, "starterKey")
+}
+
 // withCampaignID extracts the campaign ID path param and delegates to fn,
 // returning 404 when the param is missing.
 func (h handlers) withCampaignID(fn func(http.ResponseWriter, *http.Request, string)) http.HandlerFunc {

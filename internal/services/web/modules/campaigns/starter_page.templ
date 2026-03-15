@@ -1,0 +1,92 @@
+package campaigns
+
+import "github.com/louisbranch/fracturing.space/internal/services/web/routepath"
+
+templ StarterPreviewFragment(preview starterPreviewView, loc Localizer) {
+	<section class="max-w-5xl mx-auto px-4 space-y-6">
+		<div class="space-y-3">
+			<div class="flex flex-wrap gap-2 text-xs opacity-70">
+				if preview.System != "" {
+					<span class="badge badge-outline">{ preview.System }</span>
+				}
+				if preview.GmMode != "" {
+					<span class="badge badge-outline">{ preview.GmMode + " GM" }</span>
+				}
+				if preview.Duration != "" {
+					<span class="badge badge-outline">{ preview.Duration }</span>
+				}
+				if preview.Players != "" {
+					<span class="badge badge-outline">{ preview.Players + " player" }</span>
+				}
+			</div>
+			if preview.Hook != "" {
+				<p class="text-lg opacity-90">{ preview.Hook }</p>
+			}
+			if preview.Description != "" {
+				<p class="opacity-75">{ preview.Description }</p>
+			}
+			<div class="flex flex-wrap gap-2">
+				for _, tag := range preview.Tags {
+					<span class="badge badge-sm badge-ghost border border-base-300">{ tag }</span>
+				}
+			</div>
+		</div>
+
+		<div class="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
+			<article class="card bg-base-100 border border-base-300 shadow-sm">
+				<div class="card-body gap-3">
+					<h3 class="card-title">Premise</h3>
+					if preview.Storyline != "" {
+						<pre class="whitespace-pre-wrap text-sm opacity-85 font-sans">{ preview.Storyline }</pre>
+					}
+				</div>
+			</article>
+
+			<div class="space-y-6">
+				<article class="card bg-base-100 border border-base-300 shadow-sm">
+					<div class="card-body gap-3">
+						<h3 class="card-title">Premade Character</h3>
+						<div>
+							<p class="font-semibold">{ preview.CharacterName }</p>
+							if preview.PlaystyleLabel != "" {
+								<p class="text-sm opacity-70">{ preview.PlaystyleLabel }</p>
+							}
+						</div>
+						if preview.CharacterSummary != "" {
+							<p class="text-sm opacity-85">{ preview.CharacterSummary }</p>
+						}
+					</div>
+				</article>
+
+				<article class="card bg-base-100 border border-base-300 shadow-sm">
+					<div class="card-body gap-4">
+						<h3 class="card-title">Launch With Your AI GM</h3>
+						if !preview.HasAvailableAIAgents {
+							<p class="text-sm opacity-80">You need at least one ready AI agent before launching this starter.</p>
+							<div class="card-actions">
+								<a class="btn btn-primary btn-sm" href={ routepath.AppSettingsAIAgents }>Open AI agents</a>
+							</div>
+						} else {
+							<form method="post" action={ routepath.AppCampaignStarterLaunch(preview.EntryID) } class="space-y-5">
+								<label class="form-control w-full">
+									<span class="label-text">AI agent</span>
+									<select class="select select-bordered w-full" name="ai_agent_id" required>
+										<option value="">Choose an AI GM</option>
+										for _, option := range preview.AIAgentOptions {
+											if option.Enabled {
+												<option value={ option.ID }>{ option.Label }</option>
+											}
+										}
+									</select>
+								</label>
+								<div class="card-actions justify-start pt-3">
+									<button type="submit" class="btn btn-primary">Fork Campaign</button>
+								</div>
+							</form>
+						}
+					</div>
+				</article>
+			</div>
+		</div>
+	</section>
+}

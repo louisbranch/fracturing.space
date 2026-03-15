@@ -19,11 +19,8 @@ func TestNewServiceWithoutGatewayUsesExplicitDegradedContract(t *testing.T) {
 	t.Parallel()
 
 	page := NewService(nil).LoadPage(context.Background())
-	if !page.Degraded {
-		t.Fatal("Degraded = false, want true")
-	}
-	if !page.Empty {
-		t.Fatal("Empty = false, want true")
+	if page.Status != PageStatusUnavailable {
+		t.Fatalf("Status = %q, want %q", page.Status, PageStatusUnavailable)
 	}
 }
 
@@ -31,11 +28,17 @@ func TestLoadPageReturnsExplicitDegradedStateOnGatewayError(t *testing.T) {
 	t.Parallel()
 
 	page := NewService(gatewayStub{err: errors.New("boom")}).LoadPage(context.Background())
-	if !page.Degraded {
-		t.Fatal("Degraded = false, want true")
+	if page.Status != PageStatusUnavailable {
+		t.Fatalf("Status = %q, want %q", page.Status, PageStatusUnavailable)
 	}
-	if !page.Empty {
-		t.Fatal("Empty = false, want true")
+}
+
+func TestLoadPageTreatsZeroEntriesAsUnavailable(t *testing.T) {
+	t.Parallel()
+
+	page := NewService(gatewayStub{}).LoadPage(context.Background())
+	if page.Status != PageStatusUnavailable {
+		t.Fatalf("Status = %q, want %q", page.Status, PageStatusUnavailable)
 	}
 }
 
@@ -43,13 +46,10 @@ func TestLoadPageReturnsEntriesWithoutDegradation(t *testing.T) {
 	t.Parallel()
 
 	page := NewService(gatewayStub{
-		entries: []StarterEntry{{CampaignID: "c1", Title: "Starter"}},
+		entries: []StarterEntry{{EntryID: "starter:one", Title: "Starter"}},
 	}).LoadPage(context.Background())
-	if page.Degraded {
-		t.Fatal("Degraded = true, want false")
-	}
-	if page.Empty {
-		t.Fatal("Empty = true, want false")
+	if page.Status != PageStatusReady {
+		t.Fatalf("Status = %q, want %q", page.Status, PageStatusReady)
 	}
 	if len(page.Entries) != 1 {
 		t.Fatalf("len(Entries) = %d, want 1", len(page.Entries))

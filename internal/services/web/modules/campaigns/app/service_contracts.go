@@ -12,6 +12,12 @@ type CampaignCatalogService interface {
 	CreateCampaign(context.Context, CreateCampaignInput) (CreateCampaignResult, error)
 }
 
+// CampaignStarterService exposes protected starter preview and launch flows.
+type CampaignStarterService interface {
+	StarterPreview(context.Context, string) (CampaignStarterPreview, error)
+	LaunchStarter(context.Context, string, LaunchStarterInput) (StarterLaunchResult, error)
+}
+
 // CampaignWorkspaceService exposes campaign workspace reads used by transport.
 type CampaignWorkspaceService interface {
 	CampaignName(context.Context, string) string

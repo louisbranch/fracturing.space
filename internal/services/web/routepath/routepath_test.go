@@ -26,6 +26,9 @@ func TestTopLevelRouteConstants(t *testing.T) {
 	if AppCampaignsNew != "/app/campaigns/new" {
 		t.Fatalf("AppCampaignsNew = %q", AppCampaignsNew)
 	}
+	if AppCampaignStarters != "/app/campaigns/starters" {
+		t.Fatalf("AppCampaignStarters = %q", AppCampaignStarters)
+	}
 	if UserProfilePrefix != "/u/" {
 		t.Fatalf("UserProfilePrefix = %q", UserProfilePrefix)
 	}
@@ -48,6 +51,12 @@ func TestCampaignRouteBuilders(t *testing.T) {
 	}
 	if got := AppCampaignEdit("camp-1"); got != "/app/campaigns/camp-1/edit" {
 		t.Fatalf("AppCampaignEdit() = %q", got)
+	}
+	if got := AppCampaignStarter("lantern"); got != "/app/campaigns/starters/preview/lantern" {
+		t.Fatalf("AppCampaignStarter() = %q", got)
+	}
+	if got := AppCampaignStarterLaunch("lantern"); got != "/app/campaigns/starters/launch/lantern" {
+		t.Fatalf("AppCampaignStarterLaunch() = %q", got)
 	}
 	if got := AppCampaignSessions("camp-1"); got != "/app/campaigns/camp-1/sessions" {
 		t.Fatalf("AppCampaignSessions() = %q", got)
@@ -122,6 +131,12 @@ func TestServeMuxPatternConstants(t *testing.T) {
 	}
 	if AppCampaignEditPattern != "/app/campaigns/{campaignID}/edit" {
 		t.Fatalf("AppCampaignEditPattern = %q", AppCampaignEditPattern)
+	}
+	if AppCampaignStarterPattern != "/app/campaigns/starters/preview/{starterKey}" {
+		t.Fatalf("AppCampaignStarterPattern = %q", AppCampaignStarterPattern)
+	}
+	if AppCampaignStarterLaunchPattern != "/app/campaigns/starters/launch/{starterKey}" {
+		t.Fatalf("AppCampaignStarterLaunchPattern = %q", AppCampaignStarterLaunchPattern)
 	}
 	if AppCampaignSessionsPattern != "/app/campaigns/{campaignID}/sessions" {
 		t.Fatalf("AppCampaignSessionsPattern = %q", AppCampaignSessionsPattern)
@@ -228,6 +243,12 @@ func TestRouteBuildersEscapeSegments(t *testing.T) {
 	}
 	if got := AppCampaignEdit("camp/1"); got != "/app/campaigns/camp%2F1/edit" {
 		t.Fatalf("AppCampaignEdit() escaped = %q", got)
+	}
+	if got := AppCampaignStarter("starter/1"); got != "/app/campaigns/starters/preview/starter%2F1" {
+		t.Fatalf("AppCampaignStarter() escaped = %q", got)
+	}
+	if got := AppCampaignStarterLaunch("starter/1"); got != "/app/campaigns/starters/launch/starter%2F1" {
+		t.Fatalf("AppCampaignStarterLaunch() escaped = %q", got)
 	}
 	if got := AppCampaignSession("camp-1", "sess/1"); got != "/app/campaigns/camp-1/sessions/sess%2F1" {
 		t.Fatalf("AppCampaignSession() escaped = %q", got)
