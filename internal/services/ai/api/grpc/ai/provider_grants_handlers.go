@@ -8,6 +8,9 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
@@ -15,18 +18,71 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
+// ProviderGrantHandlers serves provider grant RPCs with explicit dependencies.
+type ProviderGrantHandlers struct {
+	aiv1.UnimplementedProviderGrantServiceServer
+
+	providerGrantStore    storage.ProviderGrantStore
+	connectSessionStore   storage.ProviderConnectSessionStore
+	sealer                SecretSealer
+	providerOAuthAdapters map[provider.Provider]ProviderOAuthAdapter
+	clock                 func() time.Time
+	idGenerator           func() (string, error)
+	codeVerifierGenerator func() (string, error)
+	usageGuard            authReferenceUsageGuard
+}
+
+// ProviderGrantHandlersConfig declares the dependencies for provider-grant RPCs.
+type ProviderGrantHandlersConfig struct {
+	ProviderGrantStore    storage.ProviderGrantStore
+	ConnectSessionStore   storage.ProviderConnectSessionStore
+	AgentStore            storage.AgentStore
+	GameCampaignAIClient  gamev1.CampaignAIServiceClient
+	Sealer                SecretSealer
+	ProviderOAuthAdapters map[provider.Provider]ProviderOAuthAdapter
+	Clock                 func() time.Time
+	IDGenerator           func() (string, error)
+	CodeVerifierGenerator func() (string, error)
+}
+
+// NewProviderGrantHandlers builds a provider-grant RPC server from explicit deps.
+func NewProviderGrantHandlers(cfg ProviderGrantHandlersConfig) *ProviderGrantHandlers {
+	clock := cfg.Clock
+	if clock == nil {
+		clock = time.Now
+	}
+	idGenerator := cfg.IDGenerator
+	if idGenerator == nil {
+		idGenerator = id.NewID
+	}
+	codeVerifierGenerator := cfg.CodeVerifierGenerator
+	if codeVerifierGenerator == nil {
+		codeVerifierGenerator = generatePKCECodeVerifier
+	}
+	return &ProviderGrantHandlers{
+		providerGrantStore:    cfg.ProviderGrantStore,
+		connectSessionStore:   cfg.ConnectSessionStore,
+		sealer:                cfg.Sealer,
+		providerOAuthAdapters: newProviderOAuthAdapters(cfg.ProviderOAuthAdapters),
+		clock:                 clock,
+		idGenerator:           idGenerator,
+		codeVerifierGenerator: codeVerifierGenerator,
+		usageGuard:            newAuthReferenceUsageGuard(cfg.AgentStore, cfg.GameCampaignAIClient),
+	}
+}
+
 // StartProviderConnect starts a provider OAuth grant handshake.
-func (s *Service) StartProviderConnect(ctx context.Context, in *aiv1.StartProviderConnectRequest) (*aiv1.StartProviderConnectResponse, error) {
+func (h *ProviderGrantHandlers) StartProviderConnect(ctx context.Context, in *aiv1.StartProviderConnectRequest) (*aiv1.StartProviderConnectResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "start provider connect request is required")
 	}
-	if s.providerGrantStore == nil {
+	if h == nil || h.providerGrantStore == nil {
 		return nil, status.Error(codes.Internal, "provider grant store is not configured")
 	}
-	if s.connectSessionStore == nil {
+	if h.connectSessionStore == nil {
 		return nil, status.Error(codes.Internal, "provider connect session store is not configured")
 	}
-	if s.sealer == nil {
+	if h.sealer == nil {
 		return nil, status.Error(codes.Internal, "secret sealer is not configured")
 	}
 
@@ -35,24 +91,20 @@ func (s *Service) StartProviderConnect(ctx context.Context, in *aiv1.StartProvid
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
 
-	provider, err := providerGrantProviderFromProto(in.GetProvider())
+	providerID, err := providerFromProto(in.GetProvider())
 	if err != nil {
 		return nil, err
 	}
 
-	sessionID, err := s.idGenerator()
+	sessionID, err := h.idGenerator()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "generate connect session id: %v", err)
 	}
-	state, err := s.idGenerator()
+	state, err := h.idGenerator()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "generate connect state: %v", err)
 	}
-	codeVerifierGenerator := s.codeVerifierGenerator
-	if codeVerifierGenerator == nil {
-		codeVerifierGenerator = generatePKCECodeVerifier
-	}
-	codeVerifier, err := codeVerifierGenerator()
+	codeVerifier, err := h.codeVerifierGenerator()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "generate code verifier: %v", err)
 	}
@@ -61,17 +113,17 @@ func (s *Service) StartProviderConnect(ctx context.Context, in *aiv1.StartProvid
 		return nil, status.Error(codes.Internal, "generate code verifier: value is invalid")
 	}
 	codeChallenge := pkceCodeChallengeS256(codeVerifier)
-	codeVerifierCiphertext, err := s.sealer.Seal(codeVerifier)
+	codeVerifierCiphertext, err := h.sealer.Seal(codeVerifier)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "seal code verifier: %v", err)
 	}
 
-	now := s.clock().UTC()
+	now := h.clock().UTC()
 	expiresAt := now.Add(10 * time.Minute)
 	record := storage.ProviderConnectSessionRecord{
 		ID:                     sessionID,
 		OwnerUserID:            userID,
-		Provider:               string(provider),
+		Provider:               string(providerID),
 		Status:                 "pending",
 		RequestedScopes:        normalizeScopes(in.GetRequestedScopes()),
 		StateHash:              hashState(state),
@@ -80,11 +132,11 @@ func (s *Service) StartProviderConnect(ctx context.Context, in *aiv1.StartProvid
 		UpdatedAt:              now,
 		ExpiresAt:              expiresAt,
 	}
-	if err := s.connectSessionStore.PutProviderConnectSession(ctx, record); err != nil {
+	if err := h.connectSessionStore.PutProviderConnectSession(ctx, record); err != nil {
 		return nil, status.Errorf(codes.Internal, "put provider connect session: %v", err)
 	}
 
-	adapter, ok := s.providerOAuthAdapters[provider]
+	adapter, ok := h.providerOAuthAdapters[providerID]
 	if !ok || adapter == nil {
 		return nil, status.Error(codes.FailedPrecondition, "provider oauth adapter is unavailable")
 	}
@@ -105,17 +157,17 @@ func (s *Service) StartProviderConnect(ctx context.Context, in *aiv1.StartProvid
 }
 
 // FinishProviderConnect completes a provider OAuth grant handshake.
-func (s *Service) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProviderConnectRequest) (*aiv1.FinishProviderConnectResponse, error) {
+func (h *ProviderGrantHandlers) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProviderConnectRequest) (*aiv1.FinishProviderConnectResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "finish provider connect request is required")
 	}
-	if s.providerGrantStore == nil {
+	if h == nil || h.providerGrantStore == nil {
 		return nil, status.Error(codes.Internal, "provider grant store is not configured")
 	}
-	if s.connectSessionStore == nil {
+	if h.connectSessionStore == nil {
 		return nil, status.Error(codes.Internal, "provider connect session store is not configured")
 	}
-	if s.sealer == nil {
+	if h.sealer == nil {
 		return nil, status.Error(codes.Internal, "secret sealer is not configured")
 	}
 
@@ -137,7 +189,7 @@ func (s *Service) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProv
 		return nil, status.Error(codes.InvalidArgument, "authorization_code is required")
 	}
 
-	session, err := s.connectSessionStore.GetProviderConnectSession(ctx, sessionID)
+	session, err := h.connectSessionStore.GetProviderConnectSession(ctx, sessionID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "connect session not found")
@@ -150,23 +202,22 @@ func (s *Service) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProv
 	if !strings.EqualFold(strings.TrimSpace(session.Status), "pending") {
 		return nil, status.Error(codes.FailedPrecondition, "connect session is no longer pending")
 	}
-	if s.clock().UTC().After(session.ExpiresAt) {
+	if h.clock().UTC().After(session.ExpiresAt) {
 		return nil, status.Error(codes.FailedPrecondition, "connect session expired")
 	}
-	// State check is the CSRF boundary for the connect handshake.
 	if hashState(state) != strings.TrimSpace(session.StateHash) {
 		return nil, status.Error(codes.FailedPrecondition, "state mismatch")
 	}
 
-	provider := providergrant.Provider(strings.ToLower(strings.TrimSpace(session.Provider)))
-	if provider != providergrant.ProviderOpenAI {
+	providerID := providerFromString(session.Provider)
+	if providerID != provider.OpenAI {
 		return nil, status.Error(codes.FailedPrecondition, "provider is unavailable")
 	}
-	adapter, ok := s.providerOAuthAdapters[provider]
+	adapter, ok := h.providerOAuthAdapters[providerID]
 	if !ok || adapter == nil {
 		return nil, status.Error(codes.FailedPrecondition, "provider oauth adapter is unavailable")
 	}
-	codeVerifier, err := s.sealer.Open(session.CodeVerifierCiphertext)
+	codeVerifier, err := h.sealer.Open(session.CodeVerifierCiphertext)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "open code verifier: %v", err)
 	}
@@ -181,19 +232,19 @@ func (s *Service) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProv
 	if tokenPlaintext == "" {
 		return nil, status.Error(codes.Internal, "provider returned empty token payload")
 	}
-	tokenCiphertext, err := s.sealer.Seal(tokenPlaintext)
+	tokenCiphertext, err := h.sealer.Seal(tokenPlaintext)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "seal provider token: %v", err)
 	}
 
 	created, err := providergrant.Create(providergrant.CreateInput{
 		OwnerUserID:      userID,
-		Provider:         provider,
+		Provider:         providerID,
 		GrantedScopes:    session.RequestedScopes,
 		TokenCiphertext:  tokenCiphertext,
 		RefreshSupported: exchanged.RefreshSupported,
 		ExpiresAt:        exchanged.ExpiresAt,
-	}, s.clock, s.idGenerator)
+	}, h.clock, h.idGenerator)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -213,12 +264,12 @@ func (s *Service) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProv
 		ExpiresAt:        created.ExpiresAt,
 		LastRefreshedAt:  created.RefreshedAt,
 	}
-	if err := s.providerGrantStore.PutProviderGrant(ctx, record); err != nil {
+	if err := h.providerGrantStore.PutProviderGrant(ctx, record); err != nil {
 		return nil, status.Errorf(codes.Internal, "put provider grant: %v", err)
 	}
 
-	completedAt := s.clock().UTC()
-	if err := s.connectSessionStore.CompleteProviderConnectSession(ctx, userID, sessionID, completedAt); err != nil {
+	completedAt := h.clock().UTC()
+	if err := h.connectSessionStore.CompleteProviderConnectSession(ctx, userID, sessionID, completedAt); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "connect session not found")
 		}
@@ -228,11 +279,11 @@ func (s *Service) FinishProviderConnect(ctx context.Context, in *aiv1.FinishProv
 }
 
 // ListProviderGrants returns a page of provider grants owned by the caller.
-func (s *Service) ListProviderGrants(ctx context.Context, in *aiv1.ListProviderGrantsRequest) (*aiv1.ListProviderGrantsResponse, error) {
+func (h *ProviderGrantHandlers) ListProviderGrants(ctx context.Context, in *aiv1.ListProviderGrantsRequest) (*aiv1.ListProviderGrantsResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list provider grants request is required")
 	}
-	if s.providerGrantStore == nil {
+	if h == nil || h.providerGrantStore == nil {
 		return nil, status.Error(codes.Internal, "provider grant store is not configured")
 	}
 
@@ -241,14 +292,12 @@ func (s *Service) ListProviderGrants(ctx context.Context, in *aiv1.ListProviderG
 		return nil, status.Error(codes.PermissionDenied, "missing user identity")
 	}
 
-	// Filters are caller-supplied and can only narrow rows inside the
-	// authenticated owner scope derived from trusted auth metadata.
 	filter, err := providerGrantFilterFromRequest(in)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
-	page, err := s.providerGrantStore.ListProviderGrantsByOwner(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken(), filter)
+	page, err := h.providerGrantStore.ListProviderGrantsByOwner(ctx, userID, clampPageSize(in.GetPageSize()), in.GetPageToken(), filter)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "list provider grants: %v", err)
 	}
@@ -264,14 +313,14 @@ func (s *Service) ListProviderGrants(ctx context.Context, in *aiv1.ListProviderG
 }
 
 // RevokeProviderGrant revokes one provider grant owned by the caller.
-func (s *Service) RevokeProviderGrant(ctx context.Context, in *aiv1.RevokeProviderGrantRequest) (*aiv1.RevokeProviderGrantResponse, error) {
+func (h *ProviderGrantHandlers) RevokeProviderGrant(ctx context.Context, in *aiv1.RevokeProviderGrantRequest) (*aiv1.RevokeProviderGrantResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "revoke provider grant request is required")
 	}
-	if s.providerGrantStore == nil {
+	if h == nil || h.providerGrantStore == nil {
 		return nil, status.Error(codes.Internal, "provider grant store is not configured")
 	}
-	if s.sealer == nil {
+	if h.sealer == nil {
 		return nil, status.Error(codes.Internal, "secret sealer is not configured")
 	}
 
@@ -284,11 +333,11 @@ func (s *Service) RevokeProviderGrant(ctx context.Context, in *aiv1.RevokeProvid
 	if providerGrantID == "" {
 		return nil, status.Error(codes.InvalidArgument, "provider_grant_id is required")
 	}
-	if err := s.ensureProviderGrantNotBoundToActiveCampaigns(ctx, userID, providerGrantID); err != nil {
+	if err := h.usageGuard.ensureProviderGrantNotBoundToActiveCampaigns(ctx, userID, providerGrantID); err != nil {
 		return nil, err
 	}
 
-	record, err := s.providerGrantStore.GetProviderGrant(ctx, providerGrantID)
+	record, err := h.providerGrantStore.GetProviderGrant(ctx, providerGrantID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "provider grant not found")
@@ -299,9 +348,9 @@ func (s *Service) RevokeProviderGrant(ctx context.Context, in *aiv1.RevokeProvid
 		return nil, status.Error(codes.NotFound, "provider grant not found")
 	}
 
-	provider := providergrant.Provider(strings.ToLower(strings.TrimSpace(record.Provider)))
-	if adapter, ok := s.providerOAuthAdapters[provider]; ok && adapter != nil {
-		tokenPlaintext, err := s.sealer.Open(record.TokenCiphertext)
+	providerID := providerFromString(record.Provider)
+	if adapter, ok := h.providerOAuthAdapters[providerID]; ok && adapter != nil {
+		tokenPlaintext, err := h.sealer.Open(record.TokenCiphertext)
 		if err != nil {
 			return nil, status.Errorf(codes.Internal, "open provider token: %v", err)
 		}
@@ -314,15 +363,15 @@ func (s *Service) RevokeProviderGrant(ctx context.Context, in *aiv1.RevokeProvid
 		}
 	}
 
-	revokedAt := s.clock().UTC()
-	if err := s.providerGrantStore.RevokeProviderGrant(ctx, userID, providerGrantID, revokedAt); err != nil {
+	revokedAt := h.clock().UTC()
+	if err := h.providerGrantStore.RevokeProviderGrant(ctx, userID, providerGrantID, revokedAt); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "provider grant not found")
 		}
 		return nil, status.Errorf(codes.Internal, "revoke provider grant: %v", err)
 	}
 
-	record, err = s.providerGrantStore.GetProviderGrant(ctx, providerGrantID)
+	record, err = h.providerGrantStore.GetProviderGrant(ctx, providerGrantID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "provider grant not found")
@@ -363,8 +412,8 @@ func (s *Service) refreshProviderGrant(ctx context.Context, ownerUserID string, 
 		return storage.ProviderGrantRecord{}, fmt.Errorf("provider grant does not support refresh")
 	}
 
-	provider := providergrant.Provider(strings.ToLower(strings.TrimSpace(record.Provider)))
-	adapter, ok := s.providerOAuthAdapters[provider]
+	providerID := providerFromString(record.Provider)
+	adapter, ok := s.providerOAuthAdapters[providerID]
 	if !ok || adapter == nil {
 		return storage.ProviderGrantRecord{}, fmt.Errorf("provider oauth adapter is unavailable")
 	}
@@ -401,17 +450,15 @@ func (s *Service) refreshProviderGrant(ctx context.Context, ownerUserID string, 
 		return storage.ProviderGrantRecord{}, fmt.Errorf("seal provider token: %w", err)
 	}
 
-	// Refresh errors are stored as metadata only; token ciphertext stays sealed.
-	if err := s.providerGrantStore.UpdateProviderGrantToken(
-		ctx,
-		ownerUserID,
-		providerGrantID,
-		tokenCiphertext,
-		refreshedAt,
-		exchanged.ExpiresAt,
-		string(providergrant.StatusActive),
-		strings.TrimSpace(exchanged.LastRefreshError),
-	); err != nil {
+	if err := s.providerGrantStore.UpdateProviderGrantToken(ctx, storage.UpdateProviderGrantTokenInput{
+		OwnerUserID:      ownerUserID,
+		ProviderGrantID:  providerGrantID,
+		TokenCiphertext:  tokenCiphertext,
+		RefreshedAt:      refreshedAt,
+		ExpiresAt:        exchanged.ExpiresAt,
+		Status:           string(providergrant.StatusActive),
+		LastRefreshError: strings.TrimSpace(exchanged.LastRefreshError),
+	}); err != nil {
 		return storage.ProviderGrantRecord{}, fmt.Errorf("update provider grant token: %w", err)
 	}
 	updated, err := s.providerGrantStore.GetProviderGrant(ctx, providerGrantID)
@@ -429,22 +476,21 @@ func (s *Service) markProviderGrantRefreshFailed(ctx context.Context, record sto
 	if refreshErr != nil && strings.TrimSpace(refreshErr.Error()) != "" {
 		message = strings.TrimSpace(refreshErr.Error())
 	}
-	// Keep prior ciphertext on failure; only status/metadata mutates here.
-	if err := s.providerGrantStore.UpdateProviderGrantToken(
-		ctx,
-		record.OwnerUserID,
-		record.ID,
-		record.TokenCiphertext,
-		refreshedAt,
-		record.ExpiresAt,
-		string(providergrant.StatusRefreshFailed),
-		message,
-	); err != nil {
+	if err := s.providerGrantStore.UpdateProviderGrantToken(ctx, storage.UpdateProviderGrantTokenInput{
+		OwnerUserID:      record.OwnerUserID,
+		ProviderGrantID:  record.ID,
+		TokenCiphertext:  record.TokenCiphertext,
+		RefreshedAt:      refreshedAt,
+		ExpiresAt:        record.ExpiresAt,
+		Status:           string(providergrant.StatusRefreshFailed),
+		LastRefreshError: message,
+	}); err != nil {
 		return fmt.Errorf("mark provider grant refresh failed: %w", err)
 	}
 	return nil
 }
-func (s *Service) resolveProviderGrantForInvocation(ctx context.Context, ownerUserID string, providerGrantID string, provider string) (storage.ProviderGrantRecord, error) {
+
+func (s *Service) resolveProviderGrantForInvocation(ctx context.Context, ownerUserID string, providerGrantID string, requestedProvider provider.Provider) (storage.ProviderGrantRecord, error) {
 	if s.providerGrantStore == nil {
 		return storage.ProviderGrantRecord{}, status.Error(codes.Internal, "provider grant store is not configured")
 	}
@@ -459,25 +505,31 @@ func (s *Service) resolveProviderGrantForInvocation(ctx context.Context, ownerUs
 	if strings.TrimSpace(record.OwnerUserID) != strings.TrimSpace(ownerUserID) {
 		return storage.ProviderGrantRecord{}, status.Error(codes.FailedPrecondition, "provider grant is unavailable")
 	}
-	if provider != "" && !strings.EqualFold(strings.TrimSpace(record.Provider), strings.TrimSpace(provider)) {
+	if requestedProvider != "" && providerFromString(record.Provider) != requestedProvider {
 		return storage.ProviderGrantRecord{}, status.Error(codes.FailedPrecondition, "provider grant is unavailable")
 	}
 
-	statusValue := strings.ToLower(strings.TrimSpace(record.Status))
 	now := s.clock().UTC()
-	switch statusValue {
-	case "active":
-		if isProviderGrantExpired(record, now) && !record.RefreshSupported {
+	grant := providergrant.ProviderGrant{
+		OwnerUserID:      record.OwnerUserID,
+		Provider:         providerFromString(record.Provider),
+		RefreshSupported: record.RefreshSupported,
+		Status:           providergrant.ParseStatus(record.Status),
+		ExpiresAt:        record.ExpiresAt,
+	}
+	switch grant.Status {
+	case providergrant.StatusActive:
+		if grant.IsExpired(now) && !record.RefreshSupported {
 			return storage.ProviderGrantRecord{}, status.Error(codes.FailedPrecondition, "provider grant is unavailable")
 		}
-		if shouldRefreshProviderGrantForInvocation(record, now) {
+		if grant.ShouldRefresh(now, providerGrantRefreshWindow) {
 			refreshed, err := s.refreshProviderGrant(ctx, ownerUserID, providerGrantID)
 			if err != nil {
 				return storage.ProviderGrantRecord{}, status.Error(codes.FailedPrecondition, "provider grant refresh failed")
 			}
 			record = refreshed
 		}
-	case "refresh_failed", "expired":
+	case providergrant.StatusRefreshFailed, providergrant.StatusExpired:
 		if !record.RefreshSupported {
 			return storage.ProviderGrantRecord{}, status.Error(codes.FailedPrecondition, "provider grant is unavailable")
 		}
@@ -489,30 +541,12 @@ func (s *Service) resolveProviderGrantForInvocation(ctx context.Context, ownerUs
 	default:
 		return storage.ProviderGrantRecord{}, status.Error(codes.FailedPrecondition, "provider grant is unavailable")
 	}
-	if !strings.EqualFold(strings.TrimSpace(record.Status), "active") {
+	if !providergrant.ParseStatus(record.Status).IsActive() {
 		return storage.ProviderGrantRecord{}, status.Error(codes.FailedPrecondition, "provider grant is unavailable")
 	}
 	return record, nil
 }
 
-// shouldRefreshProviderGrantForInvocation applies a small pre-expiry window so
-// invocation paths can refresh before provider-side token rejection.
-func shouldRefreshProviderGrantForInvocation(record storage.ProviderGrantRecord, now time.Time) bool {
-	if !record.RefreshSupported {
-		return false
-	}
-	if record.ExpiresAt == nil {
-		return false
-	}
-	return !record.ExpiresAt.After(now.Add(providerGrantRefreshWindow))
-}
-
-func isProviderGrantExpired(record storage.ProviderGrantRecord, now time.Time) bool {
-	if record.ExpiresAt == nil {
-		return false
-	}
-	return !record.ExpiresAt.After(now)
-}
 func providerGrantFilterFromRequest(in *aiv1.ListProviderGrantsRequest) (storage.ProviderGrantFilter, error) {
 	filter := storage.ProviderGrantFilter{}
 	switch in.GetProvider() {

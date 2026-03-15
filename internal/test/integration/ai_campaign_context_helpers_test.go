@@ -17,9 +17,9 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	aiapp "github.com/louisbranch/fracturing.space/internal/services/ai/app"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	mcpservice "github.com/louisbranch/fracturing.space/internal/services/mcp/service"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
@@ -247,10 +247,16 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 		})
 	}
 
-	provider := aiservice.NewOpenAIInvokeAdapter(aiservice.OpenAIInvokeConfig{
+	provider := openaiprovider.NewInvokeAdapter(openaiprovider.InvokeConfig{
 		ResponsesURL: strings.TrimSpace(opts.ResponsesURL),
 	})
-	runner := orchestration.NewRunner(orchestration.NewMCPDialer("http://"+mcpAddr+"/mcp", newHTTPClient(t)), 12)
+	runner := orchestration.NewRunner(orchestration.RunnerConfig{
+		Dialer: orchestration.NewMCPDialer(orchestration.MCPDialerConfig{
+			URL:        "http://" + mcpAddr + "/mcp",
+			HTTPClient: newHTTPClient(t),
+		}),
+		MaxSteps: 12,
+	})
 	runResp, err := runner.Run(context.Background(), orchestration.Input{
 		CampaignID:       campaignID,
 		SessionID:        sessionID,

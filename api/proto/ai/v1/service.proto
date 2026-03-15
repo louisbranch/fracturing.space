@@ -290,26 +290,37 @@ message DeleteAgentRequest {
 
 message DeleteAgentResponse {}
 
+message Usage {
+  int32 input_tokens = 1;
+  int32 output_tokens = 2;
+  int32 reasoning_tokens = 3;
+  int32 total_tokens = 4;
+}
+
 message InvokeAgentRequest {
   string agent_id = 1;
   string input = 2;
+  string reasoning_effort = 3;
 }
 
 message InvokeAgentResponse {
   string output_text = 1;
   Provider provider = 2;
   string model = 3;
+  Usage usage = 4;
 }
 
 message RunCampaignTurnRequest {
   string session_grant = 1;
   string input = 2;
+  string reasoning_effort = 3;
 }
 
 message RunCampaignTurnResponse {
   string output_text = 1;
   Provider provider = 2;
   string model = 3;
+  Usage usage = 4;
 }
 
 message CampaignArtifact {

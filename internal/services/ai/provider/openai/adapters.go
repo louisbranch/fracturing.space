@@ -1,4 +1,4 @@
-package ai
+package openai
 
 import (
 	"bytes"
@@ -11,15 +11,17 @@ import (
 	"strings"
 	"time"
 
+	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	anyllm "github.com/mozilla-ai/any-llm-go"
 	anyllmopenai "github.com/mozilla-ai/any-llm-go/providers/openai"
 )
 
-type defaultOpenAIOAuthAdapter struct{}
+type defaultOAuthAdapter struct{}
 
-// OpenAIOAuthConfig configures OpenAI OAuth endpoints and credentials.
-type OpenAIOAuthConfig struct {
+// OAuthConfig configures OpenAI OAuth endpoints and credentials.
+type OAuthConfig struct {
 	AuthorizationURL string
 	TokenURL         string
 	ClientID         string
@@ -28,77 +30,82 @@ type OpenAIOAuthConfig struct {
 	HTTPClient       *http.Client
 }
 
-type openAIOAuthAdapter struct {
-	cfg OpenAIOAuthConfig
+type oauthAdapter struct {
+	cfg OAuthConfig
 }
 
-// OpenAIInvokeConfig configures OpenAI provider behavior.
-type OpenAIInvokeConfig struct {
+// InvokeConfig configures OpenAI provider behavior.
+type InvokeConfig struct {
 	// ResponsesURL is kept for compatibility with existing configuration and is
 	// used to derive the OpenAI base URL for inference and model-listing calls.
 	ResponsesURL string
 	HTTPClient   *http.Client
 }
 
-type openAIInvokeAdapter struct {
-	cfg OpenAIInvokeConfig
+type invokeAdapter struct {
+	cfg InvokeConfig
 }
 
-// NewOpenAIOAuthAdapter builds an OpenAI OAuth adapter using HTTP token exchange.
-func NewOpenAIOAuthAdapter(cfg OpenAIOAuthConfig) ProviderOAuthAdapter {
+// NewDefaultOAuthAdapter builds the development/default OpenAI OAuth adapter.
+func NewDefaultOAuthAdapter() aiservice.ProviderOAuthAdapter {
+	return &defaultOAuthAdapter{}
+}
+
+// NewOAuthAdapter builds an OpenAI OAuth adapter using HTTP token exchange.
+func NewOAuthAdapter(cfg OAuthConfig) aiservice.ProviderOAuthAdapter {
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = http.DefaultClient
 	}
-	return &openAIOAuthAdapter{cfg: cfg}
+	return &oauthAdapter{cfg: cfg}
 }
 
-// NewOpenAIInvokeAdapter builds an OpenAI invocation adapter.
-func NewOpenAIInvokeAdapter(cfg OpenAIInvokeConfig) ProviderInvocationAdapter {
+// NewInvokeAdapter builds an OpenAI invocation adapter.
+func NewInvokeAdapter(cfg InvokeConfig) aiservice.ProviderInvocationAdapter {
 	if cfg.HTTPClient == nil {
 		cfg.HTTPClient = http.DefaultClient
 	}
 	if strings.TrimSpace(cfg.ResponsesURL) == "" {
 		cfg.ResponsesURL = "https://api.openai.com/v1/responses"
 	}
-	return &openAIInvokeAdapter{cfg: cfg}
+	return &invokeAdapter{cfg: cfg}
 }
 
-func (a *defaultOpenAIOAuthAdapter) BuildAuthorizationURL(input ProviderAuthorizationURLInput) (string, error) {
+func (a *defaultOAuthAdapter) BuildAuthorizationURL(input aiservice.ProviderAuthorizationURLInput) (string, error) {
 	return fmt.Sprintf("https://oauth.fracturing.space/openai?state=%s", strings.TrimSpace(input.State)), nil
 }
 
-func (a *defaultOpenAIOAuthAdapter) ExchangeAuthorizationCode(_ context.Context, input ProviderAuthorizationCodeInput) (ProviderTokenExchangeResult, error) {
+func (a *defaultOAuthAdapter) ExchangeAuthorizationCode(_ context.Context, input aiservice.ProviderAuthorizationCodeInput) (aiservice.ProviderTokenExchangeResult, error) {
 	code := strings.TrimSpace(input.AuthorizationCode)
 	if code == "" {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("authorization code is required")
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("authorization code is required")
 	}
 	token := "token:" + code
-	return ProviderTokenExchangeResult{
+	return aiservice.ProviderTokenExchangeResult{
 		TokenPlaintext:   token,
 		RefreshSupported: true,
 	}, nil
 }
 
-func (a *defaultOpenAIOAuthAdapter) RefreshToken(_ context.Context, input ProviderRefreshTokenInput) (ProviderTokenExchangeResult, error) {
+func (a *defaultOAuthAdapter) RefreshToken(_ context.Context, input aiservice.ProviderRefreshTokenInput) (aiservice.ProviderTokenExchangeResult, error) {
 	refreshToken := strings.TrimSpace(input.RefreshToken)
 	if refreshToken == "" {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("refresh token is required")
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("refresh token is required")
 	}
 	token := "token:refresh:" + refreshToken
-	return ProviderTokenExchangeResult{
+	return aiservice.ProviderTokenExchangeResult{
 		TokenPlaintext:   token,
 		RefreshSupported: true,
 	}, nil
 }
 
-func (a *defaultOpenAIOAuthAdapter) RevokeToken(_ context.Context, input ProviderRevokeTokenInput) error {
+func (a *defaultOAuthAdapter) RevokeToken(_ context.Context, input aiservice.ProviderRevokeTokenInput) error {
 	if strings.TrimSpace(input.Token) == "" {
 		return fmt.Errorf("token is required")
 	}
 	return nil
 }
 
-func (a *openAIOAuthAdapter) BuildAuthorizationURL(input ProviderAuthorizationURLInput) (string, error) {
+func (a *oauthAdapter) BuildAuthorizationURL(input aiservice.ProviderAuthorizationURLInput) (string, error) {
 	authURL := strings.TrimSpace(a.cfg.AuthorizationURL)
 	clientID := strings.TrimSpace(a.cfg.ClientID)
 	redirectURI := strings.TrimSpace(a.cfg.RedirectURI)
@@ -127,7 +134,7 @@ func (a *openAIOAuthAdapter) BuildAuthorizationURL(input ProviderAuthorizationUR
 	return u.String(), nil
 }
 
-func (a *openAIOAuthAdapter) ExchangeAuthorizationCode(ctx context.Context, input ProviderAuthorizationCodeInput) (ProviderTokenExchangeResult, error) {
+func (a *oauthAdapter) ExchangeAuthorizationCode(ctx context.Context, input aiservice.ProviderAuthorizationCodeInput) (aiservice.ProviderTokenExchangeResult, error) {
 	form := url.Values{}
 	form.Set("grant_type", "authorization_code")
 	form.Set("code", strings.TrimSpace(input.AuthorizationCode))
@@ -138,7 +145,7 @@ func (a *openAIOAuthAdapter) ExchangeAuthorizationCode(ctx context.Context, inpu
 	return a.tokenRequest(ctx, form)
 }
 
-func (a *openAIOAuthAdapter) RefreshToken(ctx context.Context, input ProviderRefreshTokenInput) (ProviderTokenExchangeResult, error) {
+func (a *oauthAdapter) RefreshToken(ctx context.Context, input aiservice.ProviderRefreshTokenInput) (aiservice.ProviderTokenExchangeResult, error) {
 	form := url.Values{}
 	form.Set("grant_type", "refresh_token")
 	form.Set("refresh_token", strings.TrimSpace(input.RefreshToken))
@@ -147,7 +154,7 @@ func (a *openAIOAuthAdapter) RefreshToken(ctx context.Context, input ProviderRef
 	return a.tokenRequest(ctx, form)
 }
 
-func (a *openAIOAuthAdapter) RevokeToken(_ context.Context, input ProviderRevokeTokenInput) error {
+func (a *oauthAdapter) RevokeToken(_ context.Context, input aiservice.ProviderRevokeTokenInput) error {
 	if strings.TrimSpace(input.Token) == "" {
 		return fmt.Errorf("token is required")
 	}
@@ -156,26 +163,26 @@ func (a *openAIOAuthAdapter) RevokeToken(_ context.Context, input ProviderRevoke
 	return nil
 }
 
-func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeInput) (ProviderInvokeResult, error) {
+func (a *invokeAdapter) Invoke(ctx context.Context, input aiservice.ProviderInvokeInput) (aiservice.ProviderInvokeResult, error) {
 	responsesURL := strings.TrimSpace(a.cfg.ResponsesURL)
 	credentialSecret := strings.TrimSpace(input.CredentialSecret)
 	model := strings.TrimSpace(input.Model)
 	prompt := strings.TrimSpace(input.Input)
 	if credentialSecret == "" {
-		return ProviderInvokeResult{}, fmt.Errorf("credential secret is required")
+		return aiservice.ProviderInvokeResult{}, fmt.Errorf("credential secret is required")
 	}
 	if model == "" {
-		return ProviderInvokeResult{}, fmt.Errorf("model is required")
+		return aiservice.ProviderInvokeResult{}, fmt.Errorf("model is required")
 	}
 	if prompt == "" {
-		return ProviderInvokeResult{}, fmt.Errorf("input is required")
+		return aiservice.ProviderInvokeResult{}, fmt.Errorf("input is required")
 	}
 	if responsesURL != "" {
 		return a.invokeResponsesAPI(ctx, responsesURL, input)
 	}
 	provider, err := a.provider(credentialSecret)
 	if err != nil {
-		return ProviderInvokeResult{}, err
+		return aiservice.ProviderInvokeResult{}, err
 	}
 	messages := make([]anyllm.Message, 0, 2)
 	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
@@ -187,20 +194,20 @@ func (a *openAIInvokeAdapter) Invoke(ctx context.Context, input ProviderInvokeIn
 		Messages: messages,
 	})
 	if err != nil {
-		return ProviderInvokeResult{}, fmt.Errorf("invoke provider: %w", err)
+		return aiservice.ProviderInvokeResult{}, fmt.Errorf("invoke provider: %w", err)
 	}
 	if resp == nil || len(resp.Choices) == 0 {
-		return ProviderInvokeResult{}, fmt.Errorf("invoke response missing choices")
+		return aiservice.ProviderInvokeResult{}, fmt.Errorf("invoke response missing choices")
 	}
 	outputText := strings.TrimSpace(resp.Choices[0].Message.ContentString())
 	if outputText == "" {
-		return ProviderInvokeResult{}, fmt.Errorf("invoke response missing output text")
+		return aiservice.ProviderInvokeResult{}, fmt.Errorf("invoke response missing output text")
 	}
-	return ProviderInvokeResult{OutputText: outputText}, nil
+	return aiservice.ProviderInvokeResult{OutputText: outputText}, nil
 }
 
 // Run executes one OpenAI Responses API step with native tool calling.
-func (a *openAIInvokeAdapter) Run(ctx context.Context, input orchestration.ProviderInput) (orchestration.ProviderOutput, error) {
+func (a *invokeAdapter) Run(ctx context.Context, input orchestration.ProviderInput) (orchestration.ProviderOutput, error) {
 	credentialSecret := strings.TrimSpace(input.CredentialSecret)
 	model := strings.TrimSpace(input.Model)
 	if credentialSecret == "" {
@@ -279,6 +286,7 @@ func (a *openAIInvokeAdapter) Run(ctx context.Context, input orchestration.Provi
 		ConversationID: strings.TrimSpace(payload.ID),
 		OutputText:     strings.TrimSpace(payload.OutputText),
 		ToolCalls:      make([]orchestration.ProviderToolCall, 0, len(payload.Output)),
+		Usage:          openAIUsageFromPayload(payload),
 	}
 	for _, item := range payload.Output {
 		if strings.TrimSpace(item.Type) == "function_call" {
@@ -306,17 +314,22 @@ func (a *openAIInvokeAdapter) Run(ctx context.Context, input orchestration.Provi
 	return out, nil
 }
 
-func (a *openAIInvokeAdapter) invokeResponsesAPI(ctx context.Context, responsesURL string, input ProviderInvokeInput) (ProviderInvokeResult, error) {
+func (a *invokeAdapter) invokeResponsesAPI(ctx context.Context, responsesURL string, input aiservice.ProviderInvokeInput) (aiservice.ProviderInvokeResult, error) {
 	requestPayload := map[string]any{
 		"model": input.Model,
 		"input": input.Input,
+	}
+	if effort := strings.TrimSpace(input.ReasoningEffort); effort != "" {
+		requestPayload["reasoning"] = map[string]any{
+			"effort": effort,
+		}
 	}
 	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
 		requestPayload["instructions"] = instructions
 	}
 	payload, err := a.responsesRequest(ctx, requestPayload, input.CredentialSecret)
 	if err != nil {
-		return ProviderInvokeResult{}, err
+		return aiservice.ProviderInvokeResult{}, err
 	}
 	outputText := strings.TrimSpace(payload.OutputText)
 	if outputText == "" {
@@ -333,9 +346,12 @@ func (a *openAIInvokeAdapter) invokeResponsesAPI(ctx context.Context, responsesU
 		}
 	}
 	if outputText == "" {
-		return ProviderInvokeResult{}, fmt.Errorf("invoke response missing output text")
+		return aiservice.ProviderInvokeResult{}, fmt.Errorf("invoke response missing output text")
 	}
-	return ProviderInvokeResult{OutputText: outputText}, nil
+	return aiservice.ProviderInvokeResult{
+		OutputText: outputText,
+		Usage:      openAIUsageFromPayload(payload),
+	}, nil
 }
 
 func openAIToolSchema(schema any) map[string]any {
@@ -389,7 +405,7 @@ func stringValue(value any) string {
 	return text
 }
 
-func (a *openAIInvokeAdapter) ListModels(ctx context.Context, input ProviderListModelsInput) ([]ProviderModel, error) {
+func (a *invokeAdapter) ListModels(ctx context.Context, input aiservice.ProviderListModelsInput) ([]aiservice.ProviderModel, error) {
 	credentialSecret := strings.TrimSpace(input.CredentialSecret)
 	if credentialSecret == "" {
 		return nil, fmt.Errorf("credential secret is required")
@@ -402,13 +418,13 @@ func (a *openAIInvokeAdapter) ListModels(ctx context.Context, input ProviderList
 	if err != nil {
 		return nil, fmt.Errorf("list models: %w", err)
 	}
-	models := make([]ProviderModel, 0, len(resp.Data))
+	models := make([]aiservice.ProviderModel, 0, len(resp.Data))
 	for _, model := range resp.Data {
 		modelID := strings.TrimSpace(model.ID)
 		if modelID == "" {
 			continue
 		}
-		models = append(models, ProviderModel{
+		models = append(models, aiservice.ProviderModel{
 			ID:      modelID,
 			OwnedBy: strings.TrimSpace(model.OwnedBy),
 			Created: model.Created,
@@ -417,7 +433,7 @@ func (a *openAIInvokeAdapter) ListModels(ctx context.Context, input ProviderList
 	return models, nil
 }
 
-func (a *openAIInvokeAdapter) provider(credentialSecret string) (*anyllmopenai.Provider, error) {
+func (a *invokeAdapter) provider(credentialSecret string) (*anyllmopenai.Provider, error) {
 	opts := []anyllm.Option{
 		anyllm.WithAPIKey(credentialSecret),
 		anyllm.WithHTTPClient(a.cfg.HTTPClient),
@@ -443,33 +459,33 @@ func openAIBaseURLFromResponsesURL(responsesURL string) string {
 	return strings.TrimSpace(trimmed)
 }
 
-func (a *openAIOAuthAdapter) tokenRequest(ctx context.Context, form url.Values) (ProviderTokenExchangeResult, error) {
+func (a *oauthAdapter) tokenRequest(ctx context.Context, form url.Values) (aiservice.ProviderTokenExchangeResult, error) {
 	tokenURL := strings.TrimSpace(a.cfg.TokenURL)
 	if tokenURL == "" {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("token url is required")
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("token url is required")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL, strings.NewReader(form.Encode()))
 	if err != nil {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("build token request: %w", err)
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("build token request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	res, err := a.cfg.HTTPClient.Do(req)
 	if err != nil {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("token request failed: %w", err)
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("token request failed: %w", err)
 	}
 	defer res.Body.Close()
 	if res.StatusCode < 200 || res.StatusCode >= 300 {
 		body, err := io.ReadAll(io.LimitReader(res.Body, 4096))
 		if err != nil {
-			return ProviderTokenExchangeResult{}, fmt.Errorf("read token error body: %w", err)
+			return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("read token error body: %w", err)
 		}
-		return ProviderTokenExchangeResult{}, fmt.Errorf("token request status %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("token request status %d: %s", res.StatusCode, strings.TrimSpace(string(body)))
 	}
 
 	var payload map[string]any
 	if err := json.NewDecoder(res.Body).Decode(&payload); err != nil {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("decode token response: %w", err)
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("decode token response: %w", err)
 	}
 
 	accessToken := asString(payload["access_token"])
@@ -477,7 +493,7 @@ func (a *openAIOAuthAdapter) tokenRequest(ctx context.Context, form url.Values) 
 	tokenType := asString(payload["token_type"])
 	scope := asString(payload["scope"])
 	if accessToken == "" {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("token response missing access_token")
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("token response missing access_token")
 	}
 	tokenPlaintextBytes, err := json.Marshal(map[string]any{
 		"access_token":  accessToken,
@@ -486,7 +502,7 @@ func (a *openAIOAuthAdapter) tokenRequest(ctx context.Context, form url.Values) 
 		"scope":         scope,
 	})
 	if err != nil {
-		return ProviderTokenExchangeResult{}, fmt.Errorf("marshal token payload: %w", err)
+		return aiservice.ProviderTokenExchangeResult{}, fmt.Errorf("marshal token payload: %w", err)
 	}
 
 	var expiresAt *time.Time
@@ -502,7 +518,7 @@ func (a *openAIOAuthAdapter) tokenRequest(ctx context.Context, form url.Values) 
 			expiresAt = &exp
 		}
 	}
-	return ProviderTokenExchangeResult{
+	return aiservice.ProviderTokenExchangeResult{
 		TokenPlaintext:   string(tokenPlaintextBytes),
 		RefreshSupported: refreshToken != "",
 		ExpiresAt:        expiresAt,
@@ -521,7 +537,15 @@ func asString(value any) string {
 type openAIResponsesPayload struct {
 	ID         string `json:"id"`
 	OutputText string `json:"output_text"`
-	Output     []struct {
+	Usage      struct {
+		InputTokens        int32 `json:"input_tokens"`
+		OutputTokens       int32 `json:"output_tokens"`
+		TotalTokens        int32 `json:"total_tokens"`
+		OutputTokenDetails struct {
+			ReasoningTokens int32 `json:"reasoning_tokens"`
+		} `json:"output_tokens_details"`
+	} `json:"usage"`
+	Output []struct {
 		Type      string `json:"type"`
 		Name      string `json:"name"`
 		Arguments string `json:"arguments"`
@@ -533,7 +557,7 @@ type openAIResponsesPayload struct {
 	} `json:"output"`
 }
 
-func (a *openAIInvokeAdapter) responsesRequest(ctx context.Context, body map[string]any, secret string) (openAIResponsesPayload, error) {
+func (a *invokeAdapter) responsesRequest(ctx context.Context, body map[string]any, secret string) (openAIResponsesPayload, error) {
 	requestBody, err := json.Marshal(body)
 	if err != nil {
 		return openAIResponsesPayload{}, fmt.Errorf("marshal invoke request: %w", err)
@@ -563,4 +587,33 @@ func (a *openAIInvokeAdapter) responsesRequest(ctx context.Context, body map[str
 		return openAIResponsesPayload{}, fmt.Errorf("decode invoke response: %w", err)
 	}
 	return payload, nil
+}
+
+func openAIUsageFromPayload(payload openAIResponsesPayload) provider.Usage {
+	return provider.Usage{
+		InputTokens:     payload.Usage.InputTokens,
+		OutputTokens:    payload.Usage.OutputTokens,
+		ReasoningTokens: payload.Usage.OutputTokenDetails.ReasoningTokens,
+		TotalTokens:     payload.Usage.TotalTokens,
+	}
+}
+
+func normalizeScopes(scopes []string) []string {
+	if len(scopes) == 0 {
+		return nil
+	}
+	items := make([]string, 0, len(scopes))
+	seen := make(map[string]struct{}, len(scopes))
+	for _, raw := range scopes {
+		scope := strings.TrimSpace(raw)
+		if scope == "" {
+			continue
+		}
+		if _, exists := seen[scope]; exists {
+			continue
+		}
+		seen[scope] = struct{}{}
+		items = append(items, scope)
+	}
+	return items
 }

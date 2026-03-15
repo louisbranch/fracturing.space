@@ -14,11 +14,12 @@ import (
 
 func TestCampaignArtifactHandlersRoundTrip(t *testing.T) {
 	store := aifakes.NewStore()
-	svc := NewService(store, store, &fakeSealer{})
-	svc.SetCampaignArtifactManager(campaigncontext.NewManager(store, func() time.Time {
-		return time.Date(2026, 3, 14, 1, 32, 0, 0, time.UTC)
-	}))
-	svc.SetGameAuthorizationClient(&fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}})
+	svc := NewCampaignArtifactHandlers(CampaignArtifactHandlersConfig{
+		Manager: campaigncontext.NewManager(store, func() time.Time {
+			return time.Date(2026, 3, 14, 1, 32, 0, 0, time.UTC)
+		}),
+		AuthorizationClient: &fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}},
+	})
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	ensureResp, err := svc.EnsureCampaignArtifacts(ctx, &aiv1.EnsureCampaignArtifactsRequest{

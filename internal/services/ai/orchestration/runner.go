@@ -3,62 +3,103 @@ package orchestration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
+	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/mcpbridge"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const defaultMaxSteps = 8
-
-// ErrStepLimit indicates the model exceeded the allowed tool loop depth.
-var ErrStepLimit = errors.New("campaign orchestration exceeded tool loop limit")
-var ErrNarrationNotCommitted = errors.New("campaign orchestration did not commit gm output")
+const defaultTurnTimeout = 2 * time.Minute
+const defaultToolResultMaxBytes = 32 * 1024
 
 type runner struct {
-	dialer Dialer
-	max    int
+	dialer             Dialer
+	promptBuilder      PromptBuilder
+	max                int
+	turnTimeout        time.Duration
+	toolResultMaxBytes int
 }
 
-type sessionBrief struct {
-	skills       string
-	story        string
-	memory       string
-	current      string
-	campaign     string
-	participants string
-	characters   string
-	sessions     string
-	scenes       string
-	interaction  string
-	bootstrap    bool
-}
-
-// NewRunner builds a campaign-turn runner over one MCP dialer.
-func NewRunner(dialer Dialer, max int) CampaignTurnRunner {
-	if max <= 0 {
-		max = defaultMaxSteps
+// NewRunner builds a campaign-turn runner over one MCP dialer and one explicit
+// runtime policy.
+func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
+	maxSteps := cfg.MaxSteps
+	if maxSteps <= 0 {
+		maxSteps = defaultMaxSteps
 	}
-	return &runner{dialer: dialer, max: max}
+	turnTimeout := cfg.TurnTimeout
+	if turnTimeout <= 0 {
+		turnTimeout = defaultTurnTimeout
+	}
+	toolResultMaxBytes := cfg.ToolResultMaxBytes
+	if toolResultMaxBytes <= 0 {
+		toolResultMaxBytes = defaultToolResultMaxBytes
+	}
+	promptBuilder := cfg.PromptBuilder
+	if promptBuilder == nil {
+		promptBuilder = newDefaultPromptBuilder()
+	}
+	return &runner{
+		dialer:             cfg.Dialer,
+		promptBuilder:      promptBuilder,
+		max:                maxSteps,
+		turnTimeout:        turnTimeout,
+		toolResultMaxBytes: toolResultMaxBytes,
+	}
 }
 
 // Run executes one MCP-backed provider turn.
 func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
+	ctx, span := tracer.Start(ctx, "ai.orchestration.run")
+	defer span.End()
 	if r == nil || r.dialer == nil {
-		return Result{}, fmt.Errorf("campaign turn runner is not configured")
+		err := errRunnerUnavailable()
+		recordSpanError(span, err)
+		return Result{}, err
+	}
+	if r.promptBuilder == nil {
+		err := errPromptBuilderUnavailable()
+		recordSpanError(span, err)
+		return Result{}, err
 	}
 	if input.Provider == nil {
-		return Result{}, fmt.Errorf("campaign turn provider is required")
+		err := errInvalidInput("campaign turn provider is required")
+		recordSpanError(span, err)
+		return Result{}, err
 	}
 	if strings.TrimSpace(input.CampaignID) == "" || strings.TrimSpace(input.SessionID) == "" || strings.TrimSpace(input.ParticipantID) == "" {
-		return Result{}, fmt.Errorf("campaign, session, and participant are required")
+		err := errInvalidInput("campaign, session, and participant are required")
+		recordSpanError(span, err)
+		return Result{}, err
 	}
 	if strings.TrimSpace(input.Model) == "" {
-		return Result{}, fmt.Errorf("model is required")
+		err := errInvalidInput("model is required")
+		recordSpanError(span, err)
+		return Result{}, err
 	}
 	if strings.TrimSpace(input.CredentialSecret) == "" {
-		return Result{}, fmt.Errorf("credential secret is required")
+		err := errInvalidInput("credential secret is required")
+		recordSpanError(span, err)
+		return Result{}, err
+	}
+	span.SetAttributes(
+		attribute.String("ai.orchestration.campaign_id", strings.TrimSpace(input.CampaignID)),
+		attribute.String("ai.orchestration.session_id", strings.TrimSpace(input.SessionID)),
+		attribute.String("ai.orchestration.participant_id", strings.TrimSpace(input.ParticipantID)),
+		attribute.String("ai.orchestration.model", strings.TrimSpace(input.Model)),
+		attribute.Int("ai.orchestration.max_steps", r.max),
+		attribute.Int64("ai.orchestration.turn_timeout_ms", r.turnTimeout.Milliseconds()),
+		attribute.Int("ai.orchestration.tool_result_max_bytes", r.toolResultMaxBytes),
+	)
+	if r.turnTimeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, r.turnTimeout)
+		defer cancel()
 	}
 
 	ctx = mcpbridge.WithSessionContext(ctx, mcpbridge.SessionContext{
@@ -69,32 +110,51 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 
 	sess, err := r.dialer.Dial(ctx)
 	if err != nil {
-		return Result{}, fmt.Errorf("dial mcp: %w", err)
+		err = errExecution(fmt.Errorf("dial mcp: %w", err))
+		recordSpanError(span, err)
+		return Result{}, err
 	}
 	defer sess.Close()
 
 	tools, err := sess.ListTools(ctx)
 	if err != nil {
-		return Result{}, fmt.Errorf("list mcp tools: %w", err)
+		err = errExecution(fmt.Errorf("list mcp tools: %w", err))
+		recordSpanError(span, err)
+		return Result{}, err
 	}
 	allowedTools := filterTools(tools)
+	span.SetAttributes(attribute.Int("ai.orchestration.allowed_tool_count", len(allowedTools)))
 	allowedToolNames := make(map[string]struct{}, len(allowedTools))
 	for _, tool := range allowedTools {
 		allowedToolNames[tool.Name] = struct{}{}
 	}
-	prompt, err := buildPrompt(ctx, sess, input)
+	promptCtx, promptSpan := tracer.Start(ctx, "ai.orchestration.build_prompt")
+	prompt, err := r.promptBuilder.Build(promptCtx, sess, input)
 	if err != nil {
+		err = errPromptBuild(err)
+		recordSpanError(promptSpan, err)
+		recordSpanError(span, err)
+		promptSpan.End()
 		return Result{}, err
 	}
+	promptSpan.SetAttributes(attribute.Int("ai.orchestration.prompt_bytes", len(prompt)))
+	promptSpan.End()
 
 	var convo string
 	committed := false
 	var results []ProviderToolResult
 	commitReminderUsed := false
 	var followUpPrompt string
+	var usage provider.Usage
 
 	for i := 0; i < r.max; i++ {
-		step, err := input.Provider.Run(ctx, ProviderInput{
+		stepCtx, stepSpan := tracer.Start(ctx, "ai.orchestration.provider_step")
+		stepSpan.SetAttributes(
+			attribute.Int("ai.orchestration.step_index", i+1),
+			attribute.Bool("ai.orchestration.has_followup_prompt", strings.TrimSpace(followUpPrompt) != ""),
+			attribute.Int("ai.orchestration.result_count", len(results)),
+		)
+		step, err := input.Provider.Run(stepCtx, ProviderInput{
 			Model:            input.Model,
 			ReasoningEffort:  input.ReasoningEffort,
 			Instructions:     input.Instructions,
@@ -106,25 +166,41 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 			Results:          results,
 		})
 		if err != nil {
-			return Result{}, fmt.Errorf("invoke provider: %w", err)
+			err = errExecution(fmt.Errorf("invoke provider: %w", err))
+			recordSpanError(stepSpan, err)
+			recordSpanError(span, err)
+			stepSpan.End()
+			return Result{}, err
 		}
+		stepSpan.SetAttributes(
+			attribute.String("ai.orchestration.conversation_id", strings.TrimSpace(step.ConversationID)),
+			attribute.Int("ai.orchestration.tool_call_count", len(step.ToolCalls)),
+			attribute.Bool("ai.orchestration.has_output_text", strings.TrimSpace(step.OutputText) != ""),
+		)
+		stepSpan.End()
 		convo = strings.TrimSpace(step.ConversationID)
+		usage = usage.Add(step.Usage)
 		followUpPrompt = ""
 		if len(step.ToolCalls) == 0 {
 			text := strings.TrimSpace(step.OutputText)
 			if text == "" {
-				return Result{}, fmt.Errorf("provider returned no tool calls or output")
+				err := errExecution(fmt.Errorf("provider returned no tool calls or output"))
+				recordSpanError(span, err)
+				return Result{}, err
 			}
 			if !committed {
 				if !commitReminderUsed && i+1 < r.max {
 					commitReminderUsed = true
 					results = nil
 					followUpPrompt = buildCommitReminder(text)
+					span.AddEvent("ai.orchestration.commit_reminder_requested")
 					continue
 				}
+				recordSpanError(span, ErrNarrationNotCommitted)
 				return Result{}, ErrNarrationNotCommitted
 			}
-			return Result{OutputText: text}, nil
+			span.SetAttributes(attribute.Bool("ai.orchestration.committed_output", committed))
+			return Result{OutputText: text, Usage: usage}, nil
 		}
 
 		results = make([]ProviderToolResult, 0, len(step.ToolCalls))
@@ -158,14 +234,24 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 			if call.Name == "interaction_scene_gm_output_commit" && !res.IsError {
 				committed = true
 			}
+			outputText, truncated := truncateToolResultOutput(res.Output, r.toolResultMaxBytes)
 			results = append(results, ProviderToolResult{
 				CallID:  call.CallID,
-				Output:  res.Output,
+				Output:  outputText,
 				IsError: res.IsError,
 			})
+			if truncated {
+				span.AddEvent("ai.orchestration.tool_result_truncated",
+					trace.WithAttributes(
+						attribute.String("ai.orchestration.tool_name", strings.TrimSpace(call.Name)),
+						attribute.Int("ai.orchestration.tool_result_max_bytes", r.toolResultMaxBytes),
+					),
+				)
+			}
 		}
 	}
 
+	recordSpanError(span, ErrStepLimit)
 	return Result{}, ErrStepLimit
 }
 
@@ -182,6 +268,22 @@ func buildCommitReminder(text string) string {
 	return b.String()
 }
 
+func truncateToolResultOutput(text string, maxBytes int) (string, bool) {
+	if maxBytes <= 0 || len(text) <= maxBytes {
+		return text, false
+	}
+	if maxBytes <= len(toolResultBudgetSuffix) {
+		return toolResultBudgetSuffix[:maxBytes], true
+	}
+	limit := maxBytes - len(toolResultBudgetSuffix)
+	for limit > 0 && (text[limit]&0xC0) == 0x80 {
+		limit--
+	}
+	return text[:limit] + toolResultBudgetSuffix, true
+}
+
+const toolResultBudgetSuffix = "\n\n[truncated by AI orchestration tool-result budget]"
+
 func filterTools(tools []Tool) []Tool {
 	filtered := make([]Tool, 0, len(tools))
 	for _, tool := range tools {
@@ -195,146 +297,6 @@ func filterTools(tools []Tool) []Tool {
 		filtered = append(filtered, tool)
 	}
 	return filtered
-}
-
-func buildPrompt(ctx context.Context, sess Session, input Input) (string, error) {
-	brief, err := buildBrief(ctx, sess, input)
-	if err != nil {
-		return "", err
-	}
-	var b strings.Builder
-	b.WriteString("Skills:\n")
-	b.WriteString(brief.skills)
-	b.WriteString("\n\nInteraction contract:\n")
-	b.WriteString("You are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.\n")
-	b.WriteString("Keep in-character narration and out-of-character coordination separate.\n")
-	b.WriteString("Use interaction_scene_gm_output_commit for authoritative in-character narration.\n")
-	b.WriteString("Use interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.\n")
-	b.WriteString("Use system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.\n")
-	b.WriteString("Use MCP tools for authoritative state changes; do not rely on free-form narration to mutate game state.\n")
-	b.WriteString("\nAuthority:\n")
-	b.WriteString("Campaign, session, and participant authority are fixed for this turn.\n")
-	if pid := strings.TrimSpace(input.ParticipantID); pid != "" {
-		b.WriteString("Fixed participant authority:\n")
-		b.WriteString(pid)
-		b.WriteString("\n")
-	}
-	if brief.bootstrap {
-		b.WriteString("\nBootstrap mode: there is no active scene yet.\n")
-		b.WriteString("You are responsible for creating or choosing the opening scene from campaign, participant, and character context, setting it active, and committing authoritative GM output.\n")
-		b.WriteString("If there are no suitable scenes yet, create one that fits the campaign theme and the player characters.\n")
-		b.WriteString("After the scene is active and narrated, start the first player phase when the acting characters are clear.\n\n")
-	} else {
-		b.WriteString("\nActive scene mode: continue the session from the current interaction state and use MCP tools for authoritative changes.\n\n")
-	}
-	b.WriteString("Current MCP context:\n")
-	b.WriteString(brief.current)
-	b.WriteString("\n\nCampaign:\n")
-	b.WriteString(brief.campaign)
-	b.WriteString("\n\nParticipants:\n")
-	b.WriteString(brief.participants)
-	b.WriteString("\n\nCharacters:\n")
-	b.WriteString(brief.characters)
-	b.WriteString("\n\nSessions:\n")
-	b.WriteString(brief.sessions)
-	b.WriteString("\n\nScenes:\n")
-	b.WriteString(brief.scenes)
-	b.WriteString("\n\nCurrent interaction state:\n")
-	b.WriteString(brief.interaction)
-	if text := strings.TrimSpace(brief.story); text != "" {
-		b.WriteString("\n\nstory.md:\n")
-		b.WriteString(text)
-	}
-	if text := strings.TrimSpace(brief.memory); text != "" {
-		b.WriteString("\n\nmemory.md:\n")
-		b.WriteString(text)
-	}
-	if text := strings.TrimSpace(input.Input); text != "" {
-		b.WriteString("\n\nTurn input:\n")
-		b.WriteString(text)
-	}
-	b.WriteString("\n\nReturn narrated GM output once you have enough information.")
-	return b.String(), nil
-}
-
-func buildBrief(ctx context.Context, sess Session, input Input) (sessionBrief, error) {
-	campaignID := strings.TrimSpace(input.CampaignID)
-	sessionID := strings.TrimSpace(input.SessionID)
-	skills, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/artifacts/skills.md", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read skills artifact: %w", err)
-	}
-	current, err := sess.ReadResource(ctx, "context://current")
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read mcp context: %w", err)
-	}
-	campaign, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read campaign: %w", err)
-	}
-	participants, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/participants", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read participants: %w", err)
-	}
-	characters, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/characters", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read characters: %w", err)
-	}
-	sessions, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read sessions: %w", err)
-	}
-	scenes, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/sessions/%s/scenes", campaignID, sessionID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read scenes: %w", err)
-	}
-	interaction, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/interaction", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read interaction state: %w", err)
-	}
-	memory, err := sess.ReadResource(ctx, fmt.Sprintf("campaign://%s/artifacts/memory.md", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read memory artifact: %w", err)
-	}
-	story, err := readOptionalResource(ctx, sess, fmt.Sprintf("campaign://%s/artifacts/story.md", campaignID))
-	if err != nil {
-		return sessionBrief{}, fmt.Errorf("read story artifact: %w", err)
-	}
-
-	var state struct {
-		ActiveScene struct {
-			SceneID string `json:"scene_id"`
-		} `json:"active_scene"`
-	}
-	if err := json.Unmarshal([]byte(interaction), &state); err != nil {
-		return sessionBrief{}, fmt.Errorf("decode interaction state: %w", err)
-	}
-
-	return sessionBrief{
-		skills:       skills,
-		story:        story,
-		memory:       memory,
-		current:      current,
-		campaign:     campaign,
-		participants: participants,
-		characters:   characters,
-		sessions:     sessions,
-		scenes:       scenes,
-		interaction:  interaction,
-		bootstrap:    strings.TrimSpace(state.ActiveScene.SceneID) == "",
-	}, nil
-}
-
-func readOptionalResource(ctx context.Context, sess Session, uri string) (string, error) {
-	value, err := sess.ReadResource(ctx, uri)
-	if err != nil {
-		errText := strings.ToLower(err.Error())
-		if strings.Contains(errText, "not found") || strings.Contains(errText, "missing resource") {
-			return "", nil
-		}
-		return "", err
-	}
-	return value, nil
 }
 
 func decodeArgs(raw string) (any, error) {

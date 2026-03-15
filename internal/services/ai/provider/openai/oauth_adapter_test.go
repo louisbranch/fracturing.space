@@ -1,4 +1,4 @@
-package ai
+package openai
 
 import (
 	"context"
@@ -9,16 +9,18 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 )
 
-func TestOpenAIOAuthAdapterBuildAuthorizationURL(t *testing.T) {
-	adapter := NewOpenAIOAuthAdapter(OpenAIOAuthConfig{
+func TestOAuthAdapterBuildAuthorizationURL(t *testing.T) {
+	adapter := NewOAuthAdapter(OAuthConfig{
 		AuthorizationURL: "https://provider.example.com/oauth/authorize",
 		ClientID:         "client-1",
 		RedirectURI:      "https://app.example.com/oauth/callback",
 	})
 
-	raw, err := adapter.BuildAuthorizationURL(ProviderAuthorizationURLInput{
+	raw, err := adapter.BuildAuthorizationURL(aiservice.ProviderAuthorizationURLInput{
 		State:           "state-1",
 		CodeChallenge:   "challenge-1",
 		RequestedScopes: []string{"responses.read", "responses.write"},
@@ -55,7 +57,7 @@ func TestOpenAIOAuthAdapterBuildAuthorizationURL(t *testing.T) {
 	}
 }
 
-func TestOpenAIOAuthAdapterExchangeAuthorizationCode(t *testing.T) {
+func TestOAuthAdapterExchangeAuthorizationCode(t *testing.T) {
 	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			t.Fatalf("method = %q, want %q", r.Method, http.MethodPost)
@@ -93,14 +95,14 @@ func TestOpenAIOAuthAdapterExchangeAuthorizationCode(t *testing.T) {
 	}))
 	defer tokenServer.Close()
 
-	adapter := NewOpenAIOAuthAdapter(OpenAIOAuthConfig{
+	adapter := NewOAuthAdapter(OAuthConfig{
 		TokenURL:     tokenServer.URL,
 		ClientID:     "client-1",
 		ClientSecret: "secret-1",
 		RedirectURI:  "https://app.example.com/oauth/callback",
 	})
 
-	got, err := adapter.ExchangeAuthorizationCode(context.Background(), ProviderAuthorizationCodeInput{
+	got, err := adapter.ExchangeAuthorizationCode(context.Background(), aiservice.ProviderAuthorizationCodeInput{
 		AuthorizationCode: "code-1",
 		CodeVerifier:      "verifier-1",
 	})
@@ -121,7 +123,7 @@ func TestOpenAIOAuthAdapterExchangeAuthorizationCode(t *testing.T) {
 	}
 }
 
-func TestOpenAIOAuthAdapterRefreshToken(t *testing.T) {
+func TestOAuthAdapterRefreshToken(t *testing.T) {
 	tokenServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if err := r.ParseForm(); err != nil {
 			t.Fatalf("parse form: %v", err)
@@ -143,12 +145,12 @@ func TestOpenAIOAuthAdapterRefreshToken(t *testing.T) {
 	}))
 	defer tokenServer.Close()
 
-	adapter := NewOpenAIOAuthAdapter(OpenAIOAuthConfig{
+	adapter := NewOAuthAdapter(OAuthConfig{
 		TokenURL:     tokenServer.URL,
 		ClientID:     "client-1",
 		ClientSecret: "secret-1",
 	})
-	got, err := adapter.RefreshToken(context.Background(), ProviderRefreshTokenInput{
+	got, err := adapter.RefreshToken(context.Background(), aiservice.ProviderRefreshTokenInput{
 		RefreshToken: "rt-1",
 	})
 	if err != nil {
@@ -162,8 +164,8 @@ func TestOpenAIOAuthAdapterRefreshToken(t *testing.T) {
 	}
 }
 
-func TestOpenAIOAuthAdapterExchangeAuthorizationCodeNon2xxReadError(t *testing.T) {
-	adapter := &openAIOAuthAdapter{cfg: OpenAIOAuthConfig{
+func TestOAuthAdapterExchangeAuthorizationCodeNon2xxReadError(t *testing.T) {
+	adapter := &oauthAdapter{cfg: OAuthConfig{
 		TokenURL:     "https://provider.example.com/token",
 		ClientID:     "client-1",
 		ClientSecret: "secret-1",
@@ -179,7 +181,7 @@ func TestOpenAIOAuthAdapterExchangeAuthorizationCodeNon2xxReadError(t *testing.T
 		},
 	}}
 
-	_, err := adapter.ExchangeAuthorizationCode(context.Background(), ProviderAuthorizationCodeInput{
+	_, err := adapter.ExchangeAuthorizationCode(context.Background(), aiservice.ProviderAuthorizationCodeInput{
 		AuthorizationCode: "code-1",
 		CodeVerifier:      "verifier-1",
 	})

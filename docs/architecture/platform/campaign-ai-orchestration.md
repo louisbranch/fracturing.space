@@ -41,6 +41,11 @@ campaign-only execution path. It is intentionally separate from the user-facing
 `ai.v1.InvocationService.InvokeAgent` RPC so campaign turns can enforce grant
 validation, MCP augmentation, and provider tool policy.
 
+Both RPCs now accept an optional `reasoning_effort` override for providers that
+support explicit reasoning levels, and both responses can carry provider usage
+accounting (`input_tokens`, `output_tokens`, `reasoning_tokens`,
+`total_tokens`) when the backing adapter reports it.
+
 ## Session Grant Model
 
 Session grants are short-lived signed tokens carrying campaign/session scope,

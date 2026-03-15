@@ -257,7 +257,14 @@ func TestUpdateProviderGrantToken(t *testing.T) {
 
 	refreshedAt := now.Add(10 * time.Minute)
 	newExpiresAt := refreshedAt.Add(2 * time.Hour)
-	if err := store.UpdateProviderGrantToken(context.Background(), "user-1", "grant-1", "enc:new", refreshedAt, &newExpiresAt, "active", ""); err != nil {
+	if err := store.UpdateProviderGrantToken(context.Background(), storage.UpdateProviderGrantTokenInput{
+		OwnerUserID:     "user-1",
+		ProviderGrantID: "grant-1",
+		TokenCiphertext: "enc:new",
+		RefreshedAt:     refreshedAt,
+		ExpiresAt:       &newExpiresAt,
+		Status:          "active",
+	}); err != nil {
 		t.Fatalf("update provider grant token: %v", err)
 	}
 
@@ -779,7 +786,14 @@ func TestReviewAccessRequest(t *testing.T) {
 	}
 
 	reviewedAt := now.Add(time.Minute)
-	if err := store.ReviewAccessRequest(context.Background(), "user-2", "request-1", "approved", "user-2", "approved", reviewedAt); err != nil {
+	if err := store.ReviewAccessRequest(context.Background(), storage.ReviewAccessRequestInput{
+		OwnerUserID:     "user-2",
+		AccessRequestID: "request-1",
+		Status:          "approved",
+		ReviewerUserID:  "user-2",
+		ReviewNote:      "approved",
+		ReviewedAt:      reviewedAt,
+	}); err != nil {
 		t.Fatalf("review access request: %v", err)
 	}
 
@@ -818,7 +832,14 @@ func TestReviewAccessRequestRejectsNonPending(t *testing.T) {
 		t.Fatalf("put access request: %v", err)
 	}
 
-	err := store.ReviewAccessRequest(context.Background(), "user-2", "request-1", "approved", "user-2", "retry", now.Add(time.Minute))
+	err := store.ReviewAccessRequest(context.Background(), storage.ReviewAccessRequestInput{
+		OwnerUserID:     "user-2",
+		AccessRequestID: "request-1",
+		Status:          "approved",
+		ReviewerUserID:  "user-2",
+		ReviewNote:      "retry",
+		ReviewedAt:      now.Add(time.Minute),
+	})
 	if !errors.Is(err, storage.ErrConflict) {
 		t.Fatalf("review error = %v, want %v", err, storage.ErrConflict)
 	}
@@ -841,7 +862,14 @@ func TestReviewAccessRequestRejectsReviewerMismatch(t *testing.T) {
 		t.Fatalf("put access request: %v", err)
 	}
 
-	err := store.ReviewAccessRequest(context.Background(), "user-2", "request-1", "approved", "user-3", "retry", now.Add(time.Minute))
+	err := store.ReviewAccessRequest(context.Background(), storage.ReviewAccessRequestInput{
+		OwnerUserID:     "user-2",
+		AccessRequestID: "request-1",
+		Status:          "approved",
+		ReviewerUserID:  "user-3",
+		ReviewNote:      "retry",
+		ReviewedAt:      now.Add(time.Minute),
+	})
 	if err == nil {
 		t.Fatal("expected review error for reviewer mismatch")
 	}
@@ -871,7 +899,14 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 	}
 
 	revokedAt := now
-	if err := store.RevokeAccessRequest(context.Background(), "owner-1", "request-1", "revoked", "owner-1", "removed", revokedAt); err != nil {
+	if err := store.RevokeAccessRequest(context.Background(), storage.RevokeAccessRequestInput{
+		OwnerUserID:     "owner-1",
+		AccessRequestID: "request-1",
+		Status:          "revoked",
+		ReviewerUserID:  "owner-1",
+		ReviewNote:      "removed",
+		RevokedAt:       revokedAt,
+	}); err != nil {
 		t.Fatalf("revoke access request: %v", err)
 	}
 
@@ -892,7 +927,14 @@ func TestRevokeAccessRequestTransition(t *testing.T) {
 		t.Fatalf("updated_at = %v, want %v", got.UpdatedAt, revokedAt)
 	}
 
-	if err := store.RevokeAccessRequest(context.Background(), "owner-1", "request-1", "revoked", "owner-1", "again", revokedAt.Add(time.Minute)); !errors.Is(err, storage.ErrConflict) {
+	if err := store.RevokeAccessRequest(context.Background(), storage.RevokeAccessRequestInput{
+		OwnerUserID:     "owner-1",
+		AccessRequestID: "request-1",
+		Status:          "revoked",
+		ReviewerUserID:  "owner-1",
+		ReviewNote:      "again",
+		RevokedAt:       revokedAt.Add(time.Minute),
+	}); !errors.Is(err, storage.ErrConflict) {
 		t.Fatalf("second revoke error = %v, want %v", err, storage.ErrConflict)
 	}
 }
@@ -917,7 +959,14 @@ func TestRevokeAccessRequestRejectsReviewerMismatch(t *testing.T) {
 		t.Fatalf("put access request: %v", err)
 	}
 
-	err := store.RevokeAccessRequest(context.Background(), "owner-1", "request-1", "revoked", "owner-2", "removed", now)
+	err := store.RevokeAccessRequest(context.Background(), storage.RevokeAccessRequestInput{
+		OwnerUserID:     "owner-1",
+		AccessRequestID: "request-1",
+		Status:          "revoked",
+		ReviewerUserID:  "owner-2",
+		ReviewNote:      "removed",
+		RevokedAt:       now,
+	})
 	if err == nil {
 		t.Fatal("expected revoke error for reviewer mismatch")
 	}

@@ -112,6 +112,10 @@ func TestGRPCCodeMapping(t *testing.T) {
 		{apperrors.CodeCampaignInvalidStatusTransition, codes.FailedPrecondition},
 		{apperrors.CodeNotFound, codes.NotFound},
 		{apperrors.CodeActiveSessionExists, codes.FailedPrecondition},
+		{apperrors.CodeAIOrchestrationInvalidInput, codes.InvalidArgument},
+		{apperrors.CodeAIOrchestrationUnavailable, codes.FailedPrecondition},
+		{apperrors.CodeAIOrchestrationTimedOut, codes.DeadlineExceeded},
+		{apperrors.CodeAIOrchestrationCanceled, codes.Canceled},
 		{apperrors.CodeUnknown, codes.Internal},
 	}
 

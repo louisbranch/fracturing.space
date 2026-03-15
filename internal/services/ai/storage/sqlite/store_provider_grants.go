@@ -226,39 +226,40 @@ WHERE owner_user_id = ? AND id = ?
 }
 
 // UpdateProviderGrantToken updates token ciphertext and refresh metadata.
-func (s *Store) UpdateProviderGrantToken(ctx context.Context, ownerUserID string, providerGrantID string, tokenCiphertext string, refreshedAt time.Time, expiresAt *time.Time, status string, lastRefreshError string) error {
+func (s *Store) UpdateProviderGrantToken(ctx context.Context, input storage.UpdateProviderGrantTokenInput) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
+	ownerUserID := strings.TrimSpace(input.OwnerUserID)
 	if ownerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	providerGrantID = strings.TrimSpace(providerGrantID)
+	providerGrantID := strings.TrimSpace(input.ProviderGrantID)
 	if providerGrantID == "" {
 		return fmt.Errorf("provider grant id is required")
 	}
-	tokenCiphertext = strings.TrimSpace(tokenCiphertext)
+	tokenCiphertext := strings.TrimSpace(input.TokenCiphertext)
 	if tokenCiphertext == "" {
 		return fmt.Errorf("token ciphertext is required")
 	}
-	status = strings.TrimSpace(status)
+	status := strings.TrimSpace(input.Status)
 	if status == "" {
 		return fmt.Errorf("status is required")
 	}
+	refreshedAt := input.RefreshedAt.UTC()
 
 	var expiresAtValue sql.NullInt64
-	if expiresAt != nil {
-		expiresAtValue = sql.NullInt64{Int64: sqliteutil.ToMillis(expiresAt.UTC()), Valid: true}
+	if input.ExpiresAt != nil {
+		expiresAtValue = sql.NullInt64{Int64: sqliteutil.ToMillis(input.ExpiresAt.UTC()), Valid: true}
 	}
 	res, err := s.sqlDB.ExecContext(ctx, `
 UPDATE ai_provider_grants
 SET token_ciphertext = ?, status = ?, last_refresh_error = ?, updated_at = ?, expires_at = ?, last_refreshed_at = ?
 WHERE owner_user_id = ? AND id = ?
-`, tokenCiphertext, status, strings.TrimSpace(lastRefreshError), sqliteutil.ToMillis(refreshedAt.UTC()), expiresAtValue, sqliteutil.ToMillis(refreshedAt.UTC()), ownerUserID, providerGrantID)
+`, tokenCiphertext, status, strings.TrimSpace(input.LastRefreshError), sqliteutil.ToMillis(refreshedAt), expiresAtValue, sqliteutil.ToMillis(refreshedAt), ownerUserID, providerGrantID)
 	if err != nil {
 		return fmt.Errorf("update provider grant token: %w", err)
 	}

@@ -91,6 +91,17 @@ type ProviderGrantFilter struct {
 	Status   string
 }
 
+// UpdateProviderGrantTokenInput captures one provider-grant refresh result.
+type UpdateProviderGrantTokenInput struct {
+	OwnerUserID      string
+	ProviderGrantID  string
+	TokenCiphertext  string
+	RefreshedAt      time.Time
+	ExpiresAt        *time.Time
+	Status           string
+	LastRefreshError string
+}
+
 // AccessRequestRecord stores one owner-reviewed access request for an agent.
 type AccessRequestRecord struct {
 	ID string
@@ -116,6 +127,26 @@ type AccessRequestRecord struct {
 type AccessRequestPage struct {
 	AccessRequests []AccessRequestRecord
 	NextPageToken  string
+}
+
+// ReviewAccessRequestInput captures one owner review decision.
+type ReviewAccessRequestInput struct {
+	OwnerUserID     string
+	AccessRequestID string
+	Status          string
+	ReviewerUserID  string
+	ReviewNote      string
+	ReviewedAt      time.Time
+}
+
+// RevokeAccessRequestInput captures one owner revocation decision.
+type RevokeAccessRequestInput struct {
+	OwnerUserID     string
+	AccessRequestID string
+	Status          string
+	ReviewerUserID  string
+	ReviewNote      string
+	RevokedAt       time.Time
 }
 
 // AuditEventRecord stores one append-only AI audit event.
@@ -205,7 +236,7 @@ type ProviderGrantStore interface {
 	GetProviderGrant(ctx context.Context, providerGrantID string) (ProviderGrantRecord, error)
 	ListProviderGrantsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter ProviderGrantFilter) (ProviderGrantPage, error)
 	RevokeProviderGrant(ctx context.Context, ownerUserID string, providerGrantID string, revokedAt time.Time) error
-	UpdateProviderGrantToken(ctx context.Context, ownerUserID string, providerGrantID string, tokenCiphertext string, refreshedAt time.Time, expiresAt *time.Time, status string, lastRefreshError string) error
+	UpdateProviderGrantToken(ctx context.Context, input UpdateProviderGrantTokenInput) error
 }
 
 // ProviderConnectSessionStore persists connect-session records.
@@ -229,8 +260,8 @@ type AccessRequestStore interface {
 	// access rows for one requester. This narrows list-accessible authorization
 	// scans to relevant records.
 	ListApprovedInvokeAccessRequestsByRequester(ctx context.Context, requesterUserID string, pageSize int, pageToken string) (AccessRequestPage, error)
-	ReviewAccessRequest(ctx context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, reviewedAt time.Time) error
-	RevokeAccessRequest(ctx context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, revokedAt time.Time) error
+	ReviewAccessRequest(ctx context.Context, input ReviewAccessRequestInput) error
+	RevokeAccessRequest(ctx context.Context, input RevokeAccessRequestInput) error
 }
 
 // AuditEventStore persists append-only AI audit events.

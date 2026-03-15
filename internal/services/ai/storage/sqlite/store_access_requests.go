@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -335,26 +334,26 @@ LIMIT ?
 }
 
 // ReviewAccessRequest applies an owner review decision for one pending request.
-func (s *Store) ReviewAccessRequest(ctx context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, reviewedAt time.Time) error {
+func (s *Store) ReviewAccessRequest(ctx context.Context, input storage.ReviewAccessRequestInput) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
+	ownerUserID := strings.TrimSpace(input.OwnerUserID)
 	if ownerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	accessRequestID = strings.TrimSpace(accessRequestID)
+	accessRequestID := strings.TrimSpace(input.AccessRequestID)
 	if accessRequestID == "" {
 		return fmt.Errorf("access request id is required")
 	}
-	status = strings.TrimSpace(status)
+	status := strings.TrimSpace(input.Status)
 	if status == "" {
 		return fmt.Errorf("status is required")
 	}
-	reviewerUserID = strings.TrimSpace(reviewerUserID)
+	reviewerUserID := strings.TrimSpace(input.ReviewerUserID)
 	if reviewerUserID == "" {
 		return fmt.Errorf("reviewer user id is required")
 	}
@@ -362,6 +361,7 @@ func (s *Store) ReviewAccessRequest(ctx context.Context, ownerUserID string, acc
 	if reviewerUserID != ownerUserID {
 		return fmt.Errorf("reviewer user id must match owner user id")
 	}
+	reviewedAt := input.ReviewedAt.UTC()
 
 	var existingStatus string
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -383,7 +383,7 @@ WHERE owner_user_id = ? AND id = ?
 UPDATE ai_access_requests
 SET status = ?, reviewer_user_id = ?, review_note = ?, reviewed_at = ?, updated_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'pending'
-`, status, reviewerUserID, strings.TrimSpace(reviewNote), sqliteutil.ToMillis(reviewedAt.UTC()), sqliteutil.ToMillis(reviewedAt.UTC()), ownerUserID, accessRequestID)
+`, status, reviewerUserID, strings.TrimSpace(input.ReviewNote), sqliteutil.ToMillis(reviewedAt), sqliteutil.ToMillis(reviewedAt), ownerUserID, accessRequestID)
 	if err != nil {
 		return fmt.Errorf("review access request: %w", err)
 	}
@@ -398,26 +398,26 @@ WHERE owner_user_id = ? AND id = ? AND status = 'pending'
 }
 
 // RevokeAccessRequest applies an owner revocation for one approved request.
-func (s *Store) RevokeAccessRequest(ctx context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, revokedAt time.Time) error {
+func (s *Store) RevokeAccessRequest(ctx context.Context, input storage.RevokeAccessRequestInput) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("storage is not configured")
 	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
+	ownerUserID := strings.TrimSpace(input.OwnerUserID)
 	if ownerUserID == "" {
 		return fmt.Errorf("owner user id is required")
 	}
-	accessRequestID = strings.TrimSpace(accessRequestID)
+	accessRequestID := strings.TrimSpace(input.AccessRequestID)
 	if accessRequestID == "" {
 		return fmt.Errorf("access request id is required")
 	}
-	status = strings.TrimSpace(status)
+	status := strings.TrimSpace(input.Status)
 	if status == "" {
 		return fmt.Errorf("status is required")
 	}
-	reviewerUserID = strings.TrimSpace(reviewerUserID)
+	reviewerUserID := strings.TrimSpace(input.ReviewerUserID)
 	if reviewerUserID == "" {
 		return fmt.Errorf("reviewer user id is required")
 	}
@@ -425,6 +425,7 @@ func (s *Store) RevokeAccessRequest(ctx context.Context, ownerUserID string, acc
 	if reviewerUserID != ownerUserID {
 		return fmt.Errorf("reviewer user id must match owner user id")
 	}
+	revokedAt := input.RevokedAt.UTC()
 
 	var existingStatus string
 	row := s.sqlDB.QueryRowContext(ctx, `
@@ -446,7 +447,7 @@ WHERE owner_user_id = ? AND id = ?
 UPDATE ai_access_requests
 SET status = ?, reviewer_user_id = ?, review_note = ?, updated_at = ?
 WHERE owner_user_id = ? AND id = ? AND status = 'approved'
-`, status, reviewerUserID, strings.TrimSpace(reviewNote), sqliteutil.ToMillis(revokedAt.UTC()), ownerUserID, accessRequestID)
+`, status, reviewerUserID, strings.TrimSpace(input.ReviewNote), sqliteutil.ToMillis(revokedAt), ownerUserID, accessRequestID)
 	if err != nil {
 		return fmt.Errorf("revoke access request: %w", err)
 	}
