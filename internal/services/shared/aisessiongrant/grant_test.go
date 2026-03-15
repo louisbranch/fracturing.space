@@ -33,10 +33,10 @@ func TestValidateRejectsFutureIssuedAt(t *testing.T) {
 			ExpiresAt: jwt.NewNumericDate(now.Add(10 * time.Minute)),
 			ID:        "grant-1",
 		},
-		CampaignID: "campaign-1",
-		SessionID:  "session-1",
-		AIAgentID:  "agent-1",
-		AuthEpoch:  1,
+		CampaignID:    "campaign-1",
+		SessionID:     "session-1",
+		ParticipantID: "gm-1",
+		AuthEpoch:     1,
 	}).SignedString(key)
 	if err != nil {
 		t.Fatalf("sign token: %v", err)

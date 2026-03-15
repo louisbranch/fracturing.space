@@ -221,6 +221,9 @@ func TestNewInteractionServiceGetInteractionStateReturnsProjectedSnapshot(t *tes
 			{ParticipantID: "player-1", SummaryText: "Aria draws steel.", CharacterIDs: []string{"char-1"}, UpdatedAt: now},
 			{ParticipantID: "player-2", Yielded: true},
 		},
+		GMOutputText:          "The bridge groans beneath your boots.",
+		GMOutputParticipantID: "gm-ai",
+		GMOutputUpdatedAt:     &now,
 	}
 
 	resp, err := h.service().GetInteractionState(
@@ -238,6 +241,9 @@ func TestNewInteractionServiceGetInteractionStateReturnsProjectedSnapshot(t *tes
 	}
 	if resp.GetState().GetActiveScene().GetSceneId() != "scene-1" {
 		t.Fatalf("active scene = %#v", resp.GetState().GetActiveScene())
+	}
+	if resp.GetState().GetActiveScene().GetGmOutput().GetText() != "The bridge groans beneath your boots." {
+		t.Fatalf("gm output = %#v", resp.GetState().GetActiveScene().GetGmOutput())
 	}
 	if resp.GetState().GetPlayerPhase().GetPhaseId() != "phase-1" {
 		t.Fatalf("player phase = %#v", resp.GetState().GetPlayerPhase())

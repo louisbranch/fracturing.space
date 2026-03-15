@@ -205,8 +205,9 @@ func (s *Store) PutSceneInteraction(ctx context.Context, interaction storage.Sce
 	_, err = s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO scene_interactions (
 			campaign_id, scene_id, session_id, phase_open, phase_id, frame_text,
-			phase_status, acting_character_ids_json, acting_participant_ids_json, slots_json, updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+			phase_status, acting_character_ids_json, acting_participant_ids_json, slots_json,
+			gm_output_text, gm_output_participant_id, gm_output_updated_at, updated_at
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (campaign_id, scene_id) DO UPDATE SET
 			session_id = excluded.session_id,
 			phase_open = excluded.phase_open,
@@ -216,6 +217,9 @@ func (s *Store) PutSceneInteraction(ctx context.Context, interaction storage.Sce
 			acting_character_ids_json = excluded.acting_character_ids_json,
 			acting_participant_ids_json = excluded.acting_participant_ids_json,
 			slots_json = excluded.slots_json,
+			gm_output_text = excluded.gm_output_text,
+			gm_output_participant_id = excluded.gm_output_participant_id,
+			gm_output_updated_at = excluded.gm_output_updated_at,
 			updated_at = excluded.updated_at`,
 		interaction.CampaignID,
 		interaction.SceneID,
@@ -227,6 +231,9 @@ func (s *Store) PutSceneInteraction(ctx context.Context, interaction storage.Sce
 		actingCharacterIDsJSON,
 		actingParticipantIDsJSON,
 		slotsJSON,
+		interaction.GMOutputText,
+		interaction.GMOutputParticipantID,
+		toNullMillis(interaction.GMOutputUpdatedAt),
 		toMillis(interaction.UpdatedAt),
 	)
 	if err != nil {
@@ -259,11 +266,15 @@ func (s *Store) GetSceneInteraction(ctx context.Context, campaignID, sceneID str
 		actingCharacterIDsJSON   []byte
 		actingParticipantIDsJSON []byte
 		slotsJSON                []byte
+		gmOutputText             string
+		gmOutputParticipantID    string
+		gmOutputUpdatedAt        sql.NullInt64
 		updatedAt                int64
 	)
 	err := s.projectionQueryable().QueryRowContext(ctx,
 		`SELECT session_id, phase_open, phase_id, frame_text, phase_status, acting_character_ids_json,
-		        acting_participant_ids_json, slots_json, updated_at
+		        acting_participant_ids_json, slots_json, gm_output_text, gm_output_participant_id,
+		        gm_output_updated_at, updated_at
 		 FROM scene_interactions
 		 WHERE campaign_id = ? AND scene_id = ?`,
 		campaignID,
@@ -277,6 +288,9 @@ func (s *Store) GetSceneInteraction(ctx context.Context, campaignID, sceneID str
 		&actingCharacterIDsJSON,
 		&actingParticipantIDsJSON,
 		&slotsJSON,
+		&gmOutputText,
+		&gmOutputParticipantID,
+		&gmOutputUpdatedAt,
 		&updatedAt,
 	)
 	if err != nil {
@@ -305,17 +319,20 @@ func (s *Store) GetSceneInteraction(ctx context.Context, campaignID, sceneID str
 		}
 	}
 	return storage.SceneInteraction{
-		CampaignID:           campaignID,
-		SceneID:              sceneID,
-		SessionID:            sessionID,
-		PhaseOpen:            intToBool(phaseOpen),
-		PhaseID:              phaseID,
-		PhaseStatus:          normalizeScenePhaseStatus(phaseStatus),
-		FrameText:            frameText,
-		ActingCharacterIDs:   actingCharacterIDs,
-		ActingParticipantIDs: actingParticipantIDs,
-		Slots:                slots,
-		UpdatedAt:            fromMillis(updatedAt),
+		CampaignID:            campaignID,
+		SceneID:               sceneID,
+		SessionID:             sessionID,
+		PhaseOpen:             intToBool(phaseOpen),
+		PhaseID:               phaseID,
+		PhaseStatus:           normalizeScenePhaseStatus(phaseStatus),
+		FrameText:             frameText,
+		ActingCharacterIDs:    actingCharacterIDs,
+		ActingParticipantIDs:  actingParticipantIDs,
+		Slots:                 slots,
+		GMOutputText:          gmOutputText,
+		GMOutputParticipantID: gmOutputParticipantID,
+		GMOutputUpdatedAt:     fromNullMillis(gmOutputUpdatedAt),
+		UpdatedAt:             fromMillis(updatedAt),
 	}, nil
 }
 

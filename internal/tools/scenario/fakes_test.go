@@ -108,6 +108,7 @@ type fakeInteractionClient struct {
 	submitPlayerPost   func(context.Context, *gamev1.SubmitScenePlayerPostRequest, ...grpc.CallOption) (*gamev1.SubmitScenePlayerPostResponse, error)
 	yieldPlayerPhase   func(context.Context, *gamev1.YieldScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.YieldScenePlayerPhaseResponse, error)
 	unyieldPlayerPhase func(context.Context, *gamev1.UnyieldScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.UnyieldScenePlayerPhaseResponse, error)
+	commitGMOutput     func(context.Context, *gamev1.CommitSceneGMOutputRequest, ...grpc.CallOption) (*gamev1.CommitSceneGMOutputResponse, error)
 	endPlayerPhase     func(context.Context, *gamev1.EndScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.EndScenePlayerPhaseResponse, error)
 	acceptPlayerPhase  func(context.Context, *gamev1.AcceptScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.AcceptScenePlayerPhaseResponse, error)
 	requestRevisions   func(context.Context, *gamev1.RequestScenePlayerRevisionsRequest, ...grpc.CallOption) (*gamev1.RequestScenePlayerRevisionsResponse, error)
@@ -160,6 +161,13 @@ func (f *fakeInteractionClient) UnyieldScenePlayerPhase(ctx context.Context, in 
 		return f.unyieldPlayerPhase(ctx, in, opts...)
 	}
 	return nil, unimplemented("UnyieldScenePlayerPhase")
+}
+
+func (f *fakeInteractionClient) CommitSceneGMOutput(ctx context.Context, in *gamev1.CommitSceneGMOutputRequest, opts ...grpc.CallOption) (*gamev1.CommitSceneGMOutputResponse, error) {
+	if f.commitGMOutput != nil {
+		return f.commitGMOutput(ctx, in, opts...)
+	}
+	return nil, unimplemented("CommitSceneGMOutput")
 }
 
 func (f *fakeInteractionClient) EndScenePlayerPhase(ctx context.Context, in *gamev1.EndScenePlayerPhaseRequest, opts ...grpc.CallOption) (*gamev1.EndScenePlayerPhaseResponse, error) {

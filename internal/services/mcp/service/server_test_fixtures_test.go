@@ -154,6 +154,7 @@ type fakeInteractionClient struct {
 	unyieldScenePlayerPhaseResponse        *statev1.UnyieldScenePlayerPhaseResponse
 	acceptScenePlayerPhaseResponse         *statev1.AcceptScenePlayerPhaseResponse
 	requestScenePlayerRevisionsResponse    *statev1.RequestScenePlayerRevisionsResponse
+	commitSceneGMOutputResponse            *statev1.CommitSceneGMOutputResponse
 	endScenePlayerPhaseResponse            *statev1.EndScenePlayerPhaseResponse
 	pauseSessionForOOCResponse             *statev1.PauseSessionForOOCResponse
 	postSessionOOCResponse                 *statev1.PostSessionOOCResponse
@@ -168,6 +169,7 @@ type fakeInteractionClient struct {
 	unyieldScenePlayerPhaseErr             error
 	acceptScenePlayerPhaseErr              error
 	requestScenePlayerRevisionsErr         error
+	commitSceneGMOutputErr                 error
 	endScenePlayerPhaseErr                 error
 	pauseSessionForOOCErr                  error
 	postSessionOOCErr                      error
@@ -182,6 +184,7 @@ type fakeInteractionClient struct {
 	lastUnyieldScenePlayerPhaseRequest     *statev1.UnyieldScenePlayerPhaseRequest
 	lastAcceptScenePlayerPhaseRequest      *statev1.AcceptScenePlayerPhaseRequest
 	lastRequestScenePlayerRevisionsRequest *statev1.RequestScenePlayerRevisionsRequest
+	lastCommitSceneGMOutputRequest         *statev1.CommitSceneGMOutputRequest
 	lastEndScenePlayerPhaseRequest         *statev1.EndScenePlayerPhaseRequest
 	lastPauseSessionForOOCRequest          *statev1.PauseSessionForOOCRequest
 	lastPostSessionOOCRequest              *statev1.PostSessionOOCRequest
@@ -454,6 +457,11 @@ func (f *fakeInteractionClient) AcceptScenePlayerPhase(ctx context.Context, req 
 func (f *fakeInteractionClient) RequestScenePlayerRevisions(ctx context.Context, req *statev1.RequestScenePlayerRevisionsRequest, opts ...grpc.CallOption) (*statev1.RequestScenePlayerRevisionsResponse, error) {
 	f.lastRequestScenePlayerRevisionsRequest = req
 	return f.requestScenePlayerRevisionsResponse, f.requestScenePlayerRevisionsErr
+}
+
+func (f *fakeInteractionClient) CommitSceneGMOutput(ctx context.Context, req *statev1.CommitSceneGMOutputRequest, opts ...grpc.CallOption) (*statev1.CommitSceneGMOutputResponse, error) {
+	f.lastCommitSceneGMOutputRequest = req
+	return f.commitSceneGMOutputResponse, f.commitSceneGMOutputErr
 }
 
 func (f *fakeInteractionClient) EndScenePlayerPhase(ctx context.Context, req *statev1.EndScenePlayerPhaseRequest, opts ...grpc.CallOption) (*statev1.EndScenePlayerPhaseResponse, error) {

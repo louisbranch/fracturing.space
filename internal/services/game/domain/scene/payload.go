@@ -151,3 +151,10 @@ type PlayerPhaseEndedPayload struct {
 	PhaseID string      `json:"phase_id"`
 	Reason  string      `json:"reason,omitempty"`
 }
+
+// GMOutputCommittedPayload captures the payload for scene.gm_output_committed events.
+type GMOutputCommittedPayload struct {
+	SceneID       ids.SceneID       `json:"scene_id"`
+	ParticipantID ids.ParticipantID `json:"participant_id"`
+	Text          string            `json:"text,omitempty"`
+}

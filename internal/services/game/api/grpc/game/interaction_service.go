@@ -128,6 +128,21 @@ func (s *InteractionService) EndScenePlayerPhase(ctx context.Context, in *campai
 	return &campaignv1.EndScenePlayerPhaseResponse{State: state}, nil
 }
 
+func (s *InteractionService) CommitSceneGMOutput(ctx context.Context, in *campaignv1.CommitSceneGMOutputRequest) (*campaignv1.CommitSceneGMOutputResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "commit scene gm output request is required")
+	}
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+	state, err := s.app.CommitSceneGMOutput(ctx, campaignID, in)
+	if err != nil {
+		return nil, err
+	}
+	return &campaignv1.CommitSceneGMOutputResponse{State: state}, nil
+}
+
 func (s *InteractionService) AcceptScenePlayerPhase(ctx context.Context, in *campaignv1.AcceptScenePlayerPhaseRequest) (*campaignv1.AcceptScenePlayerPhaseResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "accept scene player phase request is required")

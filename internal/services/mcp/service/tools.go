@@ -84,6 +84,10 @@ func registerSessionTools(registrar mcpRegistrationTarget, client statev1.Sessio
 	return nil
 }
 
+func registerSceneTools(registrar mcpRegistrationTarget, client statev1.SceneServiceClient, getContext func() domain.Context, notify domain.ResourceUpdateNotifier) error {
+	return registerTool(registrar, domain.SceneCreateTool(), domain.SceneCreateHandler(client, getContext, notify))
+}
+
 func registerInteractionTools(registrar mcpRegistrationTarget, client statev1.InteractionServiceClient, getContext func() domain.Context, notify domain.ResourceUpdateNotifier) error {
 	registrations := []struct {
 		tool    *mcp.Tool
@@ -94,6 +98,7 @@ func registerInteractionTools(registrar mcpRegistrationTarget, client statev1.In
 		{tool: domain.InteractionSubmitScenePlayerPostTool(), handler: domain.InteractionSubmitScenePlayerPostHandler(client, getContext, notify)},
 		{tool: domain.InteractionYieldScenePlayerPhaseTool(), handler: domain.InteractionYieldScenePlayerPhaseHandler(client, getContext, notify)},
 		{tool: domain.InteractionUnyieldScenePlayerPhaseTool(), handler: domain.InteractionUnyieldScenePlayerPhaseHandler(client, getContext, notify)},
+		{tool: domain.InteractionCommitSceneGMOutputTool(), handler: domain.InteractionCommitSceneGMOutputHandler(client, getContext, notify)},
 		{tool: domain.InteractionAcceptScenePlayerPhaseTool(), handler: domain.InteractionAcceptScenePlayerPhaseHandler(client, getContext, notify)},
 		{tool: domain.InteractionRequestScenePlayerRevisionsTool(), handler: domain.InteractionRequestScenePlayerRevisionsHandler(client, getContext, notify)},
 		{tool: domain.InteractionEndScenePlayerPhaseTool(), handler: domain.InteractionEndScenePlayerPhaseHandler(client, getContext, notify)},
@@ -164,6 +169,11 @@ func registerCampaignResources(
 // registerSessionResources registers readable session MCP resources.
 func registerSessionResources(registrar mcpRegistrationTarget, client statev1.SessionServiceClient) {
 	registrar.AddResourceTemplate(domain.SessionListResourceTemplate(), domain.SessionListResourceHandler(client))
+}
+
+// registerSceneResources registers readable scene MCP resources.
+func registerSceneResources(registrar mcpRegistrationTarget, client statev1.SceneServiceClient) {
+	registrar.AddResourceTemplate(domain.SceneListResourceTemplate(), domain.SceneListResourceHandler(client))
 }
 
 // registerEventResources registers readable event MCP resources.

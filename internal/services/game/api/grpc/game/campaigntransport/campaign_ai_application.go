@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"google.golang.org/grpc/codes"
@@ -24,8 +25,10 @@ type campaignAIApplication struct {
 }
 
 type campaignAIApplicationStores struct {
-	Campaign storage.CampaignStore
-	Session  storage.SessionStore
+	Campaign           storage.CampaignStore
+	Session            storage.SessionStore
+	Participant        storage.ParticipantStore
+	SessionInteraction storage.SessionInteractionStore
 }
 
 func newCampaignAIApplicationWithDependencies(
@@ -40,8 +43,10 @@ func newCampaignAIApplicationWithDependencies(
 	sessionGrantConfig.Now = clock
 	return campaignAIApplication{
 		stores: campaignAIApplicationStores{
-			Campaign: deps.Campaign,
-			Session:  deps.Session,
+			Campaign:           deps.Campaign,
+			Session:            deps.Session,
+			Participant:        deps.Participant,
+			SessionInteraction: deps.SessionInteraction,
 		},
 		idGenerator:        idGenerator,
 		sessionGrantConfig: sessionGrantConfig,
@@ -52,7 +57,6 @@ func (a campaignAIApplication) IssueCampaignAISessionGrant(
 	ctx context.Context,
 	campaignID string,
 	sessionID string,
-	aiAgentID string,
 ) (*campaignv1.IssueCampaignAISessionGrantResponse, error) {
 	if a.stores.Campaign == nil {
 		return nil, status.Error(codes.Internal, "campaign store is not configured")
@@ -72,9 +76,6 @@ func (a campaignAIApplication) IssueCampaignAISessionGrant(
 	if boundAgentID == "" {
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai binding is required")
 	}
-	if boundAgentID != aiAgentID {
-		return nil, status.Error(codes.FailedPrecondition, "requested ai agent does not match campaign binding")
-	}
 
 	activeSession, err := a.stores.Session.GetActiveSession(ctx, campaignID)
 	if err != nil {
@@ -86,6 +87,13 @@ func (a campaignAIApplication) IssueCampaignAISessionGrant(
 	if strings.TrimSpace(activeSession.ID) != sessionID {
 		return nil, status.Error(codes.FailedPrecondition, "requested session does not match active campaign session")
 	}
+	participantID, err := a.campaignAIParticipantID(ctx, campaignID, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if participantID == "" {
+		return nil, status.Error(codes.FailedPrecondition, "campaign ai gm participant is unavailable")
+	}
 
 	grantID, err := a.idGenerator()
 	if err != nil {
@@ -96,7 +104,7 @@ func (a campaignAIApplication) IssueCampaignAISessionGrant(
 		GrantID:         grantID,
 		CampaignID:      campaignID,
 		SessionID:       sessionID,
-		AIAgentID:       aiAgentID,
+		ParticipantID:   participantID,
 		AuthEpoch:       campaignRecord.AIAuthEpoch,
 		IssuedForUserID: issuedForUserID,
 	})
@@ -110,11 +118,11 @@ func (a campaignAIApplication) IssueCampaignAISessionGrant(
 			GrantId:         claims.GrantID,
 			CampaignId:      claims.CampaignID,
 			SessionId:       claims.SessionID,
-			AiAgentId:       claims.AIAgentID,
 			AuthEpoch:       claims.AuthEpoch,
 			IssuedAt:        timestamppb.New(claims.IssuedAt),
 			ExpiresAt:       timestamppb.New(claims.ExpiresAt),
 			IssuedForUserId: claims.IssuedForUserID,
+			ParticipantId:   claims.ParticipantID,
 		},
 	}, nil
 }
@@ -164,11 +172,59 @@ func (a campaignAIApplication) GetCampaignAIAuthState(
 	} else if !errors.Is(err, storage.ErrNotFound) {
 		return nil, grpcerror.Internal("get active session", err)
 	}
+	participantID := ""
+	if activeSessionID != "" {
+		participantID, err = a.campaignAIParticipantID(ctx, campaignID, activeSessionID)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	return &campaignv1.GetCampaignAIAuthStateResponse{
 		CampaignId:      campaignID,
 		AiAgentId:       strings.TrimSpace(campaignRecord.AIAgentID),
 		ActiveSessionId: activeSessionID,
 		AuthEpoch:       campaignRecord.AIAuthEpoch,
+		ParticipantId:   participantID,
 	}, nil
+}
+
+func (a campaignAIApplication) campaignAIParticipantID(ctx context.Context, campaignID, sessionID string) (string, error) {
+	if strings.TrimSpace(sessionID) == "" {
+		return "", nil
+	}
+	if a.stores.SessionInteraction == nil {
+		return "", status.Error(codes.Internal, "session interaction store is not configured")
+	}
+	if a.stores.Participant == nil {
+		return "", status.Error(codes.Internal, "participant store is not configured")
+	}
+
+	interaction, err := a.stores.SessionInteraction.GetSessionInteraction(ctx, campaignID, sessionID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return "", nil
+		}
+		return "", grpcerror.Internal("get session interaction", err)
+	}
+
+	pid := strings.TrimSpace(interaction.AITurn.OwnerParticipantID)
+	if pid == "" {
+		pid = strings.TrimSpace(interaction.GMAuthorityParticipantID)
+	}
+	if pid == "" {
+		return "", nil
+	}
+
+	record, err := a.stores.Participant.GetParticipant(ctx, campaignID, pid)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return "", nil
+		}
+		return "", grpcerror.Internal("get ai participant", err)
+	}
+	if record.Role != participant.RoleGM || record.Controller != participant.ControllerAI {
+		return "", nil
+	}
+	return pid, nil
 }

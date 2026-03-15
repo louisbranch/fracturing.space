@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -248,6 +249,26 @@ func (a Applier) applyScenePlayerPhaseYielded(ctx context.Context, evt event.Eve
 	return a.applySceneYieldMutation(ctx, evt, strings.TrimSpace(payload.SceneID.String()), strings.TrimSpace(payload.ParticipantID.String()), true)
 }
 
+func (a Applier) applySceneGMOutputCommitted(ctx context.Context, evt event.Event, payload scene.GMOutputCommittedPayload) error {
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	sceneID, err := resolveSceneID(payload.SceneID.String(), evt.SceneID)
+	if err != nil {
+		return err
+	}
+	current, err := loadSceneInteraction(ctx, a.SceneInteraction, string(evt.CampaignID), sceneID, evt.SessionID.String())
+	if err != nil {
+		return err
+	}
+	current.GMOutputText = strings.TrimSpace(payload.Text)
+	current.GMOutputParticipantID = strings.TrimSpace(payload.ParticipantID.String())
+	current.GMOutputUpdatedAt = timePtr(updatedAt)
+	current.UpdatedAt = updatedAt
+	return a.SceneInteraction.PutSceneInteraction(ctx, current)
+}
+
 func (a Applier) applyScenePlayerPhaseReviewStarted(ctx context.Context, evt event.Event, payload scene.PlayerPhaseReviewStartedPayload) error {
 	updatedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
@@ -330,6 +351,11 @@ func (a Applier) applyScenePlayerPhaseAccepted(ctx context.Context, evt event.Ev
 	}
 	current.UpdatedAt = updatedAt
 	return a.SceneInteraction.PutSceneInteraction(ctx, current)
+}
+
+func timePtr(value time.Time) *time.Time {
+	result := value
+	return &result
 }
 
 func (a Applier) applyScenePlayerPhaseEnded(ctx context.Context, evt event.Event, payload scene.PlayerPhaseEndedPayload) error {

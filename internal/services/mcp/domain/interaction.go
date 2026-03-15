@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -41,6 +42,14 @@ type InteractionSceneResult struct {
 	Name        string                       `json:"name,omitempty"`
 	Description string                       `json:"description,omitempty"`
 	Characters  []InteractionCharacterResult `json:"characters,omitempty"`
+	GMOutput    *InteractionGMOutputResult   `json:"gm_output,omitempty"`
+}
+
+// InteractionGMOutputResult exposes the latest committed GM narration.
+type InteractionGMOutputResult struct {
+	Text          string `json:"text,omitempty"`
+	ParticipantID string `json:"participant_id,omitempty"`
+	UpdatedAt     string `json:"updated_at,omitempty"`
 }
 
 // InteractionPlayerSlotResult exposes one participant-owned scene slot.
@@ -140,6 +149,13 @@ type InteractionEndScenePlayerPhaseInput struct {
 	Reason     string `json:"reason,omitempty" jsonschema:"optional GM-supplied reason"`
 }
 
+// InteractionCommitSceneGMOutputInput commits one authoritative GM narration update.
+type InteractionCommitSceneGMOutputInput struct {
+	CampaignID string `json:"campaign_id,omitempty" jsonschema:"campaign identifier (defaults to context)"`
+	SceneID    string `json:"scene_id,omitempty" jsonschema:"scene identifier (defaults to active scene)"`
+	Text       string `json:"text" jsonschema:"authoritative GM narration or instruction text"`
+}
+
 // InteractionAcceptScenePlayerPhaseInput accepts the current reviewed phase.
 type InteractionAcceptScenePlayerPhaseInput struct {
 	CampaignID string `json:"campaign_id,omitempty" jsonschema:"campaign identifier (defaults to context)"`
@@ -217,6 +233,14 @@ func InteractionEndScenePlayerPhaseTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "interaction_scene_player_phase_end",
 		Description: "Ends the active scene player phase early under GM control",
+	}
+}
+
+// InteractionCommitSceneGMOutputTool defines the MCP tool schema.
+func InteractionCommitSceneGMOutputTool() *mcp.Tool {
+	return &mcp.Tool{
+		Name:        "interaction_scene_gm_output_commit",
+		Description: "Commits authoritative GM narration or instructions for the active scene",
 	}
 }
 
@@ -446,6 +470,36 @@ func InteractionEndScenePlayerPhaseHandler(client statev1.InteractionServiceClie
 		}
 		if response == nil {
 			return nil, InteractionStateResult{}, fmt.Errorf("end scene player phase response is missing")
+		}
+		return interactionToolResult(ctx, notify, campaignID, response.GetState(), callMeta, header)
+	}
+}
+
+// InteractionCommitSceneGMOutputHandler commits authoritative GM narration.
+func InteractionCommitSceneGMOutputHandler(client statev1.InteractionServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[InteractionCommitSceneGMOutputInput, InteractionStateResult] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, input InteractionCommitSceneGMOutputInput) (*mcp.CallToolResult, InteractionStateResult, error) {
+		campaignID, callCtx, callMeta, err := interactionCallContext(ctx, getContext, input.CampaignID)
+		if err != nil {
+			return nil, InteractionStateResult{}, err
+		}
+		defer callCtx.Cancel()
+
+		sceneID, err := resolveInteractionSceneID(callCtx.RunCtx, client, campaignID, input.SceneID)
+		if err != nil {
+			return nil, InteractionStateResult{}, err
+		}
+
+		var header metadata.MD
+		response, err := client.CommitSceneGMOutput(callCtx.RunCtx, &statev1.CommitSceneGMOutputRequest{
+			CampaignId: campaignID,
+			SceneId:    sceneID,
+			Text:       strings.TrimSpace(input.Text),
+		}, grpc.Header(&header))
+		if err != nil {
+			return nil, InteractionStateResult{}, fmt.Errorf("commit scene gm output failed: %w", err)
+		}
+		if response == nil {
+			return nil, InteractionStateResult{}, fmt.Errorf("commit scene gm output response is missing")
 		}
 		return interactionToolResult(ctx, notify, campaignID, response.GetState(), callMeta, header)
 	}
@@ -769,6 +823,7 @@ func interactionStateResultFromProto(state *statev1.InteractionState) Interactio
 			Name:        state.GetActiveScene().GetName(),
 			Description: state.GetActiveScene().GetDescription(),
 			Characters:  make([]InteractionCharacterResult, 0, len(state.GetActiveScene().GetCharacters())),
+			GMOutput:    interactionGMOutputResultFromProto(state.GetActiveScene().GetGmOutput()),
 		},
 		PlayerPhase: InteractionPlayerPhaseResult{
 			PhaseID:              state.GetPlayerPhase().GetPhaseId(),
@@ -811,6 +866,20 @@ func interactionStateResultFromProto(state *statev1.InteractionState) Interactio
 			Body:          post.GetBody(),
 			CreatedAt:     formatTimestamp(post.GetCreatedAt()),
 		})
+	}
+	return result
+}
+
+func interactionGMOutputResultFromProto(output *statev1.InteractionGMOutput) *InteractionGMOutputResult {
+	if output == nil {
+		return nil
+	}
+	result := &InteractionGMOutputResult{
+		Text:          output.GetText(),
+		ParticipantID: output.GetParticipantId(),
+	}
+	if output.GetUpdatedAt() != nil {
+		result.UpdatedAt = output.GetUpdatedAt().AsTime().UTC().Format(time.RFC3339)
 	}
 	return result
 }

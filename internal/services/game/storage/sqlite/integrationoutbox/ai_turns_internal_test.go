@@ -25,6 +25,16 @@ func TestIntegrationOutboxEventsForEventBuildsAIGMTurnRequests(t *testing.T) {
 		wantSourcePhase string
 	}{
 		{
+			name: "session started",
+			evt: event.Event{
+				CampaignID: ids.CampaignID("camp-1"),
+				SessionID:  ids.SessionID("sess-1"),
+				Type:       session.EventTypeStarted,
+				Timestamp:  now,
+			},
+			wantSourceType: string(session.EventTypeStarted),
+		},
+		{
 			name: "active scene set",
 			evt: event.Event{
 				CampaignID: ids.CampaignID("camp-1"),

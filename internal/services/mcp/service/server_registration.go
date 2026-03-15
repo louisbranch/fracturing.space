@@ -26,12 +26,14 @@ const (
 	mcpDaggerheartToolsModuleName    = "daggerheart-tools"
 	mcpCampaignToolsModuleName       = "campaign-tools"
 	mcpSessionToolsModuleName        = "session-tools"
+	mcpSceneToolsModuleName          = "scene-tools"
 	mcpInteractionToolsModuleName    = "interaction-tools"
 	mcpForkToolsModuleName           = "fork-tools"
 	mcpEventToolsModuleName          = "event-tools"
 	mcpContextToolsModuleName        = "context-tools"
 	mcpCampaignResourceModuleName    = "campaign-resources"
 	mcpSessionResourceModuleName     = "session-resources"
+	mcpSceneResourceModuleName       = "scene-resources"
 	mcpInteractionResourceModuleName = "interaction-resources"
 	mcpEventResourceModuleName       = "event-resources"
 	mcpContextResourceModuleName     = "context-resources"
@@ -44,6 +46,7 @@ type mcpRegistrationClients struct {
 	characterClient   statev1.CharacterServiceClient
 	snapshotClient    statev1.SnapshotServiceClient
 	sessionClient     statev1.SessionServiceClient
+	sceneClient       statev1.SceneServiceClient
 	interactionClient statev1.InteractionServiceClient
 	forkClient        statev1.ForkServiceClient
 	eventClient       statev1.EventServiceClient
@@ -104,10 +107,12 @@ var mcpToolRegistrars = []mcpToolRegistrar{
 	newMCPToolRegistrar[domain.CharacterStatePatchInput, domain.CharacterStatePatchResult](),
 	newMCPToolRegistrar[domain.SessionStartInput, domain.SessionStartResult](),
 	newMCPToolRegistrar[domain.SessionEndInput, domain.SessionEndResult](),
+	newMCPToolRegistrar[domain.SceneCreateInput, domain.SceneCreateResult](),
 	newMCPToolRegistrar[domain.InteractionSetActiveSceneInput, domain.InteractionStateResult](),
 	newMCPToolRegistrar[domain.InteractionStartScenePlayerPhaseInput, domain.InteractionStateResult](),
 	newMCPToolRegistrar[domain.InteractionSubmitScenePlayerPostInput, domain.InteractionStateResult](),
 	newMCPToolRegistrar[domain.InteractionScenePhaseInput, domain.InteractionStateResult](),
+	newMCPToolRegistrar[domain.InteractionCommitSceneGMOutputInput, domain.InteractionStateResult](),
 	newMCPToolRegistrar[domain.InteractionAcceptScenePlayerPhaseInput, domain.InteractionStateResult](),
 	newMCPToolRegistrar[domain.InteractionRequestScenePlayerRevisionsInput, domain.InteractionStateResult](),
 	newMCPToolRegistrar[domain.InteractionEndScenePlayerPhaseInput, domain.InteractionStateResult](),
@@ -161,6 +166,13 @@ func newMCPRegistrationModules(
 			},
 		},
 		{
+			name: mcpSceneToolsModuleName,
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerSceneTools(registrar, clients.sceneClient, server.getContext, notify)
+			},
+		},
+		{
 			name: mcpInteractionToolsModuleName,
 			kind: mcpRegistrationKindTools,
 			register: func(registrar mcpRegistrationTarget) error {
@@ -201,6 +213,14 @@ func newMCPRegistrationModules(
 			kind: mcpRegistrationKindResources,
 			register: func(registrar mcpRegistrationTarget) error {
 				registerSessionResources(registrar, clients.sessionClient)
+				return nil
+			},
+		},
+		{
+			name: mcpSceneResourceModuleName,
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerSceneResources(registrar, clients.sceneClient)
 				return nil
 			},
 		},

@@ -175,6 +175,10 @@ service InvocationService {
   rpc InvokeAgent(InvokeAgentRequest) returns (InvokeAgentResponse);
 }
 
+service CampaignOrchestrationService {
+  rpc RunCampaignTurn(RunCampaignTurnRequest) returns (RunCampaignTurnResponse);
+}
+
 service ProviderGrantService {
   rpc StartProviderConnect(StartProviderConnectRequest) returns (StartProviderConnectResponse);
   rpc FinishProviderConnect(FinishProviderConnectRequest) returns (FinishProviderConnectResponse);
@@ -280,6 +284,17 @@ message InvokeAgentRequest {
 }
 
 message InvokeAgentResponse {
+  string output_text = 1;
+  Provider provider = 2;
+  string model = 3;
+}
+
+message RunCampaignTurnRequest {
+  string session_grant = 1;
+  string input = 2;
+}
+
+message RunCampaignTurnResponse {
   string output_text = 1;
   Provider provider = 2;
   string model = 3;

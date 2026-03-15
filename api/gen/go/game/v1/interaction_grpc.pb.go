@@ -27,6 +27,7 @@ const (
 	InteractionService_YieldScenePlayerPhase_FullMethodName       = "/game.v1.InteractionService/YieldScenePlayerPhase"
 	InteractionService_UnyieldScenePlayerPhase_FullMethodName     = "/game.v1.InteractionService/UnyieldScenePlayerPhase"
 	InteractionService_EndScenePlayerPhase_FullMethodName         = "/game.v1.InteractionService/EndScenePlayerPhase"
+	InteractionService_CommitSceneGMOutput_FullMethodName         = "/game.v1.InteractionService/CommitSceneGMOutput"
 	InteractionService_AcceptScenePlayerPhase_FullMethodName      = "/game.v1.InteractionService/AcceptScenePlayerPhase"
 	InteractionService_RequestScenePlayerRevisions_FullMethodName = "/game.v1.InteractionService/RequestScenePlayerRevisions"
 	InteractionService_PauseSessionForOOC_FullMethodName          = "/game.v1.InteractionService/PauseSessionForOOC"
@@ -62,6 +63,8 @@ type InteractionServiceClient interface {
 	UnyieldScenePlayerPhase(ctx context.Context, in *UnyieldScenePlayerPhaseRequest, opts ...grpc.CallOption) (*UnyieldScenePlayerPhaseResponse, error)
 	// Ends the active scene's current player phase early under GM control.
 	EndScenePlayerPhase(ctx context.Context, in *EndScenePlayerPhaseRequest, opts ...grpc.CallOption) (*EndScenePlayerPhaseResponse, error)
+	// Commits one authoritative GM narration/update to the active scene.
+	CommitSceneGMOutput(ctx context.Context, in *CommitSceneGMOutputRequest, opts ...grpc.CallOption) (*CommitSceneGMOutputResponse, error)
 	// Accepts the submitted player phase after GM review and returns to GM control.
 	AcceptScenePlayerPhase(ctx context.Context, in *AcceptScenePlayerPhaseRequest, opts ...grpc.CallOption) (*AcceptScenePlayerPhaseResponse, error)
 	// Returns one or more participant slots for correction while preserving the current phase state.
@@ -154,6 +157,16 @@ func (c *interactionServiceClient) EndScenePlayerPhase(ctx context.Context, in *
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(EndScenePlayerPhaseResponse)
 	err := c.cc.Invoke(ctx, InteractionService_EndScenePlayerPhase_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *interactionServiceClient) CommitSceneGMOutput(ctx context.Context, in *CommitSceneGMOutputRequest, opts ...grpc.CallOption) (*CommitSceneGMOutputResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CommitSceneGMOutputResponse)
+	err := c.cc.Invoke(ctx, InteractionService_CommitSceneGMOutput_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +287,8 @@ type InteractionServiceServer interface {
 	UnyieldScenePlayerPhase(context.Context, *UnyieldScenePlayerPhaseRequest) (*UnyieldScenePlayerPhaseResponse, error)
 	// Ends the active scene's current player phase early under GM control.
 	EndScenePlayerPhase(context.Context, *EndScenePlayerPhaseRequest) (*EndScenePlayerPhaseResponse, error)
+	// Commits one authoritative GM narration/update to the active scene.
+	CommitSceneGMOutput(context.Context, *CommitSceneGMOutputRequest) (*CommitSceneGMOutputResponse, error)
 	// Accepts the submitted player phase after GM review and returns to GM control.
 	AcceptScenePlayerPhase(context.Context, *AcceptScenePlayerPhaseRequest) (*AcceptScenePlayerPhaseResponse, error)
 	// Returns one or more participant slots for correction while preserving the current phase state.
@@ -322,6 +337,9 @@ func (UnimplementedInteractionServiceServer) UnyieldScenePlayerPhase(context.Con
 }
 func (UnimplementedInteractionServiceServer) EndScenePlayerPhase(context.Context, *EndScenePlayerPhaseRequest) (*EndScenePlayerPhaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method EndScenePlayerPhase not implemented")
+}
+func (UnimplementedInteractionServiceServer) CommitSceneGMOutput(context.Context, *CommitSceneGMOutputRequest) (*CommitSceneGMOutputResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CommitSceneGMOutput not implemented")
 }
 func (UnimplementedInteractionServiceServer) AcceptScenePlayerPhase(context.Context, *AcceptScenePlayerPhaseRequest) (*AcceptScenePlayerPhaseResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AcceptScenePlayerPhase not implemented")
@@ -493,6 +511,24 @@ func _InteractionService_EndScenePlayerPhase_Handler(srv interface{}, ctx contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(InteractionServiceServer).EndScenePlayerPhase(ctx, req.(*EndScenePlayerPhaseRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _InteractionService_CommitSceneGMOutput_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommitSceneGMOutputRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(InteractionServiceServer).CommitSceneGMOutput(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: InteractionService_CommitSceneGMOutput_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(InteractionServiceServer).CommitSceneGMOutput(ctx, req.(*CommitSceneGMOutputRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -693,6 +729,10 @@ var InteractionService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "EndScenePlayerPhase",
 			Handler:    _InteractionService_EndScenePlayerPhase_Handler,
+		},
+		{
+			MethodName: "CommitSceneGMOutput",
+			Handler:    _InteractionService_CommitSceneGMOutput_Handler,
 		},
 		{
 			MethodName: "AcceptScenePlayerPhase",

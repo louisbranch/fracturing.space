@@ -32,7 +32,7 @@ type Claims struct {
 	GrantID         string
 	CampaignID      string
 	SessionID       string
-	AIAgentID       string
+	ParticipantID   string
 	AuthEpoch       uint64
 	IssuedForUserID string
 	IssuedAt        time.Time
@@ -44,7 +44,7 @@ type IssueInput struct {
 	GrantID         string
 	CampaignID      string
 	SessionID       string
-	AIAgentID       string
+	ParticipantID   string
 	AuthEpoch       uint64
 	IssuedForUserID string
 }
@@ -60,7 +60,7 @@ type claimsPayload struct {
 	jwt.RegisteredClaims
 	CampaignID      string `json:"campaign_id"`
 	SessionID       string `json:"session_id"`
-	AIAgentID       string `json:"ai_agent_id"`
+	ParticipantID   string `json:"participant_id,omitempty"`
 	AuthEpoch       uint64 `json:"auth_epoch"`
 	IssuedForUserID string `json:"issued_for_user_id,omitempty"`
 }
@@ -115,10 +115,10 @@ func Issue(cfg Config, in IssueInput) (string, Claims, error) {
 	in.GrantID = strings.TrimSpace(in.GrantID)
 	in.CampaignID = strings.TrimSpace(in.CampaignID)
 	in.SessionID = strings.TrimSpace(in.SessionID)
-	in.AIAgentID = strings.TrimSpace(in.AIAgentID)
+	in.ParticipantID = strings.TrimSpace(in.ParticipantID)
 	in.IssuedForUserID = strings.TrimSpace(in.IssuedForUserID)
-	if in.GrantID == "" || in.CampaignID == "" || in.SessionID == "" || in.AIAgentID == "" {
-		return "", Claims{}, fmt.Errorf("grant id, campaign id, session id, and ai agent id are required")
+	if in.GrantID == "" || in.CampaignID == "" || in.SessionID == "" {
+		return "", Claims{}, fmt.Errorf("grant id, campaign id, and session id are required")
 	}
 
 	nowFn := cfg.Now
@@ -139,7 +139,7 @@ func Issue(cfg Config, in IssueInput) (string, Claims, error) {
 		},
 		CampaignID:      in.CampaignID,
 		SessionID:       in.SessionID,
-		AIAgentID:       in.AIAgentID,
+		ParticipantID:   in.ParticipantID,
 		AuthEpoch:       in.AuthEpoch,
 		IssuedForUserID: in.IssuedForUserID,
 	}
@@ -153,7 +153,7 @@ func Issue(cfg Config, in IssueInput) (string, Claims, error) {
 		GrantID:         in.GrantID,
 		CampaignID:      in.CampaignID,
 		SessionID:       in.SessionID,
-		AIAgentID:       in.AIAgentID,
+		ParticipantID:   in.ParticipantID,
 		AuthEpoch:       in.AuthEpoch,
 		IssuedForUserID: in.IssuedForUserID,
 		IssuedAt:        now,
@@ -205,8 +205,7 @@ func Validate(cfg Config, token string) (Claims, error) {
 	}
 	if strings.TrimSpace(parsed.ID) == "" ||
 		strings.TrimSpace(parsed.CampaignID) == "" ||
-		strings.TrimSpace(parsed.SessionID) == "" ||
-		strings.TrimSpace(parsed.AIAgentID) == "" {
+		strings.TrimSpace(parsed.SessionID) == "" {
 		return Claims{}, ErrInvalid
 	}
 
@@ -214,7 +213,7 @@ func Validate(cfg Config, token string) (Claims, error) {
 		GrantID:         strings.TrimSpace(parsed.ID),
 		CampaignID:      strings.TrimSpace(parsed.CampaignID),
 		SessionID:       strings.TrimSpace(parsed.SessionID),
-		AIAgentID:       strings.TrimSpace(parsed.AIAgentID),
+		ParticipantID:   strings.TrimSpace(parsed.ParticipantID),
 		AuthEpoch:       parsed.AuthEpoch,
 		IssuedForUserID: strings.TrimSpace(parsed.IssuedForUserID),
 		IssuedAt:        parsed.IssuedAt.Time.UTC(),

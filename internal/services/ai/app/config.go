@@ -2,13 +2,16 @@ package server
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
 // serverEnv captures startup configuration and optional provider integration.
@@ -23,6 +26,7 @@ type serverEnv struct {
 	OpenAIOAuthClientSecret string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
 	OpenAIOAuthRedirectURI  string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
 	OpenAIResponsesURL      string `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
+	MCPURL                  string `env:"FRACTURING_SPACE_AI_MCP_URL"`
 }
 
 // runtimeConfig is the normalized startup configuration used by the AI runtime.
@@ -32,6 +36,8 @@ type runtimeConfig struct {
 	GameAddr           string
 	OpenAIOAuthConfig  *aiservice.OpenAIOAuthConfig
 	OpenAIResponsesURL string
+	MCPURL             string
+	SessionGrantConfig *aisessiongrant.Config
 }
 
 func loadServerEnv() serverEnv {
@@ -52,6 +58,10 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 	if err != nil {
 		return runtimeConfig{}, fmt.Errorf("load OpenAI OAuth config: %w", err)
 	}
+	sessionGrantConfig, err := aiSessionGrantConfigFromEnv()
+	if err != nil {
+		return runtimeConfig{}, fmt.Errorf("load AI session grant config: %w", err)
+	}
 
 	return runtimeConfig{
 		DBPath:             strings.TrimSpace(srvEnv.DBPath),
@@ -59,6 +69,8 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		GameAddr:           strings.TrimSpace(srvEnv.GameAddr),
 		OpenAIOAuthConfig:  openAIOAuthConfig,
 		OpenAIResponsesURL: strings.TrimSpace(srvEnv.OpenAIResponsesURL),
+		MCPURL:             strings.TrimSpace(srvEnv.MCPURL),
+		SessionGrantConfig: sessionGrantConfig,
 	}, nil
 }
 
@@ -110,4 +122,29 @@ func openAIOAuthConfig(env serverEnv) (*aiservice.OpenAIOAuthConfig, error) {
 		ClientSecret:     clientSecret,
 		RedirectURI:      redirectURI,
 	}, nil
+}
+
+func aiSessionGrantConfigFromEnv() (*aisessiongrant.Config, error) {
+	keys := []string{
+		"FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER",
+		"FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE",
+		"FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY",
+		"FRACTURING_SPACE_AI_SESSION_GRANT_TTL",
+	}
+	set := false
+	for _, key := range keys {
+		if strings.TrimSpace(os.Getenv(key)) == "" {
+			continue
+		}
+		set = true
+		break
+	}
+	if !set {
+		return nil, nil
+	}
+	cfg, err := aisessiongrant.LoadConfigFromEnv(time.Now)
+	if err != nil {
+		return nil, err
+	}
+	return &cfg, nil
 }

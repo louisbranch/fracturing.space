@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
@@ -31,6 +32,7 @@ import (
 type RuntimeConfig struct {
 	Port              int
 	AuthAddr          string
+	AIAddr            string
 	GameAddr          string
 	NotificationsAddr string
 	SocialAddr        string
@@ -78,6 +80,7 @@ type Runtime struct {
 
 	store           *workersqlite.Store
 	authMc          *platformgrpc.ManagedConn
+	aiMc            *platformgrpc.ManagedConn
 	gameMc          *platformgrpc.ManagedConn
 	notificationsMc *platformgrpc.ManagedConn
 	socialMc        *platformgrpc.ManagedConn
@@ -133,6 +136,18 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		return nil, fmt.Errorf("worker: managed conn auth: %w", err)
 	}
 
+	aiMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "ai",
+		Addr: normalized.AIAddr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: logf,
+	})
+	if err != nil {
+		closeManagedConn(authMc, "auth")
+		closeWorkerStore(workerStore)
+		return nil, fmt.Errorf("worker: managed conn ai: %w", err)
+	}
+
 	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "game",
 		Addr: normalized.GameAddr,
@@ -140,6 +155,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		Logf: logf,
 	})
 	if err != nil {
+		closeManagedConn(aiMc, "ai")
 		closeManagedConn(authMc, "auth")
 		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("worker: managed conn game: %w", err)
@@ -153,6 +169,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	})
 	if err != nil {
 		closeManagedConn(gameMc, "game")
+		closeManagedConn(aiMc, "ai")
 		closeManagedConn(authMc, "auth")
 		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("worker: managed conn notifications: %w", err)
@@ -167,6 +184,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	if err != nil {
 		closeManagedConn(notificationsMc, "notifications")
 		closeManagedConn(gameMc, "game")
+		closeManagedConn(aiMc, "ai")
 		closeManagedConn(authMc, "auth")
 		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("worker: managed conn social: %w", err)
@@ -178,13 +196,16 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		closeManagedConn(socialMc, "social")
 		closeManagedConn(notificationsMc, "notifications")
 		closeManagedConn(gameMc, "game")
+		closeManagedConn(aiMc, "ai")
 		closeManagedConn(authMc, "auth")
 		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("backfill social user directory: %w", err)
 	}
 
+	aiCampaignClient := aiv1.NewCampaignOrchestrationServiceClient(aiMc.Conn())
 	gameInviteClient := gamev1.NewInviteServiceClient(gameMc.Conn())
 	gameCampaignClient := gamev1.NewCampaignServiceClient(gameMc.Conn())
+	gameCampaignAIClient := gamev1.NewCampaignAIServiceClient(gameMc.Conn())
 	gameParticipantClient := gamev1.NewParticipantServiceClient(gameMc.Conn())
 	gameCampaignAIOrchestrationClient := gamev1.NewCampaignAIOrchestrationServiceClient(gameMc.Conn())
 	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsMc.Conn())
@@ -195,7 +216,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	inviteCreatedHandler := workerdomain.NewInviteCreatedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
 	inviteAcceptedHandler := workerdomain.NewInviteAcceptedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
 	inviteDeclinedHandler := workerdomain.NewInviteDeclinedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
-	aiGMTurnRequestedHandler := workerdomain.NewAIGMTurnRequestedHandler(gameCampaignAIOrchestrationClient)
+	aiGMTurnRequestedHandler := workerdomain.NewAIGMTurnRequestedHandler(gameCampaignAIOrchestrationClient, gameCampaignAIClient, aiCampaignClient)
 
 	loopConfig := Config{
 		Consumer:      normalized.Consumer,
@@ -237,6 +258,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		closeManagedConn(socialMc, "social")
 		closeManagedConn(notificationsMc, "notifications")
 		closeManagedConn(gameMc, "game")
+		closeManagedConn(aiMc, "ai")
 		closeManagedConn(authMc, "auth")
 		closeWorkerStore(workerStore)
 		return nil, fmt.Errorf("listen on worker port %d: %w", normalized.Port, err)
@@ -255,6 +277,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 		loop:            parallelLoop{loops: []workerLoop{authLoop, gameLoop}},
 		store:           workerStore,
 		authMc:          authMc,
+		aiMc:            aiMc,
 		gameMc:          gameMc,
 		notificationsMc: notificationsMc,
 		socialMc:        socialMc,
@@ -389,6 +412,7 @@ func (r *Runtime) Close() {
 		closeManagedConn(r.socialMc, "social")
 		closeManagedConn(r.notificationsMc, "notifications")
 		closeManagedConn(r.gameMc, "game")
+		closeManagedConn(r.aiMc, "ai")
 		closeManagedConn(r.authMc, "auth")
 		closeWorkerStore(r.store)
 	})
@@ -396,11 +420,15 @@ func (r *Runtime) Close() {
 
 func normalizeRuntimeConfig(cfg RuntimeConfig) (RuntimeConfig, error) {
 	cfg.AuthAddr = strings.TrimSpace(cfg.AuthAddr)
+	cfg.AIAddr = strings.TrimSpace(cfg.AIAddr)
 	cfg.GameAddr = strings.TrimSpace(cfg.GameAddr)
 	cfg.NotificationsAddr = strings.TrimSpace(cfg.NotificationsAddr)
 	cfg.SocialAddr = strings.TrimSpace(cfg.SocialAddr)
 	if cfg.AuthAddr == "" {
 		return RuntimeConfig{}, fmt.Errorf("auth address is required")
+	}
+	if cfg.AIAddr == "" {
+		return RuntimeConfig{}, fmt.Errorf("ai address is required")
 	}
 	if cfg.GameAddr == "" {
 		return RuntimeConfig{}, fmt.Errorf("game address is required")

@@ -23,6 +23,7 @@ type Deps struct {
 	Participant        storage.ParticipantStore
 	Character          storage.CharacterStore
 	Session            storage.SessionStore
+	SessionInteraction storage.SessionInteractionStore
 	Daggerheart        projectionstore.Store
 	Social             socialv1.SocialServiceClient
 	Write              domainwriteexec.WritePath
