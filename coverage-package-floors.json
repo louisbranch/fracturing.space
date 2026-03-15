@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-15T04:23:50Z",
+  "updated_at": "2026-03-15T05:04:02Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -65,7 +65,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint",
-      "floor": 97.8,
+      "floor": 98,
       "description": "Checkpoint persistence and snapshot cloning behavior."
     },
     {
