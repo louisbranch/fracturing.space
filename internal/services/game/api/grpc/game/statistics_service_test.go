@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -14,7 +16,7 @@ import (
 
 func TestStatisticsServiceGetGameStatistics(t *testing.T) {
 	t.Run("rejects nil request", func(t *testing.T) {
-		service := NewStatisticsService(&fakeStatisticsStore{})
+		service := NewStatisticsService(&gametest.FakeStatisticsStore{})
 		_, err := service.GetGameStatistics(context.Background(), nil)
 		if status.Code(err) != codes.InvalidArgument {
 			t.Fatalf("expected invalid argument, got %v", err)
@@ -23,8 +25,8 @@ func TestStatisticsServiceGetGameStatistics(t *testing.T) {
 
 	t.Run("returns stats", func(t *testing.T) {
 		since := time.Date(2025, 12, 1, 10, 30, 0, 0, time.UTC)
-		store := &fakeStatisticsStore{
-			stats: storage.GameStatistics{
+		store := &gametest.FakeStatisticsStore{
+			Stats: storage.GameStatistics{
 				CampaignCount:    2,
 				SessionCount:     5,
 				CharacterCount:   12,
@@ -41,8 +43,8 @@ func TestStatisticsServiceGetGameStatistics(t *testing.T) {
 		if resp.GetStats().GetCampaignCount() != 2 {
 			t.Fatalf("expected campaign count 2, got %d", resp.GetStats().GetCampaignCount())
 		}
-		if store.lastSince == nil || !store.lastSince.Equal(since) {
-			t.Fatalf("expected since %v, got %v", since, store.lastSince)
+		if store.LastSince == nil || !store.LastSince.Equal(since) {
+			t.Fatalf("expected since %v, got %v", since, store.LastSince)
 		}
 	})
 }

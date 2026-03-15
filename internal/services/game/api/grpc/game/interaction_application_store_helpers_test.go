@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -247,11 +248,11 @@ func (interactionSceneInteractionStoreStub) PutSceneInteraction(context.Context,
 func TestInteractionApplicationLoadActiveSessionInteractionDefaultsMissingProjection(t *testing.T) {
 	t.Parallel()
 
-	sessionStore := newFakeSessionStore()
-	sessionStore.sessions["camp-1"] = map[string]storage.SessionRecord{
+	sessionStore := gametest.NewFakeSessionStore()
+	sessionStore.Sessions["camp-1"] = map[string]storage.SessionRecord{
 		"sess-1": {ID: "sess-1", CampaignID: "camp-1", Name: "Session One", Status: session.StatusActive},
 	}
-	sessionStore.activeSession["camp-1"] = "sess-1"
+	sessionStore.ActiveSession["camp-1"] = "sess-1"
 
 	app := interactionApplication{
 		stores: interactionApplicationStores{
@@ -275,7 +276,7 @@ func TestInteractionApplicationLoadActiveSessionInteractionDefaultsMissingProjec
 func TestInteractionApplicationLoadSceneStateSortsCharactersAndDefaultsInteraction(t *testing.T) {
 	t.Parallel()
 
-	characters := newFakeCharacterStore()
+	characters := gametest.NewFakeCharacterStore()
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-2", Name: "Borin", OwnerParticipantID: "p2"})
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-1", Name: "Aria", OwnerParticipantID: "p1"})
 
@@ -362,7 +363,7 @@ func TestInteractionApplicationRequireActiveScenePhaseGuardsAndHappyPath(t *test
 func TestInteractionApplicationResolveActingSet(t *testing.T) {
 	t.Parallel()
 
-	characters := newFakeCharacterStore()
+	characters := gametest.NewFakeCharacterStore()
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-1", Name: "Aria", OwnerParticipantID: "p1"})
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-2", Name: "Sable", OwnerParticipantID: "p1"})
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-3", Name: "Corin", OwnerParticipantID: "p2"})
@@ -399,7 +400,7 @@ func TestInteractionApplicationResolveActingSet(t *testing.T) {
 func TestInteractionApplicationResolveParticipantPostCharacters(t *testing.T) {
 	t.Parallel()
 
-	characters := newFakeCharacterStore()
+	characters := gametest.NewFakeCharacterStore()
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-1", Name: "Aria", OwnerParticipantID: "p1"})
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-2", Name: "Corin", OwnerParticipantID: "p2"})
 
@@ -449,7 +450,7 @@ func TestInteractionApplicationResolveParticipantPostCharacters(t *testing.T) {
 func TestInteractionApplicationResolveRevisionRequestsRejectsForeignCharacter(t *testing.T) {
 	t.Parallel()
 
-	characters := newFakeCharacterStore()
+	characters := gametest.NewFakeCharacterStore()
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-1", Name: "Aria", OwnerParticipantID: "p1"})
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-2", Name: "Corin", OwnerParticipantID: "p2"})
 
@@ -483,7 +484,7 @@ func TestInteractionApplicationResolveRevisionRequestsRejectsForeignCharacter(t 
 func TestInteractionApplicationResolveRevisionRequestsRequiresReason(t *testing.T) {
 	t.Parallel()
 
-	characters := newFakeCharacterStore()
+	characters := gametest.NewFakeCharacterStore()
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-1", Name: "Aria", OwnerParticipantID: "p1"})
 
 	app := interactionApplication{
@@ -537,7 +538,7 @@ func TestInteractionApplicationLoadSceneStateReturnsStoredInteraction(t *testing
 
 	app := interactionApplication{
 		stores: interactionApplicationStores{
-			Character:      newFakeCharacterStore(),
+			Character:      gametest.NewFakeCharacterStore(),
 			SceneCharacter: interactionSceneCharacterStoreStub{},
 			SceneInteraction: interactionSceneInteractionStoreStub{
 				interactions: map[string]storage.SceneInteraction{
@@ -577,7 +578,7 @@ func TestInteractionApplicationLoadSceneStateReturnsStoredInteraction(t *testing
 func TestInteractionApplicationResolveActingSetRejectsOwnerlessCharacter(t *testing.T) {
 	t.Parallel()
 
-	characters := newFakeCharacterStore()
+	characters := gametest.NewFakeCharacterStore()
 	_ = characters.PutCharacter(context.Background(), storage.CharacterRecord{CampaignID: "camp-1", ID: "char-1", Name: "Aria"})
 
 	app := interactionApplication{
@@ -634,7 +635,7 @@ func TestInteractionApplicationLoadActiveSessionInteractionReturnsNilWhenNoActiv
 
 	app := interactionApplication{
 		stores: interactionApplicationStores{
-			Session:            newFakeSessionStore(),
+			Session:            gametest.NewFakeSessionStore(),
 			SessionInteraction: interactionSessionInteractionStoreStub{},
 		},
 	}

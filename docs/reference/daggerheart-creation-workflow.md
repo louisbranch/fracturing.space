@@ -137,9 +137,9 @@ fields.
 ## Implementation map
 
 - Workflow evaluator: `internal/services/game/domain/bridge/daggerheart/creation_workflow.go`
-- Workflow provider + service dispatch: `internal/services/game/api/grpc/game/character_workflow.go`
-- CharacterService RPC handlers: `internal/services/game/api/grpc/game/character_service.go`
+- Workflow provider + service dispatch: `internal/services/game/api/grpc/game/charactertransport/character_workflow.go`
+- CharacterService RPC handlers: `internal/services/game/api/grpc/game/charactertransport/character_service.go`
 - Profile adapter/reset handling: `internal/services/game/domain/bridge/daggerheart/adapter_profile.go`
 - Session-start readiness evaluator: `internal/services/game/domain/readiness/session_start.go`
-- Campaign readiness RPC: `internal/services/game/api/grpc/game/campaign_readiness_service.go`
+- Campaign readiness RPC: `internal/services/game/api/grpc/game/campaigntransport/campaign_readiness_service.go`
 - MCP DTO/handlers: `internal/services/mcp/domain/campaign.go`, `internal/services/mcp/domain/character_handlers.go`

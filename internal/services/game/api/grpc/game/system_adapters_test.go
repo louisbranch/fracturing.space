@@ -3,6 +3,8 @@ package game
 import (
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 )
 
@@ -17,7 +19,7 @@ func TestAdapterRegistryForSystemStoresEmpty(t *testing.T) {
 }
 
 func TestAdapterRegistryForSystemStoresRegistersDaggerheart(t *testing.T) {
-	registry, err := TryAdapterRegistryForSystemStores(SystemStores{Daggerheart: newFakeDaggerheartStore()})
+	registry, err := TryAdapterRegistryForSystemStores(SystemStores{Daggerheart: gametest.NewFakeDaggerheartStore()})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

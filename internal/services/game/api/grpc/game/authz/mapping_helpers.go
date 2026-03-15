@@ -4,8 +4,8 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -14,7 +14,7 @@ func CanResponse(allowed bool, reasonCode string, actor storage.ParticipantRecor
 	return &campaignv1.CanResponse{
 		Allowed:             allowed,
 		ReasonCode:          strings.TrimSpace(reasonCode),
-		ActorCampaignAccess: participanttransport.CampaignAccessToProto(actor.CampaignAccess),
+		ActorCampaignAccess: campaignAccessToProto(actor.CampaignAccess),
 		ActorParticipantId:  strings.TrimSpace(actor.ID),
 	}
 }
@@ -32,6 +32,36 @@ func ActionFromProto(action campaignv1.AuthorizationAction) (domainauthz.Action,
 		return domainauthz.ActionTransferOwnership, true
 	default:
 		return domainauthz.ActionUnspecified, false
+	}
+}
+
+// campaignAccessFromProto converts a protobuf campaign-access enum to the
+// domain value. Local copy avoids importing entity-scoped transport packages.
+func campaignAccessFromProto(access campaignv1.CampaignAccess) participant.CampaignAccess {
+	switch access {
+	case campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER:
+		return participant.CampaignAccessMember
+	case campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER:
+		return participant.CampaignAccessManager
+	case campaignv1.CampaignAccess_CAMPAIGN_ACCESS_OWNER:
+		return participant.CampaignAccessOwner
+	default:
+		return participant.CampaignAccessUnspecified
+	}
+}
+
+// campaignAccessToProto converts a domain campaign-access enum to the protobuf
+// value. Local copy avoids importing entity-scoped transport packages.
+func campaignAccessToProto(access participant.CampaignAccess) campaignv1.CampaignAccess {
+	switch access {
+	case participant.CampaignAccessMember:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER
+	case participant.CampaignAccessManager:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER
+	case participant.CampaignAccessOwner:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_OWNER
+	default:
+		return campaignv1.CampaignAccess_CAMPAIGN_ACCESS_UNSPECIFIED
 	}
 }
 

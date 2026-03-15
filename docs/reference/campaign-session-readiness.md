@@ -16,7 +16,7 @@ session.
 
 - Domain evaluator: `internal/services/game/domain/readiness/session_start.go`
 - Readiness report RPC: `game.v1.CampaignService.GetCampaignSessionReadiness`
-- Session start mutation guard: `internal/services/game/api/grpc/game/session_application.go`
+- Session start mutation guard: `internal/services/game/api/grpc/game/sessiontransport/session_application.go`
 
 ## Invariants
 

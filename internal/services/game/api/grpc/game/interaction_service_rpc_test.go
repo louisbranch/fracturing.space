@@ -6,6 +6,7 @@ import (
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -20,11 +21,11 @@ import (
 )
 
 type interactionServiceHarness struct {
-	campaign           *fakeCampaignStore
-	participants       *fakeParticipantStore
-	characters         *fakeCharacterStore
-	sessions           *fakeSessionStore
-	sessionInteraction *fakeSessionInteractionStore
+	campaign           *gametest.FakeCampaignStore
+	participants       *gametest.FakeParticipantStore
+	characters         *gametest.FakeCharacterStore
+	sessions           *gametest.FakeSessionStore
+	sessionInteraction *gametest.FakeSessionInteractionStore
 	sceneStore         interactionSceneStoreStub
 	sceneCharacters    interactionSceneCharacterStoreStub
 	sceneInteraction   interactionSceneInteractionStoreStub
@@ -32,17 +33,17 @@ type interactionServiceHarness struct {
 
 func newInteractionServiceHarness() *interactionServiceHarness {
 	h := &interactionServiceHarness{
-		campaign:           newFakeCampaignStore(),
-		participants:       newFakeParticipantStore(),
-		characters:         newFakeCharacterStore(),
-		sessions:           newFakeSessionStore(),
-		sessionInteraction: &fakeSessionInteractionStore{},
+		campaign:           gametest.NewFakeCampaignStore(),
+		participants:       gametest.NewFakeParticipantStore(),
+		characters:         gametest.NewFakeCharacterStore(),
+		sessions:           gametest.NewFakeSessionStore(),
+		sessionInteraction: &gametest.FakeSessionInteractionStore{},
 		sceneStore:         interactionSceneStoreStub{scenes: map[string]storage.SceneRecord{}},
 		sceneCharacters:    interactionSceneCharacterStoreStub{records: map[string][]storage.SceneCharacterRecord{}},
 		sceneInteraction:   interactionSceneInteractionStoreStub{interactions: map[string]storage.SceneInteraction{}},
 	}
 
-	h.campaign.campaigns["c1"] = storage.CampaignRecord{
+	h.campaign.Campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    bridge.SystemIDDaggerheart,
@@ -50,7 +51,7 @@ func newInteractionServiceHarness() *interactionServiceHarness {
 		GmMode:    campaign.GmModeHybrid,
 		AIAgentID: "",
 	}
-	h.participants.participants["c1"] = map[string]storage.ParticipantRecord{
+	h.participants.Participants["c1"] = map[string]storage.ParticipantRecord{
 		"gm-1": {
 			ID:             "gm-1",
 			CampaignID:     "c1",
@@ -84,7 +85,7 @@ func newInteractionServiceHarness() *interactionServiceHarness {
 			CampaignAccess: participant.CampaignAccessMember,
 		},
 	}
-	h.characters.characters["c1"] = map[string]storage.CharacterRecord{
+	h.characters.Characters["c1"] = map[string]storage.CharacterRecord{
 		"char-1": {
 			ID:                 "char-1",
 			CampaignID:         "c1",
@@ -98,7 +99,7 @@ func newInteractionServiceHarness() *interactionServiceHarness {
 			OwnerParticipantID: "player-2",
 		},
 	}
-	h.sessions.sessions["c1"] = map[string]storage.SessionRecord{
+	h.sessions.Sessions["c1"] = map[string]storage.SessionRecord{
 		"sess-1": {
 			ID:         "sess-1",
 			CampaignID: "c1",
@@ -112,7 +113,7 @@ func newInteractionServiceHarness() *interactionServiceHarness {
 			Status:     session.StatusActive,
 		},
 	}
-	h.sessions.activeSession["c1"] = "sess-1"
+	h.sessions.ActiveSession["c1"] = "sess-1"
 	h.sceneStore.scenes["c1:scene-1"] = storage.SceneRecord{
 		CampaignID:  "c1",
 		SceneID:     "scene-1",
@@ -184,7 +185,7 @@ func TestNewInteractionServiceGetInteractionStateReturnsProjectedSnapshot(t *tes
 
 	h := newInteractionServiceHarness()
 	now := time.Date(2026, 3, 12, 9, 0, 0, 0, time.UTC)
-	h.sessionInteraction.values = map[string]storage.SessionInteraction{
+	h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 		"c1:sess-1": {
 			CampaignID:                  "c1",
 			SessionID:                   "sess-1",
@@ -223,7 +224,7 @@ func TestNewInteractionServiceGetInteractionStateReturnsProjectedSnapshot(t *tes
 	}
 
 	resp, err := h.service().GetInteractionState(
-		contextWithParticipantID("player-1"),
+		gametest.ContextWithParticipantID("player-1"),
 		&gamev1.GetInteractionStateRequest{CampaignId: "c1"},
 	)
 	if err != nil {
@@ -256,12 +257,12 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 		}
 
 		_, err := h.service().SetActiveScene(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.SetActiveSceneRequest{CampaignId: "c1", SceneId: "scene-2"},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -271,12 +272,12 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 		}
 
 		_, err := h.service().SetActiveScene(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.SetActiveSceneRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -286,12 +287,12 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", OOCPaused: true},
 		}
 
 		_, err := h.service().StartScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.StartScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1", CharacterIds: []string{"char-1"}},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -301,12 +302,12 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", OOCPaused: true},
 		}
 
 		_, err := h.service().SubmitScenePlayerPost(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.SubmitScenePlayerPostRequest{CampaignId: "c1", SceneId: "scene-1", SummaryText: "I rush ahead."},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -316,7 +317,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -326,7 +327,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().YieldScenePlayerPhase(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.YieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -336,7 +337,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -349,7 +350,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().UnyieldScenePlayerPhase(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.UnyieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.PermissionDenied)
@@ -359,7 +360,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -369,7 +370,7 @@ func TestInteractionServiceSceneRPCPreconditions(t *testing.T) {
 		}
 
 		_, err := h.service().EndScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.EndScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.FailedPrecondition)
@@ -383,12 +384,12 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 		}
 
 		_, err := h.service().PauseSessionForOOC(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.PauseSessionForOOCRequest{CampaignId: "c1", Reason: "rules question"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -398,7 +399,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -410,7 +411,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().PauseSessionForOOC(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.PauseSessionForOOCRequest{CampaignId: "c1", Reason: "rules question"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -420,12 +421,12 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", OOCPaused: true},
 		}
 
 		_, err := h.service().PostSessionOOC(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.PostSessionOOCRequest{CampaignId: "c1", Body: "Can I help here?"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -435,12 +436,12 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", OOCPaused: true},
 		}
 
 		_, err := h.service().MarkOOCReadyToResume(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.MarkOOCReadyToResumeRequest{CampaignId: "c1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -450,12 +451,12 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", OOCPaused: true},
 		}
 
 		_, err := h.service().ClearOOCReadyToResume(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.ClearOOCReadyToResumeRequest{CampaignId: "c1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -465,12 +466,12 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", OOCPaused: true},
 		}
 
 		_, err := h.service().ResumeFromOOC(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.ResumeFromOOCRequest{CampaignId: "c1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -480,12 +481,12 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 		}
 
 		_, err := h.service().SetSessionGMAuthority(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.SetSessionGMAuthorityRequest{CampaignId: "c1", ParticipantId: "gm-ai"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -495,7 +496,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.campaign.campaigns["c1"] = storage.CampaignRecord{
+		h.campaign.Campaigns["c1"] = storage.CampaignRecord{
 			ID:        "c1",
 			Name:      "Test Campaign",
 			System:    bridge.SystemIDDaggerheart,
@@ -503,7 +504,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 			GmMode:    campaign.GmModeAI,
 			AIAgentID: "agent-1",
 		}
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {
 				CampaignID:               "c1",
 				SessionID:                "sess-1",
@@ -528,7 +529,7 @@ func TestInteractionServiceOOCAndAuthorityRPCsReachWritePathBoundary(t *testing.
 		}
 
 		_, err := h.service().RetryAIGMTurn(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.RetryAIGMTurnRequest{CampaignId: "c1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -542,7 +543,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -554,7 +555,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().SetActiveScene(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.SetActiveSceneRequest{CampaignId: "c1", SceneId: "scene-3"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -564,12 +565,12 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 
 		_, err := h.service().StartScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.StartScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1", CharacterIds: []string{"char-1"}},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -579,7 +580,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -593,7 +594,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().SubmitScenePlayerPost(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.SubmitScenePlayerPostRequest{
 				CampaignId:   "c1",
 				SceneId:      "scene-1",
@@ -608,7 +609,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -621,7 +622,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().YieldScenePlayerPhase(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.YieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -631,7 +632,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -644,7 +645,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().UnyieldScenePlayerPhase(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.UnyieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -654,7 +655,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -666,7 +667,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().EndScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.EndScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1", Reason: "gm_interrupted"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -676,7 +677,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -689,7 +690,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().AcceptScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.AcceptScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.Internal)
@@ -699,7 +700,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -714,7 +715,7 @@ func TestInteractionServiceSceneRPCsReachWritePathBoundaryWhenPreconditionsPass(
 		}
 
 		_, err := h.service().RequestScenePlayerRevisions(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.RequestScenePlayerRevisionsRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -734,12 +735,12 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 		}
 
 		resp, err := h.serviceWithSuccessfulWrite(t).SetActiveScene(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.SetActiveSceneRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		if err != nil || resp.GetState() == nil {
@@ -751,7 +752,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -766,31 +767,31 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		svc := h.serviceWithSuccessfulWrite(t)
 
 		if resp, err := svc.StartScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.StartScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1", CharacterIds: []string{"char-1"}, FrameText: "Act"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("StartScenePlayerPhase() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.SubmitScenePlayerPost(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.SubmitScenePlayerPostRequest{CampaignId: "c1", SceneId: "scene-1", CharacterIds: []string{"char-1"}, SummaryText: "Advance", YieldAfterPost: true},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("SubmitScenePlayerPost() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.YieldScenePlayerPhase(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.YieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("YieldScenePlayerPhase() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.UnyieldScenePlayerPhase(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.UnyieldScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("UnyieldScenePlayerPhase() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.EndScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.EndScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1", Reason: "gm_interrupted"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("EndScenePlayerPhase() = %#v, %v", resp, err)
@@ -806,7 +807,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			ActingParticipantIDs: []string{"player-1"},
 		}
 		if resp, err := svc.AcceptScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.AcceptScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("AcceptScenePlayerPhase() = %#v, %v", resp, err)
@@ -822,7 +823,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			ActingParticipantIDs: []string{"player-1"},
 		}
 		if resp, err := svc.RequestScenePlayerRevisions(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.RequestScenePlayerRevisionsRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -839,7 +840,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -862,7 +863,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		svc := h.serviceWithSuccessfulWrite(t)
 
 		if resp, err := svc.RequestScenePlayerRevisions(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.RequestScenePlayerRevisionsRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -877,7 +878,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		}
 
 		if resp, err := svc.AcceptScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.AcceptScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("AcceptScenePlayerPhase() = %#v, %v", resp, err)
@@ -888,7 +889,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		t.Parallel()
 
 		h := newInteractionServiceHarness()
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-ai"},
 		}
 		h.sceneInteraction.interactions["c1:scene-1"] = storage.SceneInteraction{
@@ -904,16 +905,16 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		svc := h.serviceWithSuccessfulWrite(t)
 
 		_, err := svc.AcceptScenePlayerPhase(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.AcceptScenePlayerPhaseRequest{CampaignId: "c1", SceneId: "scene-1"},
 		)
 		assertStatusCode(t, err, codes.PermissionDenied)
 
-		h.sessionInteraction.values["c1:sess-1"] = storage.SessionInteraction{
+		h.sessionInteraction.Values["c1:sess-1"] = storage.SessionInteraction{
 			CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-1",
 		}
 		_, err = svc.RequestScenePlayerRevisions(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.RequestScenePlayerRevisionsRequest{
 				CampaignId: "c1",
 				SceneId:    "scene-1",
@@ -933,45 +934,45 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 		h := newInteractionServiceHarness()
 		svc := h.serviceWithSuccessfulWrite(t)
 
-		h.sessionInteraction.values = map[string]storage.SessionInteraction{
+		h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 			"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 		}
 		if resp, err := svc.PauseSessionForOOC(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.PauseSessionForOOCRequest{CampaignId: "c1", Reason: "rules"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("PauseSessionForOOC() = %#v, %v", resp, err)
 		}
 
-		h.sessionInteraction.values["c1:sess-1"] = storage.SessionInteraction{
+		h.sessionInteraction.Values["c1:sess-1"] = storage.SessionInteraction{
 			CampaignID: "c1", SessionID: "sess-1", OOCPaused: true,
 		}
 		if resp, err := svc.PostSessionOOC(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.PostSessionOOCRequest{CampaignId: "c1", Body: "Question"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("PostSessionOOC() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.MarkOOCReadyToResume(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.MarkOOCReadyToResumeRequest{CampaignId: "c1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("MarkOOCReadyToResume() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.ClearOOCReadyToResume(
-			contextWithParticipantID("player-1"),
+			gametest.ContextWithParticipantID("player-1"),
 			&gamev1.ClearOOCReadyToResumeRequest{CampaignId: "c1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("ClearOOCReadyToResume() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.ResumeFromOOC(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.ResumeFromOOCRequest{CampaignId: "c1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("ResumeFromOOC() = %#v, %v", resp, err)
 		}
 
-		h.sessionInteraction.values["c1:sess-1"] = storage.SessionInteraction{
+		h.sessionInteraction.Values["c1:sess-1"] = storage.SessionInteraction{
 			CampaignID: "c1", SessionID: "sess-1", ActiveSceneID: "scene-1", GMAuthorityParticipantID: "gm-ai",
 			AITurn: storage.SessionAITurn{
 				Status:             session.AITurnStatusFailed,
@@ -982,7 +983,7 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 				SourcePhaseID:      "phase-1",
 			},
 		}
-		h.campaign.campaigns["c1"] = storage.CampaignRecord{
+		h.campaign.Campaigns["c1"] = storage.CampaignRecord{
 			ID:        "c1",
 			Name:      "Test Campaign",
 			System:    bridge.SystemIDDaggerheart,
@@ -994,13 +995,13 @@ func TestInteractionServiceMutationRPCsSucceedWhenWriteRuntimeAcceptsEvents(t *t
 			CampaignID: "c1", SceneID: "scene-1", SessionID: "sess-1", PhaseOpen: false,
 		}
 		if resp, err := svc.SetSessionGMAuthority(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.SetSessionGMAuthorityRequest{CampaignId: "c1", ParticipantId: "gm-ai"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("SetSessionGMAuthority() = %#v, %v", resp, err)
 		}
 		if resp, err := svc.RetryAIGMTurn(
-			contextWithParticipantID("gm-1"),
+			gametest.ContextWithParticipantID("gm-1"),
 			&gamev1.RetryAIGMTurnRequest{CampaignId: "c1"},
 		); err != nil || resp.GetState() == nil {
 			t.Fatalf("RetryAIGMTurn() = %#v, %v", resp, err)
@@ -1012,31 +1013,31 @@ func TestInteractionServiceOOCRequiresPausedSessionForParticipantActions(t *test
 	t.Parallel()
 
 	h := newInteractionServiceHarness()
-	h.sessionInteraction.values = map[string]storage.SessionInteraction{
+	h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 		"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 	}
 	svc := h.service()
 
 	_, err := svc.PostSessionOOC(
-		contextWithParticipantID("player-1"),
+		gametest.ContextWithParticipantID("player-1"),
 		&gamev1.PostSessionOOCRequest{CampaignId: "c1", Body: "hello"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
 
 	_, err = svc.MarkOOCReadyToResume(
-		contextWithParticipantID("player-1"),
+		gametest.ContextWithParticipantID("player-1"),
 		&gamev1.MarkOOCReadyToResumeRequest{CampaignId: "c1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
 
 	_, err = svc.ClearOOCReadyToResume(
-		contextWithParticipantID("player-1"),
+		gametest.ContextWithParticipantID("player-1"),
 		&gamev1.ClearOOCReadyToResumeRequest{CampaignId: "c1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
 
 	_, err = svc.ResumeFromOOC(
-		contextWithParticipantID("gm-1"),
+		gametest.ContextWithParticipantID("gm-1"),
 		&gamev1.ResumeFromOOCRequest{CampaignId: "c1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -1046,12 +1047,12 @@ func TestInteractionServiceSetSessionGMAuthorityRejectsPlayerTarget(t *testing.T
 	t.Parallel()
 
 	h := newInteractionServiceHarness()
-	h.sessionInteraction.values = map[string]storage.SessionInteraction{
+	h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 		"c1:sess-1": {CampaignID: "c1", SessionID: "sess-1"},
 	}
 
 	_, err := h.service().SetSessionGMAuthority(
-		contextWithParticipantID("gm-1"),
+		gametest.ContextWithParticipantID("gm-1"),
 		&gamev1.SetSessionGMAuthorityRequest{CampaignId: "c1", ParticipantId: "player-1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -1061,7 +1062,7 @@ func TestInteractionServiceRetryAIGMTurnRequiresFailedTurn(t *testing.T) {
 	t.Parallel()
 
 	h := newInteractionServiceHarness()
-	h.campaign.campaigns["c1"] = storage.CampaignRecord{
+	h.campaign.Campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",
 		Name:      "Test Campaign",
 		System:    bridge.SystemIDDaggerheart,
@@ -1069,7 +1070,7 @@ func TestInteractionServiceRetryAIGMTurnRequiresFailedTurn(t *testing.T) {
 		GmMode:    campaign.GmModeAI,
 		AIAgentID: "agent-1",
 	}
-	h.sessionInteraction.values = map[string]storage.SessionInteraction{
+	h.sessionInteraction.Values = map[string]storage.SessionInteraction{
 		"c1:sess-1": {
 			CampaignID:               "c1",
 			SessionID:                "sess-1",
@@ -1080,7 +1081,7 @@ func TestInteractionServiceRetryAIGMTurnRequiresFailedTurn(t *testing.T) {
 	}
 
 	_, err := h.service().RetryAIGMTurn(
-		contextWithParticipantID("gm-1"),
+		gametest.ContextWithParticipantID("gm-1"),
 		&gamev1.RetryAIGMTurnRequest{CampaignId: "c1"},
 	)
 	assertStatusCode(t, err, codes.FailedPrecondition)
@@ -1091,15 +1092,15 @@ func TestInteractionServiceGetInteractionStateRequiresVisibleCampaign(t *testing
 
 	svc := NewInteractionService(Stores{
 		Campaign:    interactionActiveCampaignStore("c1"),
-		Participant: newFakeParticipantStore(),
+		Participant: gametest.NewFakeParticipantStore(),
 	})
 
 	_, err := svc.GetInteractionState(context.Background(), &gamev1.GetInteractionStateRequest{CampaignId: "c1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
-func interactionActiveCampaignStore(campaignID string) *fakeCampaignStore {
-	store := newFakeCampaignStore()
-	store.campaigns[campaignID] = activeCampaignRecord(campaignID)
+func interactionActiveCampaignStore(campaignID string) *gametest.FakeCampaignStore {
+	store := gametest.NewFakeCampaignStore()
+	store.Campaigns[campaignID] = gametest.ActiveCampaignRecord(campaignID)
 	return store
 }

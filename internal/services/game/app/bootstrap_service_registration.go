@@ -8,6 +8,17 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authorizationtransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/eventtransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/forktransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/invitetransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/scenetransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/sessiontransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/snapshottransport"
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/gameplaystores"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
@@ -82,21 +93,114 @@ func buildServiceDescriptors(
 	if err != nil {
 		return nil, fmt.Errorf("create daggerheart asset service: %w", err)
 	}
-	campaignService := gamegrpc.NewCampaignService(stores, authClient, aiAgentClient)
-	participantService := gamegrpc.NewParticipantService(stores, authClient)
-	inviteService := gamegrpc.NewInviteService(stores, authClient)
-	characterService := gamegrpc.NewCharacterService(stores)
-	snapshotService := gamegrpc.NewSnapshotService(stores)
-	sessionService := gamegrpc.NewSessionService(stores)
-	sceneService := gamegrpc.NewSceneService(stores)
-	forkService := gamegrpc.NewForkService(stores)
-	eventService := gamegrpc.NewEventService(stores)
+	campaignDeps := campaigntransport.Deps{
+		Auth:               authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:           stores.Campaign,
+		Participant:        stores.Participant,
+		Character:          stores.Character,
+		Session:            stores.Session,
+		Daggerheart:        stores.SystemStores.Daggerheart,
+		Social:             stores.Social,
+		Write:              stores.Write,
+		Applier:            stores.Applier(),
+		AuthClient:         authClient,
+		AIClient:           aiAgentClient,
+		SessionGrantConfig: sessionGrantConfig,
+	}
+	campaignService := campaigntransport.NewCampaignService(campaignDeps)
+	participantService := participanttransport.NewService(participanttransport.Deps{
+		Auth:                   authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:               stores.Campaign,
+		Participant:            stores.Participant,
+		Character:              stores.Character,
+		Social:                 stores.Social,
+		Write:                  stores.Write,
+		Applier:                stores.Applier(),
+		ClearCampaignAIBinding: campaigntransport.NewClearCampaignAIBindingFunc(stores.Campaign, stores.Write, stores.Applier()),
+	}, authClient)
+	inviteService := invitetransport.NewService(invitetransport.Deps{
+		Auth:        authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:    stores.Campaign,
+		Participant: stores.Participant,
+		Character:   stores.Character,
+		Invite:      stores.Invite,
+		ClaimIndex:  stores.ClaimIndex,
+		Event:       stores.Event,
+		Social:      stores.Social,
+		Write:       stores.Write,
+		Applier:     stores.Applier(),
+	}, authClient)
+	characterService := charactertransport.NewService(charactertransport.Deps{
+		Auth:               authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:           stores.Campaign,
+		Character:          stores.Character,
+		Participant:        stores.Participant,
+		Daggerheart:        stores.SystemStores.Daggerheart,
+		DaggerheartContent: stores.DaggerheartContent,
+		Write:              stores.Write,
+		Applier:            stores.Applier(),
+	})
+	snapshotService := snapshottransport.NewService(snapshottransport.Deps{
+		Auth:        authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:    stores.Campaign,
+		Character:   stores.Character,
+		Daggerheart: stores.SystemStores.Daggerheart,
+		Write:       stores.Write,
+		Applier:     stores.Applier(),
+	})
+	sessionDeps := sessiontransport.Deps{
+		Auth:               authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:           stores.Campaign,
+		Participant:        stores.Participant,
+		Character:          stores.Character,
+		Session:            stores.Session,
+		SessionGate:        stores.SessionGate,
+		SessionSpotlight:   stores.SessionSpotlight,
+		SessionInteraction: stores.SessionInteraction,
+		Scene:              stores.Scene,
+		Write:              stores.Write,
+		Applier:            stores.Applier(),
+	}
+	sessionService := sessiontransport.NewSessionService(sessionDeps)
+	sceneService := scenetransport.NewService(scenetransport.Deps{
+		Auth:           authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:       stores.Campaign,
+		Scene:          stores.Scene,
+		SceneCharacter: stores.SceneCharacter,
+		Write:          stores.Write,
+		Applier:        stores.Applier(),
+	})
+	forkService := forktransport.NewService(forktransport.Deps{
+		Auth:         authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Campaign:     stores.Campaign,
+		Participant:  stores.Participant,
+		Character:    stores.Character,
+		Session:      stores.Session,
+		CampaignFork: stores.CampaignFork,
+		Event:        stores.Event,
+		Social:       stores.Social,
+		Write:        stores.Write,
+		Applier:      stores.Applier(),
+	})
+	eventService := eventtransport.NewService(eventtransport.Deps{
+		Auth:        authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
+		Event:       stores.Event,
+		Campaign:    stores.Campaign,
+		Participant: stores.Participant,
+		Character:   stores.Character,
+		Session:     stores.Session,
+		Write:       stores.Write,
+	})
 	integrationService := gamegrpc.NewIntegrationService(bundle.events.IntegrationOutboxStore())
 	statisticsService := gamegrpc.NewStatisticsService(stores.Statistics)
 	systemService := gamegrpc.NewSystemService(systemRegistry)
-	authorizationService := gamegrpc.NewAuthorizationService(stores)
-	campaignAIService := gamegrpc.NewCampaignAIService(stores, sessionGrantConfig)
-	campaignAIOrchestrationService := gamegrpc.NewCampaignAIOrchestrationService(stores)
+	authorizationService := authorizationtransport.NewService(authorizationtransport.Deps{
+		Campaign:    stores.Campaign,
+		Participant: stores.Participant,
+		Character:   stores.Character,
+		Audit:       stores.Audit,
+	})
+	campaignAIService := campaigntransport.NewCampaignAIService(campaignDeps)
 	interactionService := gamegrpc.NewInteractionService(stores)
 
 	descriptors := []grpcServiceDescriptor{
@@ -128,12 +232,6 @@ func buildServiceDescriptors(
 			healthService: "game.v1.CampaignAIService",
 			register: func(server *grpc.Server) {
 				statev1.RegisterCampaignAIServiceServer(server, campaignAIService)
-			},
-		},
-		{
-			healthService: "game.v1.CampaignAIOrchestrationService",
-			register: func(server *grpc.Server) {
-				statev1.RegisterCampaignAIOrchestrationServiceServer(server, campaignAIOrchestrationService)
 			},
 		},
 		{

@@ -1,0 +1,1981 @@
+package participanttransport
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
+
+	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+)
+
+// newParticipantServiceForTest is a convenience wrapper matching the old test helper signature.
+func newParticipantServiceForTest(
+	deps Deps,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+) *Service {
+	return newServiceWithDependencies(deps, clock, idGenerator, authClient)
+}
+
+func TestCreateParticipant_NilRequest(t *testing.T) {
+	svc := NewService(Deps{})
+	_, err := svc.CreateParticipant(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateParticipant_MissingCampaignId(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
+		Name: "Player 1",
+		Role: statev1.ParticipantRole_PLAYER,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateParticipant_CampaignNotFound(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
+		CampaignId: "nonexistent",
+		Name:       "Player 1",
+		Role:       statev1.ParticipantRole_PLAYER,
+	})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestCreateParticipant_CampaignArchivedDisallowed(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ArchivedCampaignRecord("c1")
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.CreateParticipant(context.Background(), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Player 1",
+		Role:       statev1.ParticipantRole_PLAYER,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestCreateParticipant_EmptyName(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Role:       statev1.ParticipantRole_PLAYER,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateParticipant_InvalidRole(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Player 1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateParticipant_DomainRejectsAIInvariant(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	eventStore := gametest.NewFakeEventStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Reject(command.Rejection{
+				Code:    "PARTICIPANT_AI_ROLE_REQUIRED",
+				Message: "ai-controlled participants must use gm role",
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "AI Seat",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_AI,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+}
+
+func TestCreateParticipant_RequiresDomainEngine(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Game Master",
+		Role:       statev1.ParticipantRole_GM,
+		Controller: statev1.Controller_CONTROLLER_AI,
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestCreateParticipant_Success_GM(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.DraftCampaignRecord("c1")
+
+	eventStore := gametest.NewFakeEventStore()
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"","name":"Game Master","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
+			}),
+		},
+	}}
+	svc := newParticipantServiceForTest(
+		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-123"),
+		nil,
+	)
+
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Game Master",
+		Role:       statev1.ParticipantRole_GM,
+		Controller: statev1.Controller_CONTROLLER_AI,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+	if resp.Participant == nil {
+		t.Fatal("CreateParticipant response has nil participant")
+	}
+	if resp.Participant.Id != "participant-123" {
+		t.Errorf("Participant ID = %q, want %q", resp.Participant.Id, "participant-123")
+	}
+	if resp.Participant.Name != "Game Master" {
+		t.Errorf("Participant Name = %q, want %q", resp.Participant.Name, "Game Master")
+	}
+	if resp.Participant.Role != statev1.ParticipantRole_GM {
+		t.Errorf("Participant Role = %v, want %v", resp.Participant.Role, statev1.ParticipantRole_GM)
+	}
+	if resp.Participant.Controller != statev1.Controller_CONTROLLER_AI {
+		t.Errorf("Participant Controller = %v, want %v", resp.Participant.Controller, statev1.Controller_CONTROLLER_AI)
+	}
+	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER {
+		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER)
+	}
+	if got := len(eventStore.Events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["c1"][0].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][0].Type, event.Type("participant.joined"))
+	}
+
+	// Verify persisted
+	stored, err := participantStore.GetParticipant(context.Background(), "c1", "participant-123")
+	if err != nil {
+		t.Fatalf("Participant not persisted: %v", err)
+	}
+	if stored.Name != "Game Master" {
+		t.Errorf("Stored participant Name = %q, want %q", stored.Name, "Game Master")
+	}
+}
+
+func TestCreateParticipant_Success_Player(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+
+	eventStore := gametest.NewFakeEventStore()
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-456",
+				PayloadJSON: []byte(`{"participant_id":"participant-456","user_id":"","name":"Player One","role":"PLAYER","controller":"HUMAN","campaign_access":"MEMBER"}`),
+			}),
+		},
+	}}
+	svc := newParticipantServiceForTest(
+		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-456"),
+		nil,
+	)
+
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+	if resp.Participant.Role != statev1.ParticipantRole_PLAYER {
+		t.Errorf("Participant Role = %v, want %v", resp.Participant.Role, statev1.ParticipantRole_PLAYER)
+	}
+	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER {
+		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER)
+	}
+	if got := len(eventStore.Events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["c1"][0].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][0].Type, event.Type("participant.joined"))
+	}
+}
+
+func TestCreateParticipant_Success_ManagerAccess(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+
+	eventStore := gametest.NewFakeEventStore()
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-manager",
+				PayloadJSON: []byte(`{"participant_id":"participant-manager","user_id":"","name":"Quartermaster","role":"PLAYER","controller":"HUMAN","campaign_access":"MANAGER"}`),
+			}),
+		},
+	}}
+	svc := newParticipantServiceForTest(
+		Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-manager"),
+		nil,
+	)
+
+	resp, err := svc.CreateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId:     "c1",
+		Name:           "Quartermaster",
+		Role:           statev1.ParticipantRole_PLAYER,
+		Controller:     statev1.Controller_CONTROLLER_HUMAN,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+	if resp.Participant.GetCampaignAccess() != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Fatalf("Participant CampaignAccess = %v, want %v", resp.Participant.GetCampaignAccess(), statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
+	}
+}
+
+func TestCreateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"manager-1": gametest.ManagerParticipantRecord("c1", "manager-1"),
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.CreateParticipant(gametest.ContextWithParticipantID("manager-1"), &statev1.CreateParticipantRequest{
+		CampaignId:     "c1",
+		Name:           "Pending Owner",
+		Role:           statev1.ParticipantRole_PLAYER,
+		Controller:     statev1.Controller_CONTROLLER_HUMAN,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestCreateParticipant_DeniesHumanGMForAIGMCampaign(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+		GmMode: campaign.GmModeAI,
+	}
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.CreateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Human GM",
+		Role:       statev1.ParticipantRole_GM,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Player One","role":"player","controller":"human","campaign_access":"member"}`),
+			}),
+		},
+	}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
+		},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-123"),
+		nil,
+	)
+
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+		UserId:     "user-123",
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+	if resp.Participant == nil {
+		t.Fatal("CreateParticipant response has nil participant")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.join") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.join")
+	}
+	if got := len(eventStore.Events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["c1"][0].Type != event.Type("participant.joined") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][0].Type, event.Type("participant.joined"))
+	}
+}
+
+func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Request Name","role":"player","controller":"human","campaign_access":"member","avatar_set_id":"people-v1","avatar_asset_id":"request-avatar","pronouns":"request-pronouns"}`),
+			}),
+		},
+	}}
+	socialClient := &gametest.FakeSocialClient{Profile: &socialv1.UserProfile{
+		UserId:        "user-123",
+		Name:          "Social Name",
+		Pronouns:      sharedpronouns.ToProto("social-pronouns"),
+		AvatarSetId:   "creatures-v1",
+		AvatarAssetId: "social-avatar",
+	}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
+			Social:      socialClient,
+		},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-123"),
+		nil,
+	)
+
+	_, err := svc.CreateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId:    "c1",
+		UserId:        "user-123",
+		Name:          "Request Name",
+		Role:          statev1.ParticipantRole_PLAYER,
+		Controller:    statev1.Controller_CONTROLLER_HUMAN,
+		AvatarSetId:   "people-v1",
+		AvatarAssetId: "request-avatar",
+		Pronouns:      sharedpronouns.ToProto("request-pronouns"),
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if socialClient.GetUserProfileCalls != 1 {
+		t.Fatalf("GetUserProfile calls = %d, want %d", socialClient.GetUserProfileCalls, 1)
+	}
+
+	var payload participant.JoinPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Name != "Request Name" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "Request Name")
+	}
+	if payload.AvatarSetID != "people-v1" {
+		t.Fatalf("payload avatar_set_id = %q, want %q", payload.AvatarSetID, "people-v1")
+	}
+	if payload.AvatarAssetID != "request-avatar" {
+		t.Fatalf("payload avatar_asset_id = %q, want %q", payload.AvatarAssetID, "request-avatar")
+	}
+	if payload.Pronouns != "request-pronouns" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "request-pronouns")
+	}
+}
+
+func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Social Name","role":"player","controller":"human","campaign_access":"member","avatar_set_id":"creatures-v1","avatar_asset_id":"social-avatar","pronouns":"social-pronouns"}`),
+			}),
+		},
+	}}
+	socialClient := &gametest.FakeSocialClient{Profile: &socialv1.UserProfile{
+		UserId:        "user-123",
+		Name:          "Social Name",
+		Pronouns:      sharedpronouns.ToProto("social-pronouns"),
+		AvatarSetId:   "creatures-v1",
+		AvatarAssetId: "social-avatar",
+	}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
+			Social:      socialClient,
+		},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-123"),
+		nil,
+	)
+
+	_, err := svc.CreateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		UserId:     "user-123",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+
+	var payload participant.JoinPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Name != "Social Name" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "Social Name")
+	}
+	if payload.AvatarSetID != "creatures-v1" {
+		t.Fatalf("payload avatar_set_id = %q, want %q", payload.AvatarSetID, "creatures-v1")
+	}
+	if payload.AvatarAssetID != "social-avatar" {
+		t.Fatalf("payload avatar_asset_id = %q, want %q", payload.AvatarAssetID, "social-avatar")
+	}
+	if payload.Pronouns != "social-pronouns" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "social-pronouns")
+	}
+}
+
+func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsername(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"user-handle","role":"player","controller":"human","campaign_access":"member"}`),
+			}),
+		},
+	}}
+	authClient := &gametest.FakeAuthClient{User: &authv1.User{Id: "user-123", Username: "user-handle"}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
+		},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-123"),
+		authClient,
+	)
+
+	_, err := svc.CreateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		UserId:     "user-123",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+
+	var payload participant.JoinPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Name != "user-handle" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "user-handle")
+	}
+	if payload.AvatarSetID != "" {
+		t.Fatalf("payload avatar_set_id = %q, want empty", payload.AvatarSetID)
+	}
+	if payload.AvatarAssetID != "" {
+		t.Fatalf("payload avatar_asset_id = %q, want empty", payload.AvatarAssetID)
+	}
+	if payload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	}
+	if authClient.LastGetUserRequest == nil || authClient.LastGetUserRequest.GetUserId() != "user-123" {
+		t.Fatalf("GetUser request = %#v, want user-123", authClient.LastGetUserRequest)
+	}
+}
+
+func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"Player One","role":"player","controller":"human","campaign_access":"member","pronouns":"they/them"}`),
+			}),
+		},
+	}}
+	socialClient := &gametest.FakeSocialClient{Profile: &socialv1.UserProfile{
+		UserId:        "user-123",
+		AvatarSetId:   "creatures-v1",
+		AvatarAssetId: "social-avatar",
+	}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
+			Social:      socialClient,
+		},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-123"),
+		nil,
+	)
+
+	_, err := svc.CreateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		UserId:     "user-123",
+		Name:       "Player One",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+
+	var payload participant.JoinPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	}
+	if payload.Name != "Player One" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "Player One")
+	}
+	if payload.AvatarSetID != "creatures-v1" {
+		t.Fatalf("payload avatar_set_id = %q, want %q", payload.AvatarSetID, "creatures-v1")
+	}
+	if payload.AvatarAssetID != "social-avatar" {
+		t.Fatalf("payload avatar_asset_id = %q, want %q", payload.AvatarAssetID, "social-avatar")
+	}
+}
+
+func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsernameForLocale(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+	}
+	campaignStore.Campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+		Locale: "pt-BR",
+	}
+
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.join"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.joined"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "participant-123",
+				PayloadJSON: []byte(`{"participant_id":"participant-123","user_id":"user-123","name":"apelido","role":"player","controller":"human","campaign_access":"member"}`),
+			}),
+		},
+	}}
+	authClient := &gametest.FakeAuthClient{User: &authv1.User{Id: "user-123", Username: "apelido"}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
+		},
+		gametest.FixedClock(now),
+		gametest.FixedIDGenerator("participant-123"),
+		authClient,
+	)
+
+	_, err := svc.CreateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
+		CampaignId: "c1",
+		UserId:     "user-123",
+		Role:       statev1.ParticipantRole_PLAYER,
+		Controller: statev1.Controller_CONTROLLER_HUMAN,
+	})
+	if err != nil {
+		t.Fatalf("CreateParticipant returned error: %v", err)
+	}
+
+	var payload participant.JoinPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode payload: %v", err)
+	}
+	if payload.Name != "apelido" {
+		t.Fatalf("payload name = %q, want %q", payload.Name, "apelido")
+	}
+	if payload.Pronouns != "they/them" {
+		t.Fatalf("payload pronouns = %q, want %q", payload.Pronouns, "they/them")
+	}
+	if authClient.LastGetUserRequest == nil || authClient.LastGetUserRequest.GetUserId() != "user-123" {
+		t.Fatalf("GetUser request = %#v, want user-123", authClient.LastGetUserRequest)
+	}
+}
+
+func TestUpdateParticipant_NoFields(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	eventStore := gametest.NewFakeEventStore()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Uno","controller":"ai"}}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestUpdateParticipant_DeniesHumanGMForAIGMCampaign(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = storage.CampaignRecord{
+		ID:     "c1",
+		Status: campaign.StatusActive,
+		GmMode: campaign.GmModeAI,
+	}
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.UpdateParticipant(gametest.ContextWithParticipantID("owner-1"), &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Role:          statev1.ParticipantRole_GM,
+	})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestUpdateParticipant_RequiresDomainEngine(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Name:          wrapperspb.String("Player Uno"),
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestUpdateParticipant_DomainRejectsAIInvariant(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	eventStore := gametest.NewFakeEventStore()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Reject(command.Rejection{
+				Code:    "PARTICIPANT_AI_ROLE_REQUIRED",
+				Message: "ai-controlled participants must use gm role",
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Controller:    statev1.Controller_CONTROLLER_AI,
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+}
+
+func TestUpdateParticipant_Success(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	eventStore := gametest.NewFakeEventStore()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Uno","controller":"ai"}}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Name:          wrapperspb.String("Player Uno"),
+		Controller:    statev1.Controller_CONTROLLER_AI,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant returned error: %v", err)
+	}
+	if resp.Participant.Name != "Player Uno" {
+		t.Errorf("Participant Name = %q, want %q", resp.Participant.Name, "Player Uno")
+	}
+	if resp.Participant.Controller != statev1.Controller_CONTROLLER_AI {
+		t.Errorf("Participant Controller = %v, want %v", resp.Participant.Controller, statev1.Controller_CONTROLLER_AI)
+	}
+
+	stored, err := participantStore.GetParticipant(context.Background(), "c1", "p1")
+	if err != nil {
+		t.Fatalf("Participant not persisted: %v", err)
+	}
+	if stored.Name != "Player Uno" {
+		t.Errorf("Stored participant Name = %q, want %q", stored.Name, "Player Uno")
+	}
+	if got := len(eventStore.Events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["c1"][0].Type != event.Type("participant.updated") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][0].Type, event.Type("participant.updated"))
+	}
+}
+
+func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	eventStore := gametest.NewFakeEventStore()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, Controller: participant.ControllerHuman},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Uno","controller":"ai"}}`),
+			}),
+		},
+	}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore},
+		},
+		gametest.FixedClock(now),
+		nil,
+		nil,
+	)
+
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Name:          wrapperspb.String("Player Uno"),
+		Controller:    statev1.Controller_CONTROLLER_AI,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant returned error: %v", err)
+	}
+	if resp.Participant == nil {
+		t.Fatal("UpdateParticipant response has nil participant")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.update") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.update")
+	}
+	if got := len(eventStore.Events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["c1"][0].Type != event.Type("participant.updated") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][0].Type, event.Type("participant.updated"))
+	}
+	stored, err := participantStore.GetParticipant(context.Background(), "c1", "p1")
+	if err != nil {
+		t.Fatalf("Participant not persisted: %v", err)
+	}
+	if stored.Name != "Player Uno" {
+		t.Fatalf("Stored participant Name = %q, want %q", stored.Name, "Player Uno")
+	}
+}
+
+func TestUpdateParticipant_CampaignAccess(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	eventStore := gametest.NewFakeEventStore()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", CampaignAccess: participant.CampaignAccessMember},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"campaign_access":"manager"}}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "p1",
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant returned error: %v", err)
+	}
+	if resp.Participant.CampaignAccess != statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER {
+		t.Errorf("Participant CampaignAccess = %v, want %v", resp.Participant.CampaignAccess, statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER)
+	}
+
+	stored, err := participantStore.GetParticipant(context.Background(), "c1", "p1")
+	if err != nil {
+		t.Fatalf("Participant not persisted: %v", err)
+	}
+	if stored.CampaignAccess != participant.CampaignAccessManager {
+		t.Errorf("Stored participant CampaignAccess = %v, want %v", stored.CampaignAccess, participant.CampaignAccessManager)
+	}
+}
+
+func TestUpdateParticipant_DeniesManagerAssigningOwnerAccess(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"manager-1": gametest.ManagerParticipantRecord("c1", "manager-1"),
+		"member-1":  {ID: "member-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("manager-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "member-1",
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestUpdateParticipant_DeniesManagerMutatingOwnerWithoutAccessChange(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   {ID: "owner-1", CampaignID: "c1", Name: "Owner", CampaignAccess: participant.CampaignAccessOwner},
+		"manager-1": gametest.ManagerParticipantRecord("c1", "manager-1"),
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("manager-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "owner-1",
+		Name:          wrapperspb.String("Updated Owner"),
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestUpdateParticipant_AllowsSelfOwnedProfileChanges(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+			Pronouns:       "she/her",
+		},
+	}
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","fields":{"name":"Player Prime","pronouns":"they/them"}}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore}})
+	resp, err := svc.UpdateParticipant(gametest.ContextWithUserID("user-1"), &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "p1",
+		Name:           wrapperspb.String("Player Prime"),
+		Pronouns:       sharedpronouns.ToProto("they/them"),
+		Role:           statev1.ParticipantRole_PLAYER,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MEMBER,
+	})
+	if err != nil {
+		t.Fatalf("UpdateParticipant returned error: %v", err)
+	}
+	if resp.Participant.GetName() != "Player Prime" {
+		t.Fatalf("participant name = %q, want %q", resp.Participant.GetName(), "Player Prime")
+	}
+	if got := sharedpronouns.FromProto(resp.Participant.GetPronouns()); got != "they/them" {
+		t.Fatalf("participant pronouns = %q, want %q", got, "they/them")
+	}
+}
+
+func TestUpdateParticipant_DeniesSelfOwnedGovernanceChange(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			Name:           "Player One",
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.UpdateParticipant(gametest.ContextWithUserID("user-1"), &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "p1",
+		Name:           wrapperspb.String("Player Prime"),
+		Role:           statev1.ParticipantRole_GM,
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestUpdateParticipant_DeniesDemotingFinalOwner(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":  {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"member-1": gametest.MemberParticipantRecord("c1", "member-1"),
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
+		CampaignId:     "c1",
+		ParticipantId:  "owner-1",
+		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_MANAGER,
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestDeleteParticipant_DeniesManagerRemovingOwner(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":   {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"manager-1": gametest.ManagerParticipantRecord("c1", "manager-1"),
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore})
+	ctx := gametest.ContextWithParticipantID("manager-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "owner-1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestDeleteParticipant_DeniesRemovingFinalOwner(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1":  {ID: "owner-1", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
+		"member-1": gametest.MemberParticipantRecord("c1", "member-1"),
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "owner-1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestDeleteParticipant_DeniesMemberWithoutManageAccess(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 2)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"member-1": gametest.MemberParticipantRecord("c1", "member-1"),
+		"p1":       {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	ctx := gametest.ContextWithParticipantID("member-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestDeleteParticipant_Success(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	eventStore := gametest.NewFakeEventStore()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 1)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	if err != nil {
+		t.Fatalf("DeleteParticipant returned error: %v", err)
+	}
+	if resp.Participant.Id != "p1" {
+		t.Errorf("Participant ID = %q, want %q", resp.Participant.Id, "p1")
+	}
+	if _, err := participantStore.GetParticipant(context.Background(), "c1", "p1"); err == nil {
+		t.Fatal("expected participant to be deleted")
+	}
+	updatedCampaign, err := campaignStore.Get(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("campaign not found: %v", err)
+	}
+	// Count is derived from actual store records (owner-1 remains).
+	if updatedCampaign.ParticipantCount != 1 {
+		t.Errorf("ParticipantCount = %d, want 1", updatedCampaign.ParticipantCount)
+	}
+	if got := len(eventStore.Events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["c1"][0].Type != event.Type("participant.left") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][0].Type, event.Type("participant.left"))
+	}
+}
+
+func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacter(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 0, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 2)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.Events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc","owner_participant_id":"p1"}`),
+		},
+	}
+	eventStore.NextSeq["c1"] = 2
+	characterStore.Characters["c1"] = map[string]storage.CharacterRecord{
+		"ch-1": {ID: "ch-1", CampaignID: "c1", OwnerParticipantID: "p1", Name: "Hero", Kind: character.KindPC},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 0 {
+		t.Fatalf("domain calls = %d, want 0", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_DeniesWhenParticipantOwnsCharacterFromActorFallback(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 5, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 2)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.Events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc"}`),
+		},
+	}
+	eventStore.NextSeq["c1"] = 2
+	characterStore.Characters["c1"] = map[string]storage.CharacterRecord{
+		"ch-1": {ID: "ch-1", CampaignID: "c1", OwnerParticipantID: "p1", Name: "Hero", Kind: character.KindPC},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if domain.calls != 0 {
+		t.Fatalf("domain calls = %d, want 0", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_AllowsWhenOwnedCharacterAlreadyDeleted(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 10, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 2)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.Events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc","owner_participant_id":"p1"}`),
+		},
+		{
+			Seq:         2,
+			CampaignID:  "c1",
+			Type:        event.Type("character.deleted"),
+			Timestamp:   now.Add(time.Minute),
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","reason":"retired"}`),
+		},
+	}
+	eventStore.NextSeq["c1"] = 3
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now.Add(2 * time.Minute),
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	if err != nil {
+		t.Fatalf("DeleteParticipant returned error: %v", err)
+	}
+	if resp.GetParticipant().GetId() != "p1" {
+		t.Fatalf("participant id = %q, want %q", resp.GetParticipant().GetId(), "p1")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_AllowsWhenCharacterOwnershipTransferredAway(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	eventStore := gametest.NewFakeEventStore()
+	now := time.Date(2026, 2, 20, 19, 25, 0, 0, time.UTC)
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 3)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+		"p2":      {ID: "p2", CampaignID: "c1", Name: "Player Two", Role: participant.RolePlayer, CampaignAccess: participant.CampaignAccessMember},
+	}
+	eventStore.Events["c1"] = []event.Event{
+		{
+			Seq:         1,
+			CampaignID:  "c1",
+			Type:        event.Type("character.created"),
+			Timestamp:   now,
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "p1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","name":"Hero","kind":"pc","owner_participant_id":"p1"}`),
+		},
+		{
+			Seq:         2,
+			CampaignID:  "c1",
+			Type:        event.Type("character.updated"),
+			Timestamp:   now.Add(time.Minute),
+			ActorType:   event.ActorTypeParticipant,
+			ActorID:     "owner-1",
+			EntityType:  "character",
+			EntityID:    "ch-1",
+			PayloadJSON: []byte(`{"character_id":"ch-1","fields":{"owner_participant_id":"p2"}}`),
+		},
+	}
+	eventStore.NextSeq["c1"] = 3
+	characterStore.Characters["c1"] = map[string]storage.CharacterRecord{
+		"ch-1": {ID: "ch-1", CampaignID: "c1", OwnerParticipantID: "p2", Name: "Hero", Kind: character.KindPC},
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now.Add(2 * time.Minute),
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}, Applier: projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore}})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	if err != nil {
+		t.Fatalf("DeleteParticipant returned error: %v", err)
+	}
+	if resp.GetParticipant().GetId() != "p1" {
+		t.Fatalf("participant id = %q, want %q", resp.GetParticipant().GetId(), "p1")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("domain calls = %d, want 1", domain.calls)
+	}
+}
+
+func TestDeleteParticipant_RequiresDomainEngine(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 1)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore, Character: characterStore}, Campaign: campaignStore, Participant: participantStore, Character: characterStore})
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	_, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+	})
+	assertStatusCode(t, err, codes.Internal)
+}
+
+func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	characterStore := gametest.NewFakeCharacterStore()
+	eventStore := gametest.NewFakeEventStore()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecordWithParticipantCount("c1", 1)
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"owner-1": gametest.OwnerParticipantRecord("c1", "owner-1"),
+		"p1":      {ID: "p1", CampaignID: "c1", Name: "Player One", Role: participant.RolePlayer},
+	}
+	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.leave"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "c1",
+				Type:        event.Type("participant.left"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeParticipant,
+				ActorID:     "owner-1",
+				EntityType:  "participant",
+				EntityID:    "p1",
+				PayloadJSON: []byte(`{"participant_id":"p1","reason":"left"}`),
+			}),
+		},
+	}}
+
+	svc := newParticipantServiceForTest(
+		Deps{
+			Auth:        authz.PolicyDeps{Participant: participantStore, Character: characterStore},
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Character:   characterStore,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+			Applier:     projection.Applier{Campaign: campaignStore, Participant: participantStore, Character: characterStore},
+		},
+		gametest.FixedClock(now),
+		nil,
+		nil,
+	)
+
+	ctx := gametest.ContextWithParticipantID("owner-1")
+	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{
+		CampaignId:    "c1",
+		ParticipantId: "p1",
+		Reason:        "left",
+	})
+	if err != nil {
+		t.Fatalf("DeleteParticipant returned error: %v", err)
+	}
+	if resp.Participant.Id != "p1" {
+		t.Fatalf("Participant ID = %q, want %q", resp.Participant.Id, "p1")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.leave") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "participant.leave")
+	}
+	if got := len(eventStore.Events["c1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["c1"][0].Type != event.Type("participant.left") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][0].Type, event.Type("participant.left"))
+	}
+	if _, err := participantStore.GetParticipant(context.Background(), "c1", "p1"); err == nil {
+		t.Fatal("expected participant to be deleted")
+	}
+	updatedCampaign, err := campaignStore.Get(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("campaign not found: %v", err)
+	}
+	// Count is derived from actual store records (owner-1 remains).
+	if updatedCampaign.ParticipantCount != 1 {
+		t.Fatalf("ParticipantCount = %d, want 1", updatedCampaign.ParticipantCount)
+	}
+}
+
+func TestListParticipants_NilRequest(t *testing.T) {
+	svc := NewService(Deps{})
+	_, err := svc.ListParticipants(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListParticipants_MissingCampaignId(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.ListParticipants(context.Background(), &statev1.ListParticipantsRequest{})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestListParticipants_CampaignNotFound(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.ListParticipants(context.Background(), &statev1.ListParticipantsRequest{CampaignId: "nonexistent"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestListParticipants_DeniesMissingIdentity(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			UserID:         "user-1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.ListParticipants(context.Background(), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestListParticipants_CampaignArchivedAllowed(t *testing.T) {
+	// ListParticipants uses CampaignOpRead which is allowed for all campaign statuses,
+	// including archived campaigns. This allows viewing historical campaign participants.
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	now := time.Now().UTC()
+
+	campaignStore.Campaigns["c1"] = gametest.ArchivedCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	resp, err := svc.ListParticipants(gametest.ContextWithParticipantID("p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("ListParticipants returned error: %v", err)
+	}
+	if len(resp.Participants) != 1 {
+		t.Errorf("ListParticipants returned %d participants, want 1", len(resp.Participants))
+	}
+}
+
+func TestListParticipants_DeniesNonMember(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.ListParticipants(gametest.ContextWithParticipantID("outsider-1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestListParticipants_WithParticipants(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	now := time.Now().UTC()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+		},
+		"p2": {
+			ID:             "p2",
+			CampaignID:     "c1",
+			Name:           "Player 1",
+			Role:           participant.RolePlayer,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	resp, err := svc.ListParticipants(gametest.ContextWithParticipantID("p1"), &statev1.ListParticipantsRequest{CampaignId: "c1"})
+	if err != nil {
+		t.Fatalf("ListParticipants returned error: %v", err)
+	}
+	if len(resp.Participants) != 2 {
+		t.Errorf("ListParticipants returned %d participants, want 2", len(resp.Participants))
+	}
+}
+
+func TestGetParticipant_NilRequest(t *testing.T) {
+	svc := NewService(Deps{})
+	_, err := svc.GetParticipant(context.Background(), nil)
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetParticipant_MissingCampaignId(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetParticipant(context.Background(), &statev1.GetParticipantRequest{ParticipantId: "p1"})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetParticipant_MissingParticipantId(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetParticipant(context.Background(), &statev1.GetParticipantRequest{CampaignId: "c1"})
+	assertStatusCode(t, err, codes.InvalidArgument)
+}
+
+func TestGetParticipant_CampaignNotFound(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetParticipant(context.Background(), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestGetParticipant_DeniesMissingIdentity(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetParticipant(context.Background(), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
+	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestGetParticipant_ParticipantNotFound(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "GM",
+			Role:           participant.RoleGM,
+			CampaignAccess: participant.CampaignAccessMember,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	_, err := svc.GetParticipant(gametest.ContextWithParticipantID("p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "nonexistent"})
+	assertStatusCode(t, err, codes.NotFound)
+}
+
+func TestGetParticipant_Success(t *testing.T) {
+	campaignStore := gametest.NewFakeCampaignStore()
+	participantStore := gametest.NewFakeParticipantStore()
+	now := time.Now().UTC()
+
+	campaignStore.Campaigns["c1"] = gametest.ActiveCampaignRecord("c1")
+	participantStore.Participants["c1"] = map[string]storage.ParticipantRecord{
+		"p1": {
+			ID:             "p1",
+			CampaignID:     "c1",
+			Name:           "Game Master",
+			Role:           participant.RoleGM,
+			Controller:     participant.ControllerAI,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      now,
+			UpdatedAt:      now,
+		},
+	}
+
+	svc := NewService(Deps{Auth: authz.PolicyDeps{Participant: participantStore}, Campaign: campaignStore, Participant: participantStore})
+	resp, err := svc.GetParticipant(gametest.ContextWithParticipantID("p1"), &statev1.GetParticipantRequest{CampaignId: "c1", ParticipantId: "p1"})
+	if err != nil {
+		t.Fatalf("GetParticipant returned error: %v", err)
+	}
+	if resp.Participant == nil {
+		t.Fatal("GetParticipant response has nil participant")
+	}
+	if resp.Participant.Id != "p1" {
+		t.Errorf("Participant ID = %q, want %q", resp.Participant.Id, "p1")
+	}
+	if resp.Participant.Name != "Game Master" {
+		t.Errorf("Participant Name = %q, want %q", resp.Participant.Name, "Game Master")
+	}
+	if resp.Participant.Role != statev1.ParticipantRole_GM {
+		t.Errorf("Participant Role = %v, want %v", resp.Participant.Role, statev1.ParticipantRole_GM)
+	}
+	if resp.Participant.Controller != statev1.Controller_CONTROLLER_AI {
+		t.Errorf("Participant Controller = %v, want %v", resp.Participant.Controller, statev1.Controller_CONTROLLER_AI)
+	}
+}
