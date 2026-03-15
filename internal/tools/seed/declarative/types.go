@@ -96,6 +96,7 @@ type ManifestDiscoveryEntry struct {
 	CampaignKey                string   `json:"campaign_key"`
 	Title                      string   `json:"title"`
 	Description                string   `json:"description"`
+	CampaignTheme              string   `json:"campaign_theme,omitempty"`
 	RecommendedParticipantsMin int32    `json:"recommended_participants_min"`
 	RecommendedParticipantsMax int32    `json:"recommended_participants_max"`
 	DifficultyTier             string   `json:"difficulty_tier,omitempty"`

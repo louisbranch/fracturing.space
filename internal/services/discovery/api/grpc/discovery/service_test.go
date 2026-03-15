@@ -54,6 +54,7 @@ func TestCreateGetDiscoveryEntry_RoundTrip(t *testing.T) {
 		PreviewPlaystyleLabel:      "Guardian defender",
 		PreviewCharacterName:       "Mira Vale",
 		PreviewCharacterSummary:    "A steadfast guardian.",
+		CampaignTheme:              "A village lighthouse has gone dark.\nYou must restore it before the next fleet arrives.",
 	}}
 	createResp, err := svc.CreateDiscoveryEntry(context.Background(), createReq)
 	if err != nil {
@@ -72,6 +73,9 @@ func TestCreateGetDiscoveryEntry_RoundTrip(t *testing.T) {
 	}
 	if got := getResp.GetEntry().GetPreviewCharacterName(); got != "Mira Vale" {
 		t.Fatalf("preview_character_name = %q, want Mira Vale", got)
+	}
+	if got := getResp.GetEntry().GetCampaignTheme(); got == "" {
+		t.Fatal("campaign_theme should round-trip")
 	}
 }
 
@@ -115,6 +119,37 @@ func TestListDiscoveryEntries_FiltersByKind(t *testing.T) {
 	}
 	if got := resp.GetEntries()[0].GetEntryId(); got != "entry-1" {
 		t.Fatalf("entry_id = %q, want entry-1", got)
+	}
+}
+
+func TestCreateDiscoveryEntry_TrimsCampaignTheme(t *testing.T) {
+	store := newFakeStore()
+	svc := NewService(store)
+
+	_, err := svc.CreateDiscoveryEntry(context.Background(), &discoveryv1.CreateDiscoveryEntryRequest{
+		Entry: &discoveryv1.DiscoveryEntry{
+			EntryId:                    "starter:trim",
+			Kind:                       discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER,
+			Title:                      "Trim",
+			Description:                "Short description",
+			CampaignTheme:              "  Longer theme  ",
+			RecommendedParticipantsMin: 1,
+			RecommendedParticipantsMax: 1,
+			DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER,
+			ExpectedDurationLabel:      "1 session",
+			System:                     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create discovery entry: %v", err)
+	}
+
+	got, err := store.GetDiscoveryEntry(context.Background(), "starter:trim")
+	if err != nil {
+		t.Fatalf("get discovery entry: %v", err)
+	}
+	if got.CampaignTheme != "Longer theme" {
+		t.Fatalf("campaign theme = %q, want %q", got.CampaignTheme, "Longer theme")
 	}
 }
 

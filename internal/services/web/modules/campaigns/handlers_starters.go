@@ -79,11 +79,11 @@ type starterPreviewView struct {
 	EntryID              string
 	Title                string
 	Description          string
+	CampaignTheme        string
 	Hook                 string
 	PlaystyleLabel       string
 	CharacterName        string
 	CharacterSummary     string
-	Storyline            string
 	System               string
 	Difficulty           string
 	Duration             string
@@ -100,11 +100,11 @@ func mapStarterPreview(preview campaignapp.CampaignStarterPreview) starterPrevie
 		EntryID:              preview.EntryID,
 		Title:                preview.Title,
 		Description:          preview.Description,
+		CampaignTheme:        preview.CampaignTheme,
 		Hook:                 preview.Hook,
 		PlaystyleLabel:       preview.PlaystyleLabel,
 		CharacterName:        preview.CharacterName,
 		CharacterSummary:     preview.CharacterSummary,
-		Storyline:            preview.Storyline,
 		System:               preview.System,
 		Difficulty:           preview.Difficulty,
 		Duration:             preview.Duration,

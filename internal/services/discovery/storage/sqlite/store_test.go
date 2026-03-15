@@ -30,6 +30,7 @@ func TestCreateGetDiscoveryEntryRoundTrip(t *testing.T) {
 		SourceID:                   "",
 		Title:                      "Sunfall",
 		Description:                "A haunted valley campaign",
+		CampaignTheme:              "A village lighthouse has gone dark.\nYou must restore it before the next fleet arrives.",
 		RecommendedParticipantsMin: 3,
 		RecommendedParticipantsMax: 5,
 		DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER,
@@ -67,6 +68,9 @@ func TestCreateGetDiscoveryEntryRoundTrip(t *testing.T) {
 	}
 	if got.PreviewCharacterName != input.PreviewCharacterName || got.PreviewHook != input.PreviewHook {
 		t.Fatalf("preview fields mismatch: got (%q,%q)", got.PreviewCharacterName, got.PreviewHook)
+	}
+	if got.CampaignTheme != input.CampaignTheme {
+		t.Fatalf("campaign theme = %q, want %q", got.CampaignTheme, input.CampaignTheme)
 	}
 }
 
@@ -181,6 +185,7 @@ func TestUpsertBuiltinDiscoveryEntryPreservesReconciledSourceID(t *testing.T) {
 		SourceID:                   "camp-1",
 		Title:                      "Sunfall",
 		Description:                "A haunted valley campaign",
+		CampaignTheme:              "Initial theme",
 		RecommendedParticipantsMin: 1,
 		RecommendedParticipantsMax: 1,
 		DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER,
@@ -196,6 +201,7 @@ func TestUpsertBuiltinDiscoveryEntryPreservesReconciledSourceID(t *testing.T) {
 	updated := initial
 	updated.SourceID = ""
 	updated.Description = "Updated description"
+	updated.CampaignTheme = "Updated theme"
 	updated.PreviewCharacterName = "Mira Vale"
 	if err := store.UpsertBuiltinDiscoveryEntry(context.Background(), updated); err != nil {
 		t.Fatalf("second upsert: %v", err)
@@ -210,6 +216,9 @@ func TestUpsertBuiltinDiscoveryEntryPreservesReconciledSourceID(t *testing.T) {
 	}
 	if got.Description != "Updated description" {
 		t.Fatalf("description = %q, want updated", got.Description)
+	}
+	if got.CampaignTheme != "Updated theme" {
+		t.Fatalf("campaign_theme = %q, want updated", got.CampaignTheme)
 	}
 }
 

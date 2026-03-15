@@ -43,6 +43,7 @@ func TestProtoContract_DiscoveryEntryFields(t *testing.T) {
 		PreviewPlaystyleLabel:   "Guardian defender",
 		PreviewCharacterName:    "Mira Vale",
 		PreviewCharacterSummary: "A steadfast guardian.",
+		CampaignTheme:           "A village lighthouse has gone dark.\nYou must restore it before the next fleet arrives.",
 	}
 	if entry.GetEntryId() == "" || entry.GetSourceId() == "" {
 		t.Fatal("entry id/source id round-trip failed")
@@ -58,5 +59,8 @@ func TestProtoContract_DiscoveryEntryFields(t *testing.T) {
 	}
 	if entry.GetPreviewCharacterName() == "" || entry.GetPreviewHook() == "" {
 		t.Fatal("preview fields round-trip failed")
+	}
+	if entry.GetCampaignTheme() == "" {
+		t.Fatal("campaign theme round-trip failed")
 	}
 }

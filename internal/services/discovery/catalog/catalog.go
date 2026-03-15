@@ -77,6 +77,7 @@ type starterJSON struct {
 	SourceID                   string               `json:"source_id"`
 	Title                      string               `json:"title"`
 	Description                string               `json:"description"`
+	CampaignTheme              string               `json:"campaign_theme"`
 	RecommendedParticipantsMin int                  `json:"recommended_participants_min"`
 	RecommendedParticipantsMax int                  `json:"recommended_participants_max"`
 	DifficultyTier             string               `json:"difficulty_tier"`
@@ -227,6 +228,7 @@ func convertStarter(raw starterJSON) (StarterDefinition, error) {
 			SourceID:                   strings.TrimSpace(raw.SourceID),
 			Title:                      title,
 			Description:                strings.TrimSpace(raw.Description),
+			CampaignTheme:              strings.TrimSpace(raw.CampaignTheme),
 			RecommendedParticipantsMin: raw.RecommendedParticipantsMin,
 			RecommendedParticipantsMax: raw.RecommendedParticipantsMax,
 			DifficultyTier:             difficultyTier,

@@ -6,11 +6,11 @@ type CampaignStarterPreview struct {
 	TemplateCampaignID   string
 	Title                string
 	Description          string
+	CampaignTheme        string
 	Hook                 string
 	PlaystyleLabel       string
 	CharacterName        string
 	CharacterSummary     string
-	Storyline            string
 	System               string
 	Difficulty           string
 	Duration             string

@@ -834,6 +834,7 @@ func (r *Runner) applyDiscoveryEntries(ctx context.Context, manifest Manifest, c
 				SourceId:                   campaignID,
 				Title:                      discoveryEntry.Title,
 				Description:                discoveryEntry.Description,
+				CampaignTheme:              discoveryEntry.CampaignTheme,
 				RecommendedParticipantsMin: discoveryEntry.RecommendedParticipantsMin,
 				RecommendedParticipantsMax: discoveryEntry.RecommendedParticipantsMax,
 				DifficultyTier:             parseDifficultyTier(discoveryEntry.DifficultyTier),

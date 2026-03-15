@@ -38,11 +38,11 @@ func (g starterGateway) StarterPreview(ctx context.Context, starterKey string) (
 		TemplateCampaignID: strings.TrimSpace(entry.GetSourceId()),
 		Title:              strings.TrimSpace(entry.GetTitle()),
 		Description:        strings.TrimSpace(entry.GetDescription()),
+		CampaignTheme:      starterCampaignTheme(entry),
 		Hook:               strings.TrimSpace(entry.GetPreviewHook()),
 		PlaystyleLabel:     strings.TrimSpace(entry.GetPreviewPlaystyleLabel()),
 		CharacterName:      strings.TrimSpace(entry.GetPreviewCharacterName()),
 		CharacterSummary:   strings.TrimSpace(entry.GetPreviewCharacterSummary()),
-		Storyline:          strings.TrimSpace(entry.GetStoryline()),
 		System:             starterGameSystemLabel(entry.GetSystem()),
 		Difficulty:         starterDifficultyLabel(entry.GetDifficultyTier()),
 		Duration:           strings.TrimSpace(entry.GetExpectedDurationLabel()),
@@ -226,4 +226,17 @@ func starterPlayersLabel(min, max int32) string {
 		return fmt.Sprintf("%d+", min)
 	}
 	return fmt.Sprintf("up to %d", max)
+}
+
+// starterCampaignTheme resolves the spoiler-safe starter preview theme with a
+// description fallback for entries that have not adopted the richer field yet.
+func starterCampaignTheme(entry *discoveryv1.DiscoveryEntry) string {
+	if entry == nil {
+		return ""
+	}
+	theme := strings.TrimSpace(entry.GetCampaignTheme())
+	if theme != "" {
+		return theme
+	}
+	return strings.TrimSpace(entry.GetDescription())
 }

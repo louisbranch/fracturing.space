@@ -35,9 +35,9 @@ templ StarterPreviewFragment(preview starterPreviewView, loc Localizer) {
 		<div class="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
 			<article class="card bg-base-100 border border-base-300 shadow-sm">
 				<div class="card-body gap-3">
-					<h3 class="card-title">Premise</h3>
-					if preview.Storyline != "" {
-						<pre class="whitespace-pre-wrap text-sm opacity-85 font-sans">{ preview.Storyline }</pre>
+					<h3 class="card-title">Campaign Theme</h3>
+					if preview.CampaignTheme != "" {
+						<p class="whitespace-pre-line text-sm opacity-85">{ preview.CampaignTheme }</p>
 					}
 				</div>
 			</article>
