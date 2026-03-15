@@ -19,12 +19,15 @@ describe("CharacterCard", () => {
     render(<CharacterCard character={characterCardFixtures.full} variant="basic" />);
 
     const card = screen.getByRole("heading", { level: 2, name: "Mira" }).closest("article");
+    const basicTraits = screen.getByLabelText("Character traits");
     expect(card).not.toBeNull();
     expect(within(card as HTMLElement).getByText("(she/her)")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("Rogue / Nightwalker")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("Human, Slyborne")).toBeInTheDocument();
     expect(within(card as HTMLElement).getByText("3/5")).toBeInTheDocument();
-    expect(within(card as HTMLElement).getByText("Rogue's Dodge")).toBeInTheDocument();
+    expect(within(basicTraits).queryByText("Traits")).not.toBeInTheDocument();
+    expect(within(basicTraits).getByText("AGI 2")).toBeInTheDocument();
+    expect(within(card as HTMLElement).queryByText("Rogue's Dodge")).not.toBeInTheDocument();
     expect(within(card as HTMLElement).queryByText("Mary")).not.toBeInTheDocument();
     // Invariant: the basic card must stay compact and not introduce the full Daggerheart detail summary.
     expect(within(card as HTMLElement).queryByLabelText("Daggerheart full info")).not.toBeInTheDocument();
@@ -34,7 +37,8 @@ describe("CharacterCard", () => {
     render(<CharacterCard character={characterCardFixtures.full} variant="full" />);
 
     const statistics = screen.getByLabelText("Character statistics");
-    const featureSummary = screen.getByLabelText("Character feature summary");
+    const hopeSummary = screen.getByLabelText("Character hope summary");
+    const fullInfo = screen.getByLabelText("Daggerheart full info");
 
     expect(screen.getByRole("heading", { level: 2, name: "Mira" })).toBeInTheDocument();
     expect(screen.getByText("(she/her)")).toBeInTheDocument();
@@ -45,10 +49,16 @@ describe("CharacterCard", () => {
     expect(within(statistics).getByText("3/5")).toBeInTheDocument();
     expect(within(statistics).getByText("2/6")).toBeInTheDocument();
     expect(within(statistics).getByText("4/5")).toBeInTheDocument();
-    expect(within(featureSummary).getByText("2/6")).toBeInTheDocument();
-    expect(within(featureSummary).getByText("Rogue's Dodge")).toBeInTheDocument();
-    expect(screen.getByLabelText("Daggerheart full info")).toBeInTheDocument();
+    for (const icon of ["hp", "stress", "evasion", "armor"] as const) {
+      expect((statistics as HTMLElement).querySelector(`[data-icon="${icon}"]`)).not.toBeNull();
+    }
+    expect(within(hopeSummary).getByText("2/6")).toBeInTheDocument();
+    expect(within(hopeSummary).queryByText("Rogue's Dodge")).not.toBeInTheDocument();
+    expect((hopeSummary as HTMLElement).querySelector('[data-icon="hope"]')).not.toBeNull();
+    expect(fullInfo).toBeInTheDocument();
     expect(screen.getByText("AGI 2")).toBeInTheDocument();
+    expect(within(fullInfo).getByText("Hope Feature")).toBeInTheDocument();
+    expect(within(fullInfo).getByText("Rogue's Dodge")).toBeInTheDocument();
     expect(screen.getByText("Arcane Bolt")).toBeInTheDocument();
     expect(screen.queryByText("Details")).not.toBeInTheDocument();
     expect(screen.queryByText("Background")).not.toBeInTheDocument();

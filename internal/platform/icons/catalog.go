@@ -30,6 +30,11 @@ var catalog = []Definition{
 		Description: "Session lifecycle and control events.",
 	},
 	{
+		ID:          commonv1.IconId_ICON_ID_SCENE,
+		Name:        "Scene",
+		Description: "Scene framing and dramatic beats.",
+	},
+	{
 		ID:          commonv1.IconId_ICON_ID_PARTICIPANT,
 		Name:        "Participant",
 		Description: "Participant and seat management events.",
@@ -80,9 +85,19 @@ var catalog = []Definition{
 		Description: "Damage application and outcomes.",
 	},
 	{
+		ID:          commonv1.IconId_ICON_ID_HP,
+		Name:        "HP",
+		Description: "HP and health pools.",
+	},
+	{
 		ID:          commonv1.IconId_ICON_ID_ARMOR,
 		Name:        "Armor",
 		Description: "Armor and mitigation effects.",
+	},
+	{
+		ID:          commonv1.IconId_ICON_ID_EVASION,
+		Name:        "Evasion",
+		Description: "Evasion and dodge-based defense.",
 	},
 	{
 		ID:          commonv1.IconId_ICON_ID_CONDITION,
@@ -172,7 +187,7 @@ var catalog = []Definition{
 	{
 		ID:          commonv1.IconId_ICON_ID_ENVIRONMENT,
 		Name:        "Environment",
-		Description: "Environments and scenes.",
+		Description: "Physical environments and locations.",
 	},
 	{
 		ID:          commonv1.IconId_ICON_ID_ANIMAL,

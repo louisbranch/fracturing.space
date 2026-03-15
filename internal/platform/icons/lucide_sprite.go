@@ -286,5 +286,23 @@ const lucideSprite = `<svg xmlns="http://www.w3.org/2000/svg" style="display:non
     <path d="M8 8v12" />
     <path d="M4 4v16" />
   </symbol>
+  <symbol id="lucide-drama" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M10 11h.01" />
+    <path d="M14 6h.01" />
+    <path d="M18 6h.01" />
+    <path d="M6.5 13.1h.01" />
+    <path d="M22 5c0 9-4 12-6 12s-6-3-6-12c0-2 2-3 6-3s6 1 6 3" />
+    <path d="M17.4 9.9c-.8.8-2 .8-2.8 0" />
+    <path d="M10.1 7.1C9 7.2 7.7 7.7 6 8.6c-3.5 2-4.7 3.9-3.7 5.6 4.5 7.8 9.5 8.4 11.2 7.4.9-.5 1.9-2.1 1.9-4.7" />
+    <path d="M9.1 16.5c.3-1.1 1.4-1.7 2.4-1.4" />
+  </symbol>
+  <symbol id="lucide-heart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 9.5a5.5 5.5 0 0 1 9.591-3.676.56.56 0 0 0 .818 0A5.49 5.49 0 0 1 22 9.5c0 2.29-1.5 4-3 5.5l-5.492 5.313a2 2 0 0 1-3 .019L5 15c-1.5-1.5-3-3.2-3-5.5" />
+  </symbol>
+  <symbol id="lucide-redo-dot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="17" r="1" />
+    <path d="M21 7v6h-6" />
+    <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+  </symbol>
 </svg>
 `
