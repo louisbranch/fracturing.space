@@ -1,5 +1,3 @@
-// Package grpcerror centralizes transport-boundary error shaping for game gRPC
-// handlers so write-path helpers in different service packages remain aligned.
 package grpcerror
 
 import (
