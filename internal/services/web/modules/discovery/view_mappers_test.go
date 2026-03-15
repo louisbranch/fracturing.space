@@ -10,7 +10,7 @@ func TestMapEntriesToView(t *testing.T) {
 	t.Parallel()
 
 	views := mapEntriesToView([]discoveryapp.StarterEntry{{
-		CampaignID:  "c1",
+		EntryID:     "starter:one",
 		Title:       "Starter One",
 		Description: "A first step",
 		Tags:        []string{"beginner"},
@@ -25,11 +25,25 @@ func TestMapEntriesToView(t *testing.T) {
 	if len(views) != 1 {
 		t.Fatalf("len(views) = %d, want 1", len(views))
 	}
-	if views[0].CampaignID != "c1" {
-		t.Fatalf("CampaignID = %q, want %q", views[0].CampaignID, "c1")
+	if views[0].EntryID != "starter:one" {
+		t.Fatalf("EntryID = %q, want %q", views[0].EntryID, "starter:one")
 	}
 	if views[0].Title != "Starter One" {
 		t.Fatalf("Title = %q, want %q", views[0].Title, "Starter One")
+	}
+}
+
+func TestMapPageToView(t *testing.T) {
+	t.Parallel()
+
+	view := mapPageToView(discoveryapp.Page{
+		Status: discoveryapp.PageStatusUnavailable,
+	})
+	if !view.Unavailable {
+		t.Fatal("Unavailable = false, want true")
+	}
+	if view.Status != "unavailable" {
+		t.Fatalf("Status = %q, want %q", view.Status, "unavailable")
 	}
 }
 

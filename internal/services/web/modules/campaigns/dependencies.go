@@ -3,6 +3,7 @@ package campaigns
 import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -15,6 +16,7 @@ import (
 type Dependencies struct {
 	CampaignClient           CampaignClient
 	CommunicationClient      campaigngateway.CommunicationClient
+	DiscoveryClient          campaigngateway.DiscoveryClient
 	AgentClient              campaigngateway.AgentClient
 	ParticipantClient        ParticipantClient
 	CharacterClient          CharacterClient
@@ -25,6 +27,7 @@ type Dependencies struct {
 	SocialClient             campaigngateway.SocialClient
 	AuthClient               campaigngateway.AuthClient
 	AuthorizationClient      campaigngateway.AuthorizationClient
+	ForkClient               campaigngateway.ForkClient
 }
 
 // BindAuthDependency wires auth-backed clients into the campaigns dependency set.
@@ -50,6 +53,7 @@ func BindGameDependency(deps *Dependencies, conn *grpc.ClientConn) {
 	}
 	deps.CampaignClient = statev1.NewCampaignServiceClient(conn)
 	deps.CommunicationClient = statev1.NewCommunicationServiceClient(conn)
+	deps.ForkClient = statev1.NewForkServiceClient(conn)
 	deps.ParticipantClient = statev1.NewParticipantServiceClient(conn)
 	deps.CharacterClient = statev1.NewCharacterServiceClient(conn)
 	deps.DaggerheartContentClient = daggerheartv1.NewDaggerheartContentServiceClient(conn)
@@ -57,6 +61,14 @@ func BindGameDependency(deps *Dependencies, conn *grpc.ClientConn) {
 	deps.SessionClient = statev1.NewSessionServiceClient(conn)
 	deps.InviteClient = statev1.NewInviteServiceClient(conn)
 	deps.AuthorizationClient = statev1.NewAuthorizationServiceClient(conn)
+}
+
+// BindDiscoveryDependency wires discovery-backed clients into the campaigns dependency set.
+func BindDiscoveryDependency(deps *Dependencies, conn *grpc.ClientConn) {
+	if deps == nil || conn == nil {
+		return
+	}
+	deps.DiscoveryClient = discoveryv1.NewDiscoveryServiceClient(conn)
 }
 
 // BindAIDependency wires AI-backed clients into the campaigns dependency set.

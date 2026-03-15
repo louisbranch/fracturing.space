@@ -151,6 +151,7 @@ func TestRegistryBuildIncludesCampaignsWhenDependencySetIsComplete(t *testing.T)
 	BindSocialDependency(&deps, conn)
 	BindGameDependency(&deps, conn)
 	BindAIDependency(&deps, conn)
+	BindDiscoveryDependency(&deps, conn)
 
 	reg := NewRegistryBuilder()
 	built := reg.Build(RegistryInput{

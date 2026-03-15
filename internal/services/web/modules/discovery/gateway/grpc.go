@@ -60,12 +60,8 @@ func (g GRPCGateway) ListStarterEntries(ctx context.Context) ([]discoveryapp.Sta
 
 // mapProtoToStarterEntry converts a proto DiscoveryEntry to a presentation-ready StarterEntry.
 func mapProtoToStarterEntry(l *discoveryv1.DiscoveryEntry) discoveryapp.StarterEntry {
-	campaignID := strings.TrimSpace(l.GetSourceId())
-	if campaignID == "" {
-		campaignID = strings.TrimSpace(l.GetEntryId())
-	}
 	return discoveryapp.StarterEntry{
-		CampaignID:  campaignID,
+		EntryID:     strings.TrimSpace(l.GetEntryId()),
 		Title:       strings.TrimSpace(l.GetTitle()),
 		Description: strings.TrimSpace(l.GetDescription()),
 		Tags:        l.GetTags(),

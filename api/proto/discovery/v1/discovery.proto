@@ -87,6 +87,18 @@ message DiscoveryEntry {
 
   // Free-form discovery tags (e.g. "solo", "mystery").
   repeated string tags = 18;
+
+  // Structured preview hook shown on the protected starter detail page.
+  string preview_hook = 19;
+
+  // Short playstyle label used in starter preview UI.
+  string preview_playstyle_label = 20;
+
+  // Premade character name shown in starter preview UI.
+  string preview_character_name = 21;
+
+  // Premade character summary shown in starter preview UI.
+  string preview_character_summary = 22;
 }
 
 message CreateDiscoveryEntryRequest {

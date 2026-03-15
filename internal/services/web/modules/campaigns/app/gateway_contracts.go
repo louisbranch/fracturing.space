@@ -11,6 +11,12 @@ type CampaignCatalogReadGateway interface {
 	ListCampaigns(context.Context) ([]CampaignSummary, error)
 }
 
+// CampaignStarterGateway loads protected starter preview state and launches starter forks.
+type CampaignStarterGateway interface {
+	StarterPreview(context.Context, string) (CampaignStarterPreview, error)
+	LaunchStarter(context.Context, string, LaunchStarterInput) (StarterLaunchResult, error)
+}
+
 // CampaignWorkspaceReadGateway loads campaign workspace metadata reads for the
 // web service.
 type CampaignWorkspaceReadGateway interface {

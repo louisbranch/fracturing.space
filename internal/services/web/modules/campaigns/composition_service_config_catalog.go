@@ -14,6 +14,13 @@ func newCatalogServiceConfig(deps campaigngateway.GRPCGatewayDeps, assetBaseURL 
 	}
 }
 
+// newStarterServiceConfig keeps protected starter preview/launch composition local to starter ownership.
+func newStarterServiceConfig(deps campaigngateway.GRPCGatewayDeps) campaignapp.StarterServiceConfig {
+	return campaignapp.StarterServiceConfig{
+		Gateway: campaigngateway.NewStarterGateway(deps.Starter),
+	}
+}
+
 // newWorkspaceServiceConfig keeps workspace-read composition with the catalog
 // family instead of widening the root builder.
 func newWorkspaceServiceConfig(deps campaigngateway.GRPCGatewayDeps, assetBaseURL string) campaignapp.WorkspaceServiceConfig {

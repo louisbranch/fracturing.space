@@ -35,6 +35,10 @@ type DiscoveryEntry struct {
 	CharacterCount             int
 	Storyline                  string
 	Tags                       []string
+	PreviewHook                string
+	PreviewPlaystyleLabel      string
+	PreviewCharacterName       string
+	PreviewCharacterSummary    string
 	CreatedAt                  time.Time
 	UpdatedAt                  time.Time
 }

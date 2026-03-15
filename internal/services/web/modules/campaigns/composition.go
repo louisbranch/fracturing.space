@@ -16,6 +16,16 @@ type CampaignClient interface {
 	campaigngateway.CampaignMutationClient
 }
 
+// DiscoveryClient keeps composition ownership on the generated discovery client.
+type DiscoveryClient interface {
+	campaigngateway.DiscoveryClient
+}
+
+// ForkClient keeps composition ownership on the generated fork client.
+type ForkClient interface {
+	campaigngateway.ForkClient
+}
+
 // ParticipantClient keeps composition ownership on the generated participant
 // client while this area composes narrower read and mutation seams internally.
 type ParticipantClient interface {
@@ -55,6 +65,7 @@ type CompositionConfig struct {
 
 	CampaignClient           CampaignClient
 	CommunicationClient      campaigngateway.CommunicationClient
+	DiscoveryClient          DiscoveryClient
 	AgentClient              campaigngateway.AgentClient
 	ParticipantClient        ParticipantClient
 	CharacterClient          CharacterClient
@@ -65,6 +76,7 @@ type CompositionConfig struct {
 	SocialClient             campaigngateway.SocialClient
 	AuthClient               campaigngateway.AuthClient
 	AuthorizationClient      campaigngateway.AuthorizationClient
+	ForkClient               ForkClient
 }
 
 // ProtectedSurfaceOptions carries the shared cross-cutting inputs the protected
@@ -103,6 +115,7 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 		AssetBaseURL:             options.AssetBaseURL,
 		CampaignClient:           deps.CampaignClient,
 		CommunicationClient:      deps.CommunicationClient,
+		DiscoveryClient:          deps.DiscoveryClient,
 		AgentClient:              deps.AgentClient,
 		ParticipantClient:        deps.ParticipantClient,
 		CharacterClient:          deps.CharacterClient,
@@ -113,6 +126,7 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 		SocialClient:             deps.SocialClient,
 		AuthClient:               deps.AuthClient,
 		AuthorizationClient:      deps.AuthorizationClient,
+		ForkClient:               deps.ForkClient,
 	}
 	if !config.configured() {
 		return nil, false
@@ -125,6 +139,7 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 func (config CompositionConfig) configured() bool {
 	return config.CampaignClient != nil &&
 		config.CommunicationClient != nil &&
+		config.DiscoveryClient != nil &&
 		config.AgentClient != nil &&
 		config.ParticipantClient != nil &&
 		config.CharacterClient != nil &&
@@ -134,5 +149,6 @@ func (config CompositionConfig) configured() bool {
 		config.InviteClient != nil &&
 		config.SocialClient != nil &&
 		config.AuthClient != nil &&
-		config.AuthorizationClient != nil
+		config.AuthorizationClient != nil &&
+		config.ForkClient != nil
 }

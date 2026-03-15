@@ -3,6 +3,7 @@ package web
 import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
+	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
@@ -31,6 +32,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           defaultCampaignClient(),
 					CommunicationClient:      defaultCommunicationClient(),
+					DiscoveryClient:          defaultDiscoveryClient(),
 					AgentClient:              fakeAgentClient{},
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),
@@ -41,6 +43,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 					SocialClient:             social,
 					AuthClient:               auth,
 					AuthorizationClient:      defaultAuthorizationClient(),
+					ForkClient:               defaultForkClient(),
 				},
 				Invite: modules.InviteDependencies{
 					InviteClient: defaultInviteClient(),
@@ -123,4 +126,20 @@ func defaultDaggerheartAssetClient() fakeWebDaggerheartAssetClient {
 
 func defaultAuthorizationClient() fakeWebAuthorizationClient {
 	return fakeWebAuthorizationClient{}
+}
+
+func defaultDiscoveryClient() fakeWebDiscoveryClient {
+	return fakeWebDiscoveryClient{}
+}
+
+func defaultForkClient() fakeWebForkClient {
+	return fakeWebForkClient{}
+}
+
+type fakeWebDiscoveryClient struct {
+	discoveryv1.DiscoveryServiceClient
+}
+
+type fakeWebForkClient struct {
+	statev1.ForkServiceClient
 }

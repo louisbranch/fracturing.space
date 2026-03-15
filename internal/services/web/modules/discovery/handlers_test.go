@@ -24,7 +24,7 @@ func (s *serviceStub) LoadPage(context.Context) discoveryapp.Page {
 func TestHandleIndexRendersDiscoveryPageForDegradedServiceState(t *testing.T) {
 	t.Parallel()
 
-	svc := &serviceStub{page: discoveryapp.Page{Degraded: true, Empty: true}}
+	svc := &serviceStub{page: discoveryapp.Page{Status: discoveryapp.PageStatusUnavailable}}
 	h := newHandlers(publichandler.NewBase(), svc)
 
 	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
@@ -41,6 +41,12 @@ func TestHandleIndexRendersDiscoveryPageForDegradedServiceState(t *testing.T) {
 	if !strings.Contains(body, "discover-root") {
 		t.Fatalf("body missing discovery marker: %q", body)
 	}
+	if !strings.Contains(body, `data-discovery-status="unavailable"`) {
+		t.Fatalf("body missing unavailable discovery status: %q", body)
+	}
+	if !strings.Contains(body, `data-discovery-unavailable="true"`) {
+		t.Fatalf("body missing unavailable notice: %q", body)
+	}
 }
 
 func TestHandleIndexMapsServiceEntries(t *testing.T) {
@@ -48,8 +54,9 @@ func TestHandleIndexMapsServiceEntries(t *testing.T) {
 
 	svc := &serviceStub{
 		page: discoveryapp.Page{
+			Status: discoveryapp.PageStatusReady,
 			Entries: []discoveryapp.StarterEntry{{
-				CampaignID:  "c1",
+				EntryID:     "starter:one",
 				Title:       "Starter One",
 				Description: "A first step",
 				Tags:        []string{"beginner"},
@@ -74,5 +81,11 @@ func TestHandleIndexMapsServiceEntries(t *testing.T) {
 	body := rr.Body.String()
 	if !strings.Contains(body, "Starter One") {
 		t.Fatalf("body missing mapped entry: %q", body)
+	}
+	if !strings.Contains(body, "View Campaign") {
+		t.Fatalf("body missing localized starter CTA: %q", body)
+	}
+	if !strings.Contains(body, `data-discovery-status="ready"`) {
+		t.Fatalf("body missing ready discovery status: %q", body)
 	}
 }

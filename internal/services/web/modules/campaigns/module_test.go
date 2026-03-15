@@ -92,6 +92,86 @@ func TestMountServesCampaignsGet(t *testing.T) {
 	}
 }
 
+func TestMountServesStarterPreviewUnderCampaignsPrefix(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		starterPreview: campaignapp.CampaignStarterPreview{
+			EntryID:              "starter:lantern-in-the-dark",
+			Title:                "The Lantern in the Dark",
+			Description:          "A tight mystery for one session.",
+			Hook:                 "A lantern appears on the black tide.",
+			PlaystyleLabel:       "Investigation",
+			CharacterName:        "Seren Vale",
+			CharacterSummary:     "A steadfast guardian chasing a vanished light.",
+			Storyline:            "Follow the lantern, face the wreck, and choose what returns.",
+			System:               "Daggerheart",
+			Difficulty:           "Beginner",
+			Duration:             "1 session",
+			GmMode:               "AI",
+			Players:              "1",
+			Tags:                 []string{"mystery"},
+			AIAgentOptions:       []campaignapp.CampaignAIAgentOption{{ID: "agent-1", Label: "GM Agent", Enabled: true}},
+			HasAvailableAIAgents: true,
+		},
+	}, modulehandler.NewTestBase(), nil))
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignStarter("starter:lantern-in-the-dark"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if !strings.Contains(body, "The Lantern in the Dark") {
+		t.Fatalf("body missing starter preview title: %q", body)
+	}
+	if strings.Contains(body, `<h2 class="text-3xl font-semibold">The Lantern in the Dark</h2>`) {
+		t.Fatalf("body unexpectedly rendered duplicate in-content starter title: %q", body)
+	}
+	if !strings.Contains(body, `action="`+routepath.AppCampaignStarterLaunch("starter:lantern-in-the-dark")+`"`) {
+		t.Fatalf("body missing starter launch action: %q", body)
+	}
+}
+
+func TestMountStarterLaunchForksCampaignAndRedirects(t *testing.T) {
+	t.Parallel()
+
+	recorder := &starterLaunchCall{}
+	gateway := fakeGateway{
+		starterLaunchResult:   campaignapp.StarterLaunchResult{CampaignID: "camp-777"},
+		starterLaunchRecorder: recorder,
+	}
+	m := New(configWithGateway(gateway, modulehandler.NewTestBase(), nil))
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	form := url.Values{"ai_agent_id": {"agent-1"}}
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignStarterLaunch("starter:lantern-in-the-dark"), strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
+	}
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaign("camp-777") {
+		t.Fatalf("location = %q, want %q", got, routepath.AppCampaign("camp-777"))
+	}
+	if recorder.starterKey != "starter:lantern-in-the-dark" {
+		t.Fatalf("starter key = %q, want %q", recorder.starterKey, "starter:lantern-in-the-dark")
+	}
+	if recorder.input.AIAgentID != "agent-1" {
+		t.Fatalf("launch input = %#v, want ai agent id agent-1", recorder.input)
+	}
+}
+
 func TestMountRejectsMissingRequiredServices(t *testing.T) {
 	t.Parallel()
 
@@ -626,6 +706,11 @@ func defaultTestWorkflows() map[campaignapp.GameSystem]campaignworkflow.Characte
 
 type fakeGateway struct {
 	items                             []campaignapp.CampaignSummary
+	starterPreview                    campaignapp.CampaignStarterPreview
+	starterPreviewErr                 error
+	starterLaunchResult               campaignapp.StarterLaunchResult
+	starterLaunchErr                  error
+	starterLaunchRecorder             *starterLaunchCall
 	workspaceSystem                   string
 	workspaceGMMode                   string
 	workspaceStatus                   string
@@ -710,6 +795,29 @@ func (f fakeGateway) ListCampaigns(context.Context) ([]campaignapp.CampaignSumma
 		return nil, f.err
 	}
 	return f.items, nil
+}
+
+func (f fakeGateway) StarterPreview(context.Context, string) (campaignapp.CampaignStarterPreview, error) {
+	if f.starterPreviewErr != nil {
+		return campaignapp.CampaignStarterPreview{}, f.starterPreviewErr
+	}
+	return f.starterPreview, nil
+}
+
+type starterLaunchCall struct {
+	starterKey string
+	input      campaignapp.LaunchStarterInput
+}
+
+func (f fakeGateway) LaunchStarter(_ context.Context, starterKey string, input campaignapp.LaunchStarterInput) (campaignapp.StarterLaunchResult, error) {
+	if f.starterLaunchRecorder != nil {
+		f.starterLaunchRecorder.starterKey = starterKey
+		f.starterLaunchRecorder.input = input
+	}
+	if f.starterLaunchErr != nil {
+		return campaignapp.StarterLaunchResult{}, f.starterLaunchErr
+	}
+	return f.starterLaunchResult, nil
 }
 
 func (f fakeGateway) CampaignName(_ context.Context, campaignID string) (string, error) {
@@ -1278,6 +1386,18 @@ func responseCookieByName(rr *httptest.ResponseRecorder, name string) *http.Cook
 // of the fail-closed unavailable gateway. Tests only need to set the clients
 // they exercise.
 func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPCGatewayDeps {
+	if deps.Starter.Discovery == nil {
+		deps.Starter.Discovery = stubDiscoveryClient{}
+	}
+	if deps.Starter.Agent == nil {
+		deps.Starter.Agent = stubAgentClient{}
+	}
+	if deps.Starter.Campaign == nil {
+		deps.Starter.Campaign = fakeCampaignClient{}
+	}
+	if deps.Starter.Fork == nil {
+		deps.Starter.Fork = stubForkClient{}
+	}
 	if deps.CatalogRead.Campaign == nil {
 		deps.CatalogRead.Campaign = fakeCampaignClient{}
 	}
@@ -1375,8 +1495,14 @@ type stubParticipantMutationClient struct {
 type stubCommunicationClient struct {
 	campaigngateway.CommunicationClient
 }
+type stubDiscoveryClient struct {
+	campaigngateway.DiscoveryClient
+}
 type stubAgentClient struct {
 	campaigngateway.AgentClient
+}
+type stubForkClient struct {
+	campaigngateway.ForkClient
 }
 type stubCharacterReadClient struct {
 	campaigngateway.CharacterReadClient

@@ -7,6 +7,14 @@ type CatalogReadDeps struct {
 	Campaign CampaignReadClient
 }
 
+// StarterDeps keeps protected starter preview/launch dependencies explicit.
+type StarterDeps struct {
+	Discovery DiscoveryClient
+	Agent     AgentClient
+	Campaign  CampaignMutationClient
+	Fork      ForkClient
+}
+
 // CatalogMutationDeps keeps campaign catalog mutation dependencies explicit.
 type CatalogMutationDeps struct {
 	Campaign CampaignMutationClient
@@ -111,6 +119,7 @@ type CharacterCreationMutationDeps struct {
 // reintroducing flat read/mutation dependency bags.
 type GRPCGatewayDeps struct {
 	CatalogRead       CatalogReadDeps
+	Starter           StarterDeps
 	CatalogMutation   CatalogMutationDeps
 	WorkspaceRead     WorkspaceReadDeps
 	GameRead          GameReadDeps
@@ -136,6 +145,11 @@ type GRPCGatewayDeps struct {
 type catalogReadGateway struct {
 	read         CatalogReadDeps
 	assetBaseURL string
+}
+
+// starterGateway maps protected starter preview and launch operations from discovery/game/AI deps.
+type starterGateway struct {
+	deps StarterDeps
 }
 
 // catalogMutationGateway maps campaign catalog mutations without widening read deps.

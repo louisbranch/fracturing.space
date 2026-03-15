@@ -6,6 +6,11 @@ type catalogService struct {
 	mutation CampaignCatalogMutationGateway
 }
 
+// starterService keeps protected starter preview and launch behavior local to starter ownership.
+type starterService struct {
+	gateway CampaignStarterGateway
+}
+
 // workspaceService keeps campaign workspace summaries on their own read seam.
 type workspaceService struct {
 	read CampaignWorkspaceReadGateway
@@ -33,6 +38,14 @@ func NewCatalogService(config CatalogServiceConfig) CampaignCatalogService {
 		return nil
 	}
 	return catalogService{read: config.Read, mutation: config.Mutation}
+}
+
+// NewStarterService constructs the protected starter service surface from explicit gateway seams.
+func NewStarterService(config StarterServiceConfig) CampaignStarterService {
+	if config.Gateway == nil {
+		return nil
+	}
+	return starterService{gateway: config.Gateway}
 }
 
 // NewWorkspaceService constructs the workspace-read service surface from

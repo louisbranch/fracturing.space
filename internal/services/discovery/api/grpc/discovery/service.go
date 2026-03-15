@@ -49,7 +49,6 @@ func (s *Service) CreateDiscoveryEntry(ctx context.Context, in *discoveryv1.Crea
 
 	entry := in.GetEntry()
 	entryID := strings.TrimSpace(entry.GetEntryId())
-	sourceID := strings.TrimSpace(entry.GetSourceId())
 	title := strings.TrimSpace(entry.GetTitle())
 	description := strings.TrimSpace(entry.GetDescription())
 	expectedDurationLabel := strings.TrimSpace(entry.GetExpectedDurationLabel())
@@ -58,9 +57,6 @@ func (s *Service) CreateDiscoveryEntry(ctx context.Context, in *discoveryv1.Crea
 	}
 	if entry.GetKind() == discoveryv1.DiscoveryEntryKind_DISCOVERY_ENTRY_KIND_UNSPECIFIED {
 		return nil, status.Error(codes.InvalidArgument, "entry kind is required")
-	}
-	if sourceID == "" {
-		return nil, status.Error(codes.InvalidArgument, "source id is required")
 	}
 	if title == "" {
 		return nil, status.Error(codes.InvalidArgument, "title is required")
@@ -91,7 +87,7 @@ func (s *Service) CreateDiscoveryEntry(ctx context.Context, in *discoveryv1.Crea
 	record := storage.DiscoveryEntry{
 		EntryID:                    entryID,
 		Kind:                       entry.GetKind(),
-		SourceID:                   sourceID,
+		SourceID:                   strings.TrimSpace(entry.GetSourceId()),
 		Title:                      title,
 		Description:                description,
 		RecommendedParticipantsMin: int(entry.GetRecommendedParticipantsMin()),
@@ -105,6 +101,10 @@ func (s *Service) CreateDiscoveryEntry(ctx context.Context, in *discoveryv1.Crea
 		CharacterCount:             int(entry.GetCharacterCount()),
 		Storyline:                  strings.TrimSpace(entry.GetStoryline()),
 		Tags:                       entry.GetTags(),
+		PreviewHook:                strings.TrimSpace(entry.GetPreviewHook()),
+		PreviewPlaystyleLabel:      strings.TrimSpace(entry.GetPreviewPlaystyleLabel()),
+		PreviewCharacterName:       strings.TrimSpace(entry.GetPreviewCharacterName()),
+		PreviewCharacterSummary:    strings.TrimSpace(entry.GetPreviewCharacterSummary()),
 		CreatedAt:                  now,
 		UpdatedAt:                  now,
 	}
@@ -186,6 +186,10 @@ func discoveryEntryToProto(entry storage.DiscoveryEntry) *discoveryv1.DiscoveryE
 		CharacterCount:             int32(entry.CharacterCount),
 		Storyline:                  entry.Storyline,
 		Tags:                       entry.Tags,
+		PreviewHook:                entry.PreviewHook,
+		PreviewPlaystyleLabel:      entry.PreviewPlaystyleLabel,
+		PreviewCharacterName:       entry.PreviewCharacterName,
+		PreviewCharacterSummary:    entry.PreviewCharacterSummary,
 		CreatedAt:                  timestamppb.New(entry.CreatedAt),
 		UpdatedAt:                  timestamppb.New(entry.UpdatedAt),
 	}

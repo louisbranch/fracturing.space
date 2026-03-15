@@ -2,7 +2,7 @@
   {
     "entry_id": "starter:lantern-in-the-dark",
     "kind": "DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER",
-    "source_id": "starter:lantern-in-the-dark",
+    "source_id": "",
     "title": "The Lantern in the Dark",
     "description": "A coastal mystery for a solo Guardian — investigate a darkened lighthouse, uncover a smuggling ring, and save your home village.",
     "recommended_participants_min": 1,
@@ -15,12 +15,44 @@
     "level": 1,
     "character_count": 1,
     "storyline_file": "lantern-in-the-dark.md",
-    "tags": ["solo", "mystery", "guardian", "beginner"]
+    "tags": ["solo", "mystery", "guardian", "beginner"],
+    "preview_hook": "The lighthouse above Blacksalt Cove has gone dark, and the village is already whispering about wreckers and ghosts.",
+    "preview_playstyle_label": "Guardian defender",
+    "preview_character_name": "Mira Vale",
+    "preview_character_summary": "A seaborne Guardian who knows every reef path around the village and refuses to let smugglers claim another life.",
+    "premade_character": {
+      "name": "Mira Vale",
+      "pronouns": "she/her",
+      "summary": "A seaborne Guardian who knows every reef path around the village and refuses to let smugglers claim another life.",
+      "class_id": "class.guardian",
+      "subclass_id": "subclass.stalwart",
+      "ancestry_id": "heritage.human",
+      "community_id": "heritage.seaborne",
+      "weapon_ids": ["weapon.longsword"],
+      "armor_id": "armor.chainmail-armor",
+      "potion_item_id": "item.minor-health-potion",
+      "description": "Salt-stiff cloak, steady eyes, and a lantern-hook shield scarred by old storms.",
+      "background": "Former harbor watch sentry who stayed when the rest of the crew scattered after a deadly shipwreck.",
+      "connections": "The villagers trust you to keep them safe, but one of the smugglers may be someone you once protected.",
+      "domain_card_ids": ["domain_card.valor-i-am-your-shield", "domain_card.blade-get-back-up"],
+      "traits": {
+        "agility": 0,
+        "strength": 2,
+        "finesse": 1,
+        "instinct": 0,
+        "presence": -1,
+        "knowledge": 1
+      },
+      "experiences": [
+        {"name": "Harbor Watch Veteran", "modifier": 2},
+        {"name": "Smuggler Signs and Routes", "modifier": 1}
+      ]
+    }
   },
   {
     "entry_id": "starter:whispers-of-the-thornwood",
     "kind": "DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER",
-    "source_id": "starter:whispers-of-the-thornwood",
+    "source_id": "",
     "title": "Whispers of the Thornwood",
     "description": "A nature survival adventure for a solo Ranger — track a spreading corruption through an ancient forest and restore its heart.",
     "recommended_participants_min": 1,
@@ -33,12 +65,44 @@
     "level": 1,
     "character_count": 1,
     "storyline_file": "whispers-of-the-thornwood.md",
-    "tags": ["solo", "nature", "ranger", "beginner"]
+    "tags": ["solo", "nature", "ranger", "beginner"],
+    "preview_hook": "Animals are fleeing the Thornwood, streams are turning black, and the old forest paths now whisper your name.",
+    "preview_playstyle_label": "Ranger scout",
+    "preview_character_name": "Ash Thorn",
+    "preview_character_summary": "A wildborne Ranger who reads the forest like a map and is determined to cut the corruption out at its source.",
+    "premade_character": {
+      "name": "Ash Thorn",
+      "pronouns": "they/them",
+      "summary": "A wildborne Ranger who reads the forest like a map and is determined to cut the corruption out at its source.",
+      "class_id": "class.ranger",
+      "subclass_id": "subclass.wayfinder",
+      "ancestry_id": "heritage.elf",
+      "community_id": "heritage.wildborne",
+      "weapon_ids": ["weapon.shortbow"],
+      "armor_id": "armor.leather-armor",
+      "potion_item_id": "item.minor-stamina-potion",
+      "description": "Moss-green leathers, a bow polished with cedar oil, and charms braided from old antlers.",
+      "background": "Trail guide and boundary warden for a settlement that survives because you know which paths stay alive.",
+      "connections": "The forest spirits still answer you, but something wearing a familiar voice is trying to lure you deeper.",
+      "domain_card_ids": ["domain_card.bone-i-see-it-coming", "domain_card.sage-gifted-tracker"],
+      "traits": {
+        "agility": 2,
+        "strength": 0,
+        "finesse": 1,
+        "instinct": 1,
+        "presence": 0,
+        "knowledge": -1
+      },
+      "experiences": [
+        {"name": "Thornwood Trail Guide", "modifier": 2},
+        {"name": "Spirit-Touched Tracker", "modifier": 1}
+      ]
+    }
   },
   {
     "entry_id": "starter:merchants-gambit",
     "kind": "DISCOVERY_ENTRY_KIND_CAMPAIGN_STARTER",
-    "source_id": "starter:merchants-gambit",
+    "source_id": "",
     "title": "The Merchant's Gambit",
     "description": "A social intrigue adventure for a solo Bard — expose a con artist's scheme at a bustling trade fair before the auction begins.",
     "recommended_participants_min": 1,
@@ -51,6 +115,38 @@
     "level": 1,
     "character_count": 1,
     "storyline_file": "merchants-gambit.md",
-    "tags": ["solo", "intrigue", "bard", "beginner"]
+    "tags": ["solo", "intrigue", "bard", "beginner"],
+    "preview_hook": "A priceless relic will change hands by sunset unless you can expose the fraud, sway the crowd, and survive the chaos you stir up.",
+    "preview_playstyle_label": "Bard face",
+    "preview_character_name": "Lucan Reed",
+    "preview_character_summary": "A loreborne Bard whose charm opens doors, but whose sharp eye for lies is the real weapon at the trade fair.",
+    "premade_character": {
+      "name": "Lucan Reed",
+      "pronouns": "he/him",
+      "summary": "A loreborne Bard whose charm opens doors, but whose sharp eye for lies is the real weapon at the trade fair.",
+      "class_id": "class.bard",
+      "subclass_id": "subclass.wordsmith",
+      "ancestry_id": "heritage.human",
+      "community_id": "heritage.loreborne",
+      "weapon_ids": ["weapon.dagger"],
+      "armor_id": "armor.leather-armor",
+      "potion_item_id": "item.minor-health-potion",
+      "description": "Fine coat, quick smile, and a satchel packed with notes on every guildmaster worth flattering.",
+      "background": "Traveling negotiator who learned that every market has a song, and every liar misses a beat.",
+      "connections": "One of the fair's patrons thinks you are here to help them win the auction, while another knows too much about your past cons.",
+      "domain_card_ids": ["domain_card.grace-inspirational-words", "domain_card.codex-book-of-illiat"],
+      "traits": {
+        "agility": 0,
+        "strength": -1,
+        "finesse": 1,
+        "instinct": 0,
+        "presence": 2,
+        "knowledge": 1
+      },
+      "experiences": [
+        {"name": "Trade Fair Fixer", "modifier": 2},
+        {"name": "Reads a Room Fast", "modifier": 1}
+      ]
+    }
   }
 ]

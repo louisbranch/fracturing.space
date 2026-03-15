@@ -50,6 +50,10 @@ func TestCreateGetDiscoveryEntry_RoundTrip(t *testing.T) {
 		CharacterCount:             1,
 		Storyline:                  "# Sunfall",
 		Tags:                       []string{"solo", "mystery"},
+		PreviewHook:                "A dark bell tolls across the valley.",
+		PreviewPlaystyleLabel:      "Guardian defender",
+		PreviewCharacterName:       "Mira Vale",
+		PreviewCharacterSummary:    "A steadfast guardian.",
 	}}
 	createResp, err := svc.CreateDiscoveryEntry(context.Background(), createReq)
 	if err != nil {
@@ -65,6 +69,9 @@ func TestCreateGetDiscoveryEntry_RoundTrip(t *testing.T) {
 	}
 	if got := getResp.GetEntry().GetSourceId(); got != "camp-1" {
 		t.Fatalf("source_id = %q, want camp-1", got)
+	}
+	if got := getResp.GetEntry().GetPreviewCharacterName(); got != "Mira Vale" {
+		t.Fatalf("preview_character_name = %q, want Mira Vale", got)
 	}
 }
 

@@ -25,6 +25,13 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 		return storage.CampaignRecord{}, nil, 0, err
 	}
 	sourceCampaign := sourceState.campaign
+	publicForkShape := publicForkShape{}
+	if requiresPublicForkSeatReassignment(sourceCampaign) {
+		publicForkShape, err = a.validatePublicForkShape(ctx, sourceCampaign)
+		if err != nil {
+			return storage.CampaignRecord{}, nil, 0, grpcerror.EnsureStatus(err)
+		}
+	}
 
 	// Determine fork point
 	forkPoint := forkPointFromProto(in.GetForkPoint())
@@ -128,6 +135,11 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 
 	if _, err := a.eventReplay.CopyToCampaign(ctx, sourceCampaignID, f.NewCampaignID, forkEventSeq, in.GetCopyParticipants()); err != nil {
 		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("copy events", err)
+	}
+	if requiresPublicForkSeatReassignment(sourceCampaign) {
+		if err := a.reassignForkedPublicOwnerSeat(ctx, f.NewCampaignID, publicForkShape); err != nil {
+			return storage.CampaignRecord{}, nil, 0, err
+		}
 	}
 
 	newCampaign, err := a.stores.Campaign.Get(ctx, f.NewCampaignID)
