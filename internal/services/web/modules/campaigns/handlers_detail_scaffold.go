@@ -12,13 +12,13 @@ import (
 // --- Campaign detail route handlers ---
 
 // handleOverviewMethodNotAllowed preserves explicit Allow headers for the overview route.
-func (h handlers) handleOverviewMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
+func (h overviewHandlers) handleOverviewMethodNotAllowed(w http.ResponseWriter, _ *http.Request) {
 	httpx.MethodNotAllowed(http.MethodGet+", HEAD")(w, nil)
 }
 
 // loadCampaignPageOrWriteError loads common campaign detail page state and
 // writes the transport error when loading fails.
-func (h handlers) loadCampaignPageOrWriteError(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, bool) {
+func (h campaignDetailHandlers) loadCampaignPageOrWriteError(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, bool) {
 	ctx, page, err := h.loadCampaignPage(w, r, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
@@ -29,7 +29,7 @@ func (h handlers) loadCampaignPageOrWriteError(w http.ResponseWriter, r *http.Re
 
 // writeCampaignDetailPage renders one populated campaign detail view with the
 // provided extra breadcrumbs.
-func (h handlers) writeCampaignDetailPage(
+func (h campaignDetailHandlers) writeCampaignDetailPage(
 	w http.ResponseWriter,
 	r *http.Request,
 	page *campaignPageContext,

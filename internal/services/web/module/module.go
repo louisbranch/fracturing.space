@@ -1,4 +1,3 @@
-// Package module defines the feature contract used by web composition.
 package module
 
 import "net/http"
@@ -11,18 +10,6 @@ type Viewer struct {
 	NotificationsAvailable bool
 	HasUnreadNotifications bool
 }
-
-// ResolveViewer resolves app chrome viewer state for a request.
-type ResolveViewer func(*http.Request) Viewer
-
-// ResolveSignedIn reports whether the request is associated with a signed-in actor.
-type ResolveSignedIn func(*http.Request) bool
-
-// ResolveUserID resolves the authenticated user id for a request.
-type ResolveUserID func(*http.Request) string
-
-// ResolveLanguage returns the effective request language.
-type ResolveLanguage func(*http.Request) string
 
 // Mount describes a module route mount.
 type Mount struct {

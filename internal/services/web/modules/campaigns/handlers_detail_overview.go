@@ -7,7 +7,7 @@ import (
 )
 
 // handleOverview renders the default campaign detail overview section.
-func (h handlers) handleOverview(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h overviewHandlers) handleOverview(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -22,7 +22,7 @@ func (h handlers) handleOverview(w http.ResponseWriter, r *http.Request, campaig
 }
 
 // handleCampaignEdit handles this route in the module transport layer.
-func (h handlers) handleCampaignEdit(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h overviewHandlers) handleCampaignEdit(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -43,7 +43,7 @@ func (h handlers) handleCampaignEdit(w http.ResponseWriter, r *http.Request, cam
 }
 
 // handleCampaignAIBindingPage renders the dedicated campaign AI-binding page.
-func (h handlers) handleCampaignAIBindingPage(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h overviewHandlers) handleCampaignAIBindingPage(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return

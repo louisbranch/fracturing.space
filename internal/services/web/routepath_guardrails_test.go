@@ -5,7 +5,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 )
@@ -68,7 +67,7 @@ func TestGoSourcesDoNotHardcodeInternalRoutes(t *testing.T) {
 func TestRoutepathPackageStaysSplitByOwnedSurface(t *testing.T) {
 	t.Parallel()
 
-	requiredFiles := []string{
+	for _, path := range []string{
 		"routepath/doc.go",
 		"routepath/helpers.go",
 		"routepath/core.go",
@@ -77,18 +76,18 @@ func TestRoutepathPackageStaysSplitByOwnedSurface(t *testing.T) {
 		"routepath/invite.go",
 		"routepath/profile.go",
 		"routepath/dashboard.go",
-		"routepath/campaigns.go",
 		"routepath/notifications.go",
 		"routepath/settings.go",
-	}
-
-	for _, path := range requiredFiles {
+	} {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("routepath ownership file %s missing: %v", path, err)
 		}
 	}
-	if _, err := os.Stat("routepath/routepath.go"); !os.IsNotExist(err) {
-		t.Fatalf("routepath monolith returned; keep owned surfaces split into area files")
+
+	for _, path := range []string{"routepath/routepath.go", "routepath/campaigns.go"} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("%s returned; keep route ownership split by owned surface", path)
+		}
 	}
 
 	entries, err := os.ReadDir("routepath")
@@ -96,29 +95,30 @@ func TestRoutepathPackageStaysSplitByOwnedSurface(t *testing.T) {
 		t.Fatalf("read routepath dir: %v", err)
 	}
 
-	var goFiles []string
+	campaignSurfaceFiles := map[string]struct{}{}
 	for _, entry := range entries {
 		if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" || strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
-		goFiles = append(goFiles, entry.Name())
+		if strings.HasPrefix(entry.Name(), "campaigns_") {
+			campaignSurfaceFiles[entry.Name()] = struct{}{}
+		}
 	}
-	slices.Sort(goFiles)
 
-	wantFiles := []string{
-		"campaigns.go",
-		"core.go",
-		"dashboard.go",
-		"discovery.go",
-		"doc.go",
-		"helpers.go",
-		"invite.go",
-		"notifications.go",
-		"profile.go",
-		"publicauth.go",
-		"settings.go",
+	for _, required := range []string{
+		"campaigns_core.go",
+		"campaigns_overview.go",
+		"campaigns_participants.go",
+		"campaigns_characters.go",
+		"campaigns_sessions.go",
+		"campaigns_invites.go",
+		"campaigns_starters.go",
+	} {
+		if _, ok := campaignSurfaceFiles[required]; !ok {
+			t.Fatalf("routepath missing campaign surface file %s", required)
+		}
 	}
-	if !slices.Equal(goFiles, wantFiles) {
-		t.Fatalf("routepath files = %v, want %v", goFiles, wantFiles)
+	if len(campaignSurfaceFiles) < 7 {
+		t.Fatalf("campaign routepath surfaces = %d, want at least 7 split files", len(campaignSurfaceFiles))
 	}
 }

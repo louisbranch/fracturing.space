@@ -44,7 +44,10 @@ func bootstrapRuntimeDependenciesWithConnFactory(
 	reporter *platformstatus.Reporter,
 	newConn managedConnFactory,
 ) (runtimeDependencies, error) {
-	requirements := dependencyRequirements(cfg, reporter)
+	requirements, err := dependencyRequirements(cfg, reporter)
+	if err != nil {
+		return runtimeDependencies{}, fmt.Errorf("resolve web dependency requirements: %w", err)
+	}
 	bundle, conns, err := bootstrapDependencies(ctx, requirements, cfg.AssetBaseURL, reporter, slog.Default(), newConn)
 	if err != nil {
 		return runtimeDependencies{}, fmt.Errorf("init web dependency graph: %w", err)

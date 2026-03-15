@@ -22,10 +22,19 @@ func TestNewServerRequiresHTTPAddr(t *testing.T) {
 	}
 }
 
+func TestNewHandlerRequiresDependencies(t *testing.T) {
+	t.Parallel()
+
+	_, err := NewHandler(Config{})
+	if err == nil {
+		t.Fatalf("expected error for missing dependencies")
+	}
+}
+
 func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{})
+	h, err := newTestHandler(Config{})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -90,7 +99,7 @@ func TestDefaultCampaignSurfaceExposesDetailAndMutationRoutes(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(defaultProtectedConfig(auth))
+	h, err := newTestHandler(defaultProtectedConfig(auth))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -157,7 +166,7 @@ func TestDefaultCampaignSurfaceExposesDetailAndMutationRoutes(t *testing.T) {
 func TestProtectedRouteDoesNotTrustUserHeader(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{})
+	h, err := newTestHandler(Config{})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -176,7 +185,7 @@ func TestProtectedRouteDoesNotTrustUserHeader(t *testing.T) {
 func TestNewHandlerAddsRequestIDHeader(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{})
+	h, err := newTestHandler(Config{})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -192,7 +201,7 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{SessionClient: auth},
 			modules.Dependencies{
@@ -232,7 +241,7 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 func TestNewHandlerCanonicalizesDiscoveryRoot(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{})
+	h, err := newTestHandler(Config{})
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -258,7 +267,7 @@ func TestNewHandlerCanonicalizesDiscoveryRoot(t *testing.T) {
 func TestNewServerBuildsHTTPServer(t *testing.T) {
 	t.Parallel()
 
-	srv, err := NewServer(context.Background(), Config{
+	srv, err := newTestServer(Config{
 		HTTPAddr: "127.0.0.1:0",
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{},

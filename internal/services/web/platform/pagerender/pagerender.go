@@ -11,7 +11,7 @@ import (
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
@@ -33,7 +33,7 @@ func (emptyComponent) Render(context.Context, io.Writer) error {
 }
 
 // WriteModulePage writes a module page using shared app-shell rendering contracts.
-func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver requestresolver.PageResolver, page ModulePage) error {
+func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver principal.PageResolver, page ModulePage) error {
 	if w == nil {
 		return nil
 	}
@@ -46,7 +46,7 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver requestres
 		fragment = emptyComponent{}
 	}
 
-	pageState := requestresolver.ResolveLocalizedPage(w, r, resolver)
+	pageState := principal.ResolveLocalizedPage(w, r, resolver)
 	ctx := httpx.RequestContext(r)
 	var buf bytes.Buffer
 	if httpx.IsHTMXRequest(r) {
@@ -63,7 +63,7 @@ func WriteModulePage(w http.ResponseWriter, r *http.Request, resolver requestres
 	toast := resolveFlashToast(w, r, pageState.Localizer, pageState.Language)
 	layout := webtemplates.AppLayoutWithMainHeaderAndLayout(
 		page.Title,
-		requestresolver.ResolveViewer(r, resolver),
+		principal.ResolveViewer(r, resolver),
 		page.Header,
 		page.Layout,
 		toast,
@@ -116,7 +116,7 @@ func WritePublicPage(w http.ResponseWriter, r *http.Request, title string, metaD
 	if body == nil {
 		body = emptyComponent{}
 	}
-	pageState := requestresolver.ResolveLocalizedPage(w, r, nil)
+	pageState := principal.ResolveLocalizedPage(w, r, nil)
 	toast := resolveFlashToast(w, r, pageState.Localizer, pageState.Language)
 	if toast != nil {
 		content := body

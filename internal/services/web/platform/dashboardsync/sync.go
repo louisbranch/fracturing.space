@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -33,6 +33,17 @@ type GameEventClient interface {
 	SubscribeCampaignUpdates(context.Context, *gamev1.SubscribeCampaignUpdatesRequest, ...grpc.CallOption) (grpc.ServerStreamingClient[gamev1.CampaignUpdate], error)
 }
 
+// Service exposes the cross-module dashboard refresh hooks used by the web
+// service. Callers consume this contract rather than constructing refresh
+// helpers themselves.
+type Service interface {
+	ProfileSaved(context.Context, string)
+	CampaignCreated(context.Context, string, string)
+	SessionStarted(context.Context, string, string)
+	SessionEnded(context.Context, string, string)
+	InviteChanged(context.Context, []string, string)
+}
+
 // Syncer coordinates dashboard cache invalidation around web mutations.
 //
 // It is intentionally fail-open: user actions remain successful even when sync
@@ -40,14 +51,18 @@ type GameEventClient interface {
 type Syncer struct {
 	userhub     UserHubControlClient
 	game        GameEventClient
-	logger      *log.Logger
+	logger      *slog.Logger
 	waitTimeout time.Duration
 }
 
+// Noop provides a safe do-nothing dashboard sync implementation for degraded
+// startup modes and tests that do not care about refresh hooks.
+type Noop struct{}
+
 // New constructs a shared dashboard sync helper for web mutations.
-func New(userhub UserHubControlClient, game GameEventClient, logger *log.Logger) *Syncer {
+func New(userhub UserHubControlClient, game GameEventClient, logger *slog.Logger) *Syncer {
 	if logger == nil {
-		logger = log.Default()
+		logger = slog.Default()
 	}
 	return &Syncer{
 		userhub:     userhub,
@@ -106,12 +121,27 @@ func (s *Syncer) syncProjectionAndInvalidate(ctx context.Context, userID, campai
 	waitStarted := time.Now()
 	if err := s.waitForProjectionApplied(ctx, userID, campaignID, scope); err != nil {
 		if s.logger != nil {
-			s.logger.Printf("web: dashboard sync degraded reason=%s campaign_id=%s user_id=%s scope=%s wait=%s: %v", reason, campaignID, userID, scope, time.Since(waitStarted), err)
+			s.logger.Warn(
+				"web dashboard sync degraded",
+				"reason", reason,
+				"campaign_id", campaignID,
+				"user_id", userID,
+				"scope", scope,
+				"wait", time.Since(waitStarted),
+				"error", err,
+			)
 		}
 	} else if s.logger != nil {
 		waitDuration := time.Since(waitStarted)
 		if waitDuration >= slowProjectionWaitThreshold {
-			s.logger.Printf("web: dashboard sync slow reason=%s campaign_id=%s user_id=%s scope=%s wait=%s", reason, campaignID, userID, scope, waitDuration)
+			s.logger.Info(
+				"web dashboard sync slow",
+				"reason", reason,
+				"campaign_id", campaignID,
+				"user_id", userID,
+				"scope", scope,
+				"wait", waitDuration,
+			)
 		}
 	}
 	s.invalidate(ctx, []string{userID}, []string{campaignID}, reason)
@@ -175,7 +205,11 @@ func (s *Syncer) waitForProjectionApplied(ctx context.Context, userID, campaignI
 func (s *Syncer) invalidate(ctx context.Context, userIDs []string, campaignIDs []string, reason string) {
 	if s == nil || s.userhub == nil {
 		if s != nil && s.logger != nil {
-			s.logger.Printf("web: dashboard invalidation skipped reason=%s: userhub control client is not configured", strings.TrimSpace(reason))
+			s.logger.Warn(
+				"web dashboard invalidation skipped",
+				"reason", strings.TrimSpace(reason),
+				"error", "userhub control client is not configured",
+			)
 		}
 		return
 	}
@@ -189,12 +223,12 @@ func (s *Syncer) invalidate(ctx context.Context, userIDs []string, campaignIDs [
 	}
 	callCtx := grpcauthctx.WithServiceID(ctx, "web")
 	if _, err := s.userhub.InvalidateDashboards(callCtx, req); err != nil && s.logger != nil {
-		s.logger.Printf(
-			"web: dashboard invalidation failed reason=%s user_ids=%v campaign_ids=%v: %v",
-			req.GetReason(),
-			req.GetUserIds(),
-			req.GetCampaignIds(),
-			err,
+		s.logger.Warn(
+			"web dashboard invalidation failed",
+			"reason", req.GetReason(),
+			"user_ids", req.GetUserIds(),
+			"campaign_ids", req.GetCampaignIds(),
+			"error", err,
 		)
 	}
 }
@@ -243,3 +277,23 @@ func normalizedIDs(values []string) []string {
 	}
 	return result
 }
+
+// ProfileSaved keeps the no-op syncer aligned with the shared Service
+// contract.
+func (Noop) ProfileSaved(context.Context, string) {}
+
+// CampaignCreated keeps the no-op syncer aligned with the shared Service
+// contract.
+func (Noop) CampaignCreated(context.Context, string, string) {}
+
+// SessionStarted keeps the no-op syncer aligned with the shared Service
+// contract.
+func (Noop) SessionStarted(context.Context, string, string) {}
+
+// SessionEnded keeps the no-op syncer aligned with the shared Service
+// contract.
+func (Noop) SessionEnded(context.Context, string, string) {}
+
+// InviteChanged keeps the no-op syncer aligned with the shared Service
+// contract.
+func (Noop) InviteChanged(context.Context, []string, string) {}

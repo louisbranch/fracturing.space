@@ -8,8 +8,8 @@ import (
 
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -127,8 +127,8 @@ func (routeGatewayStub) DeclineInvite(context.Context, string, string) error {
 	return nil
 }
 
-func principalWithUserID(userID string) requestresolver.Principal {
-	return requestresolver.NewPrincipal(
+func principalWithUserID(userID string) principal.Principal {
+	return principal.NewPrincipal(
 		nil,
 		func(*http.Request) bool { return userID != "" },
 		func(*http.Request) string { return userID },

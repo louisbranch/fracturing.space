@@ -35,6 +35,16 @@ func testManagedConnFactory(t *testing.T) managedConnFactory {
 	}
 }
 
+func mustDependencyRequirements(t *testing.T, cfg Config) []dependencyRequirement {
+	t.Helper()
+
+	requirements, err := dependencyRequirements(cfg, nil)
+	if err != nil {
+		t.Fatalf("dependencyRequirements() error = %v", err)
+	}
+	return requirements
+}
+
 func TestParseConfigDefaults(t *testing.T) {
 	t.Parallel()
 
@@ -185,10 +195,10 @@ func testDependencyConfig() Config {
 func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	t.Parallel()
 
-	requirements := dependencyRequirements(testDependencyConfig(), nil)
+	requirements := mustDependencyRequirements(t, testDependencyConfig())
 	requiredNames := make([]string, 0, len(requirements))
 	for _, dep := range requirements {
-		if dep.policy == startupDependencyRequired {
+		if dep.policy == web.StartupDependencyRequired {
 			requiredNames = append(requiredNames, dep.name)
 		}
 	}
@@ -199,10 +209,20 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 	}
 }
 
+func TestDependencyRequirementsCoverAllServiceOwnedDescriptors(t *testing.T) {
+	t.Parallel()
+
+	requirements := mustDependencyRequirements(t, testDependencyConfig())
+	descriptors := web.StartupDependencyDescriptors()
+	if len(requirements) != len(descriptors) {
+		t.Fatalf("dependency requirements = %d, want %d service descriptors", len(requirements), len(descriptors))
+	}
+}
+
 func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 	t.Parallel()
 
-	requirements := dependencyRequirements(testDependencyConfig(), nil)
+	requirements := mustDependencyRequirements(t, testDependencyConfig())
 	got := map[string][]string{}
 	for _, dep := range requirements {
 		if len(dep.surfaces) == 0 {
@@ -231,7 +251,7 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 func TestDependencyRequirementsCapabilitiesAreUnique(t *testing.T) {
 	t.Parallel()
 
-	requirements := dependencyRequirements(testDependencyConfig(), nil)
+	requirements := mustDependencyRequirements(t, testDependencyConfig())
 	seen := map[string]struct{}{}
 	for _, dep := range requirements {
 		if strings.TrimSpace(dep.capability) == "" {
@@ -250,10 +270,10 @@ func TestDependencyRequirementsCapabilitiesAreUnique(t *testing.T) {
 func TestDependencyRequirementManagedConnModeMatchesPolicy(t *testing.T) {
 	t.Parallel()
 
-	if got := startupDependencyRequired.managedConnMode(); got != platformgrpc.ModeRequired {
+	if got := managedConnMode(web.StartupDependencyRequired); got != platformgrpc.ModeRequired {
 		t.Fatalf("required managedConnMode = %v, want %v", got, platformgrpc.ModeRequired)
 	}
-	if got := startupDependencyOptional.managedConnMode(); got != platformgrpc.ModeOptional {
+	if got := managedConnMode(web.StartupDependencyOptional); got != platformgrpc.ModeOptional {
 		t.Fatalf("optional managedConnMode = %v, want %v", got, platformgrpc.ModeOptional)
 	}
 }
@@ -261,7 +281,7 @@ func TestDependencyRequirementManagedConnModeMatchesPolicy(t *testing.T) {
 func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	cfg := testDependencyConfig()
 	cfg.AssetBaseURL = "https://cdn.example.com/assets"
-	requirements := dependencyRequirements(cfg, nil)
+	requirements := mustDependencyRequirements(t, cfg)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, reporter, nil, testManagedConnFactory(t))
@@ -316,7 +336,7 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 
 func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
 	cfg := testDependencyConfig()
-	requirements := dependencyRequirements(cfg, nil)
+	requirements := mustDependencyRequirements(t, cfg)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil, testManagedConnFactory(t))
@@ -350,7 +370,7 @@ func TestBootstrapDependenciesErrorClosesConns(t *testing.T) {
 	}
 
 	cfg := testDependencyConfig()
-	requirements := dependencyRequirements(cfg, nil)
+	requirements := mustDependencyRequirements(t, cfg)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	_, _, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil, newConn)
@@ -370,7 +390,7 @@ func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
 	cfg := testDependencyConfig()
 	cfg.AIAddr = ""
 	cfg.DiscoveryAddr = "  "
-	requirements := dependencyRequirements(cfg, nil)
+	requirements := mustDependencyRequirements(t, cfg)
 	reporter := platformstatus.NewReporter("web", nil)
 
 	_, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil, testManagedConnFactory(t))

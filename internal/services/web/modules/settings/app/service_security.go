@@ -9,7 +9,7 @@ import (
 )
 
 // ListPasskeys returns read-only passkey summaries for the security page.
-func (s service) ListPasskeys(ctx context.Context, userID string) ([]SettingsPasskey, error) {
+func (s accountService) ListPasskeys(ctx context.Context, userID string) ([]SettingsPasskey, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return nil, err
@@ -29,7 +29,7 @@ func (s service) ListPasskeys(ctx context.Context, userID string) ([]SettingsPas
 }
 
 // BeginPasskeyRegistration starts authenticated passkey enrollment for the current user.
-func (s service) BeginPasskeyRegistration(ctx context.Context, userID string) (PasskeyChallenge, error) {
+func (s accountService) BeginPasskeyRegistration(ctx context.Context, userID string) (PasskeyChallenge, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return PasskeyChallenge{}, err
@@ -46,7 +46,7 @@ func (s service) BeginPasskeyRegistration(ctx context.Context, userID string) (P
 }
 
 // FinishPasskeyRegistration completes authenticated passkey enrollment.
-func (s service) FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) error {
+func (s accountService) FinishPasskeyRegistration(ctx context.Context, sessionID string, credential json.RawMessage) error {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
 		return apperrors.E(apperrors.KindInvalidInput, "session id is required")

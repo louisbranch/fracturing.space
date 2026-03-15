@@ -1,23 +1,20 @@
 package campaigns
 
 import (
-	"context"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
 
-// DashboardSync exposes dashboard refresh hooks needed by campaign mutations.
-type DashboardSync interface {
-	CampaignCreated(context.Context, string, string)
-	SessionStarted(context.Context, string, string)
-	SessionEnded(context.Context, string, string)
-	InviteChanged(context.Context, []string, string)
-}
+// DashboardSync keeps campaign mutations aligned with dashboard freshness.
+type DashboardSync = dashboardsync.Service
 
 // campaignPageHandlerServices groups the shared workspace shell dependencies
 // used by multiple campaign detail surfaces.
@@ -80,21 +77,14 @@ type inviteHandlerServices struct {
 
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
-	modulehandler.Base
-	pages            campaignPageHandlerServices
-	catalog          catalogHandlerServices
-	starters         starterHandlerServices
-	overview         overviewHandlerServices
-	participants     participantHandlerServices
-	characters       characterHandlerServices
-	creation         creationHandlerServices
-	sessions         sessionHandlerServices
-	invites          inviteHandlerServices
-	playFallbackPort string
-	playLaunchGrant  playlaunchgrant.Config
-	requestMeta      requestmeta.SchemePolicy
-	nowFunc          func() time.Time
-	sync             DashboardSync
+	catalog      catalogHandlers
+	starters     starterHandlers
+	overview     overviewHandlers
+	participants participantHandlers
+	characters   characterHandlers
+	creation     creationHandlers
+	sessions     sessionHandlers
+	invites      inviteHandlers
 }
 
 // handlerServices groups the app-facing seams consumed by the transport layer.
@@ -125,7 +115,66 @@ type handlersConfig struct {
 	PlayLaunchGrant  playlaunchgrant.Config
 	RequestMeta      requestmeta.SchemePolicy
 	Sync             DashboardSync
-	Workflows        campaignworkflow.Registry
+	Systems          campaignSystemRegistry
+}
+
+// catalogHandlers owns the campaign catalog and creation transport surface.
+type catalogHandlers struct {
+	campaignRouteSupport
+	catalog catalogHandlerServices
+	systems campaignSystemRegistry
+}
+
+// starterHandlers owns the protected starter preview and launch surface.
+type starterHandlers struct {
+	campaignRouteSupport
+	starters starterHandlerServices
+}
+
+// campaignDetailHandlers owns the shared workspace-shell route support used by
+// detail, creation, session, and invite surfaces.
+type campaignDetailHandlers struct {
+	campaignRouteSupport
+	pages campaignPageHandlerServices
+}
+
+// overviewHandlers owns overview/configuration/AI-binding routes.
+type overviewHandlers struct {
+	campaignDetailHandlers
+	overview overviewHandlerServices
+}
+
+// participantHandlers owns participant read and mutation routes.
+type participantHandlers struct {
+	campaignDetailHandlers
+	participants participantHandlerServices
+}
+
+// characterHandlers owns character read, control, and mutation routes.
+type characterHandlers struct {
+	campaignDetailHandlers
+	characters characterHandlerServices
+	creation   creationHandlerServices
+}
+
+// creationHandlers owns character-creation page and workflow routes.
+type creationHandlers struct {
+	campaignDetailHandlers
+	creation creationHandlerServices
+}
+
+// sessionHandlers owns session detail/lifecycle plus play-launch routes.
+type sessionHandlers struct {
+	campaignDetailHandlers
+	sessions         sessionHandlerServices
+	playFallbackPort string
+	playLaunchGrant  playlaunchgrant.Config
+}
+
+// inviteHandlers owns invite read, search, and mutation routes.
+type inviteHandlers struct {
+	campaignDetailHandlers
+	invites inviteHandlerServices
 }
 
 // newHandlerServices constructs the handler-facing capability bundle from
@@ -180,38 +229,68 @@ func newHandlerServices(config serviceConfigs) handlerServices {
 }
 
 // newHandlers builds package wiring for this web seam from narrow app-facing contracts.
-func newHandlers(config handlersConfig) handlers {
-	var workflowMap campaignworkflow.Registry
-	if config.Workflows != nil {
-		workflowMap = config.Workflows
-	}
+func newHandlers(config handlersConfig) (handlers, error) {
 	services := config.Services
-	return handlers{
-		Base:         config.Base,
-		pages:        services.Page,
-		catalog:      services.Catalog,
-		starters:     services.Starter,
-		overview:     services.Overview,
-		participants: services.Participants,
-		characters:   services.Characters,
-		creation: creationHandlerServices{
-			pages:    campaignworkflow.NewPageService(services.Creation.Pages, workflowMap),
-			mutation: campaignworkflow.NewMutationService(services.Creation.Flow, workflowMap),
-		},
-		sessions: sessionHandlerServices{
-			mutation: services.Sessions.mutation,
-		},
-		invites: inviteHandlerServices{
-			reads:            services.Invites.reads,
-			mutation:         services.Invites.mutation,
-			participantReads: services.Invites.participantReads,
-		},
-		playFallbackPort: config.PlayFallbackPort,
-		playLaunchGrant:  config.PlayLaunchGrant,
-		requestMeta:      config.RequestMeta,
-		nowFunc:          time.Now,
-		sync:             config.Sync,
+	missing := missingHandlerServices(services)
+	if len(missing) > 0 {
+		return handlers{}, fmt.Errorf("campaigns module missing required services: %s", strings.Join(missing, ", "))
 	}
+	sync := config.Sync
+	if sync == nil {
+		sync = dashboardsync.Noop{}
+	}
+	support := campaignRouteSupport{
+		Base:        config.Base,
+		requestMeta: config.RequestMeta,
+		nowFunc:     time.Now,
+		sync:        sync,
+	}
+	detail := campaignDetailHandlers{
+		campaignRouteSupport: support,
+		pages:                services.Page,
+	}
+	creation := creationHandlerServices{
+		pages:    campaignworkflow.NewPageService(services.Creation.Pages, config.Systems.workflowRegistry()),
+		mutation: campaignworkflow.NewMutationService(services.Creation.Flow, config.Systems.workflowRegistry()),
+	}
+	return handlers{
+		catalog: catalogHandlers{
+			campaignRouteSupport: support,
+			catalog:              services.Catalog,
+			systems:              config.Systems,
+		},
+		starters: starterHandlers{
+			campaignRouteSupport: support,
+			starters:             services.Starter,
+		},
+		overview: overviewHandlers{
+			campaignDetailHandlers: detail,
+			overview:               services.Overview,
+		},
+		participants: participantHandlers{
+			campaignDetailHandlers: detail,
+			participants:           services.Participants,
+		},
+		characters: characterHandlers{
+			campaignDetailHandlers: detail,
+			characters:             services.Characters,
+			creation:               creation,
+		},
+		creation: creationHandlers{
+			campaignDetailHandlers: detail,
+			creation:               creation,
+		},
+		sessions: sessionHandlers{
+			campaignDetailHandlers: detail,
+			sessions:               services.Sessions,
+			playFallbackPort:       config.PlayFallbackPort,
+			playLaunchGrant:        config.PlayLaunchGrant,
+		},
+		invites: inviteHandlers{
+			campaignDetailHandlers: detail,
+			invites:                services.Invites,
+		},
+	}, nil
 }
 
 // newHandlersFromConfig keeps production and test wiring convenient while
@@ -222,22 +301,75 @@ func newHandlersFromConfig(
 	sync DashboardSync,
 	workflows ...campaignworkflow.Registry,
 ) handlers {
-	var workflowMap campaignworkflow.Registry
-	if len(workflows) > 0 {
-		workflowMap = workflows[0]
-	}
-	return newHandlers(handlersConfig{
-		Services:  newHandlerServices(config),
-		Base:      base,
-		Sync:      sync,
-		Workflows: workflowMap,
+	handlerSet, err := newHandlers(handlersConfig{
+		Services: newHandlerServices(config),
+		Base:     base,
+		Sync:     sync,
+		Systems:  newCampaignSystemsFromWorkflows(workflows...),
 	})
+	if err != nil {
+		panic(err)
+	}
+	return handlerSet
 }
 
-// now centralizes this web behavior in one helper seam.
-func (h handlers) now() time.Time {
-	if h.nowFunc != nil {
-		return h.nowFunc()
+// missingHandlerServices reports the owned handler seams that were not wired so
+// constructor failures can name the broken campaign surface directly.
+func missingHandlerServices(services handlerServices) []string {
+	missing := []string{}
+	if services.Page.workspace == nil {
+		missing = append(missing, "page-workspace")
 	}
-	return time.Now()
+	if services.Page.sessionReads == nil {
+		missing = append(missing, "page-sessions")
+	}
+	if services.Page.authorization == nil {
+		missing = append(missing, "page-authorization")
+	}
+	if services.Catalog.campaigns == nil {
+		missing = append(missing, "catalog")
+	}
+	if services.Overview.automationReads == nil {
+		missing = append(missing, "overview-automation-reads")
+	}
+	if services.Overview.automationMutate == nil {
+		missing = append(missing, "overview-automation-mutation")
+	}
+	if services.Overview.configuration == nil {
+		missing = append(missing, "overview-configuration")
+	}
+	if services.Participants.reads == nil {
+		missing = append(missing, "participant-reads")
+	}
+	if services.Participants.mutation == nil {
+		missing = append(missing, "participant-mutation")
+	}
+	if services.Characters.reads == nil {
+		missing = append(missing, "character-reads")
+	}
+	if services.Characters.control == nil {
+		missing = append(missing, "character-control")
+	}
+	if services.Characters.mutation == nil {
+		missing = append(missing, "character-mutation")
+	}
+	if services.Creation.Pages == nil {
+		missing = append(missing, "creation-pages")
+	}
+	if services.Creation.Flow == nil {
+		missing = append(missing, "creation-flow")
+	}
+	if services.Sessions.mutation == nil {
+		missing = append(missing, "session-mutation")
+	}
+	if services.Invites.reads == nil {
+		missing = append(missing, "invite-reads")
+	}
+	if services.Invites.mutation == nil {
+		missing = append(missing, "invite-mutation")
+	}
+	if services.Invites.participantReads == nil {
+		missing = append(missing, "invite-participant-reads")
+	}
+	return missing
 }

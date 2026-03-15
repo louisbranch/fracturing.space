@@ -1,4 +1,3 @@
-// Package modules defines web module registry helpers.
 package modules
 
 import (
@@ -18,9 +17,8 @@ import (
 // defined by the consuming module, so modules physically cannot access clients
 // they were not given.
 //
-// Request-scoped principal resolution is provided separately via
-// platform/requestresolver since it is derived by the server after
-// construction.
+// Request-scoped principal resolution is provided separately via the
+// principal package since it is derived by the server after construction.
 type Dependencies struct {
 	AssetBaseURL string
 

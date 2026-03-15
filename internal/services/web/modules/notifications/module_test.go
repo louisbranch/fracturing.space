@@ -21,7 +21,7 @@ import (
 func TestMountServesNotificationsGet(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listItems: []notificationsapp.NotificationSummary{testNotificationSummary("n1", false)}}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{listItems: []notificationsapp.NotificationSummary{testNotificationSummary("n1", false)}})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -56,7 +56,7 @@ func TestMountServesNotificationsGet(t *testing.T) {
 func TestMountServesNotificationsHead(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listItems: []notificationsapp.NotificationSummary{testNotificationSummary("n1", false)}}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{listItems: []notificationsapp.NotificationSummary{testNotificationSummary("n1", false)}})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -83,7 +83,7 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	if New(Config{}).Healthy() {
 		t.Fatalf("New().Healthy() = true, want false for degraded module")
 	}
-	if !New(Config{Gateway: fakeGateway{}, Base: notificationsTestBase()}).Healthy() {
+	if !newNotificationsModule(fakeGateway{}).Healthy() {
 		t.Fatalf("New(Config{...}).Healthy() = false, want true")
 	}
 }
@@ -91,7 +91,7 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: nil, Base: notificationsTestBase()})
+	m := New(Config{Base: notificationsTestBase()})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -115,7 +115,7 @@ func TestMountReturnsServiceUnavailableWhenGatewayNotConfigured(t *testing.T) {
 func TestMountRejectsNotificationsNonGet(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{})
 	mount, _ := m.Mount()
 	req := httptest.NewRequest(http.MethodPatch, routepath.Notifications+"inbox", nil)
 	rr := httptest.NewRecorder()
@@ -138,7 +138,7 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 		}),
 		Read: false,
 	}
-	m := New(Config{Gateway: fakeGateway{
+	m := newNotificationsModule(fakeGateway{
 		listItems: []notificationsapp.NotificationSummary{listItem},
 		getItem:   detailItem,
 		openItem: notificationsapp.NotificationSummary{
@@ -150,7 +150,7 @@ func TestMountServesNotificationDetailRoute(t *testing.T) {
 			}),
 			Read: true,
 		},
-	}, Base: notificationsTestBase()})
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -205,11 +205,11 @@ func TestMountServesInviteNotificationDetailActions(t *testing.T) {
 		PayloadJSON: string(payloadJSON),
 		Read:        true,
 	}
-	m := New(Config{Gateway: fakeGateway{
+	m := newNotificationsModule(fakeGateway{
 		listItems: []notificationsapp.NotificationSummary{inviteItem},
 		getItem:   inviteItem,
 		openItem:  inviteItem,
-	}, Base: notificationsTestBase()})
+	})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -240,7 +240,7 @@ func TestMountServesInviteNotificationDetailActions(t *testing.T) {
 func TestMountNotificationOpenRouteRedirectsToDetail(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{openItem: testNotificationSummary("n1", true)}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{openItem: testNotificationSummary("n1", true)})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -270,12 +270,12 @@ func TestMountInviteNotificationOpenRouteStaysInNotifications(t *testing.T) {
 		t.Fatalf("marshal payload: %v", err)
 	}
 
-	m := New(Config{Gateway: fakeGateway{openItem: notificationsapp.NotificationSummary{
+	m := newNotificationsModule(fakeGateway{openItem: notificationsapp.NotificationSummary{
 		ID:          "n1",
 		MessageType: "campaign.invite.created.v1",
 		PayloadJSON: string(payloadJSON),
 		Read:        true,
-	}}, Base: notificationsTestBase()})
+	}})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -294,7 +294,7 @@ func TestMountInviteNotificationOpenRouteStaysInNotifications(t *testing.T) {
 func TestMountNotificationOpenRouteHTMXRedirects(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{openItem: testNotificationSummary("n1", true)}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{openItem: testNotificationSummary("n1", true)})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -314,7 +314,7 @@ func TestMountNotificationOpenRouteHTMXRedirects(t *testing.T) {
 func TestMountMapsNotificationGatewayErrorToHTTPStatus(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listErr: apperrors.E(apperrors.KindUnauthorized, "missing session")}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{listErr: apperrors.E(apperrors.KindUnauthorized, "missing session")})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -330,7 +330,7 @@ func TestMountMapsNotificationGatewayErrorToHTTPStatus(t *testing.T) {
 func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listErr: status.Error(codes.NotFound, "notification not found")}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{listErr: status.Error(codes.NotFound, "notification not found")})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -354,7 +354,7 @@ func TestMountNotificationsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{listItems: []notificationsapp.NotificationSummary{testNotificationSummary("n1", false)}}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{listItems: []notificationsapp.NotificationSummary{testNotificationSummary("n1", false)}})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -379,7 +379,7 @@ func TestMountNotificationsHTMXReturnsFragmentWithoutDocumentWrapper(t *testing.
 func TestMountNotificationsUnknownSubpathRendersSharedNotFoundPage(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: fakeGateway{}, Base: notificationsTestBase()})
+	m := newNotificationsModule(fakeGateway{})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -402,4 +402,12 @@ func TestMountNotificationsUnknownSubpathRendersSharedNotFoundPage(t *testing.T)
 
 func notificationsTestBase() modulehandler.Base {
 	return modulehandler.NewBase(func(*http.Request) string { return "user-1" }, nil, nil)
+}
+
+func newNotificationsModule(gateway notificationsapp.Gateway) Module {
+	return New(Config{
+		Service: notificationsapp.NewService(gateway),
+		Base:    notificationsTestBase(),
+		Healthy: notificationsapp.IsGatewayHealthy(gateway),
+	})
 }

@@ -7,15 +7,21 @@ type testGateway interface {
 	AIGateway
 }
 
-func newService(gateway testGateway) service {
-	if gateway == nil {
-		return newServiceFromConfig(serviceConfig{})
+func newService(gateway testGateway) testServiceBundle {
+	return testServiceBundle{
+		AccountService: NewAccountService(AccountServiceConfig{
+			ProfileGateway:  gateway,
+			LocaleGateway:   gateway,
+			SecurityGateway: gateway,
+		}),
+		AIService: NewAIService(AIServiceConfig{
+			AIKeyGateway:   gateway,
+			AIAgentGateway: gateway,
+		}),
 	}
-	return newServiceFromConfig(serviceConfig{
-		ProfileGateway:  gateway,
-		LocaleGateway:   gateway,
-		SecurityGateway: gateway,
-		AIKeyGateway:    gateway,
-		AIAgentGateway:  gateway,
-	})
+}
+
+type testServiceBundle struct {
+	AccountService
+	AIService
 }

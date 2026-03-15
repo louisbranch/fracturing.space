@@ -2,6 +2,7 @@ package notifications
 
 import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	notificationsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/app"
 	notificationsgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/notifications/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 )
@@ -17,8 +18,10 @@ type CompositionConfig struct {
 // Compose builds the production notifications module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
+	gateway := notificationsgateway.NewGRPCGateway(config.NotificationClient)
 	return New(Config{
-		Gateway: notificationsgateway.NewGRPCGateway(config.NotificationClient),
+		Service: notificationsapp.NewService(gateway),
 		Base:    config.Base,
+		Healthy: notificationsapp.IsGatewayHealthy(gateway),
 	})
 }

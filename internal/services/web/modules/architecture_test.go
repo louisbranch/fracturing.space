@@ -280,7 +280,7 @@ func TestProtectedModuleHandlersDoNotBypassBaseResolverMethods(t *testing.T) {
 	t.Parallel()
 
 	// Protected module handlers embed modulehandler.Base, which now embeds the
-	// shared requestresolver seam while keeping user-id helpers local. This
+	// shared principal request-state seam while keeping user-id helpers local. This
 	// guard detects direct calls to webctx.WithResolvedUserID that would bypass
 	// the designed Base methods (RequestContextAndUserID, RequestLocaleTag,
 	// PageLocalizer, etc.).

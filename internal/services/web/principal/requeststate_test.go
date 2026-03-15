@@ -1,4 +1,4 @@
-package requestresolver
+package principal
 
 import (
 	"net/http"
@@ -11,7 +11,7 @@ import (
 func TestResolveRequestViewerDelegatesToConfiguredResolver(t *testing.T) {
 	t.Parallel()
 
-	base := New(nil, func(*http.Request) module.Viewer {
+	base := NewBase(nil, func(*http.Request) module.Viewer {
 		return module.Viewer{DisplayName: "Ada"}
 	})
 
@@ -23,7 +23,7 @@ func TestResolveRequestViewerDelegatesToConfiguredResolver(t *testing.T) {
 func TestResolveRequestViewerReturnsZeroWhenUnset(t *testing.T) {
 	t.Parallel()
 
-	base := New(nil, nil)
+	base := NewBase(nil, nil)
 
 	if got := base.ResolveRequestViewer(httptest.NewRequest(http.MethodGet, "/", nil)); got != (module.Viewer{}) {
 		t.Fatalf("ResolveRequestViewer() = %+v, want zero Viewer", got)
@@ -33,7 +33,7 @@ func TestResolveRequestViewerReturnsZeroWhenUnset(t *testing.T) {
 func TestResolveRequestLanguageDelegatesToConfiguredResolver(t *testing.T) {
 	t.Parallel()
 
-	base := New(func(*http.Request) string { return "pt-BR" }, nil)
+	base := NewBase(func(*http.Request) string { return "pt-BR" }, nil)
 
 	if got := base.ResolveRequestLanguage(httptest.NewRequest(http.MethodGet, "/", nil)); got != "pt-BR" {
 		t.Fatalf("ResolveRequestLanguage() = %q, want %q", got, "pt-BR")
@@ -43,7 +43,7 @@ func TestResolveRequestLanguageDelegatesToConfiguredResolver(t *testing.T) {
 func TestResolveRequestLanguageReturnsEmptyWhenUnset(t *testing.T) {
 	t.Parallel()
 
-	base := New(nil, nil)
+	base := NewBase(nil, nil)
 
 	if got := base.ResolveRequestLanguage(httptest.NewRequest(http.MethodGet, "/", nil)); got != "" {
 		t.Fatalf("ResolveRequestLanguage() = %q, want empty", got)
@@ -53,7 +53,7 @@ func TestResolveRequestLanguageReturnsEmptyWhenUnset(t *testing.T) {
 func TestWithViewerAndLanguageReturnUpdatedCopies(t *testing.T) {
 	t.Parallel()
 
-	base := New(nil, nil)
+	base := NewBase(nil, nil)
 	updated := base.WithLanguage(func(*http.Request) string { return "en" }).WithViewer(func(*http.Request) module.Viewer {
 		return module.Viewer{DisplayName: "Test"}
 	})
@@ -70,10 +70,10 @@ func TestWithViewerAndLanguageReturnUpdatedCopies(t *testing.T) {
 	}
 }
 
-func TestNewFromPageResolverCopiesConfiguredResolvers(t *testing.T) {
+func TestNewBaseFromPageResolverCopiesConfiguredResolvers(t *testing.T) {
 	t.Parallel()
 
-	base := NewFromPageResolver(New(
+	base := NewBaseFromPageResolver(NewBase(
 		func(*http.Request) string { return "en" },
 		func(*http.Request) module.Viewer { return module.Viewer{DisplayName: "Test"} },
 	))
@@ -87,10 +87,10 @@ func TestNewFromPageResolverCopiesConfiguredResolvers(t *testing.T) {
 	}
 }
 
-func TestNewFromPageResolverReturnsZeroBaseWhenNil(t *testing.T) {
+func TestNewBaseFromPageResolverReturnsZeroBaseWhenNil(t *testing.T) {
 	t.Parallel()
 
-	base := NewFromPageResolver(nil)
+	base := NewBaseFromPageResolver(nil)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	if got := base.ResolveRequestLanguage(req); got != "" {
 		t.Fatalf("ResolveRequestLanguage() = %q, want empty", got)
@@ -151,7 +151,7 @@ func TestResolveLocalizedPageUsesResolverLanguage(t *testing.T) {
 	page := ResolveLocalizedPage(
 		httptest.NewRecorder(),
 		httptest.NewRequest(http.MethodGet, "/", nil),
-		New(func(*http.Request) string { return "pt-BR" }, nil),
+		NewBase(func(*http.Request) string { return "pt-BR" }, nil),
 	)
 
 	if page.Localizer == nil {
@@ -175,7 +175,7 @@ func TestResolveViewerDelegatesToResolver(t *testing.T) {
 
 	viewer := ResolveViewer(
 		httptest.NewRequest(http.MethodGet, "/", nil),
-		New(nil, func(*http.Request) module.Viewer {
+		NewBase(nil, func(*http.Request) module.Viewer {
 			return module.Viewer{DisplayName: "Ada"}
 		}),
 	)

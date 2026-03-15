@@ -54,7 +54,7 @@ type campaignPageContext struct {
 
 // loadCampaignPage loads the shared workspace page state needed by campaign
 // detail, chat, and creation routes.
-func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, error) {
+func (h campaignDetailHandlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, error) {
 	loc, lang := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
 	workspace, err := h.pages.workspace.CampaignWorkspace(ctx, campaignID)

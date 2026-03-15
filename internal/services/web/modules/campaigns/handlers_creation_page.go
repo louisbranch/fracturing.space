@@ -11,7 +11,7 @@ import (
 
 // handleCharacterCreationPage renders the dedicated character creation page
 // with a full-width layout (no campaign sidebar).
-func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h creationHandlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, page, err := h.loadCampaignPage(w, r, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)

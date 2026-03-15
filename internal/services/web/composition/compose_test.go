@@ -9,7 +9,7 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
@@ -43,7 +43,7 @@ func TestComposeAppHandlerBuildsRegistryInputAndRoutes(t *testing.T) {
 	}
 
 	h, err := ComposeAppHandler(ComposeInput{
-		Principal: requestresolver.NewPrincipal(
+		Principal: principal.NewPrincipal(
 			func(*http.Request) bool { return true },
 			func(*http.Request) bool { return true },
 			func(*http.Request) string { return "user-1" },

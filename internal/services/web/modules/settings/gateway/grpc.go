@@ -52,14 +52,31 @@ type GRPCGateway struct {
 	AgentClient      AgentClient
 }
 
-// NewGRPCGateway builds the production settings gateway from the configured clients.
-// Surface health is derived per settings area so account outages do not hide AI
-// settings, and AI outages do not hide account settings.
+// NewGRPCGateway builds the full production settings gateway from the configured
+// clients. Tests can still use this broader seam, but production composition
+// should prefer the account-owned and AI-owned constructors below.
 func NewGRPCGateway(socialClient SocialClient, accountClient AccountClient, passkeyClient PasskeyClient, credentialClient CredentialClient, agentClient AgentClient) GRPCGateway {
 	return GRPCGateway{
 		SocialClient:     socialClient,
 		AccountClient:    accountClient,
 		PasskeyClient:    passkeyClient,
+		CredentialClient: credentialClient,
+		AgentClient:      agentClient,
+	}
+}
+
+// NewAccountGateway builds the production account-owned settings gateway.
+func NewAccountGateway(socialClient SocialClient, accountClient AccountClient, passkeyClient PasskeyClient) GRPCGateway {
+	return GRPCGateway{
+		SocialClient:  socialClient,
+		AccountClient: accountClient,
+		PasskeyClient: passkeyClient,
+	}
+}
+
+// NewAIGateway builds the production AI-owned settings gateway.
+func NewAIGateway(credentialClient CredentialClient, agentClient AgentClient) GRPCGateway {
+	return GRPCGateway{
 		CredentialClient: credentialClient,
 		AgentClient:      agentClient,
 	}

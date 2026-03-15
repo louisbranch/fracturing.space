@@ -8,7 +8,7 @@ import (
 )
 
 // ListAIKeys returns the package view collection for this workflow.
-func (s service) ListAIKeys(ctx context.Context, userID string) ([]SettingsAIKey, error) {
+func (s aiService) ListAIKeys(ctx context.Context, userID string) ([]SettingsAIKey, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return nil, err
@@ -30,7 +30,7 @@ func (s service) ListAIKeys(ctx context.Context, userID string) ([]SettingsAIKey
 }
 
 // ListAIAgentCredentials returns active credential options for agent creation.
-func (s service) ListAIAgentCredentials(ctx context.Context, userID string) ([]SettingsAICredentialOption, error) {
+func (s aiService) ListAIAgentCredentials(ctx context.Context, userID string) ([]SettingsAICredentialOption, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (s service) ListAIAgentCredentials(ctx context.Context, userID string) ([]S
 }
 
 // ListAIAgents returns existing agent rows for the settings page.
-func (s service) ListAIAgents(ctx context.Context, userID string) ([]SettingsAIAgent, error) {
+func (s aiService) ListAIAgents(ctx context.Context, userID string) ([]SettingsAIAgent, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func (s service) ListAIAgents(ctx context.Context, userID string) ([]SettingsAIA
 }
 
 // ListAIProviderModels returns provider-backed model options for one credential.
-func (s service) ListAIProviderModels(ctx context.Context, userID string, credentialID string) ([]SettingsAIModelOption, error) {
+func (s aiService) ListAIProviderModels(ctx context.Context, userID string, credentialID string) ([]SettingsAIModelOption, error) {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (s service) ListAIProviderModels(ctx context.Context, userID string, creden
 }
 
 // CreateAIKey executes package-scoped creation behavior for this flow.
-func (s service) CreateAIKey(ctx context.Context, userID string, label string, secret string) error {
+func (s aiService) CreateAIKey(ctx context.Context, userID string, label string, secret string) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return err
@@ -111,7 +111,7 @@ func (s service) CreateAIKey(ctx context.Context, userID string, label string, s
 }
 
 // CreateAIAgent executes package-scoped agent creation behavior.
-func (s service) CreateAIAgent(ctx context.Context, userID string, input CreateAIAgentInput) error {
+func (s aiService) CreateAIAgent(ctx context.Context, userID string, input CreateAIAgentInput) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return err
@@ -133,7 +133,7 @@ func (s service) CreateAIAgent(ctx context.Context, userID string, input CreateA
 }
 
 // DeleteAIAgent removes one user-owned AI agent when it is not in use.
-func (s service) DeleteAIAgent(ctx context.Context, userID string, agentID string) error {
+func (s aiService) DeleteAIAgent(ctx context.Context, userID string, agentID string) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return err
@@ -146,7 +146,7 @@ func (s service) DeleteAIAgent(ctx context.Context, userID string, agentID strin
 }
 
 // RevokeAIKey applies this package workflow transition.
-func (s service) RevokeAIKey(ctx context.Context, userID string, credentialID string) error {
+func (s aiService) RevokeAIKey(ctx context.Context, userID string, credentialID string) error {
 	resolvedUserID, err := RequireUserID(userID)
 	if err != nil {
 		return err

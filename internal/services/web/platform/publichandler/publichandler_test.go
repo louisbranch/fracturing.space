@@ -8,7 +8,7 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 func TestIsViewerSignedInUsesSignedInResolver(t *testing.T) {
@@ -35,7 +35,7 @@ func TestIsViewerSignedInReturnsFalseWithoutSignedInResolver(t *testing.T) {
 func TestNewBaseFromPrincipalUsesGroupedPrincipalResolver(t *testing.T) {
 	t.Parallel()
 
-	base := NewBaseFromPrincipal(requestresolver.NewPrincipal(
+	base := NewBaseFromPrincipal(principal.NewPrincipal(
 		nil,
 		func(*http.Request) bool { return true },
 		func(*http.Request) string { return "user-1" },

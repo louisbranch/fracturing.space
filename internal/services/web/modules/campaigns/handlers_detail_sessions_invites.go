@@ -10,7 +10,7 @@ import (
 )
 
 // handleSessions handles this route in the module transport layer.
-func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h sessionHandlers) handleSessions(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -25,7 +25,7 @@ func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaig
 }
 
 // handleSessionDetail handles this route in the module transport layer.
-func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID, sessionID string) {
+func (h sessionHandlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, campaignID, sessionID string) {
 	_, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return
@@ -46,7 +46,7 @@ func (h handlers) handleSessionDetail(w http.ResponseWriter, r *http.Request, ca
 }
 
 // handleInvites handles this route in the module transport layer.
-func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h inviteHandlers) handleInvites(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, ok := h.loadCampaignPageOrWriteError(w, r, campaignID)
 	if !ok {
 		return

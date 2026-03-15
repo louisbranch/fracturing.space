@@ -79,7 +79,11 @@ func TestMountRejectsDiscoveryNonGet(t *testing.T) {
 func TestNewConfigGatewayIsHealthy(t *testing.T) {
 	t.Parallel()
 
-	m := New(Config{Gateway: stubGateway{}})
+	gateway := stubGateway{}
+	m := New(Config{
+		Service: discoveryapp.NewService(gateway),
+		Healthy: discoveryapp.IsGatewayHealthy(gateway),
+	})
 	if !m.Healthy() {
 		t.Fatal("Healthy() = false, want true")
 	}

@@ -80,7 +80,6 @@ func BindUserHubDependency(deps *Dependencies, conn *grpc.ClientConn) {
 	}
 	dashboard.BindUserHubDependency(&deps.Dashboard, conn)
 	deps.DashboardSync.UserHubControlClient = userhubv1.NewUserHubControlServiceClient(conn)
-	invite.BindUserHubDependency(&deps.Invite, conn)
 }
 
 // BindNotificationsDependency wires notification-backed clients into the

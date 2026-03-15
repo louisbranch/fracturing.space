@@ -13,7 +13,7 @@ import (
 // --- Character creation workflow routes ---
 
 // handleCharacterCreationStep applies the next character creation workflow step.
-func (h handlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h creationHandlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_character_creation_form", routepath.AppCampaignCharacterCreation(campaignID, characterID)) {
 		return
 	}
@@ -39,7 +39,7 @@ func (h handlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Req
 
 // writeCreationStepError writes a step validation error as a flash notice and
 // redirects back to the creation page instead of rendering a full error page.
-func (h handlers) writeCreationStepError(w http.ResponseWriter, r *http.Request, err error, campaignID, characterID string) {
+func (h creationHandlers) writeCreationStepError(w http.ResponseWriter, r *http.Request, err error, campaignID, characterID string) {
 	key := apperrors.LocalizationKey(err)
 	if key == "" {
 		key = "error.web.message.character_creation_step_failed"
@@ -49,7 +49,7 @@ func (h handlers) writeCreationStepError(w http.ResponseWriter, r *http.Request,
 }
 
 // handleCharacterCreationReset handles this route in the module transport layer.
-func (h handlers) handleCharacterCreationReset(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
+func (h creationHandlers) handleCharacterCreationReset(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, _ := h.RequestContextAndUserID(r)
 	if err := h.creation.mutation.Reset(ctx, campaignID, characterID); err != nil {
 		h.writeCreationStepError(w, r, err, campaignID, characterID)

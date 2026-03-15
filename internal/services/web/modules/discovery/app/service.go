@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	"log"
+	"log/slog"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
@@ -50,7 +50,7 @@ type Service interface {
 // service defines an internal contract used at this web package boundary.
 type service struct {
 	gateway Gateway
-	logger  *log.Logger
+	logger  *slog.Logger
 }
 
 // unavailableGateway preserves fail-closed gateway behavior while letting the
@@ -78,7 +78,7 @@ func NewService(gateway Gateway) Service {
 	}
 	return service{
 		gateway: gateway,
-		logger:  log.Default(),
+		logger:  slog.Default(),
 	}
 }
 
@@ -88,13 +88,13 @@ func (s service) LoadPage(ctx context.Context) Page {
 	entries, err := s.gateway.ListStarterEntries(ctx)
 	if err != nil {
 		if s.logger != nil {
-			s.logger.Printf("discovery: list starter entries: %v", err)
+			s.logger.Warn("discovery starters unavailable", "error", err)
 		}
 		return Page{Status: PageStatusUnavailable}
 	}
 	if len(entries) == 0 {
 		if s.logger != nil {
-			s.logger.Printf("discovery: curated starter catalog is unavailable: zero entries returned")
+			s.logger.Warn("discovery starters unavailable", "reason", "zero_entries")
 		}
 		return Page{Status: PageStatusUnavailable}
 	}

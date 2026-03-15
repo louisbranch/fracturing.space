@@ -26,10 +26,15 @@ type CompositionConfig struct {
 // Compose builds the production dashboard module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
+	gateway := dashboardgateway.NewGRPCGateway(config.UserHubClient)
 	return New(Config{
-		Gateway:        dashboardgateway.NewGRPCGateway(config.UserHubClient),
-		Base:           config.Base,
-		HealthProvider: StatusHealthProvider(config.StatusClient, nil),
+		Service: dashboardapp.NewService(
+			gateway,
+			nil,
+			StatusHealthProvider(config.StatusClient, nil),
+		),
+		Base:    config.Base,
+		Healthy: dashboardapp.IsGatewayHealthy(gateway),
 	})
 }
 

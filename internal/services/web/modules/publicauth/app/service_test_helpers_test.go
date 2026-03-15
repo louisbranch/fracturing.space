@@ -9,11 +9,18 @@ type testGateway interface {
 	RecoveryGateway
 }
 
-func newService(gateway testGateway, authBaseURL string) service {
-	return newServiceState(serviceConfig{
-		SessionGateway:  gateway,
-		PasskeyGateway:  gateway,
-		RecoveryGateway: gateway,
-		AuthBaseURL:     authBaseURL,
-	})
+func newService(gateway testGateway, authBaseURL string) testServiceBundle {
+	return testServiceBundle{
+		PageService:     NewPageService(authBaseURL),
+		SessionService:  NewSessionService(gateway, authBaseURL),
+		PasskeyService:  NewPasskeyService(gateway, authBaseURL),
+		RecoveryService: NewRecoveryService(gateway, authBaseURL),
+	}
+}
+
+type testServiceBundle struct {
+	PageService
+	SessionService
+	PasskeyService
+	RecoveryService
 }

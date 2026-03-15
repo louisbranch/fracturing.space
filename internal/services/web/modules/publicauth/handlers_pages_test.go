@@ -12,8 +12,8 @@ import (
 	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/sessioncookie"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -213,7 +213,7 @@ func TestHandleRecoveryCodeAcknowledgeSignupExpiredRedirectsToLogin(t *testing.T
 func TestRedirectAuthenticatedToAppUsesValidatedNextPath(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlersFromGateway(publicauthGatewayStub{}, "", requestmeta.SchemePolicy{}, requestresolver.NewPrincipal(
+	h := newHandlersFromGateway(publicauthGatewayStub{}, "", requestmeta.SchemePolicy{}, principal.NewPrincipal(
 		nil,
 		func(*http.Request) bool { return true },
 		nil,

@@ -12,7 +12,7 @@ import (
 func TestLoginCookieAllowsProtectedRoute(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(defaultProtectedConfig(newFakeWebAuthClient()))
+	h, err := newTestHandler(defaultProtectedConfig(newFakeWebAuthClient()))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -49,7 +49,7 @@ func TestLoginCookieAllowsProtectedRoute(t *testing.T) {
 func TestLogoutCookieRelocksProtectedRoute(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(defaultProtectedConfig(newFakeWebAuthClient()))
+	h, err := newTestHandler(defaultProtectedConfig(newFakeWebAuthClient()))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -99,7 +99,7 @@ func TestLogoutCookieRelocksProtectedRoute(t *testing.T) {
 func TestProtectedRouteRejectsUnknownSessionCookie(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(defaultProtectedConfig(newFakeWebAuthClient()))
+	h, err := newTestHandler(defaultProtectedConfig(newFakeWebAuthClient()))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
@@ -118,7 +118,7 @@ func TestProtectedRouteRejectsUnknownSessionCookie(t *testing.T) {
 func TestLogoutRevokesPreviouslyIssuedSessionCookie(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(defaultProtectedConfig(newFakeWebAuthClient()))
+	h, err := newTestHandler(defaultProtectedConfig(newFakeWebAuthClient()))
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}

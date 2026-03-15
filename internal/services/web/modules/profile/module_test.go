@@ -9,7 +9,7 @@ import (
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	profileapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/profile/app"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
@@ -120,7 +120,11 @@ func TestModuleHealthyReflectsGatewayState(t *testing.T) {
 	if New(Config{}).Healthy() {
 		t.Fatalf("New(Config{}).Healthy() = true, want false")
 	}
-	if !New(Config{Gateway: &moduleGatewayStub{}}).Healthy() {
+	gateway := &moduleGatewayStub{}
+	if !New(Config{
+		Service: profileapp.NewService(gateway),
+		Healthy: profileapp.IsGatewayHealthy(gateway),
+	}).Healthy() {
 		t.Fatalf("expected configured gateway to be healthy")
 	}
 }
@@ -134,15 +138,16 @@ func mountProfileModule(
 	t.Helper()
 
 	mount, err := New(Config{
-		Gateway:      gateway,
+		Service:      profileapp.NewService(gateway),
 		AssetBaseURL: assetBaseURL,
-		Principal: requestresolver.NewPrincipal(
+		Principal: principal.NewPrincipal(
 			nil,
 			resolveSignedIn,
 			nil,
 			nil,
 			nil,
 		),
+		Healthy: profileapp.IsGatewayHealthy(gateway),
 	}).Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

@@ -14,7 +14,7 @@ import (
 func TestStaticThemeServedByWeb(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
@@ -34,7 +34,7 @@ func TestStaticThemeServedByWeb(t *testing.T) {
 func TestStaticPasskeyAuthScriptIncludesBusyStateGuard(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
@@ -71,7 +71,7 @@ func TestStaticPasskeyAuthScriptIncludesBusyStateGuard(t *testing.T) {
 func TestStaticUsernameInputScriptPreservesSignupAvailabilityDuringBusyState(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
@@ -108,7 +108,7 @@ func TestStaticUsernameInputScriptPreservesSignupAvailabilityDuringBusyState(t *
 func TestStaticAppShellScriptIncludesHTMXErrorSwapContract(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
@@ -135,7 +135,7 @@ func TestStaticAppShellScriptIncludesHTMXErrorSwapContract(t *testing.T) {
 func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
@@ -162,7 +162,7 @@ func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 func TestStaticAppShellScriptOmitsImageFallbackContract(t *testing.T) {
 	t.Parallel()
 
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
 	})
 	if err != nil {
@@ -195,7 +195,7 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
-	h, err := NewHandler(Config{
+	h, err := newTestHandler(Config{
 		PlayLaunchGrant: fakePlayLaunchGrantConfig(),
 		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{SessionClient: auth},

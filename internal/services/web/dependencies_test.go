@@ -1,6 +1,7 @@
 package web
 
 import (
+	"strings"
 	"testing"
 
 	grpc "google.golang.org/grpc"
@@ -129,6 +130,12 @@ func TestStartupDependencyDescriptorsExposeStableBindings(t *testing.T) {
 		if descriptor.Bind == nil {
 			t.Fatalf("descriptor %q has nil binder", name)
 		}
+		if descriptor.Capability == "" {
+			t.Fatalf("descriptor %q has empty capability", name)
+		}
+		if len(descriptor.Surfaces) == 0 {
+			t.Fatalf("descriptor %q has no owned surfaces", name)
+		}
 	}
 }
 
@@ -137,6 +144,7 @@ func TestStartupDependencyDescriptorsReturnCopy(t *testing.T) {
 
 	descriptors := StartupDependencyDescriptors()
 	descriptors[0].Name = "mutated"
+	descriptors[0].Surfaces[0] = "mutated"
 
 	lookup, ok := LookupStartupDependencyDescriptor(DependencyNameAuth)
 	if !ok {
@@ -144,6 +152,9 @@ func TestStartupDependencyDescriptorsReturnCopy(t *testing.T) {
 	}
 	if lookup.Name != DependencyNameAuth {
 		t.Fatalf("LookupStartupDependencyDescriptor(%q).Name = %q, want %q", DependencyNameAuth, lookup.Name, DependencyNameAuth)
+	}
+	if lookup.Surfaces[0] != "principal" {
+		t.Fatalf("LookupStartupDependencyDescriptor(%q).Surfaces[0] = %q, want %q", DependencyNameAuth, lookup.Surfaces[0], "principal")
 	}
 }
 
@@ -153,4 +164,54 @@ func TestLookupStartupDependencyDescriptorUnknown(t *testing.T) {
 	if descriptor, ok := LookupStartupDependencyDescriptor("missing"); ok {
 		t.Fatalf("LookupStartupDependencyDescriptor(missing) = (%+v, true), want false", descriptor)
 	}
+}
+
+func TestValidateRequiredDependencyBundleRequiresDependencies(t *testing.T) {
+	t.Parallel()
+
+	if err := validateRequiredDependencyBundle(nil); err == nil {
+		t.Fatal("expected missing dependencies error")
+	}
+}
+
+func TestValidateRequiredDependencyBundleAcceptsBootstrappedRequiredDependencies(t *testing.T) {
+	t.Parallel()
+
+	conn := &grpc.ClientConn{}
+	bundle := NewDependencyBundle("")
+	BindAuthDependency(&bundle, conn)
+	BindSocialDependency(&bundle, conn)
+	BindGameDependency(&bundle, conn)
+
+	if err := validateRequiredDependencyBundle(&bundle); err != nil {
+		t.Fatalf("validateRequiredDependencyBundle() error = %v", err)
+	}
+}
+
+func TestValidateRequiredDependencyBundleRejectsIncompleteRequiredDependency(t *testing.T) {
+	t.Parallel()
+
+	bundle := NewDependencyBundle("")
+	BindAuthDependency(&bundle, &grpc.ClientConn{})
+	BindGameDependency(&bundle, &grpc.ClientConn{})
+
+	err := validateRequiredDependencyBundle(&bundle)
+	if err == nil {
+		t.Fatal("expected incomplete dependency error")
+	}
+	if got := err.Error(); got == "" || !containsAll(got, []string{DependencyNameSocial, "principal.social"}) {
+		t.Fatalf("validateRequiredDependencyBundle() error = %q, want social completeness detail", got)
+	}
+}
+
+func containsAll(value string, fragments []string) bool {
+	for _, fragment := range fragments {
+		if fragment == "" {
+			continue
+		}
+		if !strings.Contains(value, fragment) {
+			return false
+		}
+	}
+	return true
 }

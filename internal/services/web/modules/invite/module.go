@@ -1,59 +1,69 @@
 package invite
 
 import (
-	"context"
 	"net/http"
 
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	inviteapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/invite/app"
+	"github.com/louisbranch/fracturing.space/internal/services/web/platform/dashboardsync"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-// DashboardSync exposes dashboard refresh hooks needed after invite actions.
-type DashboardSync interface {
-	InviteChanged(context.Context, []string, string)
-}
+// DashboardSync keeps public invite mutations aligned with dashboard freshness.
+type DashboardSync = dashboardsync.Service
 
 // Module provides public invite landing routes.
 type Module struct {
-	gateway     inviteapp.Gateway
+	service     inviteapp.Service
 	requestMeta requestmeta.SchemePolicy
-	principal   requestresolver.PrincipalResolver
+	principal   principal.PrincipalResolver
 	sync        DashboardSync
+	healthy     bool
 }
 
 // Config defines constructor dependencies for the invite module.
 type Config struct {
-	Gateway       inviteapp.Gateway
+	Service       inviteapp.Service
 	RequestMeta   requestmeta.SchemePolicy
-	Principal     requestresolver.PrincipalResolver
+	Principal     principal.PrincipalResolver
 	DashboardSync DashboardSync
+	Healthy       bool
 }
 
 // New returns an invite module with explicit dependencies.
 func New(config Config) Module {
+	service := config.Service
+	if service == nil {
+		service = inviteapp.NewService(nil)
+	}
+	sync := config.DashboardSync
+	if sync == nil {
+		sync = dashboardsync.Noop{}
+	}
 	return Module{
-		gateway:     config.Gateway,
+		service:     service,
 		requestMeta: config.RequestMeta,
 		principal:   config.Principal,
-		sync:        config.DashboardSync,
+		sync:        sync,
+		healthy:     config.Healthy,
 	}
 }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "invite" }
 
-// Healthy reports whether the invite module has an operational gateway.
+// Healthy reports whether the invite module has an operational runtime service
+// backing its transport surface.
 func (m Module) Healthy() bool {
-	return m.gateway != nil
+	return m.healthy
 }
 
 // Mount wires public invite route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	h := newHandlers(inviteapp.NewService(m.gateway), m.principal, m.requestMeta, m.sync)
+	h := newHandlers(m.service, m.principal, m.requestMeta, m.sync)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.InvitePrefix, Handler: mux}, nil
 }

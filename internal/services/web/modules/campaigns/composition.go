@@ -3,10 +3,7 @@ package campaigns
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
-	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
-	"github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/modulehandler"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 )
@@ -60,27 +57,8 @@ type InviteClient interface {
 // production campaigns module without leaking gateway internals into the
 // registry package.
 type CompositionConfig struct {
-	Base             modulehandler.Base
-	PlayFallbackPort string
-	PlayLaunchGrant  playlaunchgrant.Config
-	RequestMeta      requestmeta.SchemePolicy
-	DashboardSync    DashboardSync
-	AssetBaseURL     string
-
-	CampaignClient           CampaignClient
-	DiscoveryClient          DiscoveryClient
-	AgentClient              campaigngateway.AgentClient
-	CampaignArtifactClient   campaigngateway.CampaignArtifactClient
-	ParticipantClient        ParticipantClient
-	CharacterClient          CharacterClient
-	DaggerheartContentClient campaigngateway.DaggerheartContentClient
-	DaggerheartAssetClient   campaigngateway.DaggerheartAssetClient
-	SessionClient            SessionClient
-	InviteClient             InviteClient
-	SocialClient             campaigngateway.SocialClient
-	AuthClient               campaigngateway.AuthClient
-	AuthorizationClient      campaigngateway.AuthorizationClient
-	ForkClient               ForkClient
+	Options ProtectedSurfaceOptions
+	Gateway campaigngateway.GRPCGatewayDeps
 }
 
 // ProtectedSurfaceOptions carries the shared cross-cutting inputs the protected
@@ -97,18 +75,14 @@ type ProtectedSurfaceOptions struct {
 // Compose builds the production campaigns module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
-	workflows := campaignworkflow.Registry{
-		campaignapp.GameSystemDaggerheart: daggerheart.New(config.AssetBaseURL),
-	}
-	serviceConfigs := newServiceConfigsFromGRPCDeps(newGatewayDeps(config), config.AssetBaseURL)
 	return New(Config{
-		Services:         newHandlerServices(serviceConfigs),
-		Base:             config.Base,
-		PlayFallbackPort: config.PlayFallbackPort,
-		PlayLaunchGrant:  config.PlayLaunchGrant,
-		RequestMeta:      config.RequestMeta,
-		Workflows:        workflows,
-		DashboardSync:    config.DashboardSync,
+		Services:         newHandlerServices(newServiceConfigs(config)),
+		Base:             config.Options.Base,
+		PlayFallbackPort: config.Options.PlayFallbackPort,
+		PlayLaunchGrant:  config.Options.PlayLaunchGrant,
+		RequestMeta:      config.Options.RequestMeta,
+		Systems:          buildCampaignSystems(config),
+		DashboardSync:    config.Options.DashboardSync,
 	})
 }
 
@@ -116,48 +90,44 @@ func Compose(config CompositionConfig) module.Module {
 // dependency set is complete. The registry only provides shared options and
 // stable module ordering.
 func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (module.Module, bool) {
-	config := CompositionConfig{
-		Base:                     options.Base,
-		PlayFallbackPort:         options.PlayFallbackPort,
-		PlayLaunchGrant:          options.PlayLaunchGrant,
-		RequestMeta:              options.RequestMeta,
-		DashboardSync:            options.DashboardSync,
-		AssetBaseURL:             options.AssetBaseURL,
-		CampaignClient:           deps.CampaignClient,
-		DiscoveryClient:          deps.DiscoveryClient,
-		AgentClient:              deps.AgentClient,
-		CampaignArtifactClient:   deps.CampaignArtifactClient,
-		ParticipantClient:        deps.ParticipantClient,
-		CharacterClient:          deps.CharacterClient,
-		DaggerheartContentClient: deps.DaggerheartContentClient,
-		DaggerheartAssetClient:   deps.DaggerheartAssetClient,
-		SessionClient:            deps.SessionClient,
-		InviteClient:             deps.InviteClient,
-		SocialClient:             deps.SocialClient,
-		AuthClient:               deps.AuthClient,
-		AuthorizationClient:      deps.AuthorizationClient,
-		ForkClient:               deps.ForkClient,
-	}
-	if !config.configured() {
+	if !deps.configured() {
 		return nil, false
 	}
-	return Compose(config), true
+	return Compose(newCompositionConfig(options, deps)), true
 }
 
-// configured reports whether the campaigns surface has the full dependency set
-// required for production composition.
-func (config CompositionConfig) configured() bool {
-	return config.CampaignClient != nil &&
-		config.DiscoveryClient != nil &&
-		config.AgentClient != nil &&
-		config.ParticipantClient != nil &&
-		config.CharacterClient != nil &&
-		config.DaggerheartContentClient != nil &&
-		config.DaggerheartAssetClient != nil &&
-		config.SessionClient != nil &&
-		config.InviteClient != nil &&
-		config.SocialClient != nil &&
-		config.AuthClient != nil &&
-		config.AuthorizationClient != nil &&
-		config.ForkClient != nil
+// newCompositionConfig groups route-surface gateway deps before module
+// construction so the registry does not rebuild campaign startup wiring inline.
+func newCompositionConfig(options ProtectedSurfaceOptions, deps Dependencies) CompositionConfig {
+	return CompositionConfig{
+		Options: options,
+		Gateway: campaigngateway.GRPCGatewayDeps{
+			Page:         newPageGatewayDeps(deps),
+			Catalog:      newCatalogGatewayDeps(deps),
+			Starter:      newStarterGatewayDeps(deps),
+			Overview:     newOverviewGatewayDeps(deps),
+			Participants: newParticipantGatewayDeps(deps),
+			Characters:   newCharacterGatewayDeps(deps),
+			Sessions:     newSessionGatewayDeps(deps),
+			Invites:      newInviteGatewayDeps(deps),
+		},
+	}
+}
+
+// configured reports whether the campaigns dependency set has the full client
+// graph required for production composition.
+func (deps Dependencies) configured() bool {
+	return deps.CampaignClient != nil &&
+		deps.DiscoveryClient != nil &&
+		deps.AgentClient != nil &&
+		deps.ParticipantClient != nil &&
+		deps.CharacterClient != nil &&
+		deps.DaggerheartContentClient != nil &&
+		deps.DaggerheartAssetClient != nil &&
+		deps.SessionClient != nil &&
+		deps.InviteClient != nil &&
+		deps.SocialClient != nil &&
+		deps.AuthClient != nil &&
+		deps.AuthorizationClient != nil &&
+		deps.ForkClient != nil
 }

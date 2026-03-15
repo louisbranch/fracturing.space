@@ -25,8 +25,8 @@ func (r Resolver) ResolveViewer(request *http.Request) module.Viewer {
 	return r.resolveViewerUncached(request)
 }
 
-// ResolveRequestViewer adapts the principal resolver to the shared
-// requestresolver page contract.
+// ResolveRequestViewer adapts the production resolver to the shared page
+// contract used by transport helpers.
 func (r Resolver) ResolveRequestViewer(request *http.Request) module.Viewer {
 	return r.ResolveViewer(request)
 }

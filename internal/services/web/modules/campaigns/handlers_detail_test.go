@@ -1840,7 +1840,7 @@ func TestMountCampaignParticipantsFailsWhenGatewayReturnsError(t *testing.T) {
 func TestMountCampaignParticipantsFailsClosedWhenParticipantClientMissing(t *testing.T) {
 	t.Parallel()
 
-	deps := campaigngateway.GRPCGatewayDeps{CatalogRead: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}
+	deps := campaigngateway.GRPCGatewayDeps{Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}}
 	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
 	_, err := m.Mount()
 	if err == nil {
@@ -2216,7 +2216,7 @@ func TestMountCampaignCharactersFailsWhenGatewayReturnsError(t *testing.T) {
 func TestMountCampaignCharactersFailsClosedWhenCharacterClientMissing(t *testing.T) {
 	t.Parallel()
 
-	deps := campaigngateway.GRPCGatewayDeps{CatalogRead: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}
+	deps := campaigngateway.GRPCGatewayDeps{Catalog: campaigngateway.CatalogGatewayDeps{Read: campaigngateway.CatalogReadDeps{Campaign: fakeCampaignClient{}}}}
 	m := New(configWithGRPCDeps(deps, modulehandler.NewTestBase(), nil))
 	_, err := m.Mount()
 	if err == nil {

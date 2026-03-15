@@ -12,7 +12,7 @@ import (
 )
 
 // handleGame redirects the campaign game route into the dedicated play surface.
-func (h handlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID string) {
+func (h sessionHandlers) handleGame(w http.ResponseWriter, r *http.Request, campaignID string) {
 	ctx, page, err := h.loadCampaignPage(w, r, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)

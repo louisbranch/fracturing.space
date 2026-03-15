@@ -46,9 +46,7 @@ func (h handlers) handleProfilePost(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, err)
 		return
 	}
-	if h.sync != nil {
-		h.sync.ProfileSaved(ctx, userID)
-	}
+	h.sync.ProfileSaved(ctx, userID)
 	h.writeFlashNotice(w, r, flashnotice.NoticeSuccess("web.settings.user_profile.notice_saved"))
 	httpx.WriteRedirect(w, r, routepath.AppSettingsProfile)
 }

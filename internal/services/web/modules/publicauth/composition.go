@@ -2,9 +2,10 @@ package publicauth
 
 import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
+	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	publicauthgateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/gateway"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
+	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
 
 // CompositionConfig owns the startup wiring required to construct the
@@ -12,7 +13,7 @@ import (
 // registry package.
 type CompositionConfig struct {
 	AuthClient  publicauthgateway.AuthClient
-	Principal   requestresolver.PrincipalResolver
+	Principal   principal.PrincipalResolver
 	RequestMeta requestmeta.SchemePolicy
 	AuthBaseURL string
 	Surface     Surface
@@ -23,7 +24,7 @@ type CompositionConfig struct {
 // registry package.
 type SurfaceSetConfig struct {
 	AuthClient  publicauthgateway.AuthClient
-	Principal   requestresolver.PrincipalResolver
+	Principal   principal.PrincipalResolver
 	RequestMeta requestmeta.SchemePolicy
 	AuthBaseURL string
 }
@@ -31,11 +32,15 @@ type SurfaceSetConfig struct {
 // Compose builds the production publicauth module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
+	gateway := publicauthgateway.NewGRPCGateway(config.AuthClient)
 	return New(Config{
-		Services:    newHandlerServicesFromGateway(publicauthgateway.NewGRPCGateway(config.AuthClient), config.AuthBaseURL),
-		Principal:   config.Principal,
-		RequestMeta: config.RequestMeta,
-		Surface:     config.Surface,
+		PageService:    publicauthapp.NewPageService(config.AuthBaseURL),
+		SessionService: publicauthapp.NewSessionService(gateway, config.AuthBaseURL),
+		PasskeyService: publicauthapp.NewPasskeyService(gateway, config.AuthBaseURL),
+		Recovery:       publicauthapp.NewRecoveryService(gateway, config.AuthBaseURL),
+		Principal:      config.Principal,
+		RequestMeta:    config.RequestMeta,
+		Surface:        config.Surface,
 	})
 }
 

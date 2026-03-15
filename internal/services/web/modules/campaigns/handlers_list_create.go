@@ -51,7 +51,7 @@ func campaignCreateHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeade
 // --- List and creation handlers ---
 
 // handleIndex renders the campaign list page using the request-scoped service context.
-func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (h catalogHandlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
 	items, err := h.catalog.campaigns.ListCampaigns(ctx)
@@ -71,7 +71,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleStartNewCampaign handles this route in the module transport layer.
-func (h handlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request) {
+func (h catalogHandlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	h.WritePage(w, r,
 		webtemplates.T(loc, "game.campaigns.new.title"), http.StatusOK,
@@ -82,22 +82,22 @@ func (h handlers) handleStartNewCampaign(w http.ResponseWriter, r *http.Request)
 }
 
 // handleCreateCampaign handles this route in the module transport layer.
-func (h handlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
+func (h catalogHandlers) handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	h.WritePage(w, r,
 		webtemplates.T(loc, "game.create.title"), http.StatusOK,
 		campaignCreateHeader(loc),
 		webtemplates.AppMainLayoutOptions{},
-		CampaignCreateFragment(CampaignCreateFormValues{}, loc),
+		CampaignCreateFragment(CampaignCreateFormValues{}, h.systems.createOptions, h.systems.defaultCreateSystem(), loc),
 	)
 }
 
 // handleCreateCampaignSubmit handles this route in the module transport layer.
-func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Request) {
+func (h catalogHandlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Request) {
 	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_create_form", routepath.AppCampaignsCreate) {
 		return
 	}
-	input, err := parseCreateCampaignInput(r.Form)
+	input, err := parseCreateCampaignInput(r.Form, h.systems)
 	if err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return
@@ -109,16 +109,9 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return
 	}
-	if h.sync != nil {
-		h.sync.CampaignCreated(ctx, userID, created.CampaignID)
-	}
+	h.sync.CampaignCreated(ctx, userID, created.CampaignID)
 
 	h.writeMutationSuccess(w, r, "web.campaigns.notice_campaign_created", routepath.AppCampaign(created.CampaignID))
-}
-
-// parseAppGameSystem parses inbound values into package-safe forms.
-func parseAppGameSystem(value string) (campaignapp.GameSystem, bool) {
-	return campaignapp.ParseGameSystem(value)
 }
 
 // parseAppGmMode parses inbound values into package-safe forms.

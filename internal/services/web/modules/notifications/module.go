@@ -11,34 +11,40 @@ import (
 
 // Module provides authenticated notification routes.
 type Module struct {
-	gateway notificationsapp.Gateway
+	service notificationsapp.Service
 	base    modulehandler.Base
+	healthy bool
 }
 
 // Config defines constructor dependencies for a notifications module.
 type Config struct {
-	Gateway notificationsapp.Gateway
+	Service notificationsapp.Service
 	Base    modulehandler.Base
+	Healthy bool
 }
 
 // New returns a notifications module with explicit dependencies.
 func New(config Config) Module {
-	return Module{gateway: config.Gateway, base: config.Base}
+	service := config.Service
+	if service == nil {
+		service = notificationsapp.NewService(nil)
+	}
+	return Module{service: service, base: config.Base, healthy: config.Healthy}
 }
 
 // ID returns a stable module identifier.
 func (Module) ID() string { return "notifications" }
 
-// Healthy reports whether the notifications module has an operational gateway.
+// Healthy reports whether the notifications module has an operational runtime
+// service backing its transport surface.
 func (m Module) Healthy() bool {
-	return notificationsapp.IsGatewayHealthy(m.gateway)
+	return m.healthy
 }
 
 // Mount wires notifications route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
-	svc := notificationsapp.NewService(m.gateway)
-	h := newHandlers(svc, m.base)
+	h := newHandlers(m.service, m.base)
 	registerRoutes(mux, h)
 	return module.Mount{Prefix: routepath.Notifications, CanonicalRoot: true, Handler: mux}, nil
 }
