@@ -117,6 +117,53 @@ type SessionSpotlightStore interface {
 	ClearSessionSpotlight(ctx context.Context, campaignID, sessionID string) error
 }
 
+// SessionOOCPost captures one append-only OOC message within the current pause window.
+type SessionOOCPost struct {
+	PostID        string
+	ParticipantID string
+	Body          string
+	CreatedAt     time.Time
+}
+
+// SessionAITurn captures the authoritative AI GM turn lifecycle for the
+// current GM-owned interaction moment.
+type SessionAITurn struct {
+	Status             session.AITurnStatus
+	TurnToken          string
+	OwnerParticipantID string
+	SourceEventType    string
+	SourceSceneID      string
+	SourcePhaseID      string
+	LastError          string
+}
+
+// SessionInteraction captures authoritative session-level interaction state.
+type SessionInteraction struct {
+	CampaignID                  string
+	SessionID                   string
+	ActiveSceneID               string
+	GMAuthorityParticipantID    string
+	OOCPaused                   bool
+	OOCPosts                    []SessionOOCPost
+	ReadyToResumeParticipantIDs []string
+	AITurn                      SessionAITurn
+	UpdatedAt                   time.Time
+}
+
+// SessionInteractionReader provides read-only access to session interaction state.
+type SessionInteractionReader interface {
+	// GetSessionInteraction retrieves the current interaction state for a session.
+	// Returns ErrNotFound if no interaction projection exists.
+	GetSessionInteraction(ctx context.Context, campaignID, sessionID string) (SessionInteraction, error)
+}
+
+// SessionInteractionStore owns session-level interaction state consumed by the interaction surface.
+type SessionInteractionStore interface {
+	SessionInteractionReader
+	// PutSessionInteraction stores the authoritative session interaction state.
+	PutSessionInteraction(ctx context.Context, interaction SessionInteraction) error
+}
+
 // SceneRecord captures scene lifecycle metadata for projection reads.
 type SceneRecord struct {
 	CampaignID  string
@@ -247,4 +294,45 @@ type SceneSpotlightStore interface {
 	PutSceneSpotlight(ctx context.Context, spotlight SceneSpotlight) error
 	// ClearSceneSpotlight removes the spotlight for a scene.
 	ClearSceneSpotlight(ctx context.Context, campaignID, sceneID string) error
+}
+
+// ScenePlayerSlot captures one participant-owned slot in the current scene player phase.
+type ScenePlayerSlot struct {
+	ParticipantID      string
+	SummaryText        string
+	CharacterIDs       []string
+	UpdatedAt          time.Time
+	Yielded            bool
+	ReviewStatus       scene.PlayerPhaseSlotReviewStatus
+	ReviewReason       string
+	ReviewCharacterIDs []string
+}
+
+// SceneInteraction captures authoritative scene-level player phase state.
+type SceneInteraction struct {
+	CampaignID           string
+	SceneID              string
+	SessionID            string
+	PhaseOpen            bool
+	PhaseID              string
+	PhaseStatus          scene.PlayerPhaseStatus
+	FrameText            string
+	ActingCharacterIDs   []string
+	ActingParticipantIDs []string
+	Slots                []ScenePlayerSlot
+	UpdatedAt            time.Time
+}
+
+// SceneInteractionReader provides read-only access to scene interaction state.
+type SceneInteractionReader interface {
+	// GetSceneInteraction retrieves the current interaction state for a scene.
+	// Returns ErrNotFound if no interaction projection exists.
+	GetSceneInteraction(ctx context.Context, campaignID, sceneID string) (SceneInteraction, error)
+}
+
+// SceneInteractionStore owns scene-level interaction state consumed by the interaction surface.
+type SceneInteractionStore interface {
+	SceneInteractionReader
+	// PutSceneInteraction stores the authoritative scene interaction state.
+	PutSceneInteraction(ctx context.Context, interaction SceneInteraction) error
 }

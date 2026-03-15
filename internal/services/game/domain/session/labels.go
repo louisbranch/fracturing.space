@@ -31,6 +31,17 @@ const (
 	SpotlightTypeCharacter SpotlightType = "character"
 )
 
+// AITurnStatus identifies the authoritative AI GM turn lifecycle for the
+// current GM-owned interaction moment.
+type AITurnStatus string
+
+const (
+	AITurnStatusIdle    AITurnStatus = "idle"
+	AITurnStatusQueued  AITurnStatus = "queued"
+	AITurnStatusRunning AITurnStatus = "running"
+	AITurnStatusFailed  AITurnStatus = "failed"
+)
+
 // NormalizeStatus parses a session status label into a canonical value.
 //
 // Normalization keeps API and test payloads aligned so status comparisons stay
@@ -98,4 +109,15 @@ func ValidateSpotlightTarget(spotlightType SpotlightType, characterID string) er
 		return fmt.Errorf("spotlight character id must be empty for gm spotlight")
 	}
 	return nil
+}
+
+// NormalizeAITurnStatus validates and canonicalizes an AI turn status label.
+func NormalizeAITurnStatus(value string) (AITurnStatus, error) {
+	trimmed := strings.ToLower(strings.TrimSpace(value))
+	switch AITurnStatus(trimmed) {
+	case AITurnStatusIdle, AITurnStatusQueued, AITurnStatusRunning, AITurnStatusFailed:
+		return AITurnStatus(trimmed), nil
+	default:
+		return "", fmt.Errorf("ai turn status %q is not supported", value)
+	}
 }

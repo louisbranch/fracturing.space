@@ -231,7 +231,7 @@ func TestGateToProto(t *testing.T) {
 
 func TestGateToProtoNormalizesWorkflowMetadataArraysForStructPB(t *testing.T) {
 	created := time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC)
-	metadata, err := session.DecodeGateMetadataMap(session.GateTypeReadyCheck, []byte(`{"eligible_participant_ids":["p2","p1"],"options":["wait","ready"]}`))
+	metadata, err := session.DecodeGateMetadataMap("decision", []byte(`{"eligible_participant_ids":["p2","p1"],"topic":"direction"}`))
 	if err != nil {
 		t.Fatalf("DecodeGateMetadataMap() error = %v", err)
 	}
@@ -240,7 +240,7 @@ func TestGateToProtoNormalizesWorkflowMetadataArraysForStructPB(t *testing.T) {
 		GateID:     "gate-typed",
 		CampaignID: "camp-1",
 		SessionID:  "sess-1",
-		GateType:   session.GateTypeReadyCheck,
+		GateType:   "decision",
 		Status:     session.GateStatusOpen,
 		CreatedAt:  created,
 		Metadata:   metadata,
@@ -249,12 +249,8 @@ func TestGateToProtoNormalizesWorkflowMetadataArraysForStructPB(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	options, ok := gate.GetMetadata().AsMap()["options"].([]any)
-	if !ok {
-		t.Fatalf("metadata options type = %T, want []any", gate.GetMetadata().AsMap()["options"])
-	}
-	if len(options) != 2 || options[0] != "ready" || options[1] != "wait" {
-		t.Fatalf("metadata options = %#v", options)
+	if got := gate.GetMetadata().AsMap()["topic"]; got != "direction" {
+		t.Fatalf("metadata topic = %#v", got)
 	}
 }
 

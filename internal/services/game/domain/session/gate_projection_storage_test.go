@@ -6,45 +6,44 @@ import (
 )
 
 func TestStoredGateMetadataAndProgressHelpers(t *testing.T) {
-	readyMetadata, err := BuildStoredGateMetadata(GateTypeReadyCheck, map[string]any{
+	metadata, err := BuildStoredGateMetadata("decision", map[string]any{
 		"eligible_participant_ids": []string{"p2", "p1"},
-		"note":                     "alpha",
+		"response_authority":       GateResponseAuthorityParticipant,
+		"topic":                    "path",
 	})
 	if err != nil {
-		t.Fatalf("build ready metadata: %v", err)
+		t.Fatalf("build stored metadata: %v", err)
 	}
-	if readyMetadata.ResponseAuthority != GateResponseAuthorityParticipant {
-		t.Fatalf("response authority = %q", readyMetadata.ResponseAuthority)
+	if metadata.ResponseAuthority != GateResponseAuthorityParticipant {
+		t.Fatalf("response authority = %q", metadata.ResponseAuthority)
 	}
-	if len(readyMetadata.Options) != 2 || readyMetadata.Options[0] != "ready" || readyMetadata.Options[1] != "wait" {
-		t.Fatalf("ready options = %#v", readyMetadata.Options)
-	}
-
-	voteMap, err := BuildGateMetadataMapFromStored(GateTypeVote, StoredGateMetadata{
-		ResponseAuthority:      GateResponseAuthorityParticipant,
-		EligibleParticipantIDs: []string{"p1", "p2"},
-		Options:                []string{"north", "south"},
-		Extra:                  map[string]any{"topic": "path"},
-	})
-	if err != nil {
-		t.Fatalf("build vote metadata map: %v", err)
-	}
-	if got := voteMap["topic"]; got != "path" {
+	if got := metadata.Extra["topic"]; got != "path" {
 		t.Fatalf("topic = %#v", got)
 	}
 
-	progress, err := BuildGateProgressFromResponses(GateTypeVote, voteMap, []GateProgressResponse{
+	metadataMap, err := BuildGateMetadataMapFromStored("decision", metadata)
+	if err != nil {
+		t.Fatalf("build gate metadata map: %v", err)
+	}
+	if got := metadataMap["topic"]; got != "path" {
+		t.Fatalf("topic = %#v", got)
+	}
+
+	progress, err := BuildGateProgressFromResponses("decision", metadataMap, []GateProgressResponse{
 		{ParticipantID: "p1", Decision: "north"},
 		{ParticipantID: "p2", Decision: "north"},
 	})
 	if err != nil {
 		t.Fatalf("build gate progress: %v", err)
 	}
-	if progress.ResolutionState != GateResolutionStateReadyToResolve {
-		t.Fatalf("resolution state = %q", progress.ResolutionState)
+	if progress.RespondedCount != 2 {
+		t.Fatalf("responded count = %d", progress.RespondedCount)
 	}
-	if progress.SuggestedDecision != "north" {
-		t.Fatalf("suggested decision = %q", progress.SuggestedDecision)
+	if !progress.AllResponded {
+		t.Fatalf("all responded = %v, want true", progress.AllResponded)
+	}
+	if progress.LeadingOptionCount != 2 || len(progress.LeadingOptions) != 1 || progress.LeadingOptions[0] != "north" {
+		t.Fatalf("leading options = %#v count=%d", progress.LeadingOptions, progress.LeadingOptionCount)
 	}
 }
 
@@ -70,13 +69,13 @@ func TestStoredGateResolutionHelpers(t *testing.T) {
 }
 
 func TestValidateGateResponseMetadata(t *testing.T) {
-	decision, response, err := ValidateGateResponseMetadata(GateTypeReadyCheck, map[string]any{
+	decision, response, err := ValidateGateResponseMetadata("decision", map[string]any{
 		"eligible_participant_ids": []string{"p1"},
-	}, "p1", "READY", map[string]any{"note": "go"})
+	}, "p1", " APPROVE ", map[string]any{"note": "go"})
 	if err != nil {
 		t.Fatalf("validate response metadata: %v", err)
 	}
-	if decision != "ready" {
+	if decision != "APPROVE" {
 		t.Fatalf("decision = %q", decision)
 	}
 	if got := response["note"]; got != "go" {
@@ -88,7 +87,7 @@ func TestGateProjectionJSONHelpers(t *testing.T) {
 	metadata := map[string]any{
 		"eligible_participant_ids": []string{"p1", "p2"},
 	}
-	initial, err := BuildInitialGateProgressState(GateTypeReadyCheck, metadata)
+	initial, err := BuildInitialGateProgressState("decision", metadata)
 	if err != nil {
 		t.Fatalf("build initial progress: %v", err)
 	}
@@ -100,7 +99,7 @@ func TestGateProjectionJSONHelpers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("marshal gate progress: %v", err)
 	}
-	progressMap, err := DecodeGateProgressMap(GateTypeReadyCheck, mustMarshalGateMetadata(t, metadata), progressJSON)
+	progressMap, err := DecodeGateProgressMap("decision", mustMarshalGateMetadata(t, metadata), progressJSON)
 	if err != nil {
 		t.Fatalf("decode gate progress map: %v", err)
 	}
@@ -109,7 +108,7 @@ func TestGateProjectionJSONHelpers(t *testing.T) {
 	}
 
 	updated, err := RecordGateResponseProgressState(
-		GateTypeReadyCheck,
+		"decision",
 		metadata,
 		initial,
 		GateResponseRecordedPayload{ParticipantID: "p1", Decision: "ready"},
@@ -142,30 +141,25 @@ func TestGateProjectionJSONHelpers(t *testing.T) {
 }
 
 func TestGateProjectionJSONErrorAndNilHelpers(t *testing.T) {
-	if got, err := DecodeGateMetadataMap("gm_handoff", nil); err != nil || got != nil {
+	if got, err := DecodeGateMetadataMap("decision", nil); err != nil || got != nil {
 		t.Fatalf("decode nil metadata = %#v err=%v", got, err)
 	}
-	if _, err := DecodeGateMetadataMap(GateTypeReadyCheck, []byte("{")); err == nil {
+	if _, err := DecodeGateMetadataMap("decision", []byte("{")); err == nil {
 		t.Fatal("expected invalid metadata json error")
 	}
-	if _, _, err := ValidateGateResponseMetadata(GateTypeReadyCheck, map[string]any{
+	if _, _, err := ValidateGateResponseMetadata("decision", map[string]any{
 		"eligible_participant_ids": []string{"p1"},
 	}, "p2", "ready", nil); err == nil {
 		t.Fatal("expected ineligible participant error")
 	}
-	if _, err := BuildInitialGateProgressState(GateTypeReadyCheck, map[string]any{
-		"options": []string{"nope"},
-	}); err == nil {
-		t.Fatal("expected invalid ready check metadata error")
-	}
-	if got, err := DecodeGateProgress("gm_handoff", nil, nil); err != nil || got != nil {
+	if got, err := DecodeGateProgress("decision", nil, nil); err != nil || got != nil {
 		t.Fatalf("decode empty progress = %#v err=%v", got, err)
 	}
-	if got, err := DecodeGateProgressMap("gm_handoff", nil, nil); err != nil || got != nil {
+	if got, err := DecodeGateProgressMap("decision", nil, nil); err != nil || got != nil {
 		t.Fatalf("decode empty progress map = %#v err=%v", got, err)
 	}
-	if _, err := DecodeGateProgress(GateTypeVote, mustMarshalGateMetadataForType(t, GateTypeVote, map[string]any{
-		"options": []string{"north", "south"},
+	if _, err := DecodeGateProgress("decision", mustMarshalGateMetadataForType(t, "decision", map[string]any{
+		"topic": "direction",
 	}), []byte("{")); err == nil {
 		t.Fatal("expected invalid stored progress error")
 	}
@@ -180,12 +174,7 @@ func TestGateProjectionJSONErrorAndNilHelpers(t *testing.T) {
 	}); err == nil {
 		t.Fatal("expected progress marshal error")
 	}
-	if _, err := RecordGateResponseProgressState(GateTypeReadyCheck, map[string]any{
-		"options": []string{"bad"},
-	}, nil, GateResponseRecordedPayload{ParticipantID: "p1", Decision: "ready"}, testGateTime, "participant", "p1"); err == nil {
-		t.Fatal("expected invalid metadata error")
-	}
-	if _, err := RecordGateResponseProgressState(GateTypeReadyCheck, map[string]any{
+	if _, err := RecordGateResponseProgressState("decision", map[string]any{
 		"eligible_participant_ids": []string{"p1"},
 	}, &GateProgress{
 		Responses: []GateProgressResponse{{
@@ -207,7 +196,7 @@ func TestGateProjectionJSONErrorAndNilHelpers(t *testing.T) {
 }
 
 func TestStoredGateProjectionGenericWorkflowHelpers(t *testing.T) {
-	stored, err := BuildStoredGateMetadata("gm_handoff", map[string]any{
+	stored, err := BuildStoredGateMetadata("gm_prompt", map[string]any{
 		"eligible_participant_ids": []string{"p2", "p1"},
 		"response_authority":       GateResponseAuthorityParticipant,
 		"note":                     "handoff",
@@ -222,29 +211,18 @@ func TestStoredGateProjectionGenericWorkflowHelpers(t *testing.T) {
 		t.Fatalf("generic extra note = %#v", got)
 	}
 
-	metadataMap, err := BuildGateMetadataMapFromStored("gm_handoff", stored)
+	metadataMap, err := BuildGateMetadataMapFromStored("gm_prompt", stored)
 	if err != nil {
 		t.Fatalf("build generic metadata map: %v", err)
 	}
 	if got := metadataMap["note"]; got != "handoff" {
 		t.Fatalf("generic metadata note = %#v", got)
 	}
-	if got, err := BuildGateMetadataMapFromStored("gm_handoff", StoredGateMetadata{}); err != nil || got != nil {
+	if got, err := BuildGateMetadataMapFromStored("gm_prompt", StoredGateMetadata{}); err != nil || got != nil {
 		t.Fatalf("empty generic metadata map = %#v err=%v", got, err)
 	}
 
-	readyMetadataMap, err := BuildGateMetadataMapFromStored(GateTypeReadyCheck, StoredGateMetadata{
-		Extra: map[string]any{"topic": "check-in"},
-	})
-	if err != nil {
-		t.Fatalf("build ready metadata map: %v", err)
-	}
-	options, ok := readyMetadataMap["options"].([]any)
-	if !ok || len(options) != 2 {
-		t.Fatalf("ready metadata options = %#v", readyMetadataMap["options"])
-	}
-
-	progress, err := BuildGateProgressFromResponses("gm_handoff", nil, nil)
+	progress, err := BuildGateProgressFromResponses("gm_prompt", nil, nil)
 	if err != nil {
 		t.Fatalf("build generic progress: %v", err)
 	}
@@ -280,7 +258,7 @@ func mustParseGateTime(value string) time.Time {
 }
 
 func mustMarshalGateMetadata(t *testing.T, metadata map[string]any) []byte {
-	return mustMarshalGateMetadataForType(t, GateTypeReadyCheck, metadata)
+	return mustMarshalGateMetadataForType(t, "decision", metadata)
 }
 
 func mustMarshalGateMetadataForType(t *testing.T, gateType string, metadata map[string]any) []byte {

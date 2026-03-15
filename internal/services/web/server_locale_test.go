@@ -23,7 +23,7 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
-				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
+				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
 				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
 				Settings: modules.SettingsDependencies{
 					SocialClient:     defaultSocialClient(),
@@ -72,7 +72,7 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
-				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), CommunicationClient: defaultCommunicationClient()},
+				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
 				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
 				Settings: modules.SettingsDependencies{
 					SocialClient:     defaultSocialClient(),

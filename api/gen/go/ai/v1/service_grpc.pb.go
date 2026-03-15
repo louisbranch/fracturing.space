@@ -566,9 +566,7 @@ var AgentService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
-	InvocationService_InvokeAgent_FullMethodName                 = "/ai.v1.InvocationService/InvokeAgent"
-	InvocationService_SubmitCampaignTurn_FullMethodName          = "/ai.v1.InvocationService/SubmitCampaignTurn"
-	InvocationService_SubscribeCampaignTurnEvents_FullMethodName = "/ai.v1.InvocationService/SubscribeCampaignTurnEvents"
+	InvocationService_InvokeAgent_FullMethodName = "/ai.v1.InvocationService/InvokeAgent"
 )
 
 // InvocationServiceClient is the client API for InvocationService service.
@@ -576,8 +574,6 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type InvocationServiceClient interface {
 	InvokeAgent(ctx context.Context, in *InvokeAgentRequest, opts ...grpc.CallOption) (*InvokeAgentResponse, error)
-	SubmitCampaignTurn(ctx context.Context, in *SubmitCampaignTurnRequest, opts ...grpc.CallOption) (*SubmitCampaignTurnResponse, error)
-	SubscribeCampaignTurnEvents(ctx context.Context, in *SubscribeCampaignTurnEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignTurnEvent], error)
 }
 
 type invocationServiceClient struct {
@@ -598,42 +594,11 @@ func (c *invocationServiceClient) InvokeAgent(ctx context.Context, in *InvokeAge
 	return out, nil
 }
 
-func (c *invocationServiceClient) SubmitCampaignTurn(ctx context.Context, in *SubmitCampaignTurnRequest, opts ...grpc.CallOption) (*SubmitCampaignTurnResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(SubmitCampaignTurnResponse)
-	err := c.cc.Invoke(ctx, InvocationService_SubmitCampaignTurn_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *invocationServiceClient) SubscribeCampaignTurnEvents(ctx context.Context, in *SubscribeCampaignTurnEventsRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CampaignTurnEvent], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &InvocationService_ServiceDesc.Streams[0], InvocationService_SubscribeCampaignTurnEvents_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[SubscribeCampaignTurnEventsRequest, CampaignTurnEvent]{ClientStream: stream}
-	if err := x.ClientStream.SendMsg(in); err != nil {
-		return nil, err
-	}
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	return x, nil
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type InvocationService_SubscribeCampaignTurnEventsClient = grpc.ServerStreamingClient[CampaignTurnEvent]
-
 // InvocationServiceServer is the server API for InvocationService service.
 // All implementations must embed UnimplementedInvocationServiceServer
 // for forward compatibility.
 type InvocationServiceServer interface {
 	InvokeAgent(context.Context, *InvokeAgentRequest) (*InvokeAgentResponse, error)
-	SubmitCampaignTurn(context.Context, *SubmitCampaignTurnRequest) (*SubmitCampaignTurnResponse, error)
-	SubscribeCampaignTurnEvents(*SubscribeCampaignTurnEventsRequest, grpc.ServerStreamingServer[CampaignTurnEvent]) error
 	mustEmbedUnimplementedInvocationServiceServer()
 }
 
@@ -646,12 +611,6 @@ type UnimplementedInvocationServiceServer struct{}
 
 func (UnimplementedInvocationServiceServer) InvokeAgent(context.Context, *InvokeAgentRequest) (*InvokeAgentResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InvokeAgent not implemented")
-}
-func (UnimplementedInvocationServiceServer) SubmitCampaignTurn(context.Context, *SubmitCampaignTurnRequest) (*SubmitCampaignTurnResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SubmitCampaignTurn not implemented")
-}
-func (UnimplementedInvocationServiceServer) SubscribeCampaignTurnEvents(*SubscribeCampaignTurnEventsRequest, grpc.ServerStreamingServer[CampaignTurnEvent]) error {
-	return status.Errorf(codes.Unimplemented, "method SubscribeCampaignTurnEvents not implemented")
 }
 func (UnimplementedInvocationServiceServer) mustEmbedUnimplementedInvocationServiceServer() {}
 func (UnimplementedInvocationServiceServer) testEmbeddedByValue()                           {}
@@ -692,35 +651,6 @@ func _InvocationService_InvokeAgent_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
-func _InvocationService_SubmitCampaignTurn_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(SubmitCampaignTurnRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(InvocationServiceServer).SubmitCampaignTurn(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: InvocationService_SubmitCampaignTurn_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(InvocationServiceServer).SubmitCampaignTurn(ctx, req.(*SubmitCampaignTurnRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _InvocationService_SubscribeCampaignTurnEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(SubscribeCampaignTurnEventsRequest)
-	if err := stream.RecvMsg(m); err != nil {
-		return err
-	}
-	return srv.(InvocationServiceServer).SubscribeCampaignTurnEvents(m, &grpc.GenericServerStream[SubscribeCampaignTurnEventsRequest, CampaignTurnEvent]{ServerStream: stream})
-}
-
-// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type InvocationService_SubscribeCampaignTurnEventsServer = grpc.ServerStreamingServer[CampaignTurnEvent]
-
 // InvocationService_ServiceDesc is the grpc.ServiceDesc for InvocationService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -732,18 +662,8 @@ var InvocationService_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "InvokeAgent",
 			Handler:    _InvocationService_InvokeAgent_Handler,
 		},
-		{
-			MethodName: "SubmitCampaignTurn",
-			Handler:    _InvocationService_SubmitCampaignTurn_Handler,
-		},
 	},
-	Streams: []grpc.StreamDesc{
-		{
-			StreamName:    "SubscribeCampaignTurnEvents",
-			Handler:       _InvocationService_SubscribeCampaignTurnEvents_Handler,
-			ServerStreams: true,
-		},
-	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "ai/v1/service.proto",
 }
 

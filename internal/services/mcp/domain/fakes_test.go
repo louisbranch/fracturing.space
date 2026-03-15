@@ -92,6 +92,132 @@ func (f *fakeSessionClient) EndSession(ctx context.Context, _ *statev1.EndSessio
 	return f.endResp, f.endErr
 }
 
+// fakeInteractionClient implements statev1.InteractionServiceClient for testing.
+type fakeInteractionClient struct {
+	statev1.InteractionServiceClient
+
+	getResp            *statev1.GetInteractionStateResponse
+	getErr             error
+	setActiveSceneResp *statev1.SetActiveSceneResponse
+	setActiveSceneErr  error
+	startPhaseResp     *statev1.StartScenePlayerPhaseResponse
+	startPhaseErr      error
+	submitPostResp     *statev1.SubmitScenePlayerPostResponse
+	submitPostErr      error
+	yieldResp          *statev1.YieldScenePlayerPhaseResponse
+	yieldErr           error
+	unyieldResp        *statev1.UnyieldScenePlayerPhaseResponse
+	unyieldErr         error
+	endPhaseResp       *statev1.EndScenePlayerPhaseResponse
+	endPhaseErr        error
+	pauseOOCResp       *statev1.PauseSessionForOOCResponse
+	pauseOOCErr        error
+	postOOCResp        *statev1.PostSessionOOCResponse
+	postOOCErr         error
+	markReadyResp      *statev1.MarkOOCReadyToResumeResponse
+	markReadyErr       error
+	clearReadyResp     *statev1.ClearOOCReadyToResumeResponse
+	clearReadyErr      error
+	resumeResp         *statev1.ResumeFromOOCResponse
+	resumeErr          error
+	getCtx             context.Context
+	setActiveSceneCtx  context.Context
+	startPhaseCtx      context.Context
+	submitPostCtx      context.Context
+	yieldCtx           context.Context
+	unyieldCtx         context.Context
+	endPhaseCtx        context.Context
+	pauseOOCCtx        context.Context
+	postOOCCtx         context.Context
+	markReadyCtx       context.Context
+	clearReadyCtx      context.Context
+	resumeCtx          context.Context
+	lastGetRequest     *statev1.GetInteractionStateRequest
+	lastSetRequest     *statev1.SetActiveSceneRequest
+	lastStartRequest   *statev1.StartScenePlayerPhaseRequest
+	lastSubmitRequest  *statev1.SubmitScenePlayerPostRequest
+	lastYieldRequest   *statev1.YieldScenePlayerPhaseRequest
+	lastUnyieldRequest *statev1.UnyieldScenePlayerPhaseRequest
+	lastEndRequest     *statev1.EndScenePlayerPhaseRequest
+	lastPauseRequest   *statev1.PauseSessionForOOCRequest
+	lastPostRequest    *statev1.PostSessionOOCRequest
+	lastMarkRequest    *statev1.MarkOOCReadyToResumeRequest
+	lastClearRequest   *statev1.ClearOOCReadyToResumeRequest
+	lastResumeRequest  *statev1.ResumeFromOOCRequest
+}
+
+func (f *fakeInteractionClient) GetInteractionState(ctx context.Context, req *statev1.GetInteractionStateRequest, _ ...grpc.CallOption) (*statev1.GetInteractionStateResponse, error) {
+	f.getCtx = ctx
+	f.lastGetRequest = req
+	return f.getResp, f.getErr
+}
+
+func (f *fakeInteractionClient) SetActiveScene(ctx context.Context, req *statev1.SetActiveSceneRequest, _ ...grpc.CallOption) (*statev1.SetActiveSceneResponse, error) {
+	f.setActiveSceneCtx = ctx
+	f.lastSetRequest = req
+	return f.setActiveSceneResp, f.setActiveSceneErr
+}
+
+func (f *fakeInteractionClient) StartScenePlayerPhase(ctx context.Context, req *statev1.StartScenePlayerPhaseRequest, _ ...grpc.CallOption) (*statev1.StartScenePlayerPhaseResponse, error) {
+	f.startPhaseCtx = ctx
+	f.lastStartRequest = req
+	return f.startPhaseResp, f.startPhaseErr
+}
+
+func (f *fakeInteractionClient) SubmitScenePlayerPost(ctx context.Context, req *statev1.SubmitScenePlayerPostRequest, _ ...grpc.CallOption) (*statev1.SubmitScenePlayerPostResponse, error) {
+	f.submitPostCtx = ctx
+	f.lastSubmitRequest = req
+	return f.submitPostResp, f.submitPostErr
+}
+
+func (f *fakeInteractionClient) YieldScenePlayerPhase(ctx context.Context, req *statev1.YieldScenePlayerPhaseRequest, _ ...grpc.CallOption) (*statev1.YieldScenePlayerPhaseResponse, error) {
+	f.yieldCtx = ctx
+	f.lastYieldRequest = req
+	return f.yieldResp, f.yieldErr
+}
+
+func (f *fakeInteractionClient) UnyieldScenePlayerPhase(ctx context.Context, req *statev1.UnyieldScenePlayerPhaseRequest, _ ...grpc.CallOption) (*statev1.UnyieldScenePlayerPhaseResponse, error) {
+	f.unyieldCtx = ctx
+	f.lastUnyieldRequest = req
+	return f.unyieldResp, f.unyieldErr
+}
+
+func (f *fakeInteractionClient) EndScenePlayerPhase(ctx context.Context, req *statev1.EndScenePlayerPhaseRequest, _ ...grpc.CallOption) (*statev1.EndScenePlayerPhaseResponse, error) {
+	f.endPhaseCtx = ctx
+	f.lastEndRequest = req
+	return f.endPhaseResp, f.endPhaseErr
+}
+
+func (f *fakeInteractionClient) PauseSessionForOOC(ctx context.Context, req *statev1.PauseSessionForOOCRequest, _ ...grpc.CallOption) (*statev1.PauseSessionForOOCResponse, error) {
+	f.pauseOOCCtx = ctx
+	f.lastPauseRequest = req
+	return f.pauseOOCResp, f.pauseOOCErr
+}
+
+func (f *fakeInteractionClient) PostSessionOOC(ctx context.Context, req *statev1.PostSessionOOCRequest, _ ...grpc.CallOption) (*statev1.PostSessionOOCResponse, error) {
+	f.postOOCCtx = ctx
+	f.lastPostRequest = req
+	return f.postOOCResp, f.postOOCErr
+}
+
+func (f *fakeInteractionClient) MarkOOCReadyToResume(ctx context.Context, req *statev1.MarkOOCReadyToResumeRequest, _ ...grpc.CallOption) (*statev1.MarkOOCReadyToResumeResponse, error) {
+	f.markReadyCtx = ctx
+	f.lastMarkRequest = req
+	return f.markReadyResp, f.markReadyErr
+}
+
+func (f *fakeInteractionClient) ClearOOCReadyToResume(ctx context.Context, req *statev1.ClearOOCReadyToResumeRequest, _ ...grpc.CallOption) (*statev1.ClearOOCReadyToResumeResponse, error) {
+	f.clearReadyCtx = ctx
+	f.lastClearRequest = req
+	return f.clearReadyResp, f.clearReadyErr
+}
+
+func (f *fakeInteractionClient) ResumeFromOOC(ctx context.Context, req *statev1.ResumeFromOOCRequest, _ ...grpc.CallOption) (*statev1.ResumeFromOOCResponse, error) {
+	f.resumeCtx = ctx
+	f.lastResumeRequest = req
+	return f.resumeResp, f.resumeErr
+}
+
 // fakeParticipantClient implements statev1.ParticipantServiceClient for testing.
 type fakeParticipantClient struct {
 	statev1.ParticipantServiceClient

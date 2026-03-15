@@ -15,7 +15,7 @@ import (
 // Dependencies contains campaign feature clients.
 type Dependencies struct {
 	CampaignClient           CampaignClient
-	CommunicationClient      campaigngateway.CommunicationClient
+	InteractionClient        campaigngateway.InteractionClient
 	DiscoveryClient          campaigngateway.DiscoveryClient
 	AgentClient              campaigngateway.AgentClient
 	ParticipantClient        ParticipantClient
@@ -52,7 +52,7 @@ func BindGameDependency(deps *Dependencies, conn *grpc.ClientConn) {
 		return
 	}
 	deps.CampaignClient = statev1.NewCampaignServiceClient(conn)
-	deps.CommunicationClient = statev1.NewCommunicationServiceClient(conn)
+	deps.InteractionClient = statev1.NewInteractionServiceClient(conn)
 	deps.ForkClient = statev1.NewForkServiceClient(conn)
 	deps.ParticipantClient = statev1.NewParticipantServiceClient(conn)
 	deps.CharacterClient = statev1.NewCharacterServiceClient(conn)

@@ -132,7 +132,6 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		}
 	}
 
-	service.SetSessionGrantConfig(cfg.SessionGrantConfig)
 	if cfg.OpenAIOAuthConfig != nil {
 		service.SetOpenAIOAuthAdapter(aiservice.NewOpenAIOAuthAdapter(*cfg.OpenAIOAuthConfig))
 	}

@@ -95,6 +95,7 @@ type ProjectionStore interface {
 	InviteStore
 	CharacterStore
 	SessionStore
+	SessionInteractionStore
 	SnapshotStore
 	CampaignForkStore
 	StatisticsStore
@@ -111,6 +112,7 @@ type Store interface {
 	CharacterStore
 	InviteStore
 	SessionStore
+	SessionInteractionStore
 	EventStore
 	AuditEventStore
 	StatisticsStore

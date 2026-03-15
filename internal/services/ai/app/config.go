@@ -9,7 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
 // serverEnv captures startup configuration and optional provider integration.
@@ -31,7 +30,6 @@ type runtimeConfig struct {
 	DBPath             string
 	EncryptionKey      string
 	GameAddr           string
-	SessionGrantConfig aisessiongrant.Config
 	OpenAIOAuthConfig  *aiservice.OpenAIOAuthConfig
 	OpenAIResponsesURL string
 }
@@ -50,10 +48,6 @@ func loadServerEnv() serverEnv {
 // so server construction has one deterministic config source.
 func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 	srvEnv := loadServerEnv()
-	sessionGrantConfig, err := aisessiongrant.LoadConfigFromEnv(nil)
-	if err != nil {
-		return runtimeConfig{}, fmt.Errorf("load ai session grant config: %w", err)
-	}
 	openAIOAuthConfig, err := openAIOAuthConfig(srvEnv)
 	if err != nil {
 		return runtimeConfig{}, fmt.Errorf("load OpenAI OAuth config: %w", err)
@@ -63,7 +57,6 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		DBPath:             strings.TrimSpace(srvEnv.DBPath),
 		EncryptionKey:      strings.TrimSpace(srvEnv.EncryptionKey),
 		GameAddr:           strings.TrimSpace(srvEnv.GameAddr),
-		SessionGrantConfig: sessionGrantConfig,
 		OpenAIOAuthConfig:  openAIOAuthConfig,
 		OpenAIResponsesURL: strings.TrimSpace(srvEnv.OpenAIResponsesURL),
 	}, nil

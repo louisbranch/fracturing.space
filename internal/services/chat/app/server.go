@@ -11,9 +11,7 @@ import (
 	"sync"
 	"time"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
@@ -28,16 +26,12 @@ const (
 
 	webSessionTokenPrefix = "web_session:"
 
-	defaultSessionID = "active"
-
 	maxFramePayloadBytes   = 16 * 1024
 	maxFramesPerSecond     = 40
 	maxDecodeErrorsPerConn = 3
 
 	maxMessageBodyRunes     = 12000
 	maxClientMessageIDRunes = 128
-	maxAITurnMessages       = 20
-	maxAITurnBodyBytes      = 12 * 1024
 
 	maxRoomMessages      = 1000
 	maxIdempotencyRecord = 4000
@@ -46,18 +40,16 @@ const (
 // newManagedConn wraps platformgrpc.NewManagedConn for testability.
 var newManagedConn = platformgrpc.NewManagedConn
 
-var errCampaignSessionInactive = errors.New("campaign has no active session")
 var errCampaignParticipantRequired = errors.New("campaign participant access required")
 
 // Config defines the inputs for the chat transport boundary.
 //
-// The settings intentionally couple the chat WebSocket layer to game membership and
-// auth token introspection without owning gameplay state.
+// Chat remains transport-only: it authenticates the caller and validates
+// campaign/session membership, but it does not own gameplay routing.
 type Config struct {
 	HTTPAddr            string
 	AuthAddr            string
 	GameAddr            string
-	AIAddr              string
 	AuthBaseURL         string
 	OAuthResourceSecret string
 	ReadHeaderTimeout   time.Duration
@@ -66,19 +58,14 @@ type Config struct {
 
 // Server hosts the chat HTTP/WebSocket process.
 //
-// It delegates campaign membership and identity resolution to external service
-// clients so chat remains transport-only.
+// It delegates campaign/session validation to game and identity resolution to
+// auth so chat only owns realtime delivery concerns.
 type Server struct {
-	httpAddr                       string
-	shutdownTimeout                time.Duration
-	httpServer                     *http.Server
-	gameMc                         *platformgrpc.ManagedConn
-	authMc                         *platformgrpc.ManagedConn
-	aiMc                           *platformgrpc.ManagedConn
-	campaignUpdateSubscriptionDone chan struct{}
-	campaignUpdateSubscriptionStop context.CancelFunc
-	aiTurnSubscriptionDone         chan struct{}
-	aiTurnSubscriptionStop         context.CancelFunc
+	httpAddr        string
+	shutdownTimeout time.Duration
+	httpServer      *http.Server
+	gameMc          *platformgrpc.ManagedConn
+	authMc          *platformgrpc.ManagedConn
 }
 
 type wsFrame struct {
@@ -104,43 +91,29 @@ type webSessionAuthClient interface {
 
 type joinPayload struct {
 	CampaignID     string `json:"campaign_id"`
+	SessionID      string `json:"session_id"`
 	LastSequenceID int64  `json:"last_sequence_id,omitempty"`
 }
 
 type joinedPayload struct {
-	CampaignID             string                `json:"campaign_id"`
-	SessionID              string                `json:"session_id"`
-	LatestSequenceID       int64                 `json:"latest_sequence_id"`
-	ServerTime             string                `json:"server_time"`
-	DefaultStreamID        string                `json:"default_stream_id,omitempty"`
-	DefaultPersonaID       string                `json:"default_persona_id,omitempty"`
-	ActiveSessionGate      *chatSessionGate      `json:"active_session_gate,omitempty"`
-	ActiveSessionSpotlight *chatSessionSpotlight `json:"active_session_spotlight,omitempty"`
-	Streams                []chatStream          `json:"streams,omitempty"`
-	Personas               []chatPersona         `json:"personas,omitempty"`
+	CampaignID       string `json:"campaign_id"`
+	CampaignName     string `json:"campaign_name,omitempty"`
+	SessionID        string `json:"session_id"`
+	SessionName      string `json:"session_name,omitempty"`
+	ParticipantID    string `json:"participant_id,omitempty"`
+	ParticipantName  string `json:"participant_name,omitempty"`
+	LatestSequenceID int64  `json:"latest_sequence_id"`
+	ServerTime       string `json:"server_time"`
 }
 
 type sendPayload struct {
 	ClientMessageID string `json:"client_message_id"`
 	Body            string `json:"body"`
-	StreamID        string `json:"stream_id,omitempty"`
-	PersonaID       string `json:"persona_id,omitempty"`
-}
-
-type controlPayload struct {
-	Action     string         `json:"action"`
-	GateType   string         `json:"gate_type,omitempty"`
-	Reason     string         `json:"reason,omitempty"`
-	Decision   string         `json:"decision,omitempty"`
-	Metadata   map[string]any `json:"metadata,omitempty"`
-	Response   map[string]any `json:"response,omitempty"`
-	Resolution map[string]any `json:"resolution,omitempty"`
 }
 
 type historyBeforePayload struct {
-	BeforeSequenceID int64  `json:"before_sequence_id"`
-	Limit            int    `json:"limit"`
-	StreamID         string `json:"stream_id,omitempty"`
+	BeforeSequenceID int64 `json:"before_sequence_id"`
+	Limit            int   `json:"limit"`
 }
 
 type messageEnvelope struct {
@@ -153,8 +126,6 @@ type chatMessage struct {
 	SessionID       string       `json:"session_id"`
 	SequenceID      int64        `json:"sequence_id"`
 	SentAt          string       `json:"sent_at"`
-	Kind            string       `json:"kind"`
-	StreamID        string       `json:"stream_id,omitempty"`
 	Actor           messageActor `json:"actor"`
 	Body            string       `json:"body"`
 	ClientMessageID string       `json:"client_message_id,omitempty"`
@@ -162,27 +133,7 @@ type chatMessage struct {
 
 type messageActor struct {
 	ParticipantID string `json:"participant_id"`
-	CharacterID   string `json:"character_id,omitempty"`
-	PersonaID     string `json:"persona_id,omitempty"`
-	Mode          string `json:"mode,omitempty"`
 	Name          string `json:"name"`
-}
-
-type chatStream struct {
-	StreamID  string `json:"stream_id"`
-	Kind      string `json:"kind"`
-	Scope     string `json:"scope"`
-	SessionID string `json:"session_id,omitempty"`
-	SceneID   string `json:"scene_id,omitempty"`
-	Label     string `json:"label"`
-}
-
-type chatPersona struct {
-	PersonaID     string `json:"persona_id"`
-	Kind          string `json:"kind"`
-	ParticipantID string `json:"participant_id,omitempty"`
-	CharacterID   string `json:"character_id,omitempty"`
-	DisplayName   string `json:"display_name"`
 }
 
 type ackEnvelope struct {
@@ -196,85 +147,30 @@ type ackResult struct {
 	Count      int    `json:"count,omitempty"`
 }
 
-type statePayload struct {
-	CampaignID             string                `json:"campaign_id"`
-	SessionID              string                `json:"session_id"`
-	ActiveSessionGate      *chatSessionGate      `json:"active_session_gate,omitempty"`
-	ActiveSessionSpotlight *chatSessionSpotlight `json:"active_session_spotlight,omitempty"`
+type wsJoinState struct {
+	participantID   string
+	participantName string
 }
 
 type wsSession struct {
 	mu     sync.Mutex
 	userID string
-	room   *campaignRoom
+	room   *sessionRoom
 	peer   *wsPeer
-	state  wsCommunicationState
+	state  wsJoinState
 }
 
 type wsAuthorizer interface {
 	Authenticate(ctx context.Context, accessToken string) (string, error)
-	IsCampaignParticipant(ctx context.Context, campaignID string, userID string) (bool, error)
-}
-
-type wsJoinWelcomeProvider interface {
-	ResolveJoinWelcome(ctx context.Context, campaignID string, userID string) (joinWelcome, error)
-}
-
-type wsCommunicationContextProvider interface {
-	ResolveCommunicationContext(ctx context.Context, campaignID string, userID string) (communicationContext, error)
-}
-
-type wsCommunicationControlProvider interface {
-	OpenCommunicationGate(ctx context.Context, campaignID string, participantID string, gateType string, reason string, metadata map[string]any) (communicationContext, error)
-	ResolveCommunicationGate(ctx context.Context, campaignID string, participantID string, decision string, resolution map[string]any) (communicationContext, error)
-	RespondToCommunicationGate(ctx context.Context, campaignID string, participantID string, decision string, response map[string]any) (communicationContext, error)
-	AbandonCommunicationGate(ctx context.Context, campaignID string, participantID string, reason string) (communicationContext, error)
-	RequestGMHandoff(ctx context.Context, campaignID string, participantID string, reason string, metadata map[string]any) (communicationContext, error)
-	ResolveGMHandoff(ctx context.Context, campaignID string, participantID string, decision string, resolution map[string]any) (communicationContext, error)
-	AbandonGMHandoff(ctx context.Context, campaignID string, participantID string, reason string) (communicationContext, error)
+	ResolveJoinWelcome(ctx context.Context, campaignID string, sessionID string, userID string) (joinWelcome, error)
 }
 
 type joinWelcome struct {
+	ParticipantID   string
 	ParticipantName string
 	CampaignName    string
 	SessionID       string
 	SessionName     string
-	GmMode          string
-	AIAgentID       string
-	Locale          commonv1.Locale
-}
-
-type communicationContext struct {
-	Welcome                joinWelcome
-	ParticipantID          string
-	DefaultStreamID        string
-	DefaultPersonaID       string
-	ActiveSessionGate      *chatSessionGate
-	ActiveSessionSpotlight *chatSessionSpotlight
-	Streams                []chatStream
-	Personas               []chatPersona
-}
-
-type chatSessionGate struct {
-	GateID   string         `json:"gate_id"`
-	GateType string         `json:"gate_type"`
-	Status   string         `json:"status"`
-	Reason   string         `json:"reason,omitempty"`
-	Metadata map[string]any `json:"metadata,omitempty"`
-	Progress map[string]any `json:"progress,omitempty"`
-}
-
-type chatSessionSpotlight struct {
-	Type        string `json:"type"`
-	CharacterID string `json:"character_id,omitempty"`
-}
-
-type wsCommunicationState struct {
-	participantID    string
-	defaultStreamID  string
-	defaultPersonaID string
-	streamsByID      map[string]chatStream
-	personasByID     map[string]chatPersona
 }
 
 type campaignAuthorizer struct {
@@ -282,7 +178,6 @@ type campaignAuthorizer struct {
 	oauthResourceSecret string
 	httpClient          *http.Client
 	authSessionClient   webSessionAuthClient
-	communicationClient statev1.CommunicationServiceClient
 	participantClient   statev1.ParticipantServiceClient
 	sessionClient       statev1.SessionServiceClient
 	campaignClient      statev1.CampaignServiceClient
@@ -320,16 +215,11 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 	}
 
 	var gameMc *platformgrpc.ManagedConn
-	var communicationClient statev1.CommunicationServiceClient
 	var participantClient statev1.ParticipantServiceClient
 	var sessionClient statev1.SessionServiceClient
 	var campaignClient statev1.CampaignServiceClient
-	var campaignAIClient statev1.CampaignAIServiceClient
-	var eventClient statev1.EventServiceClient
 	var authMc *platformgrpc.ManagedConn
 	var authSessionClient webSessionAuthClient
-	var aiMc *platformgrpc.ManagedConn
-	var aiInvocationClient aiv1.InvocationServiceClient
 	if gameAddr := strings.TrimSpace(config.GameAddr); gameAddr != "" {
 		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 			Name: "game",
@@ -347,26 +237,9 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		} else {
 			gameMc = mc
 			conn := mc.Conn()
-			communicationClient = statev1.NewCommunicationServiceClient(conn)
 			participantClient = statev1.NewParticipantServiceClient(conn)
 			sessionClient = statev1.NewSessionServiceClient(conn)
 			campaignClient = statev1.NewCampaignServiceClient(conn)
-			campaignAIClient = statev1.NewCampaignAIServiceClient(conn)
-			eventClient = statev1.NewEventServiceClient(conn)
-		}
-	}
-	if aiAddr := strings.TrimSpace(config.AIAddr); aiAddr != "" {
-		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
-			Name: "ai",
-			Addr: aiAddr,
-			Mode: platformgrpc.ModeOptional,
-			Logf: logf,
-		})
-		if err != nil {
-			log.Printf("ai managed conn failed, campaign ai relay unavailable: %v", err)
-		} else {
-			aiMc = mc
-			aiInvocationClient = aiv1.NewInvocationServiceClient(mc.Conn())
 		}
 	}
 	if authAddr := strings.TrimSpace(config.AuthAddr); authAddr != "" {
@@ -384,80 +257,23 @@ func NewServerWithContext(ctx context.Context, config Config) (*Server, error) {
 		}
 	}
 
-	authorizer := newCampaignAuthorizer(config, communicationClient, participantClient, sessionClient, campaignClient, authSessionClient)
-	roomHub := newRoomHub()
-	issueAISessionGrant := func(callCtx context.Context, room *campaignRoom, userID string) error {
-		return issueAISessionGrantForRoom(callCtx, campaignAIClient, room, userID)
-	}
-	var ensureAITurnSubscription func(string, string, string)
-	var releaseCampaignUpdateSubscription func(string)
-	var releaseAITurnSubscription func(string)
-	onCampaignEvent := func(campaignID string, eventType string) {
-		room := roomHub.roomIfExists(campaignID)
-		if room == nil {
-			return
-		}
-		if isCommunicationCampaignContextEvent(eventType) {
-			if err := refreshRoomCommunicationContext(ctx, authorizer, room, releaseCampaignUpdateSubscription, releaseAITurnSubscription); err != nil {
-				log.Printf("chat: refresh communication room context failed campaign=%q event=%q err=%v", campaignID, eventType, err)
-			}
-		}
-		if !isAICampaignContextEvent(eventType) {
-			return
-		}
-		if err := syncRoomAIContextFromGame(ctx, campaignAIClient, room); err != nil {
-			log.Printf("chat: sync ai room context failed campaign=%q event=%q err=%v", campaignID, eventType, err)
-			room.clearAISessionGrant()
-			return
-		}
-		if !room.aiRelayEnabled() {
-			room.clearAISessionGrant()
-			return
-		}
-		if err := issueAISessionGrantForRoom(ctx, campaignAIClient, room, ""); err != nil {
-			log.Printf("chat: refresh ai session grant failed campaign=%q event=%q err=%v", campaignID, eventType, err)
-			room.clearAISessionGrant()
-			return
-		}
-		if ensureAITurnSubscription != nil {
-			ensureAITurnSubscription(campaignID, room.currentSessionID(), room.aiAgentIDValue())
-		}
-	}
-	ensureCampaignUpdateSubscription, releaseCampaignUpdateSubscription, campaignUpdateStop, campaignUpdateDone := startCampaignEventCommittedSubscriptionWorker(ctx, eventClient, onCampaignEvent)
-	ensureAITurnSubscription, releaseAITurnSubscription, aiTurnStop, aiTurnDone := startCampaignAITurnSubscriptionWorker(ctx, aiInvocationClient, roomHub)
+	authorizer := newCampaignAuthorizer(config, participantClient, sessionClient, campaignClient, authSessionClient)
 	httpServer := &http.Server{
-		Addr: httpAddr,
-		Handler: newHandler(
-			authorizer,
-			true,
-			roomHub,
-			ensureCampaignUpdateSubscription,
-			releaseCampaignUpdateSubscription,
-			ensureAITurnSubscription,
-			releaseAITurnSubscription,
-			issueAISessionGrant,
-			aiInvocationClient,
-		),
+		Addr:              httpAddr,
+		Handler:           newHandler(authorizer, true, newRoomHub()),
 		ReadHeaderTimeout: config.ReadHeaderTimeout,
 	}
 
 	return &Server{
-		httpAddr:                       httpAddr,
-		shutdownTimeout:                config.ShutdownTimeout,
-		httpServer:                     httpServer,
-		gameMc:                         gameMc,
-		authMc:                         authMc,
-		aiMc:                           aiMc,
-		campaignUpdateSubscriptionDone: campaignUpdateDone,
-		campaignUpdateSubscriptionStop: campaignUpdateStop,
-		aiTurnSubscriptionDone:         aiTurnDone,
-		aiTurnSubscriptionStop:         aiTurnStop,
+		httpAddr:        httpAddr,
+		shutdownTimeout: config.ShutdownTimeout,
+		httpServer:      httpServer,
+		gameMc:          gameMc,
+		authMc:          authMc,
 	}, nil
 }
 
 // Run creates and serves a chat server until the context ends.
-//
-// Operators can treat this as the lifecycle boundary for the real-time surface.
 func Run(ctx context.Context, config Config) error {
 	server, err := NewServer(config)
 	if err != nil {
@@ -508,21 +324,8 @@ func (s *Server) Close() {
 	if s == nil {
 		return
 	}
-	if s.campaignUpdateSubscriptionStop != nil {
-		s.campaignUpdateSubscriptionStop()
-	}
-	if s.campaignUpdateSubscriptionDone != nil {
-		<-s.campaignUpdateSubscriptionDone
-	}
-	if s.aiTurnSubscriptionStop != nil {
-		s.aiTurnSubscriptionStop()
-	}
-	if s.aiTurnSubscriptionDone != nil {
-		<-s.aiTurnSubscriptionDone
-	}
 	closeManagedConn(s.gameMc, "game")
 	closeManagedConn(s.authMc, "auth")
-	closeManagedConn(s.aiMc, "ai")
 }
 
 func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {

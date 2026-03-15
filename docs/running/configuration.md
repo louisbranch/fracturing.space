@@ -29,7 +29,7 @@ For setup steps, see [quickstart](quickstart.md) or
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY`: root secret used to sign event chain hashes. Required. Generate with `go run ./cmd/hmac-key`.
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEYS`: optional comma-separated key ring (`key_id=secret`).
 - `FRACTURING_SPACE_GAME_EVENT_HMAC_KEY_ID`: active key id when using the key ring. Default: `v1`.
-- `FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST`: comma-separated internal service IDs allowed to call internal game APIs (currently `game.v1.CampaignAIService` and `game.v1.IntegrationService`). Default: `ai,chat,worker`.
+- `FRACTURING_SPACE_GAME_INTERNAL_SERVICE_ALLOWLIST`: comma-separated internal service IDs allowed to call internal game APIs (currently `game.v1.CampaignAIService` and `game.v1.IntegrationService`). Default: `ai,worker`.
 
 ### Auth + OAuth
 
@@ -137,7 +137,7 @@ Internal gRPC dependencies default to Compose service DNS names (`service:port`)
 ### Web
 
 - `FRACTURING_SPACE_WEB_HTTP_ADDR`: HTTP bind address for the web login server. Default: `localhost:8080`.
-- `FRACTURING_SPACE_CHAT_HTTP_ADDR`: chat HTTP bind address used for campaign chat fallback host candidates. Default: `localhost:8086`.
+- `FRACTURING_SPACE_CHAT_HTTP_ADDR`: chat HTTP bind address for optional session-chat websocket transport. Default: `localhost:8086`.
 - `FRACTURING_SPACE_WEB_AUTH_BASE_URL`: external auth base URL for login redirects.
 - `FRACTURING_SPACE_WEB_AUTH_ADDR`: auth gRPC address used by the web login server. Default: `auth:8083`.
 - `FRACTURING_SPACE_NOTIFICATIONS_ADDR`: notifications gRPC address used by the web login server. Default: `notifications:8088`.
@@ -242,7 +242,6 @@ The chat service (`cmd/chat`) accepts the following flags:
 - `-http-addr`: Chat HTTP server address. Default: `:8086`
 - `-auth-addr`: auth gRPC dependency address. Default: `auth:8083`
 - `-game-addr`: game gRPC dependency address. Default: `game:8082`
-- `-ai-addr`: AI gRPC dependency address. Default: `ai:8087`
 - `-auth-base-url`: auth HTTP base URL used for token introspection fallback. Default: `http://localhost:8084`
 - `-oauth-resource-secret`: OAuth introspection resource secret.
 
@@ -250,8 +249,7 @@ The chat service (`cmd/chat`) accepts the following flags:
 
 The chat service accepts flags for HTTP and upstream dependency addresses. If
 `FRACTURING_SPACE_CHAT_HTTP_ADDR`, `FRACTURING_SPACE_AUTH_ADDR`,
-`FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_AI_ADDR`,
-`FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
+`FRACTURING_SPACE_GAME_ADDR`, `FRACTURING_SPACE_WEB_AUTH_BASE_URL`, or
 `FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET` are set, they provide defaults
 when matching flags are omitted. Command-line flags take precedence over env
 values.

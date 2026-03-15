@@ -84,6 +84,33 @@ func registerSessionTools(registrar mcpRegistrationTarget, client statev1.Sessio
 	return nil
 }
 
+func registerInteractionTools(registrar mcpRegistrationTarget, client statev1.InteractionServiceClient, getContext func() domain.Context, notify domain.ResourceUpdateNotifier) error {
+	registrations := []struct {
+		tool    *mcp.Tool
+		handler any
+	}{
+		{tool: domain.InteractionSetActiveSceneTool(), handler: domain.InteractionSetActiveSceneHandler(client, getContext, notify)},
+		{tool: domain.InteractionStartScenePlayerPhaseTool(), handler: domain.InteractionStartScenePlayerPhaseHandler(client, getContext, notify)},
+		{tool: domain.InteractionSubmitScenePlayerPostTool(), handler: domain.InteractionSubmitScenePlayerPostHandler(client, getContext, notify)},
+		{tool: domain.InteractionYieldScenePlayerPhaseTool(), handler: domain.InteractionYieldScenePlayerPhaseHandler(client, getContext, notify)},
+		{tool: domain.InteractionUnyieldScenePlayerPhaseTool(), handler: domain.InteractionUnyieldScenePlayerPhaseHandler(client, getContext, notify)},
+		{tool: domain.InteractionAcceptScenePlayerPhaseTool(), handler: domain.InteractionAcceptScenePlayerPhaseHandler(client, getContext, notify)},
+		{tool: domain.InteractionRequestScenePlayerRevisionsTool(), handler: domain.InteractionRequestScenePlayerRevisionsHandler(client, getContext, notify)},
+		{tool: domain.InteractionEndScenePlayerPhaseTool(), handler: domain.InteractionEndScenePlayerPhaseHandler(client, getContext, notify)},
+		{tool: domain.InteractionPauseOOCTool(), handler: domain.InteractionPauseOOCHandler(client, getContext, notify)},
+		{tool: domain.InteractionPostOOCTool(), handler: domain.InteractionPostOOCHandler(client, getContext, notify)},
+		{tool: domain.InteractionMarkOOCReadyTool(), handler: domain.InteractionMarkOOCReadyHandler(client, getContext, notify)},
+		{tool: domain.InteractionClearOOCReadyTool(), handler: domain.InteractionClearOOCReadyHandler(client, getContext, notify)},
+		{tool: domain.InteractionResumeOOCTool(), handler: domain.InteractionResumeOOCHandler(client, getContext, notify)},
+	}
+	for _, registration := range registrations {
+		if err := registerTool(registrar, registration.tool, registration.handler); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func registerEventTools(registrar mcpRegistrationTarget, client statev1.EventServiceClient, getContext func() domain.Context) error {
 	return registerTool(registrar, domain.EventListTool(), domain.EventListHandler(client, getContext))
 }
@@ -142,6 +169,11 @@ func registerSessionResources(registrar mcpRegistrationTarget, client statev1.Se
 // registerEventResources registers readable event MCP resources.
 func registerEventResources(registrar mcpRegistrationTarget, client statev1.EventServiceClient) {
 	registrar.AddResourceTemplate(domain.EventsListResourceTemplate(), domain.EventsListResourceHandler(client))
+}
+
+// registerInteractionResources registers readable interaction MCP resources.
+func registerInteractionResources(registrar mcpRegistrationTarget, client statev1.InteractionServiceClient, getContext func() domain.Context) {
+	registrar.AddResourceTemplate(domain.InteractionStateResourceTemplate(), domain.InteractionStateResourceHandler(client, getContext))
 }
 
 // registerContextResources registers readable context MCP resources.

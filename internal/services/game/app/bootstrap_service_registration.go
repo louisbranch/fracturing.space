@@ -96,7 +96,8 @@ func buildServiceDescriptors(
 	systemService := gamegrpc.NewSystemService(systemRegistry)
 	authorizationService := gamegrpc.NewAuthorizationService(stores)
 	campaignAIService := gamegrpc.NewCampaignAIService(stores, sessionGrantConfig)
-	communicationService := gamegrpc.NewCommunicationService(stores)
+	campaignAIOrchestrationService := gamegrpc.NewCampaignAIOrchestrationService(stores)
+	interactionService := gamegrpc.NewInteractionService(stores)
 
 	descriptors := []grpcServiceDescriptor{
 		{
@@ -127,6 +128,12 @@ func buildServiceDescriptors(
 			healthService: "game.v1.CampaignAIService",
 			register: func(server *grpc.Server) {
 				statev1.RegisterCampaignAIServiceServer(server, campaignAIService)
+			},
+		},
+		{
+			healthService: "game.v1.CampaignAIOrchestrationService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterCampaignAIOrchestrationServiceServer(server, campaignAIOrchestrationService)
 			},
 		},
 		{
@@ -202,9 +209,9 @@ func buildServiceDescriptors(
 			},
 		},
 		{
-			healthService: "game.v1.CommunicationService",
+			healthService: "game.v1.InteractionService",
 			register: func(server *grpc.Server) {
-				statev1.RegisterCommunicationServiceServer(server, communicationService)
+				statev1.RegisterInteractionServiceServer(server, interactionService)
 			},
 		},
 	}

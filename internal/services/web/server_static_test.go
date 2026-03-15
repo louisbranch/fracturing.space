@@ -31,83 +31,6 @@ func TestStaticThemeServedByWeb(t *testing.T) {
 	}
 }
 
-func TestStaticCampaignChatScriptServedByWeb(t *testing.T) {
-	t.Parallel()
-
-	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
-	})
-	if err != nil {
-		t.Fatalf("NewHandler() error = %v", err)
-	}
-	req := httptest.NewRequest(http.MethodGet, "/static/campaign-chat.js", nil)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	if ct := rr.Header().Get("Content-Type"); !strings.Contains(ct, "application/javascript") && !strings.Contains(ct, "text/javascript") {
-		t.Fatalf("content-type = %q, want javascript", ct)
-	}
-}
-
-func TestStaticCampaignChatScriptIncludesAppHostFallbackLogic(t *testing.T) {
-	t.Parallel()
-
-	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
-	})
-	if err != nil {
-		t.Fatalf("NewHandler() error = %v", err)
-	}
-	req := httptest.NewRequest(http.MethodGet, "/static/campaign-chat.js", nil)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	body := rr.Body.String()
-	for _, marker := range []string{
-		"replaceAppHostPrefix",
-		"if (fallbackPort)",
-		"host.indexOf(\"app.\") === 0",
-		"addWSHostCandidate(chatHost + \":\" + fallbackPort)",
-	} {
-		if !strings.Contains(body, marker) {
-			t.Fatalf("chat script missing fallback marker %q", marker)
-		}
-	}
-}
-
-func TestStaticCampaignChatScriptPrefersFallbackPortForLocalhost(t *testing.T) {
-	t.Parallel()
-
-	h, err := NewHandler(Config{
-		Dependencies: newDefaultDependencyBundle(modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}}),
-	})
-	if err != nil {
-		t.Fatalf("NewHandler() error = %v", err)
-	}
-	req := httptest.NewRequest(http.MethodGet, "/static/campaign-chat.js", nil)
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
-	}
-	body := rr.Body.String()
-	idxFallback := strings.Index(body, "if (fallbackPort) {")
-	if idxFallback < 0 {
-		t.Fatalf("chat script missing fallback block")
-	}
-	idxResolvedGate := strings.Index(body, "if (!canUseLocalFallback || !fallbackPort) {")
-	if idxResolvedGate < 0 {
-		t.Fatalf("chat script missing resolved-host gate")
-	}
-	if idxFallback >= idxResolvedGate {
-		t.Fatalf("fallback block should run before resolved-host gate")
-	}
-}
-
 func TestStaticPasskeyAuthScriptIncludesBusyStateGuard(t *testing.T) {
 	t.Parallel()
 
@@ -280,7 +203,7 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
-					CommunicationClient:      defaultCommunicationClient(),
+					InteractionClient:        defaultInteractionClient(),
 					AgentClient:              fakeAgentClient{},
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),

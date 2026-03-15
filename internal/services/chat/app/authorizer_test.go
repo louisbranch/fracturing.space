@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -10,12 +9,9 @@ import (
 	"testing"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
@@ -24,35 +20,61 @@ type fakeParticipantClient struct {
 	pages map[string]*statev1.ListParticipantsResponse
 	err   error
 	calls []*statev1.ListParticipantsRequest
-	users []string
 }
 
-type fakeSessionClient struct {
-	pages map[string]*statev1.ListSessionsResponse
-	err   error
-	calls []*statev1.ListSessionsRequest
-	users []string
-}
-
-func (f *fakeSessionClient) ListSessions(ctx context.Context, req *statev1.ListSessionsRequest, _ ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
-	f.users = append(f.users, userIDFromOutgoingContext(ctx))
+func (f *fakeParticipantClient) ListParticipants(_ context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
 	if req != nil {
-		f.calls = append(f.calls, proto.Clone(req).(*statev1.ListSessionsRequest))
+		f.calls = append(f.calls, proto.Clone(req).(*statev1.ListParticipantsRequest))
 	}
 	if resp, ok := f.pages[req.GetPageToken()]; ok {
 		return resp, nil
 	}
-	return &statev1.ListSessionsResponse{}, nil
+	return &statev1.ListParticipantsResponse{}, nil
+}
+
+func (*fakeParticipantClient) CreateParticipant(context.Context, *statev1.CreateParticipantRequest, ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (*fakeParticipantClient) UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (*fakeParticipantClient) DeleteParticipant(context.Context, *statev1.DeleteParticipantRequest, ...grpc.CallOption) (*statev1.DeleteParticipantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (*fakeParticipantClient) GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+type fakeSessionClient struct {
+	response *statev1.GetSessionResponse
+	err      error
+	calls    []*statev1.GetSessionRequest
+}
+
+func (f *fakeSessionClient) GetSession(_ context.Context, req *statev1.GetSessionRequest, _ ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	if req != nil {
+		f.calls = append(f.calls, proto.Clone(req).(*statev1.GetSessionRequest))
+	}
+	if f.response != nil {
+		return f.response, nil
+	}
+	return &statev1.GetSessionResponse{}, nil
 }
 
 func (*fakeSessionClient) StartSession(context.Context, *statev1.StartSessionRequest, ...grpc.CallOption) (*statev1.StartSessionResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
-func (*fakeSessionClient) GetSession(context.Context, *statev1.GetSessionRequest, ...grpc.CallOption) (*statev1.GetSessionResponse, error) {
+func (*fakeSessionClient) ListSessions(context.Context, *statev1.ListSessionsRequest, ...grpc.CallOption) (*statev1.ListSessionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
@@ -92,12 +114,6 @@ type fakeCampaignClient struct {
 	response *statev1.GetCampaignResponse
 	err      error
 	calls    []*statev1.GetCampaignRequest
-}
-
-type fakeWebSessionAuthClient struct {
-	response *authv1.GetWebSessionResponse
-	err      error
-	calls    []*authv1.GetWebSessionRequest
 }
 
 func (f *fakeCampaignClient) GetCampaign(_ context.Context, req *statev1.GetCampaignRequest, _ ...grpc.CallOption) (*statev1.GetCampaignResponse, error) {
@@ -157,12 +173,14 @@ func (*fakeCampaignClient) GetCampaignSessionReadiness(context.Context, *statev1
 	return nil, status.Error(codes.Unimplemented, "not implemented")
 }
 
+type fakeWebSessionAuthClient struct {
+	response *authv1.GetWebSessionResponse
+	err      error
+}
+
 func (f *fakeWebSessionAuthClient) GetWebSession(_ context.Context, req *authv1.GetWebSessionRequest, _ ...grpc.CallOption) (*authv1.GetWebSessionResponse, error) {
 	if f.err != nil {
 		return nil, f.err
-	}
-	if req != nil {
-		f.calls = append(f.calls, proto.Clone(req).(*authv1.GetWebSessionRequest))
 	}
 	if f.response != nil {
 		return f.response, nil
@@ -170,334 +188,107 @@ func (f *fakeWebSessionAuthClient) GetWebSession(_ context.Context, req *authv1.
 	return &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: req.GetSessionId(), UserId: "user-1"}}, nil
 }
 
-func (f *fakeParticipantClient) ListParticipants(ctx context.Context, req *statev1.ListParticipantsRequest, _ ...grpc.CallOption) (*statev1.ListParticipantsResponse, error) {
-	f.users = append(f.users, userIDFromOutgoingContext(ctx))
-	if f.err != nil {
-		return nil, f.err
-	}
-	if req != nil {
-		f.calls = append(f.calls, proto.Clone(req).(*statev1.ListParticipantsRequest))
-	}
-	if resp, ok := f.pages[req.GetPageToken()]; ok {
-		return resp, nil
-	}
-	return &statev1.ListParticipantsResponse{}, nil
-}
+func TestCampaignAuthorizerResolveJoinWelcome(t *testing.T) {
+	t.Parallel()
 
-func (*fakeParticipantClient) CreateParticipant(context.Context, *statev1.CreateParticipantRequest, ...grpc.CallOption) (*statev1.CreateParticipantResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
+	authorizer := newCampaignAuthorizer(Config{},
+		&fakeParticipantClient{pages: map[string]*statev1.ListParticipantsResponse{
+			"": {Participants: []*statev1.Participant{{Id: "part-1", UserId: "user-1", Name: "Ari"}}},
+		}},
+		&fakeSessionClient{response: &statev1.GetSessionResponse{Session: &statev1.Session{Id: "sess-1", Name: "Session One"}}},
+		&fakeCampaignClient{response: &statev1.GetCampaignResponse{Campaign: &statev1.Campaign{Id: "camp-1", Name: "Guildhouse"}}},
+		nil,
+	)
 
-func (*fakeParticipantClient) UpdateParticipant(context.Context, *statev1.UpdateParticipantRequest, ...grpc.CallOption) (*statev1.UpdateParticipantResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (*fakeParticipantClient) DeleteParticipant(context.Context, *statev1.DeleteParticipantRequest, ...grpc.CallOption) (*statev1.DeleteParticipantResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func (*fakeParticipantClient) GetParticipant(context.Context, *statev1.GetParticipantRequest, ...grpc.CallOption) (*statev1.GetParticipantResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "not implemented")
-}
-
-func userIDFromOutgoingContext(ctx context.Context) string {
-	if ctx == nil {
-		return ""
-	}
-	md, ok := metadata.FromOutgoingContext(ctx)
-	if !ok {
-		return ""
-	}
-	userIDs := md.Get(grpcmeta.UserIDHeader)
-	if len(userIDs) == 0 {
-		return ""
-	}
-	return strings.TrimSpace(userIDs[0])
-}
-
-func TestCampaignAuthorizerAuthenticateSuccess(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if got := r.Header.Get("Authorization"); got != "Bearer token-1" {
-			t.Fatalf("Authorization = %q, want %q", got, "Bearer token-1")
-		}
-		if got := r.Header.Get("X-Resource-Secret"); got != "secret-1" {
-			t.Fatalf("X-Resource-Secret = %q, want %q", got, "secret-1")
-		}
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(authIntrospectResponse{Active: true, UserID: "user-1"})
-	}))
-	t.Cleanup(srv.Close)
-
-	a := &campaignAuthorizer{
-		authBaseURL:         srv.URL,
-		oauthResourceSecret: "secret-1",
-		httpClient:          srv.Client(),
-	}
-
-	userID, err := a.Authenticate(context.Background(), "token-1")
+	welcome, err := authorizer.ResolveJoinWelcome(context.Background(), "camp-1", "sess-1", "user-1")
 	if err != nil {
-		t.Fatalf("authenticate: %v", err)
+		t.Fatalf("ResolveJoinWelcome() error = %v", err)
 	}
-	if userID != "user-1" {
-		t.Fatalf("userID = %q, want %q", userID, "user-1")
+	if welcome.ParticipantID != "part-1" || welcome.ParticipantName != "Ari" {
+		t.Fatalf("unexpected participant welcome: %+v", welcome)
 	}
-}
-
-func TestCampaignAuthorizerAuthenticateInactiveToken(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(authIntrospectResponse{Active: false})
-	}))
-	t.Cleanup(srv.Close)
-
-	a := &campaignAuthorizer{
-		authBaseURL:         srv.URL,
-		oauthResourceSecret: "secret-1",
-		httpClient:          srv.Client(),
-	}
-
-	_, err := a.Authenticate(context.Background(), "token-1")
-	if err == nil {
-		t.Fatal("expected error for inactive token")
-	}
-}
-
-func TestCampaignAuthorizerAuthenticateWebSessionSuccess(t *testing.T) {
-	client := &fakeWebSessionAuthClient{response: &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: "ws-1", UserId: "user-1"}}}
-	a := &campaignAuthorizer{authSessionClient: client}
-
-	userID, err := a.Authenticate(context.Background(), "web_session:ws-1")
-	if err != nil {
-		t.Fatalf("authenticate web session: %v", err)
-	}
-	if userID != "user-1" {
-		t.Fatalf("userID = %q, want %q", userID, "user-1")
-	}
-	if len(client.calls) != 1 || client.calls[0].GetSessionId() != "ws-1" {
-		t.Fatalf("web session lookup calls = %d, want one lookup for ws-1", len(client.calls))
-	}
-}
-
-func TestCampaignAuthorizerIsCampaignParticipantPaginates(t *testing.T) {
-	client := &fakeParticipantClient{
-		pages: map[string]*statev1.ListParticipantsResponse{
-			"": {
-				Participants:  []*statev1.Participant{{Id: "p-1", UserId: "user-a"}},
-				NextPageToken: "next-1",
-			},
-			"next-1": {
-				Participants: []*statev1.Participant{{Id: "p-2", UserId: "user-b"}},
-			},
-		},
-	}
-	sessionClient := &fakeSessionClient{
-		pages: map[string]*statev1.ListSessionsResponse{
-			"": {
-				Sessions: []*statev1.Session{
-					{Id: "sess-1", CampaignId: "camp-1", Status: statev1.SessionStatus_SESSION_ACTIVE},
-				},
-			},
-		},
-	}
-
-	a := &campaignAuthorizer{participantClient: client, sessionClient: sessionClient}
-	allowed, err := a.IsCampaignParticipant(context.Background(), "camp-1", "user-b")
-	if err != nil {
-		t.Fatalf("is campaign participant: %v", err)
-	}
-	if !allowed {
-		t.Fatal("expected participant access")
-	}
-	if len(client.calls) != 2 {
-		t.Fatalf("list participants calls = %d, want 2", len(client.calls))
-	}
-	if got := client.calls[0].GetPageSize(); got != 100 {
-		t.Fatalf("first page size = %d, want 100", got)
-	}
-}
-
-func TestCampaignAuthorizerIsCampaignParticipantReturnsError(t *testing.T) {
-	sessionClient := &fakeSessionClient{
-		pages: map[string]*statev1.ListSessionsResponse{
-			"": {
-				Sessions: []*statev1.Session{
-					{Id: "sess-1", CampaignId: "camp-1", Status: statev1.SessionStatus_SESSION_ACTIVE},
-				},
-			},
-		},
-	}
-	a := &campaignAuthorizer{participantClient: &fakeParticipantClient{err: errors.New("boom")}, sessionClient: sessionClient}
-	_, err := a.IsCampaignParticipant(context.Background(), "camp-1", "user-a")
-	if err == nil {
-		t.Fatal("expected list participants error")
-	}
-}
-
-func TestCampaignAuthorizerIsCampaignParticipantAllowsWithoutActiveSession(t *testing.T) {
-	a := &campaignAuthorizer{
-		participantClient: &fakeParticipantClient{
-			pages: map[string]*statev1.ListParticipantsResponse{
-				"": {Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a"}}},
-			},
-		},
-		sessionClient: &fakeSessionClient{pages: map[string]*statev1.ListSessionsResponse{"": {Sessions: []*statev1.Session{}}}},
-	}
-	allowed, err := a.IsCampaignParticipant(context.Background(), "camp-1", "user-a")
-	if err != nil {
-		t.Fatalf("is campaign participant: %v", err)
-	}
-	if !allowed {
-		t.Fatal("expected participant access without active session")
-	}
-}
-
-func TestCampaignAuthorizerResolveJoinWelcomeAllowsWithoutActiveSession(t *testing.T) {
-	a := &campaignAuthorizer{
-		participantClient: &fakeParticipantClient{
-			pages: map[string]*statev1.ListParticipantsResponse{
-				"": {Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", Name: "Ari"}}},
-			},
-		},
-		sessionClient: &fakeSessionClient{
-			pages: map[string]*statev1.ListSessionsResponse{
-				"": {Sessions: []*statev1.Session{}},
-			},
-		},
-		campaignClient: &fakeCampaignClient{
-			response: &statev1.GetCampaignResponse{
-				Campaign: &statev1.Campaign{
-					Id:        "camp-1",
-					Name:      "Campanha Um",
-					Locale:    commonv1.Locale_LOCALE_PT_BR,
-					GmMode:    statev1.GmMode_AI,
-					AiAgentId: "agent-1",
-				},
-			},
-		},
-	}
-
-	welcome, err := a.ResolveJoinWelcome(context.Background(), "camp-1", "user-a")
-	if err != nil {
-		t.Fatalf("resolve join welcome: %v", err)
-	}
-	if welcome.SessionID != "" {
-		t.Fatalf("session id = %q, want empty", welcome.SessionID)
-	}
-	if welcome.SessionName != "" {
-		t.Fatalf("session name = %q, want empty", welcome.SessionName)
+	if welcome.CampaignName != "Guildhouse" || welcome.SessionID != "sess-1" || welcome.SessionName != "Session One" {
+		t.Fatalf("unexpected room welcome: %+v", welcome)
 	}
 }
 
 func TestCampaignAuthorizerResolveJoinWelcomeRequiresParticipant(t *testing.T) {
-	a := &campaignAuthorizer{
-		participantClient: &fakeParticipantClient{
-			pages: map[string]*statev1.ListParticipantsResponse{
-				"": {Participants: []*statev1.Participant{}},
-			},
-		},
-		sessionClient: &fakeSessionClient{
-			pages: map[string]*statev1.ListSessionsResponse{
-				"": {Sessions: []*statev1.Session{{Id: "sess-1", CampaignId: "camp-1", Status: statev1.SessionStatus_SESSION_ACTIVE}}},
-			},
-		},
-	}
+	t.Parallel()
 
-	_, err := a.ResolveJoinWelcome(context.Background(), "camp-1", "user-a")
+	authorizer := newCampaignAuthorizer(Config{},
+		&fakeParticipantClient{pages: map[string]*statev1.ListParticipantsResponse{"": {}}},
+		&fakeSessionClient{response: &statev1.GetSessionResponse{Session: &statev1.Session{Id: "sess-1"}}},
+		nil,
+		nil,
+	)
+
+	_, err := authorizer.ResolveJoinWelcome(context.Background(), "camp-1", "sess-1", "user-1")
 	if !errors.Is(err, errCampaignParticipantRequired) {
-		t.Fatalf("error = %v, want errCampaignParticipantRequired", err)
+		t.Fatalf("ResolveJoinWelcome() error = %v, want errCampaignParticipantRequired", err)
 	}
 }
 
-func TestCampaignAuthorizerResolveJoinWelcomeUsesCampaignLocale(t *testing.T) {
-	a := &campaignAuthorizer{
-		participantClient: &fakeParticipantClient{
-			pages: map[string]*statev1.ListParticipantsResponse{
-				"": {Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", Name: "Ari"}}},
-			},
-		},
-		sessionClient: &fakeSessionClient{
-			pages: map[string]*statev1.ListSessionsResponse{
-				"": {Sessions: []*statev1.Session{{Id: "sess-1", Name: "Sessao Um", CampaignId: "camp-1", Status: statev1.SessionStatus_SESSION_ACTIVE}}},
-			},
-		},
-		campaignClient: &fakeCampaignClient{
-			response: &statev1.GetCampaignResponse{
-				Campaign: &statev1.Campaign{
-					Id:        "camp-1",
-					Name:      "Campanha Um",
-					Locale:    commonv1.Locale_LOCALE_PT_BR,
-					GmMode:    statev1.GmMode_AI,
-					AiAgentId: "agent-1",
-				},
-			},
-		},
-	}
-	welcome, err := a.ResolveJoinWelcome(context.Background(), "camp-1", "user-a")
+func TestCampaignAuthorizerResolveJoinWelcomeFallsBackToIDs(t *testing.T) {
+	t.Parallel()
+
+	authorizer := newCampaignAuthorizer(Config{},
+		&fakeParticipantClient{pages: map[string]*statev1.ListParticipantsResponse{
+			"": {Participants: []*statev1.Participant{{Id: "part-1", UserId: "user-1"}}},
+		}},
+		&fakeSessionClient{response: &statev1.GetSessionResponse{Session: &statev1.Session{Id: "sess-1"}}},
+		nil,
+		nil,
+	)
+
+	welcome, err := authorizer.ResolveJoinWelcome(context.Background(), "camp-1", "sess-1", "user-1")
 	if err != nil {
-		t.Fatalf("resolve join welcome: %v", err)
+		t.Fatalf("ResolveJoinWelcome() error = %v", err)
 	}
-	if welcome.Locale != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("locale = %v, want %v", welcome.Locale, commonv1.Locale_LOCALE_PT_BR)
-	}
-	if welcome.ParticipantName != "Ari" {
-		t.Fatalf("participant = %q, want %q", welcome.ParticipantName, "Ari")
-	}
-	if welcome.CampaignName != "Campanha Um" {
-		t.Fatalf("campaign = %q, want %q", welcome.CampaignName, "Campanha Um")
-	}
-	if welcome.SessionID != "sess-1" {
-		t.Fatalf("session id = %q, want %q", welcome.SessionID, "sess-1")
-	}
-	if welcome.SessionName != "Sessao Um" {
-		t.Fatalf("session name = %q, want %q", welcome.SessionName, "Sessao Um")
-	}
-	if welcome.GmMode != statev1.GmMode_AI.String() {
-		t.Fatalf("gm mode = %q, want %q", welcome.GmMode, statev1.GmMode_AI.String())
-	}
-	if welcome.AIAgentID != "agent-1" {
-		t.Fatalf("ai agent id = %q, want %q", welcome.AIAgentID, "agent-1")
+	if welcome.ParticipantName != "user-1" || welcome.CampaignName != "camp-1" || welcome.SessionName != "sess-1" {
+		t.Fatalf("unexpected fallback welcome: %+v", welcome)
 	}
 }
 
-func TestCampaignAuthorizerResolveJoinWelcomePropagatesUserIdentityToGameRPC(t *testing.T) {
-	sessionClient := &fakeSessionClient{
-		pages: map[string]*statev1.ListSessionsResponse{
-			"": {
-				Sessions: []*statev1.Session{{Id: "sess-1", Name: "Sessao Um", CampaignId: "camp-1", Status: statev1.SessionStatus_SESSION_ACTIVE}},
-			},
-		},
-	}
-	participantClient := &fakeParticipantClient{
-		pages: map[string]*statev1.ListParticipantsResponse{
-			"": {
-				Participants: []*statev1.Participant{{Id: "p-1", UserId: "user-a", Name: "Ari"}},
-			},
-		},
-	}
-	a := &campaignAuthorizer{
-		sessionClient:     sessionClient,
-		participantClient: participantClient,
-		campaignClient: &fakeCampaignClient{
-			response: &statev1.GetCampaignResponse{
-				Campaign: &statev1.Campaign{Id: "camp-1", Name: "Campanha Um", Locale: commonv1.Locale_LOCALE_PT_BR},
-			},
-		},
-	}
+func TestCampaignAuthorizerAuthenticateWebSession(t *testing.T) {
+	t.Parallel()
 
-	_, err := a.ResolveJoinWelcome(context.Background(), "camp-1", "user-a")
+	authorizer := newCampaignAuthorizer(Config{}, nil, nil, nil, &fakeWebSessionAuthClient{
+		response: &authv1.GetWebSessionResponse{Session: &authv1.WebSession{Id: "sess-web", UserId: "user-2"}},
+	})
+
+	userID, err := authorizer.Authenticate(context.Background(), webSessionTokenPrefix+"sess-web")
 	if err != nil {
-		t.Fatalf("resolve join welcome: %v", err)
+		t.Fatalf("Authenticate() error = %v", err)
 	}
-	if len(sessionClient.users) != 1 {
-		t.Fatalf("session calls = %d, want 1", len(sessionClient.users))
+	if userID != "user-2" {
+		t.Fatalf("Authenticate() userID = %q, want user-2", userID)
 	}
-	if got := sessionClient.users[0]; got != "user-a" {
-		t.Fatalf("session call user = %q, want %q", got, "user-a")
+}
+
+func TestCampaignAuthorizerAuthenticateIntrospection(t *testing.T) {
+	t.Parallel()
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if got := r.Header.Get("Authorization"); got != "Bearer token-1" {
+			t.Fatalf("Authorization = %q", got)
+		}
+		if got := r.Header.Get("X-Resource-Secret"); got != "secret-1" {
+			t.Fatalf("X-Resource-Secret = %q", got)
+		}
+		_, _ = w.Write([]byte(`{"active":true,"user_id":"user-9"}`))
+	}))
+	defer srv.Close()
+
+	authorizer := newCampaignAuthorizer(Config{
+		AuthBaseURL:         srv.URL,
+		OAuthResourceSecret: "secret-1",
+	}, nil, nil, nil, nil)
+
+	userID, err := authorizer.Authenticate(context.Background(), "token-1")
+	if err != nil {
+		t.Fatalf("Authenticate() error = %v", err)
 	}
-	if len(participantClient.users) != 1 {
-		t.Fatalf("participant calls = %d, want 1", len(participantClient.users))
-	}
-	if got := participantClient.users[0]; got != "user-a" {
-		t.Fatalf("participant call user = %q, want %q", got, "user-a")
+	if strings.TrimSpace(userID) != "user-9" {
+		t.Fatalf("Authenticate() userID = %q, want user-9", userID)
 	}
 }

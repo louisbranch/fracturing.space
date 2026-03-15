@@ -8,9 +8,11 @@ import (
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
+	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/aifakes"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -19,6 +21,28 @@ import (
 
 type fakeSealer = aifakes.Sealer
 type fakeStore = aifakes.Store
+
+type fakeCampaignAIAuthStateClient struct {
+	usageByAgent map[string]int32
+	usageErr     error
+}
+
+func (f *fakeCampaignAIAuthStateClient) IssueCampaignAISessionGrant(context.Context, *gamev1.IssueCampaignAISessionGrantRequest, ...grpc.CallOption) (*gamev1.IssueCampaignAISessionGrantResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
+
+func (f *fakeCampaignAIAuthStateClient) GetCampaignAIBindingUsage(_ context.Context, in *gamev1.GetCampaignAIBindingUsageRequest, _ ...grpc.CallOption) (*gamev1.GetCampaignAIBindingUsageResponse, error) {
+	if f.usageErr != nil {
+		return nil, f.usageErr
+	}
+	return &gamev1.GetCampaignAIBindingUsageResponse{
+		ActiveCampaignCount: f.usageByAgent[in.GetAiAgentId()],
+	}, nil
+}
+
+func (f *fakeCampaignAIAuthStateClient) GetCampaignAIAuthState(context.Context, *gamev1.GetCampaignAIAuthStateRequest, ...grpc.CallOption) (*gamev1.GetCampaignAIAuthStateResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented")
+}
 
 func newFakeStore() *fakeStore {
 	return aifakes.NewStore()

@@ -105,8 +105,7 @@ func TestSessionGateCommandExecutorUsageIsRestrictedToGateApplications(t *testin
 	repoRoot := repoRootFromThisFile(t)
 	gameRoot := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game")
 	allowed := map[string]struct{}{
-		"internal/services/game/api/grpc/game/session_gate_application.go":          {},
-		"internal/services/game/api/grpc/game/communication_application_control.go": {},
+		"internal/services/game/api/grpc/game/session_gate_application.go": {},
 	}
 
 	var violations []string
@@ -224,103 +223,11 @@ func TestParticipantAndCharacterTransportHelpersDoNotLiveInRootPackage(t *testin
 	t.Fatalf("legacy transport helpers still live in the root game package:\n%s", strings.Join(violations, "\n"))
 }
 
-func TestCommunicationServiceHandlersDoNotAccessStoresDirectly(t *testing.T) {
-	repoRoot := repoRootFromThisFile(t)
-	serviceFiles := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "communication_service.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "communication_service_control.go"),
-	}
-
-	var violations []string
-	for _, path := range serviceFiles {
-		lines, err := selectorUsageLines(path, []string{"s", "stores"})
-		if err != nil {
-			t.Fatalf("scan %s: %v", path, err)
-		}
-		relPath, err := filepath.Rel(repoRoot, path)
-		if err != nil {
-			t.Fatalf("relative path %s: %v", path, err)
-		}
-		for _, line := range lines {
-			violations = append(violations, fmt.Sprintf("%s:%d", filepath.ToSlash(relPath), line))
-		}
-	}
-
-	sort.Strings(violations)
-	if len(violations) == 0 {
-		return
-	}
-	t.Fatalf("communication service handlers access stores directly:\n%s", strings.Join(violations, "\n"))
-}
-
-func TestCommunicationServiceUsesApplicationBoundary(t *testing.T) {
-	repoRoot := repoRootFromThisFile(t)
-	path := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "communication_service.go")
-
-	content, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("read %s: %v", path, err)
-	}
-	source := string(content)
-	if strings.Contains(source, "type CommunicationService struct {\n\tcampaignv1.UnimplementedCommunicationServiceServer\n\tstores ") {
-		relPath, err := filepath.Rel(repoRoot, path)
-		if err != nil {
-			t.Fatalf("relative path %s: %v", path, err)
-		}
-		t.Fatalf("%s still carries full Stores; use communicationApplication instead", filepath.ToSlash(relPath))
-	}
-	if !strings.Contains(source, "app communicationApplication") {
-		relPath, err := filepath.Rel(repoRoot, path)
-		if err != nil {
-			t.Fatalf("relative path %s: %v", path, err)
-		}
-		t.Fatalf("%s no longer exposes the communication application boundary", filepath.ToSlash(relPath))
-	}
-}
-
-func TestCommunicationApplicationUsesSessionReadBoundary(t *testing.T) {
-	repoRoot := repoRootFromThisFile(t)
-	paths := []string{
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "communication_application_context.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "communication_application_control.go"),
-	}
-
-	targets := [][]string{
-		{"a", "stores", "Session"},
-		{"a", "stores", "SessionGate"},
-		{"a", "stores", "SessionSpotlight"},
-	}
-
-	var violations []string
-	for _, path := range paths {
-		relPath, err := filepath.Rel(repoRoot, path)
-		if err != nil {
-			t.Fatalf("relative path %s: %v", path, err)
-		}
-		relPath = filepath.ToSlash(relPath)
-		for _, target := range targets {
-			lines, err := selectorUsageLines(path, target)
-			if err != nil {
-				t.Fatalf("scan %s for %s: %v", path, strings.Join(target, "."), err)
-			}
-			for _, line := range lines {
-				violations = append(violations, fmt.Sprintf("%s:%d uses %s", relPath, line, strings.Join(target, ".")))
-			}
-		}
-	}
-
-	sort.Strings(violations)
-	if len(violations) == 0 {
-		return
-	}
-	t.Fatalf("communication context bypasses session-owned read boundary:\n%s", strings.Join(violations, "\n"))
-}
-
-func TestSessionAndCommunicationApplicationsUseFocusedPolicyDependencies(t *testing.T) {
+func TestSessionAndInteractionApplicationsUseFocusedPolicyDependencies(t *testing.T) {
 	repoRoot := repoRootFromThisFile(t)
 	paths := []string{
 		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "session_application.go"),
-		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "communication_application.go"),
+		filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "game", "interaction_application.go"),
 	}
 
 	for _, path := range paths {

@@ -1,2 +1,2 @@
-// Package server composes and runs the chat service entrypoint.
+// Package server composes and runs the session-chat transport entrypoint.
 package server

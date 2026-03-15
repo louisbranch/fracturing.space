@@ -31,7 +31,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				},
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           defaultCampaignClient(),
-					CommunicationClient:      defaultCommunicationClient(),
+					InteractionClient:        defaultInteractionClient(),
 					DiscoveryClient:          defaultDiscoveryClient(),
 					AgentClient:              fakeAgentClient{},
 					ParticipantClient:        defaultParticipantClient(),
@@ -86,8 +86,8 @@ func defaultParticipantClient() fakeWebParticipantClient {
 	}}}}
 }
 
-func defaultCommunicationClient() fakeWebCommunicationClient {
-	return fakeWebCommunicationClient{}
+func defaultInteractionClient() fakeWebInteractionClient {
+	return fakeWebInteractionClient{}
 }
 
 func defaultCharacterClient() fakeWebCharacterClient {

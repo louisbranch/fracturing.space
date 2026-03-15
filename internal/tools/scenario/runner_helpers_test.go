@@ -2,14 +2,20 @@ package scenario
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"testing"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
@@ -548,6 +554,29 @@ func TestActorID(t *testing.T) {
 	})
 	t.Run("unknown", func(t *testing.T) {
 		_, err := actorID(state, "Charlie")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
+}
+
+func TestParticipantID(t *testing.T) {
+	state := &scenarioState{participants: map[string]string{"Guide": "p-1", "Rhea": "p-2"}}
+
+	t.Run("exact", func(t *testing.T) {
+		id, err := participantID(state, "Guide")
+		if err != nil || id != "p-1" {
+			t.Fatalf("want p-1, got %s, err=%v", id, err)
+		}
+	})
+	t.Run("case_insensitive", func(t *testing.T) {
+		id, err := participantID(state, "rHeA")
+		if err != nil || id != "p-2" {
+			t.Fatalf("want p-2, got %s, err=%v", id, err)
+		}
+	})
+	t.Run("unknown", func(t *testing.T) {
+		_, err := participantID(state, "Bryn")
 		if err == nil {
 			t.Fatal("expected error")
 		}
@@ -1784,6 +1813,329 @@ func TestAssertDamageFlags_NoExpectations(t *testing.T) {
 	err := r.assertDamageFlags(context.Background(), &scenarioState{}, 0, "", map[string]any{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestAssertDamageFlagsMatchesLatestDamageEvent(t *testing.T) {
+	payloadJSON, _ := json.Marshal(daggerheart.DamageAppliedPayload{
+		CharacterID:    ids.CharacterID("char-1"),
+		ResistPhysical: true,
+		ResistMagic:    false,
+		ImmunePhysical: false,
+		ImmuneMagic:    true,
+	})
+	eventClient := &fakeEventClient{
+		listEvents: func(_ context.Context, req *gamev1.ListEventsRequest, _ ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
+			if !strings.Contains(req.GetFilter(), string(daggerheart.EventTypeDamageApplied)) {
+				t.Fatalf("filter = %q, want damage_applied filter", req.GetFilter())
+			}
+			return &gamev1.ListEventsResponse{
+				Events: []*gamev1.Event{
+					{Seq: 5, PayloadJson: payloadJSON},
+				},
+			}, nil
+		},
+	}
+
+	r := newTestRunner(scenarioEnv{eventClient: eventClient})
+	state := &scenarioState{campaignID: "camp-1", sessionID: "session-1", ownerParticipantID: "owner-1"}
+	err := r.assertDamageFlags(context.Background(), state, 3, "char-1", map[string]any{
+		"resist_physical": true,
+		"resist_magic":    false,
+		"immune_physical": false,
+		"immune_magic":    true,
+	})
+	if err != nil {
+		t.Fatalf("assertDamageFlags: %v", err)
+	}
+}
+
+func TestAssertDamageFlagsRejectsMismatch(t *testing.T) {
+	payloadJSON, _ := json.Marshal(daggerheart.DamageAppliedPayload{
+		CharacterID:    ids.CharacterID("char-1"),
+		ResistPhysical: false,
+	})
+	eventClient := &fakeEventClient{
+		listEvents: func(context.Context, *gamev1.ListEventsRequest, ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
+			return &gamev1.ListEventsResponse{
+				Events: []*gamev1.Event{
+					{Seq: 2, PayloadJson: payloadJSON},
+				},
+			}, nil
+		},
+	}
+
+	r := newTestRunner(scenarioEnv{eventClient: eventClient})
+	state := &scenarioState{campaignID: "camp-1", ownerParticipantID: "owner-1"}
+	err := r.assertDamageFlags(context.Background(), state, 0, "char-1", map[string]any{"resist_physical": true})
+	if err == nil || !strings.Contains(err.Error(), "resist_physical = false, want true") {
+		t.Fatalf("expected resist mismatch, got %v", err)
+	}
+}
+
+func TestResolveOutcomeSeed(t *testing.T) {
+	seed, err := resolveOutcomeSeed(map[string]any{}, "outcome", 12, 77)
+	if err != nil {
+		t.Fatalf("resolveOutcomeSeed fallback: %v", err)
+	}
+	if seed != 77 {
+		t.Fatalf("seed = %d, want %d", seed, 77)
+	}
+
+	seed, err = resolveOutcomeSeed(map[string]any{"outcome": "fear"}, "outcome", 12, 77)
+	if err != nil {
+		t.Fatalf("resolveOutcomeSeed hinted: %v", err)
+	}
+	result, err := daggerheartdomain.RollAction(daggerheartdomain.ActionRequest{
+		Difficulty: func() *int { d := 12; return &d }(),
+		Seed:       int64(seed),
+	})
+	if err != nil {
+		t.Fatalf("roll error: %v", err)
+	}
+	if !matchesOutcomeHint(result, "fear") {
+		t.Fatalf("seed %d produced %v, want fear", seed, result.Outcome)
+	}
+}
+
+func TestFirstPlayerWithoutCharacter(t *testing.T) {
+	got := firstPlayerWithoutCharacter([]string{"player-1", "player-2"}, map[string]int{"player-1": 1, "player-2": 0})
+	if got != "player-2" {
+		t.Fatalf("participant = %q, want %q", got, "player-2")
+	}
+	if got := firstPlayerWithoutCharacter([]string{"player-1"}, map[string]int{"player-1": 2}); got != "" {
+		t.Fatalf("participant = %q, want empty", got)
+	}
+}
+
+func TestEnsureSessionStartReadinessCreatesMissingParticipantAndCharacter(t *testing.T) {
+	var createdParticipants []*gamev1.CreateParticipantRequest
+	var createdCharacters []*gamev1.CreateCharacterRequest
+	var setControlRequests []*gamev1.SetDefaultControlRequest
+	var appliedWorkflows []*gamev1.ApplyCharacterCreationWorkflowRequest
+
+	r := newTestRunner(scenarioEnv{
+		participantClient: &fakeParticipantClient{
+			listParticipants: func(context.Context, *gamev1.ListParticipantsRequest, ...grpc.CallOption) (*gamev1.ListParticipantsResponse, error) {
+				return &gamev1.ListParticipantsResponse{}, nil
+			},
+			create: func(_ context.Context, req *gamev1.CreateParticipantRequest, _ ...grpc.CallOption) (*gamev1.CreateParticipantResponse, error) {
+				createdParticipants = append(createdParticipants, req)
+				return &gamev1.CreateParticipantResponse{Participant: &gamev1.Participant{Id: "player-1"}}, nil
+			},
+		},
+		characterClient: &fakeCharacterClient{
+			listCharacters: func(context.Context, *gamev1.ListCharactersRequest, ...grpc.CallOption) (*gamev1.ListCharactersResponse, error) {
+				return &gamev1.ListCharactersResponse{}, nil
+			},
+			create: func(_ context.Context, req *gamev1.CreateCharacterRequest, _ ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
+				createdCharacters = append(createdCharacters, req)
+				return &gamev1.CreateCharacterResponse{Character: &gamev1.Character{Id: "char-1"}}, nil
+			},
+			setDefaultControl: func(_ context.Context, req *gamev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
+				setControlRequests = append(setControlRequests, req)
+				return &gamev1.SetDefaultControlResponse{}, nil
+			},
+			applyWorkflow: func(_ context.Context, req *gamev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
+				appliedWorkflows = append(appliedWorkflows, req)
+				return &gamev1.ApplyCharacterCreationWorkflowResponse{}, nil
+			},
+		},
+	})
+	state := &scenarioState{
+		campaignID:         "camp-1",
+		ownerParticipantID: "owner-1",
+		campaignSystem:     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+	}
+
+	if err := r.ensureSessionStartReadiness(context.Background(), state); err != nil {
+		t.Fatalf("ensureSessionStartReadiness: %v", err)
+	}
+	if len(createdParticipants) != 1 {
+		t.Fatalf("created participants = %d, want 1", len(createdParticipants))
+	}
+	if len(createdCharacters) != 1 {
+		t.Fatalf("created characters = %d, want 1", len(createdCharacters))
+	}
+	if len(setControlRequests) != 1 || setControlRequests[0].GetParticipantId().GetValue() != "player-1" {
+		t.Fatalf("set default control = %+v, want participant player-1", setControlRequests)
+	}
+	if len(appliedWorkflows) != 1 || appliedWorkflows[0].GetCharacterId() != "char-1" {
+		t.Fatalf("applied workflows = %+v, want readiness workflow for char-1", appliedWorkflows)
+	}
+}
+
+func TestEnsureSessionStartReadinessAssignsUnownedCharacterToPlayer(t *testing.T) {
+	var setControlRequests []*gamev1.SetDefaultControlRequest
+
+	r := newTestRunner(scenarioEnv{
+		participantClient: &fakeParticipantClient{
+			listParticipants: func(context.Context, *gamev1.ListParticipantsRequest, ...grpc.CallOption) (*gamev1.ListParticipantsResponse, error) {
+				return &gamev1.ListParticipantsResponse{
+					Participants: []*gamev1.Participant{
+						{Id: "player-1", Role: gamev1.ParticipantRole_PLAYER},
+					},
+				}, nil
+			},
+		},
+		characterClient: &fakeCharacterClient{
+			listCharacters: func(context.Context, *gamev1.ListCharactersRequest, ...grpc.CallOption) (*gamev1.ListCharactersResponse, error) {
+				return &gamev1.ListCharactersResponse{
+					Characters: []*gamev1.Character{
+						{Id: "char-1"},
+					},
+				}, nil
+			},
+			setDefaultControl: func(_ context.Context, req *gamev1.SetDefaultControlRequest, _ ...grpc.CallOption) (*gamev1.SetDefaultControlResponse, error) {
+				setControlRequests = append(setControlRequests, req)
+				return &gamev1.SetDefaultControlResponse{}, nil
+			},
+		},
+	})
+	state := &scenarioState{
+		campaignID:         "camp-1",
+		ownerParticipantID: "owner-1",
+	}
+
+	if err := r.ensureSessionStartReadiness(context.Background(), state); err != nil {
+		t.Fatalf("ensureSessionStartReadiness: %v", err)
+	}
+	if len(setControlRequests) != 1 {
+		t.Fatalf("set default control calls = %d, want 1", len(setControlRequests))
+	}
+	if setControlRequests[0].GetCharacterId() != "char-1" || setControlRequests[0].GetParticipantId().GetValue() != "player-1" {
+		t.Fatalf("set control request = %+v, want char-1 -> player-1", setControlRequests[0])
+	}
+}
+
+func TestEnsureSessionStartReadinessIgnoresUnimplementedListCalls(t *testing.T) {
+	r := newTestRunner(scenarioEnv{
+		participantClient: &fakeParticipantClient{
+			listParticipants: func(context.Context, *gamev1.ListParticipantsRequest, ...grpc.CallOption) (*gamev1.ListParticipantsResponse, error) {
+				return nil, status.Error(codes.Unimplemented, "not implemented")
+			},
+		},
+		characterClient: &fakeCharacterClient{},
+	})
+	state := &scenarioState{
+		campaignID:         "camp-1",
+		ownerParticipantID: "owner-1",
+	}
+
+	if err := r.ensureSessionStartReadiness(context.Background(), state); err != nil {
+		t.Fatalf("ensureSessionStartReadiness: %v", err)
+	}
+}
+
+func TestScenarioCharacterNeedsReadiness(t *testing.T) {
+	r := newTestRunner(scenarioEnv{
+		characterClient: &fakeCharacterClient{
+			getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+				return &gamev1.GetCharacterSheetResponse{
+					Profile: &gamev1.CharacterProfile{
+						SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+							Daggerheart: &daggerheartv1.DaggerheartProfile{},
+						},
+					},
+				}, nil
+			},
+		},
+	})
+
+	needsReadiness, err := r.scenarioCharacterNeedsReadiness(context.Background(), &scenarioState{}, "char-1")
+	if err != nil {
+		t.Fatalf("scenarioCharacterNeedsReadiness unspecified: %v", err)
+	}
+	if needsReadiness {
+		t.Fatal("needsReadiness = true, want false when no game system is set")
+	}
+
+	needsReadiness, err = r.scenarioCharacterNeedsReadiness(context.Background(), &scenarioState{
+		campaignID:     "camp-1",
+		campaignSystem: commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
+	}, "char-1")
+	if err != nil {
+		t.Fatalf("scenarioCharacterNeedsReadiness daggerheart: %v", err)
+	}
+	if !needsReadiness {
+		t.Fatal("needsReadiness = false, want true for missing class/subclass")
+	}
+}
+
+func TestDaggerheartCharacterNeedsReadiness(t *testing.T) {
+	tests := []struct {
+		name    string
+		client  *fakeCharacterClient
+		want    bool
+		wantErr string
+	}{
+		{
+			name: "sheet lookup error",
+			client: &fakeCharacterClient{
+				getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+					return nil, status.Error(codes.Internal, "boom")
+				},
+			},
+			wantErr: "get character sheet for readiness check",
+		},
+		{
+			name: "missing profile",
+			client: &fakeCharacterClient{
+				getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+					return &gamev1.GetCharacterSheetResponse{}, nil
+				},
+			},
+			want: true,
+		},
+		{
+			name: "missing subclass",
+			client: &fakeCharacterClient{
+				getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+					return &gamev1.GetCharacterSheetResponse{
+						Profile: &gamev1.CharacterProfile{
+							SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+								Daggerheart: &daggerheartv1.DaggerheartProfile{ClassId: "class.guardian"},
+							},
+						},
+					}, nil
+				},
+			},
+			want: true,
+		},
+		{
+			name: "ready profile",
+			client: &fakeCharacterClient{
+				getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+					return &gamev1.GetCharacterSheetResponse{
+						Profile: &gamev1.CharacterProfile{
+							SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+								Daggerheart: &daggerheartv1.DaggerheartProfile{ClassId: "class.guardian", SubclassId: "subclass.stalwart"},
+							},
+						},
+					}, nil
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := newTestRunner(scenarioEnv{characterClient: tc.client})
+			got, err := r.daggerheartCharacterNeedsReadiness(context.Background(), &scenarioState{campaignID: "camp-1"}, "char-1")
+			if tc.wantErr != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("expected error containing %q, got %v", tc.wantErr, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("daggerheartCharacterNeedsReadiness: %v", err)
+			}
+			if got != tc.want {
+				t.Fatalf("needsReadiness = %v, want %v", got, tc.want)
+			}
+		})
 	}
 }
 

@@ -219,6 +219,103 @@ return scn
 	}
 }
 
+func TestScenarioInteractionMethodsCreateSteps(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scn = Scenario.new("interaction")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Hand GM authority to a named participant and open a player phase.
+scn:interaction_set_gm_authority({participant = "Guide", as = "Guide"})
+scn:interaction_start_player_phase({scene = "The Bridge", frame_text = "What do you do?", characters = {"Aria", "Corin"}, as = "Guide"})
+scn:interaction_post({summary = "Aria rushes forward.", characters = {"Aria"}, as = "Rhea", yield = true})
+scn:interaction_resume_ooc()
+
+return scn
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 5 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 5)
+	}
+	if scenario.Steps[1].Kind != "interaction_set_gm_authority" {
+		t.Fatalf("step[1].Kind = %q", scenario.Steps[1].Kind)
+	}
+	if scenario.Steps[1].Args["participant"] != "Guide" {
+		t.Fatalf("participant = %v, want Guide", scenario.Steps[1].Args["participant"])
+	}
+	if scenario.Steps[2].Kind != "interaction_start_player_phase" {
+		t.Fatalf("step[2].Kind = %q", scenario.Steps[2].Kind)
+	}
+	if scenario.Steps[2].Args["frame_text"] != "What do you do?" {
+		t.Fatalf("frame_text = %v, want prompt", scenario.Steps[2].Args["frame_text"])
+	}
+	if scenario.Steps[3].Kind != "interaction_post" {
+		t.Fatalf("step[3].Kind = %q", scenario.Steps[3].Kind)
+	}
+	if scenario.Steps[3].Args["as"] != "Rhea" {
+		t.Fatalf("as = %v, want Rhea", scenario.Steps[3].Args["as"])
+	}
+	if scenario.Steps[4].Kind != "interaction_resume_ooc" {
+		t.Fatalf("step[4].Kind = %q", scenario.Steps[4].Kind)
+	}
+}
+
+func TestScenarioAllInteractionMethodsCreateSteps(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scn = Scenario.new("interaction_all")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Exercise every remaining interaction wrapper once.
+scn:interaction_set_active_scene({scene = "The Bridge"})
+scn:interaction_yield({as = "Rhea"})
+scn:interaction_unyield({as = "Rhea"})
+scn:interaction_end_player_phase({reason = "gm_interrupted"})
+scn:interaction_accept_player_phase({as = "Guide"})
+scn:interaction_request_revisions({as = "Guide", revisions = {{participant = "Rhea", reason = "Clarify", characters = {"Aria"}}}})
+scn:interaction_pause_ooc({reason = "clarify the ruling"})
+scn:interaction_post_ooc({as = "Rhea", body = "Question?"})
+scn:interaction_ready_ooc({as = "Rhea"})
+scn:interaction_clear_ready_ooc({as = "Rhea"})
+scn:interaction_expect({phase_status = "GM_REVIEW", slots = {}, ooc_posts = {}})
+
+return scn
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+
+	wantKinds := []string{
+		"campaign",
+		"interaction_set_active_scene",
+		"interaction_yield",
+		"interaction_unyield",
+		"interaction_end_player_phase",
+		"interaction_accept_player_phase",
+		"interaction_request_revisions",
+		"interaction_pause_ooc",
+		"interaction_post_ooc",
+		"interaction_ready_ooc",
+		"interaction_clear_ready_ooc",
+		"interaction_expect",
+	}
+	if len(scenario.Steps) != len(wantKinds) {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), len(wantKinds))
+	}
+	for index, wantKind := range wantKinds {
+		if scenario.Steps[index].Kind != wantKind {
+			t.Fatalf("step[%d].Kind = %q, want %q", index, scenario.Steps[index].Kind, wantKind)
+		}
+	}
+	if scenario.Steps[len(scenario.Steps)-1].Args["phase_status"] != "GM_REVIEW" {
+		t.Fatalf("phase_status = %v, want GM_REVIEW", scenario.Steps[len(scenario.Steps)-1].Args["phase_status"])
+	}
+}
+
 func TestScenarioAdversaryReactionCreatesStep(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
 local scn = Scenario.new("adversary_reaction")

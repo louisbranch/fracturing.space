@@ -37,7 +37,7 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 		CatalogRead:       CatalogReadDeps{Campaign: &contractCampaignClient{}},
 		CatalogMutation:   CatalogMutationDeps{Campaign: &contractCampaignClient{}},
 		WorkspaceRead:     WorkspaceReadDeps{Campaign: &contractCampaignClient{}},
-		GameRead:          GameReadDeps{Communication: &contractCommunicationClient{}},
+		GameRead:          GameReadDeps{Interaction: &contractInteractionClient{}},
 		ParticipantRead:   ParticipantReadDeps{Participant: &contractParticipantClient{}},
 		ParticipantMutate: ParticipantMutationDeps{Participant: &contractParticipantClient{}},
 		CharacterRead: CharacterReadDeps{
@@ -78,32 +78,58 @@ func TestNewGRPCGatewayRequiresCompleteDependencies(t *testing.T) {
 	}
 }
 
-func TestCampaignGameSurfaceMapsCommunicationContext(t *testing.T) {
+func TestCampaignGameSurfaceMapsInteractionState(t *testing.T) {
 	t.Parallel()
 
 	gateway := GRPCGateway{
-		Read: GRPCGatewayReadDeps{Communication: &contractCommunicationClient{
-			getResp: &statev1.GetCommunicationContextResponse{
-				Context: &statev1.CommunicationContext{
-					Participant:      &statev1.CommunicationParticipant{ParticipantId: "p1", Name: "Rhea", Role: statev1.ParticipantRole_PLAYER},
-					ActiveSession:    &statev1.CommunicationSession{SessionId: "sess-1", Name: "Session One"},
-					DefaultStreamId:  "stream-table",
-					DefaultPersonaId: "persona-player",
-					Streams: []*statev1.CommunicationStream{
-						{StreamId: "stream-table", Kind: statev1.CommunicationStreamKind_COMMUNICATION_STREAM_KIND_TABLE, Scope: statev1.CommunicationStreamScope_COMMUNICATION_STREAM_SCOPE_SESSION, SessionId: "sess-1", Label: "Table"},
+		Read: GRPCGatewayReadDeps{Interaction: &contractInteractionClient{
+			getResp: &statev1.GetInteractionStateResponse{
+				State: &statev1.InteractionState{
+					Viewer:        &statev1.InteractionViewer{ParticipantId: "p1", Name: "Rhea", Role: statev1.ParticipantRole_PLAYER},
+					ActiveSession: &statev1.InteractionSession{SessionId: "sess-1", Name: "Session One"},
+					ActiveScene: &statev1.InteractionScene{
+						SceneId:     "scene-1",
+						SessionId:   "sess-1",
+						Name:        "The Crossing",
+						Description: "Rain slants across the bridge.",
+						Characters: []*statev1.InteractionCharacter{
+							{CharacterId: "char-1", Name: "Aria", OwnerParticipantId: "p1"},
+						},
 					},
-					Personas: []*statev1.CommunicationPersona{
-						{PersonaId: "persona-player", Kind: statev1.CommunicationPersonaKind_COMMUNICATION_PERSONA_KIND_PARTICIPANT, ParticipantId: "p1", DisplayName: "Rhea"},
+					PlayerPhase: &statev1.ScenePlayerPhase{
+						PhaseId:              "phase-1",
+						Status:               statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW,
+						FrameText:            "The bridge groans under your weight. What do you do next?",
+						ActingCharacterIds:   []string{"char-1"},
+						ActingParticipantIds: []string{"p1"},
+						Slots: []*statev1.ScenePlayerSlot{
+							{
+								ParticipantId:      "p1",
+								SummaryText:        "Aria creeps forward and checks the ropes.",
+								CharacterIds:       []string{"char-1"},
+								Yielded:            true,
+								ReviewStatus:       statev1.ScenePlayerSlotReviewStatus_SCENE_PLAYER_SLOT_REVIEW_STATUS_CHANGES_REQUESTED,
+								ReviewReason:       "Aria cannot cast Fireball.",
+								ReviewCharacterIds: []string{"char-1"},
+							},
+						},
 					},
-					ActiveSessionGate: &statev1.SessionGate{
-						Id:     "gate-1",
-						Type:   "vote",
-						Status: statev1.SessionGateStatus_SESSION_GATE_OPEN,
-						Reason: "Choose a route",
+					Ooc: &statev1.OOCState{
+						Open:                        true,
+						ReadyToResumeParticipantIds: []string{"p1"},
+						Posts: []*statev1.OOCPost{
+							{PostId: "ooc-1", ParticipantId: "p1", Body: "Quick ruling check before we continue."},
+						},
 					},
-					ActiveSessionSpotlight: &statev1.SessionSpotlight{
-						Type:        statev1.SessionSpotlightType_SESSION_SPOTLIGHT_TYPE_CHARACTER,
-						CharacterId: "char-1",
+					GmAuthorityParticipantId: "gm-ai",
+					AiTurn: &statev1.AITurnState{
+						Status:             statev1.AITurnStatus_AI_TURN_STATUS_FAILED,
+						TurnToken:          "turn-1",
+						OwnerParticipantId: "gm-ai",
+						SourceEventType:    "scene.player_phase_review_started",
+						SourceSceneId:      "scene-1",
+						SourcePhaseId:      "phase-1",
+						LastError:          "provider timeout",
 					},
 				},
 			},
@@ -120,20 +146,184 @@ func TestCampaignGameSurfaceMapsCommunicationContext(t *testing.T) {
 	if surface.SessionID != "sess-1" || surface.SessionName != "Session One" {
 		t.Fatalf("session = %#v", surface)
 	}
-	if surface.DefaultStreamID != "stream-table" || surface.DefaultPersonaID != "persona-player" {
-		t.Fatalf("defaults = %#v", surface)
+	if surface.ActiveScene == nil || surface.ActiveScene.Name != "The Crossing" {
+		t.Fatalf("active scene = %#v", surface.ActiveScene)
 	}
-	if len(surface.Streams) != 1 || surface.Streams[0].Kind != "table" || surface.Streams[0].Scope != "session" {
-		t.Fatalf("streams = %#v", surface.Streams)
+	if surface.PlayerPhase == nil || surface.PlayerPhase.Status != "gm_review" {
+		t.Fatalf("player phase = %#v", surface.PlayerPhase)
 	}
-	if len(surface.Personas) != 1 || surface.Personas[0].Kind != "participant" {
-		t.Fatalf("personas = %#v", surface.Personas)
+	if len(surface.PlayerPhase.Slots) != 1 || surface.PlayerPhase.Slots[0].ReviewStatus != "changes_requested" {
+		t.Fatalf("player slots = %#v", surface.PlayerPhase)
 	}
-	if surface.ActiveSessionGate == nil || surface.ActiveSessionGate.Status != "open" {
-		t.Fatalf("gate = %#v", surface.ActiveSessionGate)
+	if !surface.OOC.Open || len(surface.OOC.ReadyToResumeParticipantIDs) != 1 {
+		t.Fatalf("ooc = %#v", surface.OOC)
 	}
-	if surface.ActiveSessionSpotlight == nil || surface.ActiveSessionSpotlight.Type != "character" {
-		t.Fatalf("spotlight = %#v", surface.ActiveSessionSpotlight)
+	if surface.GMAuthorityParticipantID != "gm-ai" || surface.AITurn.Status != "failed" || surface.AITurn.LastError != "provider timeout" {
+		t.Fatalf("gm/ai state = %#v / %#v", surface.GMAuthorityParticipantID, surface.AITurn)
+	}
+}
+
+func TestCampaignGameSurfaceHandlesMissingClientAndMissingState(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{}
+	_, err := gateway.CampaignGameSurface(context.Background(), "c1")
+	if got := apperrors.HTTPStatus(err); got != http.StatusServiceUnavailable {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusServiceUnavailable)
+	}
+
+	gateway = GRPCGateway{
+		Read: GRPCGatewayReadDeps{Interaction: &contractInteractionClient{
+			getResp: &statev1.GetInteractionStateResponse{},
+		}},
+	}
+	_, err = gateway.CampaignGameSurface(context.Background(), "c1")
+	if got := apperrors.HTTPStatus(err); got != http.StatusNotFound {
+		t.Fatalf("HTTPStatus(err) = %d, want %d", got, http.StatusNotFound)
+	}
+}
+
+func TestCampaignGameSurfaceSkipsNilInteractionEntriesAndMapsTimestamps(t *testing.T) {
+	t.Parallel()
+
+	updatedAt := time.Date(2026, time.March, 12, 14, 30, 0, 0, time.UTC)
+	createdAt := time.Date(2026, time.March, 12, 14, 35, 0, 0, time.UTC)
+	gateway := GRPCGateway{
+		Read: GRPCGatewayReadDeps{Interaction: &contractInteractionClient{
+			getResp: &statev1.GetInteractionStateResponse{
+				State: &statev1.InteractionState{
+					Viewer: &statev1.InteractionViewer{ParticipantId: "p1", Name: "Rhea", Role: statev1.ParticipantRole_PLAYER},
+					ActiveScene: &statev1.InteractionScene{
+						SceneId: "scene-1",
+						Characters: []*statev1.InteractionCharacter{
+							nil,
+							{CharacterId: "char-1", Name: "Aria", OwnerParticipantId: "p1"},
+						},
+					},
+					PlayerPhase: &statev1.ScenePlayerPhase{
+						PhaseId: "phase-1",
+						Status:  statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW,
+						Slots: []*statev1.ScenePlayerSlot{
+							nil,
+							{ParticipantId: "p1", SummaryText: "Advance", UpdatedAt: timestamppb.New(updatedAt), ReviewStatus: statev1.ScenePlayerSlotReviewStatus_SCENE_PLAYER_SLOT_REVIEW_STATUS_UNDER_REVIEW},
+						},
+					},
+					Ooc: &statev1.OOCState{
+						Posts: []*statev1.OOCPost{
+							nil,
+							{PostId: "ooc-1", ParticipantId: "p1", Body: "Question", CreatedAt: timestamppb.New(createdAt)},
+						},
+					},
+				},
+			},
+		}},
+	}
+
+	surface, err := gateway.CampaignGameSurface(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("CampaignGameSurface() error = %v", err)
+	}
+	if surface.ActiveScene == nil || len(surface.ActiveScene.Characters) != 1 {
+		t.Fatalf("active scene = %#v", surface.ActiveScene)
+	}
+	if surface.PlayerPhase == nil || len(surface.PlayerPhase.Slots) != 1 || surface.PlayerPhase.Slots[0].UpdatedAtUnix != updatedAt.Unix() {
+		t.Fatalf("player phase = %#v", surface.PlayerPhase)
+	}
+	if len(surface.OOC.Posts) != 1 || surface.OOC.Posts[0].CreatedAtUnix != createdAt.Unix() {
+		t.Fatalf("ooc posts = %#v", surface.OOC.Posts)
+	}
+}
+
+func TestScenePhaseStatusLabel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		status statev1.ScenePhaseStatus
+		want   string
+	}{
+		{name: "players", status: statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_PLAYERS, want: "players"},
+		{name: "gm review", status: statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM_REVIEW, want: "gm_review"},
+		{name: "gm", status: statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_GM, want: "gm"},
+		{name: "unspecified", status: statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_UNSPECIFIED, want: "unspecified"},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := scenePhaseStatusLabel(tc.status); got != tc.want {
+				t.Fatalf("scenePhaseStatusLabel(%v) = %q, want %q", tc.status, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAITurnStatusLabel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name   string
+		status statev1.AITurnStatus
+		want   string
+	}{
+		{name: "queued", status: statev1.AITurnStatus_AI_TURN_STATUS_QUEUED, want: "queued"},
+		{name: "running", status: statev1.AITurnStatus_AI_TURN_STATUS_RUNNING, want: "running"},
+		{name: "failed", status: statev1.AITurnStatus_AI_TURN_STATUS_FAILED, want: "failed"},
+		{name: "idle", status: statev1.AITurnStatus_AI_TURN_STATUS_IDLE, want: "idle"},
+		{name: "unspecified", status: statev1.AITurnStatus_AI_TURN_STATUS_UNSPECIFIED, want: "unspecified"},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			if got := aiTurnStatusLabel(tc.status); got != tc.want {
+				t.Fatalf("aiTurnStatusLabel(%v) = %q, want %q", tc.status, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCampaignGameSurfaceRequiresConfiguredInteractionClient(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{}
+
+	_, err := gateway.CampaignGameSurface(context.Background(), "c1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var appErr apperrors.Error
+	if !errors.As(err, &appErr) || appErr.Kind != apperrors.KindUnavailable {
+		t.Fatalf("error = %#v, want unavailable app error", err)
+	}
+}
+
+func TestCampaignGameSurfaceRejectsMissingInteractionState(t *testing.T) {
+	t.Parallel()
+
+	gateway := GRPCGateway{
+		Read: GRPCGatewayReadDeps{Interaction: &contractInteractionClient{
+			getResp: &statev1.GetInteractionStateResponse{},
+		}},
+	}
+
+	_, err := gateway.CampaignGameSurface(context.Background(), "c1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	var appErr apperrors.Error
+	if !errors.As(err, &appErr) || appErr.Kind != apperrors.KindNotFound {
+		t.Fatalf("error = %#v, want not-found app error", err)
+	}
+}
+
+func TestScenePhaseStatusLabelFallback(t *testing.T) {
+	t.Parallel()
+
+	if got := scenePhaseStatusLabel(statev1.ScenePhaseStatus_SCENE_PHASE_STATUS_UNSPECIFIED); got != "unspecified" {
+		t.Fatalf("scenePhaseStatusLabel() = %q, want unspecified", got)
 	}
 }
 
@@ -1460,13 +1650,13 @@ func (c *contractCampaignClient) ClearCampaignAIBinding(_ context.Context, req *
 	return &statev1.ClearCampaignAIBindingResponse{}, nil
 }
 
-type contractCommunicationClient struct {
-	getResp    *statev1.GetCommunicationContextResponse
+type contractInteractionClient struct {
+	getResp    *statev1.GetInteractionStateResponse
 	getErr     error
-	lastGetReq *statev1.GetCommunicationContextRequest
+	lastGetReq *statev1.GetInteractionStateRequest
 }
 
-func (c *contractCommunicationClient) GetCommunicationContext(_ context.Context, req *statev1.GetCommunicationContextRequest, _ ...grpc.CallOption) (*statev1.GetCommunicationContextResponse, error) {
+func (c *contractInteractionClient) GetInteractionState(_ context.Context, req *statev1.GetInteractionStateRequest, _ ...grpc.CallOption) (*statev1.GetInteractionStateResponse, error) {
 	c.lastGetReq = req
 	if c.getErr != nil {
 		return nil, c.getErr
@@ -1474,7 +1664,7 @@ func (c *contractCommunicationClient) GetCommunicationContext(_ context.Context,
 	if c.getResp != nil {
 		return c.getResp, nil
 	}
-	return &statev1.GetCommunicationContextResponse{}, nil
+	return &statev1.GetInteractionStateResponse{}, nil
 }
 
 type contractParticipantClient struct {

@@ -22,19 +22,21 @@ type SystemStores struct {
 // Stores groups all campaign-related storage interfaces for service injection.
 type Stores struct {
 	// Core projection stores — used by the projection applier for core events.
-	Campaign         storage.CampaignStore
-	Participant      storage.ParticipantStore
-	ClaimIndex       storage.ClaimIndexStore
-	Invite           storage.InviteStore
-	Character        storage.CharacterStore
-	Session          storage.SessionStore
-	SessionGate      storage.SessionGateStore
-	SessionSpotlight storage.SessionSpotlightStore
-	Scene            storage.SceneStore
-	SceneCharacter   storage.SceneCharacterStore
-	SceneGate        storage.SceneGateStore
-	SceneSpotlight   storage.SceneSpotlightStore
-	CampaignFork     storage.CampaignForkStore
+	Campaign           storage.CampaignStore
+	Participant        storage.ParticipantStore
+	ClaimIndex         storage.ClaimIndexStore
+	Invite             storage.InviteStore
+	Character          storage.CharacterStore
+	Session            storage.SessionStore
+	SessionGate        storage.SessionGateStore
+	SessionSpotlight   storage.SessionSpotlightStore
+	SessionInteraction storage.SessionInteractionStore
+	Scene              storage.SceneStore
+	SceneCharacter     storage.SceneCharacterStore
+	SceneGate          storage.SceneGateStore
+	SceneSpotlight     storage.SceneSpotlightStore
+	SceneInteraction   storage.SceneInteractionStore
+	CampaignFork       storage.CampaignForkStore
 
 	// SystemStores groups system-specific projection stores used by the core
 	// game transport and projection applier.
@@ -71,10 +73,12 @@ type ProjectionStoreBundle interface {
 	storage.ProjectionStore
 	storage.SessionGateStore
 	storage.SessionSpotlightStore
+	storage.SessionInteractionStore
 	storage.SceneStore
 	storage.SceneCharacterStore
 	storage.SceneGateStore
 	storage.SceneSpotlightStore
+	storage.SceneInteractionStore
 }
 
 // StoresFromProjectionConfig configures NewStoresFromProjection.

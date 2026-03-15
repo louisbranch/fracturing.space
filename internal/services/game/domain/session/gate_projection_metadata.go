@@ -1,9 +1,6 @@
 package session
 
-import (
-	"fmt"
-	"strings"
-)
+import "strings"
 
 // StoredGateMetadata captures the structured workflow metadata persisted by the
 // session gate projection.
@@ -57,16 +54,8 @@ func BuildStoredGateMetadata(gateType string, metadata map[string]any) (StoredGa
 	if err != nil {
 		return StoredGateMetadata{}, err
 	}
-	switch typed := workflow.(type) {
-	case readyCheckGateWorkflow:
-		return storedGateMetadataFromBase(typed.gateWorkflowBase, []string{"ready", "wait"}), nil
-	case voteGateWorkflow:
-		return storedGateMetadataFromBase(typed.gateWorkflowBase, typed.options), nil
-	case genericGateWorkflow:
-		return storedGateMetadataFromBase(typed.gateWorkflowBase, nil), nil
-	default:
-		return StoredGateMetadata{}, fmt.Errorf("unsupported gate workflow type %q", strings.TrimSpace(gateType))
-	}
+	typed, _ := workflow.(genericGateWorkflow)
+	return storedGateMetadataFromBase(typed.gateWorkflowBase, nil), nil
 }
 
 // BuildGateMetadataMapFromStored rebuilds structured projection metadata as the
@@ -97,14 +86,6 @@ func storedGateMetadataValue(gateType string, stored StoredGateMetadata) map[str
 		values[gateWorkflowResponseAuthorityKey] = strings.TrimSpace(stored.ResponseAuthority)
 	}
 
-	switch strings.TrimSpace(gateType) {
-	case GateTypeReadyCheck:
-		values[gateWorkflowOptionsKey] = []string{"ready", "wait"}
-	case GateTypeVote:
-		if len(stored.Options) > 0 {
-			values[gateWorkflowOptionsKey] = append([]string(nil), stored.Options...)
-		}
-	}
 	if len(values) == 0 {
 		return nil
 	}

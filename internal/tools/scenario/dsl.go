@@ -142,6 +142,21 @@ var scenarioMethods = []lua.RegistryFunction{
 	{Name: "scene_set_spotlight", Function: scenarioSceneSetSpotlight},
 	{Name: "scene_clear_spotlight", Function: scenarioSceneClearSpotlight},
 	{Name: "update_scene", Function: scenarioUpdateScene},
+	{Name: "interaction_set_gm_authority", Function: scenarioInteractionSetGMAuthority},
+	{Name: "interaction_set_active_scene", Function: scenarioInteractionSetActiveScene},
+	{Name: "interaction_start_player_phase", Function: scenarioInteractionStartPlayerPhase},
+	{Name: "interaction_post", Function: scenarioInteractionPost},
+	{Name: "interaction_yield", Function: scenarioInteractionYield},
+	{Name: "interaction_unyield", Function: scenarioInteractionUnyield},
+	{Name: "interaction_end_player_phase", Function: scenarioInteractionEndPlayerPhase},
+	{Name: "interaction_accept_player_phase", Function: scenarioInteractionAcceptPlayerPhase},
+	{Name: "interaction_request_revisions", Function: scenarioInteractionRequestRevisions},
+	{Name: "interaction_pause_ooc", Function: scenarioInteractionPauseOOC},
+	{Name: "interaction_post_ooc", Function: scenarioInteractionPostOOC},
+	{Name: "interaction_ready_ooc", Function: scenarioInteractionReadyOOC},
+	{Name: "interaction_clear_ready_ooc", Function: scenarioInteractionClearReadyOOC},
+	{Name: "interaction_resume_ooc", Function: scenarioInteractionResumeOOC},
+	{Name: "interaction_expect", Function: scenarioInteractionExpect},
 }
 
 var (

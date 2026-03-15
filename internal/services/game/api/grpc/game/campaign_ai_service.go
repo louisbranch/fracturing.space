@@ -8,7 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
-// CampaignAIService implements internal Game<=>AI/Game<=>Chat contracts.
+// CampaignAIService implements internal Game<=>AI authorization contracts.
 type CampaignAIService struct {
 	campaignv1.UnimplementedCampaignAIServiceServer
 	app campaignAIApplication

@@ -13,6 +13,7 @@ var sceneCommandContracts = appendSceneCommandContracts(
 	sceneTransitionCommandContracts,
 	sceneGateCommandContracts,
 	sceneSpotlightCommandContracts,
+	sceneInteractionCommandContracts,
 )
 
 var sceneEventContracts = appendSceneEventContracts(
@@ -20,6 +21,7 @@ var sceneEventContracts = appendSceneEventContracts(
 	sceneCharacterEventContracts,
 	sceneGateEventContracts,
 	sceneSpotlightEventContracts,
+	sceneInteractionEventContracts,
 )
 
 // RegisterCommands registers scene commands with the shared registry.

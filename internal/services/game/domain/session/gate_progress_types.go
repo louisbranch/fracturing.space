@@ -1,15 +1,7 @@
 package session
 
 const (
-	// GateTypeReadyCheck collects participant ready/wait responses before action proceeds.
-	GateTypeReadyCheck = "ready_check"
-	// GateTypeVote collects participant decisions against one or more explicit options.
-	GateTypeVote = "vote"
-)
-
-const (
 	gateWorkflowEligibleParticipantIDsKey = "eligible_participant_ids"
-	gateWorkflowOptionsKey                = "options"
 	gateWorkflowResponseAuthorityKey      = "response_authority"
 )
 
@@ -28,7 +20,7 @@ const (
 	// outcome and can be resolved without additional participant input.
 	GateResolutionStateReadyToResolve = "ready_to_resolve"
 	// GateResolutionStateBlocked means current responses produce a stable
-	// non-proceed outcome (for example a ready check with one or more waits).
+	// non-proceed outcome.
 	GateResolutionStateBlocked = "blocked"
 	// GateResolutionStateManualReview means participant responses are complete but
 	// no single derived outcome exists, so a human/GM must decide.

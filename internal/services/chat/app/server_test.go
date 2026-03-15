@@ -28,6 +28,12 @@ func TestNewServerWithContextRequiresContext(t *testing.T) {
 	}
 }
 
+func TestRunWrapsInitError(t *testing.T) {
+	if err := Run(context.Background(), Config{}); err == nil || !strings.Contains(err.Error(), "init chat server") {
+		t.Fatalf("Run() error = %v, want wrapped init error", err)
+	}
+}
+
 func TestNewHandlerUpEndpoint(t *testing.T) {
 	rr := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/up", nil)
@@ -91,6 +97,28 @@ func TestListenAndServeStopsOnCancel(t *testing.T) {
 	}
 }
 
+func TestRunStopsOnCancel(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	serveErr := make(chan error, 1)
+	go func() {
+		serveErr <- Run(ctx, Config{HTTPAddr: "127.0.0.1:0"})
+	}()
+
+	time.Sleep(25 * time.Millisecond)
+	cancel()
+
+	select {
+	case err := <-serveErr:
+		if err != nil {
+			t.Fatalf("Run() returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Run() did not stop on cancel")
+	}
+}
+
 func TestMustJSONReturnsNilWithoutPanic(t *testing.T) {
 	defer func() {
 		if r := recover(); r != nil {
@@ -100,23 +128,5 @@ func TestMustJSONReturnsNilWithoutPanic(t *testing.T) {
 
 	if got := mustJSON(make(chan int)); got != nil {
 		t.Fatalf("mustJSON = %v, want nil", got)
-	}
-}
-
-func TestServerCloseStopsCampaignUpdateSubscriptionWorker(t *testing.T) {
-	done := make(chan struct{})
-	stopped := false
-	server := &Server{
-		campaignUpdateSubscriptionDone: done,
-		campaignUpdateSubscriptionStop: func() {
-			stopped = true
-			close(done)
-		},
-	}
-
-	server.Close()
-
-	if !stopped {
-		t.Fatalf("expected campaign update subscription stop to be called")
 	}
 }

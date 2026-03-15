@@ -37,9 +37,10 @@ type ForkClient interface {
 	ForkCampaign(context.Context, *statev1.ForkCampaignRequest, ...grpc.CallOption) (*statev1.ForkCampaignResponse, error)
 }
 
-// CommunicationClient exposes game-owned communication context for the web game surface.
-type CommunicationClient interface {
-	GetCommunicationContext(context.Context, *statev1.GetCommunicationContextRequest, ...grpc.CallOption) (*statev1.GetCommunicationContextResponse, error)
+// InteractionClient exposes game-owned interaction state for the web game
+// surface.
+type InteractionClient interface {
+	GetInteractionState(context.Context, *statev1.GetInteractionStateRequest, ...grpc.CallOption) (*statev1.GetInteractionStateResponse, error)
 }
 
 // AgentClient exposes AI agent listing used for owner-only campaign binding UX.

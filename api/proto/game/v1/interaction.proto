@@ -1,0 +1,358 @@
+syntax = "proto3";
+
+package game.v1;
+
+import "common/v1/locale.proto";
+import "game/v1/participant.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/louisbranch/fracturing.space/api/gen/go/game/v1;gamev1";
+
+// InteractionService exposes the authoritative active-play interaction state for
+// the game surface.
+service InteractionService {
+  // Returns the caller's current active-play interaction state for one
+  // campaign.
+  rpc GetInteractionState(GetInteractionStateRequest) returns (GetInteractionStateResponse);
+  // Sets the session's active scene.
+  rpc SetActiveScene(SetActiveSceneRequest) returns (SetActiveSceneResponse);
+  // Starts a new player phase on the active scene from a GM frame.
+  rpc StartScenePlayerPhase(StartScenePlayerPhaseRequest) returns (StartScenePlayerPhaseResponse);
+  // Updates one participant's current post in the open player phase. When
+  // yield_after_post is true, the participant yields in the same accepted write.
+  rpc SubmitScenePlayerPost(SubmitScenePlayerPostRequest) returns (SubmitScenePlayerPostResponse);
+  // Marks the participant as yielded in the active scene's open player phase.
+  rpc YieldScenePlayerPhase(YieldScenePlayerPhaseRequest) returns (YieldScenePlayerPhaseResponse);
+  // Clears the participant's yielded state in the active scene's open player
+  // phase.
+  rpc UnyieldScenePlayerPhase(UnyieldScenePlayerPhaseRequest) returns (UnyieldScenePlayerPhaseResponse);
+  // Ends the active scene's current player phase early under GM control.
+  rpc EndScenePlayerPhase(EndScenePlayerPhaseRequest) returns (EndScenePlayerPhaseResponse);
+  // Accepts the submitted player phase after GM review and returns to GM control.
+  rpc AcceptScenePlayerPhase(AcceptScenePlayerPhaseRequest) returns (AcceptScenePlayerPhaseResponse);
+  // Returns one or more participant slots for correction while preserving the current phase state.
+  rpc RequestScenePlayerRevisions(RequestScenePlayerRevisionsRequest) returns (RequestScenePlayerRevisionsResponse);
+  // Opens a session-level OOC pause over the active scene.
+  rpc PauseSessionForOOC(PauseSessionForOOCRequest) returns (PauseSessionForOOCResponse);
+  // Posts one append-only OOC message while the session is paused.
+  rpc PostSessionOOC(PostSessionOOCRequest) returns (PostSessionOOCResponse);
+  // Marks the caller as ready to resume from the current OOC pause.
+  rpc MarkOOCReadyToResume(MarkOOCReadyToResumeRequest) returns (MarkOOCReadyToResumeResponse);
+  // Clears the caller's ready-to-resume state for the current OOC pause.
+  rpc ClearOOCReadyToResume(ClearOOCReadyToResumeRequest) returns (ClearOOCReadyToResumeResponse);
+  // Resumes scene play from the current OOC pause.
+  rpc ResumeFromOOC(ResumeFromOOCRequest) returns (ResumeFromOOCResponse);
+  // Sets which GM participant currently owns the next GM decision for the active session.
+  rpc SetSessionGMAuthority(SetSessionGMAuthorityRequest) returns (SetSessionGMAuthorityResponse);
+  // Re-queues the current failed AI GM turn when the session is still eligible.
+  rpc RetryAIGMTurn(RetryAIGMTurnRequest) returns (RetryAIGMTurnResponse);
+}
+
+// CampaignAIOrchestrationService exposes internal-only automation lifecycle
+// writes owned by the game service. Worker and AI services are the intended
+// callers; browser clients must not use this surface.
+service CampaignAIOrchestrationService {
+  rpc QueueAIGMTurn(QueueAIGMTurnRequest) returns (QueueAIGMTurnResponse);
+  rpc StartAIGMTurn(StartAIGMTurnRequest) returns (StartAIGMTurnResponse);
+  rpc FailAIGMTurn(FailAIGMTurnRequest) returns (FailAIGMTurnResponse);
+  rpc CompleteAIGMTurn(CompleteAIGMTurnRequest) returns (CompleteAIGMTurnResponse);
+}
+
+message InteractionViewer {
+  string participant_id = 1;
+  string name = 2;
+  ParticipantRole role = 3;
+}
+
+message InteractionSession {
+  string session_id = 1;
+  string name = 2;
+}
+
+message InteractionCharacter {
+  string character_id = 1;
+  string name = 2;
+  string owner_participant_id = 3;
+}
+
+message InteractionScene {
+  string scene_id = 1;
+  string session_id = 2;
+  string name = 3;
+  string description = 4;
+  repeated InteractionCharacter characters = 5;
+}
+
+enum ScenePhaseStatus {
+  SCENE_PHASE_STATUS_UNSPECIFIED = 0;
+  SCENE_PHASE_STATUS_GM = 1;
+  SCENE_PHASE_STATUS_PLAYERS = 2;
+  SCENE_PHASE_STATUS_GM_REVIEW = 3;
+}
+
+enum ScenePlayerSlotReviewStatus {
+  SCENE_PLAYER_SLOT_REVIEW_STATUS_UNSPECIFIED = 0;
+  SCENE_PLAYER_SLOT_REVIEW_STATUS_OPEN = 1;
+  SCENE_PLAYER_SLOT_REVIEW_STATUS_UNDER_REVIEW = 2;
+  SCENE_PLAYER_SLOT_REVIEW_STATUS_ACCEPTED = 3;
+  SCENE_PLAYER_SLOT_REVIEW_STATUS_CHANGES_REQUESTED = 4;
+}
+
+message ScenePlayerSlot {
+  string participant_id = 1;
+  string summary_text = 2;
+  repeated string character_ids = 3;
+  google.protobuf.Timestamp updated_at = 4;
+  bool yielded = 5;
+  ScenePlayerSlotReviewStatus review_status = 6;
+  string review_reason = 7;
+  repeated string review_character_ids = 8;
+}
+
+message ScenePlayerPhase {
+  string phase_id = 1;
+  ScenePhaseStatus status = 2;
+  string frame_text = 3;
+  repeated string acting_character_ids = 4;
+  repeated string acting_participant_ids = 5;
+  repeated ScenePlayerSlot slots = 6;
+}
+
+message OOCPost {
+  string post_id = 1;
+  string participant_id = 2;
+  string body = 3;
+  google.protobuf.Timestamp created_at = 4;
+}
+
+message OOCState {
+  bool open = 1;
+  repeated OOCPost posts = 2;
+  repeated string ready_to_resume_participant_ids = 3;
+}
+
+enum AITurnStatus {
+  AI_TURN_STATUS_UNSPECIFIED = 0;
+  AI_TURN_STATUS_IDLE = 1;
+  AI_TURN_STATUS_QUEUED = 2;
+  AI_TURN_STATUS_RUNNING = 3;
+  AI_TURN_STATUS_FAILED = 4;
+}
+
+message AITurnState {
+  AITurnStatus status = 1;
+  string turn_token = 2;
+  string owner_participant_id = 3;
+  string source_event_type = 4;
+  string source_scene_id = 5;
+  string source_phase_id = 6;
+  string last_error = 7;
+}
+
+message InteractionState {
+  string campaign_id = 1;
+  string campaign_name = 2;
+  common.v1.Locale locale = 3;
+  InteractionViewer viewer = 4;
+  InteractionSession active_session = 5;
+  InteractionScene active_scene = 6;
+  ScenePlayerPhase player_phase = 7;
+  OOCState ooc = 8;
+  string gm_authority_participant_id = 9;
+  AITurnState ai_turn = 10;
+}
+
+message GetInteractionStateRequest {
+  string campaign_id = 1;
+}
+
+message GetInteractionStateResponse {
+  InteractionState state = 1;
+}
+
+message SetActiveSceneRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+}
+
+message SetActiveSceneResponse {
+  InteractionState state = 1;
+}
+
+message StartScenePlayerPhaseRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string frame_text = 3;
+  repeated string character_ids = 4;
+}
+
+message StartScenePlayerPhaseResponse {
+  InteractionState state = 1;
+}
+
+message SubmitScenePlayerPostRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string summary_text = 3;
+  repeated string character_ids = 4;
+  bool yield_after_post = 5;
+}
+
+message SubmitScenePlayerPostResponse {
+  InteractionState state = 1;
+}
+
+message YieldScenePlayerPhaseRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+}
+
+message YieldScenePlayerPhaseResponse {
+  InteractionState state = 1;
+}
+
+message UnyieldScenePlayerPhaseRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+}
+
+message UnyieldScenePlayerPhaseResponse {
+  InteractionState state = 1;
+}
+
+message EndScenePlayerPhaseRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  string reason = 3;
+}
+
+message EndScenePlayerPhaseResponse {
+  InteractionState state = 1;
+}
+
+message AcceptScenePlayerPhaseRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+}
+
+message AcceptScenePlayerPhaseResponse {
+  InteractionState state = 1;
+}
+
+message ScenePlayerRevisionRequest {
+  string participant_id = 1;
+  string reason = 2;
+  repeated string character_ids = 3;
+}
+
+message RequestScenePlayerRevisionsRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  repeated ScenePlayerRevisionRequest revisions = 3;
+}
+
+message RequestScenePlayerRevisionsResponse {
+  InteractionState state = 1;
+}
+
+message PauseSessionForOOCRequest {
+  string campaign_id = 1;
+  string reason = 2;
+}
+
+message PauseSessionForOOCResponse {
+  InteractionState state = 1;
+}
+
+message PostSessionOOCRequest {
+  string campaign_id = 1;
+  string body = 2;
+}
+
+message PostSessionOOCResponse {
+  InteractionState state = 1;
+}
+
+message MarkOOCReadyToResumeRequest {
+  string campaign_id = 1;
+}
+
+message MarkOOCReadyToResumeResponse {
+  InteractionState state = 1;
+}
+
+message ClearOOCReadyToResumeRequest {
+  string campaign_id = 1;
+}
+
+message ClearOOCReadyToResumeResponse {
+  InteractionState state = 1;
+}
+
+message ResumeFromOOCRequest {
+  string campaign_id = 1;
+}
+
+message ResumeFromOOCResponse {
+  InteractionState state = 1;
+}
+
+message SetSessionGMAuthorityRequest {
+  string campaign_id = 1;
+  string participant_id = 2;
+}
+
+message SetSessionGMAuthorityResponse {
+  InteractionState state = 1;
+}
+
+message RetryAIGMTurnRequest {
+  string campaign_id = 1;
+}
+
+message RetryAIGMTurnResponse {
+  InteractionState state = 1;
+}
+
+message QueueAIGMTurnRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string source_event_type = 3;
+  string source_scene_id = 4;
+  string source_phase_id = 5;
+}
+
+message QueueAIGMTurnResponse {
+  AITurnState ai_turn = 1;
+}
+
+message StartAIGMTurnRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string turn_token = 3;
+}
+
+message StartAIGMTurnResponse {
+  AITurnState ai_turn = 1;
+}
+
+message FailAIGMTurnRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string turn_token = 3;
+  string last_error = 4;
+}
+
+message FailAIGMTurnResponse {
+  AITurnState ai_turn = 1;
+}
+
+message CompleteAIGMTurnRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string turn_token = 3;
+}
+
+message CompleteAIGMTurnResponse {
+  AITurnState ai_turn = 1;
+}

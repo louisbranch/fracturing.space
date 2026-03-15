@@ -20,6 +20,17 @@ func FoldHandledTypes() []event.Type {
 		EventTypeGateAbandoned,
 		EventTypeSpotlightSet,
 		EventTypeSpotlightCleared,
+		EventTypeActiveSceneSet,
+		EventTypeGMAuthoritySet,
+		EventTypeOOCPaused,
+		EventTypeOOCPosted,
+		EventTypeOOCReadyMarked,
+		EventTypeOOCReadyCleared,
+		EventTypeOOCResumed,
+		EventTypeAITurnQueued,
+		EventTypeAITurnRunning,
+		EventTypeAITurnFailed,
+		EventTypeAITurnCleared,
 	}
 }
 
@@ -42,6 +53,17 @@ func Fold(state State, evt event.Event) (State, error) {
 	case EventTypeEnded:
 		state.Ended = true
 		state.Started = false
+		state.ActiveSceneID = ""
+		state.GMAuthorityParticipantID = ""
+		state.OOCPaused = false
+		state.OOCReadyParticipants = nil
+		state.AITurnStatus = ""
+		state.AITurnToken = ""
+		state.AITurnOwnerParticipantID = ""
+		state.AITurnSourceEventType = ""
+		state.AITurnSourceSceneID = ""
+		state.AITurnSourcePhaseID = ""
+		state.AITurnLastError = ""
 		var payload EndPayload
 		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
@@ -79,6 +101,77 @@ func Fold(state State, evt event.Event) (State, error) {
 	case EventTypeSpotlightCleared:
 		state.SpotlightType = ""
 		state.SpotlightCharacterID = ""
+	case EventTypeActiveSceneSet:
+		var payload ActiveSceneSetPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+		}
+		state.ActiveSceneID = ids.SceneID(payload.ActiveSceneID)
+	case EventTypeGMAuthoritySet:
+		var payload GMAuthoritySetPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+		}
+		state.GMAuthorityParticipantID = ids.ParticipantID(payload.ParticipantID)
+	case EventTypeOOCPaused:
+		state.OOCPaused = true
+		state.OOCReadyParticipants = make(map[ids.ParticipantID]bool)
+	case EventTypeOOCPosted:
+		// OOC posts do not change session gate/authority state.
+	case EventTypeOOCReadyMarked:
+		var payload OOCReadyMarkedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+		}
+		if state.OOCReadyParticipants == nil {
+			state.OOCReadyParticipants = make(map[ids.ParticipantID]bool)
+		}
+		state.OOCReadyParticipants[ids.ParticipantID(payload.ParticipantID)] = true
+	case EventTypeOOCReadyCleared:
+		var payload OOCReadyClearedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+		}
+		delete(state.OOCReadyParticipants, ids.ParticipantID(payload.ParticipantID))
+	case EventTypeOOCResumed:
+		state.OOCPaused = false
+		state.OOCReadyParticipants = nil
+	case EventTypeAITurnQueued:
+		var payload AITurnQueuedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+		}
+		state.AITurnStatus = AITurnStatusQueued
+		state.AITurnToken = strings.TrimSpace(payload.TurnToken)
+		state.AITurnOwnerParticipantID = ids.ParticipantID(payload.OwnerParticipantID)
+		state.AITurnSourceEventType = strings.TrimSpace(payload.SourceEventType)
+		state.AITurnSourceSceneID = ids.SceneID(payload.SourceSceneID)
+		state.AITurnSourcePhaseID = strings.TrimSpace(payload.SourcePhaseID)
+		state.AITurnLastError = ""
+	case EventTypeAITurnRunning:
+		var payload AITurnRunningPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+		}
+		state.AITurnStatus = AITurnStatusRunning
+		state.AITurnToken = strings.TrimSpace(payload.TurnToken)
+		state.AITurnLastError = ""
+	case EventTypeAITurnFailed:
+		var payload AITurnFailedPayload
+		if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
+			return state, fmt.Errorf("session fold %s: %w", evt.Type, err)
+		}
+		state.AITurnStatus = AITurnStatusFailed
+		state.AITurnToken = strings.TrimSpace(payload.TurnToken)
+		state.AITurnLastError = strings.TrimSpace(payload.LastError)
+	case EventTypeAITurnCleared:
+		state.AITurnStatus = AITurnStatusIdle
+		state.AITurnToken = ""
+		state.AITurnOwnerParticipantID = ""
+		state.AITurnSourceEventType = ""
+		state.AITurnSourceSceneID = ""
+		state.AITurnSourcePhaseID = ""
+		state.AITurnLastError = ""
 	}
 	// Unknown event types are silently ignored so that replay remains
 	// forward-compatible when new events are added before the fold is updated.

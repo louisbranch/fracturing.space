@@ -907,22 +907,27 @@ func (f fakeGateway) CampaignGameSurface(_ context.Context, campaignID string) (
 	if strings.TrimSpace(surface.SessionName) == "" {
 		surface.SessionName = "Session One"
 	}
-	if len(surface.Streams) == 0 {
-		surface.Streams = []campaignapp.CampaignGameStream{
-			{ID: "campaign:" + campaignID + ":table", Kind: "table", Scope: "session", SessionID: surface.SessionID, Label: "Table"},
-			{ID: "campaign:" + campaignID + ":system", Kind: "system", Scope: "session", SessionID: surface.SessionID, Label: "System"},
+	if surface.ActiveScene == nil {
+		surface.ActiveScene = &campaignapp.CampaignGameScene{
+			ID:        "scene-1",
+			SessionID: surface.SessionID,
+			Name:      "Session One Scene",
+			Characters: []campaignapp.CampaignGameCharacter{
+				{ID: "char-1", Name: "Owner", OwnerParticipantID: surface.Participant.ID},
+			},
 		}
 	}
-	if len(surface.Personas) == 0 {
-		surface.Personas = []campaignapp.CampaignGamePersona{
-			{ID: "participant:" + surface.Participant.ID, Kind: "participant", ParticipantID: surface.Participant.ID, DisplayName: surface.Participant.Name},
+	if surface.PlayerPhase == nil {
+		surface.PlayerPhase = &campaignapp.CampaignGamePlayerPhase{
+			PhaseID:              "phase-1",
+			Status:               "players",
+			ActingCharacterIDs:   []string{"char-1"},
+			ActingParticipantIDs: []string{surface.Participant.ID},
+			Slots:                []campaignapp.CampaignGamePlayerSlot{},
 		}
 	}
-	if strings.TrimSpace(surface.DefaultStreamID) == "" {
-		surface.DefaultStreamID = surface.Streams[0].ID
-	}
-	if strings.TrimSpace(surface.DefaultPersonaID) == "" {
-		surface.DefaultPersonaID = surface.Personas[0].ID
+	if len(surface.OOC.Posts) == 0 {
+		surface.OOC.Posts = []campaignapp.CampaignGameOOCPost{}
 	}
 	return surface, nil
 }
@@ -1416,8 +1421,8 @@ func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPC
 	if deps.AutomationMutate.Campaign == nil {
 		deps.AutomationMutate.Campaign = deps.CatalogMutation.Campaign
 	}
-	if deps.GameRead.Communication == nil {
-		deps.GameRead.Communication = stubCommunicationClient{}
+	if deps.GameRead.Interaction == nil {
+		deps.GameRead.Interaction = stubInteractionClient{}
 	}
 	if deps.AutomationRead.Agent == nil {
 		deps.AutomationRead.Agent = stubAgentClient{}
@@ -1495,8 +1500,8 @@ type stubParticipantReadClient struct {
 type stubParticipantMutationClient struct {
 	campaigngateway.ParticipantMutationClient
 }
-type stubCommunicationClient struct {
-	campaigngateway.CommunicationClient
+type stubInteractionClient struct {
+	campaigngateway.InteractionClient
 }
 type stubDiscoveryClient struct {
 	campaigngateway.DiscoveryClient

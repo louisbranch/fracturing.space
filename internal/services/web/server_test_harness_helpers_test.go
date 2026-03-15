@@ -60,7 +60,7 @@ func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBund
 
 func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dependencies {
 	hasCampaignDependency := moduleDeps.Campaigns.CampaignClient != nil ||
-		moduleDeps.Campaigns.CommunicationClient != nil ||
+		moduleDeps.Campaigns.InteractionClient != nil ||
 		moduleDeps.Campaigns.DiscoveryClient != nil ||
 		moduleDeps.Campaigns.ParticipantClient != nil ||
 		moduleDeps.Campaigns.CharacterClient != nil ||
@@ -76,8 +76,8 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 		if moduleDeps.Campaigns.CampaignClient == nil {
 			moduleDeps.Campaigns.CampaignClient = defaultCampaignClient()
 		}
-		if moduleDeps.Campaigns.CommunicationClient == nil {
-			moduleDeps.Campaigns.CommunicationClient = defaultCommunicationClient()
+		if moduleDeps.Campaigns.InteractionClient == nil {
+			moduleDeps.Campaigns.InteractionClient = defaultInteractionClient()
 		}
 		if moduleDeps.Campaigns.DiscoveryClient == nil {
 			moduleDeps.Campaigns.DiscoveryClient = defaultDiscoveryClient()

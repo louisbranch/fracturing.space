@@ -1486,6 +1486,23 @@ func actorID(state *scenarioState, name string) (string, error) {
 	return id, nil
 }
 
+func participantID(state *scenarioState, name string) (string, error) {
+	id, ok := state.participants[name]
+	if !ok {
+		for key, value := range state.participants {
+			if strings.EqualFold(key, name) {
+				id = value
+				ok = true
+				break
+			}
+		}
+	}
+	if !ok {
+		return "", fmt.Errorf("unknown participant %q", name)
+	}
+	return id, nil
+}
+
 func adversaryID(state *scenarioState, name string) (string, error) {
 	id, ok := state.adversaries[name]
 	if !ok {

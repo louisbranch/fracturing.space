@@ -1,6 +1,6 @@
-// Package chat implements real-time participation transport for active campaigns.
+// Package chat implements session-scoped realtime transcript transport.
 //
 // It keeps WebSocket lifecycle, message sequencing, and fan-out isolated from
-// domain logic so game/session services remain the source of truth for campaign
-// state transitions.
+// gameplay authority so game and auth remain the source of truth for membership
+// and session identity.
 package chat

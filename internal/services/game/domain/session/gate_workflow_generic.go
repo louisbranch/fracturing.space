@@ -10,14 +10,7 @@ type genericGateWorkflow struct {
 }
 
 func newGateWorkflow(gateType string, metadata map[string]any) (gateWorkflow, error) {
-	switch strings.TrimSpace(gateType) {
-	case GateTypeReadyCheck:
-		return newReadyCheckGateWorkflow(metadata)
-	case GateTypeVote:
-		return newVoteGateWorkflow(metadata)
-	default:
-		return newGenericGateWorkflow(metadata)
-	}
+	return newGenericGateWorkflow(metadata)
 }
 
 func newGenericGateWorkflow(metadata map[string]any) (genericGateWorkflow, error) {

@@ -144,6 +144,7 @@ func newDefaultGRPCServer(bundle *storageBundle, srvEnv serverEnv) *grpc.Server 
 	internalIdentity := interceptors.InternalServiceIdentityConfig{
 		MethodPrefixes: []string{
 			"/game.v1.CampaignAIService/",
+			"/game.v1.CampaignAIOrchestrationService/",
 			campaignv1.EventService_AppendEvent_FullMethodName,
 			"/game.v1.IntegrationService/",
 		},

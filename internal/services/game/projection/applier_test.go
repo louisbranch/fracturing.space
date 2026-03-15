@@ -379,6 +379,27 @@ func (s *fakeSessionSpotlightStore) ClearSessionSpotlight(_ context.Context, cam
 	return nil
 }
 
+type fakeSessionInteractionStore struct {
+	interactions map[string]storage.SessionInteraction
+}
+
+func newFakeSessionInteractionStore() *fakeSessionInteractionStore {
+	return &fakeSessionInteractionStore{interactions: make(map[string]storage.SessionInteraction)}
+}
+
+func (s *fakeSessionInteractionStore) PutSessionInteraction(_ context.Context, interaction storage.SessionInteraction) error {
+	s.interactions[interaction.CampaignID+":"+interaction.SessionID] = interaction
+	return nil
+}
+
+func (s *fakeSessionInteractionStore) GetSessionInteraction(_ context.Context, campaignID, sessionID string) (storage.SessionInteraction, error) {
+	interaction, ok := s.interactions[campaignID+":"+sessionID]
+	if !ok {
+		return storage.SessionInteraction{}, storage.ErrNotFound
+	}
+	return interaction, nil
+}
+
 func TestApplyInviteRevoked(t *testing.T) {
 	ctx := context.Background()
 	inviteStore := newFakeInviteStore()
@@ -1823,7 +1844,7 @@ func TestApplySessionGateResponseRecordedUpdatesProgress(t *testing.T) {
 	metadata := map[string]any{
 		"eligible_participant_ids": []string{"p1", "p2"},
 	}
-	progress, err := session.BuildInitialGateProgressState(session.GateTypeReadyCheck, metadata)
+	progress, err := session.BuildInitialGateProgressState("decision", metadata)
 	if err != nil {
 		t.Fatalf("build progress: %v", err)
 	}
@@ -1831,7 +1852,7 @@ func TestApplySessionGateResponseRecordedUpdatesProgress(t *testing.T) {
 		CampaignID: "camp-1",
 		SessionID:  "sess-1",
 		GateID:     "gate-1",
-		GateType:   session.GateTypeReadyCheck,
+		GateType:   "decision",
 		Status:     session.GateStatusOpen,
 		Metadata:   metadata,
 		Progress:   progress,
@@ -3891,4 +3912,25 @@ func (s *fakeSceneSpotlightStore) GetSceneSpotlight(_ context.Context, campaignI
 func (s *fakeSceneSpotlightStore) ClearSceneSpotlight(_ context.Context, campaignID, sceneID string) error {
 	s.cleared = append(s.cleared, campaignID+":"+sceneID)
 	return nil
+}
+
+type fakeSceneInteractionStore struct {
+	interactions map[string]storage.SceneInteraction
+}
+
+func newFakeSceneInteractionStore() *fakeSceneInteractionStore {
+	return &fakeSceneInteractionStore{interactions: make(map[string]storage.SceneInteraction)}
+}
+
+func (s *fakeSceneInteractionStore) PutSceneInteraction(_ context.Context, interaction storage.SceneInteraction) error {
+	s.interactions[interaction.CampaignID+":"+interaction.SceneID] = interaction
+	return nil
+}
+
+func (s *fakeSceneInteractionStore) GetSceneInteraction(_ context.Context, campaignID, sceneID string) (storage.SceneInteraction, error) {
+	interaction, ok := s.interactions[campaignID+":"+sceneID]
+	if !ok {
+		return storage.SceneInteraction{}, storage.ErrNotFound
+	}
+	return interaction, nil
 }

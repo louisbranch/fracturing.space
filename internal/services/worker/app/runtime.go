@@ -186,6 +186,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	gameInviteClient := gamev1.NewInviteServiceClient(gameMc.Conn())
 	gameCampaignClient := gamev1.NewCampaignServiceClient(gameMc.Conn())
 	gameParticipantClient := gamev1.NewParticipantServiceClient(gameMc.Conn())
+	gameCampaignAIOrchestrationClient := gamev1.NewCampaignAIOrchestrationServiceClient(gameMc.Conn())
 	notificationsClient := notificationsv1.NewNotificationServiceClient(notificationsMc.Conn())
 
 	signupProfileHandler := workerdomain.NewSignupSocialProfileHandler(socialClient)
@@ -194,6 +195,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 	inviteCreatedHandler := workerdomain.NewInviteCreatedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
 	inviteAcceptedHandler := workerdomain.NewInviteAcceptedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
 	inviteDeclinedHandler := workerdomain.NewInviteDeclinedNotificationHandler(gameInviteClient, gameCampaignClient, gameParticipantClient, authClient, notificationsClient)
+	aiGMTurnRequestedHandler := workerdomain.NewAIGMTurnRequestedHandler(gameCampaignAIOrchestrationClient)
 
 	loopConfig := Config{
 		Consumer:      normalized.Consumer,
@@ -224,6 +226,7 @@ func NewRuntime(ctx context.Context, cfg RuntimeConfig) (*Runtime, error) {
 			gameintegration.InviteNotificationCreatedOutboxEventType:  inviteCreatedHandler,
 			gameintegration.InviteNotificationClaimedOutboxEventType:  inviteAcceptedHandler,
 			gameintegration.InviteNotificationDeclinedOutboxEventType: inviteDeclinedHandler,
+			gameintegration.AIGMTurnRequestedOutboxEventType:          aiGMTurnRequestedHandler,
 		},
 		normalizedLoopConfig,
 		nil,

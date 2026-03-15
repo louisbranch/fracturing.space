@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// IssueCampaignAISessionGrant issues a signed session-scoped AI turn relay grant.
+// IssueCampaignAISessionGrant issues a signed session-scoped AI orchestration grant.
 func (s *CampaignAIService) IssueCampaignAISessionGrant(ctx context.Context, in *campaignv1.IssueCampaignAISessionGrantRequest) (*campaignv1.IssueCampaignAISessionGrantResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "issue campaign ai session grant request is required")

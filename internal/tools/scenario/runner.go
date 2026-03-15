@@ -69,6 +69,7 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 		sessionClient:     gamev1.NewSessionServiceClient(conn),
 		sceneClient:       gamev1.NewSceneServiceClient(conn),
 		characterClient:   gamev1.NewCharacterServiceClient(conn),
+		interactionClient: gamev1.NewInteractionServiceClient(conn),
 		snapshotClient:    gamev1.NewSnapshotServiceClient(conn),
 		eventClient:       gamev1.NewEventServiceClient(conn),
 		daggerheartClient: daggerheartv1.NewDaggerheartServiceClient(conn),

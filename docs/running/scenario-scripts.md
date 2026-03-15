@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 9
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-10"
+last_reviewed: "2026-03-12"
 ---
 
 # Running Lua Scenario Scripts
@@ -82,6 +82,129 @@ dh:gm_fear(1)
 return scn
 ```
 
+Use `as = "<participant alias>"` on any core or system step when the scenario
+needs to execute that write as a specific participant instead of the campaign
+owner. This is how interaction loops model alternating GM/player authority:
+
+```lua
+-- GM opens the beat.
+scn:interaction_start_player_phase({
+  scene = "The Bridge",
+  frame_text = "The bridge lurches in the wind. What do you do?",
+  characters = {"Aria", "Corin"},
+  as = "Guide",
+})
+
+-- One player commits a summary and then takes a real system action.
+scn:interaction_post({
+  as = "Rhea",
+  summary = "Aria grabs the near rope before the bridge twists away.",
+  characters = {"Aria"},
+})
+dh:action_roll({
+  as = "Rhea",
+  actor = "Aria",
+  trait = "agility",
+  difficulty = 12,
+  outcome = "success_fear",
+})
+```
+
+Interaction scenarios now execute directly through `game.v1.InteractionService`.
+Available root interaction steps are:
+
+- `interaction_set_gm_authority`
+- `interaction_set_active_scene`
+- `interaction_start_player_phase`
+- `interaction_post`
+- `interaction_yield`
+- `interaction_unyield`
+- `interaction_accept_player_phase`
+- `interaction_request_revisions`
+- `interaction_end_player_phase`
+- `interaction_pause_ooc`
+- `interaction_post_ooc`
+- `interaction_ready_ooc`
+- `interaction_clear_ready_ooc`
+- `interaction_resume_ooc`
+- `interaction_expect`
+
+`interaction_expect` reads authoritative interaction state and can assert the
+active session/scene, phase status/frame, acting characters or participants,
+player slots, OOC state, OOC posts, ready-to-resume set, and GM authority.
+
+Player slot assertions replace the older `posts` and `yielded_participants`
+shape. Each slot entry may assert:
+
+- `participant`
+- `summary` or `summary_text`
+- `characters`
+- `yielded`
+- `review_status`
+- `review_reason`
+- `review_characters`
+
+Scene phase status assertions now also support `GM_REVIEW` in addition to the
+GM-owned and player-owned phase states.
+
+Example review-return flow:
+
+```lua
+scn:interaction_expect({
+  scene = "Flooded Archive",
+  phase_status = "GM_REVIEW",
+  slots = {
+    {
+      participant = "Rhea",
+      summary = "Aria braces the fallen shelf against the door.",
+      characters = {"Aria"},
+      yielded = true,
+      review_status = "UNDER_REVIEW",
+    },
+  },
+})
+
+scn:interaction_request_revisions({
+  as = "Guide",
+  scene = "Flooded Archive",
+  revisions = {
+    {
+      participant = "Rhea",
+      reason = "Keep the lantern dry and tell me where Aria ends up.",
+      characters = {"Aria"},
+    },
+  },
+})
+
+scn:interaction_expect({
+  scene = "Flooded Archive",
+  phase_status = "PLAYERS",
+  slots = {
+    {
+      participant = "Rhea",
+      summary = "Aria braces the fallen shelf against the door.",
+      characters = {"Aria"},
+      review_status = "CHANGES_REQUESTED",
+      review_reason = "Keep the lantern dry and tell me where Aria ends up.",
+      review_characters = {"Aria"},
+    },
+  },
+})
+```
+
+Any scenario step may also assert an expected failure without aborting the
+script by adding:
+
+```lua
+expect_error = {
+  code = "FAILED_PRECONDITION",
+  contains = "scene is not the active scene",
+}
+```
+
+`code` is required and matched against the returned gRPC status code.
+`contains` is optional and matched as a substring of the gRPC status message.
+
 Campaign defaults:
 
 - `gm_mode` defaults to `HUMAN` when omitted in `scn:campaign({...})`.
@@ -157,3 +280,13 @@ implicit system default.
 Legacy root-level mechanic calls are rejected with migration guidance. Use
 system handles (`local sys = scn:system("<SYSTEM_ID>")`) for all
 system-owned mechanics.
+
+## Acceptance-first interaction scenarios
+
+The interaction corpus under `internal/test/game/scenarios/systems/daggerheart`
+now executes directly through `game.v1.InteractionService`, including invalid
+flow contracts that assert expected gRPC failures.
+
+Forward-looking acceptance-only scenario files are still allowed for future
+slices, but they should be treated as an exception rather than the default once
+runner support exists for a contract.

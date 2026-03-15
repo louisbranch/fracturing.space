@@ -37,10 +37,12 @@ const (
 	needSession
 	needSessionGate
 	needSessionSpotlight
+	needSessionInteraction
 	needScene
 	needSceneCharacter
 	needSceneGate
 	needSceneSpotlight
+	needSceneInteraction
 	needAdapters
 	// ClaimIndex is intentionally absent — handlers that use it perform soft
 	// nil checks and skip claim logic when the store is nil.
@@ -73,10 +75,12 @@ const (
 	storeSession
 	storeSessionGate
 	storeSessionSpotlight
+	storeSessionInteraction
 	storeScene
 	storeSceneCharacter
 	storeSceneGate
 	storeSceneSpotlight
+	storeSceneInteraction
 	storeAdapters
 )
 
@@ -118,6 +122,8 @@ func needsStores(dependencies ...storeDependency) requirementOption {
 				req.stores |= needSessionGate
 			case storeSessionSpotlight:
 				req.stores |= needSessionSpotlight
+			case storeSessionInteraction:
+				req.stores |= needSessionInteraction
 			case storeScene:
 				req.stores |= needScene
 			case storeSceneCharacter:
@@ -126,6 +132,8 @@ func needsStores(dependencies ...storeDependency) requirementOption {
 				req.stores |= needSceneGate
 			case storeSceneSpotlight:
 				req.stores |= needSceneSpotlight
+			case storeSceneInteraction:
+				req.stores |= needSceneInteraction
 			case storeAdapters:
 				req.stores |= needAdapters
 			}
@@ -196,6 +204,17 @@ func buildCoreRouter() *CoreRouter {
 	HandleProjection(r, session.EventTypeGateAbandoned, requirements(needsStores(storeSessionGate), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGateAbandoned)
 	HandleProjection(r, session.EventTypeSpotlightSet, requirements(needsStores(storeSessionSpotlight), needsEnvelope(fieldSessionID)), Applier.applySessionSpotlightSet)
 	HandleProjectionRaw(r, session.EventTypeSpotlightCleared, requirements(needsStores(storeSessionSpotlight), needsEnvelope(fieldSessionID)), Applier.applySessionSpotlightCleared)
+	HandleProjection(r, session.EventTypeActiveSceneSet, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionActiveSceneSet)
+	HandleProjection(r, session.EventTypeGMAuthoritySet, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionGMAuthoritySet)
+	HandleProjection(r, session.EventTypeOOCPaused, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCPaused)
+	HandleProjection(r, session.EventTypeOOCPosted, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCPosted)
+	HandleProjection(r, session.EventTypeOOCReadyMarked, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCReadyMarked)
+	HandleProjection(r, session.EventTypeOOCReadyCleared, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCReadyCleared)
+	HandleProjection(r, session.EventTypeOOCResumed, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionOOCResumed)
+	HandleProjection(r, session.EventTypeAITurnQueued, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnQueued)
+	HandleProjection(r, session.EventTypeAITurnRunning, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnRunning)
+	HandleProjection(r, session.EventTypeAITurnFailed, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnFailed)
+	HandleProjection(r, session.EventTypeAITurnCleared, requirements(needsStores(storeSessionInteraction), needsEnvelope(fieldCampaignID, fieldSessionID)), Applier.applySessionAITurnCleared)
 
 	// scene
 	HandleProjection(r, scene.EventTypeCreated, requirements(needsStores(storeScene, storeSceneCharacter), needsEnvelope(fieldCampaignID)), Applier.applySceneCreated)
@@ -208,6 +227,14 @@ func buildCoreRouter() *CoreRouter {
 	HandleProjection(r, scene.EventTypeGateAbandoned, requirements(needsStores(storeSceneGate), needsEnvelope(fieldCampaignID)), Applier.applySceneGateAbandoned)
 	HandleProjection(r, scene.EventTypeSpotlightSet, requirements(needsStores(storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneSpotlightSet)
 	HandleProjection(r, scene.EventTypeSpotlightCleared, requirements(needsStores(storeSceneSpotlight), needsEnvelope(fieldCampaignID)), Applier.applySceneSpotlightCleared)
+	HandleProjection(r, scene.EventTypePlayerPhaseStarted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseStarted)
+	HandleProjection(r, scene.EventTypePlayerPhasePosted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhasePosted)
+	HandleProjection(r, scene.EventTypePlayerPhaseYielded, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseYielded)
+	HandleProjection(r, scene.EventTypePlayerPhaseReviewStarted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseReviewStarted)
+	HandleProjection(r, scene.EventTypePlayerPhaseUnyielded, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseUnyielded)
+	HandleProjection(r, scene.EventTypePlayerPhaseRevisionsRequested, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseRevisionsRequested)
+	HandleProjection(r, scene.EventTypePlayerPhaseAccepted, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseAccepted)
+	HandleProjection(r, scene.EventTypePlayerPhaseEnded, requirements(needsStores(storeSceneInteraction), needsEnvelope(fieldCampaignID)), Applier.applyScenePlayerPhaseEnded)
 
 	return r
 }
@@ -241,10 +268,12 @@ var storeChecks = []storeCheck{
 	{needSession, "session", func(a Applier) bool { return a.Session == nil }},
 	{needSessionGate, "session gate", func(a Applier) bool { return a.SessionGate == nil }},
 	{needSessionSpotlight, "session spotlight", func(a Applier) bool { return a.SessionSpotlight == nil }},
+	{needSessionInteraction, "session interaction", func(a Applier) bool { return a.SessionInteraction == nil }},
 	{needScene, "scene", func(a Applier) bool { return a.Scene == nil }},
 	{needSceneCharacter, "scene character", func(a Applier) bool { return a.SceneCharacter == nil }},
 	{needSceneGate, "scene gate", func(a Applier) bool { return a.SceneGate == nil }},
 	{needSceneSpotlight, "scene spotlight", func(a Applier) bool { return a.SceneSpotlight == nil }},
+	{needSceneInteraction, "scene interaction", func(a Applier) bool { return a.SceneInteraction == nil }},
 	{needAdapters, "system adapters", func(a Applier) bool { return a.Adapters == nil }},
 }
 
