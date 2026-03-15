@@ -14,10 +14,9 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
-	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/structpb"
@@ -162,13 +161,13 @@ func TestServerCloseHandlesNilConn(t *testing.T) {
 
 func TestServerContextAccessors(t *testing.T) {
 	var nilServer *Server
-	if got := nilServer.getContext(); got != (domain.Context{}) {
+	if got := nilServer.getContext(); got != (sessionctx.Context{}) {
 		t.Fatalf("expected empty context, got %+v", got)
 	}
-	nilServer.setContext(domain.Context{CampaignID: "ignored"})
+	nilServer.setContext(sessionctx.Context{CampaignID: "ignored"})
 
 	server := &Server{}
-	expected := domain.Context{CampaignID: "camp-1", SessionID: "sess-1", ParticipantID: "part-1"}
+	expected := sessionctx.Context{CampaignID: "camp-1", SessionID: "sess-1", ParticipantID: "part-1"}
 	server.setContext(expected)
 	if got := server.getContext(); got != expected {
 		t.Fatalf("expected context %+v, got %+v", expected, got)
@@ -278,7 +277,7 @@ func TestRunWithHTTPTransportStopsOnContext(t *testing.T) {
 		errCh <- runWithHTTPTransport(ctx, Config{
 			GRPCAddr: addr,
 			HTTPAddr: "127.0.0.1:0",
-		})
+		}, mcpRegistrationProfileStandard)
 	}()
 
 	time.Sleep(50 * time.Millisecond)
@@ -304,90 +303,12 @@ func TestRunWithHTTPTransportReturnsServeError(t *testing.T) {
 	err := runWithHTTPTransport(ctx, Config{
 		GRPCAddr: addr,
 		HTTPAddr: "127.0.0.1:-1",
-	})
+	}, mcpRegistrationProfileStandard)
 	if err == nil {
 		t.Fatal("expected error")
 	}
 	if !strings.Contains(err.Error(), "HTTP server error") {
 		t.Fatalf("unexpected error: %v", err)
-	}
-}
-
-func TestNewServerNotifiesCampaignListUpdates(t *testing.T) {
-	addr, stop := startCampaignServer(t)
-	defer stop()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	conn, err := grpc.DialContext(ctx, addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-	if err != nil {
-		t.Fatalf("dial campaign server: %v", err)
-	}
-	defer conn.Close()
-
-	server, err := newServer(conn)
-	if err != nil {
-		t.Fatalf("newServer: %v", err)
-	}
-	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- server.serveWithTransport(ctx, serverTransport)
-	}()
-
-	updates := make(chan string, 1)
-	client := mcp.NewClient(&mcp.Implementation{Name: "client", Version: "v0.0.1"}, &mcp.ClientOptions{
-		ResourceUpdatedHandler: func(_ context.Context, req *mcp.ResourceUpdatedNotificationRequest) {
-			if req == nil || req.Params == nil {
-				return
-			}
-			updates <- req.Params.URI
-		},
-	})
-	clientCtx, clientCancel := context.WithTimeout(context.Background(), time.Second)
-	defer clientCancel()
-
-	session, err := client.Connect(clientCtx, clientTransport, nil)
-	if err != nil {
-		t.Fatalf("connect client: %v", err)
-	}
-	defer session.Close()
-
-	if err := session.Subscribe(ctx, &mcp.SubscribeParams{URI: domain.CampaignListResource().URI}); err != nil {
-		t.Fatalf("subscribe: %v", err)
-	}
-
-	_, err = session.CallTool(ctx, &mcp.CallToolParams{
-		Name: domain.CampaignCreateTool().Name,
-		Arguments: map[string]any{
-			"name":    "New Campaign",
-			"system":  "DAGGERHEART",
-			"gm_mode": "HUMAN",
-		},
-	})
-	if err != nil {
-		t.Fatalf("call tool: %v", err)
-	}
-
-	select {
-	case uri := <-updates:
-		if uri != domain.CampaignListResource().URI {
-			t.Fatalf("expected campaign list update, got %q", uri)
-		}
-	case <-time.After(time.Second):
-		t.Fatal("expected resource update notification")
-	}
-
-	cancel()
-
-	select {
-	case err := <-serveErr:
-		if err != nil {
-			t.Fatalf("serve returned error: %v", err)
-		}
-	case <-time.After(2 * time.Second):
-		t.Fatal("server did not stop after cancel")
 	}
 }
 
@@ -1697,8 +1618,8 @@ func TestSessionEndHandlerUsesContextDefaults(t *testing.T) {
 			EndedAt:    timestamppb.New(now),
 		},
 	}}
-	getContext := func() domain.Context {
-		return domain.Context{CampaignID: "camp-123", SessionID: "sess-456"}
+	getContext := func() sessionctx.Context {
+		return sessionctx.Context{CampaignID: "camp-123", SessionID: "sess-456"}
 	}
 	result, _, err := domain.SessionEndHandler(client, getContext, nil)(
 		context.Background(),
@@ -1740,7 +1661,7 @@ func TestSessionEndHandlerRejectsEmptyResponse(t *testing.T) {
 // TestSessionEndHandlerRejectsMissingCampaign ensures campaign_id is required.
 func TestSessionEndHandlerRejectsMissingCampaign(t *testing.T) {
 	client := &fakeSessionClient{}
-	handler := domain.SessionEndHandler(client, func() domain.Context { return domain.Context{} }, nil)
+	handler := domain.SessionEndHandler(client, func() sessionctx.Context { return sessionctx.Context{} }, nil)
 
 	result, _, err := handler(context.Background(), &mcp.CallToolRequest{}, domain.SessionEndInput{
 		SessionID: "sess-456",
@@ -2647,7 +2568,7 @@ func TestContextResourceHandlerReturnsEmptyContext(t *testing.T) {
 // TestContextResourceHandlerReturnsAllFields ensures all fields are returned when set.
 func TestContextResourceHandlerReturnsAllFields(t *testing.T) {
 	server := &Server{}
-	server.setContext(domain.Context{
+	server.setContext(sessionctx.Context{
 		CampaignID:    "camp-123",
 		SessionID:     "sess-456",
 		ParticipantID: "part-789",
@@ -2683,7 +2604,7 @@ func TestContextResourceHandlerReturnsAllFields(t *testing.T) {
 // TestContextResourceHandlerReturnsPartialFields ensures partial fields return null for unset values.
 func TestContextResourceHandlerReturnsPartialFields(t *testing.T) {
 	server := &Server{}
-	server.setContext(domain.Context{
+	server.setContext(sessionctx.Context{
 		CampaignID: "camp-123",
 		// SessionID and ParticipantID are empty
 	})

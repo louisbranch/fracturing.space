@@ -1,19 +1,14 @@
 package seed
 
 import (
-	"bufio"
 	"context"
 	"errors"
-	"io"
-	"strings"
 	"testing"
 	"time"
 )
 
 func TestReadResponseForID_RejectsNilContext(t *testing.T) {
-	client := &StdioClient{
-		reader: bufio.NewReader(strings.NewReader(`{"id":1}` + "\n")),
-	}
+	client := &ProcessClient{}
 	_, _, err := client.ReadResponseForID(nil, "1", 100*time.Millisecond)
 	if err == nil {
 		t.Fatal("expected error for nil context")
@@ -24,13 +19,7 @@ func TestReadResponseForID_RejectsNilContext(t *testing.T) {
 }
 
 func TestReadResponseForID_RespectsCallerContext(t *testing.T) {
-	reader, writer := io.Pipe()
-	t.Cleanup(func() {
-		_ = writer.Close()
-	})
-	client := &StdioClient{
-		reader: bufio.NewReader(reader),
-	}
+	client := &ProcessClient{responses: map[string]storedResponse{}}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
@@ -40,11 +29,16 @@ func TestReadResponseForID_RespectsCallerContext(t *testing.T) {
 	}
 }
 
-func TestReadResponseForID_SkipsNonMatchingResponses(t *testing.T) {
-	responseData := `{"id":2}` + "\n" + `{"id":1,"result":{"ok":true}}` + "\n"
-	client := &StdioClient{
-		reader: bufio.NewReader(strings.NewReader(responseData)),
+func TestReadResponseForID_ReturnsStoredResponse(t *testing.T) {
+	client := &ProcessClient{
+		responses: map[string]storedResponse{
+			"1": {
+				value: map[string]any{"id": 1, "result": map[string]any{"ok": true}},
+				data:  []byte(`{"id":1,"result":{"ok":true}}`),
+			},
+		},
 	}
+
 	response, raw, err := client.ReadResponseForID(context.Background(), "1", time.Second)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -54,5 +48,18 @@ func TestReadResponseForID_SkipsNonMatchingResponses(t *testing.T) {
 	}
 	if string(raw) != `{"id":1,"result":{"ok":true}}` {
 		t.Fatalf("unexpected raw response %q", string(raw))
+	}
+	if _, ok := client.responses["1"]; ok {
+		t.Fatal("expected stored response to be removed after read")
+	}
+}
+
+func TestMessageID(t *testing.T) {
+	id, ok := messageID(map[string]any{"id": 7})
+	if !ok || id != "7" {
+		t.Fatalf("messageID() = %q, %v", id, ok)
+	}
+	if _, ok := messageID(map[string]any{"method": "tools/call"}); ok {
+		t.Fatal("expected missing id to return ok=false")
 	}
 }

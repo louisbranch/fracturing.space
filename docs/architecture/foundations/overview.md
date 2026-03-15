@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 1
 status: canonical
 owner: engineering
-last_reviewed: "2026-02-26"
+last_reviewed: "2026-03-14"
 ---
 
 # Project Overview
@@ -37,7 +37,7 @@ Long-running campaigns suffer from fragmented records and single-GM continuity. 
 - Campaign, session, participant, and character management
 - Deterministic, server-side resolution of mechanics
 - Event journal with replayable state
-- gRPC and MCP (JSON-RPC) interfaces
+- gRPC APIs and an internal MCP bridge for AI orchestration
 - Duality Dice as the initial rules system
 
 ## What it does not include (yet)

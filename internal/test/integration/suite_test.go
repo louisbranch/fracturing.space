@@ -4,31 +4,34 @@ package integration
 
 import "testing"
 
-// TestMCPStdioEndToEnd validates MCP stdio integration end-to-end.
-func TestMCPStdioEndToEnd(t *testing.T) {
+// TestMCPEndToEnd validates the MCP bridge end-to-end against the shared fixture stack.
+func TestMCPEndToEnd(t *testing.T) {
 	fixture := newSuiteFixture(t)
-	clientSession := fixture.newMCPClientSession(t)
-	userID := fixture.newUserID(t, uniqueTestUsername(t, "test-creator"))
-	suite := &integrationSuite{client: clientSession, userID: userID}
+	newSuite := func(t *testing.T, label string) *integrationSuite {
+		t.Helper()
+		clientSession := fixture.newMCPClientSession(t)
+		userID := fixture.newUserID(t, uniqueTestUsername(t, label))
+		return &integrationSuite{client: clientSession, userID: userID}
+	}
 
 	t.Run("duality tools", func(t *testing.T) {
-		runDualityToolsTests(t, suite)
+		runDualityToolsTests(t, newSuite(t, "duality-tools"))
 	})
 
 	t.Run("campaign tools", func(t *testing.T) {
-		runCampaignToolsTests(t, suite)
+		runCampaignToolsTests(t, newSuite(t, "campaign-tools"))
 	})
 
 	t.Run("fork tools", func(t *testing.T) {
-		runForkToolsTests(t, suite)
+		runForkToolsTests(t, newSuite(t, "fork-tools"))
 	})
 
 	t.Run("session outcomes", func(t *testing.T) {
-		runSessionOutcomeTests(t, suite, fixture.grpcAddr)
+		runSessionOutcomeTests(t, newSuite(t, "session-outcomes"), fixture.grpcAddr)
 	})
 
 	t.Run("metadata", func(t *testing.T) {
-		runMetadataTests(t, suite, fixture.grpcAddr)
+		runMetadataTests(t, newSuite(t, "metadata"), fixture.grpcAddr)
 	})
 
 	t.Run("session lock", func(t *testing.T) {
@@ -44,6 +47,6 @@ func TestMCPStdioEndToEnd(t *testing.T) {
 	})
 
 	t.Run("mutation event guardrails", func(t *testing.T) {
-		runMutationEventGuardrailTests(t, suite, fixture.grpcAddr, fixture.authAddr)
+		runMutationEventGuardrailTests(t, newSuite(t, "mutation-guardrails"), fixture.grpcAddr, fixture.authAddr)
 	})
 }

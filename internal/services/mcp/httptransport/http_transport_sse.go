@@ -1,15 +1,15 @@
-package service
+package httptransport
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"strings"
 	"time"
+
+	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
-// handleSSE handles GET /mcp/sse for Server-Sent Events streaming.
+// handleSSE handles GET /mcp for Server-Sent Events streaming.
 // SSE is intentionally kept as a notification-only path so request/reply
 // operations can be decoupled from streaming delivery and shared connection
 // state can be updated in-place without response blocking.
@@ -19,35 +19,18 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !t.authorizeRequest(w, r) {
-		return
-	}
-
 	if r.Method != http.MethodGet {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Get session from header or cookie
-	const cookieName = "mcp_session"
+	// SSE requires an existing bridge session ID.
 	var session *httpSession
 	var exists bool
-	var sessionID string
-
-	sessionID = strings.TrimSpace(r.Header.Get("Mcp-Session-Id"))
-	if sessionID != "" {
-		t.sessionsMu.RLock()
-		session, exists = t.sessions[sessionID]
-		t.sessionsMu.RUnlock()
-	} else {
-		cookie, err := r.Cookie(cookieName)
-		if err == nil && cookie != nil && cookie.Value != "" {
-			sessionID = cookie.Value
-			t.sessionsMu.RLock()
-			session, exists = t.sessions[sessionID]
-			t.sessionsMu.RUnlock()
-		}
-	}
+	sessionID := r.Header.Get("Mcp-Session-Id")
+	t.sessionsMu.RLock()
+	session, exists = t.sessions[sessionID]
+	t.sessionsMu.RUnlock()
 
 	if !exists || session == nil {
 		http.Error(w, "Invalid or missing session ID", http.StatusBadRequest)
@@ -58,7 +41,6 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/event-stream")
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
-	// Note: Session is managed via cookies, not headers (per MCP spec)
 
 	// Flush headers
 	if flusher, ok := w.(http.Flusher); ok {
@@ -94,7 +76,10 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 				s.lastUsed = time.Now()
 			}
 			t.sessionsMu.Unlock()
-		case msg := <-session.conn.notifyChan:
+		case msg, ok := <-session.conn.notifyChan:
+			if !ok || msg == nil {
+				return
+			}
 			// Update lastUsed on each message
 			t.sessionsMu.Lock()
 			if s, ok := t.sessions[sessionID]; ok && s != nil {
@@ -103,7 +88,7 @@ func (t *HTTPTransport) handleSSE(w http.ResponseWriter, r *http.Request) {
 			t.sessionsMu.Unlock()
 
 			// Send as SSE event
-			data, err := json.Marshal(msg)
+			data, err := jsonrpc.EncodeMessage(msg)
 			if err != nil {
 				log.Printf("Failed to marshal SSE message: %v", err)
 				continue

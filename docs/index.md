@@ -5,7 +5,8 @@ nav_order: 1
 
 # Fracturing.Space docs
 
-Fracturing.Space is a server-authoritative, event-sourced engine for tabletop RPG campaigns with gRPC and MCP interfaces.
+Fracturing.Space is a server-authoritative, event-sourced engine for tabletop
+RPG campaigns with gRPC APIs and an internal MCP bridge for AI orchestration.
 
 ## Start here
 
@@ -14,7 +15,6 @@ Choose the path that matches your goal.
 - I want to try the project as a player/GM: [Users](audience/users.md)
 - I want to contribute code/docs: [Contributors](audience/contributors.md)
 - I want to develop in Go: [Go developers](audience/go-developers.md)
-- I want to build MCP/client integrations: [Integrators](audience/integrators.md)
 - I want to design or extend a rules system: [System developers](audience/system-developers.md)
 - I want to run the stack: [Running](running/index.md)
 - I want to contribute translations: [Translators](audience/translators.md)
@@ -33,5 +33,5 @@ Choose the path that matches your goal.
 
 ## Reference
 
-- MCP contract docs: [Reference](reference/index.md)
+- MCP bridge docs: [Reference](reference/index.md)
 - Generated command/event catalogs: [Events index](events/index.md)

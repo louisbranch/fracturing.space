@@ -1,11 +1,12 @@
-package service
+package campaigncontext
 
 import (
 	"context"
 	"testing"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 )
 
@@ -33,18 +34,36 @@ func (fakeSystemReferenceClient) ReadSystemReferenceDocument(context.Context, *a
 	return nil, nil
 }
 
-func TestRegisterCampaignContextToolsRegistersArtifactAndReferenceTools(t *testing.T) {
-	target := &fakeMCPRegistrationTarget{}
+type fakeRegistrar struct {
+	tools             []string
+	resourceTemplates []string
+}
 
-	err := registerCampaignContextTools(
+func (f *fakeRegistrar) AddTool(tool *mcp.Tool, _ any) error {
+	if tool != nil {
+		f.tools = append(f.tools, tool.Name)
+	}
+	return nil
+}
+
+func (f *fakeRegistrar) AddResourceTemplate(resourceTemplate *mcp.ResourceTemplate, _ mcp.ResourceHandler) {
+	if resourceTemplate != nil {
+		f.resourceTemplates = append(f.resourceTemplates, resourceTemplate.URITemplate)
+	}
+}
+
+func TestRegisterToolsRegistersArtifactAndReferenceTools(t *testing.T) {
+	target := &fakeRegistrar{}
+
+	err := RegisterTools(
 		target,
 		fakeCampaignArtifactClient{},
 		fakeSystemReferenceClient{},
-		func() domain.Context { return domain.Context{} },
+		func() sessionctx.Context { return sessionctx.Context{} },
 		nil,
 	)
 	if err != nil {
-		t.Fatalf("registerCampaignContextTools() error = %v", err)
+		t.Fatalf("RegisterTools() error = %v", err)
 	}
 
 	want := []string{
@@ -64,10 +83,10 @@ func TestRegisterCampaignContextToolsRegistersArtifactAndReferenceTools(t *testi
 	}
 }
 
-func TestRegisterCampaignContextResourcesRegistersArtifactTemplates(t *testing.T) {
-	target := &fakeMCPRegistrationTarget{}
+func TestRegisterResourcesRegistersArtifactTemplates(t *testing.T) {
+	target := &fakeRegistrar{}
 
-	registerCampaignContextResources(target, fakeCampaignArtifactClient{})
+	RegisterResources(target, fakeCampaignArtifactClient{})
 
 	want := []string{
 		"campaign://{campaign_id}/artifacts",

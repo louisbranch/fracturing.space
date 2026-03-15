@@ -2,18 +2,18 @@
 title: "Reference"
 nav_order: 5
 has_children: true
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-14"
 ---
 
 # Reference
 
-Exact and integration-facing contracts.
+Exact runtime and contributor-facing contracts.
 
 ## Start here
 
-- MCP overview: [mcp.md](mcp.md)
-- MCP tools catalog: [mcp-tools.md](mcp-tools.md)
-- MCP resources catalog: [mcp-resources.md](mcp-resources.md)
+- MCP bridge overview: [mcp.md](mcp.md)
+- MCP production tools: [mcp-tools.md](mcp-tools.md)
+- MCP production resources: [mcp-resources.md](mcp-resources.md)
 
 ## Additional references
 

@@ -1,4 +1,4 @@
-package service
+package httptransport
 
 import (
 	"context"
@@ -70,6 +70,9 @@ func (t *HTTPTransport) cleanupSessions(ctx context.Context) {
 				if session.lastUsed.Before(expirationTime) {
 					// Close the connection
 					session.conn.Close()
+					if session.runtime != nil {
+						_ = session.runtime.Close()
+					}
 					// Remove from map
 					delete(t.sessions, id)
 					// Clean up serverOnce entry
@@ -81,7 +84,11 @@ func (t *HTTPTransport) cleanupSessions(ctx context.Context) {
 	}
 }
 func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
-	if t.server == nil {
+	server := t.server
+	if session != nil && session.runtime != nil && session.runtime.Server() != nil {
+		server = session.runtime.Server()
+	}
+	if server == nil {
 		return
 	}
 
@@ -103,7 +110,7 @@ func (t *HTTPTransport) ensureServerRunning(session *httpSession) {
 		go func() {
 			// Connect the MCP server with this session's transport using the long-lived server context
 			// This will read from reqChan and write to respChan
-			serverSession, err := t.server.Connect(t.serverCtx, sessionTransport, nil)
+			serverSession, err := server.Connect(t.serverCtx, sessionTransport, nil)
 			if err != nil {
 				log.Printf("Failed to connect MCP server session %s: %v", session.id, err)
 				return

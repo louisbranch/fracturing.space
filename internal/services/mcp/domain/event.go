@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -69,7 +70,7 @@ Use page_token from response to paginate through results.`,
 // EventListHandler executes an event list request.
 func EventListHandler(client statev1.EventServiceClient, getContext func() Context) mcp.ToolHandlerFor[EventListInput, EventListResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input EventListInput) (*mcp.CallToolResult, EventListResult, error) {
-		callContext, err := newToolInvocationContextWithTimeout(ctx, getContext, grpcLongCallTimeout)
+		callContext, err := sessionctx.NewToolInvocationContextWithTimeout(ctx, getContext, sessionctx.LongCallTimeout)
 		if err != nil {
 			return nil, EventListResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -84,7 +85,7 @@ func EventListHandler(client statev1.EventServiceClient, getContext func() Conte
 			return nil, EventListResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, EventListResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -133,8 +134,8 @@ func EventListHandler(client statev1.EventServiceClient, getContext func() Conte
 			result.Events = append(result.Events, entry)
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -156,7 +157,7 @@ type EventsListPayload struct {
 }
 
 // EventsListResourceHandler returns a readable campaign events listing resource.
-func EventsListResourceHandler(client statev1.EventServiceClient) mcp.ResourceHandler {
+func EventsListResourceHandler(client statev1.EventServiceClient, getContext ...func() Context) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("event service client is not configured")
@@ -172,10 +173,14 @@ func EventsListResourceHandler(client statev1.EventServiceClient) mcp.ResourceHa
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, grpcLongCallTimeout)
+		runCtx, cancel := context.WithTimeout(ctx, sessionctx.LongCallTimeout)
 		defer cancel()
 
-		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		callContext := Context{}
+		if len(getContext) != 0 && getContext[0] != nil {
+			callContext = getContext[0]()
+		}
+		callCtx, _, err := sessionctx.NewOutgoingContextWithContext(runCtx, "", callContext)
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}

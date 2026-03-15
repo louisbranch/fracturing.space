@@ -1,14 +1,14 @@
-package service
+package httptransport
 
 import (
 	"context"
 	"crypto/rand"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"log"
 	"net"
 	"net/http"
-	"strings"
 	"sync"
 	"time"
 
@@ -19,11 +19,13 @@ import (
 var listenTCP = net.Listen
 var newTLSListener = tls.NewListener
 
+// ErrSessionBootstrapRejected reports that the service runtime rejected an
+// initialize request before an MCP session could be created.
+var ErrSessionBootstrapRejected = errors.New("mcp session bootstrap rejected")
+
 // mcpHTTPEnv holds env-parsed configuration for MCP HTTP transport.
 type mcpHTTPEnv struct {
 	AllowedHosts []string `env:"FRACTURING_SPACE_MCP_ALLOWED_HOSTS"          envSeparator:","`
-	OAuthIssuer  string   `env:"FRACTURING_SPACE_MCP_OAUTH_ISSUER"`
-	OAuthSecret  string   `env:"FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET"`
 }
 
 const (
@@ -39,9 +41,6 @@ const (
 	// This should be longer than defaultRequestTimeout to allow in-flight requests to complete.
 	defaultShutdownTimeout = 35 * time.Second
 
-	// defaultIntrospectionTimeout caps OAuth introspection duration.
-	defaultIntrospectionTimeout = 5 * time.Second
-
 	// sessionCleanupInterval is how often the cleanup goroutine runs to remove expired sessions.
 	sessionCleanupInterval = 5 * time.Minute
 
@@ -56,6 +55,26 @@ const (
 	defaultSessionReadyTimeout = 100 * time.Millisecond
 )
 
+// SessionRuntime exposes the per-session MCP runtime owned by the service
+// package without leaking service internals into the HTTP transport package.
+type SessionRuntime interface {
+	// Server returns the MCP server bound to this session's fixed authority.
+	Server() *mcp.Server
+	// Close releases any service-owned resources associated with the session.
+	Close() error
+}
+
+// RuntimeFactory exposes the base MCP server and optional per-session runtime
+// creation that the HTTP bridge needs to keep session authority isolated.
+type RuntimeFactory interface {
+	// BaseServer returns the shared MCP runtime used when a session does not
+	// need a dedicated authority binding.
+	BaseServer() *mcp.Server
+	// NewSessionRuntime creates a session-scoped runtime when bridge headers pin
+	// the MCP session to one fixed internal AI authority.
+	NewSessionRuntime(header http.Header) (SessionRuntime, error)
+}
+
 // HTTPTransport implements mcp.Transport for HTTP-based MCP communication.
 // It provides an HTTP server that handles JSON-RPC messages over POST requests
 // and supports Server-Sent Events (SSE) for streaming responses.
@@ -66,6 +85,7 @@ type HTTPTransport struct {
 	addr         string
 	allowedHosts map[string]struct{}
 	server       *mcp.Server
+	runtime      RuntimeFactory
 	sessions     map[string]*httpSession
 	sessionsMu   sync.RWMutex
 	httpServer   *http.Server
@@ -73,10 +93,6 @@ type HTTPTransport struct {
 	serverCancel context.CancelFunc
 	serverOnceMu sync.Mutex
 	serverOnce   map[string]*sync.Once
-	oauth        *oauthAuth
-	requestAuthz RequestAuthorizer
-	apiToken     string
-	rateLimiter  RequestRateLimiter
 	tlsConfig    *tls.Config
 
 	serverReadyTimeout time.Duration
@@ -84,27 +100,13 @@ type HTTPTransport struct {
 	readyAfter         func(time.Duration) <-chan time.Time
 }
 
-func (t *HTTPTransport) applyConfig(cfg Config) {
+// SetTLSConfig records the TLS listener configuration used when the HTTP
+// transport serves on an externally terminated port.
+func (t *HTTPTransport) SetTLSConfig(cfg *tls.Config) {
 	if t == nil {
 		return
 	}
-
-	t.tlsConfig = cfg.TLSConfig
-	t.rateLimiter = cfg.RateLimiter
-	t.apiToken = strings.TrimSpace(cfg.AuthToken)
-
-	if cfg.RequestAuthorizer != nil {
-		t.requestAuthz = cfg.RequestAuthorizer
-		return
-	}
-	if t.apiToken == "" && t.oauth == nil {
-		t.requestAuthz = nil
-		return
-	}
-	t.requestAuthz = &hybridRequestAuthorizer{
-		apiToken: t.apiToken,
-		oauth:    t.oauth,
-	}
+	t.tlsConfig = cfg
 }
 
 // httpSession maintains state for a single MCP session in memory.
@@ -113,6 +115,7 @@ func (t *HTTPTransport) applyConfig(cfg Config) {
 type httpSession struct {
 	id        string
 	conn      *httpConnection
+	runtime   SessionRuntime
 	createdAt time.Time
 	lastUsed  time.Time
 }
@@ -123,7 +126,7 @@ type httpSession struct {
 func NewHTTPTransport(addr string) *HTTPTransport {
 	// Default to localhost-only binding for security
 	if addr == "" {
-		addr = "localhost:8081"
+		addr = "localhost:8085"
 	}
 	var raw mcpHTTPEnv
 	_ = config.ParseEnv(&raw)
@@ -138,7 +141,6 @@ func NewHTTPTransport(addr string) *HTTPTransport {
 		serverReadyTimeout: defaultSessionReadyTimeout,
 		randomReader:       rand.Read,
 		readyAfter:         time.After,
-		oauth:              loadOAuthAuthFromEnv(raw),
 	}
 }
 
@@ -152,10 +154,31 @@ func NewHTTPTransportWithServer(addr string, server *mcp.Server) *HTTPTransport 
 	return transport
 }
 
+// NewHTTPTransportWithRuntime creates a new HTTP transport with access to the
+// MCP runtime factory so each HTTP session can bind dedicated authority when
+// the internal AI bridge supplies fixed session headers.
+func NewHTTPTransportWithRuntime(addr string, runtime RuntimeFactory) *HTTPTransport {
+	transport := NewHTTPTransport(addr)
+	transport.runtime = runtime
+	if runtime != nil {
+		transport.server = runtime.BaseServer()
+	}
+	return transport
+}
+
+// newSessionRuntime asks the owning service runtime for a dedicated session
+// server when the bridge session binds fixed AI authority.
+func (t *HTTPTransport) newSessionRuntime(header http.Header) (SessionRuntime, error) {
+	if t == nil || t.runtime == nil {
+		return nil, nil
+	}
+	return t.runtime.NewSessionRuntime(header)
+}
+
 // Start starts the HTTP server and begins handling requests.
 // This should be called in a separate goroutine while the MCP server runs.
 // The same server instance multiplexes POST requests and SSE streams while sharing
-// host validation, auth, and session lifecycle enforcement.
+// host validation and session lifecycle enforcement.
 func (t *HTTPTransport) Start(ctx context.Context) error {
 	// Update server context to use the provided context
 	t.serverCtx, t.serverCancel = context.WithCancel(ctx)
@@ -165,7 +188,7 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 
 	mux := http.NewServeMux()
 
-	// /mcp endpoint handles both GET (SSE) and POST (messages) based on HTTP method
+	// /mcp endpoint handles both GET (SSE) and POST (messages) based on HTTP method.
 	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
@@ -176,10 +199,6 @@ func (t *HTTPTransport) Start(ctx context.Context) error {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
 	})
-
-	if t.oauth != nil {
-		mux.HandleFunc("/.well-known/oauth-protected-resource", t.handleProtectedResourceMetadata)
-	}
 
 	// GET /mcp/health - Health check endpoint
 	mux.HandleFunc("/mcp/health", t.handleHealth)

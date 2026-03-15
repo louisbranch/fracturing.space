@@ -97,7 +97,7 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 						ActorType:   event.ActorTypeSystem,
 						EntityType:  "participant",
 						EntityID:    "participant-ai",
-						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 					},
 				),
 			},
@@ -185,7 +185,7 @@ func TestCreateCampaign_AllowsOwnerlessPublicStarterTemplate(t *testing.T) {
 						ActorType:   event.ActorTypeSystem,
 						EntityType:  "participant",
 						EntityID:    "participant-ai",
-						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+						PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 					},
 				),
 			},
@@ -422,13 +422,13 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 		wantOwnerProtoRole statev1.ParticipantRole
 	}{
 		{
-			name:               "AI mode creates owner player and AI gm member",
+			name:               "AI mode creates owner player and AI gm manager",
 			gmMode:             statev1.GmMode_AI,
 			wantOwnerRole:      "PLAYER",
 			wantOwnerProtoRole: statev1.ParticipantRole_PLAYER,
 		},
 		{
-			name:               "HYBRID mode creates owner gm and AI gm member",
+			name:               "HYBRID mode creates owner gm and AI gm manager",
 			gmMode:             statev1.GmMode_HYBRID,
 			wantOwnerRole:      "GM",
 			wantOwnerProtoRole: statev1.ParticipantRole_GM,
@@ -474,7 +474,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 								ActorType:   event.ActorTypeSystem,
 								EntityType:  "participant",
 								EntityID:    "participant-ai",
-								PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+								PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 							},
 						),
 					},
@@ -557,8 +557,8 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 			if aiPayload.Pronouns != "it/its" {
 				t.Fatalf("ai payload pronouns = %q, want %q", aiPayload.Pronouns, "it/its")
 			}
-			if aiPayload.CampaignAccess != "MEMBER" {
-				t.Fatalf("ai payload campaign_access = %q, want %q", aiPayload.CampaignAccess, "MEMBER")
+			if aiPayload.CampaignAccess != "MANAGER" {
+				t.Fatalf("ai payload campaign_access = %q, want %q", aiPayload.CampaignAccess, "MANAGER")
 			}
 		})
 	}
@@ -879,7 +879,7 @@ func TestCreateCampaign_AIUsesLocalizedNameAndOwnerFallsBackToAuthUsernameForLoc
 					ActorType:   event.ActorTypeSystem,
 					EntityType:  "participant",
 					EntityID:    "participant-ai",
-					PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oráculo","role":"GM","controller":"AI","campaign_access":"MEMBER","pronouns":"it/its"}`),
+					PayloadJSON: []byte(`{"participant_id":"participant-ai","name":"Oráculo","role":"GM","controller":"AI","campaign_access":"MANAGER","pronouns":"it/its"}`),
 				},
 			),
 		},

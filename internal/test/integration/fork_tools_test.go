@@ -37,6 +37,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Fork the campaign at current state (no event_seq specified)
 		forkParams := &mcp.CallToolParams{
@@ -103,6 +104,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Fork without specifying name
 		forkParams := &mcp.CallToolParams{
@@ -148,6 +150,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Get lineage of original campaign
 		lineageParams := &mcp.CallToolParams{
@@ -208,6 +211,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Fork the campaign
 		forkParams := &mcp.CallToolParams{
@@ -215,6 +219,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			Arguments: map[string]any{
 				"source_campaign_id": campaignOutput.ID,
 				"new_campaign_name":  "First Fork",
+				"copy_participants":  true,
 			},
 		}
 		forkResult, err := suite.client.CallTool(ctx, forkParams)
@@ -225,6 +230,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_fork failed: %+v", forkResult)
 		}
 		forkOutput := decodeStructuredContent[domain.CampaignForkResult](t, forkResult.StructuredContent)
+		setContext(t, suite.client, forkOutput.CampaignID, campaignOutput.OwnerParticipantID)
 
 		// Get lineage of forked campaign
 		lineageParams := &mcp.CallToolParams{
@@ -282,6 +288,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		originalOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		setContext(t, suite.client, originalOutput.ID, originalOutput.OwnerParticipantID)
 
 		// Fork the original
 		fork1Params := &mcp.CallToolParams{
@@ -289,6 +296,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			Arguments: map[string]any{
 				"source_campaign_id": originalOutput.ID,
 				"new_campaign_name":  "First Fork",
+				"copy_participants":  true,
 			},
 		}
 		fork1Result, err := suite.client.CallTool(ctx, fork1Params)
@@ -299,6 +307,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_fork (first) failed: %+v", fork1Result)
 		}
 		fork1Output := decodeStructuredContent[domain.CampaignForkResult](t, fork1Result.StructuredContent)
+		setContext(t, suite.client, fork1Output.CampaignID, originalOutput.OwnerParticipantID)
 
 		// Fork the fork
 		fork2Params := &mcp.CallToolParams{
@@ -306,6 +315,7 @@ func runForkToolsTests(t *testing.T, suite *integrationSuite) {
 			Arguments: map[string]any{
 				"source_campaign_id": fork1Output.CampaignID,
 				"new_campaign_name":  "Second Fork",
+				"copy_participants":  true,
 			},
 		}
 		fork2Result, err := suite.client.CallTool(ctx, fork2Params)

@@ -73,9 +73,6 @@ func (f *fakeProvider) Run(_ context.Context, input ProviderInput) (ProviderOutp
 func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
-			{Name: "set_context"},
-			{Name: "campaign"},
-			{Name: "campaign_end"},
 			{Name: "scene_create"},
 			{Name: "interaction_active_scene_set"},
 			{Name: "interaction_scene_gm_output_commit"},
@@ -93,8 +90,6 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 			"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"scene-1"}}`,
 		},
 		results: map[string]ToolResult{
-			"set_context":                        {Output: `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`},
-			"campaign":                           {Output: `{"id":"camp-1","name":"Ashes"}`},
 			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
 		},
 	}
@@ -105,11 +100,6 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 				ToolCalls: []ProviderToolCall{
 					{
 						CallID:    "call-1",
-						Name:      "campaign",
-						Arguments: `{"campaign_id":"camp-1"}`,
-					},
-					{
-						CallID:    "call-2",
 						Name:      "interaction_scene_gm_output_commit",
 						Arguments: `{"scene_id":"scene-1","text":"The GM describes the ruined city."}`,
 					},
@@ -138,26 +128,19 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	if res.OutputText != "The GM describes the ruined city." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if !reflect.DeepEqual(sess.calls, []string{"set_context", "campaign", "interaction_scene_gm_output_commit"}) {
+	if !reflect.DeepEqual(sess.calls, []string{"interaction_scene_gm_output_commit"}) {
 		t.Fatalf("tool calls = %#v", sess.calls)
-	}
-	if got := sess.args["set_context"]; !reflect.DeepEqual(got, map[string]any{
-		"campaign_id":    "camp-1",
-		"session_id":     "sess-1",
-		"participant_id": "gm-1",
-	}) {
-		t.Fatalf("set_context args = %#v", got)
 	}
 	if len(provider.calls) != 2 {
 		t.Fatalf("provider calls = %d", len(provider.calls))
 	}
-	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"campaign", "scene_create", "interaction_active_scene_set", "interaction_scene_gm_output_commit", "roll_dice"}) {
+	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"scene_create", "interaction_active_scene_set", "interaction_scene_gm_output_commit", "roll_dice"}) {
 		t.Fatalf("filtered tools = %#v", got)
 	}
 	if provider.calls[1].ConversationID != "resp-1" {
 		t.Fatalf("conversation id = %q", provider.calls[1].ConversationID)
 	}
-	if len(provider.calls[1].Results) != 2 || provider.calls[1].Results[1].CallID != "call-2" {
+	if len(provider.calls[1].Results) != 1 || provider.calls[1].Results[0].CallID != "call-1" {
 		t.Fatalf("tool results = %#v", provider.calls[1].Results)
 	}
 }
@@ -165,7 +148,6 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
-			{Name: "set_context"},
 			{Name: "campaign"},
 		},
 		resources: map[string]string{
@@ -178,9 +160,6 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 			"campaign://camp-1/sessions":               `{"sessions":[{"id":"sess-1","status":"ACTIVE"}]}`,
 			"campaign://camp-1/sessions/sess-1/scenes": `{"scenes":[]}`,
 			"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"scene-1"}}`,
-		},
-		results: map[string]ToolResult{
-			"set_context": {Output: `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`},
 		},
 	}
 	provider := &fakeProvider{
@@ -218,7 +197,6 @@ func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
-			{Name: "set_context"},
 			{Name: "scene_create"},
 			{Name: "interaction_scene_gm_output_commit"},
 		},
@@ -234,7 +212,6 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 			"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"scene-1"}}`,
 		},
 		results: map[string]ToolResult{
-			"set_context":                        {Output: `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`},
 			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
 		},
 	}
@@ -268,10 +245,10 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 	if res.OutputText != "The scene opens." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if reflect.DeepEqual(sess.calls, []string{"set_context", "campaign_create", "interaction_scene_gm_output_commit"}) {
+	if reflect.DeepEqual(sess.calls, []string{"campaign_create", "interaction_scene_gm_output_commit"}) {
 		t.Fatalf("unexpected disallowed tool execution: %#v", sess.calls)
 	}
-	if !reflect.DeepEqual(sess.calls, []string{"set_context", "interaction_scene_gm_output_commit"}) {
+	if !reflect.DeepEqual(sess.calls, []string{"interaction_scene_gm_output_commit"}) {
 		t.Fatalf("tool calls = %#v", sess.calls)
 	}
 	if len(provider.calls) != 2 || len(provider.calls[1].Results) != 2 {
@@ -315,7 +292,6 @@ func TestBuildPromptUsesBootstrapModeWithoutActiveScene(t *testing.T) {
 func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
-			{Name: "set_context"},
 			{Name: "scene_create"},
 			{Name: "interaction_active_scene_set"},
 			{Name: "interaction_scene_gm_output_commit"},
@@ -332,7 +308,6 @@ func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 			"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":""}}`,
 		},
 		results: map[string]ToolResult{
-			"set_context":                        {Output: `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-ai"}}`},
 			"scene_create":                       {Output: `{"scene_id":"scene-1","campaign_id":"camp-1","session_id":"sess-1"}`},
 			"interaction_active_scene_set":       {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
 			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
@@ -369,7 +344,7 @@ func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 	if res.OutputText != "The scene opens in fog." {
 		t.Fatalf("output = %q", res.OutputText)
 	}
-	if !reflect.DeepEqual(sess.calls, []string{"set_context", "scene_create", "interaction_active_scene_set", "interaction_scene_gm_output_commit"}) {
+	if !reflect.DeepEqual(sess.calls, []string{"scene_create", "interaction_active_scene_set", "interaction_scene_gm_output_commit"}) {
 		t.Fatalf("tool calls = %#v", sess.calls)
 	}
 }
@@ -377,7 +352,6 @@ func TestRunnerBootstrapAllowsCreateActivateCommitSequence(t *testing.T) {
 func TestRunnerPromptsProviderToCommitDraftNarration(t *testing.T) {
 	sess := &fakeSession{
 		tools: []Tool{
-			{Name: "set_context"},
 			{Name: "interaction_scene_gm_output_commit"},
 		},
 		resources: map[string]string{
@@ -392,7 +366,6 @@ func TestRunnerPromptsProviderToCommitDraftNarration(t *testing.T) {
 			"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"scene-1"}}`,
 		},
 		results: map[string]ToolResult{
-			"set_context":                        {Output: `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-ai"}}`},
 			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
 		},
 	}

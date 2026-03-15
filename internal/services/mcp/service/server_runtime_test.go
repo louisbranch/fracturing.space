@@ -144,20 +144,6 @@ func TestRunWithTransportServesAndStops(t *testing.T) {
 	}
 }
 
-// TestRunUnsupportedTransport ensures Run rejects unknown transport kinds.
-func TestRunUnsupportedTransport(t *testing.T) {
-	err := Run(context.Background(), Config{
-		GRPCAddr:  "localhost:0",
-		Transport: "websocket",
-	})
-	if err == nil {
-		t.Fatal("expected error for unsupported transport")
-	}
-	if !strings.Contains(err.Error(), "not supported") {
-		t.Errorf("expected 'not supported' in error, got: %v", err)
-	}
-}
-
 func TestCloseNilAndEmpty(t *testing.T) {
 	t.Run("nil server", func(t *testing.T) {
 		var s *Server
@@ -244,4 +230,33 @@ func TestRunWithTransportClosesManagedConnWhenServerBuildFails(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "build failed") {
 		t.Fatalf("runWithTransport error = %v, want build failure", err)
 	}
+}
+
+func TestResolveRegistrationProfile(t *testing.T) {
+	t.Run("default standard", func(t *testing.T) {
+		profile, err := resolveRegistrationProfile("")
+		if err != nil {
+			t.Fatalf("resolveRegistrationProfile() error = %v", err)
+		}
+		if profile != mcpRegistrationProfileStandard {
+			t.Fatalf("resolveRegistrationProfile() = %v, want %v", profile, mcpRegistrationProfileStandard)
+		}
+	})
+
+	t.Run("harness", func(t *testing.T) {
+		profile, err := resolveRegistrationProfile(RegistrationProfileHarness)
+		if err != nil {
+			t.Fatalf("resolveRegistrationProfile() error = %v", err)
+		}
+		if profile != mcpRegistrationProfileHarness {
+			t.Fatalf("resolveRegistrationProfile() = %v, want %v", profile, mcpRegistrationProfileHarness)
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		_, err := resolveRegistrationProfile("invalid")
+		if err == nil {
+			t.Fatal("expected error")
+		}
+	})
 }

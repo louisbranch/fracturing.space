@@ -45,8 +45,10 @@ Canonical how-to for system-extension changes.
 ## 4. If exposing MCP tooling
 
 1. Add domain tool/resource handlers in `internal/services/mcp/domain/`.
-2. Register in `internal/services/mcp/service/server.go`.
-3. Add/update MCP-focused tests.
+   Session-scoped bridge authority and outgoing metadata helpers belong in `internal/services/mcp/sessionctx/`, not beside gameplay handlers.
+2. Register in `internal/services/mcp/service/server_registration.go`.
+3. If the production AI bridge surface changes, update `internal/services/shared/mcpbridge/` and the MCP reference docs together.
+4. Add/update MCP-focused tests.
 
 ## 5. Startup validation debugging
 

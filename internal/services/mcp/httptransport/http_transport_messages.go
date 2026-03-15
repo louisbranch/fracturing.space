@@ -1,7 +1,8 @@
-package service
+package httptransport
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"net/http"
@@ -11,7 +12,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/jsonrpc"
 )
 
-// handleMessages handles POST /mcp/messages for JSON-RPC requests.
+// handleMessages handles POST /mcp for JSON-RPC requests.
 // It maps transport-agnostic JSON-RPC payloads onto session-local MCP
 // connection state so one campaign/auth participant can stay contiguous across
 // multiple HTTP round-trips.
@@ -20,10 +21,6 @@ import (
 func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 	if err := t.validateLocalRequest(r); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	if !t.authorizeRequest(w, r) {
 		return
 	}
 
@@ -71,8 +68,7 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 		isInitialize = req.Method == "initialize"
 	}
 
-	// Get or create session from header or cookie
-	const cookieName = "mcp_session"
+	// Get or create session from header.
 	var session *httpSession
 	var exists bool
 	var sessionID string
@@ -91,14 +87,6 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 			exists = false
 			sessionID = ""
 		}
-	} else {
-		cookie, err := r.Cookie(cookieName)
-		if err == nil && cookie != nil && cookie.Value != "" {
-			sessionID = cookie.Value
-			t.sessionsMu.RLock()
-			session, exists = t.sessions[sessionID]
-			t.sessionsMu.RUnlock()
-		}
 	}
 
 	if !exists || session == nil {
@@ -106,7 +94,7 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 			writeSessionError(w, "Invalid or missing session ID")
 			return
 		}
-		// Create new session for this request
+		// Create new session for this request.
 		conn, err := t.Connect(r.Context())
 		if err != nil {
 			log.Printf("Failed to create session: %v", err)
@@ -114,21 +102,31 @@ func (t *HTTPTransport) handleMessages(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		sessionID = conn.SessionID()
+		runtime, err := t.newSessionRuntime(r.Header)
+		if err != nil {
+			log.Printf("Failed to build session runtime: %v", err)
+			_ = conn.Close()
+			if errors.Is(err, ErrSessionBootstrapRejected) {
+				writeSessionError(w, err.Error())
+				return
+			}
+			http.Error(w, "Failed to create session runtime", http.StatusInternalServerError)
+			return
+		}
+		if runtime != nil {
+			t.sessionsMu.Lock()
+			if current := t.sessions[sessionID]; current != nil {
+				current.runtime = runtime
+			}
+			t.sessionsMu.Unlock()
+		}
 		t.sessionsMu.RLock()
 		session = t.sessions[sessionID]
 		t.sessionsMu.RUnlock()
 
-		// Set session header for MCP clients
+		// Initialize returns the session header the client must echo on
+		// subsequent requests for this internal bridge session.
 		w.Header().Set("Mcp-Session-Id", sessionID)
-
-		// Set cookie for subsequent requests (legacy fallback)
-		http.SetCookie(w, &http.Cookie{
-			Name:     cookieName,
-			Value:    sessionID,
-			Path:     "/",
-			HttpOnly: true,
-			SameSite: http.SameSiteStrictMode,
-		})
 	}
 
 	// Update last used time (protected by mutex)

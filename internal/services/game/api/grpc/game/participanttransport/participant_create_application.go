@@ -77,6 +77,9 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	access := CampaignAccessFromProto(in.GetCampaignAccess())
 	if access == participant.CampaignAccessUnspecified {
 		access = participant.CampaignAccessMember
+		if role == participant.RoleGM && controller == participant.ControllerAI {
+			access = participant.CampaignAccessManager
+		}
 	} else {
 		ownerCount, err := authz.CountCampaignOwners(ctx, c.stores.Participant, campaignID)
 		if err != nil {

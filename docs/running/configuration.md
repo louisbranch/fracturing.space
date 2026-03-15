@@ -50,6 +50,7 @@ For setup steps, see [quickstart](quickstart.md) or
 ### AI
 
 - `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8087`.
+- `FRACTURING_SPACE_AI_MCP_URL`: internal MCP bridge URL used by AI orchestration. Default: `http://localhost:8085/mcp`.
 - `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
 - `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
 - `FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER`: issuer claim used by game to sign and AI to validate campaign AI session grants.
@@ -126,11 +127,7 @@ For web-login-first local flows, many contributors set
 Internal gRPC dependencies default to Compose service DNS names (`service:port`). For direct local binary workflows, override these values to `localhost` in `.env.local`.
 
 - `FRACTURING_SPACE_GAME_ADDR`: game gRPC address used by MCP, admin, web, play, and AI services. Default: `game:8082`.
-- `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for MCP when using HTTP transport. Default: `localhost:8085`.
-- `FRACTURING_SPACE_MCP_TRANSPORT`: transport type (`stdio` or `http`). Default: `stdio`.
-- `FRACTURING_SPACE_MCP_ALLOWED_HOSTS`: comma-separated allowed Host/Origin values for MCP HTTP. Defaults to loopback-only when unset.
-- `FRACTURING_SPACE_MCP_OAUTH_ISSUER`: OAuth issuer URL for MCP token validation.
-- `FRACTURING_SPACE_MCP_OAUTH_RESOURCE_SECRET`: shared secret for MCP token introspection.
+- `FRACTURING_SPACE_MCP_HTTP_ADDR`: HTTP bind address for the internal MCP bridge. Default: `localhost:8085`.
 
 ### Admin
 
@@ -190,10 +187,7 @@ Compose note:
 The MCP server (`cmd/mcp`) accepts the following flags:
 
 - `-addr`: game server address. Default: `game:8082`
-- `-http-addr`: HTTP server address (for HTTP transport). Default: `localhost:8085`
-  
-  When running the `cmd/mcp` binary, this value is provided by the command flag/env default (`localhost:8085`). When constructing the MCP service programmatically and leaving `HTTPAddr` empty in `internal/services/mcp/service.Config`, the service-layer fallback is `localhost:8081`.
-- `-transport`: Transport type (`stdio` or `http`). Default: `stdio`
+- `-http-addr`: HTTP server address for the internal bridge. Default: `localhost:8085`
 
 ### Address Overrides
 
@@ -201,11 +195,11 @@ The MCP server accepts flags for gRPC and HTTP addresses. If `FRACTURING_SPACE_G
 or `FRACTURING_SPACE_MCP_HTTP_ADDR` are set, they provide defaults when the matching flag
 is omitted. Command-line flags take precedence over env values.
 
-### Transport Selection
+### Runtime contract
 
-The MCP server supports `stdio` (default) and `http` transports. See
-[Quickstart](quickstart.md) or [Local development](local-dev.md) for run commands and
-[MCP tools and resources](../reference/mcp.md) for HTTP endpoint details.
+The MCP runtime is HTTP-only and intended for internal AI-to-game traffic. See
+[local development](local-dev.md) for local startup and
+[MCP overview](../reference/mcp.md) for the bridge contract.
 
 ## Admin Dashboard Configuration
 

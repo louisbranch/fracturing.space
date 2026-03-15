@@ -14,16 +14,13 @@
     "Remember: the harbor master owes the party a favor."
   ],
   "initial_tool_names": [
-    "campaign_artifact_get",
     "campaign_artifact_list",
     "campaign_artifact_upsert",
-    "character_sheet_get",
     "duality_action_roll",
     "duality_explain",
     "duality_outcome",
     "duality_probability",
     "duality_rules_version",
-    "events_list",
     "interaction_active_scene_set",
     "interaction_ooc_pause",
     "interaction_ooc_post",
@@ -51,13 +48,6 @@
             "max_results": 5,
             "query": "Fear Daggerheart meaning GM Fear token hope fear roll",
             "system": "daggerheart"
-          }
-        },
-        {
-          "call_id": "call_YEB4r2huG5ez7dUlkDDz9SK4",
-          "name": "character_sheet_get",
-          "arguments": {
-            "character_id": "{{character_id}}"
           }
         }
       ]

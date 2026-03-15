@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
@@ -15,13 +16,13 @@ import (
 
 func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantCreateInput, ParticipantCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantCreateInput) (*mcp.CallToolResult, ParticipantCreateResult, error) {
-		callContext, err := newToolInvocationContextWithTimeout(ctx, getContext, grpcLongCallTimeout)
+		callContext, err := sessionctx.NewToolInvocationContextWithTimeout(ctx, getContext, sessionctx.LongCallTimeout)
 		if err != nil {
 			return nil, ParticipantCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, ParticipantCreateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -60,28 +61,28 @@ func ParticipantCreateHandler(client statev1.ParticipantServiceClient, getContex
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.CampaignID),
 			fmt.Sprintf("campaign://%s/participants", result.CampaignID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // ParticipantUpdateHandler executes a participant update request.
 func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantUpdateInput, ParticipantUpdateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantUpdateInput) (*mcp.CallToolResult, ParticipantUpdateResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, ParticipantUpdateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, ParticipantUpdateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -141,28 +142,28 @@ func ParticipantUpdateHandler(client statev1.ParticipantServiceClient, getContex
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.CampaignID),
 			fmt.Sprintf("campaign://%s/participants", result.CampaignID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // ParticipantDeleteHandler executes a participant delete request.
 func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[ParticipantDeleteInput, ParticipantDeleteResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input ParticipantDeleteInput) (*mcp.CallToolResult, ParticipantDeleteResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, ParticipantDeleteResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, ParticipantDeleteResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -198,15 +199,15 @@ func ParticipantDeleteHandler(client statev1.ParticipantServiceClient, getContex
 			UpdatedAt:  formatTimestamp(response.Participant.GetUpdatedAt()),
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.CampaignID),
 			fmt.Sprintf("campaign://%s/participants", result.CampaignID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 

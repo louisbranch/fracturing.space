@@ -37,11 +37,10 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		participants := readParticipantList(t, suite.client, campaignOutput.ID)
-		if len(participants.Participants) == 0 {
-			t.Fatal("expected owner participant")
+		if campaignOutput.OwnerParticipantID == "" {
+			t.Fatal("expected owner participant id")
 		}
-		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Now create a participant
 		participantParams := &mcp.CallToolParams{
@@ -103,11 +102,10 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		participants := readParticipantList(t, suite.client, campaignOutput.ID)
-		if len(participants.Participants) == 0 {
-			t.Fatal("expected owner participant")
+		if campaignOutput.OwnerParticipantID == "" {
+			t.Fatal("expected owner participant id")
 		}
-		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Test creating a PC character
 		characterParams := &mcp.CallToolParams{
@@ -196,11 +194,10 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
-		participants := readParticipantList(t, suite.client, campaignOutput.ID)
-		if len(participants.Participants) == 0 {
-			t.Fatal("expected owner participant")
+		if campaignOutput.OwnerParticipantID == "" {
+			t.Fatal("expected owner participant id")
 		}
-		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Create a character
 		characterParams := &mcp.CallToolParams{
@@ -244,11 +241,7 @@ func runCampaignToolsTests(t *testing.T, suite *integrationSuite) {
 			t.Fatalf("expected empty participant id, got %q", gmControlOutput.ParticipantID)
 		}
 
-		participants = readParticipantList(t, suite.client, campaignOutput.ID)
-		if len(participants.Participants) == 0 {
-			t.Fatal("expected owner participant")
-		}
-		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		// Create a participant for participant controller test
 		participantParams := &mcp.CallToolParams{

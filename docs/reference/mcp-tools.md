@@ -2,58 +2,26 @@
 title: "MCP tools"
 parent: "Reference"
 nav_order: 2
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-14"
 ---
 
 # MCP tools
 
-Exact MCP tool names currently registered by the server.
+GM-safe MCP tools exposed by the production internal AI bridge.
 
-## Context
+Broader bootstrap or dev-only registrations are intentionally omitted here.
 
-- `set_context`
+## Campaign context
 
-## Campaign
+- `campaign_artifact_list`
+- `campaign_artifact_get`
+- `campaign_artifact_upsert`
 
-- `campaign_create`
-- `campaign_end`
-- `campaign_archive`
-- `campaign_restore`
-
-## Participants
-
-- `participant_create`
-- `participant_update`
-- `participant_delete`
-
-## Characters
-
-- `character_create`
-- `character_update`
-- `character_delete`
-- `character_control_set`
-- `character_sheet_get`
-- `character_profile_patch`
-- `character_state_patch`
-
-## Session and outcomes
-
-- `session_start`
-- `session_end`
-- `session_action_roll`
-- `session_roll_outcome_apply`
-
-## Scenes
+## Scene and interaction
 
 - `scene_create`
-
-## Interaction
-
 - `interaction_active_scene_set`
 - `interaction_scene_player_phase_start`
-- `interaction_scene_player_post_submit`
-- `interaction_scene_player_phase_yield`
-- `interaction_scene_player_phase_unyield`
 - `interaction_scene_player_phase_accept`
 - `interaction_scene_player_revisions_request`
 - `interaction_scene_player_phase_end`
@@ -64,7 +32,7 @@ Exact MCP tool names currently registered by the server.
 - `interaction_ooc_ready_clear`
 - `interaction_ooc_resume`
 
-## Daggerheart utilities
+## Rules and system reference
 
 - `duality_rules_version`
 - `duality_action_roll`
@@ -72,11 +40,24 @@ Exact MCP tool names currently registered by the server.
 - `duality_explain`
 - `duality_probability`
 - `roll_dice`
+- `system_reference_search`
+- `system_reference_read`
+
+## Not in the production profile
+
+- campaign lifecycle and fork tools
+- participant and character CRUD tools
+- session lifecycle tools
+- event-list/admin-style tooling
+
+Integration harnesses may enable test-only context bootstrap tooling, but that
+surface is not part of the runtime contract described here.
 
 ## Verification
 
-For implementation and registration details, inspect:
+For implementation, inspect:
 
-- `internal/services/mcp/service/server.go`
+- `internal/services/shared/mcpbridge/profile.go`
 - `internal/services/mcp/service/server_registration.go`
 - `internal/services/mcp/domain/`
+- `internal/services/mcp/sessionctx/`

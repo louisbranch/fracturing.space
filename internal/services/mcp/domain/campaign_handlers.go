@@ -10,6 +10,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -18,13 +19,13 @@ import (
 
 func CampaignCreateHandler(client statev1.CampaignServiceClient, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignCreateInput, CampaignCreateResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignCreateInput) (*mcp.CallToolResult, CampaignCreateResult, error) {
-		callContext, err := newToolInvocationContextWithTimeout(ctx, nil, grpcLongCallTimeout)
+		callContext, err := sessionctx.NewToolInvocationContextWithTimeout(ctx, nil, sessionctx.LongCallTimeout)
 		if err != nil {
 			return nil, CampaignCreateResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, callMeta, err := NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContext(callContext.RunCtx, callContext.InvocationID)
 		if err != nil {
 			return nil, CampaignCreateResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -78,21 +79,21 @@ func CampaignCreateHandler(client statev1.CampaignServiceClient, notify Resource
 			ArchivedAt:         formatTimestamp(response.Campaign.GetArchivedAt()),
 		}
 
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.ID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // CampaignEndHandler executes a campaign end request.
 func CampaignEndHandler(client statev1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignStatusChangeInput, CampaignStatusResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignStatusChangeInput) (*mcp.CallToolResult, CampaignStatusResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -106,7 +107,7 @@ func CampaignEndHandler(client statev1.CampaignServiceClient, getContext func() 
 			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -123,21 +124,21 @@ func CampaignEndHandler(client statev1.CampaignServiceClient, getContext func() 
 		}
 
 		result := campaignStatusResultFromProto(response.Campaign)
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.ID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // CampaignArchiveHandler executes a campaign archive request.
 func CampaignArchiveHandler(client statev1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignStatusChangeInput, CampaignStatusResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignStatusChangeInput) (*mcp.CallToolResult, CampaignStatusResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -151,7 +152,7 @@ func CampaignArchiveHandler(client statev1.CampaignServiceClient, getContext fun
 			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -168,21 +169,21 @@ func CampaignArchiveHandler(client statev1.CampaignServiceClient, getContext fun
 		}
 
 		result := campaignStatusResultFromProto(response.Campaign)
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.ID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
 // CampaignRestoreHandler executes a campaign restore request.
 func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext func() Context, notify ResourceUpdateNotifier) mcp.ToolHandlerFor[CampaignStatusChangeInput, CampaignStatusResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input CampaignStatusChangeInput) (*mcp.CallToolResult, CampaignStatusResult, error) {
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -196,7 +197,7 @@ func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext fun
 			return nil, CampaignStatusResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, CampaignStatusResult{}, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -213,14 +214,14 @@ func CampaignRestoreHandler(client statev1.CampaignServiceClient, getContext fun
 		}
 
 		result := campaignStatusResultFromProto(response.Campaign)
-		responseMeta := MergeResponseMetadata(callMeta, header)
-		NotifyResourceUpdates(
+		responseMeta := sessionctx.MergeResponseMetadata(callMeta, header)
+		sessionctx.NotifyResourceUpdates(
 			ctx,
 			notify,
 			CampaignListResource().URI,
 			fmt.Sprintf("campaign://%s", result.ID),
 		)
-		return CallToolResultWithMetadata(responseMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(responseMeta), result, nil
 	}
 }
 
@@ -238,10 +239,10 @@ func CampaignListResourceHandler(client statev1.CampaignServiceClient) mcp.Resou
 			uri = req.Params.URI
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
+		runCtx, cancel := context.WithTimeout(ctx, sessionctx.CallTimeout)
 		defer cancel()
 
-		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		callCtx, _, err := sessionctx.NewOutgoingContext(runCtx, "")
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}

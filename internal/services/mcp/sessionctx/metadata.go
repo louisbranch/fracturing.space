@@ -1,4 +1,4 @@
-package domain
+package sessionctx
 
 import (
 	"context"
@@ -19,19 +19,17 @@ type ToolCallMetadata struct {
 // ResourceUpdateNotifier notifies MCP clients about resource updates.
 type ResourceUpdateNotifier func(ctx context.Context, uri string)
 
-// NewInvocationID generates an invocation identifier for a tool call.
-func NewInvocationID() (string, error) {
+func newInvocationID() (string, error) {
 	return id.NewID()
 }
 
-// NewRequestID generates a request identifier for a gRPC call.
-func NewRequestID() (string, error) {
+func newRequestID() (string, error) {
 	return id.NewID()
 }
 
 // NewOutgoingContext attaches request metadata to a context.
 func NewOutgoingContext(ctx context.Context, invocationID string) (context.Context, ToolCallMetadata, error) {
-	requestID, err := NewRequestID()
+	requestID, err := newRequestID()
 	if err != nil {
 		return nil, ToolCallMetadata{}, err
 	}
@@ -49,6 +47,14 @@ func NewOutgoingContextWithContext(ctx context.Context, invocationID string, mcp
 	callCtx, meta, err := NewOutgoingContext(ctx, invocationID)
 	if err != nil {
 		return nil, ToolCallMetadata{}, err
+	}
+	campaignID := strings.TrimSpace(mcpCtx.CampaignID)
+	if campaignID != "" {
+		callCtx = metadata.AppendToOutgoingContext(callCtx, grpcmeta.CampaignIDHeader, campaignID)
+	}
+	sessionID := strings.TrimSpace(mcpCtx.SessionID)
+	if sessionID != "" {
+		callCtx = metadata.AppendToOutgoingContext(callCtx, grpcmeta.SessionIDHeader, sessionID)
 	}
 	participantID := strings.TrimSpace(mcpCtx.ParticipantID)
 	if participantID != "" {

@@ -239,7 +239,7 @@ func TestDecideParticipantJoin_AIControllerRequiresGMRole(t *testing.T) {
 	}
 }
 
-func TestDecideParticipantJoin_AIControllerRequiresMemberAccess(t *testing.T) {
+func TestDecideParticipantJoin_AIControllerRequiresManagerAccess(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
@@ -264,7 +264,7 @@ func TestDecideParticipantJoin_AIControllerForbidsUserID(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.join"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MEMBER"}`),
+		PayloadJSON: []byte(`{"participant_id":"p-1","user_id":"user-1","name":"Oracle","role":"GM","controller":"AI","campaign_access":"MANAGER"}`),
 	}
 
 	decision := Decide(State{}, cmd, time.Now)
@@ -356,7 +356,7 @@ func TestDecideParticipantUpdate_AIControllerRequiresGMRole(t *testing.T) {
 	}
 }
 
-func TestDecideParticipantUpdate_AIControllerRequiresMemberAccess(t *testing.T) {
+func TestDecideParticipantUpdate_AIControllerRequiresManagerAccess(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("participant.update"),
@@ -394,7 +394,7 @@ func TestDecideParticipantUpdate_AIControllerForbidsUserID(t *testing.T) {
 		UserID:         "user-1",
 		Role:           "gm",
 		Controller:     "human",
-		CampaignAccess: "member",
+		CampaignAccess: "manager",
 	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
@@ -419,7 +419,7 @@ func TestDecideParticipantUpdate_CanTransitionToCompliantAIState(t *testing.T) {
 		Joined:         true,
 		Role:           "gm",
 		Controller:     "human",
-		CampaignAccess: "member",
+		CampaignAccess: "manager",
 	}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))

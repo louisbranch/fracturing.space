@@ -7,13 +7,14 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
-func ParticipantListResourceHandler(client statev1.ParticipantServiceClient) mcp.ResourceHandler {
+func ParticipantListResourceHandler(client statev1.ParticipantServiceClient, getContext ...func() Context) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("participant list client is not configured")
@@ -30,10 +31,14 @@ func ParticipantListResourceHandler(client statev1.ParticipantServiceClient) mcp
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
+		runCtx, cancel := context.WithTimeout(ctx, sessionctx.CallTimeout)
 		defer cancel()
 
-		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		callContext := Context{}
+		if len(getContext) != 0 && getContext[0] != nil {
+			callContext = getContext[0]()
+		}
+		callCtx, _, err := sessionctx.NewOutgoingContextWithContext(runCtx, "", callContext)
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -87,7 +92,7 @@ func parseCampaignIDFromURI(uri string) (string, error) {
 }
 
 // CharacterListResourceHandler returns a readable character listing resource.
-func CharacterListResourceHandler(client statev1.CharacterServiceClient) mcp.ResourceHandler {
+func CharacterListResourceHandler(client statev1.CharacterServiceClient, getContext ...func() Context) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("character list client is not configured")
@@ -104,10 +109,14 @@ func CharacterListResourceHandler(client statev1.CharacterServiceClient) mcp.Res
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
+		runCtx, cancel := context.WithTimeout(ctx, sessionctx.CallTimeout)
 		defer cancel()
 
-		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		callContext := Context{}
+		if len(getContext) != 0 && getContext[0] != nil {
+			callContext = getContext[0]()
+		}
+		callCtx, _, err := sessionctx.NewOutgoingContextWithContext(runCtx, "", callContext)
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -193,7 +202,7 @@ func parseCampaignIDFromCampaignURI(uri string) (string, error) {
 }
 
 // CampaignResourceHandler returns a readable single campaign resource.
-func CampaignResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceHandler {
+func CampaignResourceHandler(client statev1.CampaignServiceClient, getContext ...func() Context) mcp.ResourceHandler {
 	return func(ctx context.Context, req *mcp.ReadResourceRequest) (*mcp.ReadResourceResult, error) {
 		if client == nil {
 			return nil, fmt.Errorf("campaign client is not configured")
@@ -210,10 +219,14 @@ func CampaignResourceHandler(client statev1.CampaignServiceClient) mcp.ResourceH
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		runCtx, cancel := context.WithTimeout(ctx, grpcCallTimeout)
+		runCtx, cancel := context.WithTimeout(ctx, sessionctx.CallTimeout)
 		defer cancel()
 
-		callCtx, _, err := NewOutgoingContext(runCtx, "")
+		callContext := Context{}
+		if len(getContext) != 0 && getContext[0] != nil {
+			callContext = getContext[0]()
+		}
+		callCtx, _, err := sessionctx.NewOutgoingContextWithContext(runCtx, "", callContext)
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}

@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-14"
 ---
 
 # System Architecture
@@ -21,15 +21,15 @@ Fracturing.Space is organized into four layers:
 - **Domain**: game/auth/social domain logic under `internal/services/*/domain`.
 - **Storage**: service-owned SQLite adapters and data files.
 
-The MCP service is an adapter surface; rules/state authority remains in game and
-auth/social domain services.
+The MCP service is an internal adapter surface for AI orchestration; rules/state
+authority remains in game and auth/social domain services.
 
 ## Core service boundaries
 
 - **Game** (`internal/services/game/`): canonical campaign/session/action rules and event-sourced state.
 - **Web** (`internal/services/web/`): browser-facing modular BFF.
 - **Admin** (`internal/services/admin/`): operator-facing web surface.
-- **MCP** (`internal/services/mcp/`): JSON-RPC tool/resource bridge.
+- **MCP** (`internal/services/mcp/`): internal AI-to-game JSON-RPC bridge.
 - **Auth** (`internal/services/auth/`): identity/authentication and OAuth primitives.
 - **Social** (`internal/services/social/`): profile metadata, contacts, and authenticated people-search read models built from auth-owned identity data.
 - **Discovery** (`internal/services/discovery/`): public discovery entry metadata and future public browsing indexes, not authenticated invite search.

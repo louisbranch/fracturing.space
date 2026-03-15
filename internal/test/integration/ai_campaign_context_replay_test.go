@@ -102,13 +102,14 @@ func (s *openAIReplayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			s.firstErr = err
 		}
 	}
+	s.captureRequestMetadata(payload)
 	s.captureCallOutputs(payload)
 	if sceneID := extractSceneID(payload); sceneID != "" {
 		s.sceneID = sceneID
 	}
 	if s.step >= len(s.fixture.Steps) {
 		s.firstErr = fmt.Errorf("unexpected extra replay request %d", s.step)
-		http.Error(w, "unexpected extra replay request", http.StatusInternalServerError)
+		http.Error(w, "unexpected extra replay request\n"+s.debugStringLocked(), http.StatusInternalServerError)
 		return
 	}
 	step := s.fixture.Steps[s.step]
@@ -127,6 +128,40 @@ func (s *openAIReplayServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_, _ = w.Write(responseBody)
+}
+
+func (s *openAIReplayServer) captureRequestMetadata(payload map[string]any) {
+	previousID := strings.TrimSpace(asString(payload["previous_response_id"]))
+	inputItems, _ := payload["input"].([]any)
+	functionOutputs := 0
+	var followUpText string
+	for _, raw := range inputItems {
+		item, _ := raw.(map[string]any)
+		switch strings.TrimSpace(asString(item["type"])) {
+		case "function_call_output":
+			functionOutputs++
+		}
+		if strings.TrimSpace(asString(item["role"])) != "user" {
+			continue
+		}
+		contentItems, _ := item["content"].([]any)
+		for _, rawContent := range contentItems {
+			content, _ := rawContent.(map[string]any)
+			if strings.TrimSpace(asString(content["type"])) != "input_text" {
+				continue
+			}
+			followUpText = strings.TrimSpace(asString(content["text"]))
+			break
+		}
+	}
+	if previousID == "" {
+		s.requestDebug = append(s.requestDebug, fmt.Sprintf("request step=%d previous=%s function_outputs=%d initial_prompt=%t", s.step, previousID, functionOutputs, strings.TrimSpace(followUpText) != ""))
+		return
+	}
+	if len(followUpText) > 120 {
+		followUpText = followUpText[:120] + "..."
+	}
+	s.requestDebug = append(s.requestDebug, fmt.Sprintf("request step=%d previous=%s function_outputs=%d follow_up=%q", s.step, previousID, functionOutputs, followUpText))
 }
 
 // assertInitialRequest locks the replay fixture to the expected prompt contract and tool allowlist.
@@ -172,6 +207,10 @@ func (s *openAIReplayServer) StepCount() int {
 func (s *openAIReplayServer) DebugString() string {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.debugStringLocked()
+}
+
+func (s *openAIReplayServer) debugStringLocked() string {
 	if len(s.callOutputs) == 0 && len(s.requestDebug) == 0 {
 		return "(no replay call outputs captured)"
 	}
@@ -207,6 +246,9 @@ func (s *openAIReplayServer) captureCallOutputs(payload map[string]any) {
 			s.callOutputs = map[string]string{}
 		}
 		s.callOutputs[callID] = output
+		if len(output) > 200 {
+			output = output[:200] + "..."
+		}
 		s.requestDebug = append(s.requestDebug, fmt.Sprintf("step=%d call_id=%s output=%s", s.step, callID, output))
 	}
 }

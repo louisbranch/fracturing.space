@@ -152,20 +152,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			t.Fatal("session_start returned empty id")
 		}
 
-		contextResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
-			Name: "set_context",
-			Arguments: map[string]any{
-				"campaign_id":    campaignOutput.ID,
-				"session_id":     sessionOutput.ID,
-				"participant_id": participantOutput.ID,
-			},
-		})
-		if err != nil {
-			t.Fatalf("call set_context: %v", err)
-		}
-		if contextResult == nil || contextResult.IsError {
-			t.Fatalf("set_context failed: %+v", contextResult)
-		}
+		setContextWithSession(t, suite.client, campaignOutput.ID, sessionOutput.ID, participantOutput.ID)
 
 		actionRollResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "session_action_roll",
@@ -336,20 +323,7 @@ func runSessionOutcomeTests(t *testing.T, suite *integrationSuite, grpcAddr stri
 			t.Fatal("session_start returned empty id")
 		}
 
-		contextResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
-			Name: "set_context",
-			Arguments: map[string]any{
-				"campaign_id":    campaignOutput.ID,
-				"session_id":     sessionOutput.ID,
-				"participant_id": participantOutput.ID,
-			},
-		})
-		if err != nil {
-			t.Fatalf("call set_context: %v", err)
-		}
-		if contextResult == nil || contextResult.IsError {
-			t.Fatalf("set_context failed: %+v", contextResult)
-		}
+		setContextWithSession(t, suite.client, campaignOutput.ID, sessionOutput.ID, participantOutput.ID)
 
 		difficulty := 8
 		seed := findReplaySeedForFear(t, difficulty)

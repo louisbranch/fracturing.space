@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,7 +51,7 @@ func SetContextHandler(
 	notify ResourceUpdateNotifier,
 ) mcp.ToolHandlerFor[SetContextInput, SetContextResult] {
 	return func(ctx context.Context, _ *mcp.CallToolRequest, input SetContextInput) (*mcp.CallToolResult, SetContextResult, error) {
-		callContext, err := newToolInvocationContext(ctx, nil)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, nil)
 		if err != nil {
 			return nil, SetContextResult{}, fmt.Errorf("generate invocation id: %w", err)
 		}
@@ -62,12 +63,14 @@ func SetContextHandler(
 			return nil, SetContextResult{}, fmt.Errorf("campaign_id is required")
 		}
 
-		// Validate campaign exists
-		responseMeta, err := validateCampaignExists(callContext.RunCtx, campaignClient, campaignID, callContext.InvocationID)
-		if err != nil {
-			return nil, SetContextResult{}, fmt.Errorf("validate campaign: %w", err)
+		var lastMeta ToolCallMetadata
+		if campaignClient != nil {
+			responseMeta, err := validateCampaignExists(callContext.RunCtx, campaignClient, campaignID, callContext.InvocationID)
+			if err != nil {
+				return nil, SetContextResult{}, fmt.Errorf("validate campaign: %w", err)
+			}
+			lastMeta = responseMeta
 		}
-		lastMeta := responseMeta
 
 		// Build new context starting with campaign_id
 		newCtx := Context{
@@ -78,11 +81,13 @@ func SetContextHandler(
 		if input.SessionID != "" {
 			sessionID := strings.TrimSpace(input.SessionID)
 			if sessionID != "" {
-				responseMeta, err := validateSessionExists(callContext.RunCtx, sessionClient, campaignID, sessionID, callContext.InvocationID)
-				if err != nil {
-					return nil, SetContextResult{}, fmt.Errorf("validate session: %w", err)
+				if sessionClient != nil {
+					responseMeta, err := validateSessionExists(callContext.RunCtx, sessionClient, campaignID, sessionID, callContext.InvocationID)
+					if err != nil {
+						return nil, SetContextResult{}, fmt.Errorf("validate session: %w", err)
+					}
+					lastMeta = responseMeta
 				}
-				lastMeta = responseMeta
 				newCtx.SessionID = sessionID
 			}
 		}
@@ -91,11 +96,13 @@ func SetContextHandler(
 		if input.ParticipantID != "" {
 			participantID := strings.TrimSpace(input.ParticipantID)
 			if participantID != "" {
-				responseMeta, err := validateParticipantExists(callContext.RunCtx, participantClient, campaignID, participantID, callContext.InvocationID)
-				if err != nil {
-					return nil, SetContextResult{}, fmt.Errorf("validate participant: %w", err)
+				if participantClient != nil {
+					responseMeta, err := validateParticipantExists(callContext.RunCtx, participantClient, campaignID, participantID, callContext.InvocationID)
+					if err != nil {
+						return nil, SetContextResult{}, fmt.Errorf("validate participant: %w", err)
+					}
+					lastMeta = responseMeta
 				}
-				lastMeta = responseMeta
 				newCtx.ParticipantID = participantID
 			}
 		}
@@ -103,7 +110,7 @@ func SetContextHandler(
 		// Update server context
 		setContextFunc(newCtx)
 
-		NotifyResourceUpdates(ctx, notify, ContextResource().URI)
+		sessionctx.NotifyResourceUpdates(ctx, notify, ContextResource().URI)
 
 		// Return current context
 		currentCtx := getContextFunc()
@@ -116,16 +123,8 @@ func SetContextHandler(
 			result.Context.ParticipantID = currentCtx.ParticipantID
 		}
 
-		return CallToolResultWithMetadata(lastMeta), result, nil
+		return sessionctx.CallToolResultWithMetadata(lastMeta), result, nil
 	}
-}
-
-// Context represents the current MCP context.
-// This is a duplicate of the one in service package to avoid circular imports.
-type Context struct {
-	CampaignID    string
-	SessionID     string
-	ParticipantID string
 }
 
 // grpcNotFoundError translates gRPC NotFound/InvalidArgument errors into
@@ -145,7 +144,7 @@ func grpcNotFoundError(err error, entity string) error {
 
 // validateCampaignExists checks if a campaign exists by calling GetCampaign.
 func validateCampaignExists(ctx context.Context, client statev1.CampaignServiceClient, campaignID string, invocationID string) (ToolCallMetadata, error) {
-	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
+	callCtx, callMeta, err := sessionctx.NewOutgoingContext(ctx, invocationID)
 	if err != nil {
 		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
 	}
@@ -158,13 +157,13 @@ func validateCampaignExists(ctx context.Context, client statev1.CampaignServiceC
 		return ToolCallMetadata{}, grpcNotFoundError(err, "campaign")
 	}
 
-	return MergeResponseMetadata(callMeta, header), nil
+	return sessionctx.MergeResponseMetadata(callMeta, header), nil
 }
 
 // validateSessionExists checks if a session exists and belongs to the campaign.
 // The GetSession gRPC method validates that the session belongs to the campaign.
 func validateSessionExists(ctx context.Context, client statev1.SessionServiceClient, campaignID, sessionID, invocationID string) (ToolCallMetadata, error) {
-	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
+	callCtx, callMeta, err := sessionctx.NewOutgoingContext(ctx, invocationID)
 	if err != nil {
 		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
 	}
@@ -178,13 +177,13 @@ func validateSessionExists(ctx context.Context, client statev1.SessionServiceCli
 		return ToolCallMetadata{}, grpcNotFoundError(err, "session")
 	}
 
-	return MergeResponseMetadata(callMeta, header), nil
+	return sessionctx.MergeResponseMetadata(callMeta, header), nil
 }
 
 // validateParticipantExists checks if a participant exists and belongs to the campaign.
 // The GetParticipant gRPC method validates that the participant belongs to the campaign.
 func validateParticipantExists(ctx context.Context, client statev1.ParticipantServiceClient, campaignID, participantID, invocationID string) (ToolCallMetadata, error) {
-	callCtx, callMeta, err := NewOutgoingContext(ctx, invocationID)
+	callCtx, callMeta, err := sessionctx.NewOutgoingContext(ctx, invocationID)
 	if err != nil {
 		return ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)
 	}
@@ -198,7 +197,7 @@ func validateParticipantExists(ctx context.Context, client statev1.ParticipantSe
 		return ToolCallMetadata{}, grpcNotFoundError(err, "participant")
 	}
 
-	return MergeResponseMetadata(callMeta, header), nil
+	return sessionctx.MergeResponseMetadata(callMeta, header), nil
 }
 
 // ContextResourcePayload represents the MCP resource payload for the current context.

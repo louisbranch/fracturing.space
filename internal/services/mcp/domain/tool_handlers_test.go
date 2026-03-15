@@ -938,7 +938,7 @@ func TestCampaignForkHandler(t *testing.T) {
 				},
 			},
 		}
-		handler := CampaignForkHandler(client, nil)
+		handler := CampaignForkHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CampaignForkInput{
 			SourceCampaignID: "c1",
 		})
@@ -957,7 +957,7 @@ func TestCampaignForkHandler(t *testing.T) {
 		client := &fakeForkClient{
 			forkResp: &statev1.ForkCampaignResponse{},
 		}
-		handler := CampaignForkHandler(client, nil)
+		handler := CampaignForkHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CampaignForkInput{SourceCampaignID: "c1"})
 		if err == nil {
 			t.Fatal("expected error for nil campaign in response")
@@ -966,7 +966,7 @@ func TestCampaignForkHandler(t *testing.T) {
 
 	t.Run("gRPC error", func(t *testing.T) {
 		client := &fakeForkClient{forkErr: fmt.Errorf("error")}
-		handler := CampaignForkHandler(client, nil)
+		handler := CampaignForkHandler(client, nil, nil)
 		_, _, err := handler(context.Background(), nil, CampaignForkInput{SourceCampaignID: "c1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -979,7 +979,7 @@ func TestCampaignForkHandler(t *testing.T) {
 				Campaign: testCampaign("c2", "Forked", statev1.CampaignStatus_DRAFT),
 			},
 		}
-		handler := CampaignForkHandler(client, nil)
+		handler := CampaignForkHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CampaignForkInput{SourceCampaignID: "c1"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1002,7 +1002,7 @@ func TestCampaignForkHandler(t *testing.T) {
 				},
 			},
 		}
-		handler := CampaignForkHandler(client, nil)
+		handler := CampaignForkHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CampaignForkInput{
 			SourceCampaignID: "c1",
 			SessionID:        "sess-1",
@@ -1022,7 +1022,7 @@ func TestCampaignForkHandler(t *testing.T) {
 				ForkEventSeq: 5,
 			},
 		}
-		handler := CampaignForkHandler(client, nil)
+		handler := CampaignForkHandler(client, nil, nil)
 		_, result, err := handler(context.Background(), nil, CampaignForkInput{
 			SourceCampaignID: "c1",
 			EventSeq:         5,
@@ -1047,7 +1047,7 @@ func TestCampaignLineageHandler(t *testing.T) {
 				},
 			},
 		}
-		handler := CampaignLineageHandler(client)
+		handler := CampaignLineageHandler(client, nil)
 		_, result, err := handler(context.Background(), nil, CampaignLineageInput{CampaignID: "c1"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
@@ -1064,7 +1064,7 @@ func TestCampaignLineageHandler(t *testing.T) {
 		client := &fakeForkClient{
 			lineageErr: fmt.Errorf("error"),
 		}
-		handler := CampaignLineageHandler(client)
+		handler := CampaignLineageHandler(client, nil)
 		_, _, err := handler(context.Background(), nil, CampaignLineageInput{CampaignID: "c1"})
 		if err == nil {
 			t.Fatal("expected error")
@@ -1075,7 +1075,7 @@ func TestCampaignLineageHandler(t *testing.T) {
 		client := &fakeForkClient{
 			lineageResp: &statev1.GetLineageResponse{},
 		}
-		handler := CampaignLineageHandler(client)
+		handler := CampaignLineageHandler(client, nil)
 		_, _, err := handler(context.Background(), nil, CampaignLineageInput{CampaignID: "c1"})
 		if err == nil {
 			t.Fatal("expected error for nil lineage in response")
@@ -1094,7 +1094,7 @@ func TestCampaignLineageHandler(t *testing.T) {
 				},
 			},
 		}
-		handler := CampaignLineageHandler(client)
+		handler := CampaignLineageHandler(client, nil)
 		_, result, err := handler(context.Background(), nil, CampaignLineageInput{CampaignID: "c2"})
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)

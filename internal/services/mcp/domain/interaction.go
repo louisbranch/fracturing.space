@@ -8,6 +8,7 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/mcp/sessionctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -705,13 +706,13 @@ func InteractionStateResourceHandler(client statev1.InteractionServiceClient, ge
 			return nil, fmt.Errorf("parse campaign ID from URI: %w", err)
 		}
 
-		callContext, err := newToolInvocationContext(ctx, getContext)
+		callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 		if err != nil {
 			return nil, fmt.Errorf("generate invocation id: %w", err)
 		}
 		defer callContext.Cancel()
 
-		callCtx, _, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+		callCtx, _, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 		if err != nil {
 			return nil, fmt.Errorf("create request metadata: %w", err)
 		}
@@ -744,8 +745,8 @@ func interactionToolResult(ctx context.Context, notify ResourceUpdateNotifier, c
 	if state == nil {
 		return nil, InteractionStateResult{}, fmt.Errorf("interaction state response is missing")
 	}
-	NotifyResourceUpdates(ctx, notify, fmt.Sprintf("campaign://%s/interaction", campaignID))
-	return CallToolResultWithMetadata(MergeResponseMetadata(callMeta, header)), interactionStateResultFromProto(state), nil
+	sessionctx.NotifyResourceUpdates(ctx, notify, fmt.Sprintf("campaign://%s/interaction", campaignID))
+	return sessionctx.CallToolResultWithMetadata(sessionctx.MergeResponseMetadata(callMeta, header)), interactionStateResultFromProto(state), nil
 }
 
 type interactionToolContext struct {
@@ -756,7 +757,7 @@ type interactionToolContext struct {
 }
 
 func interactionCallContext(ctx context.Context, getContext func() Context, explicitCampaignID string) (string, interactionToolContext, ToolCallMetadata, error) {
-	callContext, err := newToolInvocationContext(ctx, getContext)
+	callContext, err := sessionctx.NewToolInvocationContext(ctx, getContext)
 	if err != nil {
 		return "", interactionToolContext{}, ToolCallMetadata{}, fmt.Errorf("generate invocation id: %w", err)
 	}
@@ -768,7 +769,7 @@ func interactionCallContext(ctx context.Context, getContext func() Context, expl
 		callContext.Cancel()
 		return "", interactionToolContext{}, ToolCallMetadata{}, fmt.Errorf("campaign_id is required")
 	}
-	callCtx, callMeta, err := NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
+	callCtx, callMeta, err := sessionctx.NewOutgoingContextWithContext(callContext.RunCtx, callContext.InvocationID, callContext.MCPContext)
 	if err != nil {
 		callContext.Cancel()
 		return "", interactionToolContext{}, ToolCallMetadata{}, fmt.Errorf("create request metadata: %w", err)

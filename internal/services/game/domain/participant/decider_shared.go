@@ -38,10 +38,10 @@ func validateAISeatInvariant(userID, role, controller, access string) (command.R
 		}, false
 	}
 	normalizedAccess, ok := normalizeCampaignAccessLabel(access)
-	if !ok || normalizedAccess != "member" {
+	if !ok || normalizedAccess != "manager" {
 		return command.Rejection{
 			Code:    rejectionCodeParticipantAIAccessRequired,
-			Message: "ai-controlled participants must use member campaign access",
+			Message: "ai-controlled participants must use manager campaign access",
 		}, false
 	}
 	if strings.TrimSpace(userID) != "" {

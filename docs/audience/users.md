@@ -21,4 +21,4 @@ Path for players/GMs evaluating and trying Fracturing.Space.
 
 ## Reference
 
-- MCP integration capabilities (for advanced users): [MCP overview](../reference/mcp.md)
+- Contributor-facing service/runtime details: [Running](../running/index.md)

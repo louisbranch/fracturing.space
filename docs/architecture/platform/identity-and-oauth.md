@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 2
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-11"
+last_reviewed: "2026-03-14"
 ---
 
 # Identity and OAuth
@@ -12,7 +12,7 @@ last_reviewed: "2026-03-11"
 Canonical identity, passkey, recovery, and OAuth architecture for Fracturing.Space.
 
 This page defines service ownership, security boundaries, and invariants for
-account identity, offline recovery, first-party OAuth, and MCP token checks.
+account identity, offline recovery, and first-party OAuth.
 
 ## Ownership boundaries
 
@@ -20,8 +20,6 @@ account identity, offline recovery, first-party OAuth, and MCP token checks.
   passkeys, recovery-code state, web sessions, and OAuth issuance/introspection.
 - **Web service** hosts signup, login, recovery, and settings UX and delegates
   credential verification and storage to auth.
-- **MCP service** is a protected resource that validates bearer tokens through
-  auth introspection and exposes protected-resource metadata.
 - **Social service** owns optional profile metadata, contacts, and authenticated
   people-search read models. It does not own auth or usernames.
 - **Discovery service** remains the public browsing surface and consumes
@@ -96,13 +94,7 @@ Auth service acts as the authorization server for first-party clients.
 - `GET /.well-known/oauth-authorization-server`
 
 Access tokens are opaque and persisted in auth storage. Protected resources,
-including MCP HTTP transport, validate them through `/introspect`.
-
-### MCP protected resource
-
-- `GET /.well-known/oauth-protected-resource`
-
-401 responses include `WWW-Authenticate: Bearer resource_metadata=...`.
+including first-party web/admin surfaces, validate them through `/introspect`.
 
 ## Operational invariants
 

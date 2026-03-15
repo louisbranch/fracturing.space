@@ -70,11 +70,10 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if campaignOutput.ID == "" {
 			t.Fatal("campaign_create returned empty id")
 		}
-		participants := readParticipantList(t, suite.client, campaignOutput.ID)
-		if len(participants.Participants) == 0 {
-			t.Fatal("expected owner participant")
+		if campaignOutput.OwnerParticipantID == "" {
+			t.Fatal("expected owner participant id")
 		}
-		setContext(t, suite.client, campaignOutput.ID, participants.Participants[0].ID)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		lastSeq := requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, 0, "campaign.created")
 
@@ -231,11 +230,10 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 		if campaignOutput.ID == "" {
 			t.Fatal("campaign_create returned empty id")
 		}
-		participants := readParticipantList(t, suite.client, campaignOutput.ID)
-		if len(participants.Participants) == 0 {
-			t.Fatal("expected owner participant")
+		ownerID := campaignOutput.OwnerParticipantID
+		if ownerID == "" {
+			t.Fatal("expected owner participant id")
 		}
-		ownerID := participants.Participants[0].ID
 		setContext(t, suite.client, campaignOutput.ID, ownerID)
 
 		lastSeq := requireEventTypesAfterSeq(t, ctxWithUser, eventClient, campaignOutput.ID, 0, "campaign.created")
@@ -320,6 +318,7 @@ func runMutationEventGuardrailTests(t *testing.T, suite *integrationSuite, grpcA
 			t.Fatalf("campaign_create failed: %+v", campaignResult)
 		}
 		campaignOutput := decodeStructuredContent[domain.CampaignCreateResult](t, campaignResult.StructuredContent)
+		setContext(t, suite.client, campaignOutput.ID, campaignOutput.OwnerParticipantID)
 
 		forkResult, err := suite.client.CallTool(ctx, &mcp.CallToolParams{
 			Name: "campaign_fork",

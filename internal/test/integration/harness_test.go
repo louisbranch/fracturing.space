@@ -262,7 +262,7 @@ func startAuthServer(t *testing.T) (string, func()) {
 
 const (
 	integrationMCPTransportEnv    = "INTEGRATION_MCP_TRANSPORT"
-	integrationMCPTransportStdIO  = "stdio"
+	integrationMCPTransportHTTP   = "http"
 	integrationMCPTransportMemory = "inmemory"
 	integrationSharedFixtureEnv   = "INTEGRATION_SHARED_FIXTURE"
 )
@@ -273,7 +273,7 @@ func integrationSharedFixtureEnabled() bool {
 }
 
 // startMCPClient connects a test MCP client. Default transport is in-memory for
-// speed; set INTEGRATION_MCP_TRANSPORT=stdio to exercise process boundaries.
+// speed; set INTEGRATION_MCP_TRANSPORT=http to exercise the process HTTP boundary.
 func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
 	t.Helper()
 
@@ -281,8 +281,8 @@ func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) 
 	if transport == "" || transport == integrationMCPTransportMemory {
 		return startMCPClientInMemory(t, grpcAddr)
 	}
-	if transport == integrationMCPTransportStdIO {
-		return startMCPClientStdio(t, grpcAddr)
+	if transport == integrationMCPTransportHTTP {
+		return startMCPClientHTTP(t, grpcAddr)
 	}
 	t.Fatalf("unsupported %s %q", integrationMCPTransportEnv, transport)
 	return nil, nil
@@ -291,7 +291,7 @@ func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) 
 func startMCPClientInMemory(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
 	t.Helper()
 
-	serverInstance, err := mcpservice.New(grpcAddr)
+	serverInstance, err := mcpservice.NewHarness(grpcAddr)
 	if err != nil {
 		t.Fatalf("new MCP server: %v", err)
 	}
@@ -330,20 +330,28 @@ func startMCPClientInMemory(t *testing.T, grpcAddr string) (*mcp.ClientSession, 
 	return clientSession, closeClient
 }
 
-func startMCPClientStdio(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
+func startMCPClientHTTP(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
 	t.Helper()
 
-	cmd := exec.Command(mcpBinaryForTests(t), "-addr="+grpcAddr)
-	cmd.Dir = repoRoot(t)
-	cmd.Stderr = os.Stderr
-
-	transport := &mcp.CommandTransport{Command: cmd}
-	client := mcp.NewClient(&mcp.Implementation{Name: "integration-client", Version: "dev"}, nil)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-	clientSession, err := client.Connect(ctx, transport, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	httpAddr := pickUnusedAddress(t)
+	cmd, err := startMCPHarnessHTTPServer(ctx, t, grpcAddr, httpAddr)
 	if err != nil {
+		cancel()
+		t.Fatalf("start MCP HTTP server: %v", err)
+	}
+	baseURL := "http://" + httpAddr
+	waitForHTTPHealth(t, newHTTPClient(t), baseURL+"/mcp/health")
+
+	client := mcp.NewClient(&mcp.Implementation{Name: "integration-client", Version: "dev"}, nil)
+	connectCtx, connectCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer connectCancel()
+	clientSession, err := client.Connect(connectCtx, &mcp.StreamableClientTransport{
+		Endpoint:   baseURL + "/mcp",
+		HTTPClient: newHTTPClient(t),
+	}, nil)
+	if err != nil {
+		stopMCPProcess(t, cancel, cmd)
 		t.Fatalf("connect MCP client: %v", err)
 	}
 
@@ -352,6 +360,7 @@ func startMCPClientStdio(t *testing.T, grpcAddr string) (*mcp.ClientSession, fun
 		if closeErr != nil {
 			t.Fatalf("close MCP client: %v", closeErr)
 		}
+		stopMCPProcess(t, cancel, cmd)
 	}
 
 	return clientSession, closeClient
@@ -591,19 +600,32 @@ func readParticipantList(t *testing.T, client *mcp.ClientSession, campaignID str
 	return parseParticipantListPayload(t, res.Contents[0].Text)
 }
 
-// setContext sets the MCP context for campaign/participant identity.
+// setContext sets harness-only MCP context for campaign/participant identity.
 func setContext(t *testing.T, client *mcp.ClientSession, campaignID, participantID string) {
+	t.Helper()
+	setContextWithSession(t, client, campaignID, "", participantID)
+}
+
+// setContextWithSession sets harness-only MCP context including an optional session.
+func setContextWithSession(t *testing.T, client *mcp.ClientSession, campaignID, sessionID, participantID string) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
 	defer cancel()
 
+	arguments := map[string]any{
+		"campaign_id": campaignID,
+	}
+	if sessionID != "" {
+		arguments["session_id"] = sessionID
+	}
+	if participantID != "" {
+		arguments["participant_id"] = participantID
+	}
+
 	result, err := client.CallTool(ctx, &mcp.CallToolParams{
-		Name: "set_context",
-		Arguments: map[string]any{
-			"campaign_id":    campaignID,
-			"participant_id": participantID,
-		},
+		Name:      "set_context",
+		Arguments: arguments,
 	})
 	if err != nil {
 		t.Fatalf("call set_context: %v", err)

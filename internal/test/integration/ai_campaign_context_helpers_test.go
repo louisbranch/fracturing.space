@@ -118,10 +118,9 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 	mcpErr := make(chan error, 1)
 	go func() {
 		mcpErr <- mcpservice.Run(mcpCtx, mcpservice.Config{
-			GRPCAddr:  fixture.grpcAddr,
-			AIAddr:    aiAddr,
-			Transport: mcpservice.TransportHTTP,
-			HTTPAddr:  mcpAddr,
+			GRPCAddr: fixture.grpcAddr,
+			AIAddr:   aiAddr,
+			HTTPAddr: mcpAddr,
 		})
 	}()
 	t.Cleanup(func() {

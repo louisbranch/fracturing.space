@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/mcpbridge"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -34,10 +35,15 @@ func (d *mcpDialer) Dial(ctx context.Context) (Session, error) {
 	if d == nil || strings.TrimSpace(d.url) == "" {
 		return nil, fmt.Errorf("mcp url is required")
 	}
+	httpClient := d.http
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	httpClient = withBridgeContextHTTPClient(httpClient)
 	cli := mcp.NewClient(&mcp.Implementation{Name: "fracturing-space-ai", Version: "0.1.0"}, nil)
 	sess, err := cli.Connect(ctx, &mcp.StreamableClientTransport{
 		Endpoint:   d.url,
-		HTTPClient: d.http,
+		HTTPClient: httpClient,
 	}, nil)
 	if err != nil {
 		return nil, err
@@ -140,4 +146,37 @@ func toolOutput(res *mcp.CallToolResult) string {
 		return "{}"
 	}
 	return string(data)
+}
+
+func withBridgeContextHTTPClient(base *http.Client) *http.Client {
+	if base == nil {
+		base = http.DefaultClient
+	}
+	clone := *base
+	transport := clone.Transport
+	if transport == nil {
+		transport = http.DefaultTransport
+	}
+	clone.Transport = bridgeContextRoundTripper{base: transport}
+	return &clone
+}
+
+type bridgeContextRoundTripper struct {
+	base http.RoundTripper
+}
+
+func (rt bridgeContextRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	base := rt.base
+	if base == nil {
+		base = http.DefaultTransport
+	}
+	if req == nil {
+		return base.RoundTrip(req)
+	}
+	sessionCtx := mcpbridge.SessionContextFromContext(req.Context())
+	if sessionCtx.Valid() {
+		req = req.Clone(req.Context())
+		sessionCtx.ApplyToHeader(req.Header)
+	}
+	return base.RoundTrip(req)
 }
