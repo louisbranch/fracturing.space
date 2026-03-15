@@ -45,5 +45,5 @@ func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	h := newHandlers(dashboardapp.NewService(m.gateway, nil, m.healthProvider), m.base)
 	registerRoutes(mux, h)
-	return module.Mount{Prefix: routepath.DashboardPrefix, Handler: mux}, nil
+	return module.Mount{Prefix: routepath.DashboardPrefix, CanonicalRoot: true, Handler: mux}, nil
 }

@@ -1,3 +1,6 @@
 package routepath
 
-const DiscoverPrefix = "/discover/"
+const (
+	Discover       = "/discover"
+	DiscoverPrefix = "/discover/"
+)

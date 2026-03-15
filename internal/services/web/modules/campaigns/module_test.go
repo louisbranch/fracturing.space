@@ -77,7 +77,7 @@ func TestMountServesCampaignsGet(t *testing.T) {
 	if mount.Prefix != routepath.CampaignsPrefix {
 		t.Fatalf("prefix = %q, want %q", mount.Prefix, routepath.CampaignsPrefix)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -209,7 +209,7 @@ func TestMountMapsCampaignGatewayErrorToHTTPStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusUnauthorized {
@@ -225,7 +225,7 @@ func TestMountCampaignsGRPCNotFoundRendersAppErrorPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusNotFound {
@@ -249,7 +249,7 @@ func TestMountCampaignsInternalErrorRendersServerErrorPage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusInternalServerError {
@@ -268,7 +268,7 @@ func TestMountCampaignsGRPCNotFoundHTMXRendersErrorFragment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -368,7 +368,7 @@ func TestMountUsesDependenciesCampaignClientWhenGatewayNotProvided(t *testing.T)
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {
@@ -387,7 +387,7 @@ func TestMountServesCampaignsGetWithEmptyList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusFound {
@@ -423,7 +423,7 @@ func TestMountCampaignsGetWithEmptyListUsesHXRedirect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	req.Header.Set("HX-Request", "true")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
@@ -454,7 +454,7 @@ func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 	t.Parallel()
 
 	h := newHandlersFromConfig(serviceConfigWithGateway(fakeGateway{}), modulehandler.NewTestBase(), "", nil)
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 
 	h.WritePage(rr, req, "Campaigns", http.StatusOK, campaignsListHeader(nil), webtemplates.AppMainLayoutOptions{}, failingCampaignComponent{err: errors.New("render failed")})

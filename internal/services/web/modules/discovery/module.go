@@ -38,5 +38,5 @@ func (m Module) Mount() (module.Mount, error) {
 	base := publichandler.NewBase()
 	h := newHandlers(base, discoveryapp.NewService(m.gateway))
 	registerRoutes(mux, h)
-	return module.Mount{Prefix: routepath.DiscoverPrefix, Handler: mux}, nil
+	return module.Mount{Prefix: routepath.DiscoverPrefix, CanonicalRoot: true, Handler: mux}, nil
 }

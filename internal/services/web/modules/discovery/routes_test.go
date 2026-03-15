@@ -22,7 +22,7 @@ func TestRegisterRoutesDiscoveryMethodContract(t *testing.T) {
 	mux := http.NewServeMux()
 	registerRoutes(mux, newHandlers(publichandler.NewBase(), nil))
 
-	getReq := httptest.NewRequest(http.MethodGet, routepath.DiscoverPrefix, nil)
+	getReq := httptest.NewRequest(http.MethodGet, routepath.Discover, nil)
 	getRR := httptest.NewRecorder()
 	mux.ServeHTTP(getRR, getReq)
 	if getRR.Code != http.StatusOK {
@@ -35,14 +35,14 @@ func TestRegisterRoutesDiscoveryMethodContract(t *testing.T) {
 		t.Fatalf("body missing discovery marker: %q", body)
 	}
 
-	headReq := httptest.NewRequest(http.MethodHead, routepath.DiscoverPrefix, nil)
+	headReq := httptest.NewRequest(http.MethodHead, routepath.Discover, nil)
 	headRR := httptest.NewRecorder()
 	mux.ServeHTTP(headRR, headReq)
 	if headRR.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", headRR.Code, http.StatusOK)
 	}
 
-	postReq := httptest.NewRequest(http.MethodPost, routepath.DiscoverPrefix, nil)
+	postReq := httptest.NewRequest(http.MethodPost, routepath.Discover, nil)
 	postRR := httptest.NewRecorder()
 	mux.ServeHTTP(postRR, postReq)
 	if postRR.Code != http.StatusMethodNotAllowed {

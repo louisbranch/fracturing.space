@@ -27,7 +27,7 @@ func TestAppCampaignsPageRendersPrimaryNavigation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -45,7 +45,7 @@ func TestAppDashboardPageRendersPrimaryNavigation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/dashboard/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -377,7 +377,7 @@ func TestAppPageIncludesThemeAssets(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -445,7 +445,7 @@ func TestAppLayoutIncludesHTMXErrorSwapContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)

@@ -15,7 +15,7 @@ func TestAppSettingsPageRendersPrimaryNavigation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -33,7 +33,7 @@ func TestAppSettingsRootRedirectsToProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/settings/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/settings", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -42,6 +42,26 @@ func TestAppSettingsRootRedirectsToProfile(t *testing.T) {
 	}
 	if got := rr.Header().Get("Location"); got != "/app/settings/profile" {
 		t.Fatalf("Location = %q, want %q", got, "/app/settings/profile")
+	}
+}
+
+func TestAppSettingsSlashfulRootRedirectsToCanonicalPath(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	h, err := NewHandler(defaultProtectedConfig(auth))
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/app/settings/", nil)
+	attachSessionCookie(t, req, auth, "user-1")
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, req)
+	if rr.Code != http.StatusPermanentRedirect {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusPermanentRedirect)
+	}
+	if got := rr.Header().Get("Location"); got != "/app/settings" {
+		t.Fatalf("Location = %q, want %q", got, "/app/settings")
 	}
 }
 

@@ -2383,7 +2383,7 @@ func TestMountUsesWebLayoutForNonHTMX(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, routepath.CampaignsPrefix, nil)
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusOK {

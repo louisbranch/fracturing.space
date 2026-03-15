@@ -31,9 +31,8 @@ func TestRegisterRoutesDashboardPathAndMethodContracts(t *testing.T) {
 	}{
 		{name: "app dashboard get", method: http.MethodGet, path: routepath.AppDashboard, wantStatus: http.StatusOK},
 		{name: "app dashboard head", method: http.MethodHead, path: routepath.AppDashboard, wantStatus: http.StatusOK},
-		{name: "dashboard prefix get", method: http.MethodGet, path: routepath.DashboardPrefix, wantStatus: http.StatusOK},
 		{name: "dashboard unknown subpath", method: http.MethodGet, path: routepath.DashboardPrefix + "other", wantStatus: http.StatusNotFound},
-		{name: "dashboard post rejected", method: http.MethodPost, path: routepath.DashboardPrefix, wantStatus: http.StatusMethodNotAllowed, wantAllow: "GET, HEAD"},
+		{name: "dashboard post rejected", method: http.MethodPost, path: routepath.AppDashboard, wantStatus: http.StatusMethodNotAllowed, wantAllow: "GET, HEAD"},
 	}
 
 	for _, tc := range tests {

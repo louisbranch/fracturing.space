@@ -12,6 +12,5 @@ func registerRoutes(mux *http.ServeMux, h handlers) {
 		return
 	}
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppDashboard, h.handleIndex)
-	mux.HandleFunc(http.MethodGet+" "+routepath.DashboardPrefix+"{$}", h.handleIndex)
 	mux.HandleFunc(http.MethodGet+" "+routepath.DashboardPrefix+"{rest...}", h.WriteNotFound)
 }

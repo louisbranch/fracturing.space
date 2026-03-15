@@ -54,15 +54,15 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	dashboardReq := httptest.NewRequest(http.MethodGet, "/app/dashboard/", nil)
 	dashboardRR := httptest.NewRecorder()
 	h.ServeHTTP(dashboardRR, dashboardReq)
-	if dashboardRR.Code != http.StatusFound {
-		t.Fatalf("dashboard status = %d, want %d", dashboardRR.Code, http.StatusFound)
+	if dashboardRR.Code != http.StatusPermanentRedirect {
+		t.Fatalf("dashboard status = %d, want %d", dashboardRR.Code, http.StatusPermanentRedirect)
 	}
 
 	dashboardNoSlashReq := httptest.NewRequest(http.MethodGet, "/app/dashboard", nil)
 	dashboardNoSlashRR := httptest.NewRecorder()
 	h.ServeHTTP(dashboardNoSlashRR, dashboardNoSlashReq)
-	if dashboardNoSlashRR.Code != http.StatusTemporaryRedirect {
-		t.Fatalf("dashboard (no slash) status = %d, want %d", dashboardNoSlashRR.Code, http.StatusTemporaryRedirect)
+	if dashboardNoSlashRR.Code != http.StatusFound {
+		t.Fatalf("dashboard (no slash) status = %d, want %d", dashboardNoSlashRR.Code, http.StatusFound)
 	}
 
 	campaignsReq := httptest.NewRequest(http.MethodGet, "/app/campaigns/123", nil)
@@ -71,11 +71,11 @@ func TestNewHandlerMountsOnlyStableModulesByDefault(t *testing.T) {
 	if campaignsRR.Code != http.StatusNotFound {
 		t.Fatalf("campaigns status = %d, want %d", campaignsRR.Code, http.StatusNotFound)
 	}
-	if got := dashboardRR.Header().Get("Location"); got != "/login?next=%2Fapp%2Fdashboard%2F" {
-		t.Fatalf("dashboard redirect = %q, want %q", got, "/login?next=%2Fapp%2Fdashboard%2F")
+	if got := dashboardRR.Header().Get("Location"); got != "/app/dashboard" {
+		t.Fatalf("dashboard redirect = %q, want %q", got, "/app/dashboard")
 	}
-	if got := dashboardNoSlashRR.Header().Get("Location"); got != "/app/dashboard/" {
-		t.Fatalf("dashboard (no slash) redirect = %q, want %q", got, "/app/dashboard/")
+	if got := dashboardNoSlashRR.Header().Get("Location"); got != "/login?next=%2Fapp%2Fdashboard" {
+		t.Fatalf("dashboard (no slash) redirect = %q, want %q", got, "/login?next=%2Fapp%2Fdashboard")
 	}
 
 	notificationsReq := httptest.NewRequest(http.MethodGet, "/app/notifications/", nil)
@@ -209,7 +209,7 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
-	req := httptest.NewRequest(http.MethodGet, "/app/campaigns/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/app/campaigns", nil)
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
@@ -219,6 +219,32 @@ func TestNewHandlerUsesConfiguredCampaignClient(t *testing.T) {
 	body := rr.Body.String()
 	if !strings.Contains(body, "Remote") {
 		t.Fatalf("body = %q, want configured campaign response", body)
+	}
+}
+
+func TestNewHandlerCanonicalizesDiscoveryRoot(t *testing.T) {
+	t.Parallel()
+
+	h, err := NewHandler(Config{})
+	if err != nil {
+		t.Fatalf("NewHandler() error = %v", err)
+	}
+
+	slashfulReq := httptest.NewRequest(http.MethodGet, "/discover/", nil)
+	slashfulRR := httptest.NewRecorder()
+	h.ServeHTTP(slashfulRR, slashfulReq)
+	if slashfulRR.Code != http.StatusPermanentRedirect {
+		t.Fatalf("slashful status = %d, want %d", slashfulRR.Code, http.StatusPermanentRedirect)
+	}
+	if got := slashfulRR.Header().Get("Location"); got != "/discover" {
+		t.Fatalf("slashful Location = %q, want %q", got, "/discover")
+	}
+
+	canonicalReq := httptest.NewRequest(http.MethodGet, "/discover", nil)
+	canonicalRR := httptest.NewRecorder()
+	h.ServeHTTP(canonicalRR, canonicalReq)
+	if canonicalRR.Code != http.StatusOK {
+		t.Fatalf("canonical status = %d, want %d", canonicalRR.Code, http.StatusOK)
 	}
 }
 

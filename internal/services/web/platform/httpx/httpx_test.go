@@ -282,6 +282,72 @@ func TestWriteRedirectHandlesNilRequest(t *testing.T) {
 	}
 }
 
+func TestWriteCanonicalRedirectUsesLocationForNonHTMX(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover/", nil)
+	rr := httptest.NewRecorder()
+	WriteCanonicalRedirect(rr, req, "/discover")
+	if rr.Code != http.StatusPermanentRedirect {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusPermanentRedirect)
+	}
+	if got := rr.Header().Get("Location"); got != "/discover" {
+		t.Fatalf("Location = %q, want %q", got, "/discover")
+	}
+}
+
+func TestWriteCanonicalRedirectUsesHXRedirectForHTMXGet(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/discover/", nil)
+	req.Header.Set("HX-Request", "true")
+	rr := httptest.NewRecorder()
+	WriteCanonicalRedirect(rr, req, "/discover")
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	if got := rr.Header().Get("HX-Redirect"); got != "/discover" {
+		t.Fatalf("HX-Redirect = %q, want %q", got, "/discover")
+	}
+}
+
+func TestWriteCanonicalRedirectUsesPermanentRedirectForHTMXPost(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodPost, "/app/campaigns/", nil)
+	req.Header.Set("HX-Request", "true")
+	rr := httptest.NewRecorder()
+	WriteCanonicalRedirect(rr, req, "/app/campaigns")
+	if rr.Code != http.StatusPermanentRedirect {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusPermanentRedirect)
+	}
+	if got := rr.Header().Get("Location"); got != "/app/campaigns" {
+		t.Fatalf("Location = %q, want %q", got, "/app/campaigns")
+	}
+	if got := rr.Header().Get("HX-Redirect"); got != "" {
+		t.Fatalf("HX-Redirect = %q, want empty", got)
+	}
+}
+
+func TestWriteCanonicalRedirectHandlesNilRequest(t *testing.T) {
+	t.Parallel()
+
+	rr := httptest.NewRecorder()
+	WriteCanonicalRedirect(rr, nil, "/discover")
+	if rr.Code != http.StatusPermanentRedirect {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusPermanentRedirect)
+	}
+	if got := rr.Header().Get("Location"); got != "/discover" {
+		t.Fatalf("Location = %q, want %q", got, "/discover")
+	}
+}
+
+func TestWriteCanonicalRedirectHandlesNilWriter(t *testing.T) {
+	t.Parallel()
+
+	WriteCanonicalRedirect(nil, httptest.NewRequest(http.MethodGet, "/discover/", nil), "/discover")
+}
+
 func TestWriteErrorNilAndNilWriterSafety(t *testing.T) {
 	t.Parallel()
 

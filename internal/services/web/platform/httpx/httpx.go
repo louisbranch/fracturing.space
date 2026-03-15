@@ -121,3 +121,23 @@ func WriteRedirect(w http.ResponseWriter, r *http.Request, location string) {
 	}
 	http.Redirect(w, r, location, http.StatusFound)
 }
+
+// WriteCanonicalRedirect writes the canonical slashless redirect response.
+func WriteCanonicalRedirect(w http.ResponseWriter, r *http.Request, location string) {
+	if w == nil {
+		return
+	}
+	if IsHTMXRequest(r) && r != nil {
+		switch r.Method {
+		case http.MethodGet, http.MethodHead:
+			WriteHXRedirect(w, location)
+			return
+		}
+	}
+	if r == nil {
+		w.Header().Set("Location", location)
+		w.WriteHeader(http.StatusPermanentRedirect)
+		return
+	}
+	http.Redirect(w, r, location, http.StatusPermanentRedirect)
+}
