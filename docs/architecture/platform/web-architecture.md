@@ -83,7 +83,7 @@ Required properties:
 - Chat/game UI routes must consume game-owned communication context for stream
   visibility, persona selection, and scene/session awareness; browser code must
   not derive those rules from transcript bodies.
-- Participant-adjacent campaign automation controls should remain a dedicated automation capability seam even when they render inside participant pages.
+- Campaign AI automation controls should remain a dedicated campaign automation capability seam; do not couple AI binding UI to participant edit pages just because the GM seat may be AI-controlled.
 - Campaign detail pages should render through the area-owned
   `internal/services/web/modules/campaigns/render` seam, not new page-specific `templates` models.
 - Browser controls must treat persona selection as message presentation state;

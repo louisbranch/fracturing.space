@@ -59,7 +59,7 @@ func AppCampaignSessionEnd(campaignID string) string {
 	return AppCampaignSessions(campaignID) + "/end"
 }
 
-// AppCampaignAIBinding returns the campaign AI-binding mutation route.
+// AppCampaignAIBinding returns the campaign AI-binding page and submit route.
 func AppCampaignAIBinding(campaignID string) string {
 	return AppCampaign(campaignID) + "/ai-binding"
 }

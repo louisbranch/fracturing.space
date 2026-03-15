@@ -231,16 +231,16 @@ func (h handlers) handleParticipantUpdate(w http.ResponseWriter, r *http.Request
 
 // handleCampaignAIBinding handles this route in the module transport layer.
 func (h handlers) handleCampaignAIBinding(w http.ResponseWriter, r *http.Request, campaignID string) {
-	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_ai_binding_form", routepath.AppCampaign(campaignID)) {
+	if !forminput.ParseOrRedirectErrorNotice(w, r, "error.web.message.failed_to_parse_campaign_ai_binding_form", routepath.AppCampaignAIBinding(campaignID)) {
 		return
 	}
 	input := parseUpdateCampaignAIBindingInput(r.Form)
 	ctx, _ := h.RequestContextAndUserID(r)
 	if err := h.automationMutate.UpdateCampaignAIBinding(ctx, campaignID, input); err != nil {
-		h.writeMutationError(w, r, err, "error.web.message.failed_to_update_ai_binding", routepath.AppCampaignParticipantEdit(campaignID, input.ParticipantID))
+		h.writeMutationError(w, r, err, "error.web.message.failed_to_update_ai_binding", routepath.AppCampaignAIBinding(campaignID))
 		return
 	}
-	h.writeMutationSuccess(w, r, "web.campaigns.notice_ai_binding_saved", routepath.AppCampaignParticipantEdit(campaignID, input.ParticipantID))
+	h.writeMutationSuccess(w, r, "web.campaigns.notice_ai_binding_saved", routepath.AppCampaign(campaignID))
 }
 
 // handleCampaignUpdate handles this route in the module transport layer.

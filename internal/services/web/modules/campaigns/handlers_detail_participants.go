@@ -2,9 +2,7 @@ package campaigns
 
 import (
 	"net/http"
-	"strings"
 
-	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 )
 
@@ -57,16 +55,7 @@ func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, 
 		h.WriteError(w, r, err)
 		return
 	}
-	var aiBinding *campaignapp.CampaignAIBindingEditor
-	if strings.EqualFold(strings.TrimSpace(editor.Participant.Controller), "AI") {
-		binding, err := h.automationReads.CampaignAIBindingEditor(ctx, campaignID, page.workspace.AIAgentID)
-		if err != nil {
-			h.WriteError(w, r, err)
-			return
-		}
-		aiBinding = &binding
-	}
-	view := page.participantEditView(campaignID, participantID, editor, aiBinding)
+	view := page.participantEditView(campaignID, participantID, editor)
 	h.writeCampaignDetailPage(
 		w,
 		r,

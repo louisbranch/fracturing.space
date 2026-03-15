@@ -38,13 +38,13 @@ type CampaignParticipantMutationService interface {
 	UpdateParticipant(context.Context, string, UpdateParticipantInput) error
 }
 
-// CampaignAutomationReadService exposes participant-adjacent automation editor
-// reads.
+// CampaignAutomationReadService exposes campaign-level AI automation reads.
 type CampaignAutomationReadService interface {
-	CampaignAIBindingEditor(context.Context, string, string) (CampaignAIBindingEditor, error)
+	CampaignAIBindingSummary(context.Context, string, string, string) (CampaignAIBindingSummary, error)
+	CampaignAIBindingSettings(context.Context, string, string) (CampaignAIBindingSettings, error)
 }
 
-// CampaignAutomationMutationService exposes participant-adjacent automation
+// CampaignAutomationMutationService exposes campaign-level AI automation
 // mutations.
 type CampaignAutomationMutationService interface {
 	UpdateCampaignAIBinding(context.Context, string, UpdateCampaignAIBindingInput) error

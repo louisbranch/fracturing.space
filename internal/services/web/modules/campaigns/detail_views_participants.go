@@ -46,7 +46,6 @@ func (p *campaignPageContext) participantEditView(
 	campaignID string,
 	participantID string,
 	editor campaignapp.CampaignParticipantEditor,
-	aiBinding *campaignapp.CampaignAIBindingEditor,
 ) campaignrender.ParticipantEditPageView {
 	view := campaignrender.ParticipantEditPageView{CampaignDetailBaseView: p.baseDetailView(campaignID)}
 	view.ParticipantID = strings.TrimSpace(editor.Participant.ID)
@@ -54,9 +53,6 @@ func (p *campaignPageContext) participantEditView(
 		view.ParticipantID = participantID
 	}
 	view.ParticipantEditor = mapParticipantEditorView(editor)
-	if aiBinding != nil {
-		view.AIBindingEditor = mapAIBindingEditorView(*aiBinding)
-	}
 	return view
 }
 

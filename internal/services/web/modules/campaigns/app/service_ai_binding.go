@@ -9,9 +9,24 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 )
 
-// CampaignAIBindingEditor centralizes this web behavior in one helper seam.
-func (s automationReadService) CampaignAIBindingEditor(ctx context.Context, campaignID string, currentAIAgentID string) (CampaignAIBindingEditor, error) {
-	return s.campaignAIBindingEditor(ctx, campaignID, currentAIAgentID)
+// CampaignAIBindingSummary loads campaign overview AI-binding state without
+// requiring the dedicated AI settings page to render.
+func (s automationReadService) CampaignAIBindingSummary(
+	ctx context.Context,
+	campaignID string,
+	currentAIAgentID string,
+	gmMode string,
+) (CampaignAIBindingSummary, error) {
+	return s.campaignAIBindingSummary(ctx, campaignID, currentAIAgentID, gmMode)
+}
+
+// CampaignAIBindingSettings loads dedicated campaign AI-binding page state.
+func (s automationReadService) CampaignAIBindingSettings(
+	ctx context.Context,
+	campaignID string,
+	currentAIAgentID string,
+) (CampaignAIBindingSettings, error) {
+	return s.campaignAIBindingSettings(ctx, campaignID, currentAIAgentID)
 }
 
 // UpdateCampaignAIBinding applies this package workflow transition.
@@ -19,36 +34,61 @@ func (s automationMutationService) UpdateCampaignAIBinding(ctx context.Context, 
 	return s.updateCampaignAIBinding(ctx, campaignID, input)
 }
 
-// campaignAIBindingEditor centralizes owner-only AI binding state for the
-// AI participant edit page without making the page fail when the AI service is
-// unavailable.
-func (s automationReadService) campaignAIBindingEditor(ctx context.Context, campaignID string, currentAIAgentID string) (CampaignAIBindingEditor, error) {
+// campaignAIBindingSummary derives overview status and manage visibility for one campaign.
+func (s automationReadService) campaignAIBindingSummary(
+	ctx context.Context,
+	campaignID string,
+	currentAIAgentID string,
+	gmMode string,
+) (CampaignAIBindingSummary, error) {
 	campaignID = strings.TrimSpace(campaignID)
-	currentAIAgentID = strings.TrimSpace(currentAIAgentID)
-	editor := CampaignAIBindingEditor{
-		Visible:   true,
-		CurrentID: currentAIAgentID,
-		Options:   []CampaignAIAgentOption{},
+	summary := CampaignAIBindingSummary{
+		Status: campaignAIBindingStatus(gmMode, currentAIAgentID),
 	}
 	if campaignID == "" {
-		return editor, nil
+		return summary, nil
 	}
 
-	decision, err := automationCampaignManageDecision(ctx, s.auth, campaignID)
-	actorAccess, actorAccessErr := automationCampaignActorAccess(ctx, s.participants, campaignID, decision)
-	if actorAccessErr == nil && err == nil && decision.Evaluated && decision.Allowed && actorAccess == participantAccessOwner {
-		editor.Enabled = true
+	owner, _ := resolveCampaignAIBindingOwner(ctx, s.auth, s.participants, campaignID)
+	summary.CanManage = owner
+	return summary, nil
+}
+
+// campaignAIBindingSettings loads owner-only binding settings for the dedicated campaign page.
+func (s automationReadService) campaignAIBindingSettings(
+	ctx context.Context,
+	campaignID string,
+	currentAIAgentID string,
+) (CampaignAIBindingSettings, error) {
+	campaignID = strings.TrimSpace(campaignID)
+	currentAIAgentID = strings.TrimSpace(currentAIAgentID)
+	if campaignID == "" {
+		return CampaignAIBindingSettings{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
+	}
+
+	owner, err := resolveCampaignAIBindingOwner(ctx, s.auth, s.participants, campaignID)
+	if err != nil || !owner {
+		return CampaignAIBindingSettings{}, apperrors.EK(
+			apperrors.KindForbidden,
+			"error.web.message.owner_access_required_for_campaign_ai_binding",
+			"owner access required for campaign AI binding",
+		)
+	}
+
+	settings := CampaignAIBindingSettings{
+		CurrentID: currentAIAgentID,
+		Options:   []CampaignAIAgentOption{},
 	}
 
 	options, err := s.read.CampaignAIAgents(ctx)
 	if err != nil {
 		var appErr apperrors.Error
 		if stderrors.As(err, &appErr) && appErr.Kind == apperrors.KindUnavailable {
-			editor.Unavailable = true
-			editor.Options = ensureCurrentAIAgentOption(nil, currentAIAgentID)
-			return editor, nil
+			settings.Unavailable = true
+			settings.Options = ensureCurrentAIAgentOption(nil, currentAIAgentID)
+			return settings, nil
 		}
-		return CampaignAIBindingEditor{}, err
+		return CampaignAIBindingSettings{}, err
 	}
 
 	for _, option := range options {
@@ -57,10 +97,10 @@ func (s automationReadService) campaignAIBindingEditor(ctx context.Context, camp
 			continue
 		}
 		option.Selected = agentID == currentAIAgentID
-		editor.Options = append(editor.Options, option)
+		settings.Options = append(settings.Options, option)
 	}
-	editor.Options = ensureCurrentAIAgentOption(editor.Options, currentAIAgentID)
-	return editor, nil
+	settings.Options = ensureCurrentAIAgentOption(settings.Options, currentAIAgentID)
+	return settings, nil
 }
 
 // updateCampaignAIBinding applies the owner-only binding mutation.
@@ -70,15 +110,10 @@ func (s automationMutationService) updateCampaignAIBinding(ctx context.Context, 
 		return apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
 	}
 
-	input.ParticipantID = strings.TrimSpace(input.ParticipantID)
-	if input.ParticipantID == "" {
-		return apperrors.EK(apperrors.KindInvalidInput, "error.web.message.participant_id_is_required", "participant id is required")
-	}
 	input.AIAgentID = strings.TrimSpace(input.AIAgentID)
 
-	decision, err := automationCampaignManageDecision(ctx, s.auth, campaignID)
-	actorAccess, actorAccessErr := automationCampaignActorAccess(ctx, s.participants, campaignID, decision)
-	if err != nil || actorAccessErr != nil || !decision.Evaluated || !decision.Allowed || actorAccess != participantAccessOwner {
+	owner, err := resolveCampaignAIBindingOwner(ctx, s.auth, s.participants, campaignID)
+	if err != nil || !owner {
 		return apperrors.EK(
 			apperrors.KindForbidden,
 			"error.web.message.owner_access_required_for_campaign_ai_binding",
@@ -87,6 +122,38 @@ func (s automationMutationService) updateCampaignAIBinding(ctx context.Context, 
 	}
 
 	return s.mutation.UpdateCampaignAIBinding(ctx, campaignID, input)
+}
+
+// resolveCampaignAIBindingOwner resolves whether the current actor is the campaign owner.
+func resolveCampaignAIBindingOwner(
+	ctx context.Context,
+	auth authorizationSupport,
+	participants CampaignParticipantReadGateway,
+	campaignID string,
+) (bool, error) {
+	decision, err := automationCampaignManageDecision(ctx, auth, campaignID)
+	if err != nil {
+		return false, err
+	}
+	actorAccess, actorAccessErr := automationCampaignActorAccess(ctx, participants, campaignID, decision)
+	if actorAccessErr != nil {
+		return false, actorAccessErr
+	}
+	return decision.Evaluated && decision.Allowed && actorAccess == participantAccessOwner, nil
+}
+
+// campaignAIBindingStatus maps workspace GM mode and binding state into overview status.
+func campaignAIBindingStatus(gmMode string, currentAIAgentID string) CampaignAIBindingStatus {
+	if strings.TrimSpace(currentAIAgentID) != "" {
+		return CampaignAIBindingStatusConfigured
+	}
+
+	switch strings.ToLower(strings.TrimSpace(gmMode)) {
+	case "ai", "hybrid":
+		return CampaignAIBindingStatusPending
+	default:
+		return CampaignAIBindingStatusNotRequired
+	}
 }
 
 // campaignManageDecision resolves the caller's campaign-manage authz decision,

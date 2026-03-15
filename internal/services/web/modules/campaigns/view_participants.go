@@ -70,26 +70,6 @@ func mapParticipantCreatorView(creator campaignapp.CampaignParticipantCreator) c
 	}
 }
 
-// mapAIBindingEditorView converts domain AI-binding editor state to template view state.
-func mapAIBindingEditorView(editor campaignapp.CampaignAIBindingEditor) campaignrender.AIBindingEditorView {
-	options := make([]campaignrender.AIAgentOptionView, 0, len(editor.Options))
-	for _, option := range editor.Options {
-		options = append(options, campaignrender.AIAgentOptionView{
-			ID:       option.ID,
-			Name:     option.Label,
-			Enabled:  option.Enabled,
-			Selected: option.Selected,
-		})
-	}
-	return campaignrender.AIBindingEditorView{
-		Visible:     editor.Visible,
-		Enabled:     editor.Enabled,
-		Unavailable: editor.Unavailable,
-		CurrentID:   editor.CurrentID,
-		Options:     options,
-	}
-}
-
 // mapInviteSeatOptions converts current participants and invites into available invite seat options.
 func mapInviteSeatOptions(participants []campaignapp.CampaignParticipant, invites []campaignapp.CampaignInvite) []campaignrender.InviteSeatOptionView {
 	pendingByParticipantID := make(map[string]struct{}, len(invites))

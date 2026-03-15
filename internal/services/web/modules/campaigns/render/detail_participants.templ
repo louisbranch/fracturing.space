@@ -122,100 +122,69 @@ templ participantCreateFragment(view ParticipantCreatePageView, loc Localizer) {
 
 templ participantEditFragment(view ParticipantEditPageView, loc Localizer) {
 	<section id="campaign-participant-edit" class="space-y-4">
-		<div class={ "grid grid-cols-1 gap-4", templ.KV("md:grid-cols-2", view.AIBindingEditor.Visible) } data-campaign-participant-edit-layout={ campaignParticipantEditLayout(view.AIBindingEditor) } data-campaign-participant-edit-page="true">
-			<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-edit-form="true">
-				<div class="card-body gap-4 p-4">
-					<h2 class="card-title">{ T(loc, "game.participants.action_edit") }</h2>
-					<form method="post" action={ routepath.AppCampaignParticipantEdit(view.CampaignID, view.ParticipantID) } class="space-y-4" data-campaign-participant-edit-submit="true">
-						<div class="form-control w-full">
-							<label class="label">
-								<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantEditor.Name }/>
-						</div>
-						<div class="form-control w-full">
-							<label class="label">
-								<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
-							</label>
-							if view.ParticipantEditor.RoleReadOnly {
-								<input type="hidden" name="role" value={ campaignParticipantRoleFormValue(view.ParticipantEditor) }/>
-								<select class="select select-bordered w-full" disabled data-campaign-participant-role-readonly="true">
-									<option value="gm" selected>{ campaignParticipantRoleLabel(loc, "gm") }</option>
-								</select>
-							} else {
-								<select class="select select-bordered w-full" name="role">
-									if view.ParticipantEditor.AllowGMRole {
-										<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
-									}
-									<option value="player" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "player" }>{ campaignParticipantRoleLabel(loc, "player") }</option>
-								</select>
-							}
-						</div>
-						<div class="form-control w-full">
-							<label class="label">
-								<span class="label-text">{ T(loc, "web.settings.user_profile.field_pronouns") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="pronouns" value={ view.ParticipantEditor.Pronouns } list="campaign-participant-pronouns-presets"/>
-							<datalist id="campaign-participant-pronouns-presets">
-								for _, preset := range campaignParticipantPronounPresets(loc, view.ParticipantEditor) {
-									<option value={ preset }></option>
-								}
-							</datalist>
-						</div>
-						<div class="form-control w-full">
-							<label class="label">
-								<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
-							</label>
-							if view.ParticipantEditor.AccessReadOnly {
-								<input type="hidden" name="campaign_access" value={ campaignParticipantAccessFormValue(view.ParticipantEditor) }/>
-								<select class="select select-bordered w-full" disabled data-campaign-participant-access-readonly="true">
-									for _, option := range view.ParticipantEditor.AccessOptions {
-										<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
-									}
-								</select>
-							} else {
-								<select class="select select-bordered w-full" name="campaign_access">
-									for _, option := range view.ParticipantEditor.AccessOptions {
-										<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled?={ !option.Allowed }>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
-									}
-								</select>
-							}
-						</div>
-						<div class="card-actions justify-end">
-							<button class="btn btn-primary" type="submit">{ T(loc, "game.participants.submit_save") }</button>
-						</div>
-					</form>
-				</div>
-			</div>
-			if view.AIBindingEditor.Visible {
-				<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-ai-binding-form="true">
-					<div class="card-body gap-4 p-4">
-						<h2 class="card-title">{ T(loc, "game.participants.ai_binding.title") }</h2>
-						<form method="post" action={ routepath.AppCampaignAIBinding(view.CampaignID) } class="space-y-4" data-campaign-ai-binding-submit="true">
-							<input type="hidden" name="participant_id" value={ view.ParticipantID }/>
-							<div class="form-control w-full">
-								<label class="label">
-									<span class="label-text">{ T(loc, "game.participants.ai_binding.field_agent") }</span>
-								</label>
-								<select class="select select-bordered w-full" name="ai_agent_id" disabled?={ !view.AIBindingEditor.Enabled || view.AIBindingEditor.Unavailable }>
-									<option value="" selected?={ campaignAIBindingCurrentUnbound(view.AIBindingEditor) }>{ T(loc, "game.participants.ai_binding.placeholder_unbound") }</option>
-									for _, option := range view.AIBindingEditor.Options {
-										<option value={ option.ID } selected?={ option.Selected } disabled?={ !option.Enabled }>{ option.Name }</option>
-									}
-								</select>
-							</div>
-							if view.AIBindingEditor.Unavailable {
-								<p class="text-sm opacity-70" data-campaign-ai-binding-unavailable="true">{ T(loc, "game.participants.ai_binding.unavailable") }</p>
-							} else if !view.AIBindingEditor.Enabled {
-								<p class="text-sm opacity-70" data-campaign-ai-binding-owner-required="true">{ T(loc, "game.participants.ai_binding.owner_required") }</p>
-							}
-							<div class="card-actions justify-end">
-								<button class="btn btn-primary" type="submit" disabled?={ !view.AIBindingEditor.Enabled || view.AIBindingEditor.Unavailable }>{ T(loc, "game.participants.ai_binding.submit_save") }</button>
-							</div>
-						</form>
+		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-participant-edit-page="true">
+			<div class="card-body gap-4 p-4">
+				<h2 class="card-title">{ T(loc, "game.participants.action_edit") }</h2>
+				<form method="post" action={ routepath.AppCampaignParticipantEdit(view.CampaignID, view.ParticipantID) } class="space-y-4" data-campaign-participant-edit-submit="true">
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "game.participants.field_name") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="text" name="name" required value={ view.ParticipantEditor.Name }/>
 					</div>
-				</div>
-			}
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "game.participants.field_role") }</span>
+						</label>
+						if view.ParticipantEditor.RoleReadOnly {
+							<input type="hidden" name="role" value={ campaignParticipantRoleFormValue(view.ParticipantEditor) }/>
+							<select class="select select-bordered w-full" disabled data-campaign-participant-role-readonly="true">
+								<option value="gm" selected>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+							</select>
+						} else {
+							<select class="select select-bordered w-full" name="role">
+								if view.ParticipantEditor.AllowGMRole {
+									<option value="gm" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "gm" }>{ campaignParticipantRoleLabel(loc, "gm") }</option>
+								}
+								<option value="player" selected?={ campaignParticipantRoleCanonical(view.ParticipantEditor.Role) == "player" }>{ campaignParticipantRoleLabel(loc, "player") }</option>
+							</select>
+						}
+					</div>
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "web.settings.user_profile.field_pronouns") }</span>
+						</label>
+						<input class="input input-bordered w-full" type="text" name="pronouns" value={ view.ParticipantEditor.Pronouns } list="campaign-participant-pronouns-presets"/>
+						<datalist id="campaign-participant-pronouns-presets">
+							for _, preset := range campaignParticipantPronounPresets(loc, view.ParticipantEditor) {
+								<option value={ preset }></option>
+							}
+						</datalist>
+					</div>
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "game.participants.field_access") }</span>
+						</label>
+						if view.ParticipantEditor.AccessReadOnly {
+							<input type="hidden" name="campaign_access" value={ campaignParticipantAccessFormValue(view.ParticipantEditor) }/>
+							<select class="select select-bordered w-full" disabled data-campaign-participant-access-readonly="true">
+								for _, option := range view.ParticipantEditor.AccessOptions {
+									<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+								}
+							</select>
+						} else {
+							<select class="select select-bordered w-full" name="campaign_access">
+								for _, option := range view.ParticipantEditor.AccessOptions {
+									<option value={ option.Value } selected?={ campaignParticipantAccessCanonical(view.ParticipantEditor.CampaignAccess) == option.Value } disabled?={ !option.Allowed }>{ campaignParticipantAccessLabel(loc, option.Value) }</option>
+								}
+							</select>
+						}
+					</div>
+					<div class="card-actions justify-end">
+						<button class="btn btn-primary" type="submit">{ T(loc, "game.participants.submit_save") }</button>
+					</div>
+				</form>
+			</div>
 		</div>
 	</section>
 }

@@ -454,7 +454,7 @@ func TestCampaignParticipantEditorDisablesGMRoleForHumanSeatsInAIGMCampaigns(t *
 	}
 }
 
-func TestCampaignAIBindingEditorLoadsOwnerOptionsAndPreservesCurrentBinding(t *testing.T) {
+func TestCampaignAIBindingSettingsLoadsOwnerOptionsAndPreservesCurrentBinding(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
@@ -475,23 +475,20 @@ func TestCampaignAIBindingEditorLoadsOwnerOptionsAndPreservesCurrentBinding(t *t
 	}
 	svc := newService(gateway)
 
-	editor, err := svc.campaignAIBindingEditor(context.Background(), "c-1", "agent-missing")
+	settings, err := svc.campaignAIBindingSettings(context.Background(), "c-1", "agent-missing")
 	if err != nil {
-		t.Fatalf("campaignAIBindingEditor() error = %v", err)
+		t.Fatalf("campaignAIBindingSettings() error = %v", err)
 	}
-	if !editor.Visible || !editor.Enabled {
-		t.Fatalf("editor = %#v, want visible enabled owner editor", editor)
+	if len(settings.Options) != 3 {
+		t.Fatalf("len(settings.Options) = %d, want 3", len(settings.Options))
 	}
-	if len(editor.Options) != 3 {
-		t.Fatalf("len(editor.Options) = %d, want 3", len(editor.Options))
-	}
-	last := editor.Options[len(editor.Options)-1]
+	last := settings.Options[len(settings.Options)-1]
 	if last.ID != "agent-missing" || last.Label != "agent-missing" || last.Enabled || !last.Selected {
 		t.Fatalf("preserved current option = %#v", last)
 	}
 }
 
-func TestCampaignAIBindingEditorFallsBackToParticipantAccessWhenAuthzOmitsActorAccess(t *testing.T) {
+func TestCampaignAIBindingSummaryFallsBackToParticipantAccessWhenAuthzOmitsActorAccess(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
@@ -508,16 +505,19 @@ func TestCampaignAIBindingEditorFallsBackToParticipantAccessWhenAuthzOmitsActorA
 	}
 	svc := newService(gateway)
 
-	editor, err := svc.campaignAIBindingEditor(contextWithResolvedUserID("user-1"), "c-1", "")
+	summary, err := svc.campaignAIBindingSummary(contextWithResolvedUserID("user-1"), "c-1", "", "AI")
 	if err != nil {
-		t.Fatalf("campaignAIBindingEditor() error = %v", err)
+		t.Fatalf("campaignAIBindingSummary() error = %v", err)
 	}
-	if !editor.Enabled {
-		t.Fatalf("editor.Enabled = %v, want true", editor.Enabled)
+	if !summary.CanManage {
+		t.Fatalf("summary.CanManage = %v, want true", summary.CanManage)
+	}
+	if summary.Status != CampaignAIBindingStatusPending {
+		t.Fatalf("summary.Status = %q, want %q", summary.Status, CampaignAIBindingStatusPending)
 	}
 }
 
-func TestCampaignAIBindingEditorMarksUnavailableWithoutFailingPage(t *testing.T) {
+func TestCampaignAIBindingSettingsMarksUnavailableWithoutFailingPage(t *testing.T) {
 	t.Parallel()
 
 	gateway := &campaignGatewayStub{
@@ -530,15 +530,15 @@ func TestCampaignAIBindingEditorMarksUnavailableWithoutFailingPage(t *testing.T)
 	}
 	svc := newService(gateway)
 
-	editor, err := svc.campaignAIBindingEditor(context.Background(), "c-1", "agent-current")
+	settings, err := svc.campaignAIBindingSettings(context.Background(), "c-1", "agent-current")
 	if err != nil {
-		t.Fatalf("campaignAIBindingEditor() error = %v, want nil", err)
+		t.Fatalf("campaignAIBindingSettings() error = %v, want nil", err)
 	}
-	if !editor.Visible || !editor.Unavailable {
-		t.Fatalf("editor = %#v, want visible unavailable editor", editor)
+	if !settings.Unavailable {
+		t.Fatalf("settings = %#v, want unavailable settings", settings)
 	}
-	if len(editor.Options) != 1 || editor.Options[0].ID != "agent-current" || editor.Options[0].Enabled {
-		t.Fatalf("editor.Options = %#v, want disabled preserved current option", editor.Options)
+	if len(settings.Options) != 1 || settings.Options[0].ID != "agent-current" || settings.Options[0].Enabled {
+		t.Fatalf("settings.Options = %#v, want disabled preserved current option", settings.Options)
 	}
 }
 

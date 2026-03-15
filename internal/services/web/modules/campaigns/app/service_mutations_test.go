@@ -21,7 +21,7 @@ func TestMissingGatewayMutationMethodsFailClosed(t *testing.T) {
 	}{
 		{name: "update campaign", run: func() error { return svc.updateCampaign(ctx, "c1", UpdateCampaignInput{}) }, wantStatus: http.StatusForbidden},
 		{name: "update campaign ai binding", run: func() error {
-			return svc.updateCampaignAIBinding(ctx, "c1", UpdateCampaignAIBindingInput{ParticipantID: "p-1", AIAgentID: "agent-1"})
+			return svc.updateCampaignAIBinding(ctx, "c1", UpdateCampaignAIBindingInput{AIAgentID: "agent-1"})
 		}, wantStatus: http.StatusForbidden},
 		{name: "start session", run: func() error { return svc.startSession(ctx, "c1", StartSessionInput{Name: "Session One"}) }, wantStatus: http.StatusForbidden},
 		{name: "end session", run: func() error { return svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}) }, wantStatus: http.StatusForbidden},
@@ -77,7 +77,7 @@ func TestMutationMethodsDelegateToGateway(t *testing.T) {
 	if err := svc.updateCampaign(ctx, "c1", UpdateCampaignInput{Name: &updatedName}); err != nil {
 		t.Fatalf("UpdateCampaign() error = %v", err)
 	}
-	if err := svc.updateCampaignAIBinding(ctx, "c1", UpdateCampaignAIBindingInput{ParticipantID: "p-1", AIAgentID: "agent-1"}); err != nil {
+	if err := svc.updateCampaignAIBinding(ctx, "c1", UpdateCampaignAIBindingInput{AIAgentID: "agent-1"}); err != nil {
 		t.Fatalf("UpdateCampaignAIBinding() error = %v", err)
 	}
 	if err := svc.endSession(ctx, "c1", EndSessionInput{SessionID: "sess-1"}); err != nil {
@@ -746,8 +746,7 @@ func TestUpdateCampaignAIBindingRequiresOwnerAccess(t *testing.T) {
 	svc := newService(gateway)
 
 	err := svc.updateCampaignAIBinding(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignAIBindingInput{
-		ParticipantID: "p-ai",
-		AIAgentID:     "agent-1",
+		AIAgentID: "agent-1",
 	})
 	if err == nil {
 		t.Fatalf("expected forbidden error")
@@ -772,7 +771,7 @@ func TestUpdateCampaignAIBindingDelegatesForOwner(t *testing.T) {
 	}
 	svc := newService(gateway)
 
-	input := UpdateCampaignAIBindingInput{ParticipantID: "p-ai", AIAgentID: "agent-1"}
+	input := UpdateCampaignAIBindingInput{AIAgentID: "agent-1"}
 	if err := svc.updateCampaignAIBinding(contextWithResolvedUserID("user-1"), "c1", input); err != nil {
 		t.Fatalf("updateCampaignAIBinding() error = %v", err)
 	}
@@ -801,8 +800,7 @@ func TestUpdateCampaignAIBindingFallsBackToParticipantAccessWhenAuthzOmitsActorA
 	svc := newService(gateway)
 
 	if err := svc.updateCampaignAIBinding(contextWithResolvedUserID("user-1"), "c1", UpdateCampaignAIBindingInput{
-		ParticipantID: "p-ai",
-		AIAgentID:     "agent-1",
+		AIAgentID: "agent-1",
 	}); err != nil {
 		t.Fatalf("updateCampaignAIBinding() error = %v", err)
 	}

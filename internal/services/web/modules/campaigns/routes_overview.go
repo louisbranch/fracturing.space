@@ -30,5 +30,6 @@ func registerStableCampaignOverviewRoutes(mux *http.ServeMux, h handlers) {
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignPattern, h.handleOverviewMethodNotAllowed)
 	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignEditPattern, h.withCampaignID(h.handleCampaignEdit))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignEditPattern, h.withCampaignID(h.handleCampaignUpdate))
+	mux.HandleFunc(http.MethodGet+" "+routepath.AppCampaignAIBindingPattern, h.withCampaignID(h.handleCampaignAIBindingPage))
 	mux.HandleFunc(http.MethodPost+" "+routepath.AppCampaignAIBindingPattern, h.withCampaignID(h.handleCampaignAIBinding))
 }
