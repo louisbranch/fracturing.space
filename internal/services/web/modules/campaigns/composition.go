@@ -67,6 +67,7 @@ type CompositionConfig struct {
 	InteractionClient        campaigngateway.InteractionClient
 	DiscoveryClient          DiscoveryClient
 	AgentClient              campaigngateway.AgentClient
+	CampaignArtifactClient   campaigngateway.CampaignArtifactClient
 	ParticipantClient        ParticipantClient
 	CharacterClient          CharacterClient
 	DaggerheartContentClient campaigngateway.DaggerheartContentClient
@@ -117,6 +118,7 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 		InteractionClient:        deps.InteractionClient,
 		DiscoveryClient:          deps.DiscoveryClient,
 		AgentClient:              deps.AgentClient,
+		CampaignArtifactClient:   deps.CampaignArtifactClient,
 		ParticipantClient:        deps.ParticipantClient,
 		CharacterClient:          deps.CharacterClient,
 		DaggerheartContentClient: deps.DaggerheartContentClient,

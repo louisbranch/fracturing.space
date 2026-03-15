@@ -1,0 +1,373 @@
+//go:build integration && liveai
+
+package integration
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	pathpkg "path"
+	"path/filepath"
+	"strings"
+	"sync"
+	"testing"
+	"time"
+)
+
+type openAILiveCapture struct {
+	Metadata  openAIReplayMetadata `json:"metadata"`
+	Exchanges []openAILiveExchange `json:"exchanges"`
+}
+
+// TODO: Capture and aggregate OpenAI usage/token counts from the recorded
+// Responses API exchanges so live fixture refreshes can track context-cost
+// regressions across model and reasoning settings.
+
+// openAILiveExchange stores one proxied request/response pair for local debugging of a live capture.
+type openAILiveExchange struct {
+	Step           int             `json:"step"`
+	Method         string          `json:"method"`
+	RequestURL     string          `json:"request_url"`
+	StatusCode     int             `json:"status_code"`
+	RequestBody    json.RawMessage `json:"request_body"`
+	ResponseBody   json.RawMessage `json:"response_body"`
+	CapturedAtUTC  string          `json:"captured_at_utc"`
+	PreviousRespID string          `json:"previous_response_id,omitempty"`
+}
+
+// openAILiveRecorder proxies the real Responses API while collecting enough state to build a replay fixture.
+type openAILiveRecorder struct {
+	targetURL string
+	client    *http.Client
+	model     string
+
+	mu           sync.Mutex
+	firstErr     error
+	initialTools []string
+	steps        []openAIReplayStep
+	rawCapture   openAILiveCapture
+	requestDebug []string
+	lastSceneID  string
+}
+
+// TestAIGMCampaignContextLiveCaptureBootstrap proves a real model can complete the GM bootstrap tool loop.
+func TestAIGMCampaignContextLiveCaptureBootstrap(t *testing.T) {
+	apiKey := strings.TrimSpace(os.Getenv(integrationOpenAIAPIKeyEnv))
+	if apiKey == "" {
+		t.Skipf("%s is required", integrationOpenAIAPIKeyEnv)
+	}
+	model := liveAIModel()
+	reasoningEffort := liveAIReasoningEffort()
+	recorder := &openAILiveRecorder{
+		targetURL: liveOpenAIResponsesTargetURL(),
+		client:    newHTTPClient(t),
+		model:     model,
+		rawCapture: openAILiveCapture{
+			Metadata: openAIReplayMetadata{
+				Provider:        "openai",
+				Model:           model,
+				ReasoningEffort: reasoningEffort,
+				Scenario:        aiGMBootstrapScenarioName,
+				Source:          "live_capture",
+			},
+		},
+	}
+	server := httptest.NewServer(recorder)
+	t.Cleanup(server.Close)
+
+	result := runAIGMCampaignContextBootstrapScenario(t, aiGMBootstrapScenarioOptions{
+		ResponsesURL:     server.URL,
+		Model:            model,
+		ReasoningEffort:  reasoningEffort,
+		CredentialSecret: apiKey,
+		AgentLabel:       "live-capture-gm",
+	})
+
+	rawPath := writeOpenAILiveCapture(t, recorder.rawCapture)
+	t.Logf("live capture written to %s", rawPath)
+
+	if err := recorder.Err(); err != nil {
+		t.Fatalf("live recorder: %v\nrequests:\n%s", err, recorder.DebugString())
+	}
+	if strings.TrimSpace(result.OutputText) == "" {
+		t.Fatal("expected non-empty model output")
+	}
+	if strings.TrimSpace(result.MemoryContent) == "" || result.MemoryContent == aiGMBootstrapMemorySeed {
+		t.Fatalf("memory.md = %q, expected updated memory content", result.MemoryContent)
+	}
+	if !result.SkillsReadOnly {
+		t.Fatal("expected skills.md to remain read-only")
+	}
+	if result.SceneCount == 0 || strings.TrimSpace(result.ActiveSceneID) == "" || !result.SceneIsActive {
+		t.Fatalf("scene bootstrap failed: count=%d active_scene_id=%q active=%v", result.SceneCount, result.ActiveSceneID, result.SceneIsActive)
+	}
+	if !result.PlayerPhaseOpen {
+		t.Fatal("expected bootstrap to start the first player phase")
+	}
+
+	fixture := recorder.ReplayFixture(result.CampaignID, result.SessionID, result.CharacterID, result.ActiveSceneID)
+	if err := requiredToolSetPresent(openAIReplayFixtureToolNames(fixture),
+		"system_reference_search",
+		"scene_create",
+		"interaction_active_scene_set",
+		"interaction_scene_gm_output_commit",
+		"interaction_scene_player_phase_start",
+		"campaign_artifact_upsert",
+	); err != nil {
+		t.Fatalf("fixture tool coverage: %v", err)
+	}
+	if envEnabled(integrationAIWriteFixtureEnv) {
+		fixturePath := writeOpenAIReplayFixture(t, aiGMBootstrapFixtureFile, fixture)
+		t.Logf("updated replay fixture at %s", fixturePath)
+	}
+}
+
+// ServeHTTP forwards live Responses requests to the configured upstream and records the sanitized exchange.
+func (r *openAILiveRecorder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	body, err := io.ReadAll(req.Body)
+	if err != nil {
+		r.setErr(fmt.Errorf("read request body: %w", err))
+		http.Error(w, "read request body", http.StatusInternalServerError)
+		return
+	}
+	upstreamURL, err := r.upstreamURL(req.URL)
+	if err != nil {
+		r.setErr(fmt.Errorf("resolve upstream url: %w", err))
+		http.Error(w, "resolve upstream url", http.StatusInternalServerError)
+		return
+	}
+	targetReq, err := http.NewRequestWithContext(req.Context(), req.Method, upstreamURL, bytes.NewReader(body))
+	if err != nil {
+		r.setErr(fmt.Errorf("build upstream request: %w", err))
+		http.Error(w, "build upstream request", http.StatusInternalServerError)
+		return
+	}
+	for key, values := range req.Header {
+		if strings.EqualFold(key, "Host") || strings.EqualFold(key, "Accept-Encoding") {
+			continue
+		}
+		for _, value := range values {
+			targetReq.Header.Add(key, value)
+		}
+	}
+	res, err := r.client.Do(targetReq)
+	if err != nil {
+		r.setErr(fmt.Errorf("forward request: %w", err))
+		http.Error(w, "forward request", http.StatusBadGateway)
+		return
+	}
+	defer res.Body.Close()
+	responseBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		r.setErr(fmt.Errorf("read upstream response: %w", err))
+		http.Error(w, "read upstream response", http.StatusBadGateway)
+		return
+	}
+	for key, values := range res.Header {
+		for _, value := range values {
+			w.Header().Add(key, value)
+		}
+	}
+	w.WriteHeader(res.StatusCode)
+	_, _ = w.Write(responseBody)
+
+	r.recordExchange(req.Method, upstreamURL, body, res.StatusCode, responseBody)
+}
+
+// upstreamURL preserves the incoming request path while anchoring requests to the configured provider base.
+func (r *openAILiveRecorder) upstreamURL(requestURL *url.URL) (string, error) {
+	base, err := url.Parse(r.targetURL)
+	if err != nil {
+		return "", err
+	}
+	if requestURL == nil {
+		return base.String(), nil
+	}
+	resolved := *base
+	requestPath := strings.TrimSpace(requestURL.Path)
+	switch requestPath {
+	case "", "/":
+		resolved.Path = base.Path
+	default:
+		resolved.Path = pathpkg.Join(pathpkg.Dir(base.Path), requestPath)
+	}
+	resolved.RawQuery = requestURL.RawQuery
+	return resolved.String(), nil
+}
+
+// recordExchange converts one live provider response into the replay-oriented fixture shape.
+func (r *openAILiveRecorder) recordExchange(method, requestURL string, requestBody []byte, statusCode int, responseBody []byte) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var requestPayload map[string]any
+	if trimmed := strings.TrimSpace(string(requestBody)); trimmed != "" {
+		if err := json.Unmarshal(requestBody, &requestPayload); err != nil {
+			r.setErr(fmt.Errorf("parse recorded request body: %w", err))
+			return
+		}
+	}
+	r.rawCapture.Metadata.CapturedAtUTC = time.Now().UTC().Format(time.RFC3339)
+	previousResponseID := strings.TrimSpace(asString(requestPayload["previous_response_id"]))
+	r.rawCapture.Exchanges = append(r.rawCapture.Exchanges, openAILiveExchange{
+		Step:           len(r.steps),
+		Method:         method,
+		RequestURL:     requestURL,
+		StatusCode:     statusCode,
+		RequestBody:    append(json.RawMessage(nil), requestBody...),
+		ResponseBody:   append(json.RawMessage(nil), responseBody...),
+		CapturedAtUTC:  time.Now().UTC().Format(time.RFC3339),
+		PreviousRespID: previousResponseID,
+	})
+	if !isResponsesRequestURL(requestURL) {
+		return
+	}
+	var responsePayload openAIResponsesPayload
+	if err := json.Unmarshal(responseBody, &responsePayload); err != nil {
+		r.setErr(fmt.Errorf("parse recorded response body: %w", err))
+		return
+	}
+	if len(r.steps) == 0 {
+		_, toolNames := extractPromptAndToolNames(requestPayload)
+		r.initialTools = append([]string(nil), toolNames...)
+	}
+	r.captureCallOutputs(requestPayload)
+	if sceneID := extractSceneID(requestPayload); sceneID != "" {
+		r.lastSceneID = sceneID
+	}
+	r.steps = append(r.steps, replayStepFromLiveResponse(responsePayload))
+}
+
+// isResponsesRequestURL identifies actual Responses API exchanges even when the configured endpoint has queries or alternate prefixes.
+func isResponsesRequestURL(rawURL string) bool {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
+	if err != nil {
+		return false
+	}
+	path := strings.TrimRight(strings.TrimSpace(parsed.Path), "/")
+	return strings.HasSuffix(path, "/responses")
+}
+
+// captureCallOutputs keeps tool-call outputs visible in failure logs when a live run diverges.
+func (r *openAILiveRecorder) captureCallOutputs(payload map[string]any) {
+	inputItems, _ := payload["input"].([]any)
+	for _, raw := range inputItems {
+		item, _ := raw.(map[string]any)
+		if strings.TrimSpace(asString(item["type"])) != "function_call_output" {
+			continue
+		}
+		callID := strings.TrimSpace(asString(item["call_id"]))
+		output := strings.TrimSpace(asString(item["output"]))
+		if callID == "" {
+			continue
+		}
+		r.requestDebug = append(r.requestDebug, fmt.Sprintf("step=%d call_id=%s output=%s", len(r.steps), callID, output))
+	}
+}
+
+// setErr preserves the first recorder failure so later transport noise does not hide the root cause.
+func (r *openAILiveRecorder) setErr(err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if r.firstErr == nil {
+		r.firstErr = err
+	}
+}
+
+// Err returns the first recorder failure observed during proxying.
+func (r *openAILiveRecorder) Err() error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.firstErr
+}
+
+// DebugString summarizes recorded call outputs for failure diagnostics.
+func (r *openAILiveRecorder) DebugString() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return strings.Join(r.requestDebug, "\n")
+}
+
+// ReplayFixture converts the captured live exchange into the stable tokenized fixture committed in the repo.
+func (r *openAILiveRecorder) ReplayFixture(campaignID, sessionID, characterID, sceneID string) openAIReplayFixture {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	fixture := openAIReplayFixture{
+		Metadata: &openAIReplayMetadata{
+			Provider:        "openai",
+			Model:           r.model,
+			ReasoningEffort: r.rawCapture.Metadata.ReasoningEffort,
+			CapturedAtUTC:   r.rawCapture.Metadata.CapturedAtUTC,
+			Scenario:        aiGMBootstrapScenarioName,
+			Source:          "live_capture",
+		},
+		InitialPromptContains: bootstrapPromptContains(),
+		InitialToolNames:      append([]string(nil), r.initialTools...),
+		Steps:                 append([]openAIReplayStep(nil), r.steps...),
+	}
+	return tokenizeReplayFixture(fixture, map[string]string{
+		"campaign_id":  campaignID,
+		"session_id":   sessionID,
+		"character_id": characterID,
+		"scene_id":     sceneID,
+	})
+}
+
+// replayStepFromLiveResponse trims the full provider response down to the deterministic replay contract.
+func replayStepFromLiveResponse(payload openAIResponsesPayload) openAIReplayStep {
+	step := openAIReplayStep{
+		ID:         strings.TrimSpace(payload.ID),
+		OutputText: strings.TrimSpace(payload.OutputText),
+		ToolCalls:  make([]openAIReplayToolCall, 0, len(payload.Output)),
+	}
+	for _, item := range payload.Output {
+		if strings.TrimSpace(item.Type) == "function_call" {
+			args := map[string]any{}
+			if strings.TrimSpace(item.Arguments) != "" {
+				_ = json.Unmarshal([]byte(item.Arguments), &args)
+			}
+			step.ToolCalls = append(step.ToolCalls, openAIReplayToolCall{
+				CallID:    strings.TrimSpace(item.CallID),
+				Name:      strings.TrimSpace(item.Name),
+				Arguments: args,
+			})
+			continue
+		}
+		if step.OutputText != "" {
+			continue
+		}
+		for _, content := range item.Content {
+			if strings.TrimSpace(content.Text) == "" {
+				continue
+			}
+			step.OutputText = strings.TrimSpace(content.Text)
+			break
+		}
+	}
+	return step
+}
+
+// writeOpenAILiveCapture persists the raw live capture outside the repo fixtures for local debugging and review.
+func writeOpenAILiveCapture(t *testing.T, capture openAILiveCapture) string {
+	t.Helper()
+	dir := filepath.Join(repoRoot(t), ".tmp", "ai-live-captures")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create capture dir: %v", err)
+	}
+	filename := fmt.Sprintf("%s-%s.json", aiGMBootstrapScenarioName, time.Now().UTC().Format("20060102T150405Z"))
+	path := filepath.Join(dir, filename)
+	data, err := json.MarshalIndent(capture, "", "  ")
+	if err != nil {
+		t.Fatalf("marshal live capture: %v", err)
+	}
+	data = append(data, '\n')
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatalf("write live capture: %v", err)
+	}
+	return path
+}

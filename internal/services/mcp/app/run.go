@@ -7,8 +7,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/service"
 )
 
-// Run starts the MCP app with the provided gRPC address, HTTP address, and transport type.
-func Run(ctx context.Context, grpcAddr, httpAddr, transport string) error {
+// Run starts the MCP app with the provided game/AI gRPC addresses, HTTP address, and transport type.
+func Run(ctx context.Context, grpcAddr, aiAddr, httpAddr, transport string) error {
 	var transportKind service.TransportKind
 	switch transport {
 	case "http":
@@ -21,6 +21,7 @@ func Run(ctx context.Context, grpcAddr, httpAddr, transport string) error {
 
 	return service.Run(ctx, service.Config{
 		GRPCAddr:  grpcAddr,
+		AIAddr:    aiAddr,
 		HTTPAddr:  httpAddr,
 		Transport: transportKind,
 	})

@@ -48,6 +48,11 @@ type AgentClient interface {
 	ListAgents(context.Context, *aiv1.ListAgentsRequest, ...grpc.CallOption) (*aiv1.ListAgentsResponse, error)
 }
 
+// CampaignArtifactClient exposes AI-owned campaign artifact seeding for starter launch.
+type CampaignArtifactClient interface {
+	EnsureCampaignArtifacts(context.Context, *aiv1.EnsureCampaignArtifactsRequest, ...grpc.CallOption) (*aiv1.EnsureCampaignArtifactsResponse, error)
+}
+
 // ParticipantReadClient exposes participant queries for campaign workspace pages.
 type ParticipantReadClient interface {
 	ListParticipants(context.Context, *statev1.ListParticipantsRequest, ...grpc.CallOption) (*statev1.ListParticipantsResponse, error)

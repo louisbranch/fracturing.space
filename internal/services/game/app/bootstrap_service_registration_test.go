@@ -82,3 +82,26 @@ func TestBuildServiceDescriptors_ExcludesLegacyInteractionTransport(t *testing.T
 		}
 	}
 }
+
+func TestBuildServiceDescriptors_RegistersCampaignAIOrchestrationService(t *testing.T) {
+	_, filename, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+	path := filepath.Join(filepath.Dir(filename), "bootstrap_service_registration.go")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	source := string(content)
+	for _, marker := range []string{
+		`healthService: "game.v1.CampaignAIOrchestrationService"`,
+		"RegisterCampaignAIOrchestrationServiceServer",
+		"NewCampaignAIOrchestrationService(stores)",
+		"SessionInteraction: stores.SessionInteraction",
+	} {
+		if !strings.Contains(source, marker) {
+			t.Fatalf("%s missing %q", filepath.Base(path), marker)
+		}
+	}
+}

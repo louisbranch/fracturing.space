@@ -771,6 +771,364 @@ var CampaignOrchestrationService_ServiceDesc = grpc.ServiceDesc{
 }
 
 const (
+	CampaignArtifactService_EnsureCampaignArtifacts_FullMethodName = "/ai.v1.CampaignArtifactService/EnsureCampaignArtifacts"
+	CampaignArtifactService_ListCampaignArtifacts_FullMethodName   = "/ai.v1.CampaignArtifactService/ListCampaignArtifacts"
+	CampaignArtifactService_GetCampaignArtifact_FullMethodName     = "/ai.v1.CampaignArtifactService/GetCampaignArtifact"
+	CampaignArtifactService_UpsertCampaignArtifact_FullMethodName  = "/ai.v1.CampaignArtifactService/UpsertCampaignArtifact"
+)
+
+// CampaignArtifactServiceClient is the client API for CampaignArtifactService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type CampaignArtifactServiceClient interface {
+	EnsureCampaignArtifacts(ctx context.Context, in *EnsureCampaignArtifactsRequest, opts ...grpc.CallOption) (*EnsureCampaignArtifactsResponse, error)
+	ListCampaignArtifacts(ctx context.Context, in *ListCampaignArtifactsRequest, opts ...grpc.CallOption) (*ListCampaignArtifactsResponse, error)
+	GetCampaignArtifact(ctx context.Context, in *GetCampaignArtifactRequest, opts ...grpc.CallOption) (*GetCampaignArtifactResponse, error)
+	UpsertCampaignArtifact(ctx context.Context, in *UpsertCampaignArtifactRequest, opts ...grpc.CallOption) (*UpsertCampaignArtifactResponse, error)
+}
+
+type campaignArtifactServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewCampaignArtifactServiceClient(cc grpc.ClientConnInterface) CampaignArtifactServiceClient {
+	return &campaignArtifactServiceClient{cc}
+}
+
+func (c *campaignArtifactServiceClient) EnsureCampaignArtifacts(ctx context.Context, in *EnsureCampaignArtifactsRequest, opts ...grpc.CallOption) (*EnsureCampaignArtifactsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EnsureCampaignArtifactsResponse)
+	err := c.cc.Invoke(ctx, CampaignArtifactService_EnsureCampaignArtifacts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignArtifactServiceClient) ListCampaignArtifacts(ctx context.Context, in *ListCampaignArtifactsRequest, opts ...grpc.CallOption) (*ListCampaignArtifactsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListCampaignArtifactsResponse)
+	err := c.cc.Invoke(ctx, CampaignArtifactService_ListCampaignArtifacts_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignArtifactServiceClient) GetCampaignArtifact(ctx context.Context, in *GetCampaignArtifactRequest, opts ...grpc.CallOption) (*GetCampaignArtifactResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetCampaignArtifactResponse)
+	err := c.cc.Invoke(ctx, CampaignArtifactService_GetCampaignArtifact_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *campaignArtifactServiceClient) UpsertCampaignArtifact(ctx context.Context, in *UpsertCampaignArtifactRequest, opts ...grpc.CallOption) (*UpsertCampaignArtifactResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UpsertCampaignArtifactResponse)
+	err := c.cc.Invoke(ctx, CampaignArtifactService_UpsertCampaignArtifact_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// CampaignArtifactServiceServer is the server API for CampaignArtifactService service.
+// All implementations must embed UnimplementedCampaignArtifactServiceServer
+// for forward compatibility.
+type CampaignArtifactServiceServer interface {
+	EnsureCampaignArtifacts(context.Context, *EnsureCampaignArtifactsRequest) (*EnsureCampaignArtifactsResponse, error)
+	ListCampaignArtifacts(context.Context, *ListCampaignArtifactsRequest) (*ListCampaignArtifactsResponse, error)
+	GetCampaignArtifact(context.Context, *GetCampaignArtifactRequest) (*GetCampaignArtifactResponse, error)
+	UpsertCampaignArtifact(context.Context, *UpsertCampaignArtifactRequest) (*UpsertCampaignArtifactResponse, error)
+	mustEmbedUnimplementedCampaignArtifactServiceServer()
+}
+
+// UnimplementedCampaignArtifactServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedCampaignArtifactServiceServer struct{}
+
+func (UnimplementedCampaignArtifactServiceServer) EnsureCampaignArtifacts(context.Context, *EnsureCampaignArtifactsRequest) (*EnsureCampaignArtifactsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method EnsureCampaignArtifacts not implemented")
+}
+func (UnimplementedCampaignArtifactServiceServer) ListCampaignArtifacts(context.Context, *ListCampaignArtifactsRequest) (*ListCampaignArtifactsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListCampaignArtifacts not implemented")
+}
+func (UnimplementedCampaignArtifactServiceServer) GetCampaignArtifact(context.Context, *GetCampaignArtifactRequest) (*GetCampaignArtifactResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCampaignArtifact not implemented")
+}
+func (UnimplementedCampaignArtifactServiceServer) UpsertCampaignArtifact(context.Context, *UpsertCampaignArtifactRequest) (*UpsertCampaignArtifactResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpsertCampaignArtifact not implemented")
+}
+func (UnimplementedCampaignArtifactServiceServer) mustEmbedUnimplementedCampaignArtifactServiceServer() {
+}
+func (UnimplementedCampaignArtifactServiceServer) testEmbeddedByValue() {}
+
+// UnsafeCampaignArtifactServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to CampaignArtifactServiceServer will
+// result in compilation errors.
+type UnsafeCampaignArtifactServiceServer interface {
+	mustEmbedUnimplementedCampaignArtifactServiceServer()
+}
+
+func RegisterCampaignArtifactServiceServer(s grpc.ServiceRegistrar, srv CampaignArtifactServiceServer) {
+	// If the following call pancis, it indicates UnimplementedCampaignArtifactServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&CampaignArtifactService_ServiceDesc, srv)
+}
+
+func _CampaignArtifactService_EnsureCampaignArtifacts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EnsureCampaignArtifactsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignArtifactServiceServer).EnsureCampaignArtifacts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignArtifactService_EnsureCampaignArtifacts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignArtifactServiceServer).EnsureCampaignArtifacts(ctx, req.(*EnsureCampaignArtifactsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignArtifactService_ListCampaignArtifacts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListCampaignArtifactsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignArtifactServiceServer).ListCampaignArtifacts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignArtifactService_ListCampaignArtifacts_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignArtifactServiceServer).ListCampaignArtifacts(ctx, req.(*ListCampaignArtifactsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignArtifactService_GetCampaignArtifact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetCampaignArtifactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignArtifactServiceServer).GetCampaignArtifact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignArtifactService_GetCampaignArtifact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignArtifactServiceServer).GetCampaignArtifact(ctx, req.(*GetCampaignArtifactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _CampaignArtifactService_UpsertCampaignArtifact_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UpsertCampaignArtifactRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(CampaignArtifactServiceServer).UpsertCampaignArtifact(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: CampaignArtifactService_UpsertCampaignArtifact_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(CampaignArtifactServiceServer).UpsertCampaignArtifact(ctx, req.(*UpsertCampaignArtifactRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// CampaignArtifactService_ServiceDesc is the grpc.ServiceDesc for CampaignArtifactService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var CampaignArtifactService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ai.v1.CampaignArtifactService",
+	HandlerType: (*CampaignArtifactServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "EnsureCampaignArtifacts",
+			Handler:    _CampaignArtifactService_EnsureCampaignArtifacts_Handler,
+		},
+		{
+			MethodName: "ListCampaignArtifacts",
+			Handler:    _CampaignArtifactService_ListCampaignArtifacts_Handler,
+		},
+		{
+			MethodName: "GetCampaignArtifact",
+			Handler:    _CampaignArtifactService_GetCampaignArtifact_Handler,
+		},
+		{
+			MethodName: "UpsertCampaignArtifact",
+			Handler:    _CampaignArtifactService_UpsertCampaignArtifact_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "ai/v1/service.proto",
+}
+
+const (
+	SystemReferenceService_SearchSystemReference_FullMethodName       = "/ai.v1.SystemReferenceService/SearchSystemReference"
+	SystemReferenceService_ReadSystemReferenceDocument_FullMethodName = "/ai.v1.SystemReferenceService/ReadSystemReferenceDocument"
+)
+
+// SystemReferenceServiceClient is the client API for SystemReferenceService service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SystemReferenceServiceClient interface {
+	SearchSystemReference(ctx context.Context, in *SearchSystemReferenceRequest, opts ...grpc.CallOption) (*SearchSystemReferenceResponse, error)
+	ReadSystemReferenceDocument(ctx context.Context, in *ReadSystemReferenceDocumentRequest, opts ...grpc.CallOption) (*ReadSystemReferenceDocumentResponse, error)
+}
+
+type systemReferenceServiceClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSystemReferenceServiceClient(cc grpc.ClientConnInterface) SystemReferenceServiceClient {
+	return &systemReferenceServiceClient{cc}
+}
+
+func (c *systemReferenceServiceClient) SearchSystemReference(ctx context.Context, in *SearchSystemReferenceRequest, opts ...grpc.CallOption) (*SearchSystemReferenceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SearchSystemReferenceResponse)
+	err := c.cc.Invoke(ctx, SystemReferenceService_SearchSystemReference_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *systemReferenceServiceClient) ReadSystemReferenceDocument(ctx context.Context, in *ReadSystemReferenceDocumentRequest, opts ...grpc.CallOption) (*ReadSystemReferenceDocumentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ReadSystemReferenceDocumentResponse)
+	err := c.cc.Invoke(ctx, SystemReferenceService_ReadSystemReferenceDocument_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SystemReferenceServiceServer is the server API for SystemReferenceService service.
+// All implementations must embed UnimplementedSystemReferenceServiceServer
+// for forward compatibility.
+type SystemReferenceServiceServer interface {
+	SearchSystemReference(context.Context, *SearchSystemReferenceRequest) (*SearchSystemReferenceResponse, error)
+	ReadSystemReferenceDocument(context.Context, *ReadSystemReferenceDocumentRequest) (*ReadSystemReferenceDocumentResponse, error)
+	mustEmbedUnimplementedSystemReferenceServiceServer()
+}
+
+// UnimplementedSystemReferenceServiceServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSystemReferenceServiceServer struct{}
+
+func (UnimplementedSystemReferenceServiceServer) SearchSystemReference(context.Context, *SearchSystemReferenceRequest) (*SearchSystemReferenceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SearchSystemReference not implemented")
+}
+func (UnimplementedSystemReferenceServiceServer) ReadSystemReferenceDocument(context.Context, *ReadSystemReferenceDocumentRequest) (*ReadSystemReferenceDocumentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadSystemReferenceDocument not implemented")
+}
+func (UnimplementedSystemReferenceServiceServer) mustEmbedUnimplementedSystemReferenceServiceServer() {
+}
+func (UnimplementedSystemReferenceServiceServer) testEmbeddedByValue() {}
+
+// UnsafeSystemReferenceServiceServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SystemReferenceServiceServer will
+// result in compilation errors.
+type UnsafeSystemReferenceServiceServer interface {
+	mustEmbedUnimplementedSystemReferenceServiceServer()
+}
+
+func RegisterSystemReferenceServiceServer(s grpc.ServiceRegistrar, srv SystemReferenceServiceServer) {
+	// If the following call pancis, it indicates UnimplementedSystemReferenceServiceServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&SystemReferenceService_ServiceDesc, srv)
+}
+
+func _SystemReferenceService_SearchSystemReference_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SearchSystemReferenceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemReferenceServiceServer).SearchSystemReference(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemReferenceService_SearchSystemReference_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemReferenceServiceServer).SearchSystemReference(ctx, req.(*SearchSystemReferenceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SystemReferenceService_ReadSystemReferenceDocument_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadSystemReferenceDocumentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SystemReferenceServiceServer).ReadSystemReferenceDocument(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: SystemReferenceService_ReadSystemReferenceDocument_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SystemReferenceServiceServer).ReadSystemReferenceDocument(ctx, req.(*ReadSystemReferenceDocumentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// SystemReferenceService_ServiceDesc is the grpc.ServiceDesc for SystemReferenceService service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var SystemReferenceService_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "ai.v1.SystemReferenceService",
+	HandlerType: (*SystemReferenceServiceServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "SearchSystemReference",
+			Handler:    _SystemReferenceService_SearchSystemReference_Handler,
+		},
+		{
+			MethodName: "ReadSystemReferenceDocument",
+			Handler:    _SystemReferenceService_ReadSystemReferenceDocument_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "ai/v1/service.proto",
+}
+
+const (
 	ProviderGrantService_StartProviderConnect_FullMethodName  = "/ai.v1.ProviderGrantService/StartProviderConnect"
 	ProviderGrantService_FinishProviderConnect_FullMethodName = "/ai.v1.ProviderGrantService/FinishProviderConnect"
 	ProviderGrantService_ListProviderGrants_FullMethodName    = "/ai.v1.ProviderGrantService/ListProviderGrants"

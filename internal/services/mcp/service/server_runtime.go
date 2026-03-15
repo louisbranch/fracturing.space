@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -57,10 +58,11 @@ func Run(ctx context.Context, cfg Config) error {
 	if cfg.Transport == "" {
 		cfg.Transport = TransportStdio
 	}
+	cfg.AIAddr = aiAddress(cfg.AIAddr)
 
 	switch cfg.Transport {
 	case TransportStdio:
-		return runWithTransport(ctx, cfg.GRPCAddr, &mcp.StdioTransport{})
+		return runWithTransportWithAI(ctx, cfg.GRPCAddr, cfg.AIAddr, &mcp.StdioTransport{})
 	case TransportHTTP:
 		return runWithHTTPTransport(ctx, cfg)
 	default:
@@ -78,7 +80,7 @@ func runWithHTTPTransport(ctx context.Context, cfg Config) error {
 		httpAddr = "localhost:8081"
 	}
 
-	mcpServer, err := newRuntimeServer(ctx, cfg.GRPCAddr)
+	mcpServer, err := newRuntimeServer(ctx, cfg.GRPCAddr, cfg.AIAddr)
 	if err != nil {
 		return err
 	}
@@ -109,11 +111,13 @@ func (s *Server) ServeWithTransport(ctx context.Context, transport mcp.Transport
 
 // Close releases the managed connection held by the server.
 func (s *Server) Close() error {
-	if s == nil || s.gameMc == nil {
+	if s == nil {
 		return nil
 	}
 	closeManagedConn(s.gameMc, "game")
+	closeManagedConn(s.aiMc, "ai")
 	s.gameMc = nil
+	s.aiMc = nil
 	return nil
 }
 
@@ -166,7 +170,11 @@ func (s *Server) getContext() domain.Context {
 
 // runWithTransport creates a server and serves it over the provided transport.
 func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transport) error {
-	mcpServer, err := newRuntimeServer(ctx, grpcAddr)
+	return runWithTransportWithAI(ctx, grpcAddr, "", transport)
+}
+
+func runWithTransportWithAI(ctx context.Context, grpcAddr string, aiAddr string, transport mcp.Transport) error {
+	mcpServer, err := newRuntimeServer(ctx, grpcAddr, aiAddr)
 	if err != nil {
 		return err
 	}
@@ -174,15 +182,14 @@ func runWithTransport(ctx context.Context, grpcAddr string, transport mcp.Transp
 	return mcpServer.serveWithTransport(ctx, transport)
 }
 
-func newRuntimeServer(ctx context.Context, grpcAddr string) (*Server, error) {
+func newRuntimeServer(ctx context.Context, grpcAddr string, aiAddr string) (*Server, error) {
 	addr := grpcAddress(grpcAddr)
-	return buildServerWithManagedConn(ctx, addr, platformgrpc.ModeRequired)
+	return buildServerWithManagedConns(ctx, addr, aiAddr, platformgrpc.ModeRequired)
 }
 
-// buildServerWithManagedConn dials the game gRPC service as a ManagedConn and
-// wires the MCP server from the resulting connection.
-func buildServerWithManagedConn(ctx context.Context, addr string, mode platformgrpc.ManagedConnMode) (*Server, error) {
-	mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+// buildServerWithManagedConns dials the game service and optionally the AI service.
+func buildServerWithManagedConns(ctx context.Context, addr string, aiAddr string, mode platformgrpc.ManagedConnMode) (*Server, error) {
+	gameMc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 		Name: "game",
 		Addr: addr,
 		Mode: mode,
@@ -196,12 +203,37 @@ func buildServerWithManagedConn(ctx context.Context, addr string, mode platformg
 	if err != nil {
 		return nil, fmt.Errorf("connect to game server at %s: %w", addr, err)
 	}
-	server, err := buildMCPServerFromConn(mc.Conn())
+	var aiMc *platformgrpc.ManagedConn
+	if strings.TrimSpace(aiAddr) != "" {
+		aiMc, err = newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+			Name: "ai",
+			Addr: aiAddr,
+			Mode: platformgrpc.ModeOptional,
+			Logf: log.Printf,
+			DialOpts: append(
+				platformgrpc.LenientDialOptions(),
+				grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceaddr.ServiceMCP)),
+				grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceaddr.ServiceMCP)),
+			),
+		})
+		if err != nil {
+			log.Printf("mcp: ai managed conn unavailable; ai-backed campaign context disabled: %v", err)
+			aiMc = nil
+		}
+	}
+	var server *Server
+	if aiMc != nil {
+		server, err = newServerWithAIConn(gameMc.Conn(), aiMc.Conn())
+	} else {
+		server, err = buildMCPServerFromConn(gameMc.Conn())
+	}
 	if err != nil {
-		closeManagedConn(mc, "game")
+		closeManagedConn(gameMc, "game")
+		closeManagedConn(aiMc, "ai")
 		return nil, err
 	}
-	server.gameMc = mc
+	server.gameMc = gameMc
+	server.aiMc = aiMc
 	return server, nil
 }
 
@@ -214,4 +246,14 @@ func grpcAddress(fallback string) string {
 		return value
 	}
 	return fallback
+}
+
+func aiAddress(fallback string) string {
+	if strings.TrimSpace(fallback) != "" {
+		return strings.TrimSpace(fallback)
+	}
+	if value := strings.TrimSpace(os.Getenv("FRACTURING_SPACE_AI_ADDR")); value != "" {
+		return value
+	}
+	return serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceAI)
 }

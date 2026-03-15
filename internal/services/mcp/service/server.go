@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/branding"
@@ -53,6 +54,7 @@ const (
 // Config configures the MCP server.
 type Config struct {
 	GRPCAddr  string
+	AIAddr    string
 	Transport TransportKind
 	HTTPAddr  string // HTTP server address (e.g., "localhost:8081"). Defaults to localhost:8081 for HTTP transport.
 	AuthToken string // Optional bearer token accepted by /mcp endpoints when OAuth is also configured.
@@ -78,6 +80,7 @@ type RequestRateLimiter interface {
 type Server struct {
 	mcpServer *mcp.Server
 	gameMc    *platformgrpc.ManagedConn
+	aiMc      *platformgrpc.ManagedConn
 	ctx       domain.Context
 	ctxMu     sync.RWMutex
 }
@@ -85,12 +88,16 @@ type Server struct {
 // New creates a configured MCP server that connects to state and game system
 // gRPC services and hydrates tool/resource handlers from those APIs.
 func New(grpcAddr string) (*Server, error) {
-	return buildServerWithManagedConn(context.Background(), grpcAddr, platformgrpc.ModeOptional)
+	return buildServerWithManagedConns(context.Background(), grpcAddr, "", platformgrpc.ModeOptional)
 }
 
 // newServer creates MCP tool/resource handler bindings once and keeps shared
 // context for protocol state updates.
 func newServer(conn *grpc.ClientConn) (*Server, error) {
+	return newServerWithAIConn(conn, nil)
+}
+
+func newServerWithAIConn(conn *grpc.ClientConn, aiConn *grpc.ClientConn) (*Server, error) {
 	mcpServer := mcp.NewServer(&mcp.Implementation{Name: serverName, Version: serverVersion}, &mcp.ServerOptions{
 		CompletionHandler:  completionHandler,
 		SubscribeHandler:   resourceSubscribeHandler,
@@ -107,6 +114,12 @@ func newServer(conn *grpc.ClientConn) (*Server, error) {
 	interactionClient := statev1.NewInteractionServiceClient(conn)
 	forkClient := statev1.NewForkServiceClient(conn)
 	eventClient := statev1.NewEventServiceClient(conn)
+	var campaignArtifactClient aiv1.CampaignArtifactServiceClient
+	var systemReferenceClient aiv1.SystemReferenceServiceClient
+	if aiConn != nil {
+		campaignArtifactClient = aiv1.NewCampaignArtifactServiceClient(aiConn)
+		systemReferenceClient = aiv1.NewSystemReferenceServiceClient(aiConn)
+	}
 
 	server := &Server{mcpServer: mcpServer}
 	resourceNotifier := func(ctx context.Context, uri string) {
@@ -124,16 +137,18 @@ func newServer(conn *grpc.ClientConn) (*Server, error) {
 	for _, module := range newMCPRegistrationModules(
 		server,
 		mcpRegistrationClients{
-			daggerheartClient: daggerheartClient,
-			campaignClient:    campaignClient,
-			participantClient: participantClient,
-			characterClient:   characterClient,
-			snapshotClient:    snapshotClient,
-			sessionClient:     sessionClient,
-			sceneClient:       sceneClient,
-			interactionClient: interactionClient,
-			forkClient:        forkClient,
-			eventClient:       eventClient,
+			daggerheartClient:      daggerheartClient,
+			campaignClient:         campaignClient,
+			participantClient:      participantClient,
+			characterClient:        characterClient,
+			snapshotClient:         snapshotClient,
+			sessionClient:          sessionClient,
+			sceneClient:            sceneClient,
+			interactionClient:      interactionClient,
+			forkClient:             forkClient,
+			eventClient:            eventClient,
+			campaignArtifactClient: campaignArtifactClient,
+			systemReferenceClient:  systemReferenceClient,
 		},
 		resourceNotifier,
 	) {

@@ -229,6 +229,11 @@ func (a *openAIInvokeAdapter) Run(ctx context.Context, input orchestration.Provi
 		"tools":               tools,
 		"parallel_tool_calls": true,
 	}
+	if effort := strings.TrimSpace(input.ReasoningEffort); effort != "" {
+		body["reasoning"] = map[string]any{
+			"effort": effort,
+		}
+	}
 	if instructions := strings.TrimSpace(input.Instructions); instructions != "" {
 		body["instructions"] = instructions
 	}
@@ -240,6 +245,15 @@ func (a *openAIInvokeAdapter) Run(ctx context.Context, input orchestration.Provi
 				"type":    "function_call_output",
 				"call_id": strings.TrimSpace(item.CallID),
 				"output":  item.Output,
+			})
+		}
+		if followUp := strings.TrimSpace(input.FollowUpPrompt); followUp != "" {
+			items = append(items, map[string]any{
+				"role": "user",
+				"content": []map[string]any{{
+					"type": "input_text",
+					"text": followUp,
+				}},
 			})
 		}
 		body["input"] = items

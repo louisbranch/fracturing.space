@@ -7,6 +7,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -177,6 +178,41 @@ func providerGrantToProto(record storage.ProviderGrantRecord) *aiv1.ProviderGran
 		proto.LastRefreshedAt = timestamppb.New(*record.LastRefreshedAt)
 	}
 	return proto
+}
+
+func campaignArtifactToProto(record storage.CampaignArtifactRecord) *aiv1.CampaignArtifact {
+	return &aiv1.CampaignArtifact{
+		CampaignId: record.CampaignID,
+		Path:       record.Path,
+		Content:    record.Content,
+		ReadOnly:   record.ReadOnly,
+		CreatedAt:  timestamppb.New(record.CreatedAt),
+		UpdatedAt:  timestamppb.New(record.UpdatedAt),
+	}
+}
+
+func referenceDocumentSummaryToProto(result campaigncontext.ReferenceSearchResult) *aiv1.SystemReferenceDocumentSummary {
+	return &aiv1.SystemReferenceDocumentSummary{
+		System:     result.System,
+		DocumentId: result.DocumentID,
+		Title:      result.Title,
+		Kind:       result.Kind,
+		Path:       result.Path,
+		Aliases:    append([]string(nil), result.Aliases...),
+		Snippet:    result.Snippet,
+	}
+}
+
+func referenceDocumentToProto(document campaigncontext.ReferenceDocument) *aiv1.SystemReferenceDocument {
+	return &aiv1.SystemReferenceDocument{
+		System:     document.System,
+		DocumentId: document.DocumentID,
+		Title:      document.Title,
+		Kind:       document.Kind,
+		Path:       document.Path,
+		Aliases:    append([]string(nil), document.Aliases...),
+		Content:    document.Content,
+	}
 }
 
 func accessRequestToProto(record storage.AccessRequestRecord) *aiv1.AccessRequest {

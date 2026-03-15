@@ -234,6 +234,57 @@ func TestReplayStateLoader_DoesNotSkipPastSnapshotWhenCheckpointAhead(t *testing
 	}
 }
 
+func TestReplayStateLoader_LoadFreshBypassesSnapshotsAndCheckpoints(t *testing.T) {
+	events := &trackingReplayEventStore{
+		events: []event.Event{
+			{
+				Seq:         1,
+				CampaignID:  "camp-1",
+				Type:        event.Type("session.gate_opened"),
+				Timestamp:   time.Unix(0, 0).UTC(),
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "session",
+				EntityID:    "sess-1",
+				SessionID:   "sess-1",
+				PayloadJSON: []byte(`{"gate_id":"gate-2","gate_type":"gm_consequence"}`),
+			},
+		},
+	}
+	snapshots := &fakeSnapshotStore{
+		state: aggregate.State{
+			Session: session.State{GateID: "stale-gate"},
+		},
+		seq: 7,
+	}
+	loader := ReplayStateLoader{
+		Events:      events,
+		Checkpoints: staticCheckpointStore{seq: 12},
+		Snapshots:   snapshots,
+		Folder:      &aggregate.Folder{},
+		StateFactory: func() any {
+			return aggregate.State{}
+		},
+	}
+
+	state, err := loader.LoadFresh(context.Background(), command.Command{CampaignID: "camp-1"})
+	if err != nil {
+		t.Fatalf("load fresh state: %v", err)
+	}
+	if len(events.afterCalls) == 0 {
+		t.Fatal("expected replay to query events")
+	}
+	if events.afterCalls[0] != 0 {
+		t.Fatalf("fresh replay after_seq = %d, want 0", events.afterCalls[0])
+	}
+	agg, ok := state.(aggregate.State)
+	if !ok {
+		t.Fatalf("state type = %T, want aggregate.State", state)
+	}
+	if agg.Session.GateID != "gate-2" {
+		t.Fatalf("gate id = %q, want %q", agg.Session.GateID, "gate-2")
+	}
+}
+
 func TestCheckpointCapStore_SaveDelegatesToBaseStore(t *testing.T) {
 	base := &trackingCheckpointStore{}
 	capped := checkpointCapStore{base: base, maxSeq: 12}
@@ -278,6 +329,34 @@ func TestReplayStateLoader_RequiresStateFactory(t *testing.T) {
 	_, err := loader.Load(context.Background(), command.Command{CampaignID: "camp-1"})
 	if !errors.Is(err, ErrStateFactoryRequired) {
 		t.Fatalf("expected ErrStateFactoryRequired, got %v", err)
+	}
+}
+
+func TestReplayStateLoader_RequiresCheckpointStore(t *testing.T) {
+	loader := ReplayStateLoader{
+		Events: &trackingReplayEventStore{},
+		Folder: &aggregate.Folder{},
+		StateFactory: func() any {
+			return aggregate.State{}
+		},
+	}
+	_, err := loader.Load(context.Background(), command.Command{CampaignID: "camp-1"})
+	if !errors.Is(err, replay.ErrCheckpointStoreRequired) {
+		t.Fatalf("expected ErrCheckpointStoreRequired, got %v", err)
+	}
+}
+
+func TestReplayStateLoader_RequiresFolder(t *testing.T) {
+	loader := ReplayStateLoader{
+		Events:      &trackingReplayEventStore{},
+		Checkpoints: checkpoint.NewMemory(),
+		StateFactory: func() any {
+			return aggregate.State{}
+		},
+	}
+	_, err := loader.Load(context.Background(), command.Command{CampaignID: "camp-1"})
+	if !errors.Is(err, replay.ErrFolderRequired) {
+		t.Fatalf("expected ErrFolderRequired, got %v", err)
 	}
 }
 

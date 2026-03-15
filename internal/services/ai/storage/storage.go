@@ -142,6 +142,16 @@ type AuditEventPage struct {
 	NextPageToken string
 }
 
+// CampaignArtifactRecord stores one campaign-scoped GM working artifact.
+type CampaignArtifactRecord struct {
+	CampaignID string
+	Path       string
+	Content    string
+	ReadOnly   bool
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
 // AuditEventFilter narrows owner-scoped audit event listing.
 //
 // Security note: owner scope is mandatory and enforced separately; these fields
@@ -227,4 +237,11 @@ type AccessRequestStore interface {
 type AuditEventStore interface {
 	PutAuditEvent(ctx context.Context, record AuditEventRecord) error
 	ListAuditEventsByOwner(ctx context.Context, ownerUserID string, pageSize int, pageToken string, filter AuditEventFilter) (AuditEventPage, error)
+}
+
+// CampaignArtifactStore persists campaign-scoped GM working artifacts.
+type CampaignArtifactStore interface {
+	PutCampaignArtifact(ctx context.Context, record CampaignArtifactRecord) error
+	GetCampaignArtifact(ctx context.Context, campaignID string, path string) (CampaignArtifactRecord, error)
+	ListCampaignArtifacts(ctx context.Context, campaignID string) ([]CampaignArtifactRecord, error)
 }

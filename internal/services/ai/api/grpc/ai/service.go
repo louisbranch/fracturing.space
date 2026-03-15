@@ -7,6 +7,7 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -115,6 +116,8 @@ type Service struct {
 	aiv1.UnimplementedAgentServiceServer
 	aiv1.UnimplementedInvocationServiceServer
 	aiv1.UnimplementedCampaignOrchestrationServiceServer
+	aiv1.UnimplementedCampaignArtifactServiceServer
+	aiv1.UnimplementedSystemReferenceServiceServer
 	aiv1.UnimplementedProviderGrantServiceServer
 	aiv1.UnimplementedAccessRequestServiceServer
 
@@ -124,7 +127,11 @@ type Service struct {
 	connectSessionStore        storage.ProviderConnectSessionStore
 	accessRequestStore         storage.AccessRequestStore
 	auditEventStore            storage.AuditEventStore
+	campaignArtifactManager    *campaigncontext.Manager
+	systemReferenceCorpus      *campaigncontext.ReferenceCorpus
 	gameCampaignAIClient       gamev1.CampaignAIServiceClient
+	gameAuthorizationClient    gamev1.AuthorizationServiceClient
+	internalServiceAllowlist   map[string]struct{}
 	providerOAuthAdapters      map[providergrant.Provider]ProviderOAuthAdapter
 	providerInvocationAdapters map[providergrant.Provider]ProviderInvocationAdapter
 	providerToolAdapters       map[providergrant.Provider]orchestration.Provider
@@ -181,6 +188,15 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 			auditEventStore = store
 		}
 	}
+	var campaignArtifactStore storage.CampaignArtifactStore
+	if store, ok := credentialStore.(storage.CampaignArtifactStore); ok {
+		campaignArtifactStore = store
+	}
+	if campaignArtifactStore == nil {
+		if store, ok := agentStore.(storage.CampaignArtifactStore); ok {
+			campaignArtifactStore = store
+		}
+	}
 	defaultOpenAIAdapter := NewOpenAIInvokeAdapter(OpenAIInvokeConfig{})
 	providerModelAdapters := map[providergrant.Provider]ProviderModelAdapter{}
 	if modelAdapter, ok := defaultOpenAIAdapter.(ProviderModelAdapter); ok {
@@ -190,7 +206,7 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 	if toolAdapter, ok := defaultOpenAIAdapter.(orchestration.Provider); ok {
 		providerToolAdapters[providergrant.ProviderOpenAI] = toolAdapter
 	}
-	return &Service{
+	service := &Service{
 		credentialStore:     credentialStore,
 		agentStore:          agentStore,
 		providerGrantStore:  providerGrantStore,
@@ -212,6 +228,10 @@ func NewService(credentialStore storage.CredentialStore, agentStore storage.Agen
 			return generatePKCECodeVerifier()
 		},
 	}
+	if campaignArtifactStore != nil {
+		service.campaignArtifactManager = campaigncontext.NewManager(campaignArtifactStore, time.Now)
+	}
+	return service
 }
 
 // SetGameCampaignAIClient sets the game internal campaign AI client.
@@ -220,6 +240,39 @@ func (s *Service) SetGameCampaignAIClient(client gamev1.CampaignAIServiceClient)
 		return
 	}
 	s.gameCampaignAIClient = client
+}
+
+// SetGameAuthorizationClient sets the game authorization client used for user-scoped campaign validation.
+func (s *Service) SetGameAuthorizationClient(client gamev1.AuthorizationServiceClient) {
+	if s == nil {
+		return
+	}
+	s.gameAuthorizationClient = client
+}
+
+// SetInternalServiceAllowlist defines which inbound service identities may use
+// internal-only campaign-context access without a user-scoped authz hop.
+func (s *Service) SetInternalServiceAllowlist(allowlist map[string]struct{}) {
+	if s == nil {
+		return
+	}
+	s.internalServiceAllowlist = allowlist
+}
+
+// SetCampaignArtifactManager overrides the campaign artifact manager.
+func (s *Service) SetCampaignArtifactManager(manager *campaigncontext.Manager) {
+	if s == nil || manager == nil {
+		return
+	}
+	s.campaignArtifactManager = manager
+}
+
+// SetSystemReferenceCorpus overrides the system reference corpus.
+func (s *Service) SetSystemReferenceCorpus(corpus *campaigncontext.ReferenceCorpus) {
+	if s == nil || corpus == nil {
+		return
+	}
+	s.systemReferenceCorpus = corpus
 }
 
 // SetOpenAIOAuthAdapter overrides the OpenAI OAuth adapter implementation.

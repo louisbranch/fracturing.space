@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
@@ -146,6 +147,45 @@ func registerContextTools(
 	))
 }
 
+func registerCampaignContextTools(
+	registrar mcpRegistrationTarget,
+	campaignArtifactClient aiv1.CampaignArtifactServiceClient,
+	systemReferenceClient aiv1.SystemReferenceServiceClient,
+	getContext func() domain.Context,
+	notify domain.ResourceUpdateNotifier,
+) error {
+	if campaignArtifactClient != nil {
+		registrations := []struct {
+			tool    *mcp.Tool
+			handler any
+		}{
+			{tool: domain.CampaignArtifactListTool(), handler: domain.CampaignArtifactListHandler(campaignArtifactClient, getContext)},
+			{tool: domain.CampaignArtifactGetTool(), handler: domain.CampaignArtifactGetHandler(campaignArtifactClient, getContext)},
+			{tool: domain.CampaignArtifactUpsertTool(), handler: domain.CampaignArtifactUpsertHandler(campaignArtifactClient, getContext, notify)},
+		}
+		for _, registration := range registrations {
+			if err := registerTool(registrar, registration.tool, registration.handler); err != nil {
+				return err
+			}
+		}
+	}
+	if systemReferenceClient != nil {
+		registrations := []struct {
+			tool    *mcp.Tool
+			handler any
+		}{
+			{tool: domain.SystemReferenceSearchTool(), handler: domain.SystemReferenceSearchHandler(systemReferenceClient)},
+			{tool: domain.SystemReferenceReadTool(), handler: domain.SystemReferenceReadHandler(systemReferenceClient)},
+		}
+		for _, registration := range registrations {
+			if err := registerTool(registrar, registration.tool, registration.handler); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
 func registerTool(registrar mcpRegistrationTarget, tool *mcp.Tool, handler any) error {
 	if tool == nil {
 		return fmt.Errorf("tool is nil")
@@ -189,4 +229,13 @@ func registerInteractionResources(registrar mcpRegistrationTarget, client statev
 // registerContextResources registers readable context MCP resources.
 func registerContextResources(registrar mcpRegistrationTarget, server *Server) {
 	registrar.AddResource(domain.ContextResource(), domain.ContextResourceHandler(server.getContext))
+}
+
+// registerCampaignContextResources registers readable AI-backed campaign-context resources.
+func registerCampaignContextResources(registrar mcpRegistrationTarget, client aiv1.CampaignArtifactServiceClient) {
+	if client == nil {
+		return
+	}
+	registrar.AddResourceTemplate(domain.CampaignArtifactListResourceTemplate(), domain.CampaignArtifactListResourceHandler(client))
+	registrar.AddResourceTemplate(domain.CampaignArtifactResourceTemplate(), domain.CampaignArtifactResourceHandler(client))
 }

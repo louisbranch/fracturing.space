@@ -3,6 +3,7 @@ package service
 import (
 	"fmt"
 
+	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
@@ -40,16 +41,18 @@ const (
 )
 
 type mcpRegistrationClients struct {
-	daggerheartClient daggerheartv1.DaggerheartServiceClient
-	campaignClient    statev1.CampaignServiceClient
-	participantClient statev1.ParticipantServiceClient
-	characterClient   statev1.CharacterServiceClient
-	snapshotClient    statev1.SnapshotServiceClient
-	sessionClient     statev1.SessionServiceClient
-	sceneClient       statev1.SceneServiceClient
-	interactionClient statev1.InteractionServiceClient
-	forkClient        statev1.ForkServiceClient
-	eventClient       statev1.EventServiceClient
+	daggerheartClient      daggerheartv1.DaggerheartServiceClient
+	campaignClient         statev1.CampaignServiceClient
+	participantClient      statev1.ParticipantServiceClient
+	characterClient        statev1.CharacterServiceClient
+	snapshotClient         statev1.SnapshotServiceClient
+	sessionClient          statev1.SessionServiceClient
+	sceneClient            statev1.SceneServiceClient
+	interactionClient      statev1.InteractionServiceClient
+	forkClient             statev1.ForkServiceClient
+	eventClient            statev1.EventServiceClient
+	campaignArtifactClient aiv1.CampaignArtifactServiceClient
+	systemReferenceClient  aiv1.SystemReferenceServiceClient
 }
 
 type mcpServerRegistrationAdapter struct {
@@ -122,6 +125,11 @@ var mcpToolRegistrars = []mcpToolRegistrar{
 	newMCPToolRegistrar[domain.CampaignForkInput, domain.CampaignForkResult](),
 	newMCPToolRegistrar[domain.CampaignLineageInput, domain.CampaignLineageResult](),
 	newMCPToolRegistrar[domain.SetContextInput, domain.SetContextResult](),
+	newMCPToolRegistrar[domain.CampaignArtifactListInput, domain.CampaignArtifactListResult](),
+	newMCPToolRegistrar[domain.CampaignArtifactGetInput, domain.CampaignArtifactResult](),
+	newMCPToolRegistrar[domain.CampaignArtifactUpsertInput, domain.CampaignArtifactResult](),
+	newMCPToolRegistrar[domain.SystemReferenceSearchInput, domain.SystemReferenceSearchResult](),
+	newMCPToolRegistrar[domain.SystemReferenceReadInput, domain.SystemReferenceDocumentResult](),
 }
 
 func addMCPTool(server *mcp.Server, tool *mcp.Tool, handler any) error {
@@ -143,7 +151,7 @@ func newMCPRegistrationModules(
 	clients mcpRegistrationClients,
 	notify domain.ResourceUpdateNotifier,
 ) []mcpRegistrationModule {
-	return []mcpRegistrationModule{
+	modules := []mcpRegistrationModule{
 		{
 			name: mcpDaggerheartToolsModuleName,
 			kind: mcpRegistrationKindTools,
@@ -249,4 +257,24 @@ func newMCPRegistrationModules(
 			},
 		},
 	}
+	if clients.campaignArtifactClient != nil || clients.systemReferenceClient != nil {
+		modules = append(modules, mcpRegistrationModule{
+			name: "campaign-context-tools",
+			kind: mcpRegistrationKindTools,
+			register: func(registrar mcpRegistrationTarget) error {
+				return registerCampaignContextTools(registrar, clients.campaignArtifactClient, clients.systemReferenceClient, server.getContext, notify)
+			},
+		})
+	}
+	if clients.campaignArtifactClient != nil {
+		modules = append(modules, mcpRegistrationModule{
+			name: "campaign-context-resources",
+			kind: mcpRegistrationKindResources,
+			register: func(registrar mcpRegistrationTarget) error {
+				registerCampaignContextResources(registrar, clients.campaignArtifactClient)
+				return nil
+			},
+		})
+	}
+	return modules
 }

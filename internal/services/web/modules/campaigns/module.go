@@ -73,9 +73,6 @@ func validateHandlerServices(services handlerServices) error {
 	if services.Catalog == nil {
 		missing = append(missing, "catalog")
 	}
-	if services.Starters == nil {
-		missing = append(missing, "starters")
-	}
 	if services.Workspace == nil {
 		missing = append(missing, "workspace")
 	}

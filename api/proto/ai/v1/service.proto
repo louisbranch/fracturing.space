@@ -179,6 +179,18 @@ service CampaignOrchestrationService {
   rpc RunCampaignTurn(RunCampaignTurnRequest) returns (RunCampaignTurnResponse);
 }
 
+service CampaignArtifactService {
+  rpc EnsureCampaignArtifacts(EnsureCampaignArtifactsRequest) returns (EnsureCampaignArtifactsResponse);
+  rpc ListCampaignArtifacts(ListCampaignArtifactsRequest) returns (ListCampaignArtifactsResponse);
+  rpc GetCampaignArtifact(GetCampaignArtifactRequest) returns (GetCampaignArtifactResponse);
+  rpc UpsertCampaignArtifact(UpsertCampaignArtifactRequest) returns (UpsertCampaignArtifactResponse);
+}
+
+service SystemReferenceService {
+  rpc SearchSystemReference(SearchSystemReferenceRequest) returns (SearchSystemReferenceResponse);
+  rpc ReadSystemReferenceDocument(ReadSystemReferenceDocumentRequest) returns (ReadSystemReferenceDocumentResponse);
+}
+
 service ProviderGrantService {
   rpc StartProviderConnect(StartProviderConnectRequest) returns (StartProviderConnectResponse);
   rpc FinishProviderConnect(FinishProviderConnectRequest) returns (FinishProviderConnectResponse);
@@ -298,6 +310,90 @@ message RunCampaignTurnResponse {
   string output_text = 1;
   Provider provider = 2;
   string model = 3;
+}
+
+message CampaignArtifact {
+  string campaign_id = 1;
+  string path = 2;
+  string content = 3;
+  bool read_only = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+message EnsureCampaignArtifactsRequest {
+  string campaign_id = 1;
+  string story_seed_markdown = 2;
+}
+
+message EnsureCampaignArtifactsResponse {
+  repeated CampaignArtifact artifacts = 1;
+}
+
+message ListCampaignArtifactsRequest {
+  string campaign_id = 1;
+}
+
+message ListCampaignArtifactsResponse {
+  repeated CampaignArtifact artifacts = 1;
+}
+
+message GetCampaignArtifactRequest {
+  string campaign_id = 1;
+  string path = 2;
+}
+
+message GetCampaignArtifactResponse {
+  CampaignArtifact artifact = 1;
+}
+
+message UpsertCampaignArtifactRequest {
+  string campaign_id = 1;
+  string path = 2;
+  string content = 3;
+}
+
+message UpsertCampaignArtifactResponse {
+  CampaignArtifact artifact = 1;
+}
+
+message SystemReferenceDocument {
+  string system = 1;
+  string document_id = 2;
+  string title = 3;
+  string kind = 4;
+  string path = 5;
+  repeated string aliases = 6;
+  string content = 7;
+}
+
+message SystemReferenceDocumentSummary {
+  string system = 1;
+  string document_id = 2;
+  string title = 3;
+  string kind = 4;
+  string path = 5;
+  repeated string aliases = 6;
+  string snippet = 7;
+}
+
+message SearchSystemReferenceRequest {
+  string system = 1;
+  string query = 2;
+  int32 max_results = 3;
+}
+
+message SearchSystemReferenceResponse {
+  repeated SystemReferenceDocumentSummary results = 1;
+}
+
+message ReadSystemReferenceDocumentRequest {
+  string system = 1;
+  string document_id = 2;
+}
+
+message ReadSystemReferenceDocumentResponse {
+  SystemReferenceDocument document = 1;
 }
 
 message StartProviderConnectRequest {

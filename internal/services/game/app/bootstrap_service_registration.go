@@ -99,6 +99,7 @@ func buildServiceDescriptors(
 		Participant:        stores.Participant,
 		Character:          stores.Character,
 		Session:            stores.Session,
+		SessionInteraction: stores.SessionInteraction,
 		Daggerheart:        stores.SystemStores.Daggerheart,
 		Social:             stores.Social,
 		Write:              stores.Write,
@@ -201,6 +202,7 @@ func buildServiceDescriptors(
 		Audit:       stores.Audit,
 	})
 	campaignAIService := campaigntransport.NewCampaignAIService(campaignDeps)
+	campaignAIOrchestrationService := gamegrpc.NewCampaignAIOrchestrationService(stores)
 	interactionService := gamegrpc.NewInteractionService(stores)
 
 	descriptors := []grpcServiceDescriptor{
@@ -232,6 +234,12 @@ func buildServiceDescriptors(
 			healthService: "game.v1.CampaignAIService",
 			register: func(server *grpc.Server) {
 				statev1.RegisterCampaignAIServiceServer(server, campaignAIService)
+			},
+		},
+		{
+			healthService: "game.v1.CampaignAIOrchestrationService",
+			register: func(server *grpc.Server) {
+				statev1.RegisterCampaignAIOrchestrationServiceServer(server, campaignAIOrchestrationService)
 			},
 		},
 		{

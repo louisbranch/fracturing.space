@@ -40,13 +40,14 @@ func (f *Sealer) Open(sealed string) (string, error) {
 
 // Store is an in-memory AI storage fake used by service-level tests.
 type Store struct {
-	Credentials     map[string]storage.CredentialRecord
-	Agents          map[string]storage.AgentRecord
-	AccessRequests  map[string]storage.AccessRequestRecord
-	ProviderGrants  map[string]storage.ProviderGrantRecord
-	ConnectSessions map[string]storage.ProviderConnectSessionRecord
-	AuditEvents     []storage.AuditEventRecord
-	AuditEventNames []string
+	Credentials       map[string]storage.CredentialRecord
+	Agents            map[string]storage.AgentRecord
+	AccessRequests    map[string]storage.AccessRequestRecord
+	ProviderGrants    map[string]storage.ProviderGrantRecord
+	ConnectSessions   map[string]storage.ProviderConnectSessionRecord
+	CampaignArtifacts map[string]storage.CampaignArtifactRecord
+	AuditEvents       []storage.AuditEventRecord
+	AuditEventNames   []string
 
 	ListAccessRequestsByRequesterErr   error
 	ListAccessRequestsByRequesterCalls int
@@ -56,12 +57,17 @@ type Store struct {
 // NewStore creates an initialized in-memory store fake.
 func NewStore() *Store {
 	return &Store{
-		Credentials:     make(map[string]storage.CredentialRecord),
-		Agents:          make(map[string]storage.AgentRecord),
-		AccessRequests:  make(map[string]storage.AccessRequestRecord),
-		ProviderGrants:  make(map[string]storage.ProviderGrantRecord),
-		ConnectSessions: make(map[string]storage.ProviderConnectSessionRecord),
+		Credentials:       make(map[string]storage.CredentialRecord),
+		Agents:            make(map[string]storage.AgentRecord),
+		AccessRequests:    make(map[string]storage.AccessRequestRecord),
+		ProviderGrants:    make(map[string]storage.ProviderGrantRecord),
+		ConnectSessions:   make(map[string]storage.ProviderConnectSessionRecord),
+		CampaignArtifacts: make(map[string]storage.CampaignArtifactRecord),
 	}
+}
+
+func campaignArtifactKey(campaignID, path string) string {
+	return strings.TrimSpace(campaignID) + "\x00" + strings.TrimSpace(path)
 }
 
 // PutCredential stores a credential record.
@@ -162,6 +168,38 @@ func (s *Store) DeleteAgent(_ context.Context, ownerUserID string, agentID strin
 	}
 	delete(s.Agents, agentID)
 	return nil
+}
+
+// PutCampaignArtifact stores one campaign-scoped GM artifact snapshot.
+func (s *Store) PutCampaignArtifact(_ context.Context, record storage.CampaignArtifactRecord) error {
+	if s.CampaignArtifacts == nil {
+		s.CampaignArtifacts = make(map[string]storage.CampaignArtifactRecord)
+	}
+	s.CampaignArtifacts[campaignArtifactKey(record.CampaignID, record.Path)] = record
+	return nil
+}
+
+// GetCampaignArtifact returns one campaign artifact by campaign and path.
+func (s *Store) GetCampaignArtifact(_ context.Context, campaignID string, path string) (storage.CampaignArtifactRecord, error) {
+	record, ok := s.CampaignArtifacts[campaignArtifactKey(campaignID, path)]
+	if !ok {
+		return storage.CampaignArtifactRecord{}, storage.ErrNotFound
+	}
+	return record, nil
+}
+
+// ListCampaignArtifacts returns all artifacts for one campaign ordered by path.
+func (s *Store) ListCampaignArtifacts(_ context.Context, campaignID string) ([]storage.CampaignArtifactRecord, error) {
+	records := make([]storage.CampaignArtifactRecord, 0)
+	for _, record := range s.CampaignArtifacts {
+		if strings.TrimSpace(record.CampaignID) == strings.TrimSpace(campaignID) {
+			records = append(records, record)
+		}
+	}
+	sort.Slice(records, func(i, j int) bool {
+		return strings.Compare(records[i].Path, records[j].Path) < 0
+	})
+	return records, nil
 }
 
 // PutAccessRequest stores an access request record.
