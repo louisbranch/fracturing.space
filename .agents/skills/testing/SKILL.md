@@ -55,6 +55,23 @@ Example:
   - `make check` before pushing or updating a PR
 - Do not run `make cover*` in parallel with `make check`; `make check` already
   generates the shared coverage artifacts.
+- When a verification command is running in the background, inspect
+  `.tmp/test-status/` instead of repeatedly re-running or blindly polling the
+  process.
+- Use `.tmp/test-status/test/status.json` for `make test`.
+- Use `.tmp/test-status/smoke/status.json` for overall `make smoke` stage
+  progress.
+- Use `.tmp/test-status/smoke/integration/status.json` and
+  `.tmp/test-status/smoke/scenario/status.json` for lane-specific `make smoke`
+  progress.
+- Use `.tmp/test-status/check/status.json` for `make check` stage progress.
+- If `make check` is in `check-runtime`, read
+  `.tmp/test-status/check-runtime/scenario/status.json`.
+- If `make check` is in `check-coverage`, read `.tmp/test-status/cover/status.json`
+  and the nested shard status files under `.tmp/test-status/cover/`.
+- Treat `state`, `current_stage`, `current_package`, `current_test`,
+  `packages_completed`, `packages_running`, `updated_at_utc`, and
+  `last_event_at_utc` as the primary fields for liveness and progress.
 - If a command cannot run locally, report why and what risk remains.
 
 ## Removal Policy

@@ -75,6 +75,27 @@ Supported command surface:
 - Use `make cover` and `make cover-critical-domain` only for focused diagnostics
   when you need standalone coverage output separate from `make check`.
 
+Agent progress workflow:
+
+- When a verification command runs in the background, do not re-run it just to
+  see whether it is alive. Inspect the status files under `.tmp/test-status/`.
+- Poll `.tmp/test-status/test/status.json` for `make test`.
+- Poll `.tmp/test-status/smoke/status.json` for overall `make smoke` stage
+  progress.
+- Inspect `.tmp/test-status/smoke/integration/status.json` and
+  `.tmp/test-status/smoke/scenario/status.json` for lane-specific `make smoke`
+  progress.
+- Poll `.tmp/test-status/check/status.json` for `make check` stage progress.
+- When `make check` is in `check-runtime`, inspect
+  `.tmp/test-status/check-runtime/scenario/status.json` for the active package
+  or test.
+- When `make check` is in `check-coverage`, inspect
+  `.tmp/test-status/cover/status.json`, plus nested shard status files under
+  `.tmp/test-status/cover/`, for the active coverage stage and slow shard.
+- Prefer the JSON fields `state`, `current_stage`, `current_package`,
+  `current_test`, `packages_completed`, `packages_running`, `updated_at_utc`,
+  and `last_event_at_utc` when deciding whether a lane is progressing or stuck.
+
 ## Documentation and Knowledge Durability
 
 - Document both exported and non-exported functions/types with "why" context.

@@ -8,6 +8,9 @@ SCENARIO_SMOKE_MANIFEST := internal/test/game/scenarios/manifests/smoke.txt
 SCENARIO_DEFAULT_PARALLELISM ?= 4
 GO_TEST_CACHE_DIR ?= $(CURDIR)/.tmp/go-cache
 GO_TEST_TMP_DIR ?= $(CURDIR)/.tmp/go-build
+TEST_PROGRESS_DIR ?= $(CURDIR)/.tmp/test-status
+TEST_PROGRESS_HEARTBEAT ?= 10s
+INTEGRATION_COVERAGE_SHARDS ?= 4
 INTEGRATION_SMOKE_FULL_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackbox)$$
 INTEGRATION_SMOKE_PR_PATTERN := ^(TestMCPStdioEndToEnd|TestMCPHTTPBlackboxSmoke)$$
 
@@ -23,7 +26,7 @@ PROTO_FILES := \
 	$(wildcard $(PROTO_DIR)/systems/daggerheart/v1/*.proto) \
 	$(wildcard $(PROTO_DIR)/status/v1/*.proto)
 
-.PHONY: all proto clean up down cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
+.PHONY: all proto clean up down cover cover-core cover-critical-domain cover-critical-domain-core check-coverage cover-package-floors coverage-floors-ratchet cover-treemap test test-changed smoke smoke-integration smoke-scenario check check-core check-focused check-runtime ci-integration-shard ci-integration-shard-check ci-scenario-shard ci-scenario-shard-check templ-generate event-catalog-check topology-generate topology-check i18n-check i18n-status i18n-status-check docs-check docs-path-check docs-link-check docs-index-check docs-nav-quality-check docs-lifecycle-check docs-web-route-check docs-architecture-budget-check web-architecture-check game-architecture-check admin-architecture-check web-package-comment-check web-declaration-comment-check web-comment-quality-check web-doc-baseline-update negative-test-assertion-check tool-cli-contract-check tools-check fmt fmt-check catalog-importer bootstrap bootstrap-prod setup-hooks
 
 all: proto
 
@@ -81,16 +84,13 @@ cover:
 	@COVERAGE_LOCK_LABEL='make cover' bash ./scripts/with-coverage-lock.sh $(MAKE) cover-core
 
 cover-core:
-	mkdir -p "$(GO_TEST_CACHE_DIR)" "$(GO_TEST_TMP_DIR)"
-	rm -f coverage.raw coverage.out coverage.html coverage-treemap.svg coverage.log
-	GOCACHE="$(GO_TEST_CACHE_DIR)" GOTMPDIR="$(GO_TEST_TMP_DIR)" go test -count=1 -tags=integration -covermode=set -coverprofile=coverage.raw ./... > coverage.log 2>&1
-	{ \
-	  head -n 1 coverage.raw; \
-	  tail -n +2 coverage.raw | grep -E '^[^[:space:]]+:[0-9]+\.[0-9]+,[0-9]+\.[0-9]+ [0-9]+ [0-9]+$$' | grep -Ev '$(COVER_EXCLUDE_REGEX)'; \
-	} > coverage.out
-	go tool cover -func coverage.out > coverage.func
-	@awk '/^total:/{print}' coverage.func
-	go tool cover -html=coverage.out -o coverage.html
+	COVER_EXCLUDE_REGEX='$(COVER_EXCLUDE_REGEX)' \
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" \
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	GO_TEST_TMP_DIR="$(GO_TEST_TMP_DIR)" \
+	INTEGRATION_COVERAGE_SHARDS="$(INTEGRATION_COVERAGE_SHARDS)" \
+	TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
+	bash ./scripts/cover-full.sh
 
 cover-critical-domain:
 	@COVERAGE_LOCK_LABEL='make cover-critical-domain' bash ./scripts/with-coverage-lock.sh $(MAKE) cover-critical-domain-core
@@ -117,25 +117,39 @@ cover-treemap: cover
 	go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg
 
 test:
-	go test ./...
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
+	bash ./scripts/go-test-progress.sh \
+		--label test \
+		--status-dir "$(TEST_PROGRESS_DIR)/test" \
+		-- \
+		go test -json ./...
 
 test-changed:
 	@bash ./scripts/test-changed.sh
 
 smoke:
-	$(MAKE) event-catalog-check
-	$(MAKE) topology-check
-	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} go test -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_PR_PATTERN)'
-	@bash -euo pipefail -c ' \
-		scenario_parallelism="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}"; \
-		SCENARIO_MANIFEST="$(SCENARIO_SMOKE_MANIFEST)" go test -parallel="$$scenario_parallelism" -tags=scenario ./internal/test/game \
-	'
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" MAKE="$(MAKE)" bash ./scripts/smoke.sh
+
+smoke-integration:
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
+	bash ./scripts/go-test-progress.sh \
+		--label smoke-integration \
+		--status-dir "$(TEST_PROGRESS_DIR)/smoke/integration" \
+		-- \
+		env INTEGRATION_SHARED_FIXTURE="$${INTEGRATION_SHARED_FIXTURE:-true}" \
+		go test -json -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_PR_PATTERN)'
+
+smoke-scenario:
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
+	bash ./scripts/go-test-progress.sh \
+		--label smoke-scenario \
+		--status-dir "$(TEST_PROGRESS_DIR)/smoke/scenario" \
+		-- \
+		env SCENARIO_MANIFEST="$(SCENARIO_SMOKE_MANIFEST)" \
+		go test -json -parallel="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}" -tags=scenario ./internal/test/game
 
 check:
-	$(MAKE) check-core
-	$(MAKE) check-focused
-	$(MAKE) check-runtime
-	$(MAKE) check-coverage
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" MAKE="$(MAKE)" bash ./scripts/check.sh
 
 check-core:
 	$(MAKE) docs-check
@@ -143,19 +157,22 @@ check-core:
 	$(MAKE) i18n-check
 	$(MAKE) i18n-status-check
 	$(MAKE) negative-test-assertion-check
-	$(MAKE) test
 
 check-focused:
 	@bash ./scripts/check-focused-gates.sh
 
 check-runtime:
+	@echo "[check-runtime] stage 1/3: event-catalog-check"
 	$(MAKE) event-catalog-check
+	@echo "[check-runtime] stage 2/3: topology-check"
 	$(MAKE) topology-check
-	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} go test -tags=integration ./...
-	@bash -euo pipefail -c ' \
-		scenario_parallelism="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}"; \
-		go test -parallel="$$scenario_parallelism" -tags=scenario ./internal/test/game \
-	'
+	@echo "[check-runtime] stage 3/3: scenario"
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
+	bash ./scripts/go-test-progress.sh \
+		--label check-runtime-scenario \
+		--status-dir "$(TEST_PROGRESS_DIR)/check-runtime/scenario" \
+		-- \
+		go test -json -parallel="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}" -tags=scenario ./internal/test/game
 
 ci-integration-shard:
 	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} INTEGRATION_SHARD_TOTAL=$${INTEGRATION_SHARD_TOTAL:?set INTEGRATION_SHARD_TOTAL} INTEGRATION_SHARD_INDEX=$${INTEGRATION_SHARD_INDEX:?set INTEGRATION_SHARD_INDEX} bash ./scripts/integration-shard.sh
