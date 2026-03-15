@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-14T20:10:42Z",
+  "updated_at": "2026-03-15T00:18:17Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -190,7 +190,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/tools/testruntimereport",
-      "floor": 61.1,
+      "floor": 66.9,
       "description": "CLI contract and test runtime budget reporting behavior."
     },
     {
