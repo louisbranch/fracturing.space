@@ -52,7 +52,7 @@ func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 		h.WriteError(w, r, err)
 		return
 	}
-	h.writeNotificationsPage(w, r, loc, listItems, nil)
+	h.writeNotificationsPage(w, r, loc, routepath.AppNotifications, listItems, nil)
 }
 
 // handleDetail handles this route in the module transport layer.
@@ -69,7 +69,12 @@ func (h handlers) handleDetail(w http.ResponseWriter, r *http.Request, notificat
 		h.WriteError(w, r, err)
 		return
 	}
-	h.writeNotificationsPage(w, r, loc, listItems, h.notificationDetailView(item, loc))
+	selected := h.notificationDetailView(item, loc)
+	currentPath := routepath.AppNotification(notificationID)
+	if selected != nil && strings.TrimSpace(selected.DetailURL) != "" {
+		currentPath = selected.DetailURL
+	}
+	h.writeNotificationsPage(w, r, loc, currentPath, listItems, selected)
 }
 
 // handleOpen handles this route in the module transport layer.
@@ -101,6 +106,7 @@ func (h handlers) writeNotificationsPage(
 	w http.ResponseWriter,
 	r *http.Request,
 	loc webtemplates.Localizer,
+	currentPath string,
 	items []NotificationListItemView,
 	selected *NotificationDetailView,
 ) {
@@ -110,7 +116,7 @@ func (h handlers) writeNotificationsPage(
 		webtemplates.T(loc, "game.notifications.title"),
 		http.StatusOK,
 		notificationsMainHeader(loc),
-		webtemplates.AppMainLayoutOptions{},
+		webtemplates.AppMainLayoutOptions{SideMenu: notificationsSideMenu(currentPath, items, loc)},
 		NotificationsFragment(NotificationsPageView{
 			Items:    items,
 			Selected: selected,

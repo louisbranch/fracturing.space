@@ -40,13 +40,14 @@ var lucideIconNames = map[commonv1.IconId]string{
 	commonv1.IconId_ICON_ID_ENVIRONMENT:  "map",
 	commonv1.IconId_ICON_ID_ANIMAL:       "paw-print",
 	commonv1.IconId_ICON_ID_PROFILE:      "circle-user",
-	commonv1.IconId_ICON_ID_INVITES:      "mail",
+	commonv1.IconId_ICON_ID_INVITES:      "user-plus",
 	commonv1.IconId_ICON_ID_NOTIFICATION: "bell",
 	commonv1.IconId_ICON_ID_AI:           "bot",
 	commonv1.IconId_ICON_ID_KEY:          "key",
 	commonv1.IconId_ICON_ID_LOG_OUT:      "log-out",
 	commonv1.IconId_ICON_ID_SETTINGS:     "settings",
 	commonv1.IconId_ICON_ID_LOCALE:       "languages",
+	commonv1.IconId_ICON_ID_MESSAGE:      "mail",
 }
 
 // LucideName returns the Lucide icon name for a core icon identifier.
