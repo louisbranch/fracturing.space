@@ -64,7 +64,7 @@ templ invitesFragment(view InvitesPageView, loc Localizer) {
 									<p class="text-sm opacity-70 md:col-span-2" data-campaign-invite-create-empty="true">{ T(loc, "game.campaign_invites.empty_targets") }</p>
 								}
 								<div class="md:col-span-2 card-actions justify-end">
-									<button class="btn btn-primary" type="submit" disabled?={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-disabled={ len(view.InviteSeatOptions) == 0 }>{ T(loc, "game.campaign_invites.submit_create") }</button>
+									<button class="btn btn-primary" type="submit" disabled?={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-disabled={ len(view.InviteSeatOptions) == 0 } data-campaign-invite-create-submit="true">{ T(loc, "game.campaign_invites.submit_create") }</button>
 								</div>
 							</form>
 						}
@@ -78,7 +78,10 @@ templ invitesFragment(view InvitesPageView, loc Localizer) {
 				for _, invite := range view.Invites {
 					<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-invite-card-id={ invite.ID }>
 						<div class="card-body gap-2 p-4">
-							<p data-campaign-invite-participant={ invite.ParticipantID }>{ invite.ParticipantName }</p>
+							<div class="flex items-start justify-between gap-3">
+								<p data-campaign-invite-participant={ invite.ParticipantID }>{ invite.ParticipantName }</p>
+								<span class="badge badge-outline shrink-0" data-campaign-invite-status={ campaignInviteStatusLabel(loc, invite.Status) }>{ campaignInviteStatusLabel(loc, invite.Status) }</span>
+							</div>
 							if invite.RecipientUsername != "" {
 								<p data-campaign-invite-recipient={ invite.RecipientUsername }>{ "@" + invite.RecipientUsername }</p>
 							} else if invite.HasRecipient {
@@ -90,7 +93,6 @@ templ invitesFragment(view InvitesPageView, loc Localizer) {
 								</span>
 								<input class="input input-bordered input-sm w-full" type="text" readonly value={ invite.PublicURL } data-campaign-invite-public-url="true"/>
 							</label>
-							<p data-campaign-invite-status={ campaignInviteStatusLabel(loc, invite.Status) }>{ campaignInviteStatusLabel(loc, invite.Status) }</p>
 							if view.CanManageInvites && campaignInviteCanRevoke(invite.Status) {
 								<div class="card-actions justify-end">
 									if campaignActionsLocked(view.ActionsLocked) {
@@ -100,7 +102,7 @@ templ invitesFragment(view InvitesPageView, loc Localizer) {
 									} else {
 										<form method="post" action={ routepath.AppCampaignInviteRevoke(view.CampaignID) } data-campaign-invite-revoke-form="true">
 											<input type="hidden" name="invite_id" value={ invite.ID }/>
-											<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.campaign_invites.submit_revoke") }</button>
+											<button class="btn btn-outline btn-error btn-sm" type="submit" data-campaign-invite-revoke-submit="true">{ T(loc, "game.campaign_invites.submit_revoke") }</button>
 										</form>
 									}
 								</div>

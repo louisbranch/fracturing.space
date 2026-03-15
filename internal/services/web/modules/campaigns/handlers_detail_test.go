@@ -370,10 +370,13 @@ func TestMountCampaignInvitesRouteRendersInviteCards(t *testing.T) {
 		`data-campaign-invite-public-url="true"`,
 		`value="http://example.com/invite/inv-1"`,
 		`data-campaign-invite-create-form="true"`,
+		`data-campaign-invite-create-submit="true"`,
 		`data-campaign-invite-create-participant-select="true"`,
 		`data-campaign-invite-create-option-id="p-eligible"`,
 		`>Aria</option>`,
 		`data-campaign-invite-revoke-form="true"`,
+		`data-campaign-invite-revoke-submit="true"`,
+		`<script defer src="/static/username-input.js"></script>`,
 		`class="menu-active" href="/app/campaigns/c1/invites"`,
 	} {
 		if !strings.Contains(body, marker) {
@@ -446,6 +449,10 @@ func TestMountCampaignInvitesRouteHidesManageControlsWithoutInvitePermission(t *
 			t.Fatalf("body should not render invite manage control marker %q: %q", marker, body)
 		}
 	}
+	// Invariant: without invite-manage permission, the fragment must not load the client-side mutation UX script.
+	if strings.Contains(body, `<script defer src="/static/username-input.js"></script>`) {
+		t.Fatalf("body should not render invite mutation script without permission: %q", body)
+	}
 }
 
 func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *testing.T) {
@@ -506,6 +513,10 @@ func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *te
 		if strings.Contains(body, marker) {
 			t.Fatalf("body should not render live invite form marker %q while locked: %q", marker, body)
 		}
+	}
+	// Invariant: locked invite actions must not activate the client-side mutation UX script.
+	if strings.Contains(body, `<script defer src="/static/username-input.js"></script>`) {
+		t.Fatalf("body should not render invite mutation script while locked: %q", body)
 	}
 }
 

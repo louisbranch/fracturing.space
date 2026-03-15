@@ -236,6 +236,43 @@
     });
   }
 
+  function setupInviteMutationLoadingState() {
+    function markBusy(form, button) {
+      if (!form || !button) {
+        return;
+      }
+      form.setAttribute("aria-busy", "true");
+      form.setAttribute("data-campaign-submit-busy", "true");
+      button.disabled = true;
+      button.classList.add("loading");
+      button.setAttribute("aria-busy", "true");
+    }
+
+    function bindInviteSubmit(formSelector, buttonSelector) {
+      document.querySelectorAll(formSelector).forEach(function (form) {
+        if (form.getAttribute("data-campaign-submit-bound") === "true") {
+          return;
+        }
+        form.setAttribute("data-campaign-submit-bound", "true");
+        form.addEventListener("submit", function (event) {
+          if (form.getAttribute("data-campaign-submit-busy") === "true") {
+            event.preventDefault();
+            return;
+          }
+          var button = event.submitter || form.querySelector(buttonSelector);
+          if (!button) {
+            return;
+          }
+          markBusy(form, button);
+        });
+      });
+    }
+
+    bindInviteSubmit("[data-campaign-invite-create-form='true']", "[data-campaign-invite-create-submit='true']");
+    bindInviteSubmit("[data-campaign-invite-revoke-form='true']", "[data-campaign-invite-revoke-submit='true']");
+  }
+
   setupSignupUsernameCheck();
   setupInviteUsernameSearch();
+  setupInviteMutationLoadingState();
 })();

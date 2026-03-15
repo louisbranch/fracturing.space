@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -1266,6 +1267,86 @@ func TestCreateInviteMapsUnknownRecipientUsernameToValidationError(t *testing.T)
 	}
 }
 
+func TestCampaignInvitesHydratesRecipientUsernamesOncePerUniqueUser(t *testing.T) {
+	t.Parallel()
+
+	authClient := &contractAuthClient{
+		getUserRespByID: map[string]*authv1.GetUserResponse{
+			"user-2": {User: &authv1.User{Id: "user-2", Username: "river"}},
+			"user-3": {User: &authv1.User{Id: "user-3", Username: "ember"}},
+		},
+	}
+	gateway := inviteReadGateway{read: InviteReadDeps{
+		Invite: &contractInviteClient{listResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{
+			{Id: "inv-1", ParticipantId: "p1", RecipientUserId: "user-2", Status: statev1.InviteStatus_PENDING},
+			{Id: "inv-2", ParticipantId: "p2", RecipientUserId: "user-2", Status: statev1.InviteStatus_PENDING},
+			{Id: "inv-3", ParticipantId: "p3", RecipientUserId: "user-3", Status: statev1.InviteStatus_PENDING},
+		}}},
+		Participant: &contractParticipantClient{listResp: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{
+			{Id: "p1", Name: "Seat One"},
+			{Id: "p2", Name: "Seat Two"},
+			{Id: "p3", Name: "Seat Three"},
+		}}},
+		Auth: authClient,
+	}}
+
+	invites, err := gateway.CampaignInvites(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("CampaignInvites() error = %v", err)
+	}
+	if len(invites) != 3 {
+		t.Fatalf("len(invites) = %d, want 3", len(invites))
+	}
+	if invites[0].RecipientUsername != "river" || invites[1].RecipientUsername != "river" || invites[2].RecipientUsername != "ember" {
+		t.Fatalf("recipient usernames = %#v", invites)
+	}
+
+	if got := authClient.getUserRequestUserIDs(); len(got) != 2 {
+		t.Fatalf("GetUser request count = %d, want 2", len(got))
+	} else {
+		want := map[string]struct{}{"user-2": {}, "user-3": {}}
+		for _, userID := range got {
+			if _, ok := want[userID]; !ok {
+				t.Fatalf("unexpected GetUser request for %q in %v", userID, got)
+			}
+			delete(want, userID)
+		}
+		if len(want) != 0 {
+			t.Fatalf("missing GetUser requests for %v", want)
+		}
+	}
+}
+
+func TestCampaignInvitesFallsBackWhenRecipientLookupFails(t *testing.T) {
+	t.Parallel()
+
+	gateway := inviteReadGateway{read: InviteReadDeps{
+		Invite: &contractInviteClient{listResp: &statev1.ListInvitesResponse{Invites: []*statev1.Invite{
+			{Id: "inv-1", ParticipantId: "p1", RecipientUserId: "user-2", Status: statev1.InviteStatus_PENDING},
+		}}},
+		Participant: &contractParticipantClient{listResp: &statev1.ListParticipantsResponse{Participants: []*statev1.Participant{
+			{Id: "p1", Name: "Seat One"},
+		}}},
+		Auth: &contractAuthClient{
+			getUserErrByID: map[string]error{"user-2": status.Error(codes.Unavailable, "boom")},
+		},
+	}}
+
+	invites, err := gateway.CampaignInvites(context.Background(), "c1")
+	if err != nil {
+		t.Fatalf("CampaignInvites() error = %v", err)
+	}
+	if len(invites) != 1 {
+		t.Fatalf("len(invites) = %d, want 1", len(invites))
+	}
+	if invites[0].RecipientUsername != "" {
+		t.Fatalf("RecipientUsername = %q, want empty fallback", invites[0].RecipientUsername)
+	}
+	if !invites[0].HasRecipient {
+		t.Fatalf("HasRecipient = false, want true")
+	}
+}
+
 func TestMapCampaignCharacterCreationStepToProtoWrapper(t *testing.T) {
 	t.Parallel()
 
@@ -1556,9 +1637,13 @@ type contractSocialClient struct {
 }
 
 type contractAuthClient struct {
-	lookupResp *authv1.LookupUserByUsernameResponse
-	lookupErr  error
-	lastLookup *authv1.LookupUserByUsernameRequest
+	mu              sync.Mutex
+	lookupResp      *authv1.LookupUserByUsernameResponse
+	lookupErr       error
+	lastLookup      *authv1.LookupUserByUsernameRequest
+	getUserRespByID map[string]*authv1.GetUserResponse
+	getUserErrByID  map[string]error
+	getUserReqs     []*authv1.GetUserRequest
 }
 
 func (c *contractAuthClient) LookupUserByUsername(_ context.Context, req *authv1.LookupUserByUsernameRequest, _ ...grpc.CallOption) (*authv1.LookupUserByUsernameResponse, error) {
@@ -1572,12 +1657,42 @@ func (c *contractAuthClient) LookupUserByUsername(_ context.Context, req *authv1
 	return &authv1.LookupUserByUsernameResponse{}, nil
 }
 
-func (c *contractAuthClient) GetUser(context.Context, *authv1.GetUserRequest, ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+func (c *contractAuthClient) GetUser(_ context.Context, req *authv1.GetUserRequest, _ ...grpc.CallOption) (*authv1.GetUserResponse, error) {
+	c.mu.Lock()
+	c.getUserReqs = append(c.getUserReqs, req)
+	var err error
+	if c.getUserErrByID != nil {
+		err = c.getUserErrByID[req.GetUserId()]
+	}
+	var resp *authv1.GetUserResponse
+	if c.getUserRespByID != nil {
+		resp = c.getUserRespByID[req.GetUserId()]
+	}
+	c.mu.Unlock()
+	if err != nil {
+		return nil, err
+	}
+	if resp != nil {
+		return resp, nil
+	}
 	return &authv1.GetUserResponse{User: &authv1.User{}}, nil
 }
 
 func (c *contractAuthClient) IssueJoinGrant(context.Context, *authv1.IssueJoinGrantRequest, ...grpc.CallOption) (*authv1.IssueJoinGrantResponse, error) {
 	return &authv1.IssueJoinGrantResponse{JoinGrant: "grant"}, nil
+}
+
+func (c *contractAuthClient) getUserRequestUserIDs() []string {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	result := make([]string, 0, len(c.getUserReqs))
+	for _, req := range c.getUserReqs {
+		if req == nil {
+			continue
+		}
+		result = append(result, req.GetUserId())
+	}
+	return result
 }
 
 func (c *contractSocialClient) SearchUsers(context.Context, *socialv1.SearchUsersRequest, ...grpc.CallOption) (*socialv1.SearchUsersResponse, error) {
