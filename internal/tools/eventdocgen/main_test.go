@@ -14,6 +14,16 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/tools/cli"
 )
 
+func useSystemTempDir(t *testing.T) {
+	t.Helper()
+
+	// Keep this temp root outside the repo so module-root discovery cannot
+	// resolve the workspace go.mod through the wrapped local test TMPDIR.
+	t.Setenv("TMPDIR", "")
+	t.Setenv("TMP", "")
+	t.Setenv("TEMP", "")
+}
+
 func TestFindModuleRoot(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/test"), 0o644); err != nil {
@@ -34,6 +44,8 @@ func TestFindModuleRoot(t *testing.T) {
 }
 
 func TestFindModuleRootMissing(t *testing.T) {
+	useSystemTempDir(t)
+
 	root, err := os.MkdirTemp("", "eventdocgen-root-missing-*")
 	if err != nil {
 		t.Fatalf("mkdir temp: %v", err)
