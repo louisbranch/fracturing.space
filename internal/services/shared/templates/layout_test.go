@@ -167,8 +167,9 @@ func TestAppChromeLayoutRendersNotificationButtonLeftOfAvatar(t *testing.T) {
 	if !strings.Contains(got, `href="#lucide-bell"`) {
 		t.Fatalf("expected bell icon for read notification state, got %q", got)
 	}
-	if strings.Contains(got, `href="#lucide-bell-dot"`) {
-		t.Fatalf("expected read notification state to avoid bell-dot icon, got %q", got)
+	// Invariant: read notification state must not render the unread status dot.
+	if strings.Contains(got, `indicator-item status status-primary`) {
+		t.Fatalf("expected read notification state to avoid unread indicator, got %q", got)
 	}
 	notificationIndex := strings.Index(got, `href="/app/notifications"`)
 	avatarIndex := strings.Index(got, `class="btn btn-ghost btn-circle avatar"`)
@@ -189,7 +190,7 @@ func TestAppChromeLayoutRendersNotificationButtonLeftOfAvatar(t *testing.T) {
 	}
 }
 
-func TestAppChromeLayoutRendersUnreadNotificationBellDot(t *testing.T) {
+func TestAppChromeLayoutRendersUnreadNotificationIndicator(t *testing.T) {
 	var b strings.Builder
 	err := AppChromeLayout(AppChromeLayoutOptions{
 		Title:   "Campaigns",
@@ -206,8 +207,11 @@ func TestAppChromeLayoutRendersUnreadNotificationBellDot(t *testing.T) {
 		t.Fatalf("AppChromeLayout() = %v", err)
 	}
 	got := b.String()
-	if !strings.Contains(got, `href="#lucide-bell-dot"`) {
-		t.Fatalf("expected bell-dot icon when unread notifications exist, got %q", got)
+	if !strings.Contains(got, `href="#lucide-bell"`) {
+		t.Fatalf("expected bell icon when unread notifications exist, got %q", got)
+	}
+	if !strings.Contains(got, `indicator-item status status-primary`) {
+		t.Fatalf("expected unread indicator when unread notifications exist, got %q", got)
 	}
 }
 

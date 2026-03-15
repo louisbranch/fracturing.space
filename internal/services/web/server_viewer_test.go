@@ -159,13 +159,13 @@ func TestPrimaryNavigationUsesDashboardAndCampaignIcons(t *testing.T) {
 	if !strings.Contains(body, notificationReadIconHref) {
 		t.Fatalf("body missing read notifications icon %q", notificationReadIconHref)
 	}
-	notificationUnreadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD)) + `"`
-	if strings.Contains(body, notificationUnreadIconHref) {
-		t.Fatalf("body unexpectedly contains unread notifications icon %q", notificationUnreadIconHref)
+	// Invariant: read notification state must not render the unread status dot.
+	if strings.Contains(body, `indicator-item status status-primary`) {
+		t.Fatalf("body unexpectedly contains unread notifications indicator")
 	}
 }
 
-func TestPrimaryNavigationUsesUnreadNotificationIconWhenUserHasUnread(t *testing.T) {
+func TestPrimaryNavigationUsesUnreadNotificationIndicatorWhenUserHasUnread(t *testing.T) {
 	t.Parallel()
 
 	auth := newFakeWebAuthClient()
@@ -187,13 +187,12 @@ func TestPrimaryNavigationUsesUnreadNotificationIconWhenUserHasUnread(t *testing
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
 	body := rr.Body.String()
-	notificationUnreadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD)) + `"`
-	if !strings.Contains(body, notificationUnreadIconHref) {
-		t.Fatalf("body missing unread notifications icon %q", notificationUnreadIconHref)
-	}
 	notificationReadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION)) + `"`
-	if strings.Contains(body, notificationReadIconHref) {
-		t.Fatalf("body unexpectedly contains read notifications icon %q", notificationReadIconHref)
+	if !strings.Contains(body, notificationReadIconHref) {
+		t.Fatalf("body missing notifications bell icon %q", notificationReadIconHref)
+	}
+	if !strings.Contains(body, `indicator-item status status-primary`) {
+		t.Fatalf("body missing unread notifications indicator")
 	}
 }
 
@@ -221,9 +220,9 @@ func TestPrimaryNavigationFallsBackToReadNotificationIconWhenUnreadLookupFails(t
 	if !strings.Contains(body, notificationReadIconHref) {
 		t.Fatalf("body missing read notifications icon %q", notificationReadIconHref)
 	}
-	notificationUnreadIconHref := `href="#` + icons.LucideSymbolID(icons.LucideNameOrDefault(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD)) + `"`
-	if strings.Contains(body, notificationUnreadIconHref) {
-		t.Fatalf("body unexpectedly contains unread notifications icon %q", notificationUnreadIconHref)
+	// Invariant: unread lookup failure must fall back to the non-alerting chrome state.
+	if strings.Contains(body, `indicator-item status status-primary`) {
+		t.Fatalf("body unexpectedly contains unread notifications indicator")
 	}
 }
 

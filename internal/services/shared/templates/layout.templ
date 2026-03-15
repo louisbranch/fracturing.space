@@ -173,11 +173,12 @@ templ AppChromeLayout(options AppChromeLayoutOptions) {
 							aria-label={ T(options.Loc, "game.notifications.title") }
 							title={ T(options.Loc, "game.notifications.title") }
 						>
-							if options.ChromeOptions.HasUnreadNotifications {
-								@LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD, "size-5")
-							} else {
+							<span class="indicator">
+								if options.ChromeOptions.HasUnreadNotifications {
+									<span class="indicator-item status status-primary" aria-hidden="true"></span>
+								}
 								@LucideIconID(commonv1.IconId_ICON_ID_NOTIFICATION, "size-5")
-							}
+							</span>
 						</a>
 						if strings.TrimSpace(options.ChromeOptions.UserAvatarURL) != "" {
 							<div class="dropdown dropdown-end">

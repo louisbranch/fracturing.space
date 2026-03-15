@@ -30,11 +30,6 @@ func TestLucideNameNotificationIcons(t *testing.T) {
 			id:   commonv1.IconId_ICON_ID_NOTIFICATION,
 			want: "bell",
 		},
-		{
-			name: "notification unread",
-			id:   commonv1.IconId_ICON_ID_NOTIFICATION_UNREAD,
-			want: "bell-dot",
-		},
 	}
 
 	for _, tc := range tests {
