@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-15T04:15:46Z",
+  "updated_at": "2026-03-15T04:23:50Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -130,7 +130,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/web/app",
-      "floor": 88,
+      "floor": 93.6,
       "description": "Web app composition and auth/csrf wrapper routing behavior."
     },
     {
