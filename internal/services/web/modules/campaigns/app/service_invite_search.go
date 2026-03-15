@@ -7,8 +7,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/userid"
 )
 
-const minInviteSearchQueryLength = 2
-
 // SearchInviteUsers centralizes invite typeahead search for one campaign.
 func (s inviteReadService) SearchInviteUsers(ctx context.Context, campaignID string, input SearchInviteUsersInput) ([]InviteUserSearchResult, error) {
 	return s.searchInviteUsers(ctx, campaignID, input)
@@ -23,12 +21,8 @@ func (s inviteReadService) searchInviteUsers(ctx context.Context, campaignID str
 	if err != nil {
 		return nil, err
 	}
-	query := strings.ToLower(strings.TrimSpace(input.Query))
-	if len(query) < minInviteSearchQueryLength {
-		return []InviteUserSearchResult{}, nil
-	}
 	input.ViewerUserID = viewerUserID
-	input.Query = query
+	input.Query = strings.TrimSpace(input.Query)
 	if input.Limit <= 0 {
 		input.Limit = 8
 	}

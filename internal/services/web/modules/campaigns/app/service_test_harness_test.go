@@ -38,6 +38,8 @@ type campaignGatewayStub struct {
 	campaignInvitesErr                      error
 	inviteSearchResults                     []InviteUserSearchResult
 	inviteSearchErr                         error
+	lastSearchInviteUsersInput              SearchInviteUsersInput
+	searchInviteCalls                       int
 	createCampaignResult                    CreateCampaignResult
 	createCampaignErr                       error
 	lastCreateInput                         CreateCampaignInput
@@ -229,7 +231,9 @@ func (f *campaignGatewayStub) CampaignInvites(context.Context, string) ([]Campai
 	return f.campaignInvites, nil
 }
 
-func (f *campaignGatewayStub) SearchInviteUsers(context.Context, SearchInviteUsersInput) ([]InviteUserSearchResult, error) {
+func (f *campaignGatewayStub) SearchInviteUsers(_ context.Context, input SearchInviteUsersInput) ([]InviteUserSearchResult, error) {
+	f.searchInviteCalls++
+	f.lastSearchInviteUsersInput = input
 	if f.inviteSearchErr != nil {
 		return nil, f.inviteSearchErr
 	}

@@ -206,7 +206,7 @@ func TestDirectoryUserRoundTripAndSearchRanking(t *testing.T) {
 		t.Fatalf("put contact: %v", err)
 	}
 
-	results, err := store.SearchUsers(context.Background(), "viewer-1", "al", 10)
+	results, err := store.SearchUsers(context.Background(), "viewer-1", storage.SearchUsersQuery{Username: "al", Name: "al"}, 10)
 	if err != nil {
 		t.Fatalf("search users: %v", err)
 	}
@@ -247,7 +247,7 @@ func TestDirectoryUserSameValueUpdateIsNoOp(t *testing.T) {
 		t.Fatalf("put repeated directory user: %v", err)
 	}
 
-	results, err := store.SearchUsers(context.Background(), "viewer-1", "al", 10)
+	results, err := store.SearchUsers(context.Background(), "viewer-1", storage.SearchUsersQuery{Username: "al", Name: "al"}, 10)
 	if err != nil {
 		t.Fatalf("search users: %v", err)
 	}

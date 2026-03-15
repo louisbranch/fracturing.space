@@ -229,6 +229,50 @@ func TestSearchUsers_RanksContactsFirst(t *testing.T) {
 	}
 }
 
+func TestSearchUsers_NormalizesUsernameHandleQuery(t *testing.T) {
+	store := newFakeContactStore()
+	_ = store.PutDirectoryUser(context.Background(), storage.DirectoryUser{UserID: "user-2", Username: "alice"})
+	_ = store.PutUserProfile(context.Background(), storage.UserProfile{UserID: "user-2", Name: "Alice"})
+
+	svc := NewService(store)
+	resp, err := svc.SearchUsers(context.Background(), &socialv1.SearchUsersRequest{
+		ViewerUserId: "viewer-1",
+		Query:        "  @Al!  ",
+		Limit:        10,
+	})
+	if err != nil {
+		t.Fatalf("search users: %v", err)
+	}
+	if len(resp.GetUsers()) != 1 {
+		t.Fatalf("users len = %d, want 1", len(resp.GetUsers()))
+	}
+	if got := resp.GetUsers()[0].GetUsername(); got != "alice" {
+		t.Fatalf("username = %q, want %q", got, "alice")
+	}
+}
+
+func TestSearchUsers_PreservesNamePrefixSearch(t *testing.T) {
+	store := newFakeContactStore()
+	_ = store.PutDirectoryUser(context.Background(), storage.DirectoryUser{UserID: "user-2", Username: "alice"})
+	_ = store.PutUserProfile(context.Background(), storage.UserProfile{UserID: "user-2", Name: "Alice One"})
+
+	svc := NewService(store)
+	resp, err := svc.SearchUsers(context.Background(), &socialv1.SearchUsersRequest{
+		ViewerUserId: "viewer-1",
+		Query:        "Alice O",
+		Limit:        10,
+	})
+	if err != nil {
+		t.Fatalf("search users: %v", err)
+	}
+	if len(resp.GetUsers()) != 1 {
+		t.Fatalf("users len = %d, want 1", len(resp.GetUsers()))
+	}
+	if got := resp.GetUsers()[0].GetName(); got != "Alice One" {
+		t.Fatalf("name = %q, want %q", got, "Alice One")
+	}
+}
+
 func TestSearchUsers_ShortQueryReturnsEmpty(t *testing.T) {
 	svc := NewService(newFakeContactStore())
 	resp, err := svc.SearchUsers(context.Background(), &socialv1.SearchUsersRequest{
@@ -341,9 +385,10 @@ func (s *fakeContactStore) PutDirectoryUser(_ context.Context, user storage.Dire
 	return nil
 }
 
-func (s *fakeContactStore) SearchUsers(_ context.Context, viewerUserID string, query string, limit int) ([]storage.SearchUser, error) {
+func (s *fakeContactStore) SearchUsers(_ context.Context, viewerUserID string, query storage.SearchUsersQuery, limit int) ([]storage.SearchUser, error) {
 	results := make([]storage.SearchUser, 0, len(s.directory))
-	query = strings.ToLower(strings.TrimSpace(query))
+	query.Username = strings.TrimSpace(query.Username)
+	query.Name = strings.TrimSpace(query.Name)
 	for _, entry := range s.directory {
 		name := ""
 		avatarSetID := ""
@@ -353,8 +398,8 @@ func (s *fakeContactStore) SearchUsers(_ context.Context, viewerUserID string, q
 			avatarSetID = profile.AvatarSetID
 			avatarAssetID = profile.AvatarAssetID
 		}
-		usernameMatch := strings.HasPrefix(strings.ToLower(entry.Username), query)
-		nameMatch := strings.HasPrefix(strings.ToLower(strings.TrimSpace(name)), query)
+		usernameMatch := query.Username != "" && strings.HasPrefix(strings.ToLower(entry.Username), query.Username)
+		nameMatch := query.Name != "" && strings.HasPrefix(strings.ToLower(strings.TrimSpace(name)), query.Name)
 		if !usernameMatch && !nameMatch {
 			continue
 		}

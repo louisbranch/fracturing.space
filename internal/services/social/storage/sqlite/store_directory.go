@@ -61,7 +61,7 @@ func (s *Store) PutDirectoryUser(ctx context.Context, user storage.DirectoryUser
 }
 
 // SearchUsers returns ranked user directory matches for invite search.
-func (s *Store) SearchUsers(ctx context.Context, viewerUserID string, query string, limit int) ([]storage.SearchUser, error) {
+func (s *Store) SearchUsers(ctx context.Context, viewerUserID string, query storage.SearchUsersQuery, limit int) ([]storage.SearchUser, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -72,16 +72,17 @@ func (s *Store) SearchUsers(ctx context.Context, viewerUserID string, query stri
 	if viewerUserID == "" {
 		return nil, fmt.Errorf("viewer user id is required")
 	}
-	query = strings.ToLower(strings.TrimSpace(query))
-	if query == "" {
+	query.Username = strings.TrimSpace(query.Username)
+	query.Name = strings.TrimSpace(query.Name)
+	if query.Username == "" && query.Name == "" {
 		return []storage.SearchUser{}, nil
 	}
 	if limit <= 0 {
 		return nil, fmt.Errorf("limit must be greater than zero")
 	}
 
-	namePrefix := query + "%"
-	usernamePrefix := query + "%"
+	namePrefix := query.Name + "%"
+	usernamePrefix := query.Username + "%"
 	rows, err := s.sqlDB.QueryContext(
 		ctx,
 		`SELECT d.user_id,
@@ -95,17 +96,21 @@ func (s *Store) SearchUsers(ctx context.Context, viewerUserID string, query stri
 		     ON p.user_id = d.user_id
 		   LEFT JOIN contacts c
 		     ON c.owner_user_id = ? AND c.contact_user_id = d.user_id
-		  WHERE d.username LIKE ?
-		     OR lower(COALESCE(p.name, '')) LIKE ?
+		  WHERE (? <> '' AND d.username LIKE ?)
+		     OR (? <> '' AND lower(COALESCE(p.name, '')) LIKE ?)
 		  ORDER BY is_contact DESC,
-		           CASE WHEN d.username = ? THEN 0 ELSE 1 END ASC,
-		           CASE WHEN d.username LIKE ? THEN 0 ELSE 1 END ASC,
+		           CASE WHEN ? <> '' AND d.username = ? THEN 0 ELSE 1 END ASC,
+		           CASE WHEN ? <> '' AND d.username LIKE ? THEN 0 ELSE 1 END ASC,
 		           d.username ASC
 		  LIMIT ?`,
 		viewerUserID,
+		query.Username,
 		usernamePrefix,
+		query.Name,
 		namePrefix,
-		query,
+		query.Username,
+		query.Username,
+		query.Username,
 		usernamePrefix,
 		limit,
 	)

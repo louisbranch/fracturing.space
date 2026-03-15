@@ -9,6 +9,34 @@ import (
 
 var canonicalPattern = regexp.MustCompile(`^[a-z][a-z0-9._-]{2,31}$`)
 
+// NormalizeSearchQuery lowercases ASCII username characters and drops
+// characters that cannot appear in a username, so handle-style search like
+// "@alice" resolves through the shared people-search API.
+func NormalizeSearchQuery(input string) string {
+	input = strings.TrimSpace(input)
+	if input == "" {
+		return ""
+	}
+
+	var builder strings.Builder
+	builder.Grow(len(input))
+	for i := 0; i < len(input); i++ {
+		ch := input[i]
+		if ch >= 'A' && ch <= 'Z' {
+			ch = ch - 'A' + 'a'
+		}
+		switch {
+		case ch >= 'a' && ch <= 'z':
+			builder.WriteByte(ch)
+		case ch >= '0' && ch <= '9':
+			builder.WriteByte(ch)
+		case ch == '.', ch == '_', ch == '-':
+			builder.WriteByte(ch)
+		}
+	}
+	return builder.String()
+}
+
 // Canonicalize normalizes a username to lowercase ASCII and validates policy.
 func Canonicalize(input string) (string, error) {
 	input = strings.TrimSpace(input)

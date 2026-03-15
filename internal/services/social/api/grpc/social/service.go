@@ -192,8 +192,17 @@ func (s *Service) SearchUsers(ctx context.Context, in *socialv1.SearchUsersReque
 	if viewerUserID == "" {
 		return nil, status.Error(codes.InvalidArgument, "viewer user id is required")
 	}
-	query := strings.ToLower(strings.TrimSpace(in.GetQuery()))
-	if len(query) < minSearchUsersQueryLength {
+	query := storage.SearchUsersQuery{
+		Username: socialusername.NormalizeSearchQuery(in.GetQuery()),
+		Name:     strings.ToLower(strings.TrimSpace(in.GetQuery())),
+	}
+	if len(query.Username) < minSearchUsersQueryLength {
+		query.Username = ""
+	}
+	if len(query.Name) < minSearchUsersQueryLength {
+		query.Name = ""
+	}
+	if query.Username == "" && query.Name == "" {
 		return &socialv1.SearchUsersResponse{}, nil
 	}
 	limit := pagination.ClampPageSize(in.GetLimit(), pagination.PageSizeConfig{

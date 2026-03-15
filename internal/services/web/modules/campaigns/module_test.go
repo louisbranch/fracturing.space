@@ -651,6 +651,7 @@ type fakeGateway struct {
 	invitesErr                        error
 	inviteSearchResults               []campaignapp.InviteUserSearchResult
 	inviteSearchErr                   error
+	lastInviteSearchInput             *campaignapp.SearchInviteUsersInput
 	characterCreationProgress         campaignapp.CampaignCharacterCreationProgress
 	characterCreationProgressErr      error
 	characterCreationCatalog          campaignapp.CampaignCharacterCreationCatalog
@@ -885,7 +886,10 @@ func (f fakeGateway) CampaignInvites(context.Context, string) ([]campaignapp.Cam
 	return f.invites, nil
 }
 
-func (f fakeGateway) SearchInviteUsers(context.Context, campaignapp.SearchInviteUsersInput) ([]campaignapp.InviteUserSearchResult, error) {
+func (f fakeGateway) SearchInviteUsers(_ context.Context, input campaignapp.SearchInviteUsersInput) ([]campaignapp.InviteUserSearchResult, error) {
+	if f.lastInviteSearchInput != nil {
+		*f.lastInviteSearchInput = input
+	}
 	if f.inviteSearchErr != nil {
 		return nil, f.inviteSearchErr
 	}

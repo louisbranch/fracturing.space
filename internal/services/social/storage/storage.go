@@ -57,6 +57,13 @@ type SearchUser struct {
 	IsContact     bool
 }
 
+// SearchUsersQuery stores the username and display-name prefixes for one
+// people-search request.
+type SearchUsersQuery struct {
+	Username string
+	Name     string
+}
+
 // ContactStore persists owner-scoped directed contact relationships.
 type ContactStore interface {
 	PutContact(ctx context.Context, contact Contact) error
@@ -74,5 +81,5 @@ type UserProfileStore interface {
 // UserDirectoryStore persists auth-synced directory data used for search.
 type UserDirectoryStore interface {
 	PutDirectoryUser(ctx context.Context, user DirectoryUser) error
-	SearchUsers(ctx context.Context, viewerUserID string, query string, limit int) ([]SearchUser, error)
+	SearchUsers(ctx context.Context, viewerUserID string, query SearchUsersQuery, limit int) ([]SearchUser, error)
 }
