@@ -14,6 +14,22 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go install github.com/air-verse/air@v1.62.0
 
+FROM node:22-bookworm AS build-play-ui
+
+WORKDIR /src/internal/services/play/ui
+
+COPY internal/services/play/ui/package.json ./
+COPY internal/services/play/ui/package-lock.json ./
+COPY internal/services/play/ui/index.html ./
+COPY internal/services/play/ui/tsconfig.json ./
+COPY internal/services/play/ui/tsconfig.node.json ./
+COPY internal/services/play/ui/vite.config.ts ./
+COPY internal/services/play/ui/vitest.setup.ts ./
+COPY internal/services/play/ui/src ./src
+
+RUN npm ci
+RUN npm run build
+
 FROM base AS build-game
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/game ./cmd/game
@@ -42,9 +58,11 @@ FROM base AS build-web
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/web ./cmd/web
 
-FROM base AS build-chat
+FROM base AS build-play
 
-RUN CGO_ENABLED=0 GOOS=linux go build -o /out/chat ./cmd/chat
+COPY --from=build-play-ui /src/internal/services/play/ui/dist /src/internal/services/play/ui/dist
+
+RUN CGO_ENABLED=0 GOOS=linux go build -o /out/play ./cmd/play
 
 FROM base AS build-ai
 
@@ -136,15 +154,15 @@ EXPOSE 8080
 
 ENTRYPOINT ["/app/web"]
 
-FROM gcr.io/distroless/static-debian12:nonroot AS chat
+FROM gcr.io/distroless/static-debian12:nonroot AS play
 
 WORKDIR /app
 
-COPY --from=build-chat /out/chat /app/chat
+COPY --from=build-play /out/play /app/play
 
-EXPOSE 8086
+EXPOSE 8094
 
-ENTRYPOINT ["/app/chat"]
+ENTRYPOINT ["/app/play"]
 
 FROM gcr.io/distroless/static-debian12:nonroot AS ai
 

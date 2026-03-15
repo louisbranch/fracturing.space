@@ -3,6 +3,7 @@ package composition
 import (
 	"net/http"
 
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	websupport "github.com/louisbranch/fracturing.space/internal/services/shared/websupport"
 	webapp "github.com/louisbranch/fracturing.space/internal/services/web/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
@@ -16,7 +17,8 @@ type ComposeInput struct {
 
 	ModuleDependencies modules.Dependencies
 
-	ChatHTTPAddr        string
+	PlayHTTPAddr        string
+	PlayLaunchGrant     playlaunchgrant.Config
 	RequestSchemePolicy requestmeta.SchemePolicy
 
 	RegistryBuilder modules.RegistryBuilder
@@ -40,7 +42,8 @@ func ComposeAppHandler(input ComposeInput) (http.Handler, error) {
 			RequestSchemePolicy: input.RequestSchemePolicy,
 		},
 		ProtectedOptions: modules.ProtectedModuleOptions{
-			ChatFallbackPort:    websupport.ResolveChatFallbackPort(input.ChatHTTPAddr),
+			PlayFallbackPort:    websupport.ResolveHTTPFallbackPort(input.PlayHTTPAddr),
+			PlayLaunchGrant:     input.PlayLaunchGrant,
 			RequestSchemePolicy: input.RequestSchemePolicy,
 		},
 	})

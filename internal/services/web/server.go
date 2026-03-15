@@ -11,6 +11,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/timeouts"
 	sharedhttpx "github.com/louisbranch/fracturing.space/internal/services/shared/httpx"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/composition"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/observability"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -21,12 +22,15 @@ import (
 // Config defines startup inputs for the web service.
 type Config struct {
 	HTTPAddr     string
-	ChatHTTPAddr string
+	PlayHTTPAddr string
 	// Logger receives request and lifecycle logs. Nil uses slog.Default().
 	Logger *slog.Logger
 
 	// RequestSchemePolicy controls scheme resolution for proxy headers.
 	RequestSchemePolicy requestmeta.SchemePolicy
+
+	// PlayLaunchGrant signs web-to-play handoff grants for the game route.
+	PlayLaunchGrant playlaunchgrant.Config
 
 	// Dependencies carries startup dependencies in one place for principal resolution
 	// and module registry construction.
@@ -55,7 +59,8 @@ func NewHandler(cfg Config) (http.Handler, error) {
 	h, err := composition.ComposeAppHandler(composition.ComposeInput{
 		Principal:           principalResolver,
 		ModuleDependencies:  deps.Modules,
-		ChatHTTPAddr:        cfg.ChatHTTPAddr,
+		PlayHTTPAddr:        cfg.PlayHTTPAddr,
+		PlayLaunchGrant:     cfg.PlayLaunchGrant,
 		RequestSchemePolicy: cfg.RequestSchemePolicy,
 	})
 	if err != nil {

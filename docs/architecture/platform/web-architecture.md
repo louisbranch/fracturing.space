@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 5
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-09"
+last_reviewed: "2026-03-13"
 ---
 
 # Web Architecture
@@ -87,9 +87,11 @@ Required properties:
 - Campaign detail pages should render through the area-owned
   `internal/services/web/modules/campaigns/render` seam, not new page-specific `templates` models.
 - The canonical campaign game route (`/app/campaigns/{campaign_id}/game`) is a
-  server-rendered game surface that bootstraps `CampaignGameSurface` metadata
-  from `game.v1.InteractionService`. Optional human chat is a separate
-  transport-only surface and must not drive active-play workflow.
+  launcher owned by `web`; it validates campaign access, issues a short-lived
+  `play` launch grant, and hands the browser off to `play.<domain>`.
+- `web` must not become the long-lived active-play runtime. Browser-visible
+  game surface state, active-play websocket transport, and play-session cookies
+  belong to `play` once the handoff completes.
 
 ## Principal identity seam
 

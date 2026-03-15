@@ -196,7 +196,7 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
-		ChatHTTPAddr: "localhost:8086",
+		PlayLaunchGrant: fakePlayLaunchGrantConfig(),
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{SessionClient: auth},
 			modules.Dependencies{
@@ -225,7 +225,10 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 	attachSessionCookie(t, req, auth, "user-1")
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, req)
-	if rr.Code != http.StatusOK {
-		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	if rr.Code != http.StatusSeeOther {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusSeeOther)
+	}
+	if got := rr.Header().Get("Location"); !strings.HasPrefix(got, "http://play.example.com/campaigns/c1?launch=") {
+		t.Fatalf("Location = %q, want play host handoff", got)
 	}
 }

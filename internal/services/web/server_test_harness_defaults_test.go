@@ -1,12 +1,15 @@
 package web
 
 import (
+	"time"
+
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
@@ -18,6 +21,7 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 	notifications := fakeWebNotificationClient{}
 	social := defaultSocialClient()
 	return Config{
+		PlayLaunchGrant: fakePlayLaunchGrantConfig(),
 		Dependencies: newDependencyBundle(
 			principal.Dependencies{
 				SessionClient:      auth,
@@ -65,6 +69,15 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				},
 			},
 		),
+	}
+}
+
+func fakePlayLaunchGrantConfig() playlaunchgrant.Config {
+	return playlaunchgrant.Config{
+		Issuer:   "fracturing-space-web",
+		Audience: "fracturing-space-play",
+		HMACKey:  []byte("0123456789abcdef0123456789abcdef"),
+		TTL:      2 * time.Minute,
 	}
 }
 

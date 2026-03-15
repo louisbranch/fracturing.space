@@ -95,19 +95,27 @@ func TestDefaultCampaignSurfaceExposesDetailAndMutationRoutes(t *testing.T) {
 		t.Fatalf("NewHandler() error = %v", err)
 	}
 
-	for _, path := range []string{
-		"/app/campaigns/c1/sessions",
-		"/app/campaigns/c1/sessions/sess-1",
-		"/app/campaigns/c1/invites",
-		"/app/campaigns/c1/game",
-		"/app/campaigns/c1/characters/char-1",
+	for _, tc := range []struct {
+		path       string
+		wantStatus int
+	}{
+		{path: "/app/campaigns/c1/sessions", wantStatus: http.StatusOK},
+		{path: "/app/campaigns/c1/sessions/sess-1", wantStatus: http.StatusOK},
+		{path: "/app/campaigns/c1/invites", wantStatus: http.StatusOK},
+		{path: "/app/campaigns/c1/game", wantStatus: http.StatusSeeOther},
+		{path: "/app/campaigns/c1/characters/char-1", wantStatus: http.StatusOK},
 	} {
-		req := httptest.NewRequest(http.MethodGet, path, nil)
+		req := httptest.NewRequest(http.MethodGet, tc.path, nil)
 		attachSessionCookie(t, req, auth, "user-1")
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, req)
-		if rr.Code != http.StatusOK {
-			t.Fatalf("path %q status = %d, want %d", path, rr.Code, http.StatusOK)
+		if rr.Code != tc.wantStatus {
+			t.Fatalf("path %q status = %d, want %d", tc.path, rr.Code, tc.wantStatus)
+		}
+		if tc.path == "/app/campaigns/c1/game" {
+			if got := rr.Header().Get("Location"); !strings.HasPrefix(got, "http://play.example.com/campaigns/c1?launch=") {
+				t.Fatalf("path %q Location = %q, want play host handoff", tc.path, got)
+			}
 		}
 	}
 

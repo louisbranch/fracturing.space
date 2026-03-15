@@ -6,8 +6,9 @@ import (
 	"strings"
 )
 
-// ResolveChatFallbackPort extracts the final component of a host:port pair.
-func ResolveChatFallbackPort(rawAddr string) string {
+// ResolveHTTPFallbackPort extracts the final port component of an HTTP listen
+// address or host:port pair.
+func ResolveHTTPFallbackPort(rawAddr string) string {
 	trimmed := strings.TrimSpace(rawAddr)
 	if trimmed == "" {
 		return ""

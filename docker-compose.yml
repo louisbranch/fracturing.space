@@ -303,7 +303,6 @@ services:
       - notifications
     environment:
       FRACTURING_SPACE_WEB_HTTP_ADDR: 0.0.0.0:8080
-      FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8086}
       FRACTURING_SPACE_WEB_AUTH_BASE_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://auth.${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}
       FRACTURING_SPACE_SOCIAL_ADDR: social:8090
       FRACTURING_SPACE_NOTIFICATIONS_ADDR: notifications:8088
@@ -314,6 +313,7 @@ services:
       FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET: ${FRACTURING_SPACE_WEB_OAUTH_RESOURCE_SECRET:-dev-admin-secret}
       FRACTURING_SPACE_WEB_CALLBACK_URL: ${FRACTURING_SPACE_PUBLIC_SCHEME:-http}://${FRACTURING_SPACE_DOMAIN:-localhost}${FRACTURING_SPACE_PUBLIC_PORT-:8080}/auth/callback
       FRACTURING_SPACE_WEB_AUTH_TOKEN_URL: http://auth:8084/token
+      FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY: ${FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
       FRACTURING_SPACE_ASSET_BASE_URL: ${FRACTURING_SPACE_ASSET_BASE_URL:-https://res.cloudinary.com/fracturing-space/image/upload}
       FRACTURING_SPACE_ASSET_VERSION: ${FRACTURING_SPACE_ASSET_VERSION:-v1}
       FRACTURING_SPACE_DOMAIN: ${FRACTURING_SPACE_DOMAIN:-localhost}
@@ -322,22 +322,25 @@ services:
       - internal
     restart: unless-stopped
 
-  chat:
+  play:
     build:
       context: .
-      target: chat
+      target: play
       args:
         GO_VERSION: ${GO_VERSION:-1.26.0}
-    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/chat:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
+    image: "${FRACTURING_SPACE_IMAGE_REGISTRY:-ghcr.io}/${FRACTURING_SPACE_IMAGE_NAMESPACE:-fracturing-space}/play:${FRACTURING_SPACE_IMAGE_TAG:-dev}"
     depends_on:
-      init-data:
-        condition: service_completed_successfully
-      game:
-        condition: service_started
+      - auth
+      - game
     environment:
-      FRACTURING_SPACE_CHAT_HTTP_ADDR: ${FRACTURING_SPACE_CHAT_HTTP_ADDR:-0.0.0.0:8086}
+      FRACTURING_SPACE_PLAY_HTTP_ADDR: 0.0.0.0:8094
+      FRACTURING_SPACE_PLAY_DB_PATH: ${FRACTURING_SPACE_PLAY_DB_PATH:-/data/play.db}
+      FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL: ${FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL:-}
+      FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY: ${FRACTURING_SPACE_PLAY_LAUNCH_GRANT_HMAC_KEY:-MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
       FRACTURING_SPACE_STATUS_ADDR: status:8093
       FRACTURING_SPACE_OTEL_ENDPOINT: ${FRACTURING_SPACE_OTEL_ENDPOINT:-http://jaeger:4318}
+    volumes:
+      - fracturing-space-data:/data
     networks:
       - internal
     restart: unless-stopped
@@ -346,7 +349,7 @@ services:
     image: caddy:2.8.4
     depends_on:
       - web
-      - chat
+      - play
       - auth
       - admin
       - mcp

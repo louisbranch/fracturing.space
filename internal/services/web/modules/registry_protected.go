@@ -51,7 +51,9 @@ func buildProtectedModules(
 	}
 	if campaignsModule, ok := campaigns.ComposeProtected(campaigns.ProtectedSurfaceOptions{
 		Base:             base,
-		ChatFallbackPort: opts.ChatFallbackPort,
+		PlayFallbackPort: opts.PlayFallbackPort,
+		PlayLaunchGrant:  opts.PlayLaunchGrant,
+		RequestMeta:      opts.RequestSchemePolicy,
 		DashboardSync:    dashboardSync,
 		AssetBaseURL:     deps.AssetBaseURL,
 	}, deps.Campaigns); ok {
