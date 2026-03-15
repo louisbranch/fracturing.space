@@ -16,10 +16,12 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
 )
 
-func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T) {
+func TestCreateCharacter_InheritsControllerAvatarWhenAutoAssigned(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	now := time.Date(2026, 2, 20, 0, 0, 0, 0, time.UTC)
 
@@ -93,8 +95,8 @@ func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T
 	if payload.AvatarAssetID != "007" {
 		t.Fatalf("avatar_asset_id = %q, want %q", payload.AvatarAssetID, "007")
 	}
-	if payload.Pronouns != "they/them" {
-		t.Fatalf("pronouns = %q, want %q", payload.Pronouns, "they/them")
+	if payload.Pronouns != "" {
+		t.Fatalf("pronouns = %q, want empty", payload.Pronouns)
 	}
 }
 
@@ -265,5 +267,14 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 	}
 	if payload.Pronouns != "" {
 		t.Fatalf("pronouns = %q, want empty", payload.Pronouns)
+	}
+}
+
+func TestResolveCharacterIdentitySnapshot_RequiresParticipantStoreWhenParticipantProvided(t *testing.T) {
+	app := characterApplication{}
+
+	_, err := app.resolveCharacterIdentitySnapshot(context.Background(), "c1", "part-1")
+	if status.Code(err) != codes.Internal {
+		t.Fatalf("resolveCharacterIdentitySnapshot error code = %v, want %v", status.Code(err), codes.Internal)
 	}
 }

@@ -235,6 +235,8 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		ctx,
 		a.write,
 		a.applier,
+		a.stores.Participant,
+		a.stores.Character,
 		a.stores.Social,
 		campaignID,
 		seat.ID,

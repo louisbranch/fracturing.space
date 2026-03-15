@@ -1375,7 +1375,7 @@ func TestSetDefaultControl_MissingParticipantId(t *testing.T) {
 
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Pronouns: "she/her", CreatedAt: now},
 	}
 
 	svc := NewCharacterService(ts.build())
@@ -1412,7 +1412,7 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Pronouns: "she/her", CreatedAt: now},
 	}
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
 		command.Type("character.update"): {
@@ -1460,8 +1460,8 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	if payload.Fields["avatar_asset_id"] != "" {
 		t.Fatalf("avatar_asset_id = %q, want empty", payload.Fields["avatar_asset_id"])
 	}
-	if payload.Fields["pronouns"] != "" {
-		t.Fatalf("pronouns = %q, want empty", payload.Fields["pronouns"])
+	if _, ok := payload.Fields["pronouns"]; ok {
+		t.Fatalf("pronouns field should be omitted, got %q", payload.Fields["pronouns"])
 	}
 
 	// Verify persisted
@@ -1471,6 +1471,9 @@ func TestSetDefaultControl_Success_Unassigned(t *testing.T) {
 	}
 	if updated.ParticipantID != "" {
 		t.Fatalf("ParticipantID = %q, want empty", updated.ParticipantID)
+	}
+	if updated.Pronouns != "she/her" {
+		t.Fatalf("Pronouns = %q, want %q", updated.Pronouns, "she/her")
 	}
 	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
@@ -1487,7 +1490,7 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Pronouns: "she/her", CreatedAt: now},
 	}
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"manager-1": {
@@ -1547,8 +1550,8 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	if payload.Fields["avatar_asset_id"] != "009" {
 		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "009")
 	}
-	if payload.Fields["pronouns"] != "they/them" {
-		t.Fatalf("pronouns = %q, want %q", payload.Fields["pronouns"], "they/them")
+	if _, ok := payload.Fields["pronouns"]; ok {
+		t.Fatalf("pronouns field should be omitted, got %q", payload.Fields["pronouns"])
 	}
 
 	// Verify persisted
@@ -1558,6 +1561,9 @@ func TestSetDefaultControl_Success_Participant(t *testing.T) {
 	}
 	if ctrl.ParticipantID != "p1" {
 		t.Errorf("ParticipantID = %q, want %q", ctrl.ParticipantID, "p1")
+	}
+	if ctrl.Pronouns != "she/her" {
+		t.Fatalf("Pronouns = %q, want %q", ctrl.Pronouns, "she/her")
 	}
 	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)
@@ -1575,7 +1581,7 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Pronouns: "she/her", CreatedAt: now},
 	}
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"manager-1": {
@@ -1651,7 +1657,7 @@ func TestClaimCharacterControl_Success_WithUserIdentity(t *testing.T) {
 
 	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
-		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Pronouns: "she/her", CreatedAt: now},
 	}
 	player := memberUserParticipantRecord("c1", "player-1", "user-1", "Player One")
 	player.AvatarSetID = assetcatalog.AvatarSetPeopleV1
@@ -1708,8 +1714,8 @@ func TestClaimCharacterControl_Success_WithUserIdentity(t *testing.T) {
 	if payload.Fields["avatar_asset_id"] != "009" {
 		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "009")
 	}
-	if payload.Fields["pronouns"] != "they/them" {
-		t.Fatalf("pronouns = %q, want %q", payload.Fields["pronouns"], "they/them")
+	if _, ok := payload.Fields["pronouns"]; ok {
+		t.Fatalf("pronouns field should be omitted, got %q", payload.Fields["pronouns"])
 	}
 	updated, err := ts.Character.GetCharacter(context.Background(), "c1", "ch1")
 	if err != nil {
@@ -1717,6 +1723,9 @@ func TestClaimCharacterControl_Success_WithUserIdentity(t *testing.T) {
 	}
 	if updated.ParticipantID != "player-1" {
 		t.Fatalf("ParticipantID = %q, want %q", updated.ParticipantID, "player-1")
+	}
+	if updated.Pronouns != "she/her" {
+		t.Fatalf("Pronouns = %q, want %q", updated.Pronouns, "she/her")
 	}
 }
 
@@ -1739,6 +1748,31 @@ func TestClaimCharacterControl_RejectsAssignedCharacter(t *testing.T) {
 		CharacterId: "ch1",
 	})
 	assertStatusCode(t, err, codes.FailedPrecondition)
+}
+
+func TestClaimCharacterControl_DeniesEmptyResolvedParticipantID(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	now := time.Now().UTC()
+
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", CreatedAt: now},
+	}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"seat-1": {
+			ID:         "",
+			CampaignID: "c1",
+			UserID:     "user-1",
+			Name:       "Player One",
+		},
+	}
+
+	svc := NewCharacterService(ts.build())
+	_, err := svc.ClaimCharacterControl(contextWithUserID("user-1"), &statev1.ClaimCharacterControlRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.PermissionDenied)
 }
 
 func TestReleaseCharacterControl_Success_WithUserIdentity(t *testing.T) {
@@ -1816,6 +1850,26 @@ func TestReleaseCharacterControl_DeniesNonController(t *testing.T) {
 		CharacterId: "ch1",
 	})
 	assertStatusCode(t, err, codes.PermissionDenied)
+}
+
+func TestReleaseCharacterControl_RejectsUnassignedCharacter(t *testing.T) {
+	ts := newTestStores().withCharacter()
+	now := time.Now().UTC()
+
+	ts.Campaign.campaigns["c1"] = activeCampaignRecord("c1")
+	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
+		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", ParticipantID: "", CreatedAt: now},
+	}
+	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
+		"player-1": memberUserParticipantRecord("c1", "player-1", "user-1", "Player One"),
+	}
+
+	svc := NewCharacterService(ts.build())
+	_, err := svc.ReleaseCharacterControl(contextWithUserID("user-1"), &statev1.ReleaseCharacterControlRequest{
+		CampaignId:  "c1",
+		CharacterId: "ch1",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestGetCharacterSheet_NilRequest(t *testing.T) {

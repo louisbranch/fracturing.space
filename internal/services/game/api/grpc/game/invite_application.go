@@ -29,6 +29,7 @@ type inviteApplication struct {
 type inviteApplicationStores struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
+	Character   storage.CharacterStore
 	Invite      storage.InviteStore
 	ClaimIndex  storage.ClaimIndexStore
 	Event       storage.EventStore
@@ -54,6 +55,7 @@ func newInviteApplicationWithDependencies(
 		stores: inviteApplicationStores{
 			Campaign:    stores.Campaign,
 			Participant: stores.Participant,
+			Character:   stores.Character,
 			Invite:      stores.Invite,
 			ClaimIndex:  stores.ClaimIndex,
 			Event:       stores.Event,

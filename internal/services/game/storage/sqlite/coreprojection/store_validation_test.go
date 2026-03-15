@@ -392,6 +392,12 @@ func TestEmptyIDValidation(t *testing.T) {
 	if _, err := store.ListCharactersByOwnerParticipant(ctx, "c", ""); err == nil {
 		t.Fatal("expected error for empty participant ID in ListCharactersByOwnerParticipant")
 	}
+	if _, err := store.ListCharactersByControllerParticipant(ctx, "", "part-1"); err == nil {
+		t.Fatal("expected error for empty campaign ID in ListCharactersByControllerParticipant")
+	}
+	if _, err := store.ListCharactersByControllerParticipant(ctx, "c", ""); err == nil {
+		t.Fatal("expected error for empty participant ID in ListCharactersByControllerParticipant")
+	}
 
 	// Session
 	if err := store.PutSession(ctx, storage.SessionRecord{ID: "s"}); err == nil {

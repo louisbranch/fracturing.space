@@ -136,6 +136,16 @@ func (s *testCharacterStore) ListCharactersByOwnerParticipant(_ context.Context,
 	return result, nil
 }
 
+func (s *testCharacterStore) ListCharactersByControllerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	var result []storage.CharacterRecord
+	for _, c := range s.characters[campaignID] {
+		if c.ParticipantID == participantID {
+			result = append(result, c)
+		}
+	}
+	return result, nil
+}
+
 func TestRequirePolicyMissingActor(t *testing.T) {
 	deps := PolicyDeps{Participant: testParticipantStore{}}
 	err := RequirePolicy(context.Background(), deps, domainauthz.CapabilityManageParticipants, testCampaignRecord())

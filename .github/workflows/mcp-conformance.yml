@@ -59,7 +59,7 @@ jobs:
 
           ./bin/game -addr="$GAME_ADDR" >.tmp/game.log 2>&1 &
           GAME_PID=$!
-          GAME_PID="$GAME_PID" timeout 90 bash -c 'until grep -q "game server listening at" .tmp/game.log 2>/dev/null; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done' || { dump_logs; exit 1; }
+          GAME_PID="$GAME_PID" timeout 90 bash -c 'until grep -q "game server listening" .tmp/game.log 2>/dev/null; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done' || { dump_logs; exit 1; }
           GAME_PID="$GAME_PID" GAME_ADDR="$GAME_ADDR" timeout 60 bash -c 'until (echo > /dev/tcp/${GAME_ADDR%:*}/${GAME_ADDR##*:}) >/dev/null 2>&1; do if ! kill -0 "$GAME_PID" 2>/dev/null; then exit 1; fi; sleep 0.5; done' || { dump_logs; exit 1; }
 
           ./bin/mcp -transport=http -http-addr="$MCP_HTTP_ADDR" -addr="$GAME_ADDR" >.tmp/mcp.log 2>&1 &

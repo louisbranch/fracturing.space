@@ -108,6 +108,8 @@ func (a forkApplication) reassignForkedPublicOwnerSeat(
 		ctx,
 		a.write,
 		a.applier,
+		a.stores.Participant,
+		a.stores.Character,
 		a.stores.Social,
 		forkCampaignID,
 		shape.ownerSeat.ID,

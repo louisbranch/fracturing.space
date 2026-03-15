@@ -51,7 +51,7 @@ wait_for_services_ready() {
   # readiness survives moves between plain logs and structured slog output.
   local markers=(
     "status server listening at"
-    "game server listening at"
+    "game server listening"
     "auth server listening at"
     "social server listening at"
     "ai server listening at"

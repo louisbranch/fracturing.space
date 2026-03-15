@@ -216,6 +216,10 @@ func (f *fakeProjectionStore) ListCharactersByOwnerParticipant(ctx context.Conte
 	return nil, fmt.Errorf("not implemented")
 }
 
+func (f *fakeProjectionStore) ListCharactersByControllerParticipant(context.Context, string, string) ([]storage.CharacterRecord, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
 func (f *fakeProjectionStore) PutDaggerheartCharacterProfile(ctx context.Context, profile projectionstore.DaggerheartCharacterProfile) error {
 	if f.putDaggerheartCharProfile != nil {
 		return f.putDaggerheartCharProfile(ctx, profile)

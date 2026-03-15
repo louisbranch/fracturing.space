@@ -139,6 +139,69 @@ func (s *Store) ListCharactersByOwnerParticipant(ctx context.Context, campaignID
 	return characters, nil
 }
 
+// ListCharactersByControllerParticipant returns all character records
+// controlled by one participant.
+func (s *Store) ListCharactersByControllerParticipant(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(participantID) == "" {
+		return nil, fmt.Errorf("participant id is required")
+	}
+
+	rows, err := s.projectionQueryable().QueryContext(
+		ctx,
+		`SELECT campaign_id, id, controller_participant_id, name, kind, notes, pronouns, aliases_json, created_at, updated_at, avatar_set_id, avatar_asset_id, owner_participant_id
+FROM characters
+WHERE campaign_id = ? AND controller_participant_id = ?
+ORDER BY id`,
+		campaignID,
+		participantID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("list controlled characters: %w", err)
+	}
+	defer rows.Close()
+
+	characters := make([]storage.CharacterRecord, 0)
+	for rows.Next() {
+		var row db.Character
+		if err := rows.Scan(
+			&row.CampaignID,
+			&row.ID,
+			&row.ControllerParticipantID,
+			&row.Name,
+			&row.Kind,
+			&row.Notes,
+			&row.Pronouns,
+			&row.AliasesJson,
+			&row.CreatedAt,
+			&row.UpdatedAt,
+			&row.AvatarSetID,
+			&row.AvatarAssetID,
+			&row.OwnerParticipantID,
+		); err != nil {
+			return nil, fmt.Errorf("scan controlled character: %w", err)
+		}
+		characterRecord, err := dbCharacterToDomain(row)
+		if err != nil {
+			return nil, err
+		}
+		characters = append(characters, characterRecord)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate controlled characters: %w", err)
+	}
+
+	return characters, nil
+}
+
 // ListCharacters returns a page of character records.
 func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
 	if err := ctx.Err(); err != nil {

@@ -10,6 +10,7 @@ import (
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -1313,6 +1314,134 @@ func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
 	}
 	if len(domain.commands) != 1 || domain.commands[0].Type != command.Type("participant.update") {
 		t.Fatalf("commands = %#v, want participant.update only", domain.commands)
+	}
+}
+
+func TestClaimInvite_ResyncsControlledCharacterAvatarFromClaimedSeat(t *testing.T) {
+	campaignStore := newFakeCampaignStore()
+	participantStore := newFakeParticipantStore()
+	characterStore := newFakeCharacterStore()
+	inviteStore := newFakeInviteStore()
+	eventStore := newFakeBatchEventStore()
+	socialClient := &fakeSocialClient{profile: &socialv1.UserProfile{
+		Name:          "Ariadne",
+		Pronouns:      sharedpronouns.ToProto("she/her"),
+		AvatarSetId:   "avatar-set-1",
+		AvatarAssetId: "avatar-asset-1",
+	}}
+	now := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+
+	campaignStore.campaigns["campaign-1"] = draftCampaignRecord("campaign-1")
+	participantStore.participants["campaign-1"] = map[string]storage.ParticipantRecord{
+		"participant-1": {ID: "participant-1", CampaignID: "campaign-1", Name: "Pending Seat"},
+	}
+	characterStore.characters["campaign-1"] = map[string]storage.CharacterRecord{
+		"char-1": {
+			ID:            "char-1",
+			CampaignID:    "campaign-1",
+			ParticipantID: "participant-1",
+			Name:          "Hero",
+			AvatarSetID:   "old-set",
+			AvatarAssetID: "old-asset",
+			Pronouns:      "xe/xem",
+			CreatedAt:     now,
+			UpdatedAt:     now,
+		},
+	}
+	inviteStore.invites["invite-1"] = storage.InviteRecord{
+		ID:            "invite-1",
+		CampaignID:    "campaign-1",
+		ParticipantID: "participant-1",
+		Status:        invite.StatusPending,
+	}
+	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
+	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("participant.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("participant.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "participant",
+				EntityID:    "participant-1",
+				PayloadJSON: []byte(`{"participant_id":"participant-1","fields":{"name":"Ariadne","pronouns":"she/her","avatar_set_id":"avatar-set-1","avatar_asset_id":"avatar-asset-1"}}`),
+			}),
+		},
+		command.Type("character.update"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "campaign-1",
+				Type:        event.Type("character.updated"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				EntityType:  "character",
+				EntityID:    "char-1",
+				PayloadJSON: []byte(`{"character_id":"char-1","fields":{"avatar_set_id":"avatar-set-1","avatar_asset_id":"avatar-asset-1"}}`),
+			}),
+		},
+	}}
+
+	svc := newInviteServiceWithDependencies(
+		Stores{
+			Campaign:    campaignStore,
+			Participant: participantStore,
+			Character:   characterStore,
+			Invite:      inviteStore,
+			Event:       eventStore,
+			Social:      socialClient,
+			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+		},
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
+
+	signer := newJoinGrantSigner(t)
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.app.clock())
+	ctx := contextWithUserID("user-1")
+	if _, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
+		CampaignId: "campaign-1",
+		InviteId:   "invite-1",
+		JoinGrant:  joinGrant,
+	}); err != nil {
+		t.Fatalf("ClaimInvite returned error: %v", err)
+	}
+
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("participant.update") {
+		t.Fatalf("command[0] type = %s, want participant.update", domain.commands[0].Type)
+	}
+	if domain.commands[1].Type != command.Type("character.update") {
+		t.Fatalf("command[1] type = %s, want character.update", domain.commands[1].Type)
+	}
+
+	var payload character.UpdatePayload
+	if err := json.Unmarshal(domain.commands[1].PayloadJSON, &payload); err != nil {
+		t.Fatalf("decode character update payload: %v", err)
+	}
+	if payload.Fields["avatar_set_id"] != "avatar-set-1" {
+		t.Fatalf("avatar_set_id = %q, want %q", payload.Fields["avatar_set_id"], "avatar-set-1")
+	}
+	if payload.Fields["avatar_asset_id"] != "avatar-asset-1" {
+		t.Fatalf("avatar_asset_id = %q, want %q", payload.Fields["avatar_asset_id"], "avatar-asset-1")
+	}
+	if _, ok := payload.Fields["pronouns"]; ok {
+		t.Fatalf("pronouns field should be omitted, got %q", payload.Fields["pronouns"])
+	}
+
+	updated, err := characterStore.GetCharacter(context.Background(), "campaign-1", "char-1")
+	if err != nil {
+		t.Fatalf("load updated character: %v", err)
+	}
+	if updated.AvatarSetID != "avatar-set-1" || updated.AvatarAssetID != "avatar-asset-1" {
+		t.Fatalf("character avatar = %q/%q, want avatar-set-1/avatar-asset-1", updated.AvatarSetID, updated.AvatarAssetID)
+	}
+	if updated.Pronouns != "xe/xem" {
+		t.Fatalf("character pronouns = %q, want %q", updated.Pronouns, "xe/xem")
 	}
 }
 
