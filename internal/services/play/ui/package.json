@@ -16,6 +16,7 @@
   "dependencies": {
     "@tailwindcss/vite": "^4.2.1",
     "daisyui": "^5.5.19",
+    "lucide-react": "^0.577.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwindcss": "^4.2.1"

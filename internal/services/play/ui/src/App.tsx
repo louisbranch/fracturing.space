@@ -13,7 +13,7 @@ export function App(props: { mode: AppMode }) {
         <PlaceholderScreen
           kicker="Play UI shell"
           title="Play runtime UI deferred"
-          body="The bundled play SPA no longer hosts isolated component previews. Run Storybook locally for Character Card design and review work."
+          body="The bundled play SPA no longer hosts isolated component previews. Run Storybook locally for interaction workflow slices and Daggerheart reference components."
         />
       );
     case "runtime-placeholder":
@@ -21,7 +21,7 @@ export function App(props: { mode: AppMode }) {
         <PlaceholderScreen
           kicker="Runtime placeholder"
           title="Play runtime UI deferred"
-          body="Campaign routes remain reserved for the future runtime shell. Isolated component work now happens in the separate Storybook workflow."
+          body="Campaign routes remain reserved for the future runtime shell. Isolated interaction and character component work now happens in the separate Storybook workflow."
           detailLabel="Campaign path"
           detailValue={`/campaigns/${props.mode.campaignId}`}
         />
@@ -34,8 +34,8 @@ export function App(props: { mode: AppMode }) {
               <span className="preview-kicker">Unsupported route</span>
               <h1 className="font-display text-4xl">No UI mapped to this path</h1>
               <p className="preview-prose text-base">
-                Use the separate Storybook workflow for component work or a campaign path for the runtime
-                placeholder surface.
+                Use the separate Storybook workflow for interaction and character component work or a
+                campaign path for the runtime placeholder surface.
               </p>
               <div className="rounded-box border border-base-300/70 bg-base-100/85 px-4 py-3 text-sm text-base-content/80">
                 Requested path: <code>{props.mode.path}</code>
