@@ -1188,6 +1188,10 @@ func (f *fakeAuthClient) FinishAccountRegistration(ctx context.Context, req *aut
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }
 
+func (f *fakeAuthClient) AcknowledgeAccountRegistration(ctx context.Context, req *authv1.AcknowledgeAccountRegistrationRequest, opts ...grpc.CallOption) (*authv1.AcknowledgeAccountRegistrationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
+}
+
 func (f *fakeAuthClient) CheckUsernameAvailability(ctx context.Context, req *authv1.CheckUsernameAvailabilityRequest, opts ...grpc.CallOption) (*authv1.CheckUsernameAvailabilityResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "not implemented in fake auth client")
 }

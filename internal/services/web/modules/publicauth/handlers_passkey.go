@@ -67,11 +67,12 @@ func (h handlers) handlePasskeyRegisterFinish(w http.ResponseWriter, r *http.Req
 		h.writeJSONError(w, r, err)
 		return
 	}
-	h.writeSessionCookie(w, r, finished.SessionID)
 	h.writeRecoveryRevealState(w, r, recoveryRevealState{
-		Code: finished.RecoveryCode,
-		Next: input.NextPath,
-		Mode: recoveryRevealModeSignup,
+		Code:      finished.RecoveryCode,
+		SessionID: input.SessionID,
+		PendingID: input.PendingID,
+		Next:      input.NextPath,
+		Mode:      recoveryRevealModeSignup,
 	})
 	_ = httpx.WriteJSON(w, http.StatusOK, newPasskeyRegisterFinishResponse(finished))
 }

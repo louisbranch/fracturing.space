@@ -41,6 +41,9 @@ service AuthService {
   // Finish account registration, create the first passkey, and issue the recovery code.
   rpc FinishAccountRegistration(FinishAccountRegistrationRequest) returns (FinishAccountRegistrationResponse);
 
+  // Acknowledge the staged recovery code and activate the account.
+  rpc AcknowledgeAccountRegistration(AcknowledgeAccountRegistrationRequest) returns (AcknowledgeAccountRegistrationResponse);
+
   // Begin an authenticated passkey registration ceremony for an existing user.
   rpc BeginPasskeyRegistration(BeginPasskeyRegistrationRequest) returns (BeginPasskeyRegistrationResponse);
 
@@ -116,6 +119,16 @@ message FinishAccountRegistrationResponse {
   string credential_id = 2;
   WebSession session = 3;
   string recovery_code = 4;
+}
+
+message AcknowledgeAccountRegistrationRequest {
+  string session_id = 1;
+  string pending_id = 2;
+}
+
+message AcknowledgeAccountRegistrationResponse {
+  User user = 1;
+  WebSession session = 2;
 }
 
 message BeginPasskeyRegistrationRequest {

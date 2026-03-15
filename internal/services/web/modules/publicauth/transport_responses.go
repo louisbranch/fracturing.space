@@ -20,9 +20,8 @@ type passkeyLoginFinishResponse struct {
 }
 
 // passkeyRegisterFinishResponse defines the JSON contract returned after account
-// registration and initial sign-in.
+// registration is staged and the recovery-code step should be shown.
 type passkeyRegisterFinishResponse struct {
-	UserID      string `json:"user_id"`
 	RedirectURL string `json:"redirect_url"`
 }
 
@@ -62,9 +61,8 @@ func newPasskeyLoginFinishResponse(redirectURL string) passkeyLoginFinishRespons
 
 // newPasskeyRegisterFinishResponse maps app-layer registration completion data
 // to the transport contract.
-func newPasskeyRegisterFinishResponse(finished publicauthapp.PasskeyFinish) passkeyRegisterFinishResponse {
+func newPasskeyRegisterFinishResponse(publicauthapp.PasskeyRegistrationReveal) passkeyRegisterFinishResponse {
 	return passkeyRegisterFinishResponse{
-		UserID:      finished.UserID,
 		RedirectURL: routepath.LoginRecoveryCode,
 	}
 }

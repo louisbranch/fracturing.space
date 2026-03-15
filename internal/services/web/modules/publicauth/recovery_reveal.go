@@ -23,6 +23,7 @@ const (
 // recoveryRevealState carries the one-time recovery code between auth handlers.
 type recoveryRevealState struct {
 	Code      string             `json:"code"`
+	SessionID string             `json:"session_id,omitempty"`
 	PendingID string             `json:"pending_id,omitempty"`
 	Next      string             `json:"next,omitempty"`
 	Mode      recoveryRevealMode `json:"mode"`
@@ -94,6 +95,7 @@ func clearRecoveryRevealState(w http.ResponseWriter, r *http.Request, policy req
 // normalizeRecoveryRevealState trims transport fields and rejects invalid modes.
 func normalizeRecoveryRevealState(state recoveryRevealState) (recoveryRevealState, bool) {
 	state.Code = strings.TrimSpace(state.Code)
+	state.SessionID = strings.TrimSpace(state.SessionID)
 	state.PendingID = strings.TrimSpace(state.PendingID)
 	state.Next = strings.TrimSpace(state.Next)
 	switch state.Mode {
@@ -102,6 +104,9 @@ func normalizeRecoveryRevealState(state recoveryRevealState) (recoveryRevealStat
 		return recoveryRevealState{}, false
 	}
 	if state.Code == "" {
+		return recoveryRevealState{}, false
+	}
+	if state.Mode == recoveryRevealModeSignup && state.SessionID == "" {
 		return recoveryRevealState{}, false
 	}
 	return state, true

@@ -135,6 +135,15 @@ func (s *fakePasskeyStore) GetRegistrationSession(_ context.Context, id string) 
 	return session, nil
 }
 
+func (s *fakePasskeyStore) GetRegistrationSessionByUsername(_ context.Context, username string) (storage.RegistrationSession, error) {
+	for _, session := range s.registrations {
+		if session.Username == username {
+			return session, nil
+		}
+	}
+	return storage.RegistrationSession{}, storage.ErrNotFound
+}
+
 func (s *fakePasskeyStore) DeleteRegistrationSession(_ context.Context, id string) error {
 	delete(s.registrations, id)
 	return nil
@@ -245,6 +254,10 @@ func TestBeginAccountRegistration_Success(t *testing.T) {
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
 	svc := NewAuthService(userStore, passkeyStore, nil)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	svc.clock = func() time.Time { return now }
+	svc.passkeyConfig.SessionTTL = 5 * time.Minute
+	svc.passkeyConfig.SignupSessionTTL = 2 * time.Minute
 	svc.idGenerator = func() (string, error) { return "user-123", nil }
 	svc.passkeyIDGenerator = func() (string, error) { return "reg-1", nil }
 	svc.passkeyWebAuthn = &fakePasskeyProvider{}
@@ -264,11 +277,26 @@ func TestBeginAccountRegistration_Success(t *testing.T) {
 	if registration.Username != "alice" {
 		t.Fatalf("registration username = %q, want %q", registration.Username, "alice")
 	}
+	if got := registration.ExpiresAt; !got.Equal(now.Add(2 * time.Minute)) {
+		t.Fatalf("registration ExpiresAt = %v, want %v", got, now.Add(2*time.Minute))
+	}
+	if stored := passkeyStore.sessions["reg-1"]; !stored.ExpiresAt.Equal(now.Add(2 * time.Minute)) {
+		t.Fatalf("passkey session ExpiresAt = %v, want %v", stored.ExpiresAt, now.Add(2*time.Minute))
+	}
 }
 
 func TestBeginAccountRegistration_DeletesExpiredReservationAndSucceeds(t *testing.T) {
 	store := openTempAuthStore(t)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	if err := store.PutPasskeySession(context.Background(), storage.PasskeySession{
+		ID:          "expired-reg",
+		Kind:        string(passkey.SessionKindRegistration),
+		UserID:      "user-old",
+		SessionJSON: "{}",
+		ExpiresAt:   now.Add(-time.Minute),
+	}); err != nil {
+		t.Fatalf("put expired passkey session: %v", err)
+	}
 	if err := store.PutRegistrationSession(context.Background(), storage.RegistrationSession{
 		ID:        "expired-reg",
 		UserID:    "user-old",
@@ -297,6 +325,9 @@ func TestBeginAccountRegistration_DeletesExpiredReservationAndSucceeds(t *testin
 	if _, err := store.GetRegistrationSession(context.Background(), "expired-reg"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected expired reservation cleanup, got %v", err)
 	}
+	if _, err := store.GetPasskeySession(context.Background(), "expired-reg"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected expired passkey session cleanup, got %v", err)
+	}
 }
 
 func TestBeginAccountRegistration_ReservationFailureDoesNotLeakPasskeySession(t *testing.T) {
@@ -321,19 +352,19 @@ func TestBeginAccountRegistration_ReservationFailureDoesNotLeakPasskeySession(t 
 	svc.passkeyInitErr = nil
 
 	_, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "alice"})
-	assertStatusCode(t, err, codes.Internal)
+	assertStatusCode(t, err, codes.AlreadyExists)
 	if _, err := store.GetPasskeySession(context.Background(), "reg-1"); !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected no leaked passkey session, got %v", err)
 	}
 }
 
-func TestFinishAccountRegistration_Success(t *testing.T) {
+func TestFinishAccountRegistration_StagesSignupUntilAcknowledged(t *testing.T) {
 	t.Parallel()
 
 	store := openTempAuthStore(t)
 	svc := NewAuthService(store, store, nil)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
-	ids := []string{"user-1", "event-1", "ws-1"}
+	ids := []string{"user-1"}
 	svc.idGenerator = func() (string, error) {
 		id := ids[0]
 		ids = ids[1:]
@@ -358,14 +389,89 @@ func TestFinishAccountRegistration_Success(t *testing.T) {
 	if err != nil {
 		t.Fatalf("finish account registration: %v", err)
 	}
-	if got := finishResp.GetUser().GetUsername(); got != "alpha" {
-		t.Fatalf("username = %q, want %q", got, "alpha")
-	}
 	if finishResp.GetRecoveryCode() == "" {
 		t.Fatal("expected recovery code")
 	}
-	if finishResp.GetSession().GetId() != "ws-1" {
-		t.Fatalf("web session id = %q, want %q", finishResp.GetSession().GetId(), "ws-1")
+	if got := finishResp.GetSession().GetId(); got != "" {
+		t.Fatalf("web session id = %q, want empty", got)
+	}
+	if got := finishResp.GetUser().GetId(); got != "" {
+		t.Fatalf("user id = %q, want empty", got)
+	}
+
+	if _, err := store.GetUser(context.Background(), "user-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected staged signup to avoid user creation, got %v", err)
+	}
+	if _, err := store.GetPasskeyCredential(context.Background(), encodeCredentialID([]byte("cred-1"))); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected no stored passkey before acknowledge, got %v", err)
+	}
+	registration, err := store.GetRegistrationSession(context.Background(), beginResp.GetSessionId())
+	if err != nil {
+		t.Fatalf("get staged registration: %v", err)
+	}
+	if registration.CredentialID != encodeCredentialID([]byte("cred-1")) {
+		t.Fatalf("credential id = %q, want %q", registration.CredentialID, encodeCredentialID([]byte("cred-1")))
+	}
+	if registration.CredentialJSON == "" {
+		t.Fatal("expected staged credential json")
+	}
+	if !recoverycode.Verify(finishResp.GetRecoveryCode(), registration.RecoveryCodeHash) {
+		t.Fatal("expected staged recovery hash to verify")
+	}
+	if _, err := store.GetPasskeySession(context.Background(), beginResp.GetSessionId()); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected passkey session cleanup after staging, got %v", err)
+	}
+	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 10, now, time.Minute)
+	if err != nil {
+		t.Fatalf("lease signup outbox events: %v", err)
+	}
+	if len(leased) != 0 {
+		t.Fatalf("leased events len = %d, want 0", len(leased))
+	}
+}
+
+func TestAcknowledgeAccountRegistration_Success(t *testing.T) {
+	t.Parallel()
+
+	store := openTempAuthStore(t)
+	svc := NewAuthService(store, store, nil)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	ids := []string{"user-1", "event-1", "ws-1"}
+	svc.idGenerator = func() (string, error) {
+		id := ids[0]
+		ids = ids[1:]
+		return id, nil
+	}
+	svc.passkeyIDGenerator = func() (string, error) { return "reg-1", nil }
+	svc.clock = func() time.Time { return now }
+	svc.randReader = bytes.NewReader(bytes.Repeat([]byte{1}, 64))
+	svc.passkeyWebAuthn = &fakePasskeyProvider{credential: &webauthn.Credential{ID: []byte("cred-1")}}
+	svc.passkeyInitErr = nil
+	svc.passkeyParser = &fakePasskeyParser{creation: &protocol.ParsedCredentialCreationData{}}
+
+	beginResp, err := svc.BeginAccountRegistration(context.Background(), &authv1.BeginAccountRegistrationRequest{Username: "alpha"})
+	if err != nil {
+		t.Fatalf("begin account registration: %v", err)
+	}
+	finishResp, err := svc.FinishAccountRegistration(context.Background(), &authv1.FinishAccountRegistrationRequest{
+		SessionId:              beginResp.GetSessionId(),
+		CredentialResponseJson: []byte("{}"),
+	})
+	if err != nil {
+		t.Fatalf("finish account registration: %v", err)
+	}
+
+	ackResp, err := svc.AcknowledgeAccountRegistration(context.Background(), &authv1.AcknowledgeAccountRegistrationRequest{
+		SessionId: beginResp.GetSessionId(),
+	})
+	if err != nil {
+		t.Fatalf("acknowledge account registration: %v", err)
+	}
+	if got := ackResp.GetUser().GetUsername(); got != "alpha" {
+		t.Fatalf("username = %q, want %q", got, "alpha")
+	}
+	if ackResp.GetSession().GetId() != "ws-1" {
+		t.Fatalf("web session id = %q, want %q", ackResp.GetSession().GetId(), "ws-1")
 	}
 
 	storedUser, err := store.GetUser(context.Background(), "user-1")
@@ -377,6 +483,9 @@ func TestFinishAccountRegistration_Success(t *testing.T) {
 	}
 	if _, err := store.GetPasskeyCredential(context.Background(), encodeCredentialID([]byte("cred-1"))); err != nil {
 		t.Fatalf("get stored passkey: %v", err)
+	}
+	if _, err := store.GetRegistrationSession(context.Background(), beginResp.GetSessionId()); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected registration cleanup after acknowledge, got %v", err)
 	}
 	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 10, now, time.Minute)
 	if err != nil {
@@ -390,12 +499,23 @@ func TestFinishAccountRegistration_Success(t *testing.T) {
 	}
 }
 
-func TestFinishAccountRegistration_PersistFailureLeavesRegistrationState(t *testing.T) {
+func TestAcknowledgeAccountRegistration_PersistFailureLeavesRegistrationState(t *testing.T) {
 	t.Parallel()
 
 	userStore := newFakeUserStore()
 	passkeyStore := newFakePasskeyStore()
-	svc := NewAuthService(userStore, passkeyStore, nil)
+	oauthStore := openTempOAuthStore(t)
+	pendingID, err := oauthStore.CreatePendingAuthorization(oauth.AuthorizationRequest{
+		ResponseType:        "code",
+		ClientID:            "test-client",
+		RedirectURI:         "http://localhost:5555/callback",
+		CodeChallenge:       "challenge",
+		CodeChallengeMethod: "S256",
+	}, time.Hour)
+	if err != nil {
+		t.Fatalf("create pending authorization: %v", err)
+	}
+	svc := NewAuthService(userStore, passkeyStore, oauthStore)
 	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
 	userStore.signupPutErr = errors.New("boom")
 	ids := []string{"user-1", "ws-1", "event-1"}
@@ -420,15 +540,65 @@ func TestFinishAccountRegistration_PersistFailureLeavesRegistrationState(t *test
 		SessionId:              beginResp.GetSessionId(),
 		CredentialResponseJson: []byte("{}"),
 	})
+	if err != nil {
+		t.Fatalf("finish account registration: %v", err)
+	}
+
+	_, err = svc.AcknowledgeAccountRegistration(context.Background(), &authv1.AcknowledgeAccountRegistrationRequest{
+		SessionId: beginResp.GetSessionId(),
+		PendingId: pendingID,
+	})
 	assertStatusCode(t, err, codes.Internal)
 	if _, ok := userStore.users["user-1"]; ok {
 		t.Fatal("expected user persistence rollback")
 	}
 	if _, ok := passkeyStore.registrations["reg-1"]; !ok {
-		t.Fatal("expected registration session to remain for retry")
+		t.Fatal("expected staged registration session to remain for retry")
 	}
-	if _, ok := passkeyStore.sessions["reg-1"]; !ok {
-		t.Fatal("expected passkey session to remain for retry")
+	if _, ok := passkeyStore.sessions["reg-1"]; ok {
+		t.Fatal("expected passkey session cleanup after staging")
+	}
+	pending, err := oauthStore.GetPendingAuthorization(pendingID)
+	if err != nil {
+		t.Fatalf("get pending authorization: %v", err)
+	}
+	if pending == nil {
+		t.Fatal("expected pending authorization to remain")
+	}
+	if pending.UserID != "" {
+		t.Fatalf("pending authorization user id = %q, want empty", pending.UserID)
+	}
+}
+
+func TestAcknowledgeAccountRegistration_ExpiredSessionDeletesReservation(t *testing.T) {
+	t.Parallel()
+
+	store := openTempAuthStore(t)
+	now := time.Date(2026, 2, 12, 12, 0, 0, 0, time.UTC)
+	if err := store.PutRegistrationSession(context.Background(), storage.RegistrationSession{
+		ID:               "reg-1",
+		UserID:           "user-1",
+		Username:         "alpha",
+		Locale:           "en-US",
+		RecoveryCodeHash: "hash-1",
+		CredentialID:     "cred-1",
+		CredentialJSON:   `{"id":"cred-1"}`,
+		ExpiresAt:        now.Add(-time.Minute),
+		CreatedAt:        now.Add(-2 * time.Minute),
+		UpdatedAt:        now.Add(-2 * time.Minute),
+	}); err != nil {
+		t.Fatalf("put registration session: %v", err)
+	}
+
+	svc := NewAuthService(store, store, nil)
+	svc.clock = func() time.Time { return now }
+
+	_, err := svc.AcknowledgeAccountRegistration(context.Background(), &authv1.AcknowledgeAccountRegistrationRequest{
+		SessionId: "reg-1",
+	})
+	assertStatusCode(t, err, codes.FailedPrecondition)
+	if _, err := store.GetRegistrationSession(context.Background(), "reg-1"); !errors.Is(err, storage.ErrNotFound) {
+		t.Fatalf("expected expired staged signup cleanup, got %v", err)
 	}
 }
 

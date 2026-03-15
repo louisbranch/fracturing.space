@@ -100,7 +100,8 @@ User-configurable per-message-type delivery preferences are planned but not yet 
 - `FRACTURING_SPACE_WEBAUTHN_RP_ID`: WebAuthn relying party ID (the domain the user sees). Default: `localhost`.
 - `FRACTURING_SPACE_WEBAUTHN_RP_DISPLAY_NAME`: display name shown during passkey prompts. Defaults to the app name.
 - `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS`: comma-separated list of allowed WebAuthn origins. Runtime default: `http://localhost:8086`.
-- `FRACTURING_SPACE_WEBAUTHN_SESSION_TTL`: passkey session TTL. Default: `5m`.
+- `FRACTURING_SPACE_WEBAUTHN_SESSION_TTL`: passkey session TTL for login, recovery, and authenticated passkey enrollment. Default: `5m`.
+- `FRACTURING_SPACE_WEBAUTHN_SIGNUP_SESSION_TTL`: initial signup reservation and ceremony TTL before the first passkey is successfully created. Default: `2m`.
 
 For web-login-first local flows, many contributors set
 `FRACTURING_SPACE_WEBAUTHN_RP_ORIGINS=http://localhost:8080` in `.env`.

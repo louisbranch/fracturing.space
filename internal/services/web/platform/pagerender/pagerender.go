@@ -116,6 +116,16 @@ func WritePublicPage(w http.ResponseWriter, r *http.Request, title string, metaD
 	if body == nil {
 		body = emptyComponent{}
 	}
+	toast := resolveFlashToast(w, r, nil, "")
+	if toast != nil {
+		content := body
+		body = templ.ComponentFunc(func(ctx context.Context, wr io.Writer) error {
+			if err := webtemplates.AppToastComponent(toast).Render(ctx, wr); err != nil {
+				return err
+			}
+			return content.Render(ctx, wr)
+		})
+	}
 
 	ctx := templ.WithChildren(httpx.RequestContext(r), body)
 	path := ""

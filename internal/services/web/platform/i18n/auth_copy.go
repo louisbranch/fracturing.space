@@ -39,6 +39,7 @@ type AuthCopy struct {
 	RecoveryCodeDownloadFilename  string
 	RecoveryCodeAcknowledge       string
 	RecoveryCodeContinue          string
+	RecoveryCodeSignupExpired     string
 	JSLoginStartError             string
 	JSLoginFinishError            string
 	JSRegisterStartErr            string
@@ -99,6 +100,7 @@ func Auth(tag language.Tag) AuthCopy {
 		RecoveryCodeDownloadFilename:  localizeWithFallback(loc, "recovery_code.download_filename", "fracturing-space-recovery-code.txt"),
 		RecoveryCodeAcknowledge:       localizeWithFallback(loc, "recovery_code.acknowledge", "I saved this recovery code."),
 		RecoveryCodeContinue:          localizeWithFallback(loc, "recovery_code.continue", "Continue"),
+		RecoveryCodeSignupExpired:     localizeWithFallback(loc, "recovery_code.signup_expired", "That unfinished signup expired or was replaced. Create the account again."),
 		JSLoginStartError:             localizeWithFallback(loc, "login.js.login_start_error", "Unable to start passkey login."),
 		JSLoginFinishError:            localizeWithFallback(loc, "login.js.login_finish_error", "Unable to finish passkey login."),
 		JSRegisterStartErr:            localizeWithFallback(loc, "login.js.register_start_error", "Unable to start passkey registration."),

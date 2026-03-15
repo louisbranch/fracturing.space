@@ -86,7 +86,14 @@ func (fakeAuthClient) CheckUsernameAvailability(context.Context, *authv1.CheckUs
 }
 
 func (fakeAuthClient) FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
-	return &authv1.FinishAccountRegistrationResponse{User: &authv1.User{Id: "user-1"}, Session: &authv1.WebSession{Id: "web-1"}, RecoveryCode: "ABCD-EFGH"}, nil
+	return &authv1.FinishAccountRegistrationResponse{RecoveryCode: "ABCD-EFGH"}, nil
+}
+
+func (fakeAuthClient) AcknowledgeAccountRegistration(context.Context, *authv1.AcknowledgeAccountRegistrationRequest, ...grpc.CallOption) (*authv1.AcknowledgeAccountRegistrationResponse, error) {
+	return &authv1.AcknowledgeAccountRegistrationResponse{
+		User:    &authv1.User{Id: "user-1"},
+		Session: &authv1.WebSession{Id: "web-1"},
+	}, nil
 }
 
 func (fakeAuthClient) BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {

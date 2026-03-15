@@ -247,6 +247,8 @@ func (s *Store) PutRegistrationSession(ctx context.Context, session storage.Regi
 		Username:         session.Username,
 		Locale:           session.Locale,
 		RecoveryCodeHash: session.RecoveryCodeHash,
+		CredentialID:     session.CredentialID,
+		CredentialJson:   session.CredentialJSON,
 		ExpiresAt:        toMillis(session.ExpiresAt),
 		CreatedAt:        toMillis(session.CreatedAt),
 		UpdatedAt:        toMillis(session.UpdatedAt),
@@ -274,6 +276,40 @@ func (s *Store) GetRegistrationSession(ctx context.Context, id string) (storage.
 		Username:         row.Username,
 		Locale:           row.Locale,
 		RecoveryCodeHash: row.RecoveryCodeHash,
+		CredentialID:     row.CredentialID,
+		CredentialJSON:   row.CredentialJson,
+		ExpiresAt:        fromMillis(row.ExpiresAt),
+		CreatedAt:        fromMillis(row.CreatedAt),
+		UpdatedAt:        fromMillis(row.UpdatedAt),
+	}, nil
+}
+
+// GetRegistrationSessionByUsername fetches pending signup state by username.
+func (s *Store) GetRegistrationSessionByUsername(ctx context.Context, username string) (storage.RegistrationSession, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.RegistrationSession{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.RegistrationSession{}, fmt.Errorf("Storage is not configured.")
+	}
+	if strings.TrimSpace(username) == "" {
+		return storage.RegistrationSession{}, fmt.Errorf("Username is required.")
+	}
+	row, err := s.q.GetRegistrationSessionByUsername(ctx, username)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.RegistrationSession{}, storage.ErrNotFound
+		}
+		return storage.RegistrationSession{}, fmt.Errorf("Get registration session by username: %w", err)
+	}
+	return storage.RegistrationSession{
+		ID:               row.ID,
+		UserID:           row.UserID,
+		Username:         row.Username,
+		Locale:           row.Locale,
+		RecoveryCodeHash: row.RecoveryCodeHash,
+		CredentialID:     row.CredentialID,
+		CredentialJSON:   row.CredentialJson,
 		ExpiresAt:        fromMillis(row.ExpiresAt),
 		CreatedAt:        fromMillis(row.CreatedAt),
 		UpdatedAt:        fromMillis(row.UpdatedAt),

@@ -50,6 +50,7 @@ type AuthService struct {
 
 const defaultWebSessionTTL = 24 * time.Hour
 const defaultRecoverySessionTTL = 10 * time.Minute
+const defaultPendingSignupTTL = 30 * time.Minute
 
 // NewAuthService builds a service with defaults for the auth package.
 //
@@ -129,8 +130,8 @@ func (s *AuthService) CheckUsernameAvailability(ctx context.Context, in *authv1.
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "Check username availability request is required.")
 	}
-	if s.store == nil {
-		return nil, status.Error(codes.Internal, "User store is not configured.")
+	if s.store == nil || s.passkeyStore == nil {
+		return nil, status.Error(codes.Internal, "Auth stores are not configured.")
 	}
 
 	canonicalUsername, normalized := normalizeUsernameCandidate(in.GetUsername())
@@ -154,6 +155,20 @@ func (s *AuthService) CheckUsernameAvailability(ctx context.Context, in *authv1.
 		}, nil
 	}
 	if err == storage.ErrNotFound {
+		if err := s.passkeyStore.DeleteExpiredRegistrationSessions(ctx, s.clock().UTC()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Delete expired registration sessions: %v", err)
+		}
+		if err := s.passkeyStore.DeleteExpiredPasskeySessions(ctx, s.clock().UTC()); err != nil {
+			return nil, status.Errorf(codes.Internal, "Delete expired passkey sessions: %v", err)
+		}
+		if _, err := s.passkeyStore.GetRegistrationSessionByUsername(ctx, canonicalUsername); err == nil {
+			return &authv1.CheckUsernameAvailabilityResponse{
+				CanonicalUsername: canonicalUsername,
+				State:             authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_UNAVAILABLE,
+			}, nil
+		} else if err != storage.ErrNotFound {
+			return nil, status.Errorf(codes.Internal, "Get registration session by username: %v", err)
+		}
 		return &authv1.CheckUsernameAvailabilityResponse{
 			CanonicalUsername: canonicalUsername,
 			State:             authv1.UsernameAvailabilityState_USERNAME_AVAILABILITY_STATE_AVAILABLE,

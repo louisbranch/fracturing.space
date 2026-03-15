@@ -91,6 +91,8 @@ type RegistrationSession struct {
 	ExpiresAt        int64  `json:"expires_at"`
 	CreatedAt        int64  `json:"created_at"`
 	UpdatedAt        int64  `json:"updated_at"`
+	CredentialID     string `json:"credential_id"`
+	CredentialJson   string `json:"credential_json"`
 }
 
 type User struct {

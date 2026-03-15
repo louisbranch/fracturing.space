@@ -164,6 +164,7 @@
     async function finishPasskeyRegister(sessionID, credential) {
       return postJSON(registerFinishPath, {
         session_id: sessionID,
+        pending_id: pendingID,
         next: nextPath,
         credential: credential
       }, jsRegisterFinishError);
@@ -206,10 +207,10 @@
           if (registerButton.disabled) {
             return;
           }
-          var start = await startPasskeyRegister(username);
-          var publicKey = normalizeCreationOptions(start.public_key.publicKey);
-          var credential = await navigator.credentials.create({ publicKey: publicKey });
-          var finish = await finishPasskeyRegister(start.session_id, credentialToJSON(credential));
+      var start = await startPasskeyRegister(username);
+      var publicKey = normalizeCreationOptions(start.public_key.publicKey);
+      var credential = await navigator.credentials.create({ publicKey: publicKey });
+      var finish = await finishPasskeyRegister(start.session_id, credentialToJSON(credential));
           if (finish.redirect_url) {
             window.location = finish.redirect_url;
           }

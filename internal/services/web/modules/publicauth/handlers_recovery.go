@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"strings"
 
+	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
+	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	webi18n "github.com/louisbranch/fracturing.space/internal/services/web/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
@@ -49,7 +51,7 @@ func (h handlers) handleRecoveryFinish(w http.ResponseWriter, r *http.Request) {
 
 // handleRecoveryCodeGet handles this route in the module transport layer.
 func (h handlers) handleRecoveryCodeGet(w http.ResponseWriter, r *http.Request) {
-	state, ok := h.readAndClearRecoveryRevealState(w, r)
+	state, ok := h.readRecoveryRevealState(r)
 	if !ok {
 		if h.redirectAuthenticatedToApp(w, r) {
 			return
@@ -90,7 +92,35 @@ func (h handlers) handleRecoveryCodeAcknowledge(w http.ResponseWriter, r *http.R
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
-	httpx.WriteRedirect(w, r, h.session.ResolvePostAuthRedirect(strings.TrimSpace(r.FormValue("pending_id")), strings.TrimSpace(r.FormValue("next"))))
+	state, ok := h.readRecoveryRevealState(r)
+	if !ok {
+		httpx.WriteRedirect(w, r, routepath.Login)
+		return
+	}
+	if state.Mode == recoveryRevealModeSignup {
+		finished, err := h.passkeys.PasskeyRegisterAcknowledge(r.Context(), state.SessionID, state.PendingID)
+		if err != nil {
+			status := apperrors.HTTPStatus(err)
+			if status == http.StatusNotFound || status == http.StatusConflict {
+				clearRecoveryRevealState(w, r, h.requestMeta)
+				copy := webi18n.Auth(h.resolveAuthTag(w, r))
+				flashnotice.WriteWithPolicy(w, r, flashnotice.Notice{
+					Kind:    flashnotice.KindError,
+					Message: copy.RecoveryCodeSignupExpired,
+				}, h.requestMeta)
+				httpx.WriteRedirect(w, r, h.authPageURLWithState(routepath.Login, state.PendingID, state.Next))
+				return
+			}
+			http.Error(w, http.StatusText(status), status)
+			return
+		}
+		h.writeSessionCookie(w, r, finished.SessionID)
+		clearRecoveryRevealState(w, r, h.requestMeta)
+		httpx.WriteRedirect(w, r, h.session.ResolvePostAuthRedirect(state.PendingID, state.Next))
+		return
+	}
+	clearRecoveryRevealState(w, r, h.requestMeta)
+	httpx.WriteRedirect(w, r, h.session.ResolvePostAuthRedirect(state.PendingID, state.Next))
 }
 
 // writeRecoveryRevealState stores one-time recovery-code display state.
@@ -98,12 +128,7 @@ func (h handlers) writeRecoveryRevealState(w http.ResponseWriter, r *http.Reques
 	writeRecoveryRevealState(w, r, h.requestMeta, state)
 }
 
-// readAndClearRecoveryRevealState reads and clears one-time recovery-code display state.
-func (h handlers) readAndClearRecoveryRevealState(w http.ResponseWriter, r *http.Request) (recoveryRevealState, bool) {
-	state, ok := readRecoveryRevealState(r)
-	if !ok {
-		return recoveryRevealState{}, false
-	}
-	clearRecoveryRevealState(w, r, h.requestMeta)
-	return state, true
+// readRecoveryRevealState reads one recovery-code display state without consuming it.
+func (h handlers) readRecoveryRevealState(r *http.Request) (recoveryRevealState, bool) {
+	return readRecoveryRevealState(r)
 }

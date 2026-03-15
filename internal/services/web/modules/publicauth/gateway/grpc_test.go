@@ -40,11 +40,9 @@ func TestBeginAccountRegistrationForwardsUsername(t *testing.T) {
 	}
 }
 
-func TestFinishAccountRegistrationMapsSessionAndRecoveryCode(t *testing.T) {
+func TestFinishAccountRegistrationMapsRecoveryCode(t *testing.T) {
 	client := &recordingAuthClient{
 		finishRegistrationResp: &authv1.FinishAccountRegistrationResponse{
-			User:         &authv1.User{Id: "user-1"},
-			Session:      &authv1.WebSession{Id: "web-1"},
 			RecoveryCode: "ABCD-EFGH",
 		},
 	}
@@ -54,7 +52,25 @@ func TestFinishAccountRegistrationMapsSessionAndRecoveryCode(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FinishAccountRegistration() error = %v", err)
 	}
-	if finish.UserID != "user-1" || finish.SessionID != "web-1" || finish.RecoveryCode != "ABCD-EFGH" {
+	if finish.RecoveryCode != "ABCD-EFGH" {
+		t.Fatalf("finish = %+v", finish)
+	}
+}
+
+func TestAcknowledgeAccountRegistrationMapsSessionAndUser(t *testing.T) {
+	client := &recordingAuthClient{
+		ackRegistrationResp: &authv1.AcknowledgeAccountRegistrationResponse{
+			User:    &authv1.User{Id: "user-1"},
+			Session: &authv1.WebSession{Id: "web-1"},
+		},
+	}
+	gateway := newGRPCGateway(client)
+
+	finish, err := gateway.AcknowledgeAccountRegistration(context.Background(), "reg-1", "")
+	if err != nil {
+		t.Fatalf("AcknowledgeAccountRegistration() error = %v", err)
+	}
+	if finish.UserID != "user-1" || finish.SessionID != "web-1" {
 		t.Fatalf("finish = %+v", finish)
 	}
 }
@@ -63,6 +79,7 @@ type recordingAuthClient struct {
 	beginRegistrationResp  *authv1.BeginAccountRegistrationResponse
 	usernameCheckResp      *authv1.CheckUsernameAvailabilityResponse
 	finishRegistrationResp *authv1.FinishAccountRegistrationResponse
+	ackRegistrationResp    *authv1.AcknowledgeAccountRegistrationResponse
 	lastBeginRegistration  *authv1.BeginAccountRegistrationRequest
 }
 
@@ -86,6 +103,13 @@ func (f *recordingAuthClient) FinishAccountRegistration(context.Context, *authv1
 		return f.finishRegistrationResp, nil
 	}
 	return &authv1.FinishAccountRegistrationResponse{}, nil
+}
+
+func (f *recordingAuthClient) AcknowledgeAccountRegistration(context.Context, *authv1.AcknowledgeAccountRegistrationRequest, ...grpc.CallOption) (*authv1.AcknowledgeAccountRegistrationResponse, error) {
+	if f.ackRegistrationResp != nil {
+		return f.ackRegistrationResp, nil
+	}
+	return &authv1.AcknowledgeAccountRegistrationResponse{}, nil
 }
 
 func (*recordingAuthClient) BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error) {

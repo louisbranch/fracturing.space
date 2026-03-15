@@ -107,11 +107,16 @@ func (h handlers) authPageURL(basePath string, r *http.Request) string {
 	if r == nil {
 		return basePath
 	}
+	return h.authPageURLWithState(basePath, h.pendingID(r), h.nextPath(r))
+}
+
+// authPageURLWithState builds one auth-surface URL while preserving post-auth state.
+func (h handlers) authPageURLWithState(basePath string, pendingID string, nextPath string) string {
 	values := url.Values{}
-	if pendingID := h.pendingID(r); pendingID != "" {
+	if pendingID = strings.TrimSpace(pendingID); pendingID != "" {
 		values.Set("pending_id", pendingID)
 	}
-	if nextPath := h.nextPath(r); nextPath != "" {
+	if nextPath = redirectpath.ResolveSafe(nextPath); nextPath != "" {
 		values.Set("next", nextPath)
 	}
 	if len(values) == 0 {

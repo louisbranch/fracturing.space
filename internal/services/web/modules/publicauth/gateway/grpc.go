@@ -16,6 +16,7 @@ type AuthClient interface {
 	BeginAccountRegistration(context.Context, *authv1.BeginAccountRegistrationRequest, ...grpc.CallOption) (*authv1.BeginAccountRegistrationResponse, error)
 	CheckUsernameAvailability(context.Context, *authv1.CheckUsernameAvailabilityRequest, ...grpc.CallOption) (*authv1.CheckUsernameAvailabilityResponse, error)
 	FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error)
+	AcknowledgeAccountRegistration(context.Context, *authv1.AcknowledgeAccountRegistrationRequest, ...grpc.CallOption) (*authv1.AcknowledgeAccountRegistrationResponse, error)
 	BeginPasskeyLogin(context.Context, *authv1.BeginPasskeyLoginRequest, ...grpc.CallOption) (*authv1.BeginPasskeyLoginResponse, error)
 	FinishPasskeyLogin(context.Context, *authv1.FinishPasskeyLoginRequest, ...grpc.CallOption) (*authv1.FinishPasskeyLoginResponse, error)
 	BeginAccountRecovery(context.Context, *authv1.BeginAccountRecoveryRequest, ...grpc.CallOption) (*authv1.BeginAccountRecoveryResponse, error)
@@ -82,14 +83,28 @@ func (g GRPCGateway) CheckUsernameAvailability(ctx context.Context, username str
 	}, nil
 }
 
-// FinishAccountRegistration centralizes this web behavior in one helper seam.
-func (g GRPCGateway) FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (publicauthapp.PasskeyFinish, error) {
+// FinishAccountRegistration centralizes this staged-signup behavior in one helper seam.
+func (g GRPCGateway) FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (publicauthapp.PasskeyRegistrationReveal, error) {
 	resp, err := g.Client.FinishAccountRegistration(ctx, &authv1.FinishAccountRegistrationRequest{
 		SessionId:              sessionID,
 		CredentialResponseJson: credential,
 	})
 	if err != nil {
-		return publicauthapp.PasskeyFinish{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to finish passkey registration.")
+		return publicauthapp.PasskeyRegistrationReveal{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to finish passkey registration.")
+	}
+	return publicauthapp.PasskeyRegistrationReveal{
+		RecoveryCode: strings.TrimSpace(resp.GetRecoveryCode()),
+	}, nil
+}
+
+// AcknowledgeAccountRegistration activates one staged signup and returns the signed-in session.
+func (g GRPCGateway) AcknowledgeAccountRegistration(ctx context.Context, sessionID string, pendingID string) (publicauthapp.PasskeyFinish, error) {
+	resp, err := g.Client.AcknowledgeAccountRegistration(ctx, &authv1.AcknowledgeAccountRegistrationRequest{
+		SessionId: sessionID,
+		PendingId: strings.TrimSpace(pendingID),
+	})
+	if err != nil {
+		return publicauthapp.PasskeyFinish{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to activate the account.")
 	}
 	userID := strings.TrimSpace(resp.GetUser().GetId())
 	if userID == "" {
@@ -100,9 +115,8 @@ func (g GRPCGateway) FinishAccountRegistration(ctx context.Context, sessionID st
 		return publicauthapp.PasskeyFinish{}, apperrors.E(apperrors.KindUnknown, "Auth did not return a web session ID.")
 	}
 	return publicauthapp.PasskeyFinish{
-		SessionID:    webSessionID,
-		UserID:       userID,
-		RecoveryCode: strings.TrimSpace(resp.GetRecoveryCode()),
+		SessionID: webSessionID,
+		UserID:    userID,
 	}, nil
 }
 

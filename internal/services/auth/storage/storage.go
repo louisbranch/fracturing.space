@@ -32,6 +32,8 @@ type RegistrationSession struct {
 	Username         string
 	Locale           string
 	RecoveryCodeHash string
+	CredentialID     string
+	CredentialJSON   string
 	ExpiresAt        time.Time
 	CreatedAt        time.Time
 	UpdatedAt        time.Time
@@ -87,6 +89,7 @@ type PasskeyStore interface {
 	DeleteExpiredPasskeySessions(ctx context.Context, now time.Time) error
 	PutRegistrationSession(ctx context.Context, session RegistrationSession) error
 	GetRegistrationSession(ctx context.Context, id string) (RegistrationSession, error)
+	GetRegistrationSessionByUsername(ctx context.Context, username string) (RegistrationSession, error)
 	DeleteRegistrationSession(ctx context.Context, id string) error
 	DeleteExpiredRegistrationSessions(ctx context.Context, now time.Time) error
 	PutRecoverySession(ctx context.Context, session RecoverySession) error

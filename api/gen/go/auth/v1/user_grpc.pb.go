@@ -22,6 +22,7 @@ const _ = grpc.SupportPackageIsVersion9
 const (
 	AuthService_BeginAccountRegistration_FullMethodName          = "/auth.v1.AuthService/BeginAccountRegistration"
 	AuthService_FinishAccountRegistration_FullMethodName         = "/auth.v1.AuthService/FinishAccountRegistration"
+	AuthService_AcknowledgeAccountRegistration_FullMethodName    = "/auth.v1.AuthService/AcknowledgeAccountRegistration"
 	AuthService_BeginPasskeyRegistration_FullMethodName          = "/auth.v1.AuthService/BeginPasskeyRegistration"
 	AuthService_FinishPasskeyRegistration_FullMethodName         = "/auth.v1.AuthService/FinishPasskeyRegistration"
 	AuthService_BeginPasskeyLogin_FullMethodName                 = "/auth.v1.AuthService/BeginPasskeyLogin"
@@ -52,6 +53,8 @@ type AuthServiceClient interface {
 	BeginAccountRegistration(ctx context.Context, in *BeginAccountRegistrationRequest, opts ...grpc.CallOption) (*BeginAccountRegistrationResponse, error)
 	// Finish account registration, create the first passkey, and issue the recovery code.
 	FinishAccountRegistration(ctx context.Context, in *FinishAccountRegistrationRequest, opts ...grpc.CallOption) (*FinishAccountRegistrationResponse, error)
+	// Acknowledge the staged recovery code and activate the account.
+	AcknowledgeAccountRegistration(ctx context.Context, in *AcknowledgeAccountRegistrationRequest, opts ...grpc.CallOption) (*AcknowledgeAccountRegistrationResponse, error)
 	// Begin an authenticated passkey registration ceremony for an existing user.
 	BeginPasskeyRegistration(ctx context.Context, in *BeginPasskeyRegistrationRequest, opts ...grpc.CallOption) (*BeginPasskeyRegistrationResponse, error)
 	// Finish an authenticated passkey registration ceremony.
@@ -112,6 +115,16 @@ func (c *authServiceClient) FinishAccountRegistration(ctx context.Context, in *F
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(FinishAccountRegistrationResponse)
 	err := c.cc.Invoke(ctx, AuthService_FinishAccountRegistration_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *authServiceClient) AcknowledgeAccountRegistration(ctx context.Context, in *AcknowledgeAccountRegistrationRequest, opts ...grpc.CallOption) (*AcknowledgeAccountRegistrationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(AcknowledgeAccountRegistrationResponse)
+	err := c.cc.Invoke(ctx, AuthService_AcknowledgeAccountRegistration_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -308,6 +321,8 @@ type AuthServiceServer interface {
 	BeginAccountRegistration(context.Context, *BeginAccountRegistrationRequest) (*BeginAccountRegistrationResponse, error)
 	// Finish account registration, create the first passkey, and issue the recovery code.
 	FinishAccountRegistration(context.Context, *FinishAccountRegistrationRequest) (*FinishAccountRegistrationResponse, error)
+	// Acknowledge the staged recovery code and activate the account.
+	AcknowledgeAccountRegistration(context.Context, *AcknowledgeAccountRegistrationRequest) (*AcknowledgeAccountRegistrationResponse, error)
 	// Begin an authenticated passkey registration ceremony for an existing user.
 	BeginPasskeyRegistration(context.Context, *BeginPasskeyRegistrationRequest) (*BeginPasskeyRegistrationResponse, error)
 	// Finish an authenticated passkey registration ceremony.
@@ -359,6 +374,9 @@ func (UnimplementedAuthServiceServer) BeginAccountRegistration(context.Context, 
 }
 func (UnimplementedAuthServiceServer) FinishAccountRegistration(context.Context, *FinishAccountRegistrationRequest) (*FinishAccountRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinishAccountRegistration not implemented")
+}
+func (UnimplementedAuthServiceServer) AcknowledgeAccountRegistration(context.Context, *AcknowledgeAccountRegistrationRequest) (*AcknowledgeAccountRegistrationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AcknowledgeAccountRegistration not implemented")
 }
 func (UnimplementedAuthServiceServer) BeginPasskeyRegistration(context.Context, *BeginPasskeyRegistrationRequest) (*BeginPasskeyRegistrationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method BeginPasskeyRegistration not implemented")
@@ -467,6 +485,24 @@ func _AuthService_FinishAccountRegistration_Handler(srv interface{}, ctx context
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(AuthServiceServer).FinishAccountRegistration(ctx, req.(*FinishAccountRegistrationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _AuthService_AcknowledgeAccountRegistration_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AcknowledgeAccountRegistrationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(AuthServiceServer).AcknowledgeAccountRegistration(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: AuthService_AcknowledgeAccountRegistration_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(AuthServiceServer).AcknowledgeAccountRegistration(ctx, req.(*AcknowledgeAccountRegistrationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -809,6 +845,10 @@ var AuthService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FinishAccountRegistration",
 			Handler:    _AuthService_FinishAccountRegistration_Handler,
+		},
+		{
+			MethodName: "AcknowledgeAccountRegistration",
+			Handler:    _AuthService_AcknowledgeAccountRegistration_Handler,
 		},
 		{
 			MethodName: "BeginPasskeyRegistration",

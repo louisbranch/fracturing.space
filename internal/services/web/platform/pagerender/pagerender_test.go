@@ -232,6 +232,29 @@ func TestWritePublicPageDefaultsStatusAndNilBody(t *testing.T) {
 	}
 }
 
+func TestWritePublicPageRendersToastFromFlashNotice(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/login", nil)
+	setFlashCookie(t, req, flashnotice.Notice{Kind: flashnotice.KindError, Message: "Signup expired. Please try again."})
+	rr := httptest.NewRecorder()
+
+	WritePublicPage(rr, req, "Sign In", "desc", "en", http.StatusAccepted, textComponent(`<section id="public-fragment">ok</section>`))
+
+	if rr.Code != http.StatusAccepted {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusAccepted)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{`id="app-toast"`, `Signup expired. Please try again.`, `id="public-fragment"`} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing marker %q: %q", marker, body)
+		}
+	}
+	if !responseHasCookieName(rr, flashnotice.CookieName) {
+		t.Fatalf("response missing %q clear cookie", flashnotice.CookieName)
+	}
+}
+
 func TestWritePublicPageFallsBackToInternalServerErrorOnRenderFailure(t *testing.T) {
 	t.Parallel()
 
