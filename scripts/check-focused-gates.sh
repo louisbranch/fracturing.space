@@ -59,6 +59,10 @@ if printf '%s\n' "${changed_files}" | rg -q '^(internal/services/admin/|internal
 	targets+=("admin-architecture-check")
 fi
 
+if printf '%s\n' "${changed_files}" | rg -q '^(internal/services/play/|internal/cmd/play/)'; then
+	targets+=("play-architecture-check")
+fi
+
 if [[ "${#targets[@]}" -eq 0 ]]; then
 	echo "No focused architecture gates selected."
 	exit 0

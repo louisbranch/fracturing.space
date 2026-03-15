@@ -16,6 +16,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [Campaign AI orchestration](campaign-ai-orchestration.md)
 - [Campaign AI session bootstrap](campaign-ai-session-bootstrap.md)
 - [Interaction surfaces](interaction-surfaces.md)
+- [Play architecture](play-architecture.md)
 - [Identity and OAuth](identity-and-oauth.md)
 - [Web passkey recovery and device enrollment](web-passkey-recovery-and-device-enrollment.md)
 - [Web architecture](web-architecture.md)

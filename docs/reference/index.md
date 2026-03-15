@@ -26,6 +26,7 @@ Exact and integration-facing contracts.
 - Core choice primitive contracts: [core-choice-primitive-contracts.md](core-choice-primitive-contracts.md)
 - Contributor map: [contributor-map.md](contributor-map.md)
 - Game service contributor map: [game-service-contributor-map.md](game-service-contributor-map.md)
+- Play contributor map: [play-contributor-map.md](play-contributor-map.md)
 - Small services topology: [small-services-topology.md](small-services-topology.md)
 - Icon rendering: [icon-rendering.md](icon-rendering.md)
 - Icon catalog: [icon-catalog.md](icon-catalog.md)

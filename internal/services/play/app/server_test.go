@@ -11,6 +11,7 @@ import (
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	playprotocol "github.com/louisbranch/fracturing.space/internal/services/play/protocol"
 	"github.com/louisbranch/fracturing.space/internal/services/play/transcript"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/playlaunchgrant"
 	"google.golang.org/grpc"
@@ -182,7 +183,7 @@ func TestHandleBootstrapReturnsPlayContract(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	var payload playBootstrap
+	var payload playprotocol.Bootstrap
 	if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
@@ -223,7 +224,7 @@ func TestHandleBootstrapUsesCookieScopedRealtimeURL(t *testing.T) {
 	if rr.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
 	}
-	var payload playBootstrap
+	var payload playprotocol.Bootstrap
 	if err := json.Unmarshal(rr.Body.Bytes(), &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
@@ -383,19 +384,19 @@ func (f fakePlaySystemClient) GetGameSystem(context.Context, *gamev1.GetGameSyst
 
 type fakeTranscriptStore struct{}
 
-func (f *fakeTranscriptStore) LatestSequence(context.Context, string, string) (int64, error) {
+func (f *fakeTranscriptStore) LatestSequence(context.Context, transcript.Scope) (int64, error) {
 	return 0, nil
 }
 
-func (f *fakeTranscriptStore) AppendMessage(context.Context, string, string, transcript.MessageActor, string, string) (transcript.Message, bool, error) {
-	return transcript.Message{}, false, nil
+func (f *fakeTranscriptStore) AppendMessage(context.Context, transcript.AppendRequest) (transcript.AppendResult, error) {
+	return transcript.AppendResult{}, nil
 }
 
-func (f *fakeTranscriptStore) HistoryAfter(context.Context, string, string, int64) ([]transcript.Message, error) {
+func (f *fakeTranscriptStore) HistoryAfter(context.Context, transcript.HistoryAfterQuery) ([]transcript.Message, error) {
 	return nil, nil
 }
 
-func (f *fakeTranscriptStore) HistoryBefore(context.Context, string, string, int64, int) ([]transcript.Message, error) {
+func (f *fakeTranscriptStore) HistoryBefore(context.Context, transcript.HistoryBeforeQuery) ([]transcript.Message, error) {
 	return nil, nil
 }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { PlayChatMessage, TypingEvent } from "../../types";
+import type { PlayChatMessage, TypingEvent } from "../../protocol";
 import { formatClock } from "../../utils";
 
 type Props = {

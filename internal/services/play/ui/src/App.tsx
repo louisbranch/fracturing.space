@@ -2,7 +2,7 @@ import { ChatPanel } from "./features/chat/ChatPanel";
 import { DraftPanel } from "./features/draft/DraftPanel";
 import { usePlayRuntime } from "./runtime";
 import { resolveSystemRenderer } from "./systems/registry";
-import { sessionLabel } from "./utils";
+import { createPlayShellViewModel, createSystemRenderViewModel } from "./view_models";
 
 export function App() {
   const runtime = usePlayRuntime();
@@ -41,10 +41,9 @@ export function App() {
     );
   }
 
-  const renderer = resolveSystemRenderer(
-    state.bootstrap.system.id,
-    state.bootstrap.system.version,
-  );
+  const renderer = resolveSystemRenderer(state.bootstrap.system);
+  const shellView = createPlayShellViewModel(state.bootstrap, state.snapshot, state.connected);
+  const systemView = createSystemRenderViewModel(state.snapshot);
 
   return (
     <main className="play-shell">
@@ -52,25 +51,19 @@ export function App() {
         <div className="play-hero-body">
           <div className="max-w-3xl space-y-4">
             <span className="play-eyebrow">Active play</span>
-            <h1 className="font-display text-4xl sm:text-5xl">
-              {state.snapshot.interaction_state.campaign_name || "Untitled campaign"}
-            </h1>
+            <h1 className="font-display text-4xl sm:text-5xl">{shellView.campaignName}</h1>
             <p className="play-prose text-base sm:text-lg">
-              Live interaction state for {state.snapshot.interaction_state.viewer?.name || "participant"}.
+              Live interaction state for {shellView.viewerName}.
             </p>
           </div>
           <div className="play-badge-row">
-            <span className="badge badge-primary badge-outline badge-lg">
-              {state.bootstrap.system.name || state.bootstrap.system.id || "system"}
-            </span>
-            <span className="badge badge-accent badge-outline badge-lg">
-              {sessionLabel(state.snapshot.interaction_state.active_session)}
-            </span>
+            <span className="badge badge-primary badge-outline badge-lg">{shellView.systemLabel}</span>
+            <span className="badge badge-accent badge-outline badge-lg">{shellView.sessionLabel}</span>
             <span
               className={`badge badge-lg ${state.connected ? "badge-success" : "badge-error"} badge-outline`}
               data-testid="live-status"
             >
-              {state.connected ? "Connected" : "Disconnected"}
+              {shellView.connectedLabel}
             </span>
           </div>
         </div>
@@ -84,7 +77,7 @@ export function App() {
 
       <div className="play-workspace">
         <section className="play-column">
-          {renderer.render({ bootstrap: state.bootstrap, snapshot: state.snapshot })}
+          {renderer.render({ bootstrap: state.bootstrap, snapshot: state.snapshot, view: systemView })}
         </section>
         <aside className="play-column">
           <div className="play-sticky">

@@ -57,6 +57,7 @@ Run targeted tests first, then full checks:
 ## Canonical references
 
 - Service runtime ownership map: [Small services topology](small-services-topology.md)
+- Play routing: [Play contributor map](play-contributor-map.md)
 - Write-path semantics: [Event-driven system](../architecture/foundations/event-driven-system.md)
 - System extension: [Game systems architecture](../architecture/systems/game-systems.md)
 - Game service routing: [Game service contributor map](game-service-contributor-map.md)

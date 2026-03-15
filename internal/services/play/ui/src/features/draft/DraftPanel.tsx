@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { TypingEvent } from "../../types";
+import type { TypingEvent } from "../../protocol";
 
 type Props = {
   typing: TypingEvent[];

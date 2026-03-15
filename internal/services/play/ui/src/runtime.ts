@@ -1,42 +1,23 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react";
-import { PlayRealtimeClient, type ServerFrame } from "./realtime";
-import type {
-  PlayBootstrap,
-  PlayChatMessage,
-  PlayRoomSnapshot,
-  TypingEvent,
-} from "./types";
 import {
-  mergeMessages,
-  normalizeBootstrap,
-  normalizeHistory,
-  normalizeSnapshot,
-  resolveCampaignId,
-} from "./utils";
-
-type TypingState = Record<string, TypingEvent>;
-
-type RuntimeState = {
-  bootstrap?: PlayBootstrap;
-  snapshot?: PlayRoomSnapshot;
-  messages: PlayChatMessage[];
-  chatTyping: TypingState;
-  draftTyping: TypingState;
-  error: string;
-  loading: boolean;
-  connected: boolean;
-  loadingHistory: boolean;
-};
-
-const initialState: RuntimeState = {
-  messages: [],
-  chatTyping: {},
-  draftTyping: {},
-  error: "",
-  loading: true,
-  connected: false,
-  loadingHistory: false,
-};
+  PlayRealtimeClient,
+  type RealtimeStatus,
+  type ServerFrame,
+} from "./realtime";
+import type { PlayBootstrap, PlayRoomSnapshot } from "./protocol";
+import {
+  applyHistoryFailure,
+  applyHistoryLoaded,
+  applyHistoryLoadStarted,
+  applyRealtimeFrame,
+  applyRealtimeStatus,
+  createFailedRuntimeState,
+  createLoadedRuntimeState,
+  initialRuntimeState,
+  type RuntimeState,
+} from "./runtime_state";
+import { errorMessage, fetchBootstrapData, fetchHistoryPage } from "./runtime_transport";
+import { resolveCampaignId } from "./utils";
 
 export function usePlayRuntime(): {
   state: RuntimeState;
@@ -47,144 +28,92 @@ export function usePlayRuntime(): {
   setDraftTyping: (active: boolean) => void;
 } {
   const campaignId = resolveCampaignId(window.location.pathname);
-  const [state, setState] = useState<RuntimeState>(initialState);
+  const [state, setState] = useState<RuntimeState>(initialRuntimeState);
   const realtimeRef = useRef<PlayRealtimeClient | null>(null);
 
   const onFrame = useEffectEvent((frame: ServerFrame) => {
-    switch (frame.type) {
-      case "play.ready":
-      case "play.interaction.updated":
-        setState((current) => {
-          if (!current.bootstrap) {
-            return current;
-          }
-          const snapshot = normalizeSnapshot(current.bootstrap, frame.payload, current.snapshot?.chat);
-          return {
-            ...current,
-            snapshot,
-            connected: true,
-          };
-        });
-        return;
-      case "play.chat.message":
-        setState((current) => ({
-          ...current,
-          messages: mergeMessages(current.messages, [frame.payload.message]),
-        }));
-        return;
-      case "play.chat.typing":
-        setState((current) => ({
-          ...current,
-          chatTyping: updateTypingState(current.chatTyping, frame.payload),
-        }));
-        return;
-      case "play.draft.typing":
-        setState((current) => ({
-          ...current,
-          draftTyping: updateTypingState(current.draftTyping, frame.payload),
-        }));
-        return;
-      case "play.error":
-        setState((current) => ({
-          ...current,
-          error: frame.payload.message,
-        }));
-        return;
-      case "play.resync":
-        setState((current) => ({
-          ...current,
-          error: frame.payload.reason,
-        }));
-        return;
-    }
+    setState((current) => applyRealtimeFrame(current, frame));
   });
 
-  const fetchBootstrap = useEffectEvent(async () => {
-    const response = await fetch(`/api/campaigns/${campaignId}/bootstrap`, {
-      credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-      },
-    });
+  const connectRealtime = useEffectEvent((bootstrap: PlayBootstrap, snapshot: PlayRoomSnapshot) => {
+    const previous = realtimeRef.current;
+    realtimeRef.current = null;
+    previous?.close();
 
-    if (!response.ok) {
-      throw new Error(`bootstrap request failed: ${response.status}`);
-    }
+    let client: PlayRealtimeClient | null = null;
+    const handleStatus = (status: RealtimeStatus) => {
+      if (realtimeRef.current !== client) {
+        return;
+      }
+      if (status.type !== "open") {
+        realtimeRef.current = null;
+      }
+      setState((current) => applyRealtimeStatus(current, status));
+    };
 
-    const payload = normalizeBootstrap((await response.json()) as PlayBootstrap);
-    setState((current) => ({
-      ...current,
-      bootstrap: payload,
-      snapshot: normalizeSnapshot(payload),
-      loading: false,
-      error: "",
-    }));
-    await loadHistory(payload.chat.history_url, payload.chat.latest_sequence_id + 1);
-    connectRealtime(payload);
-  });
-
-  const connectRealtime = useEffectEvent((bootstrap: PlayBootstrap) => {
-    realtimeRef.current?.close();
-    const client = new PlayRealtimeClient(
+    client = new PlayRealtimeClient(
       bootstrap,
       onFrame,
-      () => {
-        setState((current) => ({ ...current, connected: true }));
-      },
-      (message) => {
-        setState((current) => ({ ...current, connected: false, error: message }));
-      },
-      state.snapshot?.latest_game_sequence ?? 0,
-      state.snapshot?.chat?.latest_sequence_id ?? bootstrap.chat.latest_sequence_id,
+      handleStatus,
+      snapshot.latest_game_sequence,
+      snapshot.chat?.latest_sequence_id ?? bootstrap.chat.latest_sequence_id,
     );
     realtimeRef.current = client;
   });
 
   const loadHistory = useEffectEvent(async (historyURL?: string, beforeSequence?: number) => {
-    const url = new URL(historyURL ?? `/api/campaigns/${campaignId}/chat/history`, window.location.origin);
-    if (beforeSequence !== undefined) {
-      url.searchParams.set("before_seq", String(beforeSequence));
+    setState((current) => applyHistoryLoadStarted(current));
+    try {
+      const messages = await fetchHistoryPage(campaignId, historyURL, beforeSequence);
+      setState((current) => applyHistoryLoaded(current, { messages }));
+    } catch (error) {
+      const message = errorMessage(error, "failed to load chat history");
+      setState((current) => applyHistoryFailure(current, message));
     }
-    url.searchParams.set("limit", "25");
-
-    setState((current) => ({ ...current, loadingHistory: true }));
-    const response = await fetch(url, {
-      credentials: "same-origin",
-      headers: {
-        Accept: "application/json",
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`history request failed: ${response.status}`);
-    }
-    const payload = await response.json();
-    const messages = normalizeHistory(payload);
-    setState((current) => ({
-      ...current,
-      loadingHistory: false,
-      messages: mergeMessages(current.messages, messages),
-    }));
   });
 
   useEffect(() => {
     let cancelled = false;
 
-    fetchBootstrap().catch((error) => {
-      if (cancelled) {
-        return;
+    void (async () => {
+      try {
+        const runtimeData = await fetchBootstrapData(campaignId);
+        if (cancelled) {
+          return;
+        }
+
+        setState(createLoadedRuntimeState(runtimeData));
+
+        if (cancelled) {
+          return;
+        }
+
+        try {
+          connectRealtime(runtimeData.bootstrap, runtimeData.snapshot);
+        } catch (error) {
+          if (cancelled) {
+            return;
+          }
+          setState((current) =>
+            applyRealtimeStatus(current, {
+              type: "disconnected",
+              message: errorMessage(error, "failed to connect realtime"),
+            }),
+          );
+        }
+      } catch (error) {
+        if (cancelled) {
+          return;
+        }
+        setState(createFailedRuntimeState(errorMessage(error, "failed to load active play")));
       }
-      const message = error instanceof Error ? error.message : "failed to load active play";
-      setState((current) => ({
-        ...current,
-        loading: false,
-        error: message,
-      }));
-    });
+    })();
 
     return () => {
       cancelled = true;
-      realtimeRef.current?.close();
+      const client = realtimeRef.current;
       realtimeRef.current = null;
+      client?.close();
     };
   }, [campaignId]);
 
@@ -192,7 +121,7 @@ export function usePlayRuntime(): {
     state,
     campaignId,
     loadOlderMessages: async () => {
-      if (!state.bootstrap) {
+      if (!state.bootstrap || state.loadingHistory) {
         return;
       }
       const firstSequence = state.messages[0]?.sequence_id ?? state.snapshot?.chat?.latest_sequence_id ?? 0;
@@ -211,14 +140,4 @@ export function usePlayRuntime(): {
       realtimeRef.current?.sendDraftTyping(active);
     },
   };
-}
-
-function updateTypingState(current: TypingState, event: TypingEvent): TypingState {
-  const next = { ...current };
-  if (!event.active) {
-    delete next[event.participant_id];
-    return next;
-  }
-  next[event.participant_id] = event;
-  return next;
 }

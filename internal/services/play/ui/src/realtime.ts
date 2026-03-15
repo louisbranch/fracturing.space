@@ -3,12 +3,11 @@ import type {
   PlayChatMessage,
   PlayRoomSnapshot,
   TypingEvent,
-} from "./types";
+} from "./protocol";
 import { realtimeURL } from "./utils";
 
 type FrameHandler = (frame: ServerFrame) => void;
-type OpenHandler = () => void;
-type ErrorHandler = (message: string) => void;
+type StatusHandler = (status: RealtimeStatus) => void;
 
 type ClientFrame =
   | {
@@ -39,17 +38,23 @@ export type ServerFrame =
   | { type: "play.chat.message"; payload: { message: PlayChatMessage } }
   | { type: "play.chat.typing"; payload: TypingEvent }
   | { type: "play.draft.typing"; payload: TypingEvent }
-  | { type: "play.error"; payload: { code: string; message: string } }
+  | { type: "play.error"; payload: { error: { code: string; message: string } } }
   | { type: "play.resync"; payload: { reason: string } };
+
+export type RealtimeStatus =
+  | { type: "open" }
+  | { type: "closed" }
+  | { type: "disconnected"; message: string };
 
 export class PlayRealtimeClient {
   private readonly socket: WebSocket;
+  private closedByClient = false;
+  private terminalStatusSent = false;
 
   constructor(
     bootstrap: PlayBootstrap,
     onFrame: FrameHandler,
-    onOpen: OpenHandler,
-    onError: ErrorHandler,
+    onStatus: StatusHandler,
     lastGameSeq: number,
     lastChatSeq: number,
   ) {
@@ -65,7 +70,7 @@ export class PlayRealtimeClient {
           last_chat_seq: lastChatSeq,
         },
       });
-      onOpen();
+      onStatus({ type: "open" });
     });
 
     socket.addEventListener("message", (event) => {
@@ -74,16 +79,25 @@ export class PlayRealtimeClient {
         onFrame(frame);
       } catch (error) {
         const message = error instanceof Error ? error.message : "invalid realtime payload";
-        onError(message);
+        this.reportDisconnected(onStatus, message);
       }
     });
 
     socket.addEventListener("error", () => {
-      onError("realtime connection error");
+      this.reportDisconnected(onStatus, "realtime connection error");
+    });
+
+    socket.addEventListener("close", (event) => {
+      if (this.closedByClient) {
+        onStatus({ type: "closed" });
+        return;
+      }
+      this.reportDisconnected(onStatus, closeMessage(event));
     });
   }
 
   close(): void {
+    this.closedByClient = true;
     this.socket.close();
   }
 
@@ -108,4 +122,22 @@ export class PlayRealtimeClient {
   private send(frame: ClientFrame): void {
     this.socket.send(JSON.stringify(frame));
   }
+
+  private reportDisconnected(onStatus: StatusHandler, message: string): void {
+    if (this.closedByClient || this.terminalStatusSent) {
+      return;
+    }
+    this.terminalStatusSent = true;
+    onStatus({ type: "disconnected", message });
+  }
+}
+
+function closeMessage(event: CloseEvent): string {
+  if (event.reason.trim()) {
+    return event.reason.trim();
+  }
+  if (event.code > 0) {
+    return `realtime connection closed (${event.code})`;
+  }
+  return "realtime connection closed";
 }
