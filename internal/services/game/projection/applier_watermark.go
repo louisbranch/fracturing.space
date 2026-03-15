@@ -18,7 +18,7 @@ package projection
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -68,8 +68,11 @@ func (a Applier) nowUTC() time.Time {
 // audit event. The log line is retained for backward compatibility with
 // existing log-based alerting.
 func (a Applier) emitProjectionGapAudit(ctx context.Context, campaignID string, expectedSeq, actualSeq uint64) {
-	log.Printf("projection gap detected for campaign %s: expected seq %d but got %d",
-		campaignID, expectedSeq, actualSeq)
+	slog.Warn("projection gap detected",
+		"campaign_id", campaignID,
+		"expected_seq", expectedSeq,
+		"actual_seq", actualSeq,
+	)
 
 	if a.Auditor == nil {
 		return
@@ -83,6 +86,6 @@ func (a Applier) emitProjectionGapAudit(ctx context.Context, campaignID string, 
 			"actual_seq":   actualSeq,
 		},
 	}); err != nil {
-		log.Printf("audit emit projection gap: %v", err)
+		slog.Error("audit emit projection gap", "error", err)
 	}
 }

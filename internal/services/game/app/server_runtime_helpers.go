@@ -28,7 +28,10 @@ func startCancelableLoop(ctx context.Context, run func(context.Context)) runtime
 	if run == nil {
 		return noopStop
 	}
-	workerCtx, cancel := context.WithCancel(startupContext(ctx))
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	workerCtx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -51,7 +54,9 @@ func runBatchedPollingLoop(
 	if runPass == nil || interval <= 0 || batchLimit <= 0 {
 		return
 	}
-	ctx = startupContext(ctx)
+	if ctx == nil {
+		ctx = context.Background()
+	}
 
 	for {
 		if runPass() < batchLimit {

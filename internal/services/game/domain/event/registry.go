@@ -164,6 +164,9 @@ const (
 //
 // Validation happens at the edge of storage. The goal is to reject malformed
 // events before persistence and before they can contaminate replay.
+//
+// A Registry must be fully populated before use. After initialization,
+// all methods are safe for concurrent read access.
 type Registry struct {
 	definitions map[Type]Definition
 	aliases     map[Type]Type

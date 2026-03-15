@@ -3,9 +3,10 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net"
 	"strings"
+	"time"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
@@ -17,6 +18,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // serverBootstrap configures each startup phase for the game server.
@@ -36,7 +38,7 @@ type serverBootstrap struct {
 
 // serverBootstrapConfig defines per-phase seams and is intentionally internal.
 type serverBootstrapConfig struct {
-	loadEnv                     func() serverEnv
+	loadEnv                     func() (serverEnv, error)
 	listen                      func(network, address string) (net.Listener, error)
 	openStorageBundle           storageBundleOpener
 	configureDomain             func(serverEnv, *gamegrpc.Stores, engine.Registries) error
@@ -153,19 +155,19 @@ func (d managedConnDependencyDialer) Dial(
 // projectionRuntimeConfigurer owns startup-time projection worker and
 // inline-apply runtime configuration.
 type projectionRuntimeConfigurer interface {
-	Configure(serverEnv, *gamegrpc.Stores, projectionApplyStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
+	Configure(serverEnv, *gamegrpc.Stores, storage.ProjectionApplyExactlyOnceStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
 }
 
 type defaultProjectionRuntimeConfigurer struct {
 	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
 	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
-	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error)
+	buildProjectionApplyOutboxApply func(storage.ProjectionApplyExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error)
 }
 
 func (c defaultProjectionRuntimeConfigurer) Configure(
 	srvEnv serverEnv,
 	stores *gamegrpc.Stores,
-	projectionStore projectionApplyStore,
+	projectionStore storage.ProjectionApplyExactlyOnceStore,
 	registries engine.Registries,
 	adapters *bridge.AdapterRegistry,
 ) (projectionRuntimeState, error) {
@@ -176,7 +178,7 @@ func (c defaultProjectionRuntimeConfigurer) Configure(
 	if stores != nil && stores.Write.Runtime != nil {
 		stores.Write.Runtime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
 	}
-	log.Printf("projection apply mode = %s", projectionApplyMode)
+	slog.Info("projection apply mode resolved", "mode", projectionApplyMode)
 
 	projectionRegistries, err := c.buildProjectionRegistries(registries, adapters)
 	if err != nil {
@@ -251,11 +253,14 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	return cfg
 }
 
-func startupContext(ctx context.Context) context.Context {
+func startupContext(ctx context.Context, timeout time.Duration) (context.Context, context.CancelFunc) {
 	if ctx == nil {
-		return context.Background()
+		ctx = context.Background()
 	}
-	return ctx
+	if timeout > 0 {
+		return context.WithTimeout(ctx, timeout)
+	}
+	return ctx, func() {}
 }
 
 type configuredStores struct {
@@ -328,8 +333,12 @@ func nilCatalogReadinessStore(bundle *storageBundle) contentstore.DaggerheartCat
 
 // NewWithAddr builds a game server using named startup phases.
 func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server *Server, err error) {
-	startupCtx := startupContext(ctx)
-	srvEnv := b.config.loadEnv()
+	srvEnv, err := b.config.loadEnv()
+	if err != nil {
+		return nil, wrapStartupError(startupPhaseRegistries, "load server env", err)
+	}
+	startupCtx, startupCancel := startupContext(ctx, srvEnv.StartupTimeout)
+	defer startupCancel()
 	rollback := startupRollback{}
 	defer func() {
 		if err != nil {

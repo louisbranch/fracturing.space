@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -189,14 +189,11 @@ func commandNamespaceFromType(cmdType command.Type) string {
 
 // logCampaignWriteBlocked emits a structured log for blocked campaign writes.
 func logCampaignWriteBlocked(ctx context.Context, campaignID, activeSessionID, fullMethod string) {
-	requestID := grpcmeta.RequestIDFromContext(ctx)
-	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	log.Printf(
-		"campaign write blocked campaign_id=%s active_session_id=%s rpc_name=%s request_id=%s invocation_id=%s",
-		campaignID,
-		activeSessionID,
-		fullMethod,
-		requestID,
-		invocationID,
+	slog.Warn("campaign write blocked",
+		"campaign_id", campaignID,
+		"active_session_id", activeSessionID,
+		"rpc_name", fullMethod,
+		"request_id", grpcmeta.RequestIDFromContext(ctx),
+		"invocation_id", grpcmeta.InvocationIDFromContext(ctx),
 	)
 }

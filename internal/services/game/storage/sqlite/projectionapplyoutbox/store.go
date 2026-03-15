@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -290,8 +290,12 @@ func (s *Store) markRetry(ctx context.Context, row row, now time.Time, attempt i
 	status := "failed"
 	if attempt >= deadLetterThreshold {
 		status = "dead"
-		log.Printf("projection outbox dead letter campaign_id=%s seq=%d attempts=%d last_error=%s",
-			row.CampaignID, row.Seq, attempt, lastError)
+		slog.Warn("projection apply dead letter",
+			"campaign_id", row.CampaignID,
+			"seq", row.Seq,
+			"attempts", attempt,
+			"last_error", lastError,
+		)
 	}
 	result, err := s.sqlDB.ExecContext(
 		ctx,

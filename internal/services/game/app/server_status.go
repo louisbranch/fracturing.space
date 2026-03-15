@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -87,7 +86,7 @@ func (s *Server) startCatalogAvailabilityMonitor(ctx context.Context) func() {
 			s.statusReporter,
 			s.stores.content,
 			catalogAvailabilityMonitorInterval,
-			log.Printf,
+			slogInfof,
 		)
 	})
 }

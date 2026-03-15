@@ -12,6 +12,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 )
@@ -169,13 +171,12 @@ func UnaryServerInterceptor(idGenerator func() (string, error)) grpc.UnaryServer
 			return nil, grpcerror.Internal("set response metadata", headerErr)
 		}
 
-		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes for unary calls once tracing is added.
-		// Metadata headers are propagated today as the transport-agnostic audit rail.
-		// This keeps correlation consistent across CLI, MCP, and web callers even before
-		// tracing is introduced. Spans can be added behind the same metadata keys later
-		// without changing this contract.
-		// Metadata headers are propagated today for auditability; tracing is intentionally
-		// deferred to avoid blocking this layer on observability plumbing choices.
+		if span := trace.SpanFromContext(updatedCtx); span.IsRecording() {
+			span.SetAttributes(
+				attribute.String("request.id", requestID),
+				attribute.String("request.invocation_id", invocationID),
+			)
+		}
 
 		return handler(updatedCtx, req)
 	}
@@ -198,13 +199,12 @@ func StreamServerInterceptor(idGenerator func() (string, error)) grpc.StreamServ
 			return grpcerror.Internal("set response metadata", headerErr)
 		}
 
-		// TODO: Add request_id and invocation_id to OpenTelemetry span attributes for stream calls once tracing is added.
-		// Metadata headers are propagated today as the transport-agnostic audit rail.
-		// This keeps correlation consistent across CLI, MCP, and web callers even before
-		// tracing is introduced. Spans can be added behind the same metadata keys later
-		// without changing this contract.
-		// Metadata headers are propagated today for auditability; tracing is intentionally
-		// deferred to avoid blocking this layer on observability plumbing choices.
+		if span := trace.SpanFromContext(updatedCtx); span.IsRecording() {
+			span.SetAttributes(
+				attribute.String("request.id", requestID),
+				attribute.String("request.invocation_id", invocationID),
+			)
+		}
 
 		return handler(srv, &wrappedServerStream{ServerStream: stream, ctx: updatedCtx})
 	}

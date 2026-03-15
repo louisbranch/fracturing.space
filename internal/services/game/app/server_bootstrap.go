@@ -3,7 +3,7 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
 
@@ -38,7 +38,7 @@ func NewWithAddrContext(ctx context.Context, addr string) (*Server, error) {
 	return newServerBootstrap().NewWithAddr(ctx, addr)
 }
 
-func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, eventRegistry *event.Registry) (func(context.Context, event.Event) error, error) {
+func buildProjectionApplyOutboxApply(projectionStore storage.ProjectionApplyExactlyOnceStore, eventRegistry *event.Registry) (func(context.Context, event.Event) error, error) {
 	if projectionStore == nil {
 		return nil, nil
 	}
@@ -147,7 +147,7 @@ func openEventStore(ctx context.Context, path string, projectionApplyOutboxEnabl
 	if err != nil {
 		return nil, fmt.Errorf("open events store: %w", err)
 	}
-	if err := store.VerifyEventIntegrity(startupContext(ctx)); err != nil {
+	if err := store.VerifyEventIntegrity(ctx); err != nil {
 		_ = store.Close()
 		return nil, fmt.Errorf("verify event integrity: %w", err)
 	}
@@ -189,13 +189,13 @@ func repairProjectionGaps(ctx context.Context, bundle *storageBundle, applier pr
 	if bundle == nil || bundle.projections == nil || bundle.events == nil {
 		return
 	}
-	results, err := projection.RepairProjectionGaps(startupContext(ctx), bundle.projections, bundle.events, applier)
+	results, err := projection.RepairProjectionGaps(ctx, bundle.projections, bundle.events, applier)
 	if err != nil {
-		log.Printf("projection gap repair: %v", err)
+		slog.Warn("projection gap repair failed", "error", err)
 		return
 	}
 	for _, r := range results {
-		log.Printf("projection gap repaired: campaign %s replayed %d events", r.CampaignID, r.EventsReplayed)
+		slog.Info("projection gap repaired", "campaign_id", r.CampaignID, "events_replayed", r.EventsReplayed)
 	}
 }
 

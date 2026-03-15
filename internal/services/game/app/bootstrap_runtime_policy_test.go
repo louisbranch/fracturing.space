@@ -9,14 +9,15 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-type projectionRuntimeConfigurerFunc func(serverEnv, *gamegrpc.Stores, projectionApplyStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
+type projectionRuntimeConfigurerFunc func(serverEnv, *gamegrpc.Stores, storage.ProjectionApplyExactlyOnceStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
 
 func (f projectionRuntimeConfigurerFunc) Configure(
 	srvEnv serverEnv,
 	stores *gamegrpc.Stores,
-	projectionStore projectionApplyStore,
+	projectionStore storage.ProjectionApplyExactlyOnceStore,
 	registries engine.Registries,
 	adapters *bridge.AdapterRegistry,
 ) (projectionRuntimeState, error) {
@@ -33,7 +34,7 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 		t.Fatalf("register projection event: %v", err)
 	}
 
-	var capturedStore projectionApplyStore
+	var capturedStore storage.ProjectionApplyExactlyOnceStore
 	var capturedRegistry *event.Registry
 	applyCalled := false
 	applyFn := func(context.Context, event.Event) error {
@@ -42,7 +43,7 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 	}
 
 	bootstrap := newServerBootstrapWithConfig(serverBootstrapConfig{
-		projectionRuntimeConfigurer: projectionRuntimeConfigurerFunc(func(_ serverEnv, stores *gamegrpc.Stores, store projectionApplyStore, _ engine.Registries, _ *bridge.AdapterRegistry) (projectionRuntimeState, error) {
+		projectionRuntimeConfigurer: projectionRuntimeConfigurerFunc(func(_ serverEnv, stores *gamegrpc.Stores, store storage.ProjectionApplyExactlyOnceStore, _ engine.Registries, _ *bridge.AdapterRegistry) (projectionRuntimeState, error) {
 			if stores != nil && stores.Write.Runtime != nil {
 				stores.Write.Runtime.SetInlineApplyEnabled(false)
 				stores.Write.Runtime.SetIntentFilter(projectionRegistries)
@@ -108,7 +109,7 @@ func TestConfigureProjectionRuntime_ReturnsResolveModeError(t *testing.T) {
 				t.Fatal("expected projection registry builder not to run after mode-resolution failure")
 				return nil, nil
 			},
-			buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
+			buildProjectionApplyOutboxApply: func(storage.ProjectionApplyExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error) {
 				t.Fatal("expected outbox apply builder not to run after mode-resolution failure")
 				return nil, nil
 			},
@@ -134,7 +135,7 @@ func TestConfigureProjectionRuntime_ReturnsBuildProjectionRegistriesError(t *tes
 			buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
 				return nil, wantErr
 			},
-			buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
+			buildProjectionApplyOutboxApply: func(storage.ProjectionApplyExactlyOnceStore, *event.Registry) (func(context.Context, event.Event) error, error) {
 				calledBuildApply = true
 				return nil, nil
 			},

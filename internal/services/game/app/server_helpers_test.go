@@ -489,7 +489,10 @@ func TestLoadServerEnvDomainEnabledDefaults(t *testing.T) {
 	}
 	_ = os.Unsetenv(key)
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if !cfg.DomainEnabled {
 		t.Fatal("expected domain to be enabled by default")
 	}
@@ -504,7 +507,10 @@ func TestLoadServerEnvAuthAddrDefaultsToServiceDNS(t *testing.T) {
 	}
 	_ = os.Unsetenv(key)
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if cfg.AuthAddr != "auth:8083" {
 		t.Fatalf("auth addr = %q, want %q", cfg.AuthAddr, "auth:8083")
 	}
@@ -513,7 +519,10 @@ func TestLoadServerEnvAuthAddrDefaultsToServiceDNS(t *testing.T) {
 func TestLoadServerEnvDomainEnabled(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_DOMAIN_ENABLED", "true")
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if !cfg.DomainEnabled {
 		t.Fatal("expected domain to be enabled")
 	}
@@ -528,7 +537,10 @@ func TestLoadServerEnvProjectionApplyOutboxDefaults(t *testing.T) {
 	}
 	_ = os.Unsetenv(key)
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if cfg.ProjectionApplyOutboxEnabled {
 		t.Fatal("expected projection apply outbox to be disabled by default")
 	}
@@ -536,8 +548,12 @@ func TestLoadServerEnvProjectionApplyOutboxDefaults(t *testing.T) {
 
 func TestLoadServerEnvProjectionApplyOutboxEnabled(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED", "true")
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED", "true")
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if !cfg.ProjectionApplyOutboxEnabled {
 		t.Fatal("expected projection apply outbox to be enabled")
 	}
@@ -552,16 +568,23 @@ func TestLoadServerEnvProjectionApplyOutboxShadowWorkerDefaults(t *testing.T) {
 	}
 	_ = os.Unsetenv(key)
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if cfg.ProjectionApplyOutboxShadowWorkerEnabled {
 		t.Fatal("expected projection apply outbox shadow worker to be disabled by default")
 	}
 }
 
 func TestLoadServerEnvProjectionApplyOutboxShadowWorkerEnabled(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED", "true")
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED", "true")
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if !cfg.ProjectionApplyOutboxShadowWorkerEnabled {
 		t.Fatal("expected projection apply outbox shadow worker to be enabled")
 	}
@@ -576,16 +599,23 @@ func TestLoadServerEnvProjectionApplyOutboxWorkerDefaults(t *testing.T) {
 	}
 	_ = os.Unsetenv(key)
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if cfg.ProjectionApplyOutboxWorkerEnabled {
 		t.Fatal("expected projection apply outbox worker to be disabled by default")
 	}
 }
 
 func TestLoadServerEnvProjectionApplyOutboxWorkerEnabled(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED", "true")
 	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED", "true")
 
-	cfg := loadServerEnv()
+	cfg, err := loadServerEnv()
+	if err != nil {
+		t.Fatalf("load server env: %v", err)
+	}
 	if !cfg.ProjectionApplyOutboxWorkerEnabled {
 		t.Fatal("expected projection apply outbox worker to be enabled")
 	}

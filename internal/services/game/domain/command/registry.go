@@ -178,6 +178,9 @@ type PayloadValidator func(json.RawMessage) error
 //
 // Validation here is intentionally strict: malformed commands are rejected once,
 // before policy deciders run, to keep behavior deterministic.
+//
+// A Registry must be fully populated before use. After initialization,
+// all methods are safe for concurrent read access.
 type Registry struct {
 	definitions map[Type]Definition
 }
