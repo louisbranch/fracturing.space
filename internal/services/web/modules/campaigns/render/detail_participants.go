@@ -19,7 +19,6 @@ type ParticipantEditPageView struct {
 	CampaignDetailBaseView
 	ParticipantID     string
 	ParticipantEditor ParticipantEditorView
-	AIBindingEditor   AIBindingEditorView
 }
 
 // ParticipantsFragment renders the participant-list page.
@@ -59,22 +58,12 @@ type ParticipantAccessOptionView struct {
 	Allowed bool
 }
 
-// AIAgentOptionView carries AI agent choices for participant AI-binding forms.
+// AIAgentOptionView carries AI agent choices for campaign AI-binding forms.
 type AIAgentOptionView struct {
 	ID       string
 	Name     string
 	Enabled  bool
 	Selected bool
-}
-
-// AIBindingEditorView keeps AI-binding form state local to campaigns detail
-// rendering.
-type AIBindingEditorView struct {
-	Visible     bool
-	Enabled     bool
-	Unavailable bool
-	CurrentID   string
-	Options     []AIAgentOptionView
 }
 
 // ParticipantEditorView carries participant edit form state for campaign

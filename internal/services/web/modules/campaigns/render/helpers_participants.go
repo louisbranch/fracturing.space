@@ -84,16 +84,3 @@ func campaignParticipantAccessFormValue(editor ParticipantEditorView) string {
 	}
 	return "member"
 }
-
-// campaignParticipantEditLayout exposes whether AI-binding UI shares the edit screen.
-func campaignParticipantEditLayout(editor AIBindingEditorView) string {
-	if editor.Visible {
-		return "ai"
-	}
-	return "standard"
-}
-
-// campaignAIBindingCurrentUnbound drives the unbound-state copy for AI binding editors.
-func campaignAIBindingCurrentUnbound(editor AIBindingEditorView) bool {
-	return strings.TrimSpace(editor.CurrentID) == ""
-}

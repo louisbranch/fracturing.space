@@ -348,15 +348,6 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 						<input type="hidden" name="credential_id" value={ form.CredentialID }/>
 						<div class="form-control">
 							<label class="label">
-								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_label") }</span>
-							</label>
-							<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
-							<label class="label">
-								<span class="label-text-alt">{ T(loc, "web.settings.ai_agents.helper_label") }</span>
-							</label>
-						</div>
-						<div class="form-control">
-							<label class="label">
 								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_model") }</span>
 							</label>
 							<select class="select select-bordered w-full" name="model" required>
@@ -374,6 +365,15 @@ templ SettingsAIAgentsFragment(form SettingsAIAgentsForm, agents []SettingsAIAge
 									<span class="label-text-alt">{ T(loc, "web.settings.ai_agents.helper_load_models") }</span>
 								</label>
 							}
+						</div>
+						<div class="form-control">
+							<label class="label">
+								<span class="label-text">{ T(loc, "web.settings.ai_agents.field_label") }</span>
+							</label>
+							<input class="input input-bordered w-full" type="text" name="label" value={ form.Label } required/>
+							<label class="label">
+								<span class="label-text-alt">{ T(loc, "web.settings.ai_agents.helper_label") }</span>
+							</label>
 						</div>
 						<div class="form-control">
 							<label class="label">

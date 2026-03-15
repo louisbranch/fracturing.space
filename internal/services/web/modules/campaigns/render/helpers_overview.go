@@ -87,3 +87,20 @@ func campaignOverviewAccessPolicy(loc Localizer, value string) string {
 		return raw
 	}
 }
+
+// campaignOverviewAIBindingStatus maps campaign AI-binding status values to localized copy.
+func campaignOverviewAIBindingStatus(loc Localizer, value string) string {
+	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "configured":
+		return T(loc, "game.campaign.ai_binding.status_configured")
+	case "pending":
+		return T(loc, "game.campaign.ai_binding.status_pending")
+	default:
+		return T(loc, "game.campaign.ai_binding.status_not_required")
+	}
+}
+
+// campaignAIBindingCurrentUnbound drives the unbound-state copy for campaign AI-binding forms.
+func campaignAIBindingCurrentUnbound(settings AIBindingSettingsView) bool {
+	return strings.TrimSpace(settings.CurrentID) == ""
+}

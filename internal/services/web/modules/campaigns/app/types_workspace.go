@@ -78,10 +78,26 @@ type CampaignAIAgentOption struct {
 	Selected bool   `json:"selected"`
 }
 
-// CampaignAIBindingEditor stores AI-binding form state for the participant edit page.
-type CampaignAIBindingEditor struct {
-	Visible     bool                    `json:"visible"`
-	Enabled     bool                    `json:"enabled"`
+// CampaignAIBindingStatus classifies campaign-level AI binding readiness for web views.
+type CampaignAIBindingStatus string
+
+const (
+	// CampaignAIBindingStatusConfigured indicates a campaign already has an AI agent bound.
+	CampaignAIBindingStatusConfigured CampaignAIBindingStatus = "configured"
+	// CampaignAIBindingStatusPending indicates an AI/hybrid campaign still needs a binding.
+	CampaignAIBindingStatusPending CampaignAIBindingStatus = "pending"
+	// CampaignAIBindingStatusNotRequired indicates the current GM mode does not require a binding.
+	CampaignAIBindingStatusNotRequired CampaignAIBindingStatus = "not_required"
+)
+
+// CampaignAIBindingSummary stores overview-level AI binding state.
+type CampaignAIBindingSummary struct {
+	Status    CampaignAIBindingStatus `json:"status"`
+	CanManage bool                    `json:"canManage"`
+}
+
+// CampaignAIBindingSettings stores dedicated campaign AI-binding page state.
+type CampaignAIBindingSettings struct {
 	Unavailable bool                    `json:"unavailable"`
 	CurrentID   string                  `json:"currentId"`
 	Options     []CampaignAIAgentOption `json:"options"`

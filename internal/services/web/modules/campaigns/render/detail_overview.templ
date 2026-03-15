@@ -10,15 +10,26 @@ templ overviewFragment(view OverviewPageView, loc Localizer) {
 			<div class="card-body gap-4">
 				<div class="flex items-center justify-between gap-3">
 					<h2 class="card-title">{ T(loc, "game.campaign.menu.overview") }</h2>
-					if view.CanEditCampaign {
-						if campaignActionsLocked(view.ActionsLocked) {
-							<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
-								<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ T(loc, "game.campaign.action_edit") }</button>
-							</div>
-						} else {
-							<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ T(loc, "game.campaign.action_edit") }</a>
+					<div class="flex items-center gap-2">
+						if view.CanManageAIBinding {
+							if campaignActionsLocked(view.ActionsLocked) {
+								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-ai-binding-disabled="true">{ T(loc, "game.campaign.ai_binding.action_manage") }</button>
+								</div>
+							} else {
+								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignAIBinding(view.CampaignID) } data-campaign-overview-ai-binding-link="true">{ T(loc, "game.campaign.ai_binding.action_manage") }</a>
+							}
 						}
-					}
+						if view.CanEditCampaign {
+							if campaignActionsLocked(view.ActionsLocked) {
+								<div class="tooltip tooltip-left" data-tip={ T(loc, "game.campaign.tooltip_actions_locked") }>
+									<button class="btn btn-outline btn-sm" type="button" disabled data-campaign-overview-edit-disabled="true">{ T(loc, "game.campaign.action_edit") }</button>
+								</div>
+							} else {
+								<a class="btn btn-outline btn-sm" href={ routepath.AppCampaignEdit(view.CampaignID) } data-campaign-overview-edit-link="true">{ T(loc, "game.campaign.action_edit") }</a>
+							}
+						}
+					</div>
 				</div>
 				<dl class="grid gap-3 md:grid-cols-2 text-sm">
 					<div>
@@ -36,6 +47,10 @@ templ overviewFragment(view OverviewPageView, loc Localizer) {
 					<div>
 						<dt class="opacity-70">{ T(loc, "game.campaigns.table.gm_mode") }</dt>
 						<dd data-campaign-overview-gm-mode={ campaignOverviewGMMode(loc, view.GMMode) }>{ campaignOverviewGMMode(loc, view.GMMode) }</dd>
+					</div>
+					<div>
+						<dt class="opacity-70">{ T(loc, "game.campaign.ai_binding.title") }</dt>
+						<dd data-campaign-overview-ai-binding-status={ campaignOverviewAIBindingStatus(loc, view.AIBindingStatus) }>{ campaignOverviewAIBindingStatus(loc, view.AIBindingStatus) }</dd>
 					</div>
 					<div>
 						<dt class="opacity-70">{ T(loc, "game.campaign.overview.label_status") }</dt>
@@ -92,6 +107,35 @@ templ campaignEditFragment(view CampaignEditPageView, loc Localizer) {
 					</div>
 					<div class="card-actions justify-end">
 						<button class="btn btn-primary" type="submit">{ T(loc, "game.campaign.edit.submit_save") }</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</section>
+}
+
+templ campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) {
+	<section id="campaign-ai-binding" class="space-y-4">
+		<div class="card bg-base-100 border border-base-300 shadow-sm" data-campaign-ai-binding-page="true">
+			<div class="card-body gap-4 p-4">
+				<h2 class="card-title">{ T(loc, "game.campaign.ai_binding.title") }</h2>
+				<form method="post" action={ routepath.AppCampaignAIBinding(view.CampaignID) } class="space-y-4" data-campaign-ai-binding-submit="true">
+					<div class="form-control w-full">
+						<label class="label">
+							<span class="label-text">{ T(loc, "game.campaign.ai_binding.field_agent") }</span>
+						</label>
+						<select class="select select-bordered w-full" name="ai_agent_id" disabled?={ view.AIBindingSettings.Unavailable }>
+							<option value="" selected?={ campaignAIBindingCurrentUnbound(view.AIBindingSettings) }>{ T(loc, "game.campaign.ai_binding.placeholder_unbound") }</option>
+							for _, option := range view.AIBindingSettings.Options {
+								<option value={ option.ID } selected?={ option.Selected } disabled?={ !option.Enabled }>{ option.Name }</option>
+							}
+						</select>
+					</div>
+					if view.AIBindingSettings.Unavailable {
+						<p class="text-sm opacity-70" data-campaign-ai-binding-unavailable="true">{ T(loc, "game.campaign.ai_binding.unavailable") }</p>
+					}
+					<div class="card-actions justify-end">
+						<button class="btn btn-primary" type="submit" disabled?={ view.AIBindingSettings.Unavailable }>{ T(loc, "game.campaign.ai_binding.submit_save") }</button>
 					</div>
 				</form>
 			</div>

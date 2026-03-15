@@ -1162,6 +1162,7 @@ func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 		`data-campaign-overview-theme="Stormbound intrigue"`,
 		`data-campaign-overview-system="Daggerheart"`,
 		`data-campaign-overview-gm-mode="Human"`,
+		`data-campaign-overview-ai-binding-status="Not required"`,
 		`data-campaign-overview-status="Active"`,
 		`data-campaign-overview-locale="English (US)"`,
 		`data-campaign-overview-intent="Standard"`,
@@ -1171,6 +1172,43 @@ func TestMountCampaignOverviewRendersWorkspaceDetailsAndMenu(t *testing.T) {
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing campaign workspace marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignOverviewRendersPendingAIBindingStatusAndManageLinkForOwner(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items:           []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceGMMode: "AI",
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
+			ActorCampaignAccess: "Owner",
+		},
+	}, modulehandler.NewTestBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaign("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-overview-ai-binding-status="Pending"`,
+		`data-campaign-overview-ai-binding-link="true"`,
+		`href="/app/campaigns/c1/ai-binding"`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing overview AI binding marker %q: %q", marker, body)
 		}
 	}
 }
@@ -1550,7 +1588,8 @@ func TestMountCampaignParticipantEditRendersForm(t *testing.T) {
 	body := rr.Body.String()
 	for _, marker := range []string{
 		`campaign-participant-edit`,
-		`data-campaign-participant-edit-form="true"`,
+		`data-campaign-participant-edit-page="true"`,
+		`data-campaign-participant-edit-submit="true"`,
 		`action="/app/campaigns/c1/participants/p-a/edit"`,
 		`name="role"`,
 		`name="pronouns"`,
@@ -1596,7 +1635,8 @@ func TestMountCampaignParticipantEditAllowsSelfOwnedParticipant(t *testing.T) {
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`data-campaign-participant-edit-form="true"`,
+		`data-campaign-participant-edit-page="true"`,
+		`data-campaign-participant-edit-submit="true"`,
 		`data-campaign-participant-role-readonly="true"`,
 		`data-campaign-participant-access-readonly="true"`,
 	} {
@@ -1646,7 +1686,7 @@ func TestMountCampaignParticipantEditOmitsGMRoleForHumanSeatsInAIGMCampaigns(t *
 	}
 }
 
-func TestMountCampaignParticipantEditRendersAIBindingColumnForOwner(t *testing.T) {
+func TestMountCampaignParticipantEditOmitsAIBindingControlsForAIGMSeats(t *testing.T) {
 	t.Parallel()
 
 	m := New(configWithGateway(fakeGateway{
@@ -1682,18 +1722,89 @@ func TestMountCampaignParticipantEditRendersAIBindingColumnForOwner(t *testing.T
 	}
 	body := rr.Body.String()
 	for _, marker := range []string{
-		`data-campaign-participant-edit-layout="ai"`,
 		`data-campaign-participant-role-readonly="true"`,
 		`data-campaign-participant-access-readonly="true"`,
 		`type="hidden" name="role" value="gm"`,
 		`type="hidden" name="campaign_access" value="member"`,
-		`data-campaign-ai-binding-form="true"`,
-		`action="/app/campaigns/c1/ai-binding"`,
-		`name="ai_agent_id"`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("body missing AI participant edit marker %q: %q", marker, body)
 		}
+	}
+	for _, marker := range []string{
+		`data-campaign-ai-binding-form="true"`,
+		`data-campaign-participant-edit-layout="ai"`,
+		`name="ai_agent_id"`,
+		`action="/app/campaigns/c1/ai-binding"`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body unexpectedly contains removed AI binding marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignAIBindingPageRendersForOwner(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items:              []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		workspaceAIAgentID: "agent-current",
+		campaignAIAgents:   []campaignapp.CampaignAIAgentOption{{ID: "agent-current", Label: "current", Enabled: true}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
+			ActorCampaignAccess: "Owner",
+		},
+	}, modulehandler.NewTestBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignAIBinding("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`data-campaign-ai-binding-page="true"`,
+		`action="/app/campaigns/c1/ai-binding"`,
+		`name="ai_agent_id"`,
+		`>current</option>`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("body missing campaign AI binding marker %q: %q", marker, body)
+		}
+	}
+}
+
+func TestMountCampaignAIBindingPageRequiresOwnerAccess(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		authorizationDecision: campaignapp.AuthorizationDecision{
+			Evaluated:           true,
+			Allowed:             true,
+			ReasonCode:          "AUTHZ_ALLOW_ACCESS_LEVEL",
+			ActorCampaignAccess: "Member",
+		},
+	}, modulehandler.NewTestBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignAIBinding("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusForbidden {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusForbidden)
 	}
 }
 

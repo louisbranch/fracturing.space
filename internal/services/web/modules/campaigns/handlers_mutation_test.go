@@ -478,7 +478,7 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 	}
 }
 
-func TestCampaignAIBindingRouteRedirectsBackToParticipantEdit(t *testing.T) {
+func TestCampaignAIBindingRouteRedirectsToCampaignOverview(t *testing.T) {
 	t.Parallel()
 
 	m := New(configWithGateway(fakeGateway{
@@ -491,15 +491,15 @@ func TestCampaignAIBindingRouteRedirectsBackToParticipantEdit(t *testing.T) {
 	}, managerMutationBase(), nil))
 	mount, _ := m.Mount()
 
-	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignAIBinding("c1"), strings.NewReader("participant_id=p-ai&ai_agent_id=agent-1"))
+	req := httptest.NewRequest(http.MethodPost, routepath.AppCampaignAIBinding("c1"), strings.NewReader("ai_agent_id=agent-1"))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	rr := httptest.NewRecorder()
 	mount.Handler.ServeHTTP(rr, req)
 	if rr.Code != http.StatusFound {
 		t.Fatalf("status = %d, want %d", rr.Code, http.StatusFound)
 	}
-	if got := rr.Header().Get("Location"); got != routepath.AppCampaignParticipantEdit("c1", "p-ai") {
-		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaignParticipantEdit("c1", "p-ai"))
+	if got := rr.Header().Get("Location"); got != routepath.AppCampaign("c1") {
+		t.Fatalf("Location = %q, want %q", got, routepath.AppCampaign("c1"))
 	}
 	notice := flashNoticeFromResponse(t, rr)
 	if notice.Kind != flash.KindSuccess || notice.Key != "web.campaigns.notice_ai_binding_saved" {
