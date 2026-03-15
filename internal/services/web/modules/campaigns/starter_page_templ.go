@@ -177,25 +177,25 @@ func StarterPreviewFragment(preview starterPreviewView, loc Localizer) templ.Com
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div><div class=\"grid gap-6 lg:grid-cols-[1.3fr_0.9fr]\"><article class=\"card bg-base-100 border border-base-300 shadow-sm\"><div class=\"card-body gap-3\"><h3 class=\"card-title\">Premise</h3>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "</div></div><div class=\"grid gap-6 lg:grid-cols-[1.3fr_0.9fr]\"><article class=\"card bg-base-100 border border-base-300 shadow-sm\"><div class=\"card-body gap-3\"><h3 class=\"card-title\">Campaign Theme</h3>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if preview.Storyline != "" {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<pre class=\"whitespace-pre-wrap text-sm opacity-85 font-sans\">")
+		if preview.CampaignTheme != "" {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "<p class=\"whitespace-pre-line text-sm opacity-85\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(preview.Storyline)
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(preview.CampaignTheme)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/starter_page.templ`, Line: 40, Col: 87}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/starter_page.templ`, Line: 40, Col: 79}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</pre>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, "</p>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

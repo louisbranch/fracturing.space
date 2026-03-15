@@ -3,6 +3,7 @@ package gateway
 import (
 	"context"
 	"net/http"
+	"strings"
 	"testing"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
@@ -75,11 +76,12 @@ func TestStarterPreviewMapsEntryAndLaunchableAgents(t *testing.T) {
 			SourceId:                   " tmpl-1 ",
 			Title:                      " The Lantern in the Dark ",
 			Description:                " A tight mystery for one session. ",
+			CampaignTheme:              " The lighthouse has gone dark.\nReturn home before the next fleet is lost. ",
 			PreviewHook:                " A lantern appears on the black tide. ",
 			PreviewPlaystyleLabel:      " Investigation ",
 			PreviewCharacterName:       " Seren Vale ",
 			PreviewCharacterSummary:    " A steadfast guardian chasing a vanished light. ",
-			Storyline:                  " Follow the lantern into the wreck. ",
+			Storyline:                  " GM ONLY: Follow the lantern into the wreck. ",
 			System:                     commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART,
 			DifficultyTier:             discoveryv1.DiscoveryDifficultyTier_DISCOVERY_DIFFICULTY_TIER_BEGINNER,
 			ExpectedDurationLabel:      " 1 session ",
@@ -119,8 +121,14 @@ func TestStarterPreviewMapsEntryAndLaunchableAgents(t *testing.T) {
 	if preview.Title != "The Lantern in the Dark" || preview.Description != "A tight mystery for one session." {
 		t.Fatalf("preview titles = %#v", preview)
 	}
+	if preview.CampaignTheme != "The lighthouse has gone dark.\nReturn home before the next fleet is lost." {
+		t.Fatalf("campaign theme = %q", preview.CampaignTheme)
+	}
 	if preview.System != "Daggerheart" || preview.Difficulty != "Beginner" || preview.GmMode != "AI" {
 		t.Fatalf("preview labels = %#v", preview)
+	}
+	if strings.Contains(preview.CampaignTheme, "GM ONLY") {
+		t.Fatalf("campaign theme leaked storyline text: %q", preview.CampaignTheme)
 	}
 	if preview.Players != "1" || preview.Duration != "1 session" {
 		t.Fatalf("players/duration = %#v", preview)
@@ -269,5 +277,26 @@ func TestStarterGatewayLabelsAndPlayerRanges(t *testing.T) {
 	}
 	if containsEnabledAIAgent([]campaignapp.CampaignAIAgentOption{{ID: "agent-ready", Enabled: false}}, "agent-ready") {
 		t.Fatal("expected disabled AI agent to be rejected")
+	}
+}
+
+func TestStarterCampaignThemeFallbacks(t *testing.T) {
+	t.Parallel()
+
+	if got := starterCampaignTheme(nil); got != "" {
+		t.Fatalf("starterCampaignTheme(nil) = %q, want empty", got)
+	}
+
+	entry := &discoveryv1.DiscoveryEntry{
+		Description:   " Short description ",
+		CampaignTheme: " ",
+	}
+	if got := starterCampaignTheme(entry); got != "Short description" {
+		t.Fatalf("starterCampaignTheme(description fallback) = %q, want %q", got, "Short description")
+	}
+
+	entry.CampaignTheme = " Longer theme "
+	if got := starterCampaignTheme(entry); got != "Longer theme" {
+		t.Fatalf("starterCampaignTheme(theme) = %q, want %q", got, "Longer theme")
 	}
 }

@@ -24,6 +24,7 @@ type DiscoveryEntry struct {
 	SourceID                   string
 	Title                      string
 	Description                string
+	CampaignTheme              string
 	RecommendedParticipantsMin int
 	RecommendedParticipantsMax int
 	DifficultyTier             discoveryv1.DiscoveryDifficultyTier

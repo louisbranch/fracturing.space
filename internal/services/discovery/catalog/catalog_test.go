@@ -44,6 +44,9 @@ func TestBuiltinEntries_StarterCampaignShape(t *testing.T) {
 		if e.Storyline == "" {
 			t.Fatalf("entries[%d].storyline is empty", i)
 		}
+		if e.CampaignTheme == "" {
+			t.Fatalf("entries[%d].campaign_theme is empty", i)
+		}
 		if e.PreviewHook == "" || e.PreviewCharacterName == "" || e.PreviewCharacterSummary == "" {
 			t.Fatalf("entries[%d] missing structured preview data", i)
 		}

@@ -10,6 +10,7 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/discovery/catalog"
+	"github.com/louisbranch/fracturing.space/internal/services/discovery/storage"
 	discoverysqlite "github.com/louisbranch/fracturing.space/internal/services/discovery/storage/sqlite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
@@ -77,7 +78,7 @@ func createStarterTemplateCampaign(
 		GmMode:       gamev1.GmMode_AI,
 		Intent:       gamev1.CampaignIntent_STARTER,
 		AccessPolicy: gamev1.CampaignAccessPolicy_PUBLIC,
-		ThemePrompt:  starter.Entry.Description,
+		ThemePrompt:  starterThemePrompt(starter.Entry),
 		Locale:       commonv1.Locale_LOCALE_EN_US,
 	})
 	if err != nil {
@@ -206,4 +207,11 @@ func toDaggerheartExperiences(src []catalog.StarterExperienceDefinition) []*dagg
 		})
 	}
 	return out
+}
+
+func starterThemePrompt(entry storage.DiscoveryEntry) string {
+	if theme := strings.TrimSpace(entry.CampaignTheme); theme != "" {
+		return theme
+	}
+	return strings.TrimSpace(entry.Description)
 }

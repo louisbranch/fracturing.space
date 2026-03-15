@@ -79,6 +79,7 @@ func (s *Store) CreateDiscoveryEntry(ctx context.Context, entry storage.Discover
 		   source_id,
 		   title,
 		   description,
+		   campaign_theme,
 		   recommended_participants_min,
 		   recommended_participants_max,
 		   difficulty_tier,
@@ -96,12 +97,13 @@ func (s *Store) CreateDiscoveryEntry(ctx context.Context, entry storage.Discover
 		   preview_character_summary,
 		   created_at,
 		   updated_at
-		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		normalized.EntryID,
 		int32(normalized.Kind),
 		normalized.SourceID,
 		normalized.Title,
 		normalized.Description,
+		normalized.CampaignTheme,
 		normalized.RecommendedParticipantsMin,
 		normalized.RecommendedParticipantsMax,
 		int32(normalized.DifficultyTier),
@@ -166,6 +168,7 @@ func (s *Store) UpsertBuiltinDiscoveryEntry(ctx context.Context, entry storage.D
 		   source_id,
 		   title,
 		   description,
+		   campaign_theme,
 		   recommended_participants_min,
 		   recommended_participants_max,
 		   difficulty_tier,
@@ -183,7 +186,7 @@ func (s *Store) UpsertBuiltinDiscoveryEntry(ctx context.Context, entry storage.D
 		   preview_character_summary,
 		   created_at,
 		   updated_at
-		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		 ON CONFLICT(entry_id) DO UPDATE SET
 		   kind = excluded.kind,
 		   source_id = CASE
@@ -192,6 +195,7 @@ func (s *Store) UpsertBuiltinDiscoveryEntry(ctx context.Context, entry storage.D
 		   END,
 		   title = excluded.title,
 		   description = excluded.description,
+		   campaign_theme = excluded.campaign_theme,
 		   recommended_participants_min = excluded.recommended_participants_min,
 		   recommended_participants_max = excluded.recommended_participants_max,
 		   difficulty_tier = excluded.difficulty_tier,
@@ -213,6 +217,7 @@ func (s *Store) UpsertBuiltinDiscoveryEntry(ctx context.Context, entry storage.D
 		normalized.SourceID,
 		normalized.Title,
 		normalized.Description,
+		normalized.CampaignTheme,
 		normalized.RecommendedParticipantsMin,
 		normalized.RecommendedParticipantsMax,
 		int32(normalized.DifficultyTier),
@@ -295,7 +300,7 @@ func (s *Store) GetDiscoveryEntry(ctx context.Context, entryID string) (storage.
 
 	row := s.sqlDB.QueryRowContext(
 		ctx,
-		`SELECT entry_id, kind, source_id, title, description,
+		`SELECT entry_id, kind, source_id, title, description, campaign_theme,
 		        recommended_participants_min, recommended_participants_max,
 		        difficulty_tier, expected_duration_label, system,
 		        gm_mode, intent, level, character_count, storyline, tags,
@@ -338,7 +343,7 @@ func (s *Store) ListDiscoveryEntries(
 		Entries: make([]storage.DiscoveryEntry, 0, pageSize),
 	}
 
-	const selectCols = `entry_id, kind, source_id, title, description,
+	const selectCols = `entry_id, kind, source_id, title, description, campaign_theme,
 		        recommended_participants_min, recommended_participants_max,
 		        difficulty_tier, expected_duration_label, system,
 		        gm_mode, intent, level, character_count, storyline, tags,
@@ -441,6 +446,7 @@ func scanEntry(scanner rowScanner) (storage.DiscoveryEntry, error) {
 		&entry.SourceID,
 		&entry.Title,
 		&entry.Description,
+		&entry.CampaignTheme,
 		&entry.RecommendedParticipantsMin,
 		&entry.RecommendedParticipantsMax,
 		&difficultyTier,
@@ -482,6 +488,7 @@ func normalizeEntry(entry storage.DiscoveryEntry) (storage.DiscoveryEntry, error
 	entry.SourceID = strings.TrimSpace(entry.SourceID)
 	entry.Title = strings.TrimSpace(entry.Title)
 	entry.Description = strings.TrimSpace(entry.Description)
+	entry.CampaignTheme = strings.TrimSpace(entry.CampaignTheme)
 	entry.ExpectedDurationLabel = strings.TrimSpace(entry.ExpectedDurationLabel)
 	entry.Storyline = strings.TrimSpace(entry.Storyline)
 	entry.PreviewHook = strings.TrimSpace(entry.PreviewHook)

@@ -495,6 +495,7 @@ func (f *fakeDiscoveryClient) CreateDiscoveryEntry(ctx context.Context, in *disc
 		SourceId:                   entry.GetSourceId(),
 		Title:                      entry.GetTitle(),
 		Description:                entry.GetDescription(),
+		CampaignTheme:              entry.GetCampaignTheme(),
 		RecommendedParticipantsMin: entry.GetRecommendedParticipantsMin(),
 		RecommendedParticipantsMax: entry.GetRecommendedParticipantsMax(),
 		DifficultyTier:             entry.GetDifficultyTier(),

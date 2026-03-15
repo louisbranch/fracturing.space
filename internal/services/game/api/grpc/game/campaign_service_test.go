@@ -236,7 +236,7 @@ func TestCreateCampaign_AllowsOwnerlessPublicStarterTemplate(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			commandTypeCampaignCreateWithParticipants: {
+			handler.CommandTypeCampaignCreateWithParticipants: {
 				Decision: command.Accept(
 					event.Event{
 						CampaignID:  "campaign-123",

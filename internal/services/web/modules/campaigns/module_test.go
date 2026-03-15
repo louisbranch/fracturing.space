@@ -100,11 +100,11 @@ func TestMountServesStarterPreviewUnderCampaignsPrefix(t *testing.T) {
 			EntryID:              "starter:lantern-in-the-dark",
 			Title:                "The Lantern in the Dark",
 			Description:          "A tight mystery for one session.",
+			CampaignTheme:        "The lighthouse has gone dark.\nReturn home before the next fleet is lost.",
 			Hook:                 "A lantern appears on the black tide.",
 			PlaystyleLabel:       "Investigation",
 			CharacterName:        "Seren Vale",
 			CharacterSummary:     "A steadfast guardian chasing a vanished light.",
-			Storyline:            "Follow the lantern, face the wreck, and choose what returns.",
 			System:               "Daggerheart",
 			Difficulty:           "Beginner",
 			Duration:             "1 session",
@@ -129,6 +129,9 @@ func TestMountServesStarterPreviewUnderCampaignsPrefix(t *testing.T) {
 	body := rr.Body.String()
 	if !strings.Contains(body, "The Lantern in the Dark") {
 		t.Fatalf("body missing starter preview title: %q", body)
+	}
+	if !strings.Contains(body, "Campaign Theme") || !strings.Contains(body, "Return home before the next fleet is lost.") {
+		t.Fatalf("body missing campaign theme card: %q", body)
 	}
 	if strings.Contains(body, `<h2 class="text-3xl font-semibold">The Lantern in the Dark</h2>`) {
 		t.Fatalf("body unexpectedly rendered duplicate in-content starter title: %q", body)

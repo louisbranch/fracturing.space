@@ -99,6 +99,10 @@ message DiscoveryEntry {
 
   // Premade character summary shown in starter preview UI.
   string preview_character_summary = 22;
+
+  // Spoiler-safe campaign theme shown on starter preview pages and copied into
+  // starter-template campaign theme prompts.
+  string campaign_theme = 23;
 }
 
 message CreateDiscoveryEntryRequest {
