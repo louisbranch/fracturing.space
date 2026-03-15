@@ -1,1898 +1,1898 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
-      "id": "domain_card.arcana-runeward",
+      "domain_id": "domain.arcana",
+      "feature_text": "Infuse a personal trinket as a ward held by you or an ally. The holder can spend a Hope to reduce incoming damage by 1d8; if the ward die is 8, the ward ends after reducing damage and can be recharged on your next rest.",
+      "id": "domain_card.rune-ward",
+      "level": 1,
       "name": "Guarda Rúnica",
-      "domain_id": "domain.arcana",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Infuse a personal trinket as a ward held by you or an ally. The holder can spend uma Esperanca to reduce incoming damage by 1d8; if the ward die is 8, the ward ends after reducing damage and can be recharged on your next rest."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "At session start, place tokens equal to your Spellcast trait. Make a Spellcast Roll against a far target and spend any number of tokens; on success, roll d10s equal to tokens spent for magic damage. Mark a Stress to replenish tokens; clear unspent tokens at session end.",
       "id": "domain_card.arcana-unleash-chaos",
+      "level": 1,
       "name": "Liberar Caos",
-      "domain_id": "domain.arcana",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "At session start, place tokens equal to your Conjuracao trait. Make a rolagem de Conjuracao against a far target and spend any number of tokens; on success, roll d10s equal to tokens spent for magic damage. Mark um Estresse to replenish tokens; clear unspent tokens at session end."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.arcana-wallwalk",
+      "domain_id": "domain.arcana",
+      "feature_text": "Spend a Hope to let a touched creature walk on walls and ceilings until the scene ends or you cast Wallwalk again.",
+      "id": "domain_card.wall-walk",
+      "level": 1,
       "name": "Andar na Parede",
-      "domain_id": "domain.arcana",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to let a touched creature walk on walls and ceilings until the scene ends or you cast Wallwalk again."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll against a melee target. On success, they take 1d20+3 magic damage and are temporarily On Fire; when they act while On Fire, they take an extra 2d6 magic damage if still burning at the end of their action.",
       "id": "domain_card.arcana-cinder-grasp",
+      "level": 2,
       "name": "Garra de Cinzas",
-      "domain_id": "domain.arcana",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a rolagem de Conjuracao against a melee target. On success, they take 1d20+3 magic damage and are temporarily Em Chamas; when they act while Em Chamas, they take an extra 2d6 magic damage if still burning at the end of their action."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Spend a Hope to create a small floating orb you can move within very far range and see through. The spell ends if the orb is damaged or leaves range.",
       "id": "domain_card.arcana-floating-eye",
+      "level": 2,
       "name": "Olho Flutuante",
-      "domain_id": "domain.arcana",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to create a small floating orb you can move within very alcance longo and see through. The spell ends if the orb is damaged or leaves range."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Interrupt a magical effect by making a reaction roll using your Spellcast trait. On success, the effect ends, consequences are avoided, and this card is placed in your vault.",
       "id": "domain_card.arcana-counterspell",
+      "level": 3,
       "name": "Contrafeitiço",
-      "domain_id": "domain.arcana",
-      "level": 3,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Interrupt a magical effect by making a reaction roll using your Conjuracao trait. On success, the effect ends, consequences are avoided, and this card is placed in your vault."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll (15). On success, place tokens equal to your Agility (min 1). While flying, spend a token on each action roll; when the last token is spent, you descend.",
       "id": "domain_card.arcana-flight",
+      "level": 3,
       "name": "Voo",
-      "domain_id": "domain.arcana",
-      "level": 3,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a rolagem de Conjuracao (15). On success, place tokens equal to your Agility (min 1). While flying, spend a token on each rolagem de acao; when the last token is spent, you descend."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll (12). On success, spend a Hope to teleport to a visible point within far range; spend additional Hope to bring willing creatures within very close range.",
       "id": "domain_card.arcana-blink-out",
+      "level": 4,
       "name": "Desaparecer num Piscar",
-      "domain_id": "domain.arcana",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a rolagem de Conjuracao (12). On success, spend uma Esperanca to teleport to a visible point within alcance longo; spend additional Esperanca to bring willing creatures within alcance muito proximo."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll against all targets within melee range. Targets you succeed against are forced to far range and take d8+3 magic damage using your Spellcast trait.",
       "id": "domain_card.arcana-preservation-blast",
+      "level": 4,
       "name": "Explosão de Preservação",
-      "domain_id": "domain.arcana",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a rolagem de Conjuracao against all targets within alcance corpo a corpo. Targets you succeed against are forced to alcance longo and take d8+3 magic damage using your Conjuracao trait."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Mark 2 Stress to make a Spellcast Roll affecting all targets within close range. Targets you succeed against make a reaction roll vs your Spellcast result; failures take 2d8+4 magic damage. The chain jumps to additional adversaries within close range of affected targets.",
       "id": "domain_card.arcana-chain-lightning",
+      "level": 5,
       "name": "Relâmpago em Cadeia",
-      "domain_id": "domain.arcana",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mark 2 Estresse to make a rolagem de Conjuracao affecting all targets within alcance proximo. Targets you succeed against make a reaction roll vs your Conjuracao result; failures take 2d8+4 magic damage. The chain jumps to additional adversaries within alcance proximo of affected targets."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "After the GM gives you the consequences of a roll you made, you can undo that move and make another instead.",
       "id": "domain_card.arcana-premonition",
+      "level": 5,
       "name": "Premonição",
-      "domain_id": "domain.arcana",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "After the GM gives you the consequences of a roll you made, you can undo that move and make another instead."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
-      "id": "domain_card.arcana-riftwalker",
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll (15). On success, place an arcane mark where you stand; the next time you cast Riftwalker successfully, a rift opens to that mark and stays until closed or another spell replaces it. You can drop the spell to place a new mark.",
+      "id": "domain_card.rift-walker",
+      "level": 6,
       "name": "Andarilho da Fenda",
-      "domain_id": "domain.arcana",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a rolagem de Conjuracao (15). On success, place an arcane mark where you stand; the next time you cast Riftwalker successfully, a rift opens to that mark and stays until closed or another spell replaces it. You can drop the spell to place a new mark."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll against a far target. On success, move them anywhere within far range of their original position. You can throw the lifted target at another by making a second Spellcast Roll; on success, deal d12+4 physical damage.",
       "id": "domain_card.arcana-telekinesis",
+      "level": 6,
       "name": "Telecinese",
-      "domain_id": "domain.arcana",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a rolagem de Conjuracao against a far target. On success, move them anywhere within alcance longo of their original position. You can throw the lifted target at another by making a second rolagem de Conjuracao; on success, deal d12+4 physical damage."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "If 4 or more Arcana cards are in your loadout, gain +1 to Spellcast Rolls and once per rest you can swap the results of your Hope and Fear Dice.",
       "id": "domain_card.arcana-arcana-touched",
+      "level": 7,
       "name": "Tocado pela Arcana",
-      "domain_id": "domain.arcana",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Arcana cards are in your loadout, gain +1 to Conjuracao Rolls and once per rest you can swap the results of your Esperanca and Medo Dice."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "After a successful Spellcast Roll to cast another spell, spend a Hope to become Cloaked. While Cloaked, you remain unseen if stationary when an adversary moves to see you; you lose Cloaked when you move into line of sight or attack.",
       "id": "domain_card.arcana-cloaking-blast",
+      "level": 7,
       "name": "Explosão de Camuflagem",
-      "domain_id": "domain.arcana",
-      "level": 7,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "After a successful rolagem de Conjuracao to cast another spell, spend uma Esperanca to become Encoberto. While Encoberto, you remain unseen if stationary when an adversary moves to see you; you lose Encoberto when you move into line of sight or attack."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "When you would take magic damage, spend any number of Hope to roll that many d6s. If any roll a 6, the attack is reflected back at the caster.",
       "id": "domain_card.arcana-arcane-reflection",
+      "level": 8,
       "name": "Reflexão Arcana",
-      "domain_id": "domain.arcana",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you would take magic damage, spend any number of Esperanca to roll that many d6s. If any roll a 6, the attack is reflected back at the caster."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll (14). On success, create illusory layers around you. Mark any number of Stress to add layers. When attacked, roll a d6 per layer; if any are 5+, one layer breaks and the attack fails; otherwise you take the damage and the spell ends.",
       "id": "domain_card.arcana-confusing-aura",
+      "level": 8,
       "name": "Aura Confusora",
-      "domain_id": "domain.arcana",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Make a rolagem de Conjuracao (14). On success, create illusory layers around you. Mark any number of Estresse to add layers. When attacked, roll a d6 per layer; if any are 5+, one layer breaks and the attack fails; otherwise you take the damage and the spell ends."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll (16). On success, all non-flying targets within very far range make a Reaction Roll (18). Failures take 3d10+8 physical damage and are temporarily Vulnerable; successes take half damage. The area becomes difficult terrain and structures may crumble.",
       "id": "domain_card.arcana-earthquake",
+      "level": 9,
       "name": "Terremoto",
-      "domain_id": "domain.arcana",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Make a rolagem de Conjuracao (16). On success, all non-flying targets within very alcance longo make a rolagem de Reacao (18). Failures take 3d10+8 physical damage and are temporarily Vulneravel; successes take half damage. The area becomes difficult terrain and structures may crumble."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll (15). On success, you perceive a place you've been before as if you were there. The vision ends if you take damage or cast another spell.",
       "id": "domain_card.arcana-sensory-projection",
+      "level": 9,
       "name": "Projeção Sensorial",
-      "domain_id": "domain.arcana",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Make a rolagem de Conjuracao (15). On success, you perceive a place you've been before as if you were there. The vision ends if you take damage or cast another spell."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "After you or a willing ally makes a roll, spend 5 Hope to change the numeric result to a plausible value of your choice.",
       "id": "domain_card.arcana-adjust-reality",
+      "level": 10,
       "name": "Ajustar a Realidade",
-      "domain_id": "domain.arcana",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "After you or a willing ally makes a roll, spend 5 Esperanca to change the numeric result to a plausible value of your choice."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.arcana",
+      "feature_text": "Make a Spellcast Roll against all adversaries within far range. Mark any number of Stress to rain arcane shards; targets you succeed against take 1d20+2 magic damage per Stress marked.",
       "id": "domain_card.arcana-falling-sky",
+      "level": 10,
       "name": "Céu em Queda",
-      "domain_id": "domain.arcana",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a rolagem de Conjuracao against all adversaries within alcance longo. Mark any number of Estresse to rain arcane shards; targets you succeed against take 1d20+2 magic damage per Estresse marked."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When you take severe damage, you can mark a Stress to reduce the severity by one threshold.",
       "id": "domain_card.blade-get-back-up",
+      "level": 1,
       "name": "Levante-se",
-      "domain_id": "domain.blade",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you take severe damage, you can mark um Estresse to reduce the severity by one threshold."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When you roll your damage dice, you can reroll any 1s or 2s.",
       "id": "domain_card.blade-not-good-enough",
+      "level": 1,
       "name": "Não é Bom o Suficiente",
-      "domain_id": "domain.blade",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you roll your damage dice, you can reroll any 1s or 2s."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "After a successful attack within very close range, spend a Hope to use the attack against all other targets within very close range; additional targets you succeed against take half damage.",
       "id": "domain_card.blade-whirlwind",
+      "level": 1,
       "name": "Redemoinho",
-      "domain_id": "domain.blade",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "After a successful attack within alcance muito proximo, spend uma Esperanca to use the attack against all other targets within alcance muito proximo; additional targets you succeed against take half damage."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.blade-soldiers-bond",
+      "domain_id": "domain.blade",
+      "feature_text": "When you compliment someone or ask about their skill, you both gain 3 Hope.",
+      "id": "domain_card.a-soldier-s-bond",
+      "level": 2,
       "name": "Elogio dos Companheiros",
-      "domain_id": "domain.blade",
-      "level": 2,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "When you compliment someone or ask about their skill, you both gain 3 Esperanca."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "Mark a Stress to gain advantage on an attack.",
       "id": "domain_card.blade-reckless",
+      "level": 2,
       "name": "Imprudente",
-      "domain_id": "domain.blade",
-      "level": 2,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mark um Estresse to gain advantage on an attack."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When a creature within melee range would deal damage to you, you can avoid the attack and safely move out of their melee range.",
       "id": "domain_card.blade-scramble",
+      "level": 3,
       "name": "Correria",
-      "domain_id": "domain.blade",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "When a creature within alcance corpo a corpo would deal damage to you, you can avoid the attack and safely move out of their alcance corpo a corpo."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "You can use a different trait for an equipped weapon. When you deal damage, you can mark a Stress to use the maximum result of one damage die instead of rolling it.",
       "id": "domain_card.blade-versatile-fighter",
+      "level": 3,
       "name": "Combatente Versátil",
-      "domain_id": "domain.blade",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "You can use a different trait for an equipped weapon. When you deal damage, you can mark um Estresse to use the maximum result of one damage die instead of rolling it."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "Focus on a chosen target; until you attack another creature, defeat the target, or the battle ends, gain +1 Proficiency.",
       "id": "domain_card.blade-deadly-focus",
+      "level": 4,
       "name": "Foco Mortal",
-      "domain_id": "domain.blade",
-      "level": 4,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Focus on a chosen target; until you attack another creature, defeat the target, or the battle ends, gain +1 Proficiencia."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "While wearing armor, gain +2 to your damage thresholds.",
       "id": "domain_card.blade-fortified-armor",
+      "level": 4,
       "name": "Armadura Fortificada",
-      "domain_id": "domain.blade",
-      "level": 4,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Passivo",
-      "feature_text": "While wearing armor, gain +2 to your limiares de dano."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
-      "id": "domain_card.blade-champions-edge",
+      "domain_id": "domain.blade",
+      "feature_text": "When you critically succeed on an attack, you can spend up to 3 Hope; each Hope lets you clear a Hit Point, clear an Armor Slot, or force the target to mark an additional Hit Point (no option twice).",
+      "id": "domain_card.champion-s-edge",
+      "level": 5,
       "name": "Fio Crítico",
-      "domain_id": "domain.blade",
-      "level": 5,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you critically succeed on an attack, you can spend up to 3 Esperanca; each Esperanca lets you clear a Ponto de Vida, clear an espaco de Armadura, or force the target to mark an additional Ponto de Vida (no option twice)."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "Permanently gain two benefits: one Stress slot, one Hit Point slot, or +2 to damage thresholds. Place this card in your vault permanently.",
       "id": "domain_card.blade-vitality",
+      "level": 5,
       "name": "Vitalidade",
-      "domain_id": "domain.blade",
-      "level": 5,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Permanente",
-      "feature_text": "Permanently gain two benefits: one Estresse slot, one Ponto de Vida slot, or +2 to limiares de dano. Place this card in your vault permanently."
+      "type": "ability",
+      "usage_limit": "Permanent"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When you would make a Death Move, spend a Hope to clear a Hit Point instead.",
       "id": "domain_card.blade-battle-hardened",
+      "level": 6,
       "name": "Endurecido pela Batalha",
-      "domain_id": "domain.blade",
-      "level": 6,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "When you would make a Death Move, spend uma Esperanca to clear a Ponto de Vida instead."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "Before an attack, mark a Stress to gain a damage bonus equal to twice your Strength. You can Rage Up twice per attack.",
       "id": "domain_card.blade-rage-up",
+      "level": 6,
       "name": "Aumentar a Fúria",
-      "domain_id": "domain.blade",
-      "level": 6,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Before an attack, mark um Estresse to gain a damage bonus equal to twice your Strength. You can Rage Up twice per attack."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "If 4 or more Blade cards are in your loadout, gain +2 to attack rolls and +4 to your severe damage threshold.",
       "id": "domain_card.blade-blade-touched",
+      "level": 7,
       "name": "Tocado pela Lâmina",
-      "domain_id": "domain.blade",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Blade cards are in your loadout, gain +2 to attack rolls and +4 to your limiar de dano severo."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When you fail an attack, you can mark a Stress to deal weapon damage using half your Proficiency.",
       "id": "domain_card.blade-glancing-blow",
+      "level": 7,
       "name": "Golpe de Raspão",
-      "domain_id": "domain.blade",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you fail an attack, you can mark um Estresse to deal weapon damage using half your Proficiencia."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "While charging into danger, rally allies who can hear you: they clear a Stress and gain a Hope, and gain advantage on attack rolls until you or an ally rolls a failure with Fear.",
       "id": "domain_card.blade-battle-cry",
+      "level": 8,
       "name": "Grito de Batalha",
-      "domain_id": "domain.blade",
-      "level": 8,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "While charging into danger, rally allies who can hear you: they clear um Estresse and gain uma Esperanca, and gain advantage on attack rolls until you or an ally rolls a failure with Medo."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "Enter a Frenzy until no adversaries are in sight. While Frenzied, you cannot use Armor Slots and gain +10 to damage rolls and +8 to your severe damage threshold.",
       "id": "domain_card.blade-frenzy",
+      "level": 8,
       "name": "Frenesi",
-      "domain_id": "domain.blade",
-      "level": 8,
-      "type": "ability",
       "recall_cost": 3,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Enter a Frenzy until no adversaries are in sight. While Frenzied, you cannot use Armadura Slots and gain +10 to damage rolls and +8 to your limiar de dano severo."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When you critically succeed on a weapon attack, gain a Hope or clear a Stress. When you defeat an enemy, gain a Hope or clear a Stress.",
       "id": "domain_card.blade-gore-and-glory",
+      "level": 9,
       "name": "Sangue e Glória",
-      "domain_id": "domain.blade",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you critically succeed on a weapon attack, gain uma Esperanca or clear um Estresse. When you defeat an enemy, gain uma Esperanca or clear um Estresse."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.blade-reapers-strike",
+      "domain_id": "domain.blade",
+      "feature_text": "Spend a Hope to make an attack roll. The GM tells you which targets within range it would hit; choose one and force them to mark 5 Hit Points.",
+      "id": "domain_card.reaper-s-strike",
+      "level": 9,
       "name": "Golpe de Execução",
-      "domain_id": "domain.blade",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 3,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Spend uma Esperanca to make an attack roll. The GM tells you which targets within range it would hit; choose one and force them to mark 5 Pontos de Vida."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When you successfully attack, you can mark 4 Stress to force the target to mark Hit Points equal to the number of Hit Points you currently have marked instead of rolling damage.",
       "id": "domain_card.blade-battle-monster",
+      "level": 10,
       "name": "Monstro de Batalha",
-      "domain_id": "domain.blade",
-      "level": 10,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you successfully attack, you can mark 4 Estresse to force the target to mark Pontos de Vida equal to the number of Pontos de Vida you currently have marked instead of rolling damage."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.blade",
+      "feature_text": "When you successfully attack, you never deal damage below a target's major threshold (minimum 2 Hit Points). When a creature within your weapon range damages an ally without including you, you can mark a Stress to force a Reaction Roll (15); on failure, the target marks a Hit Point.",
       "id": "domain_card.blade-onslaught",
+      "level": 10,
       "name": "Investida",
-      "domain_id": "domain.blade",
-      "level": 10,
-      "type": "ability",
       "recall_cost": 3,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you successfully attack, you never deal damage below a target's limiar maior (minimum 2 Pontos de Vida). When a creature within your weapon range damages an ally without including you, you can mark um Estresse to force a rolagem de Reacao (15); on failure, the target marks a Ponto de Vida."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Mark a Stress to sprint anywhere within far range without an Agility roll. If you end in melee range and attack immediately, gain +1 to the attack roll.",
       "id": "domain_card.bone-deft-maneuvers",
+      "level": 1,
       "name": "Manobras Ágeis",
-      "domain_id": "domain.bone",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Mark um Estresse to sprint anywhere within alcance longo without an Agility roll. If you end in alcance corpo a corpo and attack immediately, gain +1 to the attack roll."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When targeted by an attack from beyond melee range, mark a Stress to roll a d4 and add it to your Evasion against the attack.",
       "id": "domain_card.bone-i-see-it-coming",
+      "level": 1,
       "name": "Eu Vi Chegar",
-      "domain_id": "domain.bone",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When targeted by an attack from beyond alcance corpo a corpo, mark um Estresse to roll a d4 and add it to your Evasao against the attack."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Gain an Evasion bonus equal to half your Agility.",
       "id": "domain_card.bone-untouchable",
+      "level": 1,
       "name": "Intocável",
-      "domain_id": "domain.bone",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Passivo",
-      "feature_text": "Gain an Evasao bonus equal to half your Agility."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When you cause an adversary to mark Hit Points, spend 2 Hope to increase your Evasion by the number of Hit Points they marked until after the next attack against you.",
       "id": "domain_card.bone-ferocity",
+      "level": 2,
       "name": "Ferocidade",
-      "domain_id": "domain.bone",
-      "level": 2,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you cause an adversary to mark Pontos de Vida, spend 2 Esperanca to increase your Evasao by the number of Pontos de Vida they marked until after the next attack against you."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "After a long rest, place tokens equal to your Knowledge (min 1). The first time you move within close range of an adversary and attack, spend a token to gain advantage, clear a Stress on an ally within melee range of that adversary, or add a d8 to your damage roll. Clear tokens on long rest.",
       "id": "domain_card.bone-strategic-approach",
+      "level": 2,
       "name": "Abordagem Estratégica",
-      "domain_id": "domain.bone",
-      "level": 2,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "After a long rest, place tokens equal to your Knowledge (min 1). The first time you move within alcance proximo of an adversary and attack, spend a token to gain advantage, clear um Estresse on an ally within alcance corpo a corpo of that adversary, or add a d8 to your damage roll. Clear tokens on long rest."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When you mark an Armor Slot to reduce incoming damage, you can mark a Stress to mark an additional Armor Slot.",
       "id": "domain_card.bone-brace",
+      "level": 3,
       "name": "Firmar-se",
-      "domain_id": "domain.bone",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you mark an espaco de Armadura to reduce incoming damage, you can mark um Estresse to mark an additional espaco de Armadura."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When you Help an Ally, they can spend a Hope to add one of your Experiences to their roll alongside your advantage die. When making a Tag Team Roll, you can roll a d20 as your Hope Die.",
       "id": "domain_card.bone-tactician",
+      "level": 3,
       "name": "Tático",
-      "domain_id": "domain.bone",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you Help an Ally, they can spend uma Esperanca to add one of your Experiences to their roll alongside your advantage die. When making a Tag Team Roll, you can roll a d20 as your Dado de Esperanca."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Mark a Stress to vault off a willing ally within close range and make an aerial attack against a far target with advantage; add a d10 to the damage roll and end within melee range of the target.",
       "id": "domain_card.bone-boost",
+      "level": 4,
       "name": "Impulso",
-      "domain_id": "domain.bone",
-      "level": 4,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mark um Estresse to vault off a willing ally within alcance proximo and make an aerial attack against a far target with advantage; add a d10 to the damage roll and end within alcance corpo a corpo of the target."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When an attack from beyond melee range fails against you, roll d6s equal to your Proficiency. If any are 6, you can mark a Stress to redirect the attack to an adversary within very close range.",
       "id": "domain_card.bone-redirect",
+      "level": 4,
       "name": "Redirecionar",
-      "domain_id": "domain.bone",
-      "level": 4,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When an attack from beyond alcance corpo a corpo fails against you, roll d6s equal to your Proficiencia. If any are 6, you can mark um Estresse to redirect the attack to an adversary within alcance muito proximo."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Observe a creature and make an Instinct Roll. On success, spend a Hope to ask the GM one set of details: HP/Stress, Difficulty/thresholds, tactics/attack dice, or features/Experiences. You can also mark a Stress to remove a Fear from the GM's pool.",
       "id": "domain_card.bone-know-thy-enemy",
+      "level": 5,
       "name": "Conheça Seu Inimigo",
-      "domain_id": "domain.bone",
-      "level": 5,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Observe a creature and make an Instinct Roll. On success, spend uma Esperanca to ask the GM one set of details: HP/Estresse, Difficulty/thresholds, tactics/attack dice, or features/Experiences. You can also mark um Estresse to remove a Medo from the GM's pool."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Name a signature move. When you perform it as part of an action, you can roll a d20 as your Hope Die; on success, clear a Stress.",
       "id": "domain_card.bone-signature-move",
+      "level": 5,
       "name": "Golpe Assinatura",
-      "domain_id": "domain.bone",
-      "level": 5,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Name a signature move. When you perform it as part of an action, you can roll a d20 as your Dado de Esperanca; on success, clear um Estresse."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When an attack against you from within melee range fails, mark a Stress to deal the weapon damage of one of your active weapons to the attacker.",
       "id": "domain_card.bone-rapid-riposte",
+      "level": 6,
       "name": "Riposta Rápida",
-      "domain_id": "domain.bone",
-      "level": 6,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "When an attack against you from within alcance corpo a corpo fails, mark um Estresse to deal the weapon damage of one of your active weapons to the attacker."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "During a short rest, you can choose a long rest downtime move instead. You can spend a Hope to let an ally do the same.",
       "id": "domain_card.bone-recovery",
+      "level": 6,
       "name": "Recuperação",
-      "domain_id": "domain.bone",
-      "level": 6,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "During a short rest, you can choose a long rest downtime move instead. You can spend uma Esperanca to let an ally do the same."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "If 4 or more Bone cards are in your loadout, gain +1 Agility and once per rest you can spend 3 Hope to make a successful attack against you fail instead.",
       "id": "domain_card.bone-bone-touched",
+      "level": 7,
       "name": "Tocado pelo Osso",
-      "domain_id": "domain.bone",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Bone cards are in your loadout, gain +1 Agility and once per rest you can spend 3 Esperanca to make a successful attack against you fail instead."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When you successfully attack with a weapon, gain a damage bonus equal to your Finesse or Agility.",
       "id": "domain_card.bone-cruel-precision",
+      "level": 7,
       "name": "Precisão Cruel",
-      "domain_id": "domain.bone",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you successfully attack with a weapon, gain a damage bonus equal to your Finesse or Agility."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When you make a successful attack, you can mark a Stress so the next successful attack against that target deals an extra 2d12 damage.",
       "id": "domain_card.bone-breaking-blow",
+      "level": 8,
       "name": "Golpe Quebrador",
-      "domain_id": "domain.bone",
-      "level": 8,
-      "type": "ability",
       "recall_cost": 3,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you make a successful attack, you can mark um Estresse so the next successful attack against that target deals an extra 2d12 damage."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Make an Agility Roll against all targets within close range. Spend a Hope to move targets you succeed against, and willing allies within close range, to another point within close range.",
       "id": "domain_card.bone-wrangle",
+      "level": 8,
       "name": "Domar",
-      "domain_id": "domain.bone",
-      "level": 8,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make an Agility Roll against all targets within alcance proximo. Spend uma Esperanca to move targets you succeed against, and willing allies within alcance proximo, to another point within alcance proximo."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "When you have 2 or fewer Hit Points unmarked, you do not take Minor damage.",
       "id": "domain_card.bone-on-the-brink",
+      "level": 9,
       "name": "À Beira",
-      "domain_id": "domain.bone",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Passivo",
-      "feature_text": "When you have 2 or fewer Pontos de Vida unmarked, you do not take Minor damage."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Spend a Hope and attack all adversaries within your weapon range. On a success against any targets, roll weapon damage and distribute it among those targets; before each target takes damage, roll an additional damage die and add it.",
       "id": "domain_card.bone-splintering-strike",
+      "level": 9,
       "name": "Golpe Estilhaçante",
-      "domain_id": "domain.bone",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 3,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Spend uma Esperanca and attack all adversaries within your weapon range. On a success against any targets, roll weapon damage and distribute it among those targets; before each target takes damage, roll an additional damage die and add it."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.bone",
+      "feature_text": "Spend 3 Hope to run a straight path to a point within far range, attacking all adversaries within your weapon range along the path. Roll weapon damage with +1 Proficiency for the first target, then remove one damage die for each subsequent target.",
       "id": "domain_card.bone-deathrun",
+      "level": 10,
       "name": "Corrida da Morte",
-      "domain_id": "domain.bone",
-      "level": 10,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend 3 Esperanca to run a straight path to a point within alcance longo, attacking all adversaries within your weapon range along the path. Roll weapon damage with +1 Proficiencia for the first target, then remove one damage die for each subsequent target."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.bone-swiftstep",
+      "domain_id": "domain.bone",
+      "feature_text": "When an attack against you fails, clear a Stress; if you cannot, gain a Hope.",
+      "id": "domain_card.swift-step",
+      "level": 10,
       "name": "Passo Veloz",
-      "domain_id": "domain.bone",
-      "level": 10,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "When an attack against you fails, clear um Estresse; if you cannot, gain uma Esperanca."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-ava",
+      "domain_id": "domain.codex",
+      "feature_text": "Power Push: Spellcast vs melee target to knock them to far range and deal d10+2 magic damage. Tava's Armor: spend a Hope to give a touched target +1 Armor Score until next rest or recast. Ice Spike: Spellcast (12) to summon a spike within far range; if used as a weapon, deal d6 physical damage on success.",
+      "id": "domain_card.book-of-ava",
+      "level": 1,
       "name": "Códice de Força e Gelo",
-      "domain_id": "domain.codex",
-      "level": 1,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Power Push: Conjuracao vs melee target to knock them to alcance longo and deal d10+2 magic damage. Tava's Armadura: spend uma Esperanca to give a touched target +1 Valor de Armadura until next rest or recast. Ice Spike: Conjuracao (12) to summon a spike within alcance longo; if used as a weapon, deal d6 physical damage on success."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-illiat",
-      "name": "Códice de Sono e Mente",
       "domain_id": "domain.codex",
+      "feature_text": "Slumber: Spellcast vs very close target; on success they sleep until damaged or the GM spends Fear. Arcane Barrage: once per rest, spend any Hope to deal d6 magic damage per Hope to a close target. Telepathy: spend a Hope to open mental communication with a visible target until next rest or recast.",
+      "id": "domain_card.book-of-illiat",
       "level": 1,
-      "type": "grimoire",
+      "name": "Book of Illiat",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Slumber: Conjuracao vs very close target; on success they sleep until damaged or the GM spends Medo. Arcane Barrage: once per rest, spend any Esperanca to deal d6 magic damage per Esperanca to a close target. Telepathy: spend uma Esperanca to open mental communication with a visible target until next rest or recast."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-tyfar",
+      "domain_id": "domain.codex",
+      "feature_text": "Wild Flame: Spellcast vs up to three melee adversaries; on success they take 2d6 magic damage and mark a Stress. Magic Hand: conjure a magical hand within far range. Mysterious Mist: Spellcast (13) to create dense fog in a very close area that heavily obscures.",
+      "id": "domain_card.book-of-tyfar",
+      "level": 1,
       "name": "Códice de Chama e Névoa",
-      "domain_id": "domain.codex",
-      "level": 1,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Wild Flame: Conjuracao vs up to three melee adversaries; on success they take 2d6 magic damage and mark um Estresse. Magic Hand: conjure a magical hand within alcance longo. Mysterious Mist: Conjuracao (13) to create dense fog in a very close area that heavily obscures."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-sitil",
+      "domain_id": "domain.codex",
+      "feature_text": "Adjust Appearance: magically shift appearance and clothing. Parallela: spend 2 Hope on self or ally within close range so their next attack can hit an additional target their roll would succeed against (only one active at a time). Illusion: Spellcast (14) to create a visual illusion within close range that lasts while you watch it.",
+      "id": "domain_card.book-of-sitil",
+      "level": 2,
       "name": "Códice de Ilusões",
-      "domain_id": "domain.codex",
-      "level": 2,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Adjust Appearance: magically shift appearance and clothing. Parallela: spend 2 Esperanca on self or ally within alcance proximo so their next attack can hit an additional target their roll would succeed against (only one active at a time). Illusion: Conjuracao (14) to create a visual illusion within alcance proximo that lasts while you watch it."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-vagras",
+      "domain_id": "domain.codex",
+      "feature_text": "Runic Lock: Spellcast (15) on a closeable object; once per rest on success, lock it so only chosen creatures can open. Arcane Door: when no adversaries within melee, Spellcast (13) to create a portal to a visible far point; closes after a creature passes. Reveal: Spellcast to reveal anything magically hidden within close range.",
+      "id": "domain_card.book-of-vagras",
+      "level": 2,
       "name": "Códice de Selos e Portais",
-      "domain_id": "domain.codex",
-      "level": 2,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Runic Lock: Conjuracao (15) on a closeable object; once per rest on success, lock it so only chosen creatures can open. Arcane Door: when no adversaries within melee, Conjuracao (13) to create a portal to a visible far point; closes after a creature passes. Reveal: Conjuracao to reveal anything magically hidden within alcance proximo."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-korvax",
+      "domain_id": "domain.codex",
+      "feature_text": "Levitation: Spellcast to lift a visible target and move them within close range of their original position. Recant: spend a Hope to force a melee target to make a Reaction Roll (15); on failure they forget the last minute. Rune Circle: mark a Stress to create a circle that deals 2d12+4 magic damage to adversaries in melee range and knocks them to very close range.",
+      "id": "domain_card.book-of-korvax",
+      "level": 3,
       "name": "Códice de Runas e Levitação",
-      "domain_id": "domain.codex",
-      "level": 3,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Levitation: Conjuracao to lift a visible target and move them within alcance proximo of their original position. Recant: spend uma Esperanca to force a melee target to make a rolagem de Reacao (15); on failure they forget the last minute. Rune Circle: mark um Estresse to create a circle that deals 2d12+4 magic damage to adversaries in alcance corpo a corpo and knocks them to alcance muito proximo."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-norai",
+      "domain_id": "domain.codex",
+      "feature_text": "Mystic Tether: Spellcast vs a far target; on success they are temporarily Restrained and mark a Stress, grounding flying targets. Fireball: Spellcast vs a very far target; on success, the target and creatures within very close range make a Reaction Roll (13), taking d20+5 magic damage on failure or half on success.",
+      "id": "domain_card.book-of-norai",
+      "level": 3,
       "name": "Códice de Laços e Fogo",
-      "domain_id": "domain.codex",
-      "level": 3,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mystic Tether: Conjuracao vs a far target; on success they are temporarily Restringido and mark um Estresse, grounding flying targets. Fireball: Conjuracao vs a very far target; on success, the target and creatures within alcance muito proximo make a rolagem de Reacao (13), taking d20+5 magic damage on failure or half on success."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-exota",
+      "domain_id": "domain.codex",
+      "feature_text": "Repudiate: once per rest, make a reaction roll to interrupt a magical effect; on success, it ends. Create Construct: spend a Hope to animate nearby objects into a construct that follows basic commands; Spellcast to command it. It shares your Evasion and traits, deals 2d10+3 physical damage, and falls apart if damaged; only one at a time.",
+      "id": "domain_card.book-of-exota",
+      "level": 4,
       "name": "Códice de Construtos e Proteção",
-      "domain_id": "domain.codex",
-      "level": 4,
-      "type": "grimoire",
       "recall_cost": 3,
-      "usage_limit": "Ver texto",
-      "feature_text": "Repudiate: once per rest, make a reaction roll to interrupt a magical effect; on success, it ends. Create Construct: spend uma Esperanca to animate nearby objects into a construct that follows basic commands; Conjuracao to command it. It shares your Evasao and traits, deals 2d10+3 physical damage, and falls apart if damaged; only one at a time."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-grynn",
+      "domain_id": "domain.codex",
+      "feature_text": "Arcane Deflection: once per long rest, spend a Hope to negate damage from an attack targeting you or an ally within very close range. Time Lock: freeze an object within far range until your next rest; maintain with Spellcast if moved. Wall of Flame: Spellcast (15) to create a wall of flame between two far points; anything passing through takes 4d10+3 magic damage.",
+      "id": "domain_card.book-of-grynn",
+      "level": 4,
       "name": "Códice de Guardas e Tempo",
-      "domain_id": "domain.codex",
-      "level": 4,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Arcane Deflection: once per long rest, spend uma Esperanca to negate damage from an attack targeting you or an ally within alcance muito proximo. Time Lock: freeze an object within alcance longo until your next rest; maintain with Conjuracao if moved. Wall of Flame: Conjuracao (15) to create a wall of flame between two far points; anything passing through takes 4d10+3 magic damage."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.codex",
+      "feature_text": "Make a Spellcast Roll (15). On success, spend a Hope to create a magical wall between two far points, up to 50 feet high. Creatures or objects in its path are shunted aside. The wall lasts until your next rest or you cast it again.",
       "id": "domain_card.codex-manifest-wall",
+      "level": 5,
       "name": "Manifestar Muralha",
-      "domain_id": "domain.codex",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Make a rolagem de Conjuracao (15). On success, spend uma Esperanca to create a magical wall between two far points, up to 50 feet high. Creatures or objects in its path are shunted aside. The wall lasts until your next rest or you cast it again."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.codex",
+      "feature_text": "Teleport yourself and willing targets within close range to a place you've been before. Make a Spellcast Roll (16) with a modifier based on your familiarity; on success you arrive as intended, on failure you appear off course.",
       "id": "domain_card.codex-teleport",
+      "level": 5,
       "name": "Teleporte",
-      "domain_id": "domain.codex",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Teleport yourself and willing targets within alcance proximo to a place you've been before. Make a rolagem de Conjuracao (16) with a modifier based on your familiarity; on success you arrive as intended, on failure you appear off course."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.codex",
+      "feature_text": "Spellcast vs a close target; on success roll d20s equal to your Spellcast trait. The target makes a reaction roll against your highest result; on success they mark a Stress, on failure they are banished. When PCs roll with Fear, the difficulty drops by 1 and the target rolls again to return.",
       "id": "domain_card.codex-banish",
+      "level": 6,
       "name": "Banir",
-      "domain_id": "domain.codex",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Conjuracao vs a close target; on success roll d20s equal to your Conjuracao trait. The target makes a reaction roll against your highest result; on success they mark um Estresse, on failure they are banished. When PCs roll with Medo, the difficulty drops by 1 and the target rolls again to return."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
-      "id": "domain_card.codex-sigil-of-retribution",
+      "domain_id": "domain.codex",
+      "feature_text": "Mark a close adversary with a retribution sigil; the GM gains a Fear. When they damage you or allies, place a d8 on this card (up to your level). When you hit the marked adversary, roll those dice and add the total to your damage, then clear the dice. The effect ends when the target is defeated or you recast.",
+      "id": "domain_card.sigil-of-retribution",
+      "level": 6,
       "name": "Sigilo Vingativo",
-      "domain_id": "domain.codex",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mark a close adversary with a retribution sigil; the GM gains a Medo. When they damage you or allies, place a d8 on this card (up to your level). When you hit the marked adversary, roll those dice and add the total to your damage, then clear the dice. The effect ends when the target is defeated or you recast."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-homet",
+      "domain_id": "domain.codex",
+      "feature_text": "Pass Through: Spellcast (13); once per rest on success, you and all touching you can pass through a wall or door within close range. Plane Gate: Spellcast (14); once per long rest on success, open a gateway to a known location on another plane until your next rest.",
+      "id": "domain_card.book-of-homet",
+      "level": 7,
       "name": "Códice de Passagem",
-      "domain_id": "domain.codex",
-      "level": 7,
-      "type": "grimoire",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Pass Through: Conjuracao (13); once per rest on success, you and all touching you can pass through a wall or door within alcance proximo. Plane Gate: Conjuracao (14); once per long rest on success, open a gateway to a known location on another plane until your next rest."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.codex",
+      "feature_text": "If 4 or more Codex cards are in your loadout, you can mark a Stress to add your Proficiency to a Spellcast Roll and once per rest replace this card with any card from your vault without paying its Recall Cost.",
       "id": "domain_card.codex-codex-touched",
+      "level": 7,
       "name": "Tocado pelo Códice",
-      "domain_id": "domain.codex",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Codex cards are in your loadout, you can mark um Estresse to add your Proficiencia to a rolagem de Conjuracao and once per rest replace this card with any card from your vault without paying its Recall Cost."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
-      "id": "domain_card.codex-book-of-vyola",
+      "domain_id": "domain.codex",
+      "feature_text": "Memory Delve: Spellcast vs a far target; on success, ask the GM a question and see memories tied to the answer. Shared Clarity: once per long rest, spend a Hope to link two willing creatures so either can mark Stress for the other until next rest.",
+      "id": "domain_card.book-of-vyola",
+      "level": 8,
       "name": "Códice da Memória",
-      "domain_id": "domain.codex",
-      "level": 8,
-      "type": "grimoire",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Memory Delve: Conjuracao vs a far target; on success, ask the GM a question and see memories tied to the answer. Shared Clarity: once per long rest, spend uma Esperanca to link two willing creatures so either can mark Estresse for the other until next rest."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.codex",
+      "feature_text": "With a few minutes of calm, spend 2 Hope to summon a safe interdimensional home. A magical door appears within close range; only chosen creatures can enter, and you can hide the entrance. Resting inside grants an additional downtime move; the doorway must be resummoned after you leave.",
       "id": "domain_card.codex-safe-haven",
+      "level": 8,
       "name": "Refúgio Seguro",
-      "domain_id": "domain.codex",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 3,
-      "usage_limit": "Ver texto",
-      "feature_text": "With a few minutes of calm, spend 2 Esperanca to summon a safe interdimensional home. A magical door appears within alcance proximo; only chosen creatures can enter, and you can hide the entrance. Resting inside grants an additional downtime move; the doorway must be resummoned after you leave."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-book-of-ronin",
+      "domain_id": "domain.codex",
+      "feature_text": "Transform: Spellcast (15) to become an inanimate object up to twice your size until you take damage. Eternal Enervation: once per long rest, Spellcast vs a close target; on success they become permanently Vulnerable.",
+      "id": "domain_card.book-of-ronin",
+      "level": 9,
       "name": "Códice da Transformação",
-      "domain_id": "domain.codex",
-      "level": 9,
-      "type": "grimoire",
       "recall_cost": 4,
-      "usage_limit": "Ver texto",
-      "feature_text": "Transform: Conjuracao (15) to become an inanimate object up to twice your size until you take damage. Eternal Enervation: once per long rest, Conjuracao vs a close target; on success they become permanently Vulneravel."
+      "type": "grimoire",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.codex",
+      "feature_text": "Make a Spellcast Roll (18). On success, the GM tells you which adversaries within far range have Difficulty 18 or lower. Mark a Stress for each you choose; they are killed and cannot be brought back.",
       "id": "domain_card.codex-disintegration-wave",
+      "level": 9,
       "name": "Onda de Desintegração",
-      "domain_id": "domain.codex",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 4,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Make a rolagem de Conjuracao (18). On success, the GM tells you which adversaries within alcance longo have Difficulty 18 or lower. Mark um Estresse for each you choose; they are killed and cannot be brought back."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
-      "id": "domain_card.codex-book-of-yarrow",
+      "domain_id": "domain.codex",
+      "feature_text": "Timejammer: Spellcast (18) to halt time for everyone within far range except you; it resumes after your next action targeting another creature. Magic Immunity: spend 5 Hope to become immune to magic damage until your next rest.",
+      "id": "domain_card.book-of-yarrow",
+      "level": 10,
       "name": "Códice da Ruptura do Tempo",
-      "domain_id": "domain.codex",
-      "level": 10,
+      "recall_cost": 2,
       "type": "grimoire",
-      "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Timejammer: Conjuracao (18) to halt time for everyone within alcance longo except you; it resumes after your next action targeting another creature. Magic Immunity: spend 5 Esperanca to become immune to magic damage until your next rest."
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.codex-transcendent-union",
-      "name": "União Transcendente",
       "domain_id": "domain.codex",
+      "feature_text": "Spend 5 Hope to link two or more willing creatures until your next rest. When any linked creature would mark Stress or Hit Points, the group chooses who marks it.",
+      "id": "domain_card.codex-transcendent-union",
       "level": 10,
-      "type": "spell",
+      "name": "União Transcendente",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Spend 5 Esperanca to link two or more willing creatures until your next rest. When any linked creature would mark Estresse or Pontos de Vida, the group chooses who marks it."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Spend a Hope to gain advantage on a roll to deceive or trick someone into believing a lie.",
       "id": "domain_card.grace-deft-deceiver",
+      "level": 1,
       "name": "Enganador Ágil",
-      "domain_id": "domain.grace",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to gain advantage on a roll to deceive or trick someone into believing a lie."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Spellcast vs a close target; on success they become temporarily Enraptured, focusing only on you. Once per rest on a success, you can mark a Stress to force the Enraptured target to mark a Stress.",
       "id": "domain_card.grace-enrapture",
+      "level": 1,
       "name": "Encantar",
-      "domain_id": "domain.grace",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a close target; on success they become temporarily Enrapturado, focusing only on you. Once per rest on a success, you can mark um Estresse to force the Enrapturado target to mark um Estresse."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "After a long rest, place tokens equal to your Presence. When you speak with an ally, spend a token to let them clear a Stress, clear a Hit Point, or gain a Hope. Clear unspent tokens on a long rest.",
       "id": "domain_card.grace-inspirational-words",
+      "level": 1,
       "name": "Palavras Inspiradoras",
-      "domain_id": "domain.grace",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "After a long rest, place tokens equal to your Presence. When you speak with an ally, spend a token to let them clear um Estresse, clear a Ponto de Vida, or gain uma Esperanca. Clear unspent tokens on a long rest."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Spellcast vs a very close target; on success they cannot lie while within close range. If they refuse to answer a question, they mark a Stress and the effect ends.",
       "id": "domain_card.grace-tell-no-lies",
+      "level": 2,
       "name": "Não Conte Mentiras",
-      "domain_id": "domain.grace",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a very close target; on success they cannot lie while within alcance proximo. If they refuse to answer a question, they mark um Estresse and the effect ends."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Taunt a far target and make a Presence Roll. On success, roll d4s equal to your Proficiency; the target marks Stress equal to the highest result.",
       "id": "domain_card.grace-troublemaker",
+      "level": 2,
       "name": "Criador de Encrenca",
-      "domain_id": "domain.grace",
-      "level": 2,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Taunt a far target and make a Presence Roll. On success, roll d4s equal to your Proficiencia; the target marks Estresse equal to the highest result."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Spellcast against all adversaries in front of you within close range. On success, they mark a Stress and are temporarily Stunned, unable to act or react until they clear the condition.",
       "id": "domain_card.grace-hypnotic-shimmer",
+      "level": 3,
       "name": "Brilho Hipnótico",
-      "domain_id": "domain.grace",
-      "level": 3,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Conjuracao against all adversaries in front of you within alcance proximo. On success, they mark um Estresse and are temporarily Atordoado, unable to act or react until they clear the condition."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Spellcast (10). On success, mark a Stress to make yourself or an ally within melee range Invisible. Place tokens equal to your Spellcast trait; spend a token each time the Invisible creature takes an action. The effect ends when the last token is spent; only one creature can be Invisible at a time.",
       "id": "domain_card.grace-invisibility",
+      "level": 3,
       "name": "Invisibilidade",
-      "domain_id": "domain.grace",
-      "level": 3,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (10). On success, mark um Estresse to make yourself or an ally within alcance corpo a corpo Invisivel. Place tokens equal to your Conjuracao trait; spend a token each time the Invisivel creature takes an action. The effect ends when the last token is spent; only one creature can be Invisivel at a time."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "During a short rest, when you use Tend to Wounds on another character, they clear one additional Hit Point and you clear 2 Hit Points.",
       "id": "domain_card.grace-soothing-speech",
+      "level": 4,
       "name": "Discurso Acalmante",
-      "domain_id": "domain.grace",
-      "level": 4,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "During a short rest, when you use Tend to Wounds on another character, they clear one additional Ponto de Vida and you clear 2 Pontos de Vida."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Choose a target within very far range; you can see and hear through them until you cast another spell or take your next rest.",
       "id": "domain_card.grace-through-your-eyes",
+      "level": 4,
       "name": "Pelos Seus Olhos",
-      "domain_id": "domain.grace",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Choose a target within very alcance longo; you can see and hear through them until you cast another spell or take your next rest."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Spend a Hope to read a far target's surface thoughts. Make a Spellcast Roll against them to delve deeper; on a roll with Fear, they may realize you're reading their thoughts.",
       "id": "domain_card.grace-thought-delver",
+      "level": 5,
       "name": "Explorador de Pensamentos",
-      "domain_id": "domain.grace",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to read a far target's surface thoughts. Make a rolagem de Conjuracao against them to delve deeper; on a roll with Medo, they may realize you're reading their thoughts."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Whisper discord to a melee adversary and Spellcast (13). On success, they mark a Stress and must attack another adversary instead. The next time you cast this on them, you take a -5 penalty to the Spellcast Roll.",
       "id": "domain_card.grace-words-of-discord",
+      "level": 5,
       "name": "Palavras de Discórdia",
-      "domain_id": "domain.grace",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Whisper discord to a melee adversary and Conjuracao (13). On success, they mark um Estresse and must attack another adversary instead. The next time you cast this on them, you take a -5 penalty to the rolagem de Conjuracao."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "When you mark Hit Points from an attack, you can mark a Stress to place tokens equal to the Hit Points marked. On your next successful attack, gain +5 damage per token and then clear the tokens.",
       "id": "domain_card.grace-never-upstaged",
+      "level": 6,
       "name": "Nunca Ofuscado",
-      "domain_id": "domain.grace",
-      "level": 6,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you mark Pontos de Vida from an attack, you can mark um Estresse to place tokens equal to the Pontos de Vida marked. On your next successful attack, gain +5 damage per token and then clear the tokens."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Take on Stress from a willing creature within melee range. Transfer any number of their marked Stress to you and gain a Hope for each transferred Stress.",
       "id": "domain_card.grace-share-the-burden",
+      "level": 6,
       "name": "Compartilhar o Fardo",
-      "domain_id": "domain.grace",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Take on Estresse from a willing creature within alcance corpo a corpo. Transfer any number of their marked Estresse to you and gain uma Esperanca for each transferred Estresse."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "After you make an action roll to persuade, lie, or gain favor, spend a Hope to reroll your Hope or Fear Die.",
       "id": "domain_card.grace-endless-charisma",
+      "level": 7,
       "name": "Carisma Infinito",
-      "domain_id": "domain.grace",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "After you make an rolagem de acao to persuade, lie, or gain favor, spend uma Esperanca to reroll your Esperanca or Dado de Medo."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "If 4 or more Grace cards are in your loadout, you can mark an Armor Slot instead of Stress, and when you would force a target to mark Hit Points you can instead force them to mark that much Stress.",
       "id": "domain_card.grace-grace-touched",
+      "level": 7,
       "name": "Tocado pela Graça",
-      "domain_id": "domain.grace",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Grace cards are in your loadout, you can mark an espaco de Armadura instead of Estresse, and when you would force a target to mark Pontos de Vida you can instead force them to mark that much Estresse."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Mark a Stress to create a projected copy of yourself at a place you've been before. You can see and hear through it and act as if you were there; it lasts until your next rest or it takes damage.",
       "id": "domain_card.grace-astral-projection",
+      "level": 8,
       "name": "Projeção Astral",
-      "domain_id": "domain.grace",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Mark um Estresse to create a projected copy of yourself at a place you've been before. You can see and hear through it and act as if you were there; it lasts until your next rest or it takes damage."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Spellcast against all targets within far range. Targets you succeed against become temporarily Enraptured. You can mark a Stress to force all Enraptured targets to mark a Stress, ending the spell.",
       "id": "domain_card.grace-mass-enrapture",
+      "level": 8,
       "name": "Encantamento em Massa",
-      "domain_id": "domain.grace",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 3,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao against all targets within alcance longo. Targets you succeed against become temporarily Enrapturado. You can mark um Estresse to force all Enrapturado targets to mark um Estresse, ending the spell."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Mimic a domain card of level 8 or lower from another player's loadout. Spend Hope equal to half the card's level to gain its feature until your next rest or they vault the card.",
       "id": "domain_card.grace-copycat",
+      "level": 9,
       "name": "Imitador",
-      "domain_id": "domain.grace",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 3,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Mimic a domain card of level 8 or lower from another player's loadout. Spend Esperanca equal to half the card's level to gain its feature until your next rest or they vault the card."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Permanently gain +2 to two Experiences or +3 to one Experience. Place this card in your vault permanently.",
       "id": "domain_card.grace-master-of-the-craft",
+      "level": 9,
       "name": "Mestre do Ofício",
-      "domain_id": "domain.grace",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Permanente",
-      "feature_text": "Permanently gain +2 to two Experiences or +3 to one Experience. Place this card in your vault permanently."
+      "type": "ability",
+      "usage_limit": "Permanent"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "When an ally within close range deals damage to an adversary, make a Spellcast Roll against that target. On success, you deal the same damage; on success with Fear, place this card in your vault.",
       "id": "domain_card.grace-encore",
+      "level": 10,
       "name": "Bis",
-      "domain_id": "domain.grace",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When an ally within alcance proximo deals damage to an adversary, make a rolagem de Conjuracao against that target. On success, you deal the same damage; on success with Medo, place this card in your vault."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.grace",
+      "feature_text": "Leverage your notoriety: mark a Stress before a roll to gain +10 to the result. Food and drink are free; other purchases cost one bag of gold less (min one handful). This card does not count against your loadout and cannot be vaulted.",
       "id": "domain_card.grace-notorious",
+      "level": 10,
       "name": "Notório",
-      "domain_id": "domain.grace",
-      "level": 10,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Passivo",
-      "feature_text": "Leverage your notoriety: mark um Estresse before a roll to gain +10 to the result. Food and drink are free; other purchases cost one bag of gold less (min one handful). This card does not count against your loadout and cannot be vaulted."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Gain advantage on action rolls to pick nonmagical locks, disarm nonmagical traps, or steal items from a target.",
       "id": "domain_card.midnight-pick-and-pull",
+      "level": 1,
       "name": "Pegar e Puxar",
-      "domain_id": "domain.midnight",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Passivo",
-      "feature_text": "Gain advantage on action rolls to pick nonmagical locks, disarm nonmagical traps, or steal items from a target."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
-      "id": "domain_card.midnight-rain-of-blades",
+      "domain_id": "domain.midnight",
+      "feature_text": "Spend a Hope to make a Spellcast Roll and conjure throwing blades at all targets within very close range. Targets you succeed against take d8+2 magic damage; Vulnerable targets take an extra 1d8 damage.",
+      "id": "domain_card.rain-of-blades",
+      "level": 1,
       "name": "Tempestade de Lâminas",
-      "domain_id": "domain.midnight",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to make a rolagem de Conjuracao and conjure throwing blades at all targets within alcance muito proximo. Targets you succeed against take d8+2 magic damage; Vulneravel targets take an extra 1d8 damage."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "With a few minutes to prepare, mark a Stress to disguise yourself as a humanoid you can picture. Gain advantage on Presence rolls to avoid scrutiny. Place tokens equal to your Spellcast trait; spend a token on each action while disguised.",
       "id": "domain_card.midnight-uncanny-disguise",
+      "level": 1,
       "name": "Disfarce Inquietante",
-      "domain_id": "domain.midnight",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "With a few minutes to prepare, mark um Estresse to disguise yourself as a humanoid you can picture. Gain advantage on Presence rolls to avoid scrutiny. Place tokens equal to your Conjuracao trait; spend a token on each action while disguised."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Spend a Hope to summon a humanoid-sized spirit until your next rest. You can command it with Spellcast; it can attack a far target, moving to melee range and dealing d6s of magic damage equal to your Spellcast trait before dissipating. Only one spirit at a time.",
       "id": "domain_card.midnight-midnight-spirit",
+      "level": 2,
       "name": "Espírito da Meia-Noite",
-      "domain_id": "domain.midnight",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to summon a humanoid-sized spirit until your next rest. You can command it with Conjuracao; it can attack a far target, moving to alcance corpo a corpo and dealing d6s of magic damage equal to your Conjuracao trait before dissipating. Only one spirit at a time."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Spellcast against all adversaries within very close range; targets you succeed against are temporarily Restrained.",
       "id": "domain_card.midnight-shadowbind",
+      "level": 2,
       "name": "Vincular Sombras",
-      "domain_id": "domain.midnight",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao against all adversaries within alcance muito proximo; targets you succeed against are temporarily Restringido."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "When behind a creature your size, mark a Stress to put them in a chokehold, making them temporarily Vulnerable. Attacks against them while Vulnerable deal an extra 2d6 damage.",
       "id": "domain_card.midnight-chokehold",
+      "level": 3,
       "name": "Estrangulamento",
-      "domain_id": "domain.midnight",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When behind a creature your size, mark um Estresse to put them in a chokehold, making them temporarily Vulneravel. Attacks against them while Vulneravel deal an extra 2d6 damage."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Spellcast (13) to create a curtain of darkness between two far points. Only you can see through it; you are Hidden to adversaries on the other side and gain advantage on attacks through the veil.",
       "id": "domain_card.midnight-veil-of-night",
+      "level": 3,
       "name": "Véu da Noite",
-      "domain_id": "domain.midnight",
-      "level": 3,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (13) to create a curtain of darkness between two far points. Only you can see through it; you are Oculto to adversaries on the other side and gain advantage on attacks through the veil."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "When you roll with Fear while moving unnoticed through danger, you can mark a Stress to roll with Hope instead. If an ally within close range rolls with Fear, you can mark a Stress to change their result to Hope.",
       "id": "domain_card.midnight-stealth-expertise",
+      "level": 4,
       "name": "Especialista em Furtividade",
-      "domain_id": "domain.midnight",
-      "level": 4,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you roll with Medo while moving unnoticed through danger, you can mark um Estresse to roll with Esperanca instead. If an ally within alcance proximo rolls with Medo, you can mark um Estresse to change their result to Esperanca."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Spellcast vs a very close target. On success, spend a Hope to mark them with a dark glyph that reduces their Difficulty by your Knowledge (min 1) temporarily.",
       "id": "domain_card.midnight-glyph-of-nightfall",
+      "level": 4,
       "name": "Glifo do Ocaso",
-      "domain_id": "domain.midnight",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a very close target. On success, spend uma Esperanca to mark them with a dark glyph that reduces their Difficulty by your Knowledge (min 1) temporarily."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Spellcast vs a close target. On success, spend a Hope to create a silencing field that follows them within very close range. The field ends when the GM spends a Fear, you recast, or you take major damage; while Silenced, targets cannot make noise or cast spells.",
       "id": "domain_card.midnight-hush",
+      "level": 5,
       "name": "Silêncio",
-      "domain_id": "domain.midnight",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a close target. On success, spend uma Esperanca to create a silencing field that follows them within alcance muito proximo. The field ends when the GM spends a Medo, you recast, or you take major damage; while Silenciado, targets cannot make noise or cast spells."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Spend a Hope to mark your current position. Before your next rest, spend another Hope to vanish and reappear at the marked point, ending the spell.",
       "id": "domain_card.midnight-phantom-retreat",
+      "level": 5,
       "name": "Retirada Fantasma",
-      "domain_id": "domain.midnight",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to mark your current position. Before your next rest, spend another Esperanca to vanish and reappear at the marked point, ending the spell."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "You can speak into the mind of anyone you've touched. You can mark a Stress to Spellcast against them; on success, ask the GM one question about their location, actions, fears, or what they cherish most.",
       "id": "domain_card.midnight-dark-whispers",
+      "level": 6,
       "name": "Sussurros Sombrios",
-      "domain_id": "domain.midnight",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "You can speak into the mind of anyone you've touched. You can mark um Estresse to Conjuracao against them; on success, ask the GM one question about their location, actions, fears, or what they cherish most."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "With a few minutes of silence, mark a Stress to disguise all willing creatures within close range. Forms share a general size and structure. Disguised creatures gain advantage on Presence rolls to avoid scrutiny. Activate a Countdown (8); when it triggers, the disguise drops.",
       "id": "domain_card.midnight-mass-disguise",
+      "level": 6,
       "name": "Disfarce em Massa",
-      "domain_id": "domain.midnight",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "With a few minutes of silence, mark um Estresse to disguise all willing creatures within alcance proximo. Forms share a general size and structure. Disguised creatures gain advantage on Presence rolls to avoid scrutiny. Activate a Countdown (8); when it triggers, the disguise drops."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "If 4 or more Midnight cards are in your loadout, once per rest when you have 0 Hope and the GM would gain a Fear, you can gain a Hope instead; when you hit, you can mark a Stress to add your Fear Die result to your damage roll.",
       "id": "domain_card.midnight-midnight-touched",
+      "level": 7,
       "name": "Tocado pela Meia-Noite",
-      "domain_id": "domain.midnight",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Midnight cards are in your loadout, once per rest when you have 0 Esperanca and the GM would gain a Medo, you can gain uma Esperanca instead; when you hit, you can mark um Estresse to add your Dado de Medo result to your damage roll."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "When a physical attack against you fails, spend a Hope to become Hidden and teleport to a point within close range of the attacker. You remain Hidden until your next action roll.",
       "id": "domain_card.midnight-vanishing-dodge",
+      "level": 7,
       "name": "Esquiva Desaparecente",
-      "domain_id": "domain.midnight",
-      "level": 7,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When a physical attack against you fails, spend uma Esperanca to become Oculto and teleport to a point within alcance proximo of the attacker. You remain Oculto until your next rolagem de acao."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "While in low light or darkness, gain +1 Evasion and make attack rolls with advantage.",
       "id": "domain_card.midnight-shadowhunter",
+      "level": 8,
       "name": "Caçador de Sombras",
-      "domain_id": "domain.midnight",
-      "level": 8,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "While in low light or darkness, gain +1 Evasao and make attack rolls with advantage."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "When you take magic damage, place tokens equal to Hit Points marked (up to your Spellcast trait). When you hit a target, spend any number of tokens to add a d6 per token to the damage roll.",
       "id": "domain_card.midnight-spellcharge",
+      "level": 8,
       "name": "Carga de Feitiço",
-      "domain_id": "domain.midnight",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you take magic damage, place tokens equal to Pontos de Vida marked (up to your Conjuracao trait). When you hit a target, spend any number of tokens to add a d6 per token to the damage roll."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Targets within very close range must make a Reaction Roll (16) or become Horrified and Vulnerable. Steal Fear from the GM equal to the number of Horrified targets, roll that many d6s, and deal that total damage to each Horrified target.",
       "id": "domain_card.midnight-night-terror",
+      "level": 9,
       "name": "Terror Noturno",
-      "domain_id": "domain.midnight",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Targets within alcance muito proximo must make a rolagem de Reacao (16) or become Aterrorizado and Vulneravel. Steal Medo from the GM equal to the number of Aterrorizado targets, roll that many d6s, and deal that total damage to each Aterrorizado target."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Choose a far target. Each time you succeed on a non-damage action roll against them, place a token. When you deal damage to that target, spend tokens to add a d12 per token to the damage roll. Clear tokens when you choose a new target or take a rest.",
       "id": "domain_card.midnight-twilight-toll",
+      "level": 9,
       "name": "Toque do Crepúsculo",
-      "domain_id": "domain.midnight",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Choose a far target. Each time you succeed on a non-damage rolagem de acao against them, place a token. When you deal damage to that target, spend tokens to add a d12 per token to the damage roll. Clear tokens when you choose a new target or take a rest."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Spellcast (16). On success, plunge the area within far range into darkness only you and your allies can see through. Attacks against you or allies in the shadow have disadvantage. When you or an ally succeeds with Hope in the shadow, the target marks a Stress. The effect ends when the GM spends a Fear or you take severe damage.",
       "id": "domain_card.midnight-eclipse",
+      "level": 10,
       "name": "Eclipse",
-      "domain_id": "domain.midnight",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Conjuracao (16). On success, plunge the area within alcance longo into darkness only you and your allies can see through. Attacks against you or allies in the shadow have disadvantage. When you or an ally succeeds with Esperanca in the shadow, the target marks um Estresse. The effect ends when the GM spends a Medo or you take severe damage."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.midnight",
+      "feature_text": "Mark a Stress to become Spectral until you make an action roll targeting another creature. While Spectral, you are immune to physical damage and can pass through solid objects.",
       "id": "domain_card.midnight-specter-of-the-dark",
+      "level": 10,
       "name": "Espectro da Escuridão",
-      "domain_id": "domain.midnight",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mark um Estresse to become Espectral until you make an rolagem de acao targeting another creature. While Espectral, you are immune to physical damage and can pass through solid objects."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "When tracking a creature or group by their signs, spend any number of Hope to ask that many questions about their direction, timing, actions, or count. When you meet tracked creatures, gain +1 Evasion against them.",
       "id": "domain_card.sage-gifted-tracker",
+      "level": 1,
       "name": "Rastreador Talentoso",
-      "domain_id": "domain.sage",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "When tracking a creature or group by their signs, spend any number of Esperanca to ask that many questions about their direction, timing, actions, or count. When you meet tracked creatures, gain +1 Evasao against them."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.sage-natures-tongue",
+      "domain_id": "domain.sage",
+      "feature_text": "Speak with plants and animals by making an Instinct Roll (12). On success they share what they know; on a roll with Fear, information may be limited or costly. Before a Spellcast Roll in a natural environment, you can spend a Hope for +2 to the roll.",
+      "id": "domain_card.nature-s-tongue",
+      "level": 1,
       "name": "Fala Selvagem",
-      "domain_id": "domain.sage",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Speak with plants and animals by making an Instinct Roll (12). On success they share what they know; on a roll with Medo, information may be limited or costly. Before a rolagem de Conjuracao in a natural environment, you can spend uma Esperanca for +2 to the roll."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spellcast vs a far target; on success, deal 1d8+1 physical damage and temporarily Restrain them. You can spend a Hope to also Restrain another adversary within very close range of the target.",
       "id": "domain_card.sage-vicious-entangle",
+      "level": 1,
       "name": "Enredar Vicioso",
-      "domain_id": "domain.sage",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a far target; on success, deal 1d8+1 physical damage and temporarily Restrain them. You can spend uma Esperanca to also Restrain another adversary within alcance muito proximo of the target."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Choose a swarm: Tekaira Armored Beetles (mark a Stress; next damage you take is reduced by one threshold, and you can spend a Hope to keep them after taking damage) or Fire Flies (Spellcast vs all adversaries within close range; spend a Hope to deal 2d8+3 magic damage to targets you succeeded against).",
       "id": "domain_card.sage-conjure-swarm",
+      "level": 2,
       "name": "Conjurar Enxame",
-      "domain_id": "domain.sage",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Choose a swarm: Tekaira Armored Beetles (mark um Estresse; next damage you take is reduced by one threshold, and you can spend uma Esperanca to keep them after taking damage) or Fire Flies (Conjuracao vs all adversaries within alcance proximo; spend uma Esperanca to deal 2d8+3 magic damage to targets you succeeded against)."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spend a Hope to summon a small nature spirit or critter until next rest, recast, or it is attacked. Spend another Hope to give it flight. Spellcast to command tasks and mark a Stress to see through its eyes. When you damage an adversary in melee range of your familiar, add a d6 to your damage roll.",
       "id": "domain_card.sage-natural-familiar",
+      "level": 2,
       "name": "Familiar Natural",
-      "domain_id": "domain.sage",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to summon a small nature spirit or critter until next rest, recast, or it is attacked. Spend another Esperanca to give it flight. Conjuracao to command tasks and mark um Estresse to see through its eyes. When you damage an adversary in alcance corpo a corpo of your familiar, add a d6 to your damage roll."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spellcast vs a far target; on success, deal d6+4 magic damage. Mark 2 or more Stress to make them permanently Corroded; while Corroded, they take a -1 Difficulty penalty per 2 Stress spent (stacks).",
       "id": "domain_card.sage-corrosive-projectile",
+      "level": 3,
       "name": "Projétil Corrosivo",
-      "domain_id": "domain.sage",
-      "level": 3,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a far target; on success, deal d6+4 magic damage. Mark 2 or more Estresse to make them permanently Corroido; while Corroido, they take a -1 Difficulty penalty per 2 Estresse spent (stacks)."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Conjure a climbable stalk within close range that can grow up to far range high. You can mark a Stress to use it as an attack: Spellcast against adversaries within close range; on success, lift and drop them for d8 physical damage.",
       "id": "domain_card.sage-towering-stalk",
+      "level": 3,
       "name": "Talos Elevados",
-      "domain_id": "domain.sage",
-      "level": 3,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Conjure a climbable stalk within alcance proximo that can grow up to alcance longo high. You can mark um Estresse to use it as an attack: Conjuracao against adversaries within alcance proximo; on success, lift and drop them for d8 physical damage."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spellcast vs a close target. On success, choose one: pull them to melee or pull yourself to them; force them to mark 2 Stress; or strike all adversaries between you and the target for 3d6+2 physical damage on a failed Reaction Roll (13). The target is temporarily Restrained.",
       "id": "domain_card.sage-death-grip",
+      "level": 4,
       "name": "Aperto da Morte",
-      "domain_id": "domain.sage",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a close target. On success, choose one: pull them to melee or pull yourself to them; force them to mark 2 Estresse; or strike all adversaries between you and the target for 3d6+2 physical damage on a failed rolagem de Reacao (13). The target is temporarily Restringido."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Conjure a healing field within close range; you and allies in the area clear 1 Hit Point. Spend 2 Hope to clear 2 Hit Points instead.",
       "id": "domain_card.sage-healing-field",
+      "level": 4,
       "name": "Campo de Cura",
-      "domain_id": "domain.sage",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Conjure a healing field within alcance proximo; you and allies in the area clear 1 Ponto de Vida. Spend 2 Esperanca to clear 2 Pontos de Vida instead."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spend a Hope to sprout thorns and place tokens equal to your Spellcast trait. When you take damage, spend any number of tokens to roll that many d6s and reduce incoming damage by the total; if in melee range of the attacker, deal that much damage back. Clear tokens on rest.",
       "id": "domain_card.sage-thorn-skin",
+      "level": 5,
       "name": "Pele de Espinhos",
-      "domain_id": "domain.sage",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Spend uma Esperanca to sprout thorns and place tokens equal to your Conjuracao trait. When you take damage, spend any number of tokens to roll that many d6s and reduce incoming damage by the total; if in alcance corpo a corpo of the attacker, deal that much damage back. Clear tokens on rest."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spellcast (13). On success, spend 2 Hope to grow a dome-shaped barricade that you and one ally can shelter within. Creatures inside cannot be targeted or attack; attacks against the dome automatically succeed. The dome has thresholds 15/30 and lasts until it marks 3 Hit Points.",
       "id": "domain_card.sage-wild-fortress",
+      "level": 5,
       "name": "Fortaleza Selvagem",
-      "domain_id": "domain.sage",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (13). On success, spend 2 Esperanca to grow a dome-shaped barricade that you and one ally can shelter within. Creatures inside cannot be targeted or attack; attacks against the dome automatically succeed. The dome has thresholds 15/30 and lasts until it marks 3 Pontos de Vida."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spend any number of Hope to conjure that many magical steeds until your next long rest or they take damage. Steeds double travel speed and allow far-range movement without rolls, but riders take -2 to attack rolls and +2 to damage rolls.",
       "id": "domain_card.sage-conjured-steeds",
+      "level": 6,
       "name": "Montarias Conjuradas",
-      "domain_id": "domain.sage",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend any number of Esperanca to conjure that many magical steeds until your next long rest or they take damage. Steeds double travel speed and allow far-range movement without rolls, but riders take -2 to attack rolls and +2 to damage rolls."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Gain a downtime move to forage. Roll a d6 to find a consumable: unique food (clear 2 Stress), beautiful relic (gain 2 Hope), arcane rune (+2 Spellcast Roll), healing vial (clear 2 Hit Points), luck charm (reroll any die), or choose one. The party can carry up to five foraged consumables.",
       "id": "domain_card.sage-forager",
+      "level": 6,
       "name": "Forrageador",
-      "domain_id": "domain.sage",
-      "level": 6,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Gain a downtime move to forage. Roll a d6 to find a consumable: unique food (clear 2 Estresse), beautiful relic (gain 2 Esperanca), arcane rune (+2 rolagem de Conjuracao), healing vial (clear 2 Pontos de Vida), luck charm (reroll any die), or choose one. The party can carry up to five foraged consumables."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "If 4 or more Sage cards are in your loadout, gain +2 to Spellcast Rolls while in a natural environment and once per rest you can double your Agility or Instinct for a roll (declare before rolling).",
       "id": "domain_card.sage-sage-touched",
+      "level": 7,
       "name": "Tocado pelo Sábio",
-      "domain_id": "domain.sage",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Sage cards are in your loadout, gain +2 to Conjuracao Rolls while in a natural environment and once per rest you can double your Agility or Instinct for a roll (declare before rolling)."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Mark a Stress to awaken wild power and place a Wild Surge Die (d6) set to 1. Add its value to every action roll; after each use, increase it by 1. When it would exceed 6 or you rest, the form ends and you mark an additional Stress.",
       "id": "domain_card.sage-wild-surge",
+      "level": 7,
       "name": "Surto Selvagem",
-      "domain_id": "domain.sage",
-      "level": 7,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Mark um Estresse to awaken wild power and place a Wild Surge Die (d6) set to 1. Add its value to every rolagem de acao; after each use, increase it by 1. When it would exceed 6 or you rest, the form ends and you mark an additional Estresse."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spellcast (13). On success, spend any number of Hope to create that many sprites within far range. Allies gain +3 to attack rolls against adversaries within melee range of a sprite; allies within melee range of a sprite can mark an additional Armor Slot when they mark one. Sprites vanish after granting a benefit or taking damage.",
       "id": "domain_card.sage-forest-sprites",
+      "level": 8,
       "name": "Espíritos da Floresta",
-      "domain_id": "domain.sage",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (13). On success, spend any number of Esperanca to create that many sprites within alcance longo. Allies gain +3 to attack rolls against adversaries within alcance corpo a corpo of a sprite; allies within alcance corpo a corpo of a sprite can mark an additional espaco de Armadura when they mark one. Sprites vanish after granting a benefit or taking damage."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spellcast (15). On success, create a protective barrier at very close range around you. You and allies within clear 1d4 Hit Points. While the barrier is up, you and allies within resist physical damage from outside; it moves with you.",
       "id": "domain_card.sage-rejuvenation-barrier",
+      "level": 8,
       "name": "Barreira de Rejuvenescimento",
-      "domain_id": "domain.sage",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Conjuracao (15). On success, create a protective barrier at alcance muito proximo around you. You and allies within clear 1d4 Pontos de Vida. While the barrier is up, you and allies within resist physical damage from outside; it moves with you."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "After a long rest, place tokens equal to the number of Sage cards in your loadout and vault. After you make a Spellcast Roll, spend any number of tokens to gain +1 per token. When you critically succeed on a Sage Spellcast Roll, gain a token. Clear tokens on long rest.",
       "id": "domain_card.sage-fane-of-the-wilds",
+      "level": 9,
       "name": "Santuário dos Ermos",
-      "domain_id": "domain.sage",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "After a long rest, place tokens equal to the number of Sage cards in your loadout and vault. After you make a rolagem de Conjuracao, spend any number of tokens to gain +1 per token. When you critically succeed on a Sage rolagem de Conjuracao, gain a token. Clear tokens on long rest."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Spellcast (18). On success, reshape plant life within far range (grow trees, clear paths, or form walls of roots).",
       "id": "domain_card.sage-plant-dominion",
+      "level": 9,
       "name": "Domínio das Plantas",
-      "domain_id": "domain.sage",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Conjuracao (18). On success, reshape plant life within alcance longo (grow trees, clear paths, or form walls of roots)."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Mark a Stress to transform into a hulking nature spirit. Gain +10 damage when you succeed on attacks or Spellcast Rolls, clear an Armor Slot when you defeat a creature within close range, and cannot be Restrained. Before each action roll, spend a Hope or revert.",
       "id": "domain_card.sage-force-of-nature",
+      "level": 10,
       "name": "Força da Natureza",
-      "domain_id": "domain.sage",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mark um Estresse to transform into a hulking nature spirit. Gain +10 damage when you succeed on attacks or Conjuracao Rolls, clear an espaco de Armadura when you defeat a creature within alcance proximo, and cannot be Restringido. Before each rolagem de acao, spend uma Esperanca or revert."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.sage",
+      "feature_text": "Choose a tempest and Spellcast against all targets within far range; on success, effects last until the GM spends a Fear. Blizzard: 2d20+8 magic damage and targets are temporarily Vulnerable. Hurricane: 3d10+10 magic damage and targets cannot move against the wind. Sandstorm: 5d6+9 magic damage and attacks from beyond melee range have disadvantage.",
       "id": "domain_card.sage-tempest",
+      "level": 10,
       "name": "Tempestade",
-      "domain_id": "domain.sage",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Choose a tempest and Conjuracao against all targets within alcance longo; on success, effects last until the GM spends a Medo. Blizzard: 2d20+8 magic damage and targets are temporarily Vulneravel. Hurricane: 3d10+10 magic damage and targets cannot move against the wind. Sandstorm: 5d6+9 magic damage and attacks from beyond alcance corpo a corpo have disadvantage."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast vs a far target; on success, spend a Hope to deal d8+2 magic damage. The target becomes temporarily Vulnerable and glows until the condition ends.",
       "id": "domain_card.splendor-bolt-beacon",
+      "level": 1,
       "name": "Farol de Raio",
-      "domain_id": "domain.splendor",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao vs a far target; on success, spend uma Esperanca to deal d8+2 magic damage. The target becomes temporarily Vulneravel and glows until the condition ends."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "With a few minutes of focus, spend 2 Hope to clear 1 Hit Point or 1 Stress on a creature. Once per long rest, if you learn something new about them or reveal something about yourself during the healing, clear 2 Hit Points or 2 Stress instead.",
       "id": "domain_card.splendor-mending-touch",
+      "level": 1,
       "name": "Toque Restaurador",
-      "domain_id": "domain.splendor",
-      "level": 1,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "With a few minutes of focus, spend 2 Esperanca to clear 1 Ponto de Vida or 1 Estresse on a creature. Once per long rest, if you learn something new about them or reveal something about yourself during the healing, clear 2 Pontos de Vida or 2 Estresse instead."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "After an ally makes an action roll but before consequences, you can offer support; they reroll their dice.",
       "id": "domain_card.splendor-reassurance",
+      "level": 1,
       "name": "Reafirmação",
-      "domain_id": "domain.splendor",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "After an ally makes an rolagem de acao but before consequences, you can offer support; they reroll their dice."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast (13) to speak with a corpse. On success with Hope, it answers up to three questions; on success with Fear, it answers one. The corpse answers truthfully, then turns to dust.",
       "id": "domain_card.splendor-final-words",
+      "level": 2,
       "name": "Palavras Finais",
-      "domain_id": "domain.splendor",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (13) to speak with a corpse. On success with Esperanca, it answers up to three questions; on success with Medo, it answers one. The corpse answers truthfully, then turns to dust."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast (13) and target a creature within melee range other than yourself. On success, mark a Stress to clear 2 Hit Points or 2 Stress; on failure, mark a Stress to clear 1 Hit Point or 1 Stress. You cannot heal the same target again until your next long rest.",
       "id": "domain_card.splendor-healing-hands",
+      "level": 2,
       "name": "Mãos Curativas",
-      "domain_id": "domain.splendor",
-      "level": 2,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (13) and target a creature within alcance corpo a corpo other than yourself. On success, mark um Estresse to clear 2 Pontos de Vida or 2 Estresse; on failure, mark um Estresse to clear 1 Ponto de Vida or 1 Estresse. You cannot heal the same target again until your next long rest."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "When you succeed on an attack, clear 3 Stress or 1 Hit Point. On a success with Hope, you also clear 3 Stress or 1 Hit Point on an ally within close range.",
       "id": "domain_card.splendor-second-wind",
+      "level": 3,
       "name": "Segundo Fôlego",
-      "domain_id": "domain.splendor",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "When you succeed on an attack, clear 3 Estresse or 1 Ponto de Vida. On a success with Esperanca, you also clear 3 Estresse or 1 Ponto de Vida on an ally within alcance proximo."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Gain advantage on action rolls to de-escalate violence or convince someone to follow your lead. When all Stress slots are marked, you gain +1 Proficiency for damage rolls.",
       "id": "domain_card.splendor-voice-of-reason",
+      "level": 3,
       "name": "Voz da Razão",
-      "domain_id": "domain.splendor",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Passivo",
-      "feature_text": "Gain advantage on action rolls to de-escalate violence or convince someone to follow your lead. When all Estresse slots are marked, you gain +1 Proficiencia for damage rolls."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spend 3 Hope to ask one yes-or-no question about the near future and receive the answer in a brief vision.",
       "id": "domain_card.splendor-divination",
+      "level": 4,
       "name": "Adivinhação",
-      "domain_id": "domain.splendor",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Spend 3 Esperanca to ask one yes-or-no question about the near future and receive the answer in a brief vision."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spend 3 Hope and choose an ally within close range. When they would make a Death Move, they clear a Hit Point instead. The effect ends after saving them, when you cast Lifeward on another target, or after a long rest.",
       "id": "domain_card.splendor-lifeward",
+      "level": 4,
       "name": "Guarda da Vida",
-      "domain_id": "domain.splendor",
-      "level": 4,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend 3 Esperanca and choose an ally within alcance proximo. When they would make a Death Move, they clear a Ponto de Vida instead. The effect ends after saving them, when you cast Lifeward on another target, or after a long rest."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spend a Hope to shape natural material you are touching (stone, ice, wood) within close range into a simple tool or structure.",
       "id": "domain_card.splendor-shape-material",
+      "level": 5,
       "name": "Moldar Material",
-      "domain_id": "domain.splendor",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend uma Esperanca to shape natural material you are touching (stone, ice, wood) within alcance proximo into a simple tool or structure."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spend 3 Hope to charge a smite. The next time you hit with a weapon, double the damage roll; it deals magic damage regardless of weapon type.",
       "id": "domain_card.splendor-smite",
+      "level": 5,
       "name": "Golpe Divino",
-      "domain_id": "domain.splendor",
-      "level": 5,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "Spend 3 Esperanca to charge a smite. The next time you hit with a weapon, double the damage roll; it deals magic damage regardless of weapon type."
+      "type": "spell",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "After a long rest, place tokens equal to your Spellcast trait. Touch a creature and spend tokens to clear 2 Hit Points or 2 Stress per token; you can also spend a token to clear Vulnerable or heal an ailment. Clear unspent tokens on a long rest.",
       "id": "domain_card.splendor-restoration",
+      "level": 6,
       "name": "Restauração",
-      "domain_id": "domain.splendor",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "After a long rest, place tokens equal to your Conjuracao trait. Touch a creature and spend tokens to clear 2 Pontos de Vida or 2 Estresse per token; you can also spend a token to clear Vulneravel or heal an ailment. Clear unspent tokens on a long rest."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast (16). On success, create a zone at a far point for allies within very close range. Place a d6 set to 1; when an ally in the zone takes damage, reduce it by the die's value and increase the die by 1. When it would exceed 6, the effect ends.",
       "id": "domain_card.splendor-zone-of-protection",
+      "level": 6,
       "name": "Zona de Proteção",
-      "domain_id": "domain.splendor",
-      "level": 6,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Conjuracao (16). On success, create a zone at a far point for allies within alcance muito proximo. Place a d6 set to 1; when an ally in the zone takes damage, reduce it by the die's value and increase the die by 1. When it would exceed 6, the effect ends."
+      "type": "spell",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "When you deal damage to an adversary, you can spend 2 Hope to clear a Hit Point on an ally within close range.",
       "id": "domain_card.splendor-healing-strike",
+      "level": 7,
       "name": "Golpe Curativo",
-      "domain_id": "domain.splendor",
-      "level": 7,
-      "type": "spell",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you deal damage to an adversary, you can spend 2 Esperanca to clear a Ponto de Vida on an ally within alcance proximo."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "If 4 or more Splendor cards are in your loadout, gain +3 to your severe damage threshold and once per long rest you can choose to mark Stress or spend Hope instead of marking Hit Points.",
       "id": "domain_card.splendor-splendor-touched",
+      "level": 7,
       "name": "Tocado pelo Esplendor",
-      "domain_id": "domain.splendor",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 2,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Splendor cards are in your loadout, gain +3 to your limiar de dano severo and once per long rest you can choose to mark Estresse or spend Esperanca instead of marking Pontos de Vida."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Mark a Stress to cast a protective aura on a creature within very close range. When they mark an Armor Slot, reduce the severity by an additional threshold. If the aura prevents all Hit Point damage from an attack, the effect ends. Only one creature can have Shield Aura at a time.",
       "id": "domain_card.splendor-shield-aura",
+      "level": 8,
       "name": "Aura de Escudo",
-      "domain_id": "domain.splendor",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Mark um Estresse to cast a protective aura on a creature within alcance muito proximo. When they mark an espaco de Armadura, reduce the severity by an additional threshold. If the aura prevents all Ponto de Vida damage from an attack, the effect ends. Only one creature can have Shield Aura at a time."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast to unleash rays against all adversaries in front of you within far range. On success, spend any number of Hope to force that many targets to make a Reaction Roll (14). Success: 3d20+3 magic damage; failure: 4d20+5 magic damage and temporarily Stunned.",
       "id": "domain_card.splendor-stunning-sunlight",
+      "level": 8,
       "name": "Luz Solar Atordoante",
-      "domain_id": "domain.splendor",
-      "level": 8,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao to unleash rays against all adversaries in front of you within alcance longo. On success, spend any number of Esperanca to force that many targets to make a rolagem de Reacao (14). Success: 3d20+3 magic damage; failure: 4d20+5 magic damage and temporarily Atordoado."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast (15). On success, spend 2 Hope to set your Presence equal to your Spellcast trait until your next long rest. While active, an adversary must mark a Stress when they target you with an attack.",
       "id": "domain_card.splendor-overwhelming-aura",
+      "level": 9,
       "name": "Aura Avassaladora",
-      "domain_id": "domain.splendor",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (15). On success, spend 2 Esperanca to set your Presence equal to your Conjuracao trait until your next long rest. While active, an adversary must mark um Estresse when they target you with an attack."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast (16). On success, mark any number of Stress to target a line of allies within far range. Clear Hit Points equal to Stress marked, divided among them as you choose.",
       "id": "domain_card.splendor-salvation-beam",
+      "level": 9,
       "name": "Raio de Salvação",
-      "domain_id": "domain.splendor",
-      "level": 9,
-      "type": "spell",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (16). On success, mark any number of Estresse to target a line of allies within alcance longo. Clear Pontos de Vida equal to Estresse marked, divided among them as you choose."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "When you or an ally within close range uses a feature with an exhaustion limit, spend any number of Hope and roll that many d6s. If any roll a 6, the feature can be used again.",
       "id": "domain_card.splendor-invigoration",
+      "level": 10,
       "name": "Revigoramento",
-      "domain_id": "domain.splendor",
-      "level": 10,
-      "type": "spell",
       "recall_cost": 3,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you or an ally within alcance proximo uses a feature with an exhaustion limit, spend any number of Esperanca and roll that many d6s. If any roll a 6, the feature can be used again."
+      "type": "spell",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.splendor",
+      "feature_text": "Spellcast (20) to restore a creature dead no longer than 100 years to full strength. Then roll a d6; on 5 or lower, place this card in your vault permanently. On failure, you cannot cast Resurrection for a week.",
       "id": "domain_card.splendor-resurrection",
+      "level": 10,
       "name": "Ressurreição",
-      "domain_id": "domain.splendor",
-      "level": 10,
+      "recall_cost": 2,
       "type": "spell",
-      "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Conjuracao (20) to restore a creature dead no longer than 100 years to full strength. Then roll a d6; on 5 or lower, place this card in your vault permanently. On failure, you cannot cast Resurrection for a week."
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you choose not to equip armor, your base Armor Score becomes 3 + Strength and your base thresholds are Tier 1: 9/19, Tier 2: 11/24, Tier 3: 13/31, Tier 4: 15/38.",
       "id": "domain_card.valor-bare-bones",
+      "level": 1,
       "name": "O Básico",
-      "domain_id": "domain.valor",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Passivo",
-      "feature_text": "When you choose not to equip armor, your base Valor de Armadura becomes 3 + Strength and your base thresholds are Tier 1: 9/19, Tier 2: 11/24, Tier 3: 13/31, Tier 4: 15/38."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "Make a primary weapon attack against a melee target. On success, deal damage and knock them to close range; on success with Hope, add a d6 to damage. You can spend a Hope to make them temporarily Vulnerable.",
       "id": "domain_card.valor-forceful-push",
+      "level": 1,
       "name": "Empurrão Poderoso",
-      "domain_id": "domain.valor",
-      "level": 1,
-      "type": "ability",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "Make a primary weapon attack against a melee target. On success, deal damage and knock them to alcance proximo; on success with Esperanca, add a d6 to damage. You can spend uma Esperanca to make them temporarily Vulneravel."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When an ally within very close range would take damage, mark a Stress to become the target instead. When you take damage from this attack, you can mark any number of Armor Slots.",
       "id": "domain_card.valor-i-am-your-shield",
-      "name": "Eu Sou Seu Escudo",
-      "domain_id": "domain.valor",
       "level": 1,
-      "type": "ability",
+      "name": "Eu Sou Seu Escudo",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When an ally within alcance muito proximo would take damage, mark um Estresse to become the target instead. When you take damage from this attack, you can mark any number of Armadura Slots."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "On a successful attack with a melee weapon, gain a damage bonus equal to your Strength.",
       "id": "domain_card.valor-body-basher",
+      "level": 2,
       "name": "Esmaga-Corpos",
-      "domain_id": "domain.valor",
-      "level": 2,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "On a successful attack with a melee weapon, gain a damage bonus equal to your Strength."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you make a Presence Roll, you can spend a Hope to add your Strength to the roll. Once per rest, when you would gain a condition, describe how your bold presence helps and avoid the condition.",
       "id": "domain_card.valor-bold-presence",
-      "name": "Presença Ousada",
-      "domain_id": "domain.valor",
       "level": 2,
-      "type": "ability",
+      "name": "Presença Ousada",
       "recall_cost": 0,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you make a Presence Roll, you can spend uma Esperanca to add your Strength to the roll. Once per rest, when you would gain a condition, describe how your bold presence helps and avoid the condition."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you critically succeed on an attack, all allies within very close range can clear a Stress or gain a Hope.",
       "id": "domain_card.valor-critical-inspiration",
+      "level": 3,
       "name": "Inspiração Crítica",
-      "domain_id": "domain.valor",
-      "level": 3,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "When you critically succeed on an attack, all allies within alcance muito proximo can clear um Estresse or gain uma Esperanca."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you console or inspire an ally who failed an action roll, you both clear 2 Stress.",
       "id": "domain_card.valor-lean-on-me",
-      "name": "Apoie-se em Mim",
-      "domain_id": "domain.valor",
       "level": 3,
-      "type": "ability",
+      "name": "Apoie-se em Mim",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "When you console or inspire an ally who failed an rolagem de acao, you both clear 2 Estresse."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "Taunt a target within close range and make a Presence Roll. On success, they mark a Stress and the next time the GM spotlights them they must target you with an attack made with disadvantage.",
       "id": "domain_card.valor-goad-them-on",
+      "level": 4,
       "name": "Incite-os",
-      "domain_id": "domain.valor",
-      "level": 4,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Taunt a target within alcance proximo and make a Presence Roll. On success, they mark um Estresse and the next time the GM spotlights them they must target you with an attack made with disadvantage."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When an ally within close range fails a roll, spend 2 Hope to let them reroll their Hope or Fear Die.",
       "id": "domain_card.valor-support-tank",
-      "name": "Tanque de Suporte",
-      "domain_id": "domain.valor",
       "level": 4,
-      "type": "ability",
+      "name": "Tanque de Suporte",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "When an ally within alcance proximo fails a roll, spend 2 Esperanca to let them reroll their Esperanca or Dado de Medo."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "While wearing armor, gain +1 Armor Score. During a rest, when you repair your armor as a downtime move, your allies also clear an Armor Slot.",
       "id": "domain_card.valor-armorer",
+      "level": 5,
       "name": "Armeiro",
-      "domain_id": "domain.valor",
-      "level": 5,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "While wearing armor, gain +1 Valor de Armadura. During a rest, when you repair your armor as a downtime move, your allies also clear an espaco de Armadura."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you critically succeed on an attack, you and allies who can see or hear you clear a Hit Point or 1d4 Stress.",
       "id": "domain_card.valor-rousing-strike",
-      "name": "Golpe Estimulante",
-      "domain_id": "domain.valor",
       "level": 5,
-      "type": "ability",
+      "name": "Golpe Estimulante",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso",
-      "feature_text": "When you critically succeed on an attack, you and allies who can see or hear you clear a Ponto de Vida or 1d4 Estresse."
+      "type": "ability",
+      "usage_limit": "Once per rest"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you fail an action roll, your next action roll has advantage.",
       "id": "domain_card.valor-inevitable",
+      "level": 6,
       "name": "Inevitável",
-      "domain_id": "domain.valor",
-      "level": 6,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Passivo",
-      "feature_text": "When you fail an rolagem de acao, your next rolagem de acao has advantage."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "Gain a bonus to your severe threshold equal to your Proficiency. When you mark Hit Points from an attack, clear a Stress.",
       "id": "domain_card.valor-rise-up",
-      "name": "Erga-se",
-      "domain_id": "domain.valor",
       "level": 6,
-      "type": "ability",
+      "name": "Erga-se",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Gain a bonus to your severe threshold equal to your Proficiencia. When you mark Pontos de Vida from an attack, clear um Estresse."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you would take damage, you can mark a Stress to reduce its severity by one threshold. Then roll a d6; on 3 or lower, place this card in your vault.",
       "id": "domain_card.valor-shrug-it-off",
+      "level": 7,
       "name": "Dê de Ombros",
-      "domain_id": "domain.valor",
-      "level": 7,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you would take damage, you can mark um Estresse to reduce its severity by one threshold. Then roll a d6; on 3 or lower, place this card in your vault."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "If 4 or more Valor cards are in your loadout, gain +1 Armor Score and when you mark Hit Points without marking an Armor Slot, clear an Armor Slot.",
       "id": "domain_card.valor-valor-touched",
-      "name": "Tocado pelo Valor",
-      "domain_id": "domain.valor",
       "level": 7,
-      "type": "ability",
+      "name": "Tocado pelo Valor",
       "recall_cost": 1,
-      "usage_limit": "Passivo",
-      "feature_text": "If 4 or more Valor cards are in your loadout, gain +1 Valor de Armadura and when you mark Pontos de Vida without marking an espaco de Armadura, clear an espaco de Armadura."
+      "type": "ability",
+      "usage_limit": "Passive"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "Mark 3 Stress to gain +2 to all character traits until your next rest.",
       "id": "domain_card.valor-full-surge",
+      "level": 8,
       "name": "Surto Total",
-      "domain_id": "domain.valor",
-      "level": 8,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Uma vez por descanso longo",
-      "feature_text": "Mark 3 Estresse to gain +2 to all character traits until your next rest."
+      "type": "ability",
+      "usage_limit": "Once per long rest"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "Spend 2 Hope to make a Strength Roll against all targets within very close range. Targets you succeed against are thrown to far range and make a Reaction Roll (17); failures take 4d10+8 damage and successes take half.",
       "id": "domain_card.valor-ground-pound",
-      "name": "Golpe no Chão",
-      "domain_id": "domain.valor",
       "level": 8,
-      "type": "ability",
+      "name": "Golpe no Chão",
       "recall_cost": 2,
-      "usage_limit": "Ver texto",
-      "feature_text": "Spend 2 Esperanca to make a Strength Roll against all targets within alcance muito proximo. Targets you succeed against are thrown to alcance longo and make a rolagem de Reacao (17); failures take 4d10+8 damage and successes take half."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "Describe your defensive stance and spend a Hope. If an adversary moves within very close range, they are pulled into melee range and Restrained until you move, fail with Fear, or the GM spends 2 Fear to clear the condition.",
       "id": "domain_card.valor-hold-the-line",
+      "level": 9,
       "name": "Segure a Linha",
-      "domain_id": "domain.valor",
-      "level": 9,
-      "type": "ability",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "Describe your defensive stance and spend uma Esperanca. If an adversary moves within alcance muito proximo, they are pulled into alcance corpo a corpo and Restringido until you move, fail with Medo, or the GM spends 2 Medo to clear the condition."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you deal damage to an adversary, mark a Stress to encourage allies. The next PC to attack that adversary can clear a Stress or gain a Hope.",
       "id": "domain_card.valor-lead-by-example",
-      "name": "Lidere pelo Exemplo",
-      "domain_id": "domain.valor",
       "level": 9,
-      "type": "ability",
+      "name": "Lidere pelo Exemplo",
       "recall_cost": 3,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you deal damage to an adversary, mark um Estresse to encourage allies. The next PC to attack that adversary can clear um Estresse or gain uma Esperanca."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
+      "domain_id": "domain.valor",
+      "feature_text": "When you mark your last Hit Point, instead of making a Death Move, roll a d6 and clear that many Hit Points, then place this card in your vault.",
       "id": "domain_card.valor-unbreakable",
-      "name": "Inquebrável",
-      "domain_id": "domain.valor",
       "level": 10,
-      "type": "ability",
+      "name": "Inquebrável",
       "recall_cost": 4,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you mark your last Ponto de Vida, instead of making a Death Move, roll a d6 and clear that many Pontos de Vida, then place this card in your vault."
+      "type": "ability",
+      "usage_limit": "See text"
     },
     {
-      "id": "domain_card.valor-unyielding-armor",
-      "name": "Armadura Inabalável",
       "domain_id": "domain.valor",
+      "feature_text": "When you would mark an Armor Slot, roll d6s equal to your Proficiency. If any roll a 6, reduce the severity by one threshold without marking an Armor Slot.",
+      "id": "domain_card.valor-unyielding-armor",
       "level": 10,
-      "type": "ability",
+      "name": "Armadura Inabalável",
       "recall_cost": 1,
-      "usage_limit": "Ver texto",
-      "feature_text": "When you would mark an espaco de Armadura, roll d6s equal to your Proficiencia. If any roll a 6, reduce the severity by one threshold without marking an espaco de Armadura."
+      "type": "ability",
+      "usage_limit": "See text"
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }

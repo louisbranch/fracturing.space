@@ -439,7 +439,7 @@ func TestCreationViewUsesCatalogDomainCardIllustrationURL(t *testing.T) {
 	creation := catalogCreation{
 		DomainCards: []campaignworkflow.DomainCard{
 			{
-				ID:   "domain_card.arcana-runeward",
+				ID:   "domain_card.rune-ward",
 				Name: "Runeward",
 				Illustration: campaignworkflow.AssetReference{
 					URL: "https://cdn.example.com/domain-cards/runeward.png",
@@ -463,7 +463,7 @@ func TestCreationViewResolvesDomainCardImageURLFallback(t *testing.T) {
 	creation := catalogCreation{
 		DomainCards: []campaignworkflow.DomainCard{
 			{
-				ID:   "domain_card.arcana-runeward",
+				ID:   "domain_card.rune-ward",
 				Name: "Runeward",
 			},
 		},

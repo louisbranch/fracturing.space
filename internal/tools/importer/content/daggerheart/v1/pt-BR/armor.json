@@ -1,314 +1,314 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
-      "id": "armor.gambeson-armor",
-      "name": "Armadura de Gambeson",
-      "tier": 1,
+      "armor_score": 3,
       "base_major_threshold": 5,
       "base_severe_threshold": 11,
-      "armor_score": 3,
-      "feature": "Flexible: +1 to Evasao"
+      "feature": "Flexible: +1 to Evasion",
+      "id": "armor.gambeson-armor",
+      "name": "Armadura de Gambeson",
+      "tier": 1
     },
     {
-      "id": "armor.leather-armor",
-      "name": "Armadura de Couro",
-      "tier": 1,
+      "armor_score": 3,
       "base_major_threshold": 6,
       "base_severe_threshold": 13,
-      "armor_score": 3,
-      "feature": ""
+      "feature": "",
+      "id": "armor.leather-armor",
+      "name": "Armadura de Couro",
+      "tier": 1
     },
     {
-      "id": "armor.chainmail-armor",
-      "name": "Armadura de Cota de Malha",
-      "tier": 1,
+      "armor_score": 4,
       "base_major_threshold": 7,
       "base_severe_threshold": 15,
-      "armor_score": 4,
-      "feature": "Heavy: -1 to Evasao"
+      "feature": "Heavy: -1 to Evasion",
+      "id": "armor.chainmail-armor",
+      "name": "Armadura de Cota de Malha",
+      "tier": 1
     },
     {
-      "id": "armor.full-plate-armor",
-      "name": "Armadura de Placas Completa",
-      "tier": 1,
+      "armor_score": 4,
       "base_major_threshold": 8,
       "base_severe_threshold": 17,
-      "armor_score": 4,
-      "feature": "Very Heavy: -2 to Evasao; -1 to Agility"
+      "feature": "Very Heavy: -2 to Evasion; -1 to Agility",
+      "id": "armor.full-plate-armor",
+      "name": "Armadura de Placas Completa",
+      "tier": 1
     },
     {
-      "id": "armor.improved-gambeson-armor",
-      "name": "Armadura de Gambeson Melhorada",
-      "tier": 2,
+      "armor_score": 4,
       "base_major_threshold": 7,
       "base_severe_threshold": 16,
-      "armor_score": 4,
-      "feature": "Flexible: +1 to Evasao"
+      "feature": "Flexible: +1 to Evasion",
+      "id": "armor.improved-gambeson-armor",
+      "name": "Armadura de Gambeson Melhorada",
+      "tier": 2
     },
     {
+      "armor_score": 4,
+      "base_major_threshold": 9,
+      "base_severe_threshold": 20,
+      "feature": "",
       "id": "armor.improved-leather-armor",
       "name": "Armadura de Couro Melhorada",
-      "tier": 2,
-      "base_major_threshold": 9,
-      "base_severe_threshold": 20,
-      "armor_score": 4,
-      "feature": ""
+      "tier": 2
     },
     {
-      "id": "armor.improved-chainmail-armor",
-      "name": "Armadura de Cota de Malha Melhorada",
-      "tier": 2,
+      "armor_score": 5,
       "base_major_threshold": 11,
       "base_severe_threshold": 24,
-      "armor_score": 5,
-      "feature": "Heavy: -1 to Evasao"
+      "feature": "Heavy: -1 to Evasion",
+      "id": "armor.improved-chainmail-armor",
+      "name": "Armadura de Cota de Malha Melhorada",
+      "tier": 2
     },
     {
-      "id": "armor.improved-full-plate-armor",
-      "name": "Armadura de Placas Completa Melhorada",
-      "tier": 2,
+      "armor_score": 5,
       "base_major_threshold": 13,
       "base_severe_threshold": 28,
-      "armor_score": 5,
-      "feature": "Very Heavy: -2 to Evasao; -1 to Agility"
+      "feature": "Very Heavy: -2 to Evasion; -1 to Agility",
+      "id": "armor.improved-full-plate-armor",
+      "name": "Armadura de Placas Completa Melhorada",
+      "tier": 2
     },
     {
+      "armor_score": 4,
+      "base_major_threshold": 9,
+      "base_severe_threshold": 21,
+      "feature": "Warded: You reduce incoming magic damage by your Armor Score before applying it to your damage thresholds.",
       "id": "armor.elundrian-chain-armor",
       "name": "Armadura de Cota de Malha Elundriana",
-      "tier": 2,
-      "base_major_threshold": 9,
-      "base_severe_threshold": 21,
-      "armor_score": 4,
-      "feature": "Warded: You reduce incoming magic damage by your Valor de Armadura before applying it to your damage thresholds."
+      "tier": 2
     },
     {
+      "armor_score": 4,
+      "base_major_threshold": 9,
+      "base_severe_threshold": 21,
+      "feature": "Resilient: Before you mark your last Armor Slot, roll a d6. On a result of 6, reduce the severity by one threshold without marking an Armor Slot.",
       "id": "armor.harrowbone-armor",
       "name": "Armadura Harrowbone",
-      "tier": 2,
-      "base_major_threshold": 9,
-      "base_severe_threshold": 21,
-      "armor_score": 4,
-      "feature": "Resilient: Before you mark your last espaco de Armadura, roll a d6. On a result of 6, reduce the severity by one threshold without marking an espaco de Armadura."
+      "tier": 2
     },
     {
+      "armor_score": 4,
+      "base_major_threshold": 9,
+      "base_severe_threshold": 20,
+      "feature": "Reinforced: When you mark your last Armor Slot, increase your damage thresholds by +2 until you clear at least 1 Armor Slot.",
       "id": "armor.irontree-breastplate-armor",
       "name": "Armadura de Peitoral Irontree",
-      "tier": 2,
-      "base_major_threshold": 9,
-      "base_severe_threshold": 20,
-      "armor_score": 4,
-      "feature": "Reinforced: When you mark your last espaco de Armadura, increase your damage thresholds by +2 until you clear at least 1 espaco de Armadura."
+      "tier": 2
     },
     {
+      "armor_score": 4,
+      "base_major_threshold": 9,
+      "base_severe_threshold": 20,
+      "feature": "Shifting: When you are targeted for an attack, you can mark an Armor Slot to give the attack roll against you disadvantage.",
       "id": "armor.runetan-floating-armor",
       "name": "Armadura Flutuante Runetan",
-      "tier": 2,
-      "base_major_threshold": 9,
-      "base_severe_threshold": 20,
-      "armor_score": 4,
-      "feature": "Shifting: When you are targeted for an attack, you can mark an espaco de Armadura to give the attack roll against you disadvantage."
+      "tier": 2
     },
     {
-      "id": "armor.tyris-soft-armor",
-      "name": "Armadura Macia de Tyris",
-      "tier": 2,
+      "armor_score": 5,
       "base_major_threshold": 8,
       "base_severe_threshold": 18,
-      "armor_score": 5,
-      "feature": "Quiet: You gain a +2 bonus to rolls you make to move silently."
+      "feature": "Quiet: You gain a +2 bonus to rolls you make to move silently.",
+      "id": "armor.tyris-soft-armor",
+      "name": "Armadura Macia de Tyris",
+      "tier": 2
     },
     {
+      "armor_score": 5,
+      "base_major_threshold": 11,
+      "base_severe_threshold": 23,
+      "feature": "Hopeful: When you would spend a Hope, you can mark an Armor Slot instead.",
       "id": "armor.rosewild-armor",
       "name": "Armadura Rosewild",
-      "tier": 2,
-      "base_major_threshold": 11,
-      "base_severe_threshold": 23,
-      "armor_score": 5,
-      "feature": "Hopeful: When you would spend a Hope, you can mark an espaco de Armadura instead."
+      "tier": 2
     },
     {
-      "id": "armor.advanced-gambeson-armor",
-      "name": "Armadura de Gambeson Avançada",
-      "tier": 3,
+      "armor_score": 5,
       "base_major_threshold": 9,
       "base_severe_threshold": 23,
-      "armor_score": 5,
-      "feature": "Flexible: +1 to Evasao"
+      "feature": "Flexible: +1 to Evasion",
+      "id": "armor.advanced-gambeson-armor",
+      "name": "Armadura de Gambeson Avançada",
+      "tier": 3
     },
     {
+      "armor_score": 5,
+      "base_major_threshold": 11,
+      "base_severe_threshold": 27,
+      "feature": "",
       "id": "armor.advanced-leather-armor",
       "name": "Armadura de Couro Avançada",
-      "tier": 3,
-      "base_major_threshold": 11,
-      "base_severe_threshold": 27,
-      "armor_score": 5,
-      "feature": ""
+      "tier": 3
     },
     {
-      "id": "armor.advanced-chainmail-armor",
-      "name": "Armadura de Cota de Malha Avançada",
-      "tier": 3,
+      "armor_score": 6,
       "base_major_threshold": 13,
       "base_severe_threshold": 31,
-      "armor_score": 6,
-      "feature": "Heavy: -1 to Evasao"
+      "feature": "Heavy: -1 to Evasion",
+      "id": "armor.advanced-chainmail-armor",
+      "name": "Armadura de Cota de Malha Avançada",
+      "tier": 3
     },
     {
-      "id": "armor.advanced-full-plate-armor",
-      "name": "Armadura de Placas Completa Avançada",
-      "tier": 3,
+      "armor_score": 6,
       "base_major_threshold": 15,
       "base_severe_threshold": 35,
-      "armor_score": 6,
-      "feature": "Very Heavy: -2 to Evasao; -1 to Agility"
+      "feature": "Very Heavy: -2 to Evasion; -1 to Agility",
+      "id": "armor.advanced-full-plate-armor",
+      "name": "Armadura de Placas Completa Avançada",
+      "tier": 3
     },
     {
+      "armor_score": 5,
+      "base_major_threshold": 11,
+      "base_severe_threshold": 27,
+      "feature": "Gilded: +1 to Presence",
       "id": "armor.bellamoi-fine-armor",
       "name": "Armadura Fina Bellamoi",
-      "tier": 3,
-      "base_major_threshold": 11,
-      "base_severe_threshold": 27,
-      "armor_score": 5,
-      "feature": "Gilded: +1 to Presence"
+      "tier": 3
     },
     {
+      "armor_score": 5,
+      "base_major_threshold": 11,
+      "base_severe_threshold": 27,
+      "feature": "Impenetrable: Once per short rest, when you would mark your last Hit Point, you can instead mark a Stress.",
       "id": "armor.dragonscale-armor",
       "name": "Armadura de Escamas de Dragão",
-      "tier": 3,
-      "base_major_threshold": 11,
-      "base_severe_threshold": 27,
-      "armor_score": 5,
-      "feature": "Impenetrable: Once per short rest, when you would mark your last Ponto de Vida, you can instead mark a Estresse."
+      "tier": 3
     },
     {
-      "id": "armor.spiked-plate-armor",
-      "name": "Armadura de Placas com Espinhos",
-      "tier": 3,
+      "armor_score": 5,
       "base_major_threshold": 10,
       "base_severe_threshold": 25,
-      "armor_score": 5,
-      "feature": "Sharp: On a successful attack against a target within Melee range, add a d4 to the damage roll."
+      "feature": "Sharp: On a successful attack against a target within Melee range, add a d4 to the damage roll.",
+      "id": "armor.spiked-plate-armor",
+      "name": "Armadura de Placas com Espinhos",
+      "tier": 3
     },
     {
+      "armor_score": 6,
+      "base_major_threshold": 16,
+      "base_severe_threshold": 39,
+      "feature": "Physical: You can't mark an Armor Slot to reduce magic damage.",
       "id": "armor.bladefare-armor",
       "name": "Armadura Bladefare",
-      "tier": 3,
-      "base_major_threshold": 16,
-      "base_severe_threshold": 39,
-      "armor_score": 6,
-      "feature": "Physical: You can't mark an espaco de Armadura to reduce magic damage."
+      "tier": 3
     },
     {
-      "id": "armor.monetts-cloak",
+      "armor_score": 6,
+      "base_major_threshold": 16,
+      "base_severe_threshold": 39,
+      "feature": "Magic: You can't mark an Armor Slot to reduce physical damage.",
+      "id": "armor.monett-s-cloak",
       "name": "Manto de Guarda Mágica",
-      "tier": 3,
-      "base_major_threshold": 16,
-      "base_severe_threshold": 39,
-      "armor_score": 6,
-      "feature": "Magic: You can't mark an espaco de Armadura to reduce physical damage."
+      "tier": 3
     },
     {
-      "id": "armor.runes-of-fortification",
-      "name": "Runas de Fortificação",
-      "tier": 3,
+      "armor_score": 6,
       "base_major_threshold": 17,
       "base_severe_threshold": 43,
-      "armor_score": 6,
-      "feature": "Painful: Each time you mark an espaco de Armadura, you must mark a Estresse."
+      "feature": "Painful: Each time you mark an Armor Slot, you must mark a Stress.",
+      "id": "armor.runes-of-fortification",
+      "name": "Runas de Fortificação",
+      "tier": 3
     },
     {
-      "id": "armor.legendary-gambeson-armor",
-      "name": "Armadura de Gambeson Lendária",
-      "tier": 4,
+      "armor_score": 6,
       "base_major_threshold": 11,
       "base_severe_threshold": 32,
-      "armor_score": 6,
-      "feature": "Flexible: +1 to Evasao"
+      "feature": "Flexible: +1 to Evasion",
+      "id": "armor.legendary-gambeson-armor",
+      "name": "Armadura de Gambeson Lendária",
+      "tier": 4
     },
     {
+      "armor_score": 6,
+      "base_major_threshold": 13,
+      "base_severe_threshold": 36,
+      "feature": "",
       "id": "armor.legendary-leather-armor",
       "name": "Armadura de Couro Lendária",
-      "tier": 4,
-      "base_major_threshold": 13,
-      "base_severe_threshold": 36,
-      "armor_score": 6,
-      "feature": ""
+      "tier": 4
     },
     {
+      "armor_score": 7,
+      "base_major_threshold": 15,
+      "base_severe_threshold": 40,
+      "feature": "Heavy: -1 to Evasion",
       "id": "armor.legendary-chainmail-armor",
       "name": "Armadura de Cota de Malha Lendária",
-      "tier": 4,
-      "base_major_threshold": 15,
-      "base_severe_threshold": 40,
-      "armor_score": 7,
-      "feature": "Heavy: -1 to Evasao"
+      "tier": 4
     },
     {
-      "id": "armor.legendary-full-plate-armor",
-      "name": "Armadura de Placas Completa Lendária",
-      "tier": 4,
+      "armor_score": 7,
       "base_major_threshold": 17,
       "base_severe_threshold": 44,
-      "armor_score": 7,
-      "feature": "Very Heavy: -2 to Evasao; -1 to Agility"
+      "feature": "Very Heavy: -2 to Evasion; -1 to Agility",
+      "id": "armor.legendary-full-plate-armor",
+      "name": "Armadura de Placas Completa Lendária",
+      "tier": 4
     },
     {
+      "armor_score": 7,
+      "base_major_threshold": 13,
+      "base_severe_threshold": 36,
+      "feature": "Timeslowing: Mark an Armor Slot to roll a d4 and add its result as a bonus to your Evasion against an incoming attack.",
       "id": "armor.dunamis-silkchain",
       "name": "Cota de Seda Dunamis",
-      "tier": 4,
-      "base_major_threshold": 13,
-      "base_severe_threshold": 36,
-      "armor_score": 7,
-      "feature": "Timeslowing: Mark an espaco de Armadura to roll a d4 and add its result as a bonus to your Evasao against an incoming attack."
+      "tier": 4
     },
     {
+      "armor_score": 5,
+      "base_major_threshold": 13,
+      "base_severe_threshold": 36,
+      "feature": "Channeling: +1 to Spellcast Rolls",
       "id": "armor.channeling-armor",
       "name": "Armadura de Canalização",
-      "tier": 4,
-      "base_major_threshold": 13,
-      "base_severe_threshold": 36,
-      "armor_score": 5,
-      "feature": "Channeling: +1 to rolagens de Conjuracao"
+      "tier": 4
     },
     {
+      "armor_score": 6,
+      "base_major_threshold": 13,
+      "base_severe_threshold": 36,
+      "feature": "Burning: When an adversary attacks you within Melee range, they mark a Stress.",
       "id": "armor.emberwoven-armor",
       "name": "Armadura de Trama de Brasa",
-      "tier": 4,
-      "base_major_threshold": 13,
-      "base_severe_threshold": 36,
-      "armor_score": 6,
-      "feature": "Burning: When an adversary attacks you within Melee range, they mark a Estresse."
+      "tier": 4
     },
     {
-      "id": "armor.full-fortified-armor",
-      "name": "Armadura Totalmente Fortificada",
-      "tier": 4,
+      "armor_score": 4,
       "base_major_threshold": 15,
       "base_severe_threshold": 40,
-      "armor_score": 4,
-      "feature": "Fortified: When you mark an espaco de Armadura, you reduce the severity of an attack by two thresholds instead of one."
+      "feature": "Fortified: When you mark an Armor Slot, you reduce the severity of an attack by two thresholds instead of one.",
+      "id": "armor.full-fortified-armor",
+      "name": "Armadura Totalmente Fortificada",
+      "tier": 4
     },
     {
-      "id": "armor.veritas-opal-armor",
-      "name": "Armadura de Opala Veritas",
-      "tier": 4,
+      "armor_score": 6,
       "base_major_threshold": 13,
       "base_severe_threshold": 36,
-      "armor_score": 6,
-      "feature": "Truthseeking: This armor glows when another creature within Close range tells a lie."
+      "feature": "Truthseeking: This armor glows when another creature within Close range tells a lie.",
+      "id": "armor.veritas-opal-armor",
+      "name": "Armadura de Opala Veritas",
+      "tier": 4
     },
     {
-      "id": "armor.savior-chainmail",
-      "name": "Cota de Malha do Salvador",
-      "tier": 4,
+      "armor_score": 8,
       "base_major_threshold": 18,
       "base_severe_threshold": 48,
-      "armor_score": 8,
-      "feature": "Difficult: -1 to all character traits and Evasao"
+      "feature": "Difficult: -1 to all character traits and Evasion",
+      "id": "armor.savior-chainmail",
+      "name": "Cota de Malha do Salvador",
+      "tier": 4
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }

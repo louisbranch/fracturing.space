@@ -2082,7 +2082,7 @@
         {
           "asset_type": "daggerheart_domain_card_illustration",
           "set_id": "daggerheart_domain_card_set_v1",
-          "entity_id": "domain_card.arcana-runeward",
+          "entity_id": "domain_card.rune-ward",
           "entity_type": "domain_card",
           "asset_id": "arcana_runeward"
         },
@@ -2096,7 +2096,7 @@
         {
           "asset_type": "daggerheart_domain_card_illustration",
           "set_id": "daggerheart_domain_card_set_v1",
-          "entity_id": "domain_card.arcana-wallwalk",
+          "entity_id": "domain_card.wall-walk",
           "entity_type": "domain_card",
           "asset_id": "arcana_wallwalk"
         },
@@ -2145,21 +2145,21 @@
         {
           "asset_type": "daggerheart_domain_card_illustration",
           "set_id": "daggerheart_domain_card_set_v1",
-          "entity_id": "domain_card.codex-book-of-ava",
+          "entity_id": "domain_card.book-of-ava",
           "entity_type": "domain_card",
           "asset_id": "codex_book_of_ava"
         },
         {
           "asset_type": "daggerheart_domain_card_illustration",
           "set_id": "daggerheart_domain_card_set_v1",
-          "entity_id": "domain_card.codex-book-of-illiat",
+          "entity_id": "domain_card.book-of-illiat",
           "entity_type": "domain_card",
           "asset_id": "codex_book_of_illiat"
         },
         {
           "asset_type": "daggerheart_domain_card_illustration",
           "set_id": "daggerheart_domain_card_set_v1",
-          "entity_id": "domain_card.codex-book-of-tyfar",
+          "entity_id": "domain_card.book-of-tyfar",
           "entity_type": "domain_card",
           "asset_id": "codex_book_of_tyfar"
         },
@@ -2194,7 +2194,7 @@
         {
           "asset_type": "daggerheart_domain_card_illustration",
           "set_id": "daggerheart_domain_card_set_v1",
-          "entity_id": "domain_card.midnight-rain-of-blades",
+          "entity_id": "domain_card.rain-of-blades",
           "entity_type": "domain_card",
           "asset_id": "midnight_rain_of_blades"
         },
@@ -2215,7 +2215,7 @@
         {
           "asset_type": "daggerheart_domain_card_illustration",
           "set_id": "daggerheart_domain_card_set_v1",
-          "entity_id": "domain_card.sage-natures-tongue",
+          "entity_id": "domain_card.nature-s-tongue",
           "entity_type": "domain_card",
           "asset_id": "sage_natures_tongue"
         },
@@ -4005,7 +4005,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "domain_card",
-        "entity_id": "domain_card.arcana-runeward",
+        "entity_id": "domain_card.rune-ward",
         "source_file": "domain_cards.json"
       },
       "review_flags": []
@@ -4069,7 +4069,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "domain_card",
-        "entity_id": "domain_card.arcana-wallwalk",
+        "entity_id": "domain_card.wall-walk",
         "source_file": "domain_cards.json"
       },
       "review_flags": []
@@ -4299,7 +4299,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "domain_card",
-        "entity_id": "domain_card.codex-book-of-ava",
+        "entity_id": "domain_card.book-of-ava",
         "source_file": "domain_cards.json"
       },
       "review_flags": []
@@ -4331,7 +4331,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "domain_card",
-        "entity_id": "domain_card.codex-book-of-illiat",
+        "entity_id": "domain_card.book-of-illiat",
         "source_file": "domain_cards.json"
       },
       "review_flags": []
@@ -4363,7 +4363,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "domain_card",
-        "entity_id": "domain_card.codex-book-of-tyfar",
+        "entity_id": "domain_card.book-of-tyfar",
         "source_file": "domain_cards.json"
       },
       "review_flags": []
@@ -4525,7 +4525,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "domain_card",
-        "entity_id": "domain_card.midnight-rain-of-blades",
+        "entity_id": "domain_card.rain-of-blades",
         "source_file": "domain_cards.json"
       },
       "review_flags": []
@@ -4621,7 +4621,7 @@
         "system_version": "v1",
         "locale": "en-US",
         "entity_type": "domain_card",
-        "entity_id": "domain_card.sage-natures-tongue",
+        "entity_id": "domain_card.nature-s-tongue",
         "source_file": "domain_cards.json"
       },
       "review_flags": []

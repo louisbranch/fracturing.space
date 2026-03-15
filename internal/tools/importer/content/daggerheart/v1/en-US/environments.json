@@ -705,8 +705,8 @@
       ]
     },
     {
-      "id": "environment.necromancers-ossuary",
-      "name": "Ossuary of the Dead",
+      "id": "environment.necromancer-s-ossuary",
+      "name": "Necromancer's Ossuary",
       "tier": 4,
       "type": "exploration",
       "difficulty": 19,
@@ -719,13 +719,13 @@
       "potential_adversary_ids": [],
       "features": [
         {
-          "id": "feature.environment-necromancers-ossuary-no-place-for-the-liv-in-g",
+          "id": "feature.environment-necromancer-s-ossuary-no-place-for-the-liv-in-g",
           "name": "No Place for the Living",
           "description": "Passive: A feature or action that clears HP requires spending a Hope to use. If it already costs Hope, a PC must spend an additional Hope.",
           "level": 4
         },
         {
-          "id": "feature.environment-necromancers-ossuary-centuries-of-knowledge",
+          "id": "feature.environment-necromancer-s-ossuary-centuries-of-knowledge",
           "name": "Centuries of Knowledge",
           "description": "Passive: A PC can investigate the library and laboratory and make a Knowledge Roll to learn information related to arcana, local history, and the Necromancer's plans. Skeletal Burst - Action: All targets within Close range of a point you choose in this environment must succeed on an Agility Reaction Roll or take 4d8+8 physical damage from skeletal shrapnel as part of the ossuary detonates around them. Aura of Death - Action: Once per scene, roll a d4. Each undead within Far range of the Necromancer can clear HP and Stress equal to the result rolled. The undead can choose how that number is divided between HP and Stress. They Just Keep Coming! - Action: Spend a Fear to summon 1d6 Rotted Zombies, two Perfected Zombies, or a Zombie Legion, who appear at Close range of a chosen PC.",
           "level": 4

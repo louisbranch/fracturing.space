@@ -1,656 +1,674 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
-      "id": "subclass.troubadour",
-      "name": "Trovador",
-      "spellcast_trait": "Presence",
+      "class_id": "class.bard",
       "foundation_features": [
         {
+          "description": "Once per long rest per song, perform one of three songs: Relaxing Song clears 1 Hit Point for you and allies within close range; Epic Song makes a target within close range temporarily Vulnerable; Heartbreaking Song grants a Hope to you and allies within close range.",
           "id": "feature.troubadour-gifted-performer",
-          "name": "Artista Talentoso",
-          "description": "Uma vez por descanso longo por canção, escolha uma de três cancoes: Canção Relaxante limpa 1 Ponto de Vida para você e aliados em alcance próximo; Canção Épica deixa um alvo em alcance próximo temporariamente Vulnerável; Canção Dolorida concede uma Esperança para você e aliados em alcance próximo.",
-          "level": 1
+          "level": 1,
+          "name": "Artista Talentoso"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.troubadour-maestro",
-          "name": "Maestro",
-          "description": "Quando você entrega um Dado de Rali a um aliado, ele pode ganhar uma Esperança ou limpar um Estresse.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.troubadour",
       "mastery_features": [
         {
+          "description": "You can perform each Gifted Performer song twice per long rest.",
           "id": "feature.troubadour-virtuoso",
-          "name": "Virtuoso",
-          "description": "Você pode executar cada canção de Artista Talentoso duas vezes por descanso longo.",
-          "level": 3
+          "level": 3,
+          "name": "Virtuoso"
         }
-      ]
+      ],
+      "name": "Trovador",
+      "specialization_features": [
+        {
+          "description": "When you give a Rally Die to an ally, they can gain a Hope or clear a Stress.",
+          "id": "feature.troubadour-maestro",
+          "level": 2,
+          "name": "Maestro"
+        }
+      ],
+      "spellcast_trait": "Presence"
     },
     {
-      "id": "subclass.wordsmith",
-      "name": "Forjador de Palavras",
-      "spellcast_trait": "Presence",
+      "class_id": "class.bard",
       "foundation_features": [
         {
+          "description": "Once per long rest, give an inspiring speech. All allies within far range clear 2 Stress.",
           "id": "feature.wordsmith-rousing-speech",
-          "name": "Discurso Inspirador",
-          "description": "Uma vez por descanso longo, faça um discurso inspirador. Todos os aliados em alcance longo limpam 2 Estresse.",
-          "level": 1
+          "level": 1,
+          "name": "Discurso Inspirador"
         },
         {
+          "description": "After you make an action roll to impress, persuade, or offend someone, you can spend a Hope to add a d4 to the roll.",
           "id": "feature.wordsmith-heart-of-poet",
-          "name": "Coracao de Poeta",
-          "description": "Depois de fazer uma rolagem de ação para impressionar, persuadir ou ofender alguem, você pode gastar uma Esperança para adicionar um d4 à rolagem.",
-          "level": 1
+          "level": 1,
+          "name": "Coracao de Poeta"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.wordsmith-eloquent",
-          "name": "Eloquente",
-          "description": "Uma vez por sessão, quando você encoraja um aliado, escolha um: ele encontra um objeto ou ferramenta mundana de que precisa; você Ajudar um Aliado sem gastar Esperança; ou ele ganha um movimento de descanso adicional no próximo descanso.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.wordsmith",
       "mastery_features": [
         {
+          "description": "Your Rally Die increases to a d10. When you Help an Ally, you can narrate their heroism and roll a d10 as your advantage die.",
           "id": "feature.wordsmith-epic-poetry",
-          "name": "Poesia Epica",
-          "description": "Seu Dado de Rali aumenta para d10. Quando você Ajuda um Aliado, pode narrar o momento como um conto heroico e rolar um d10 como seu dado de vantagem.",
-          "level": 3
+          "level": 3,
+          "name": "Poesia Epica"
         }
-      ]
+      ],
+      "name": "Forjador de Palavras",
+      "specialization_features": [
+        {
+          "description": "Once per session, when you encourage an ally, choose one: let them find a mundane object or tool they need; Help an Ally without spending Hope; or give them an additional downtime move during their next rest.",
+          "id": "feature.wordsmith-eloquent",
+          "level": 2,
+          "name": "Eloquente"
+        }
+      ],
+      "spellcast_trait": "Presence"
     },
     {
-      "id": "subclass.warden-elements",
-      "name": "Guardiao dos Elementos",
-      "spellcast_trait": "Instinct",
+      "class_id": "class.druid",
       "foundation_features": [
         {
+          "description": "Mark a Stress to Channel fire, earth, water, or air until you take severe damage or your next rest. Fire: when an adversary within melee range damages you, they take 1d10 magic damage. Earth: gain a bonus to damage thresholds equal to your Proficiency. Water: when you damage an adversary within melee range, all other adversaries within very close range mark a Stress. Air: you can hover, gaining advantage on Agility rolls.",
           "id": "feature.warden-elements-elemental-incarnation",
-          "name": "Encarnacao Elemental",
-          "description": "Marque um Estresse para Canalizar fogo, terra, agua ou ar ate sofrer dano severo ou ate o proximo descanso. Fogo: quando um adversario em alcance corpo a corpo causa dano a você, ele sofre 1d10 de dano magico. Terra: ganhe um bonus nos limiares de dano igual a sua Proficiência. Agua: quando você causa dano a um adversario em alcance corpo a corpo, todos os outros adversarios em alcance muito proximo marcam um Estresse. Ar: você pode pairar, ganhando vantagem em rolagens de Agility.",
-          "level": 1
+          "level": 1,
+          "name": "Encarnacao Elemental"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.warden-elements-elemental-aura",
-          "name": "Aura Elemental",
-          "description": "Uma vez por descanso enquanto Canaliza, assuma uma aura do seu elemento que afeta alvos em alcance proximo ate o Canalizar terminar. Fogo: quando um adversario marca 1 ou mais Pontos de Vida, ele tambem marca um Estresse. Terra: aliados ganham +1 em Strength. Agua: quando um adversario causa dano a você, marque um Estresse para movê-lo para qualquer lugar em alcance muito proximo de onde ele esta. Ar: quando você ou um aliado sofre dano de um ataque além de alcance corpo a corpo, reduza o dano em 1d8.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.warden-elements",
       "mastery_features": [
         {
+          "description": "While Channeling, gain a benefit based on your element. Fire: +1 Proficiency to damaging attacks and spells. Earth: when you would mark Hit Points, roll a d6 per Hit Point; each 6 reduces the number marked by 1. Water: when an attack against you succeeds, you can mark a Stress to make the attacker temporarily Vulnerable. Air: gain +1 Evasion and you can fly.",
           "id": "feature.warden-elements-elemental-dominion",
-          "name": "Dominio Elemental",
-          "description": "Enquanto Canaliza, ganhe um beneficio conforme o elemento. Fogo: +1 de Proficiência em ataques e feitiços que causem dano. Terra: quando você marcaria Pontos de Vida, role um d6 por Ponto de Vida; cada 6 reduz em 1 o total marcado. Agua: quando um ataque contra você acerta, pode marcar um Estresse para deixar o atacante temporariamente Vulnerável. Ar: ganhe +1 de Evasão e você pode voar.",
-          "level": 3
+          "level": 3,
+          "name": "Dominio Elemental"
         }
-      ]
+      ],
+      "name": "Guardiao dos Elementos",
+      "specialization_features": [
+        {
+          "description": "Once per rest while Channeling, assume an aura matching your element that affects targets within close range until Channeling ends. Fire: when an adversary marks 1 or more Hit Points, they also mark a Stress. Earth: allies gain +1 Strength. Water: when an adversary damages you, you can mark a Stress to move them anywhere within very close range of where they are. Air: when you or an ally takes damage from beyond melee range, reduce the damage by 1d8.",
+          "id": "feature.warden-elements-elemental-aura",
+          "level": 2,
+          "name": "Aura Elemental"
+        }
+      ],
+      "spellcast_trait": "Instinct"
     },
     {
-      "id": "subclass.warden-renewal",
-      "name": "Guardiao da Renovacao",
-      "spellcast_trait": "Instinct",
+      "class_id": "class.druid",
       "foundation_features": [
         {
+          "description": "Once per long rest, create a space of natural serenity within close range. After a few minutes of rest there, clear Stress equal to your Instinct, distributed among you and allies as you choose.",
           "id": "feature.warden-renewal-clarity-of-nature",
-          "name": "Clareza da Natureza",
-          "description": "Uma vez por descanso longo, crie um espaço de serenidade natural em alcance proximo. Depois de alguns minutos descansando ali, limpe Estresse igual ao seu Instinct, distribuindo entre você e aliados como quiser.",
-          "level": 1
+          "level": 1,
+          "name": "Clareza da Natureza"
         },
         {
+          "description": "Touch a creature and spend 3 Hope; they clear 1d4 Hit Points.",
           "id": "feature.warden-renewal-regeneration",
-          "name": "Regeneracao",
-          "description": "Toque uma criatura e gaste 3 Esperança; ela limpa 1d4 Pontos de Vida.",
-          "level": 1
+          "level": 1,
+          "name": "Regeneracao"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.warden-renewal-regenerative-reach",
-          "name": "Alcance Regenerativo",
-          "description": "Você pode atingir criaturas em alcance muito proximo com Regeneracao.",
-          "level": 2
-        },
-        {
-          "id": "feature.warden-renewal-wardens-protection",
-          "name": "Guarda Renovadora",
-          "description": "Uma vez por descanso longo, gaste 2 Esperança para limpar 2 Pontos de Vida de 1d4 aliados em alcance proximo.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.warden-renewal",
       "mastery_features": [
         {
+          "description": "While in Beastform, when an ally within close range marks 2 or more Hit Points, you can mark a Stress to reduce the number of Hit Points they mark by 1.",
           "id": "feature.warden-renewal-defender",
-          "name": "Defensor",
-          "description": "Enquanto estiver em Forma de Besta, quando um aliado em alcance proximo marcar 2 ou mais Pontos de Vida, você pode marcar um Estresse para reduzir em 1 o numero de Pontos de Vida marcados.",
-          "level": 3
+          "level": 3,
+          "name": "Defensor"
         }
-      ]
+      ],
+      "name": "Guardiao da Renovacao",
+      "specialization_features": [
+        {
+          "description": "You can target creatures within very close range with Regeneration.",
+          "id": "feature.warden-renewal-regenerative-reach",
+          "level": 2,
+          "name": "Alcance Regenerativo"
+        },
+        {
+          "description": "Once per long rest, spend 2 Hope to clear 2 Hit Points on 1d4 allies within close range.",
+          "id": "feature.warden-renewal-wardens-protection",
+          "level": 2,
+          "name": "Guarda Renovadora"
+        }
+      ],
+      "spellcast_trait": "Instinct"
     },
     {
-      "id": "subclass.stalwart",
-      "name": "Baluarte",
-      "spellcast_trait": "Strength",
+      "class_id": "class.guardian",
       "foundation_features": [
         {
+          "description": "Gain a permanent +1 bonus to your damage thresholds.",
           "id": "feature.stalwart-unwavering",
-          "name": "Inabalavel",
-          "description": "Ganhe um bonus permanente de +1 nos seus limiares de dano.",
-          "level": 1
+          "level": 1,
+          "name": "Inabalavel"
         },
         {
+          "description": "When you take physical damage, you can mark an additional Armor Slot to reduce the severity.",
           "id": "feature.stalwart-iron-will",
-          "name": "Vontade de Ferro",
-          "description": "Quando você sofre dano fisico, pode marcar um espaco de Armadura adicional para reduzir a severidade.",
-          "level": 1
+          "level": 1,
+          "name": "Vontade de Ferro"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.stalwart-unrelenting",
-          "name": "Implacavel",
-          "description": "Ganhe um bonus permanente de +2 nos seus limiares de dano.",
-          "level": 2
-        },
-        {
-          "id": "feature.stalwart-partners-in-arms",
-          "name": "Parceiros de Armas",
-          "description": "Quando um aliado em alcance muito proximo sofre dano, você pode marcar um espaco de Armadura para reduzir a severidade em um passo.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.stalwart",
       "mastery_features": [
         {
+          "description": "Gain a permanent +3 bonus to your damage thresholds.",
           "id": "feature.stalwart-undaunted",
-          "name": "Indomavel",
-          "description": "Ganhe um bonus permanente de +3 nos seus limiares de dano.",
-          "level": 3
+          "level": 3,
+          "name": "Indomavel"
         },
         {
+          "description": "When an ally within close range has 2 or fewer Hit Points and would take damage, you can mark a Stress to sprint to their side and take the damage instead.",
           "id": "feature.stalwart-loyal-protector",
-          "name": "Protetor Leal",
-          "description": "Quando um aliado em alcance proximo tem 2 ou menos Pontos de Vida e sofreria dano, você pode marcar um Estresse para correr ao lado dele e sofrer o dano no lugar.",
-          "level": 3
+          "level": 3,
+          "name": "Protetor Leal"
         }
-      ]
+      ],
+      "name": "Baluarte",
+      "specialization_features": [
+        {
+          "description": "Gain a permanent +2 bonus to your damage thresholds.",
+          "id": "feature.stalwart-unrelenting",
+          "level": 2,
+          "name": "Implacavel"
+        },
+        {
+          "description": "When an ally within very close range takes damage, you can mark an Armor Slot to reduce the severity by one step.",
+          "id": "feature.stalwart-partners-in-arms",
+          "level": 2,
+          "name": "Parceiros de Armas"
+        }
+      ],
+      "spellcast_trait": "Strength"
     },
     {
-      "id": "subclass.vengeance",
-      "name": "Vinganca",
-      "spellcast_trait": "Strength",
+      "class_id": "class.guardian",
       "foundation_features": [
         {
+          "description": "Gain an additional Stress slot.",
           "id": "feature.vengeance-at-ease",
-          "name": "A Vontade",
-          "description": "Ganhe um espaco de Estresse adicional.",
-          "level": 1
+          "level": 1,
+          "name": "A Vontade"
         },
         {
+          "description": "When an adversary within melee range succeeds on an attack against you, you can mark 2 Stress to force the attacker to mark a Hit Point.",
           "id": "feature.vengeance-revenge",
-          "name": "Revanche",
-          "description": "Quando um adversario em alcance corpo a corpo acerta um ataque contra você, pode marcar 2 Estresse para forcar o atacante a marcar 1 Ponto de Vida.",
-          "level": 1
+          "level": 1,
+          "name": "Revanche"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.vengeance-act-of-reprisal",
-          "name": "Represália Vingativa",
-          "description": "Quando um adversario causa dano a um aliado em alcance corpo a corpo, ganhe +1 de Proficiência no proximo ataque bem-sucedido contra esse adversario.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.vengeance",
       "mastery_features": [
         {
+          "description": "Spend 2 Hope to Prioritize an adversary until your next rest. When you attack your Prioritized adversary, you can swap the results of your Hope and Fear Dice. You can only Prioritize one adversary at a time.",
           "id": "feature.vengeance-nemesis",
-          "name": "Nêmesis",
-          "description": "Gaste 2 Esperança para Priorizar um adversario ate o proximo descanso. Quando você ataca seu adversario Prioritario, pode trocar os resultados dos seus Dados de Esperança e Medo. Você so pode Priorizar um adversario por vez.",
-          "level": 3
+          "level": 3,
+          "name": "Nêmesis"
         }
-      ]
+      ],
+      "name": "Vinganca",
+      "specialization_features": [
+        {
+          "description": "When an adversary damages an ally within melee range, gain +1 Proficiency on your next successful attack against that adversary.",
+          "id": "feature.vengeance-act-of-reprisal",
+          "level": 2,
+          "name": "Represália Vingativa"
+        }
+      ],
+      "spellcast_trait": "Strength"
     },
     {
-      "id": "subclass.beastbound",
-      "name": "Vinculo Bestial",
-      "spellcast_trait": "Agility",
+      "class_id": "class.ranger",
       "foundation_features": [
         {
+          "description": "You have an animal companion of your choice. They stay by your side unless you direct otherwise. Take the Ranger Companion sheet and choose a companion level-up option whenever you level up.",
           "id": "feature.beastbound-companion",
-          "name": "Companheiro",
-          "description": "Você tem um companheiro animal da sua escolha. Ele fica ao seu lado, a menos que você diga o contrario. Pegue a ficha de Companheiro do Patrulheiro e escolha uma opcao de aprimoramento sempre que subir de nivel.",
-          "level": 1
+          "level": 1,
+          "name": "Companheiro"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.beastbound-expert-training",
-          "name": "Treino Especialista",
-          "description": "Escolha uma opcao adicional de aprimoramento para seu companheiro.",
-          "level": 2
-        },
-        {
-          "id": "feature.beastbound-battle-bonded",
-          "name": "Laço de Batalha",
-          "description": "Quando um adversario ataca você enquanto esta em alcance corpo a corpo do seu companheiro, ganhe +2 de Evasao contra o ataque.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.beastbound",
       "mastery_features": [
         {
+          "description": "Choose two additional level-up options for your companion.",
           "id": "feature.beastbound-advanced-training",
-          "name": "Treino Avancado",
-          "description": "Escolha duas opcoes adicionais de aprimoramento para seu companheiro.",
-          "level": 3
+          "level": 3,
+          "name": "Treino Avancado"
         },
         {
+          "description": "Once per long rest, when damage would mark your companion's last Stress or your last Hit Point and you are within close range, you or your companion can rush to the other and take that damage instead.",
           "id": "feature.beastbound-loyal-friend",
-          "name": "Amigo Leal",
-          "description": "Uma vez por descanso longo, quando o dano marcaria o ultimo Estresse do seu companheiro ou seu ultimo Ponto de Vida e vocês estao em alcance proximo, você ou o companheiro pode correr para o outro e sofrer o dano no lugar.",
-          "level": 3
+          "level": 3,
+          "name": "Amigo Leal"
         }
-      ]
+      ],
+      "name": "Vinculo Bestial",
+      "specialization_features": [
+        {
+          "description": "Choose an additional level-up option for your companion.",
+          "id": "feature.beastbound-expert-training",
+          "level": 2,
+          "name": "Treino Especialista"
+        },
+        {
+          "description": "When an adversary attacks you while they are within your companion's melee range, gain +2 Evasion against the attack.",
+          "id": "feature.beastbound-battle-bonded",
+          "level": 2,
+          "name": "Laço de Batalha"
+        }
+      ],
+      "spellcast_trait": "Agility"
     },
     {
-      "id": "subclass.wayfinder",
-      "name": "Desbravador",
-      "spellcast_trait": "Agility",
+      "class_id": "class.ranger",
       "foundation_features": [
         {
+          "description": "When you make a damage roll, you can mark a Stress to gain +1 Proficiency. Additionally, when you deal severe damage, the target must mark a Stress.",
           "id": "feature.wayfinder-ruthless-predator",
-          "name": "Predador Implacavel",
-          "description": "Quando você fizer uma rolagem de dano, pode marcar um Estresse para ganhar +1 de Proficiência. Além disso, quando causar dano severo, o alvo deve marcar um Estresse.",
-          "level": 1
+          "level": 1,
+          "name": "Predador Implacavel"
         },
         {
+          "description": "When traveling to a place you've visited before or if you carry an object that has been there, you can identify the shortest, most direct path to your destination.",
           "id": "feature.wayfinder-path-forward",
-          "name": "Caminho a Frente",
-          "description": "Quando estiver viajando para um lugar que ja visitou ou carregando um objeto que ja esteve la, você pode identificar o caminho mais curto e direto.",
-          "level": 1
+          "level": 1,
+          "name": "Caminho a Frente"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.wayfinder-elusive-predator",
-          "name": "Predador Elusivo",
-          "description": "Quando seu Foco atacar você, ganhe +2 de Evasao contra esse ataque.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.wayfinder",
       "mastery_features": [
         {
+          "description": "Before you make an attack roll against your Focus, you can spend a Hope. On a successful attack, remove a Fear from the GM's Fear pool.",
           "id": "feature.wayfinder-apex-predator",
-          "name": "Predador Alfa",
-          "description": "Antes de fazer uma rolagem de ataque contra seu Foco, você pode gastar uma Esperança. Em um ataque bem-sucedido, remova um Medo do estoque do GM.",
-          "level": 3
+          "level": 3,
+          "name": "Predador Alfa"
         }
-      ]
+      ],
+      "name": "Desbravador",
+      "specialization_features": [
+        {
+          "description": "When your Focus attacks you, gain +2 Evasion against that attack.",
+          "id": "feature.wayfinder-elusive-predator",
+          "level": 2,
+          "name": "Predador Elusivo"
+        }
+      ],
+      "spellcast_trait": "Agility"
     },
     {
-      "id": "subclass.nightwalker",
-      "name": "Caminhante da Noite",
-      "spellcast_trait": "Finesse",
+      "class_id": "class.rogue",
       "foundation_features": [
         {
+          "description": "Move from shadow to shadow. When you enter darkness or a shadow cast by a creature or object, you can mark a Stress to vanish and reappear inside another shadow within far range. You are Cloaked when you reappear.",
           "id": "feature.nightwalker-shadow-stepper",
-          "name": "Passo das Sombras",
-          "description": "Mova-se de sombra a sombra. Quando entrar em uma area escura ou na sombra de uma criatura ou objeto, você pode marcar um Estresse para desaparecer e reaparecer dentro de outra sombra em alcance longo. Ao reaparecer, você fica Encoberto.",
-          "level": 1
+          "level": 1,
+          "name": "Passo das Sombras"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.nightwalker-dark-cloud",
-          "name": "Nuvem Escura",
-          "description": "Faça uma rolagem de Conjuracao (15). Em sucesso, crie uma nuvem escura temporaria em uma area em alcance proximo. Quem esta dentro nao ve para fora e quem esta fora nao ve para dentro. Você fica Encoberto para adversarios cujo campo de visao for bloqueado pela nuvem.",
-          "level": 2
-        },
-        {
-          "id": "feature.nightwalker-adrenaline",
-          "name": "Adrenalina",
-          "description": "Enquanto estiver Vulnerável, adicione seu nivel as rolagens de dano.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.nightwalker",
       "mastery_features": [
         {
+          "description": "Gain a permanent +1 bonus to your Evasion. Shadow Stepper can move you within very far range.",
           "id": "feature.nightwalker-fleeting-shadow",
-          "name": "Sombra Furtiva",
-          "description": "Ganhe um bonus permanente de +1 na Evasao. Passo das Sombras pode mover você em alcance muito longo.",
-          "level": 3
+          "level": 3,
+          "name": "Sombra Furtiva"
         },
         {
+          "description": "Mark a Stress to become Cloaked at any time. You automatically clear Restrained while Cloaked from this feature. You remain Cloaked until you roll with Fear or until your next rest.",
           "id": "feature.nightwalker-vanishing-act",
-          "name": "Ato de Desaparecer",
-          "description": "Marque um Estresse para ficar Encoberto a qualquer momento. Você limpa automaticamente Restringido enquanto Encoberto por esta habilidade. Você permanece Encoberto ate rolar com Medo ou ate o proximo descanso.",
-          "level": 3
+          "level": 3,
+          "name": "Ato de Desaparecer"
         }
-      ]
+      ],
+      "name": "Caminhante da Noite",
+      "specialization_features": [
+        {
+          "description": "Make a Spellcast Roll (15). On a success, create a temporary dark cloud covering an area within close range. Those inside cannot see out, and those outside cannot see in. You are Cloaked from adversaries for whom the cloud blocks line of sight.",
+          "id": "feature.nightwalker-dark-cloud",
+          "level": 2,
+          "name": "Nuvem Escura"
+        },
+        {
+          "description": "While you are Vulnerable, add your level to your damage rolls.",
+          "id": "feature.nightwalker-adrenaline",
+          "level": 2,
+          "name": "Adrenalina"
+        }
+      ],
+      "spellcast_trait": "Finesse"
     },
     {
-      "id": "subclass.syndicate",
-      "name": "Sindicato",
-      "spellcast_trait": "Finesse",
+      "class_id": "class.rogue",
       "foundation_features": [
         {
+          "description": "When you arrive in a prominent town or environment, you know someone there. Give them a name, note how they could help, and choose one fact: they owe you a favor but are hard to find; they will ask for something in exchange; they are always in trouble; you used to be together; or you did not part on good terms.",
           "id": "feature.syndicate-well-connected",
-          "name": "Bem Conectado",
-          "description": "Quando chegar a uma cidade ou ambiente importante, você conhece alguem de la. De um nome, descreva como pode ajudar, e escolha um fato: deve um favor mas e dificil de encontrar; vai pedir algo em troca; esta sempre em apuros; vocês ja foram um casal; ou não se separaram em bons termos.",
-          "level": 1
+          "level": 1,
+          "name": "Bem Conectado"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.syndicate-contacts-everywhere",
-          "name": "Contatos em Todo Lugar",
-          "description": "Uma vez por sessão, chame um contato duvidoso. Escolha um: ele fornece 1 punhado de ouro, uma ferramenta unica ou um objeto mundano necessario; sua proxima rolagem de ação ganha +3 no resultado do Dado de Esperança ou Medo; ou na proxima vez que você causar dano, ele atira das sombras e adiciona 2d8 ao dano.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.syndicate",
       "mastery_features": [
         {
+          "description": "You can use Contacts Everywhere three times per session. Additional options: when you mark 1 or more Hit Points, they reduce the Hit Points marked by 1; or when you make a Presence roll, they back you up and you can roll a d20 as your Hope Die.",
           "id": "feature.syndicate-reliable-backup",
-          "name": "Apoio Confiavel",
-          "description": "Você pode usar Contatos em Todo Lugar tres vezes por sessão. Opcoes adicionais: quando você marcar 1 ou mais Pontos de Vida, ele reduz em 1 o numero marcado; ou quando você fizer uma rolagem de Presence, ele te apoia e você pode rolar um d20 como seu Dado de Esperança.",
-          "level": 3
+          "level": 3,
+          "name": "Apoio Confiavel"
         }
-      ]
+      ],
+      "name": "Sindicato",
+      "specialization_features": [
+        {
+          "description": "Once per session, call on a shady contact. Choose one: they provide 1 handful of gold, a unique tool, or a needed mundane object; your next action roll gains +3 to the result of your Hope or Fear Die; or the next time you deal damage, they snipe from the shadows adding 2d8 to the damage roll.",
+          "id": "feature.syndicate-contacts-everywhere",
+          "level": 2,
+          "name": "Contatos em Todo Lugar"
+        }
+      ],
+      "spellcast_trait": "Finesse"
     },
     {
-      "id": "subclass.divine-wielder",
-      "name": "Portador Divino",
-      "spellcast_trait": "Strength",
+      "class_id": "class.seraph",
       "foundation_features": [
         {
+          "description": "When you have a melee or very close weapon equipped, it can fly to attack an adversary within close range and return. You can mark a Stress to target an additional adversary within range with the same attack roll.",
           "id": "feature.divine-wielder-spirit-weapon",
-          "name": "Arma Espiritual",
-          "description": "Quando você tem uma arma equipada com alcance corpo a corpo ou muito proximo, ela pode voar para atacar um adversario em alcance proximo e retornar. Você pode marcar um Estresse para atingir um adversario adicional no alcance com a mesma rolagem de ataque.",
-          "level": 1
+          "level": 1,
+          "name": "Arma Espiritual"
         },
         {
+          "description": "Once per long rest, touch a creature to clear 2 Hit Points or 2 Stress.",
           "id": "feature.divine-wielder-sparing-touch",
-          "name": "Toque Poupador",
-          "description": "Uma vez por descanso longo, toque uma criatura para limpar 2 Pontos de Vida ou 2 Estresse.",
-          "level": 1
+          "level": 1,
+          "name": "Toque Poupador"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.divine-wielder-devout",
-          "name": "Devoto",
-          "description": "Quando rolar seus Dados de Oração, role um dado adicional e descarte o menor. Você pode usar Toque Poupador duas vezes por descanso longo.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.divine-wielder",
       "mastery_features": [
         {
+          "description": "When you roll damage for Spirit Weapon, if any dice match, double each matching die's value.",
           "id": "feature.divine-wielder-sacred-resonance",
-          "name": "Ressonancia Sagrada",
-          "description": "Quando rolar dano da Arma Espiritual, se algum resultado se repetir, dobre o valor de cada dado repetido.",
-          "level": 3
+          "level": 3,
+          "name": "Ressonancia Sagrada"
         }
-      ]
+      ],
+      "name": "Portador Divino",
+      "specialization_features": [
+        {
+          "description": "When you roll your Prayer Dice, roll one additional die and discard the lowest. You can use Sparing Touch twice per long rest.",
+          "id": "feature.divine-wielder-devout",
+          "level": 2,
+          "name": "Devoto"
+        }
+      ],
+      "spellcast_trait": "Strength"
     },
     {
-      "id": "subclass.winged-sentinel",
-      "name": "Sentinela Alada",
-      "spellcast_trait": "Strength",
+      "class_id": "class.seraph",
       "foundation_features": [
         {
+          "description": "You can fly. While flying, you can mark a Stress to carry a willing creature about your size or smaller, or spend a Hope to deal an extra 1d8 damage on a successful attack.",
           "id": "feature.winged-sentinel-wings-of-light",
-          "name": "Asas de Luz",
-          "description": "Você pode voar. Enquanto voa, pode marcar um Estresse para carregar uma criatura disposta de tamanho semelhante ou menor, ou gastar uma Esperança para causar 1d8 de dano extra em um ataque bem-sucedido.",
-          "level": 1
+          "level": 1,
+          "name": "Asas de Luz"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.winged-sentinel-ethereal-visage",
-          "name": "Visagem Eterea",
-          "description": "Enquanto voa, você tem vantagem em rolagens de Presence. Quando você tem sucesso com Esperança em uma rolagem de Presence, pode remover um Medo do estoque do GM em vez de ganhar Esperança.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.winged-sentinel",
       "mastery_features": [
         {
+          "description": "Gain a permanent +4 bonus to your severe damage threshold.",
           "id": "feature.winged-sentinel-ascendant",
-          "name": "Ascendente",
-          "description": "Ganhe um bonus permanente de +4 no limiar de dano severo.",
-          "level": 3
+          "level": 3,
+          "name": "Ascendente"
         },
         {
+          "description": "While flying, the extra damage from Wings of Light becomes 1d12 instead of 1d8.",
           "id": "feature.winged-sentinel-power-of-the-gods",
-          "name": "Poder dos Deuses",
-          "description": "Enquanto voa, o dano extra de Asas de Luz passa a ser 1d12 em vez de 1d8.",
-          "level": 3
+          "level": 3,
+          "name": "Poder dos Deuses"
         }
-      ]
+      ],
+      "name": "Sentinela Alada",
+      "specialization_features": [
+        {
+          "description": "While flying, you have advantage on Presence rolls. When you succeed with Hope on a Presence roll, you can remove a Fear from the GM's Fear pool instead of gaining Hope.",
+          "id": "feature.winged-sentinel-ethereal-visage",
+          "level": 2,
+          "name": "Visagem Eterea"
+        }
+      ],
+      "spellcast_trait": "Strength"
     },
     {
-      "id": "subclass.elemental-origin",
-      "name": "Origem Elemental",
-      "spellcast_trait": "Instinct",
+      "class_id": "class.sorcerer",
       "foundation_features": [
         {
+          "description": "Choose air, earth, fire, lightning, or water at character creation. You can shape it into harmless effects. Spend a Hope and describe how it helps an action roll to gain either +2 to the roll or +3 to the roll's damage.",
           "id": "feature.elemental-origin-elementalist",
-          "name": "Elementalista",
-          "description": "Escolha ar, terra, fogo, relampago ou agua na criacao do personagem. Você pode moldar efeitos inofensivos desse elemento. Gaste uma Esperança e descreva como ele ajuda uma rolagem de ação para ganhar +2 na rolagem ou +3 no dano da rolagem.",
-          "level": 1
+          "level": 1,
+          "name": "Elementalista"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.elemental-origin-natural-evasion",
-          "name": "Evasao Natural",
-          "description": "Quando um ataque contra você acerta, pode marcar um Estresse e descrever como seu elemento o defende. Role um d6 e some o resultado a sua Evasao contra o ataque.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.elemental-origin",
       "mastery_features": [
         {
+          "description": "Once per long rest, transform into a physical manifestation of your element. Choose two benefits until your next rest: +4 severe threshold, +1 to a trait, +1 Proficiency, or +2 Evasion.",
           "id": "feature.elemental-origin-transcendence",
-          "name": "Transcendencia",
-          "description": "Uma vez por descanso longo, transforme-se em uma manifestacao fisica do seu elemento. Escolha dois beneficios ate o proximo descanso: +4 no limiar severo, +1 em um traço, +1 de Proficiência, ou +2 de Evasao.",
-          "level": 3
+          "level": 3,
+          "name": "Transcendencia"
         }
-      ]
+      ],
+      "name": "Origem Elemental",
+      "specialization_features": [
+        {
+          "description": "When an attack against you succeeds, you can mark a Stress and describe how your element defends you. Roll a d6 and add it to your Evasion against the attack.",
+          "id": "feature.elemental-origin-natural-evasion",
+          "level": 2,
+          "name": "Evasao Natural"
+        }
+      ],
+      "spellcast_trait": "Instinct"
     },
     {
-      "id": "subclass.primal-origin",
-      "name": "Origem Primal",
-      "spellcast_trait": "Instinct",
+      "class_id": "class.sorcerer",
       "foundation_features": [
         {
+          "description": "After you cast a spell or make a magic-damage weapon attack, you can mark a Stress to do one: extend the reach by one range; gain +2 to the action roll result; double a damage die of your choice; or hit an additional target within range.",
           "id": "feature.primal-origin-manipulate-magic",
-          "name": "Manipular Magia",
-          "description": "Depois de conjurar um feitiço ou fazer um ataque com arma de dano magico, você pode marcar um Estresse para fazer um: aumentar o alcance em um passo; ganhar +2 no resultado da rolagem de ação; dobrar um dado de dano a sua escolha; ou atingir um alvo adicional dentro do alcance.",
-          "level": 1
+          "level": 1,
+          "name": "Manipular Magia"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.primal-origin-enchanted-aid",
-          "name": "Ajuda Encantada",
-          "description": "Quando você Ajuda um Aliado com uma rolagem de Conjuracao, role um d8 como dado de vantagem. Uma vez por descanso longo, depois que um aliado fizer uma rolagem de Conjuracao com sua ajuda, você pode trocar os resultados dos Dados de Dualidade dele.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.primal-origin",
       "mastery_features": [
         {
+          "description": "When you take magic damage, you become Charged; or spend 2 Hope to become Charged. When you hit with magic damage while Charged, clear the Charge to gain +10 damage or +3 to the Difficulty of a reaction roll the spell causes. You stop being Charged at your next long rest.",
           "id": "feature.primal-origin-arcane-charge",
-          "name": "Carga Arcana",
-          "description": "Quando você sofre dano magico, fica Carregado; ou gaste 2 Esperança para ficar Carregado. Ao acertar dano magico enquanto Carregado, limpe a Carga para ganhar +10 de dano ou +3 na Dificuldade de uma rolagem de reacao causada pelo feitiço. Você deixa de ficar Carregado no proximo descanso longo.",
-          "level": 3
+          "level": 3,
+          "name": "Carga Arcana"
         }
-      ]
+      ],
+      "name": "Origem Primal",
+      "specialization_features": [
+        {
+          "description": "When you Help an Ally with a Spellcast Roll, roll a d8 as your advantage die. Once per long rest, after an ally makes a Spellcast Roll with your help, you can swap the results of their Duality Dice.",
+          "id": "feature.primal-origin-enchanted-aid",
+          "level": 2,
+          "name": "Ajuda Encantada"
+        }
+      ],
+      "spellcast_trait": "Instinct"
     },
     {
-      "id": "subclass.call-brave",
-      "name": "Chamado dos Valentes",
-      "spellcast_trait": "Strength",
+      "class_id": "class.warrior",
       "foundation_features": [
         {
+          "description": "When you fail a roll with Fear, you gain a Hope.",
           "id": "feature.call-brave-courage",
-          "name": "Coragem",
-          "description": "Quando você falha em uma rolagem com Medo, você ganha uma Esperança.",
-          "level": 1
+          "level": 1,
+          "name": "Coragem"
         },
         {
+          "description": "Once per long rest, before attempting something incredibly dangerous or facing a foe who outmatches you, describe your ritual or preparations. Clear 2 Stress and gain 2 Hope.",
           "id": "feature.call-brave-battle-ritual",
-          "name": "Ritual de Batalha",
-          "description": "Uma vez por descanso longo, antes de tentar algo muito perigoso ou enfrentar um inimigo que claramente o supera, descreva seu ritual ou preparacao. Limpe 2 Estresse e ganhe 2 Esperança.",
-          "level": 1
+          "level": 1,
+          "name": "Ritual de Batalha"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.call-brave-rise-to-the-challenge",
-          "name": "Erguer-se ao Desafio",
-          "description": "Enquanto você tiver 2 ou menos Pontos de Vida desmarcados, pode rolar um d20 como seu Dado de Esperança.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.call-brave",
       "mastery_features": [
         {
+          "description": "You can initiate a Tag Team Roll one additional time per session. When an ally initiates a Tag Team Roll with you, they only need to spend 2 Hope.",
           "id": "feature.call-brave-camaraderie",
-          "name": "Camaradagem",
-          "description": "Você pode iniciar uma Rolagem de Tag Team uma vez adicional por sessão. Quando um aliado inicia uma Rolagem de Tag Team com você, ele so precisa gastar 2 Esperança.",
-          "level": 3
+          "level": 3,
+          "name": "Camaradagem"
         }
-      ]
+      ],
+      "name": "Chamado dos Valentes",
+      "specialization_features": [
+        {
+          "description": "While you have 2 or fewer Hit Points unmarked, you can roll a d20 as your Hope Die.",
+          "id": "feature.call-brave-rise-to-the-challenge",
+          "level": 2,
+          "name": "Erguer-se ao Desafio"
+        }
+      ],
+      "spellcast_trait": "Strength"
     },
     {
-      "id": "subclass.call-slayer",
-      "name": "Chamado do Matador",
-      "spellcast_trait": "Strength",
+      "class_id": "class.warrior",
       "foundation_features": [
         {
+          "description": "You gain a pool of Slayer Dice. On a roll with Hope, you can place a d6 in the pool instead of gaining Hope. You can store a number equal to your Proficiency. When you make an attack or damage roll, you can spend any number, rolling them and adding the total. At session end, clear unspent Slayer Dice and gain a Hope per die cleared.",
           "id": "feature.call-slayer-slayer",
-          "name": "Matador",
-          "description": "Você ganha um conjunto de Dados de Matador. Em uma rolagem com Esperança, você pode colocar um d6 no conjunto em vez de ganhar Esperança. Você pode guardar uma quantidade igual à sua Proficiência. Ao fazer uma rolagem de ataque ou dano, pode gastar quantos quiser, rolando e somando o total. No fim da sessão, limpe os Dados de Matador nao usados e ganhe uma Esperança por dado limpo.",
-          "level": 1
+          "level": 1,
+          "name": "Matador"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.call-slayer-weapon-specialist",
-          "name": "Especialista em Armas",
-          "description": "Quando você acerta um ataque, pode gastar uma Esperança para adicionar um dado de dano da sua arma secundaria ao dano. Uma vez por descanso longo, ao rolar seus Dados de Matador, rerrole quaisquer 1s.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.call-slayer",
       "mastery_features": [
         {
+          "description": "Your party gains the Martial Preparation downtime move. During a rest, describe training; you and each ally who chooses the move gain a d6 Slayer Die. A PC can spend their Slayer Die to add it to an attack or damage roll.",
           "id": "feature.call-slayer-martial-preparation",
-          "name": "Preparacao Marcial",
-          "description": "Seu grupo ganha o movimento de descanso Preparacao Marcial. Durante um descanso, descreva o treinamento; você e cada aliado que escolher o movimento ganham um Dado de Matador d6. Um PC pode gastar o dado para somá-lo a uma rolagem de ataque ou dano.",
-          "level": 3
+          "level": 3,
+          "name": "Preparacao Marcial"
         }
-      ]
+      ],
+      "name": "Chamado do Matador",
+      "specialization_features": [
+        {
+          "description": "When you succeed on an attack, you can spend a Hope to add one damage die from your secondary weapon to the damage roll. Once per long rest, when you roll Slayer Dice, reroll any 1s.",
+          "id": "feature.call-slayer-weapon-specialist",
+          "level": 2,
+          "name": "Especialista em Armas"
+        }
+      ],
+      "spellcast_trait": "Strength"
     },
     {
-      "id": "subclass.school-knowledge",
-      "name": "Escola do Conhecimento",
-      "spellcast_trait": "Knowledge",
+      "class_id": "class.wizard",
       "foundation_features": [
         {
+          "description": "Take an additional domain card of your level or lower from a domain you have access to.",
           "id": "feature.school-knowledge-prepared",
-          "name": "Preparado",
-          "description": "Pegue uma carta de dominio adicional do seu nivel ou menor de um dominio ao qual você tem acesso.",
-          "level": 1
+          "level": 1,
+          "name": "Preparado"
         },
         {
+          "description": "When you Utilize an Experience, you can mark a Stress instead of spending a Hope. If you do, double your Experience modifier for that roll.",
           "id": "feature.school-knowledge-adept",
-          "name": "Adepto",
-          "description": "Quando você Utiliza uma Experiencia, pode marcar um Estresse em vez de gastar Esperança. Se fizer isso, dobre seu modificador de Experiencia para essa rolagem.",
-          "level": 1
+          "level": 1,
+          "name": "Adepto"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.school-knowledge-accomplished",
-          "name": "Realizado",
-          "description": "Pegue uma carta de dominio adicional do seu nivel ou menor de um dominio ao qual você tem acesso.",
-          "level": 2
-        },
-        {
-          "id": "feature.school-knowledge-perfect-recall",
-          "name": "Memoria Perfeita",
-          "description": "Uma vez por descanso, ao recordar uma carta de dominio no seu cofre, reduza o Custo de Recordacao dela em 1.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.school-knowledge",
       "mastery_features": [
         {
+          "description": "Take an additional domain card of your level or lower from a domain you have access to.",
           "id": "feature.school-knowledge-brilliant",
-          "name": "Brilhante",
-          "description": "Pegue uma carta de dominio adicional do seu nivel ou menor de um dominio ao qual você tem acesso.",
-          "level": 3
+          "level": 3,
+          "name": "Brilhante"
         },
         {
+          "description": "When you use an Experience, roll a d6. On a 5 or higher, you can use it without spending Hope.",
           "id": "feature.school-knowledge-honed-expertise",
-          "name": "Especializacao Lapidada",
-          "description": "Quando você usa uma Experiencia, role um d6. Com 5 ou mais, você pode usa-la sem gastar Esperança.",
-          "level": 3
+          "level": 3,
+          "name": "Especializacao Lapidada"
         }
-      ]
+      ],
+      "name": "Escola do Conhecimento",
+      "specialization_features": [
+        {
+          "description": "Take an additional domain card of your level or lower from a domain you have access to.",
+          "id": "feature.school-knowledge-accomplished",
+          "level": 2,
+          "name": "Realizado"
+        },
+        {
+          "description": "Once per rest, when you recall a domain card in your vault, reduce its Recall Cost by 1.",
+          "id": "feature.school-knowledge-perfect-recall",
+          "level": 2,
+          "name": "Memoria Perfeita"
+        }
+      ],
+      "spellcast_trait": "Knowledge"
     },
     {
-      "id": "subclass.school-war",
-      "name": "Escola da Guerra",
-      "spellcast_trait": "Knowledge",
+      "class_id": "class.wizard",
       "foundation_features": [
         {
+          "description": "Gain an additional Hit Point slot.",
           "id": "feature.school-war-battlemage",
-          "name": "Mago de Batalha",
-          "description": "Ganhe um espaco adicional de Ponto de Vida.",
-          "level": 1
+          "level": 1,
+          "name": "Mago de Batalha"
         },
         {
+          "description": "When you succeed with Fear on an attack roll, you deal an extra 1d10 magic damage.",
           "id": "feature.school-war-face-your-fear",
-          "name": "Enfrente Seu Medo",
-          "description": "Quando você tem sucesso com Medo em uma rolagem de ataque, causa 1d10 de dano magico extra.",
-          "level": 1
+          "level": 1,
+          "name": "Enfrente Seu Medo"
         }
       ],
-      "specialization_features": [
-        {
-          "id": "feature.school-war-conjure-shield",
-          "name": "Conjurar Escudo",
-          "description": "Enquanto você tiver pelo menos 2 Esperança, some sua Proficiência a sua Evasao.",
-          "level": 2
-        },
-        {
-          "id": "feature.school-war-fueled-by-fear",
-          "name": "Movido pelo Medo",
-          "description": "O dano magico extra de Enfrente Seu Medo aumenta para 2d10.",
-          "level": 2
-        }
-      ],
+      "id": "subclass.school-war",
       "mastery_features": [
         {
+          "description": "When you succeed on an attack, you can mark a Stress after rolling damage to force the target to mark an additional Hit Point.",
           "id": "feature.school-war-thrive-in-chaos",
-          "name": "Prosperar no Caos",
-          "description": "Quando você acerta um ataque, pode marcar um Estresse apos rolar o dano para forcar o alvo a marcar um Ponto de Vida adicional.",
-          "level": 3
+          "level": 3,
+          "name": "Prosperar no Caos"
         },
         {
+          "description": "The extra magic damage from Face Your Fear increases to 3d10.",
           "id": "feature.school-war-have-no-fear",
-          "name": "Sem Medo",
-          "description": "O dano magico extra de Enfrente Seu Medo aumenta para 3d10.",
-          "level": 3
+          "level": 3,
+          "name": "Sem Medo"
         }
-      ]
+      ],
+      "name": "Escola da Guerra",
+      "specialization_features": [
+        {
+          "description": "While you have at least 2 Hope, add your Proficiency to your Evasion.",
+          "id": "feature.school-war-conjure-shield",
+          "level": 2,
+          "name": "Conjurar Escudo"
+        },
+        {
+          "description": "The extra magic damage from Face Your Fear increases to 2d10.",
+          "id": "feature.school-war-fueled-by-fear",
+          "level": 2,
+          "name": "Movido pelo Medo"
+        }
+      ],
+      "spellcast_trait": "Knowledge"
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }

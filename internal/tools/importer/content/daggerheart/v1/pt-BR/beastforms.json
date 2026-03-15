@@ -1,158 +1,883 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
+      "advantages": [
+        "deceive",
+        "locate",
+        "sneak"
+      ],
+      "attack": {
+        "damage_bonus": 0,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 4
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "agility"
+      },
+      "evasion_bonus": 2,
+      "examples": "Fox, mouse, weasel",
+      "features": [
+        {
+          "description": "Your movement stays silent. Spend a Hope to move up to Far range without rolling.",
+          "id": "beastform-feature.agile-scout-agile",
+          "name": "Ágil"
+        },
+        {
+          "description": "When you take Major or worse damage, you drop out of Beastform.",
+          "id": "beastform-feature.agile-scout-fragile",
+          "name": "Frágil"
+        }
+      ],
       "id": "beastform.agile-scout",
       "name": "Batedor Ágil",
       "tier": 1,
-      "examples": "Raposa, rato, doninha",
       "trait": "agility",
-      "trait_bonus": 1,
-      "evasion_bonus": 2,
+      "trait_bonus": 1
+    },
+    {
+      "advantages": [
+        "attack",
+        "swim",
+        "track"
+      ],
       "attack": {
+        "damage_bonus": 6,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 10
+          }
+        ],
+        "damage_type": "physical",
         "range": "melee",
-        "trait": "agility",
-        "damage_dice": [{"sides": 4, "count": 1}],
+        "trait": "agility"
+      },
+      "evasion_bonus": 4,
+      "examples": "(Dolphin, Orca, Shark, etc.)",
+      "features": [
+        {
+          "description": "You can breathe and move naturally underwater.",
+          "id": "beastform-feature.aquatic-predator-aquatic",
+          "name": "Aquatic"
+        },
+        {
+          "description": "When you succeed on an attack against a target, you can **spend a Hope** to make them _Vulnerable_ and gain a +1 bonus to your Proficiency for this attack.",
+          "id": "beastform-feature.aquatic-predator-vicious-maul",
+          "name": "Vicious Maul"
+        }
+      ],
+      "id": "beastform.aquatic-predator",
+      "name": "Aquatic Predator",
+      "tier": 3,
+      "trait": "agility",
+      "trait_bonus": 2
+    },
+    {
+      "advantages": [
+        "navigate",
+        "sneak",
+        "swim"
+      ],
+      "attack": {
         "damage_bonus": 0,
-        "damage_type": "physical"
-      },
-      "advantages": ["enganar", "localizar", "esgueirar"],
-      "features": [
-        {
-          "id": "beastform-feature.agile-scout-agile",
-          "name": "Ágil",
-          "description": "Seu movimento é silencioso. Gaste uma Esperança para mover até alcance longo sem rolar."
-        },
-        {
-          "id": "beastform-feature.agile-scout-fragile",
-          "name": "Frágil",
-          "description": "Ao sofrer dano Maior ou pior, você sai da Forma Bestial."
-        }
-      ]
-    },
-    {
-      "id": "beastform.pack-predator",
-      "name": "Predador de Matilha",
-      "tier": 1,
-      "examples": "Coiote, hiena, lobo",
-      "trait": "strength",
-      "trait_bonus": 2,
-      "evasion_bonus": 1,
-      "attack": {
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 4
+          }
+        ],
+        "damage_type": "physical",
         "range": "melee",
-        "trait": "strength",
-        "damage_dice": [{"sides": 8, "count": 1}],
-        "damage_bonus": 2,
-        "damage_type": "physical"
+        "trait": "agility"
       },
-      "advantages": ["atacar", "correr", "rastrear"],
+      "evasion_bonus": 2,
+      "examples": "(Eel, Fish, Octopus, etc.)",
       "features": [
         {
-          "id": "beastform-feature.pack-predator-hobbling-strike",
-          "name": "Golpe Mancante",
-          "description": "Quando acerta um alvo em corpo a corpo, marque um Estresse para deixá-lo Vulnerável temporariamente."
+          "description": "You can breathe and move naturally underwater.",
+          "id": "beastform-feature.aquatic-scout-aquatic",
+          "name": "Aquatic"
         },
         {
-          "id": "beastform-feature.pack-predator-pack-hunting",
-          "name": "Caça em Matilha",
-          "description": "Quando acerta um alvo atingido por um aliado imediatamente antes de você, adicione 1d8 ao dano."
+          "description": "When you take Major or greater damage, you drop out of Beastform.",
+          "id": "beastform-feature.aquatic-scout-fragile",
+          "name": "Fragile"
         }
-      ]
+      ],
+      "id": "beastform.aquatic-scout",
+      "name": "Aquatic Scout",
+      "tier": 1,
+      "trait": "agility",
+      "trait_bonus": 1
     },
     {
+      "advantages": [
+        "dig",
+        "locate",
+        "protect"
+      ],
+      "attack": {
+        "damage_bonus": 2,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 8
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 1,
+      "examples": "Armadillo, pangolin, turtle",
+      "features": [
+        {
+          "description": "You resist physical damage. Mark an Armor slot to withdraw into your shell; while shelled, physical damage is reduced by your Armor Score after resistance, and you cannot act until you emerge.",
+          "id": "beastform-feature.armored-sentry-armored-shell",
+          "name": "Casco Blindado"
+        },
+        {
+          "description": "Mark a Stress to let an ally launch you. They make an Agility or Strength attack against a target within Close range; on a hit, the target takes d12+2 physical damage using the thrower's Proficiency. Spend a Hope to also hit a second target within very close of the first for half damage.",
+          "id": "beastform-feature.armored-sentry-cannonball",
+          "name": "Bola de Canhão"
+        }
+      ],
       "id": "beastform.armored-sentry",
       "name": "Sentinela Blindado",
       "tier": 2,
-      "examples": "Tatu, pangolim, tartaruga",
       "trait": "strength",
-      "trait_bonus": 1,
-      "evasion_bonus": 1,
-      "attack": {
-        "range": "melee",
-        "trait": "strength",
-        "damage_dice": [{"sides": 8, "count": 1}],
-        "damage_bonus": 2,
-        "damage_type": "physical"
-      },
-      "advantages": ["cavar", "localizar", "proteger"],
-      "features": [
-        {
-          "id": "beastform-feature.armored-sentry-armored-shell",
-          "name": "Casco Blindado",
-          "description": "Você resiste a dano físico. Marque um espaço de Armadura para se retrair na carapaça; enquanto fechado, dano físico é reduzido pelo seu Valor de Armadura após resistência, e você não pode agir até sair."
-        },
-        {
-          "id": "beastform-feature.armored-sentry-cannonball",
-          "name": "Bola de Canhão",
-          "description": "Marque um Estresse para um aliado arremessá-lo. Ele faz um ataque de Agilidade ou Força contra um alvo em alcance próximo; em sucesso, o alvo sofre d12+2 de dano físico usando a Proficiência do lançador. Gaste uma Esperança para atingir um segundo alvo em alcance muito próximo do primeiro por metade do dano."
-        }
-      ]
+      "trait_bonus": 1
     },
     {
+      "advantages": [
+        "locate",
+        "protect",
+        "scare",
+        "track"
+      ],
+      "attack": {
+        "damage_bonus": 10,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 10
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "agility"
+      },
+      "evasion_bonus": 3,
+      "examples": "(Giant Squid, Whale, etc.)",
+      "features": [
+        {
+          "description": "You can breathe and move naturally underwater. When you succeed on an attack against a target within Melee range, you can temporarily _Restrain_ them.",
+          "id": "beastform-feature.epic-aquatic-beast-ocean-master",
+          "name": "Ocean Master"
+        },
+        {
+          "description": "When you would mark an Armor Slot, roll a **d6.** On a result of 5 or higher, reduce the severity by one threshold without marking an Armor Slot.",
+          "id": "beastform-feature.epic-aquatic-beast-unyielding",
+          "name": "Unyielding"
+        }
+      ],
+      "id": "beastform.epic-aquatic-beast",
+      "name": "Epic Aquatic Beast",
+      "tier": 4,
+      "trait": "agility",
+      "trait_bonus": 3
+    },
+    {
+      "advantages": [
+        "attack",
+        "sneak",
+        "sprint"
+      ],
+      "attack": {
+        "damage_bonus": 8,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 12
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 2,
+      "examples": "Dire wolf, velociraptor, sabertooth tiger",
+      "features": [
+        {
+          "description": "You can carry up to two willing allies when you move.",
+          "id": "beastform-feature.great-predator-carrier",
+          "name": "Transportador"
+        },
+        {
+          "description": "When you hit, spend a Hope to make the target temporarily Vulnerable and gain +1 Proficiency on that attack.",
+          "id": "beastform-feature.great-predator-vicious-maul",
+          "name": "Mordida Viciosa"
+        }
+      ],
       "id": "beastform.great-predator",
       "name": "Grande Predador",
       "tier": 3,
-      "examples": "Lobo terrível, velociraptor, tigre-dentes-de-sabre",
       "trait": "strength",
-      "trait_bonus": 2,
-      "evasion_bonus": 2,
-      "attack": {
-        "range": "melee",
-        "trait": "strength",
-        "damage_dice": [{"sides": 12, "count": 1}],
-        "damage_bonus": 8,
-        "damage_type": "physical"
-      },
-      "advantages": ["atacar", "esgueirar", "correr"],
-      "features": [
-        {
-          "id": "beastform-feature.great-predator-carrier",
-          "name": "Transportador",
-          "description": "Você pode carregar até dois aliados dispostos ao se mover."
-        },
-        {
-          "id": "beastform-feature.great-predator-vicious-maul",
-          "name": "Mordida Viciosa",
-          "description": "Ao acertar, gaste uma Esperança para deixar o alvo Vulnerável temporariamente e ganhar +1 de Proficiência nesse ataque."
-        }
-      ]
+      "trait_bonus": 2
     },
     {
+      "advantages": [
+        "deceive",
+        "distract",
+        "locate"
+      ],
+      "attack": {
+        "damage_bonus": 6,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 8
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "finesse"
+      },
+      "evasion_bonus": 3,
+      "examples": "(Giant Eagle, Falcon, etc.)",
+      "features": [
+        {
+          "description": "You can fly at will. Once per rest while you are airborne, you can ask the GM a question about the scene below you without needing to roll. The first time a character makes a roll to act on this information, they gain advantage on the roll.",
+          "id": "beastform-feature.great-winged-beast-birds-eye-view",
+          "name": "Bird's-Eye View"
+        },
+        {
+          "description": "You can carry up to two willing allies with you when you move.",
+          "id": "beastform-feature.great-winged-beast-carrier",
+          "name": "Carrier"
+        }
+      ],
+      "id": "beastform.great-winged-beast",
+      "name": "Great Winged Beast",
+      "tier": 3,
+      "trait": "finesse",
+      "trait_bonus": 2
+    },
+    {
+      "advantages": [
+        "climb",
+        "locate",
+        "protect"
+      ],
+      "attack": {
+        "damage_bonus": 0,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 6
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "instinct"
+      },
+      "evasion_bonus": 2,
+      "examples": "(Cat, Dog, Rabbit, etc.)",
+      "features": [
+        {
+          "description": "When you Help an Ally, you can roll a **d8** as your advantage die.",
+          "id": "beastform-feature.household-friend-companion",
+          "name": "Companion"
+        },
+        {
+          "description": "When you take Major or greater damage, you drop out of Beastform.",
+          "id": "beastform-feature.household-friend-fragile",
+          "name": "Fragile"
+        }
+      ],
+      "id": "beastform.household-friend",
+      "name": "Household Friend",
+      "tier": 1,
+      "trait": "instinct",
+      "trait_bonus": 1
+    },
+    {
+      "advantages": [],
+      "attack": {
+        "damage_bonus": 0,
+        "damage_dice": null,
+        "damage_type": "",
+        "range": "",
+        "trait": ""
+      },
+      "evasion_bonus": 0,
+      "examples": "(Upgraded Tier 1 Options)",
+      "features": [
+        {
+          "description": "Pick a Tier 1 Beastform option and become a larger, more powerful version of that creature. While you're in this form, you retain all traits and features from the original form and gain the following bonuses:\n\n- A +6 bonus to damage rolls\n- A +1 bonus to the trait used by this form\n- A +2 bonus to Evasion",
+          "id": "beastform-feature.legendary-beast-evolved",
+          "name": "Evolved"
+        }
+      ],
+      "id": "beastform.legendary-beast",
+      "name": "Legendary Beast",
+      "tier": 3,
+      "trait": "",
+      "trait_bonus": 0
+    },
+    {
+      "advantages": [],
+      "attack": {
+        "damage_bonus": 8,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 10
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 3,
+      "examples": "(Griffon, Sphinx, etc.)",
+      "features": [
+        {
+          "description": "To transform into this creature, **mark an additional Stress.** Choose any two Beastform options from Tiers 1-2. Choose a total of four advantages and two features from those options.",
+          "id": "beastform-feature.legendary-hybrid-hybrid-features",
+          "name": "Hybrid Features"
+        }
+      ],
+      "id": "beastform.legendary-hybrid",
+      "name": "Legendary Hybrid",
+      "tier": 3,
+      "trait": "strength",
+      "trait_bonus": 2
+    },
+    {
+      "advantages": [
+        "locate",
+        "protect",
+        "scare",
+        "sprint"
+      ],
+      "attack": {
+        "damage_bonus": 12,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 12
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 1,
+      "examples": "Elephant, mammoth, rhinoceros",
+      "features": [
+        {
+          "description": "You can carry up to four willing allies when you move.",
+          "id": "beastform-feature.massive-behemoth-carrier",
+          "name": "Transportador"
+        },
+        {
+          "description": "Spend a Hope to move up to Far range in a straight line and attack all targets in melee along the path. On a hit, deal d8+10 physical damage using your Proficiency and make targets temporarily Vulnerable.",
+          "id": "beastform-feature.massive-behemoth-demolish",
+          "name": "Demolir"
+        },
+        {
+          "description": "Gain +2 to all your damage thresholds.",
+          "id": "beastform-feature.massive-behemoth-undaunted",
+          "name": "Inabalável"
+        }
+      ],
       "id": "beastform.massive-behemoth",
       "name": "Beemote Massivo",
       "tier": 4,
-      "examples": "Elefante, mamute, rinoceronte",
       "trait": "strength",
-      "trait_bonus": 3,
-      "evasion_bonus": 1,
+      "trait_bonus": 3
+    },
+    {
+      "advantages": [
+        "attack",
+        "sneak",
+        "track"
+      ],
       "attack": {
+        "damage_bonus": 7,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 10
+          }
+        ],
+        "damage_type": "physical",
         "range": "melee",
-        "trait": "strength",
-        "damage_dice": [{"sides": 12, "count": 1}],
-        "damage_bonus": 12,
-        "damage_type": "physical"
+        "trait": "instinct"
       },
-      "advantages": ["localizar", "proteger", "assustar", "correr"],
+      "evasion_bonus": 1,
+      "examples": "(Alligator, Crocodile, Gila Monster, etc.)",
       "features": [
         {
-          "id": "beastform-feature.massive-behemoth-carrier",
-          "name": "Transportador",
-          "description": "Você pode carregar até quatro aliados dispostos ao se mover."
+          "description": "You gain a +3 bonus to your damage thresholds.",
+          "id": "beastform-feature.mighty-lizard-physical-defense",
+          "name": "Physical Defense"
         },
         {
-          "id": "beastform-feature.massive-behemoth-demolish",
-          "name": "Demolir",
-          "description": "Gaste uma Esperança para mover até alcance longo em linha reta e atacar todos os alvos em alcance corpo a corpo ao longo do caminho. Em sucesso, cause d8+10 de dano físico usando sua Proficiência e deixe-os Vulneráveis temporariamente."
-        },
-        {
-          "id": "beastform-feature.massive-behemoth-undaunted",
-          "name": "Inabalável",
-          "description": "Ganhe +2 em todos os limiares de dano."
+          "description": "When you succeed on an attack against a target within Melee range, you can **spend a Hope** to clamp that opponent in your jaws, making them temporarily _Restrained_ and _Vulnerable._",
+          "id": "beastform-feature.mighty-lizard-snapping-strike",
+          "name": "Snapping Strike"
         }
-      ]
+      ],
+      "id": "beastform.mighty-lizard",
+      "name": "Mighty Lizard",
+      "tier": 3,
+      "trait": "instinct",
+      "trait_bonus": 2
+    },
+    {
+      "advantages": [
+        "leap",
+        "navigate",
+        "sprint"
+      ],
+      "attack": {
+        "damage_bonus": 1,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 8
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "agility"
+      },
+      "evasion_bonus": 2,
+      "examples": "(Camel, Horse, Zebra, etc.)",
+      "features": [
+        {
+          "description": "You can carry up to two willing allies with you when you move.",
+          "id": "beastform-feature.mighty-strider-carrier",
+          "name": "Carrier"
+        },
+        {
+          "description": "**Mark a Stress** to move up to Close range in a straight line and make an attack against all targets within Melee range of the line. Targets you succeed against take **d8+1** physical damage using your Proficiency and are temporarily _Vulnerable_.",
+          "id": "beastform-feature.mighty-strider-trample",
+          "name": "Trample"
+        }
+      ],
+      "id": "beastform.mighty-strider",
+      "name": "Mighty Strider",
+      "tier": 2,
+      "trait": "agility",
+      "trait_bonus": 1
+    },
+    {
+      "advantages": [
+        "attack",
+        "deceive",
+        "locate",
+        "navigate"
+      ],
+      "attack": {
+        "damage_bonus": 11,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 10
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "finesse"
+      },
+      "evasion_bonus": 4,
+      "examples": "(Dragon, Pterodactyl, Roc, Wyvern, etc.)",
+      "features": [
+        {
+          "description": "You can carry up to three willing allies with you when you move.",
+          "id": "beastform-feature.mythic-aerial-hunter-carrier",
+          "name": "Carrier"
+        },
+        {
+          "description": "You can fly at will and move up to Far range as part of your action. When you move in a straight line into Melee range of a target from at least Close range and make an attack against that target in the same action, you can reroll all damage dice that rolled a result lower than your Proficiency.",
+          "id": "beastform-feature.mythic-aerial-hunter-deadly-raptor",
+          "name": "Deadly Raptor"
+        }
+      ],
+      "id": "beastform.mythic-aerial-hunter",
+      "name": "Mythic Aerial Hunter",
+      "tier": 4,
+      "trait": "finesse",
+      "trait_bonus": 3
+    },
+    {
+      "advantages": [],
+      "attack": {
+        "damage_bonus": 0,
+        "damage_dice": null,
+        "damage_type": "",
+        "range": "",
+        "trait": ""
+      },
+      "evasion_bonus": 0,
+      "examples": "(Upgraded Tier 1 or Tier 2 Options)",
+      "features": [
+        {
+          "description": "Pick a Tier 1 or Tier 2 Beastform option and become a larger, more powerful version of that creature. While you're in this form, you retain all traits and features from the original form and gain the following bonuses:\n\n- A +9 bonus to damage rolls\n- A +2 bonus to the trait used by this form\n- A +3 bonus to Evasion\n- Your damage die increases by one size (d6 becomes d8, d8 becomes d10, etc.)",
+          "id": "beastform-feature.mythic-beast-evolved",
+          "name": "Evolved"
+        }
+      ],
+      "id": "beastform.mythic-beast",
+      "name": "Mythic Beast",
+      "tier": 4,
+      "trait": "",
+      "trait_bonus": 0
+    },
+    {
+      "advantages": [],
+      "attack": {
+        "damage_bonus": 10,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 12
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 2,
+      "examples": "(Chimera, Cockatrice, Manticore, etc.)",
+      "features": [
+        {
+          "description": "To transform into this creature, **mark 2 additional Stress.** Choose any three Beastform options from Tiers 1-3. Choose a total of five advantages and three features from those options.",
+          "id": "beastform-feature.mythic-hybrid-hybrid-features",
+          "name": "Hybrid Features"
+        }
+      ],
+      "id": "beastform.mythic-hybrid",
+      "name": "Mythic Hybrid",
+      "tier": 4,
+      "trait": "strength",
+      "trait_bonus": 3
+    },
+    {
+      "advantages": [
+        "leap",
+        "sneak",
+        "sprint"
+      ],
+      "attack": {
+        "damage_bonus": 0,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 6
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "agility"
+      },
+      "evasion_bonus": 3,
+      "examples": "(Deer, Gazelle, Goat, etc.)",
+      "features": [
+        {
+          "description": "When an attack roll against you would succeed, you can **mark a Stress** and roll a **d4.** Add the result to your Evasion against this attack.",
+          "id": "beastform-feature.nimble-grazer-elusive-prey",
+          "name": "Elusive Prey"
+        },
+        {
+          "description": "When you take Major or greater damage, you drop out of Beastform.",
+          "id": "beastform-feature.nimble-grazer-fragile",
+          "name": "Fragile"
+        }
+      ],
+      "id": "beastform.nimble-grazer",
+      "name": "Nimble Grazer",
+      "tier": 1,
+      "trait": "agility",
+      "trait_bonus": 1
+    },
+    {
+      "advantages": [
+        "attack",
+        "sprint",
+        "track"
+      ],
+      "attack": {
+        "damage_bonus": 2,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 8
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 1,
+      "examples": "Coyote, hyena, wolf",
+      "features": [
+        {
+          "description": "When you hit a target in melee, you can mark a Stress to make them temporarily Vulnerable.",
+          "id": "beastform-feature.pack-predator-hobbling-strike",
+          "name": "Golpe Mancante"
+        },
+        {
+          "description": "When you hit a target an ally struck immediately before you, add a d8 to your damage roll.",
+          "id": "beastform-feature.pack-predator-pack-hunting",
+          "name": "Caça em Matilha"
+        }
+      ],
+      "id": "beastform.pack-predator",
+      "name": "Predador de Matilha",
+      "tier": 1,
+      "trait": "strength",
+      "trait_bonus": 2
+    },
+    {
+      "advantages": [
+        "attack",
+        "climb",
+        "sneak"
+      ],
+      "attack": {
+        "damage_bonus": 6,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 8
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "instinct"
+      },
+      "evasion_bonus": 3,
+      "examples": "(Cheetah, Lion, Panther, etc.)",
+      "features": [
+        {
+          "description": "**Spend a Hope** to move up to Far range without rolling.",
+          "id": "beastform-feature.pouncing-predator-fleet",
+          "name": "Fleet"
+        },
+        {
+          "description": "**Mark a Stress** to move into Melee range of a target and make an attack roll against them. On a success, you gain a +2 bonus to your Proficiency for this attack and the target must mark a Stress.",
+          "id": "beastform-feature.pouncing-predator-takedown",
+          "name": "Takedown"
+        }
+      ],
+      "id": "beastform.pouncing-predator",
+      "name": "Pouncing Predator",
+      "tier": 2,
+      "trait": "instinct",
+      "trait_bonus": 1
+    },
+    {
+      "advantages": [
+        "navigate",
+        "protect",
+        "scare"
+      ],
+      "attack": {
+        "damage_bonus": 4,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 10
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 1,
+      "examples": "(Bear, Bull, Moose, etc.)",
+      "features": [
+        {
+          "description": "When you roll a 1 on a damage die, you can roll a **d10** and add the result to the damage roll. Additionally, before you make an attack roll, you can **mark a Stress** to gain a +1 bonus to your Proficiency for that attack.",
+          "id": "beastform-feature.powerful-beast-rampage",
+          "name": "Rampage"
+        },
+        {
+          "description": "You gain a +2 bonus to your damage thresholds.",
+          "id": "beastform-feature.powerful-beast-thick-hide",
+          "name": "Thick Hide"
+        }
+      ],
+      "id": "beastform.powerful-beast",
+      "name": "Powerful Beast",
+      "tier": 2,
+      "trait": "strength",
+      "trait_bonus": 3
+    },
+    {
+      "advantages": [
+        "attack",
+        "climb",
+        "sneak"
+      ],
+      "attack": {
+        "damage_bonus": 1,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 6
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "finesse"
+      },
+      "evasion_bonus": 2,
+      "examples": "(Tarantula, Wolf Spider, etc.)",
+      "features": [
+        {
+          "description": "When you succeed on an attack against a target within Melee range, the target becomes temporarily _Poisoned_. A _Poisoned_ creature takes **1d10** direct physical damage each time they act.",
+          "id": "beastform-feature.stalking-arachnid-venomous-bite",
+          "name": "Venomous Bite"
+        },
+        {
+          "description": "You can create a strong web material useful for both adventuring and battle. The web is resilient enough to support one creature. You can temporarily _Restrain_ a target within Close range by succeeding on a Finesse Roll against them.",
+          "id": "beastform-feature.stalking-arachnid-webslinger",
+          "name": "Webslinger"
+        }
+      ],
+      "id": "beastform.stalking-arachnid",
+      "name": "Stalking Arachnid",
+      "tier": 1,
+      "trait": "finesse",
+      "trait_bonus": 1
+    },
+    {
+      "advantages": [
+        "climb",
+        "deceive",
+        "sprint"
+      ],
+      "attack": {
+        "damage_bonus": 4,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 8
+          }
+        ],
+        "damage_type": "physical",
+        "range": "very close",
+        "trait": "finesse"
+      },
+      "evasion_bonus": 2,
+      "examples": "(Cobra, Rattlesnake, Viper, etc.)",
+      "features": [
+        {
+          "description": "Make an attack against any number of targets within Very Close range. On a success, a target is temporarily _Poisoned_. A _Poisoned_ creature takes **1d10** direct physical damage each time they act.",
+          "id": "beastform-feature.striking-serpent-venomous-strike",
+          "name": "Venomous Strike"
+        },
+        {
+          "description": "**Mark a Stress** to force any number of targets within Melee range to move back to Very Close range.",
+          "id": "beastform-feature.striking-serpent-warning-hiss",
+          "name": "Warning Hiss"
+        }
+      ],
+      "id": "beastform.striking-serpent",
+      "name": "Striking Serpent",
+      "tier": 2,
+      "trait": "finesse",
+      "trait_bonus": 1
+    },
+    {
+      "advantages": [
+        "attack",
+        "deceive",
+        "scare",
+        "track"
+      ],
+      "attack": {
+        "damage_bonus": 10,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 12
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "strength"
+      },
+      "evasion_bonus": 2,
+      "examples": "(Brachiosaurus, Tyrannosaurus, etc.)",
+      "features": [
+        {
+          "description": "When you deal Severe damage to a target within Melee range, you can **mark a Stress** to force them to mark an additional Hit Point.",
+          "id": "beastform-feature.terrible-lizard-devastating-strikes",
+          "name": "Devastating Strikes"
+        },
+        {
+          "description": "You can move up to Far range without rolling. You ignore rough terain (at the GM's discretion) due to your size.",
+          "id": "beastform-feature.terrible-lizard-massive-stride",
+          "name": "Massive Stride"
+        }
+      ],
+      "id": "beastform.terrible-lizard",
+      "name": "Terrible Lizard",
+      "tier": 4,
+      "trait": "strength",
+      "trait_bonus": 3
+    },
+    {
+      "advantages": [
+        "deceive",
+        "locate",
+        "scare"
+      ],
+      "attack": {
+        "damage_bonus": 2,
+        "damage_dice": [
+          {
+            "count": 1,
+            "sides": 4
+          }
+        ],
+        "damage_type": "physical",
+        "range": "melee",
+        "trait": "finesse"
+      },
+      "evasion_bonus": 3,
+      "examples": "(Hawk, Owl, Raven, etc.)",
+      "features": [
+        {
+          "description": "You can fly at will. Once per rest while you are airborne, you can ask the GM a question about the scene below you without needing to roll. The first time a character makes a roll to act on this information, they gain advantage on the roll.",
+          "id": "beastform-feature.winged-beast-birds-eye-view",
+          "name": "Bird's-Eye View"
+        },
+        {
+          "description": "You gain a -2 penalty to your damage thresholds.",
+          "id": "beastform-feature.winged-beast-hollow-bones",
+          "name": "Hollow Bones"
+        }
+      ],
+      "id": "beastform.winged-beast",
+      "name": "Winged Beast",
+      "tier": 2,
+      "trait": "finesse",
+      "trait_bonus": 1
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }

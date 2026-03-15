@@ -1,53 +1,53 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
+      "description": "A domain of raw, enigmatic power used to bend energy and the elements.",
       "id": "domain.arcana",
-      "name": "Arcana",
-      "description": "Um domínio de poder enigmático e bruto para moldar energia e elementos."
+      "name": "Arcana"
     },
     {
-      "id": "domain.valor",
-      "name": "Valor",
-      "description": "Um domínio de coragem, defesa e escudos erguidos contra o perigo."
-    },
-    {
+      "description": "A domain of martial precision and the skill to end fights with steel.",
       "id": "domain.blade",
-      "name": "Lâmina",
-      "description": "Um domínio de precisão marcial e a habilidade de encerrar lutas com aço."
+      "name": "Lâmina"
     },
     {
+      "description": "A domain of bodily mastery, resilience, and the thin line of life and death.",
       "id": "domain.bone",
-      "name": "Osso",
-      "description": "Um domínio de domínio do corpo, resistência e a linha entre vida e morte."
+      "name": "Osso"
     },
     {
+      "description": "A domain of recorded knowledge, equations of power, and practiced study.",
       "id": "domain.codex",
-      "name": "Codex",
-      "description": "Um domínio de conhecimento registrado, equações de poder e estudo."
+      "name": "Codex"
     },
     {
+      "description": "A domain of charm, performance, and shaping perception through presence.",
       "id": "domain.grace",
-      "name": "Graça",
-      "description": "Um domínio de carisma, performance e percepção moldada pela presença."
+      "name": "Graça"
     },
     {
+      "description": "A domain of obscurity, clever tricks, and the cloak of night.",
       "id": "domain.midnight",
-      "name": "Meia-Noite",
-      "description": "Um domínio de obscuridade, truques astutos e o manto da noite."
+      "name": "Meia-Noite"
     },
     {
+      "description": "A domain of earth's power, natural balance, and hard-won wisdom.",
       "id": "domain.sage",
-      "name": "Sábio",
-      "description": "Um domínio do poder da terra, equilíbrio natural e sabedoria."
+      "name": "Sábio"
     },
     {
+      "description": "A domain of life, healing radiance, and the power to defy death.",
       "id": "domain.splendor",
-      "name": "Esplendor",
-      "description": "Um domínio de vida, cura radiante e o poder de desafiar a morte."
+      "name": "Esplendor"
+    },
+    {
+      "description": "A domain of courage, defense, and shields held against the odds.",
+      "id": "domain.valor",
+      "name": "Valor"
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }

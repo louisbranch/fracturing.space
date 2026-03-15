@@ -1,233 +1,286 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
+      "domain_ids": [
+        "domain.valor",
+        "domain.blade"
+      ],
+      "features": [
+        {
+          "description": "Once per long rest, enter an Unstoppable state with an Unstoppable die (d4 at level 1, d6 at level 5). Start at 1; each time you deal at least 1 HP damage, increase it by 1. When it would exceed its max or the scene ends, the die is removed. While Unstoppable, reduce physical damage severity by one step, add the die value to your damage rolls, and you cannot be Restrained or Vulnerable.",
+          "id": "feature.guardian-unstoppable",
+          "level": 1,
+          "name": "Imparável"
+        }
+      ],
+      "hope_feature": {
+        "description": "Spend 3 Hope to clear 2 Armor Slots.",
+        "hope_cost": 3,
+        "name": "Tanque de Linha de Frente"
+      },
       "id": "class.guardian",
       "name": "Guardião",
       "starting_evasion": 9,
       "starting_hp": 7,
-      "starting_items": ["item.basic-supplies"],
+      "starting_items": [
+        "item.basic-supplies"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.grace",
+        "domain.codex"
+      ],
       "features": [
         {
-          "id": "feature.guardian-unstoppable",
-          "name": "Imparável",
-          "description": "Uma vez por descanso longo, entre em um estado Imparável com um dado Imparável (d4 no nível 1, d6 no nível 5). Comece em 1; cada vez que causar ao menos 1 PV, aumente em 1. Quando exceder o máximo ou a cena terminar, o dado é removido. Enquanto Imparável, reduza a severidade do dano físico em um passo, some o valor do dado aos seus danos e não pode ficar Restringido ou Vulnerável.",
-          "level": 1
+          "description": "Once per session, rally the party to give yourself and each ally a Rally Die (d6 at level 1, d8 at level 5). A PC can spend their Rally Die to add it to an action, reaction, or damage roll, or clear Stress equal to the roll. Unused Rally Dice clear at session end.",
+          "id": "feature.bard-rally",
+          "level": 1,
+          "name": "Rali"
         }
       ],
       "hope_feature": {
-        "name": "Tanque de Linha de Frente",
-        "description": "Gaste 3 Esperança para limpar 2 espaços de Armadura.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope to temporarily Distract a target within close range, giving them -2 Difficulty.",
+        "hope_cost": 3,
+        "name": "Fazer Cena"
       },
-      "domain_ids": ["domain.valor", "domain.blade"]
-    },
-    {
       "id": "class.bard",
       "name": "Bardo",
       "starting_evasion": 10,
       "starting_hp": 5,
-      "starting_items": ["item.basic-supplies", "item.instrument-kit"],
+      "starting_items": [
+        "item.basic-supplies",
+        "item.instrument-kit"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.sage",
+        "domain.arcana"
+      ],
       "features": [
         {
-          "id": "feature.bard-rally",
-          "name": "Rali",
-          "description": "Uma vez por sessão, reúna o grupo para dar a você e a cada aliado um Dado de Rali (d6 no nível 1, d8 no nível 5). Um PC pode gastar o dado para somá-lo a uma rolagem de ação, reação ou dano, ou limpar Estresse igual ao resultado. Dados não usados somem no fim da sessão.",
-          "level": 1
+          "description": "Mark a Stress to transform into a Beastform of your tier or lower. While transformed, you cannot use weapons or domain spells, but other features still apply. Ongoing spells remain active. You gain the form's features, add its Evasion bonus, and use its listed trait for attacks. Armor slots remain marked through the change; if you mark your last HP, you drop out of the form.",
+          "id": "feature.druid-beastform",
+          "level": 1,
+          "name": "Forma de Besta"
+        },
+        {
+          "description": "You can perform subtle, harmless nature effects at will, such as coaxing growth, summoning a breeze, or starting a campfire.",
+          "id": "feature.druid-wildtouch",
+          "level": 1,
+          "name": "Toque Selvagem"
         }
       ],
       "hope_feature": {
-        "name": "Fazer Cena",
-        "description": "Gaste 3 Esperança para Distrair temporariamente um alvo em alcance próximo, dando -2 na Dificuldade dele.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope to enter a Beastform without marking Stress. Choose one trait to gain +1 until you leave that form.",
+        "hope_cost": 3,
+        "name": "Evolução"
       },
-      "domain_ids": ["domain.grace", "domain.codex"]
-    },
-    {
       "id": "class.druid",
       "name": "Druida",
       "starting_evasion": 10,
       "starting_hp": 6,
-      "starting_items": ["item.basic-supplies", "item.herbal-tonic"],
+      "starting_items": [
+        "item.basic-supplies",
+        "item.herbal-tonic"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.bone",
+        "domain.sage"
+      ],
       "features": [
         {
-          "id": "feature.druid-beastform",
-          "name": "Forma de Besta",
-          "description": "Marque um Estresse para se transformar em uma forma de besta do seu nível de tier ou menor. Enquanto estiver transformado, você não pode usar armas nem feitiços de domínio, mas pode usar outras habilidades. Feitiços ativos continuam. Você ganha as características da forma, soma o bônus de Evasão dela e usa o traço indicado para atacar. A Armadura permanece marcada; se marcar seu último PV, você sai da forma.",
-          "level": 1
-        },
-        {
-          "id": "feature.druid-wildtouch",
-          "name": "Toque Selvagem",
-          "description": "Você pode produzir efeitos naturais sutis e inofensivos à vontade, como fazer uma flor crescer, chamar uma brisa ou acender uma fogueira.",
-          "level": 1
+          "description": "Spend a Hope to make an attack. On a success, deal normal damage and make the target your Focus. Until the focus ends or you choose another, you know their direction; when you damage them they mark a Stress; and when you miss, you may end the focus to reroll your Duality Dice.",
+          "id": "feature.ranger-focus",
+          "level": 1,
+          "name": "Foco do Caçador"
         }
       ],
       "hope_feature": {
-        "name": "Evolução",
-        "description": "Gaste 3 Esperança para entrar em Forma de Besta sem marcar Estresse. Escolha um traço para receber +1 até sair da forma.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope after a successful weapon attack to use the same roll against two additional targets in range.",
+        "hope_cost": 3,
+        "name": "Segurar o Avanço"
       },
-      "domain_ids": ["domain.sage", "domain.arcana"]
-    },
-    {
       "id": "class.ranger",
       "name": "Patrulheiro",
       "starting_evasion": 12,
       "starting_hp": 6,
-      "starting_items": ["item.basic-supplies", "item.trail-rations"],
+      "starting_items": [
+        "item.basic-supplies",
+        "item.trail-rations"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.midnight",
+        "domain.grace"
+      ],
       "features": [
         {
-          "id": "feature.ranger-focus",
-          "name": "Foco do Caçador",
-          "description": "Gaste uma Esperança e faça um ataque. Em sucesso, cause o dano normal e faça o alvo virar seu Foco. Enquanto o Foco durar, você sabe a direção dele; quando causa dano, ele marca um Estresse; e quando falha um ataque contra ele, pode encerrar o Foco para rerrolar seus Dados de Dualidade.",
-          "level": 1
+          "description": "Any time you would be Hidden, you are instead Cloaked. You remain unseen while stationary even if an adversary moves to where they would normally see you. You lose Cloaked after an attack or when you end a move in line of sight.",
+          "id": "feature.rogue-cloaked",
+          "level": 1,
+          "name": "Encoberto"
+        },
+        {
+          "description": "When you hit while Cloaked or while an ally is within melee range of your target, add d6s equal to your tier to the damage roll.",
+          "id": "feature.rogue-sneak-attack",
+          "level": 1,
+          "name": "Ataque Furtivo"
         }
       ],
       "hope_feature": {
-        "name": "Segurar o Avanço",
-        "description": "Gaste 3 Esperança após um ataque com arma bem-sucedido para usar a mesma rolagem contra dois alvos adicionais no alcance.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope to gain +2 Evasion until an attack succeeds against you; otherwise it lasts until your next rest.",
+        "hope_cost": 3,
+        "name": "Esquiva do Ladino"
       },
-      "domain_ids": ["domain.bone", "domain.sage"]
-    },
-    {
       "id": "class.rogue",
       "name": "Ladino",
       "starting_evasion": 12,
       "starting_hp": 6,
-      "starting_items": ["item.basic-supplies", "item.lockpicks"],
+      "starting_items": [
+        "item.basic-supplies",
+        "item.lockpicks"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.splendor",
+        "domain.valor"
+      ],
       "features": [
         {
-          "id": "feature.rogue-cloaked",
-          "name": "Encoberto",
-          "description": "Sempre que você estaria Oculto, você fica Encoberto. Além dos benefícios de Oculto, se ficar parado, continua invisível mesmo quando um adversário vai para onde normalmente o veria. Você perde o Encoberto ao atacar ou terminar um movimento na linha de visão.",
-          "level": 1
-        },
-        {
-          "id": "feature.rogue-sneak-attack",
-          "name": "Ataque Furtivo",
-          "description": "Ao acertar enquanto Encoberto ou quando um aliado está em alcance corpo a corpo do alvo, adicione d6s ao dano iguais ao seu tier.",
-          "level": 1
+          "description": "At the start of each session, roll d4s equal to your subclass Spellcast trait to form your Prayer Dice. Spend any number to aid yourself or an ally within far range: reduce incoming damage, add to a roll after it is made, or gain Hope equal to the die. Unused dice clear at session end.",
+          "id": "feature.seraph-prayer-dice",
+          "level": 1,
+          "name": "Dados de Oração"
         }
       ],
       "hope_feature": {
-        "name": "Esquiva do Ladino",
-        "description": "Gaste 3 Esperança para ganhar +2 de Evasão até que um ataque acerte você; caso contrário, dura até o próximo descanso.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope to clear 1 Hit Point on an ally within close range.",
+        "hope_cost": 3,
+        "name": "Suporte de Vida"
       },
-      "domain_ids": ["domain.midnight", "domain.grace"]
-    },
-    {
       "id": "class.seraph",
       "name": "Serafim",
       "starting_evasion": 9,
       "starting_hp": 7,
-      "starting_items": ["item.basic-supplies", "item.sun-charm"],
+      "starting_items": [
+        "item.basic-supplies",
+        "item.sun-charm"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.arcana",
+        "domain.midnight"
+      ],
       "features": [
         {
-          "id": "feature.seraph-prayer-dice",
-          "name": "Dados de Oração",
-          "description": "No início de cada sessão, role d4s iguais ao traço de Conjuração da sua subclasse para formar seus Dados de Oração. Gaste quaisquer deles para ajudar você ou um aliado em alcance longo: reduzir dano recebido, somar a uma rolagem depois de feita, ou ganhar Esperança igual ao dado. Dados não usados somem no fim da sessão.",
-          "level": 1
+          "description": "You can sense magical creatures and objects within close range.",
+          "id": "feature.sorcerer-arcane-sense",
+          "level": 1,
+          "name": "Sentido Arcano"
+        },
+        {
+          "description": "Make a Spellcast Roll (10). On a success, create a minor visual illusion no larger than you within close range; it is convincing to anyone at close range or farther.",
+          "id": "feature.sorcerer-minor-illusion",
+          "level": 1,
+          "name": "Ilusão Menor"
+        },
+        {
+          "description": "Once per long rest, move a loadout domain card to your vault to either gain Hope equal to its level or add twice its level to a damage roll for a damaging spell.",
+          "id": "feature.sorcerer-channel-raw-power",
+          "level": 1,
+          "name": "Canalizar Poder Bruto"
         }
       ],
       "hope_feature": {
-        "name": "Suporte de Vida",
-        "description": "Gaste 3 Esperança para limpar 1 Ponto de Vida de um aliado em alcance próximo.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope to reroll any number of damage dice on a magic-damage attack.",
+        "hope_cost": 3,
+        "name": "Magia Volátil"
       },
-      "domain_ids": ["domain.splendor", "domain.valor"]
-    },
-    {
       "id": "class.sorcerer",
       "name": "Feiticeiro",
       "starting_evasion": 10,
       "starting_hp": 6,
-      "starting_items": ["item.basic-supplies", "item.arcane-focus"],
+      "starting_items": [
+        "item.basic-supplies",
+        "item.arcane-focus"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.blade",
+        "domain.bone"
+      ],
       "features": [
         {
-          "id": "feature.sorcerer-arcane-sense",
-          "name": "Sentido Arcano",
-          "description": "Você sente a presença de pessoas e objetos mágicos em alcance próximo.",
-          "level": 1
+          "description": "When an adversary within melee range tries to leave, make a reaction roll using any trait against their Difficulty. On a success choose one effect (two on a critical): stop their movement, deal damage equal to your primary weapon, or move with them.",
+          "id": "feature.warrior-attack-of-opportunity",
+          "level": 1,
+          "name": "Golpe de Despedida"
         },
         {
-          "id": "feature.sorcerer-minor-illusion",
-          "name": "Ilusão Menor",
-          "description": "Faça uma rolagem de Conjuração (10). Em sucesso, crie uma ilusão visual pequena, até o seu tamanho, em alcance próximo; ela convence qualquer um em alcance próximo ou além.",
-          "level": 1
-        },
-        {
-          "id": "feature.sorcerer-channel-raw-power",
-          "name": "Canalizar Poder Bruto",
-          "description": "Uma vez por descanso longo, mova uma carta de domínio do seu equipamento para o seu cofre e escolha: ganhar Esperança igual ao nível da carta ou somar duas vezes o nível da carta ao dano de um feitiço que cause dano.",
-          "level": 1
+          "description": "Ignore burden when equipping weapons. When you deal physical damage, add your level to the damage roll.",
+          "id": "feature.warrior-combat-training",
+          "level": 1,
+          "name": "Treino de Combate"
         }
       ],
       "hope_feature": {
-        "name": "Magia Volátil",
-        "description": "Gaste 3 Esperança para rerrolar qualquer quantidade de dados de dano em um ataque que cause dano mágico.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope to gain +1 to attack rolls until your next rest.",
+        "hope_cost": 3,
+        "name": "Sem Piedade"
       },
-      "domain_ids": ["domain.arcana", "domain.midnight"]
-    },
-    {
       "id": "class.warrior",
       "name": "Guerreiro",
       "starting_evasion": 11,
       "starting_hp": 6,
-      "starting_items": ["item.basic-supplies", "item.weapon-kit"],
+      "starting_items": [
+        "item.basic-supplies",
+        "item.weapon-kit"
+      ]
+    },
+    {
+      "domain_ids": [
+        "domain.codex",
+        "domain.splendor"
+      ],
       "features": [
         {
-          "id": "feature.warrior-attack-of-opportunity",
-          "name": "Golpe de Despedida",
-          "description": "Quando um adversário em alcance corpo a corpo tenta sair, faça uma reação usando qualquer traço contra a Dificuldade dele. Em sucesso escolha um efeito (dois no crítico): impedir o movimento, causar dano igual ao da arma primária, ou se mover com ele.",
-          "level": 1
+          "description": "You can perform subtle, harmless magic at will, such as changing colors, creating scents, lighting candles, floating tiny objects, illuminating a room, or repairing a small item.",
+          "id": "feature.wizard-prestidigitation",
+          "level": 1,
+          "name": "Prestidigitação"
         },
         {
-          "id": "feature.warrior-combat-training",
-          "name": "Treino de Combate",
-          "description": "Ignore a carga ao equipar armas. Quando causar dano físico, some seu nível ao dano.",
-          "level": 1
+          "description": "Choose a number from 1-12. When you roll it on a Duality Die, gain a Hope or clear a Stress. You can change the number on a long rest.",
+          "id": "feature.wizard-strange-patterns",
+          "level": 1,
+          "name": "Padrões Estranhos"
         }
       ],
       "hope_feature": {
-        "name": "Sem Piedade",
-        "description": "Gaste 3 Esperança para ganhar +1 em rolagens de ataque até o próximo descanso.",
-        "hope_cost": 3
+        "description": "Spend 3 Hope to force an adversary within far range to reroll an attack or damage roll.",
+        "hope_cost": 3,
+        "name": "Desta Vez Não"
       },
-      "domain_ids": ["domain.blade", "domain.bone"]
-    },
-    {
       "id": "class.wizard",
       "name": "Mago",
       "starting_evasion": 11,
       "starting_hp": 5,
-      "starting_items": ["item.basic-supplies", "item.field-notes"],
-      "features": [
-        {
-          "id": "feature.wizard-prestidigitation",
-          "name": "Prestidigitação",
-          "description": "Você pode realizar magia sutil e inofensiva à vontade, como mudar cores, criar cheiros, acender velas, fazer objetos pequenos flutuarem, iluminar um cômodo ou reparar um item pequeno.",
-          "level": 1
-        },
-        {
-          "id": "feature.wizard-strange-patterns",
-          "name": "Padrões Estranhos",
-          "description": "Escolha um número de 1 a 12. Quando ele sair em um Dado de Dualidade, ganhe uma Esperança ou limpe um Estresse. Você pode mudar o número após um descanso longo.",
-          "level": 1
-        }
-      ],
-      "hope_feature": {
-        "name": "Desta Vez Não",
-        "description": "Gaste 3 Esperança para forçar um adversário em alcance longo a rerrolar um ataque ou rolagem de dano.",
-        "hope_cost": 3
-      },
-      "domain_ids": ["domain.codex", "domain.splendor"]
+      "starting_items": [
+        "item.basic-supplies",
+        "item.field-notes"
+      ]
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }

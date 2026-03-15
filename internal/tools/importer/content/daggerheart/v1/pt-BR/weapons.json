@@ -1,2444 +1,3272 @@
 {
-  "system_id": "daggerheart",
-  "system_version": "v1",
-  "source": "Daggerheart SRD v1 (paraphrased)",
-  "locale": "pt-BR",
   "items": [
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +3.",
       "id": "weapon.longsword",
       "name": "Espada Longa",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +3."
+      "tier": 1,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +3.",
       "id": "weapon.shortbow",
       "name": "Arco Curto",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Agility",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +3."
+      "tier": 1,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +1.",
       "id": "weapon.dagger",
       "name": "Adaga",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +1."
+      "tier": 1,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +3.",
       "id": "weapon.spear",
       "name": "Lança",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Finesse",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +3."
+      "tier": 1,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +3.",
       "id": "weapon.quarterstaff",
       "name": "Bastão",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Instinct",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +3."
+      "tier": 1,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +1.",
       "id": "weapon.mace",
       "name": "Maça",
-      "category": "primary",
+      "range": "melee",
       "tier": 1,
-      "trait": "Strength",
-      "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
+      "trait": "Strength"
+    },
+    {
       "burden": 1,
-      "feature": "Bônus de dano +1."
-    },
-    {
-      "id": "weapon.light-frame-wheelchair",
-      "name": "Cadeira de Rodas de Estrutura Leve",
       "category": "primary",
-      "tier": 1,
-      "trait": "Agility",
-      "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
       "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance."
-    },
-    {
-      "id": "weapon.light-frame-wheelchair-improved",
-      "name": "Cadeira de Rodas de Estrutura Leve Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
-      "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +3."
-    },
-    {
-      "id": "weapon.light-frame-wheelchair-advanced",
-      "name": "Cadeira de Rodas de Estrutura Leve Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
-      "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +6."
-    },
-    {
-      "id": "weapon.light-frame-wheelchair-legendary",
-      "name": "Cadeira de Rodas de Estrutura Leve Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
-      "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +9."
-    },
-    {
-      "id": "weapon.heavy-frame-wheelchair",
-      "name": "Cadeira de Rodas de Estrutura Pesada",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Strength",
-      "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão."
-    },
-    {
-      "id": "weapon.heavy-frame-wheelchair-improved",
-      "name": "Cadeira de Rodas de Estrutura Pesada Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
-      "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão. Bônus de dano +6."
-    },
-    {
-      "id": "weapon.heavy-frame-wheelchair-advanced",
-      "name": "Cadeira de Rodas de Estrutura Pesada Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
-      "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão. Bônus de dano +9."
-    },
-    {
-      "id": "weapon.heavy-frame-wheelchair-legendary",
-      "name": "Cadeira de Rodas de Estrutura Pesada Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
-      "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão. Bônus de dano +12."
-    },
-    {
-      "id": "weapon.arcane-frame-wheelchair",
-      "name": "Cadeira de Rodas de Estrutura Arcana",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Spellcast",
-      "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque."
-    },
-    {
-      "id": "weapon.arcane-frame-wheelchair-improved",
-      "name": "Cadeira de Rodas de Estrutura Arcana Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Spellcast",
-      "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +3."
-    },
-    {
-      "id": "weapon.arcane-frame-wheelchair-advanced",
-      "name": "Cadeira de Rodas de Estrutura Arcana Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Spellcast",
-      "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +6."
-    },
-    {
-      "id": "weapon.arcane-frame-wheelchair-legendary",
-      "name": "Cadeira de Rodas de Estrutura Arcana Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Spellcast",
-      "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +9."
-    },
-    {
+      "feature": "Reliable: +1 to attack rolls.",
       "id": "weapon.broadsword",
       "name": "Espada Larga",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque."
+      "tier": 1,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +3.",
       "id": "weapon.battleaxe",
       "name": "Machado de Batalha",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +3."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +3.",
       "id": "weapon.greatsword",
       "name": "Espadão",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Massiva: -1 em Evasão; em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +3."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 12
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Heavy: -1 to Evasion. Damage bonus +3.",
       "id": "weapon.warhammer",
       "name": "Martelo de Guerra",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão. Bônus de dano +3."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +1.",
       "id": "weapon.cutlass",
       "name": "Cutelo",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +1."
+      "tier": 1,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range.",
       "id": "weapon.rapier",
       "name": "Rapieira",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance."
+      "tier": 1,
+      "trait": "Presence"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +2.",
       "id": "weapon.halberd",
       "name": "Alabarda",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +2."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +1.",
       "id": "weapon.crossbow",
       "name": "Besta",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +1."
+      "tier": 1,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +3.",
       "id": "weapon.longbow",
       "name": "Arco Longo",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Agility",
       "range": "very_far",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +3."
+      "tier": 1,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +3.",
       "id": "weapon.arcane-gauntlets",
       "name": "Manoplas Arcanas",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +3."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +1.",
       "id": "weapon.hallowed-axe",
       "name": "Machado Sagrado",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +1."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +2.",
       "id": "weapon.glowing-rings",
       "name": "Anéis Luminosos",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Agility",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +2."
+      "tier": 1,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "No special feature.",
       "id": "weapon.hand-runes",
       "name": "Runas nas Mãos",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Instinct",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Sem característica especial."
-    },
-    {
-      "id": "weapon.returning",
-      "name": "Retornante",
-      "category": "primary",
       "tier": 1,
-      "trait": "Finesse",
-      "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Retornante: Quando esta arma é arremessada dentro do seu alcance, ela reaparece em sua mão após o ataque."
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack.",
+      "id": "weapon.returning-blade",
+      "name": "Retornante",
+      "range": "close",
+      "tier": 1,
+      "trait": "Finesse"
+    },
+    {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +1.",
       "id": "weapon.shortstaff",
       "name": "Bastão Curto",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Instinct",
       "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +1."
+      "tier": 1,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +3.",
       "id": "weapon.dualstaff",
       "name": "Bastão Duplo",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +3."
+      "tier": 1,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage.",
       "id": "weapon.scepter",
       "name": "Cetro",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Presence",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Versátil: Também pode ser usada como Presence, alcance corpo a corpo, d8 de dano."
+      "tier": 1,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +1.",
       "id": "weapon.wand",
       "name": "Varinha",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Knowledge",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +1."
+      "tier": 1,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result.",
       "id": "weapon.greatstaff",
       "name": "Bastão Grande",
-      "category": "primary",
-      "tier": 1,
-      "trait": "Knowledge",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado."
+      "tier": 1,
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +3.",
       "id": "weapon.broadsword-improved",
       "name": "Espada Larga Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +3."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +6.",
       "id": "weapon.longsword-improved",
       "name": "Espada Longa Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +6."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +6.",
       "id": "weapon.battleaxe-improved",
       "name": "Machado de Batalha Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +6."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6.",
       "id": "weapon.greatsword-improved",
       "name": "Espadão Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Massiva: -1 em Evasão; em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +6."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +4.",
       "id": "weapon.mace-improved",
       "name": "Maça Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +4."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 12
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Heavy: -1 to Evasion. Damage bonus +6.",
       "id": "weapon.warhammer-improved",
       "name": "Martelo de Guerra Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão. Bônus de dano +6."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +4.",
       "id": "weapon.dagger-improved",
       "name": "Adaga Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +4."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +6.",
       "id": "weapon.quarterstaff-improved",
       "name": "Bastão Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Instinct",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +6."
+      "tier": 2,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +4.",
       "id": "weapon.cutlass-improved",
       "name": "Cutelo Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +4."
+      "tier": 2,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +3.",
       "id": "weapon.rapier-improved",
       "name": "Rapieira Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +3."
+      "tier": 2,
+      "trait": "Presence"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +5.",
       "id": "weapon.halberd-improved",
       "name": "Alabarda Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +5."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +6.",
       "id": "weapon.spear-improved",
       "name": "Lança Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +6."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +6.",
       "id": "weapon.shortbow-improved",
       "name": "Arco Curto Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +6."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +4.",
       "id": "weapon.crossbow-improved",
       "name": "Besta Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +4."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +6.",
       "id": "weapon.longbow-improved",
       "name": "Arco Longo Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "very_far",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +6."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +4.",
       "id": "weapon.gilded-falchion",
       "name": "Falcione Dourado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +6.",
       "id": "weapon.knuckle-blades",
       "name": "Lâminas de Soqueira",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Brutal: Quando você rola o valor máximo em um dado de dano, role um dado de dano adicional. Bônus de dano +6."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Deadly: When you deal severe damage, the target must mark an additional HP. Damage bonus +3.",
       "id": "weapon.urok-broadsword",
       "name": "Espada Larga de Urok",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Mortal: Quando você causa dano severo, o alvo deve marcar 1 HP adicional. Bônus de dano +3."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +3.",
       "id": "weapon.bladed-whip",
       "name": "Chicote Laminado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +3."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Scary: On a successful attack, the target must mark a Stress. Damage bonus +4.",
       "id": "weapon.steelforged-halberd",
       "name": "Alabarda Forjada em Aço",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Assustadora: Em um ataque bem-sucedido, o alvo deve marcar um Estresse. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +5.",
       "id": "weapon.war-scythe",
       "name": "Foice de Guerra",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +5."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +6.",
       "id": "weapon.blunderbuss",
       "name": "Bacamarte",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Recarregar: Depois de fazer um ataque, role um d6. Com 1, você deve marcar um Estresse para recarregar esta arma antes de poder disparar novamente. Bônus de dano +6."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6.",
       "id": "weapon.greatbow",
       "name": "Arco Grande",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +6."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +5.",
       "id": "weapon.finehair-bow",
       "name": "Arco de Crina Fina",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +5."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +6.",
       "id": "weapon.arcane-gauntlets-improved",
       "name": "Manoplas Arcanas Aprimoradas",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +6."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +4.",
       "id": "weapon.hallowed-axe-improved",
       "name": "Machado Sagrado Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +4."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +5.",
       "id": "weapon.glowing-rings-improved",
       "name": "Anéis Luminosos Aprimorados",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +5."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +3.",
       "id": "weapon.hand-runes-improved",
       "name": "Runas nas Mãos Aprimoradas",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Instinct",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +3."
-    },
-    {
-      "id": "weapon.returning-improved",
-      "name": "Retornante Aprimorada",
-      "category": "primary",
       "tier": 2,
-      "trait": "Finesse",
-      "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Retornante: Quando esta arma é arremessada dentro do seu alcance, ela reaparece em sua mão após o ataque. Bônus de dano +3."
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +3.",
+      "id": "weapon.improved-returning-blade",
+      "name": "Improved Returning Blade",
+      "range": "close",
+      "tier": 2,
+      "trait": "Finesse"
+    },
+    {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +4.",
       "id": "weapon.shortstaff-improved",
       "name": "Bastão Curto Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Instinct",
       "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +4."
+      "tier": 2,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +6.",
       "id": "weapon.dualstaff-improved",
       "name": "Bastão Duplo Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +6."
+      "tier": 2,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +3.",
       "id": "weapon.scepter-improved",
       "name": "Cetro Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Presence",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Versátil: Também pode ser usada como Presence, alcance corpo a corpo, d8 de dano. Bônus de dano +3."
+      "tier": 2,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +4.",
       "id": "weapon.wand-improved",
       "name": "Varinha Aprimorada",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Knowledge",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +4."
+      "tier": 2,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +3.",
       "id": "weapon.greatstaff-improved",
       "name": "Bastão Grande Aprimorado",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Knowledge",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +3."
+      "tier": 2,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Versatile: You can also use it as Knowledge, far range, d6 damage. Damage bonus +4.",
       "id": "weapon.casting-sword",
       "name": "Espada de Conjuração",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Versátil: Também pode ser usada como Knowledge, alcance longo, d6 de dano. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Scary: On a successful attack, the target must mark a Stress. Damage bonus +4.",
       "id": "weapon.devouring-dagger",
       "name": "Adaga Devoradora",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Assustadora: Em um ataque bem-sucedido, o alvo deve marcar um Estresse. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Eruptive: On a successful melee attack, all other adversaries within very close range must succeed on a reaction roll (14) or take half damage. Damage bonus +6.",
       "id": "weapon.hammer-of-exota",
       "name": "Martelo da Erupção",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Instinct",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Eruptiva: Em um ataque corpo a corpo bem-sucedido, todos os outros adversários em alcance muito próximo devem passar em uma rolagem de reação (14) ou sofrer metade do dano. Bônus de dano +6."
+      "tier": 2,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +4.",
       "id": "weapon.yutari-bloodbow",
       "name": "Arco Sangrento de Yutari",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Brutal: Quando você rola o valor máximo em um dado de dano, role um dado de dano adicional. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +4.",
       "id": "weapon.elder-bow",
       "name": "Arco Ancestral",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 12
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Pompous: You must have Presence of 0 or lower to use this weapon.",
+      "id": "weapon.ego-blade",
+      "name": "Ego Blade",
+      "range": "melee",
+      "tier": 2,
+      "trait": "Agility"
+    },
+    {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Invigorating: On a successful attack, roll a d4. On a 4, clear a Stress. Damage bonus +3.",
       "id": "weapon.scepter-of-elias",
       "name": "Cetro Revigorante",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Presence",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Revigorante: Em um ataque bem-sucedido, role um d4. Com 4, limpe um Estresse. Bônus de dano +3."
+      "tier": 2,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Persuasive: Before you make a Presence roll, you can mark a Stress to gain +2 to the result. Damage bonus +4.",
       "id": "weapon.wand-of-enthrallment",
       "name": "Varinha de Persuasão",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Presence",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Persuasiva: Antes de fazer uma rolagem de Presence, você pode marcar um Estresse para ganhar +2 no resultado. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Presence"
     },
     {
-      "id": "weapon.keepers-staff",
-      "name": "Bastão Firme",
-      "category": "primary",
-      "tier": 2,
-      "trait": "Knowledge",
-      "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
       "burden": 2,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +4."
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +4.",
+      "id": "weapon.keeper-s-staff",
+      "name": "Bastão Firme",
+      "range": "far",
+      "tier": 2,
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +6.",
       "id": "weapon.broadsword-advanced",
       "name": "Espada Larga Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +6."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +9.",
       "id": "weapon.longsword-advanced",
       "name": "Espada Longa Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +9."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +9.",
       "id": "weapon.battleaxe-advanced",
       "name": "Machado de Batalha Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +9."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9.",
       "id": "weapon.greatsword-advanced",
       "name": "Espadão Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Massiva: -1 em Evasão; em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +9."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +7.",
       "id": "weapon.mace-advanced",
       "name": "Maça Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 12
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Heavy: -1 to Evasion. Damage bonus +9.",
       "id": "weapon.warhammer-advanced",
       "name": "Martelo de Guerra Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão. Bônus de dano +9."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +7.",
       "id": "weapon.dagger-advanced",
       "name": "Adaga Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +9.",
       "id": "weapon.quarterstaff-advanced",
       "name": "Bastão Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Instinct",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +9."
+      "tier": 3,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +7.",
       "id": "weapon.cutlass-advanced",
       "name": "Cutelo Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 3,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +6.",
       "id": "weapon.rapier-advanced",
       "name": "Rapieira Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +6."
+      "tier": 3,
+      "trait": "Presence"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +8.",
       "id": "weapon.halberd-advanced",
       "name": "Alabarda Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +8."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +9.",
       "id": "weapon.spear-advanced",
       "name": "Lança Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +9."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +9.",
       "id": "weapon.shortbow-advanced",
       "name": "Arco Curto Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +9."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +7.",
       "id": "weapon.crossbow-advanced",
       "name": "Besta Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +9.",
       "id": "weapon.longbow-advanced",
       "name": "Arco Longo Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "very_far",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +9."
-    },
-    {
-      "id": "weapon.glimmermoth-blade",
-      "name": "Lâmina Glimmermoth",
-      "category": "primary",
       "tier": 3,
-      "trait": "Agility",
-      "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Asa Afiada: Ganhe um bônus nas suas rolagens de dano igual à sua Agility. Bônus de dano +5."
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Sharpwing: Gain a bonus to your damage rolls equal to your Agility. Damage bonus +5.",
+      "id": "weapon.flickerfly-blade",
+      "name": "Lâmina Glimmermoth",
+      "range": "melee",
+      "tier": 3,
+      "trait": "Agility"
+    },
+    {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 12
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Brave: -1 to Evasion; +3 to severe damage threshold. Damage bonus +7.",
       "id": "weapon.bravesword",
       "name": "Espada Valente",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Valente: -1 em Evasão; +3 no limiar de dano severo. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Devastating: Before you make an attack roll, you can mark a Stress to use a d20 as your damage die. Damage bonus +7.",
       "id": "weapon.hammer-of-wrath",
       "name": "Martelo da Ira",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Devastadora: Antes de fazer uma rolagem de ataque, você pode marcar um Estresse para usar um d20 como dado de dano. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Protective: +1 to Armor Score. Damage bonus +7.",
       "id": "weapon.labrys-axe",
       "name": "Machado Labrys",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Protetora: +1 no Valor de Armadura. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Dueling: When no other creatures are within close range of the target, gain advantage on your attack roll against them. Damage bonus +5.",
       "id": "weapon.meridian-cutlass",
       "name": "Cutelo Meridian",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Duelo: Quando não há outras criaturas em alcance próximo do alvo, ganhe vantagem na sua rolagem de ataque contra ele. Bônus de dano +5."
+      "tier": 3,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Retractable: The blade can be hidden in the hilt to avoid detection. Damage bonus +7.",
       "id": "weapon.retractable-saber",
       "name": "Sabre Retrátil",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Retrátil: A lâmina pode ser escondida no punho para evitar detecção. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Presence"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +8.",
       "id": "weapon.double-flail",
       "name": "Mangual Duplo",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +8."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +7.",
       "id": "weapon.talon-blades",
       "name": "Lâminas de Garra",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Brutal: Quando você rola o valor máximo em um dado de dano, role um dado de dano adicional. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +8.",
       "id": "weapon.black-powder-revolver",
       "name": "Revólver de Pólvora",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Recarregar: Depois de fazer um ataque, role um d6. Com 1, você deve marcar um Estresse para recarregar esta arma antes de poder disparar novamente. Bônus de dano +8."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Versatile: You can also use it as Agility, melee range, d10 damage. Damage bonus +7.",
       "id": "weapon.spiked-bow",
       "name": "Arco Espinhado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Versátil: Também pode ser usada como Agility, alcance corpo a corpo, d10 de dano. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +9.",
       "id": "weapon.arcane-gauntlets-advanced",
       "name": "Manoplas Arcanas Avançadas",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +9."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +7.",
       "id": "weapon.hallowed-axe-advanced",
       "name": "Machado Sagrado Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +8.",
       "id": "weapon.glowing-rings-advanced",
       "name": "Anéis Luminosos Avançados",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +8."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +6.",
       "id": "weapon.hand-runes-advanced",
       "name": "Runas nas Mãos Avançadas",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Instinct",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +6."
-    },
-    {
-      "id": "weapon.returning-advanced",
-      "name": "Retornante Avançada",
-      "category": "primary",
       "tier": 3,
-      "trait": "Finesse",
-      "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Retornante: Quando esta arma é arremessada dentro do seu alcance, ela reaparece em sua mão após o ataque. Bônus de dano +6."
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +6.",
+      "id": "weapon.advanced-returning-blade",
+      "name": "Advanced Returning Blade",
+      "range": "close",
+      "tier": 3,
+      "trait": "Finesse"
+    },
+    {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +7.",
       "id": "weapon.shortstaff-advanced",
       "name": "Bastão Curto Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Instinct",
       "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 3,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +9.",
       "id": "weapon.dualstaff-advanced",
       "name": "Bastão Duplo Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +9."
+      "tier": 3,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +6.",
       "id": "weapon.scepter-advanced",
       "name": "Cetro Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Presence",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Versátil: Também pode ser usada como Presence, alcance corpo a corpo, d8 de dano. Bônus de dano +6."
+      "tier": 3,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +7.",
       "id": "weapon.wand-advanced",
       "name": "Varinha Avançada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Knowledge",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 3,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6.",
       "id": "weapon.greatstaff-advanced",
       "name": "Bastão Grande Avançado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Knowledge",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +6."
+      "tier": 3,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Lucky: On a failed attack, you can mark a Stress to reroll it. Damage bonus +8.",
       "id": "weapon.axe-of-fortunis",
       "name": "Machado da Fortuna",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Sortuda: Em um ataque falho, você pode marcar um Estresse para refazer a rolagem. Bônus de dano +8."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Healing: During downtime, automatically clear a Hit Point. Damage bonus +6.",
       "id": "weapon.blessed-anlace",
       "name": "Anlace Abençoada",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Instinct",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Cicatrizante: Durante o descanso, limpe automaticamente um Ponto de Vida. Bônus de dano +6."
+      "tier": 3,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "mixed",
+      "feature": "Otherworldly: On a successful attack, you can deal physical or magic damage. Damage bonus +7.",
       "id": "weapon.ghostblade",
       "name": "Lâmina Fantasma",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "mixed",
-      "burden": 1,
-      "feature": "Sobrenatural: Em um ataque bem-sucedido, você pode causar dano físico ou mágico. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 20
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Painful: Each time you make a successful attack, you must mark a Stress. Damage bonus +4.",
       "id": "weapon.runes-of-ruination",
       "name": "Runas da Ruína",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Knowledge",
       "range": "very_close",
-      "damage_dice": [{"sides": 20, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Dolorosa: Sempre que você fizer um ataque bem-sucedido, deve marcar um Estresse. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Timebending: You can choose the target of your attack after making the roll. Damage bonus +5.",
       "id": "weapon.widogast-pendant",
       "name": "Pingente de Widogast",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Knowledge",
       "range": "close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Dobra do Tempo: Você pode escolher o alvo do ataque após fazer a rolagem. Bônus de dano +5."
+      "tier": 3,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Self-Correcting: When you roll a 1 on a damage die, it deals 6 damage instead. Damage bonus +7.",
       "id": "weapon.gilded-bow",
       "name": "Arco Dourado",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Autocorreção: Quando você rola 1 em um dado de dano, ele causa 6 de dano em vez disso. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Burning: When you roll a 6 on a damage die, the target must mark a Stress. Damage bonus +7.",
       "id": "weapon.firestaff",
       "name": "Bastão de Fogo",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Ardente: Quando você rola 6 em um dado de dano, o alvo deve marcar um Estresse. Bônus de dano +7."
+      "tier": 3,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +7.",
       "id": "weapon.mage-orb",
       "name": "Orbe do Mago",
-      "category": "primary",
-      "tier": 3,
-      "trait": "Knowledge",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +7."
-    },
-    {
-      "id": "weapon.ilmari-rifle",
-      "name": "Rifle de Recarga",
-      "category": "primary",
       "tier": 3,
-      "trait": "Finesse",
-      "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Recarregar: Depois de fazer um ataque, role um d6. Com 1, você deve marcar um Estresse para recarregar esta arma antes de poder disparar novamente. Bônus de dano +6."
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +6.",
+      "id": "weapon.ilmari-s-rifle",
+      "name": "Rifle de Recarga",
+      "range": "very_far",
+      "tier": 3,
+      "trait": "Finesse"
+    },
+    {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +9.",
       "id": "weapon.broadsword-legendary",
       "name": "Espada Larga Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +12.",
       "id": "weapon.longsword-legendary",
       "name": "Espada Longa Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +12."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +12.",
       "id": "weapon.battleaxe-legendary",
       "name": "Machado de Batalha Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +12."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +12.",
       "id": "weapon.greatsword-legendary",
       "name": "Espadão Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Massiva: -1 em Evasão; em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +12."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +10.",
       "id": "weapon.mace-legendary",
       "name": "Maça Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +10."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 12
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Heavy: -1 to Evasion. Damage bonus +12.",
       "id": "weapon.warhammer-legendary",
       "name": "Martelo de Guerra Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Pesada: -1 em Evasão. Bônus de dano +12."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +10.",
       "id": "weapon.dagger-legendary",
       "name": "Adaga Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +10."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +12.",
       "id": "weapon.quarterstaff-legendary",
       "name": "Bastão Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +12."
+      "tier": 4,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +10.",
       "id": "weapon.cutlass-legendary",
       "name": "Cutelo Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +10."
+      "tier": 4,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +9.",
       "id": "weapon.rapier-legendary",
       "name": "Rapieira Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Presence"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +11.",
       "id": "weapon.halberd-legendary",
       "name": "Alabarda Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +11."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +12.",
       "id": "weapon.spear-legendary",
       "name": "Lança Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +12."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +12.",
       "id": "weapon.shortbow-legendary",
       "name": "Arco Curto Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Bônus de dano +12."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +10.",
       "id": "weapon.crossbow-legendary",
       "name": "Besta Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +10."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +12.",
       "id": "weapon.longbow-legendary",
       "name": "Arco Longo Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "very_far",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Desajeitada: -1 em Finesse. Bônus de dano +12."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +9.",
       "id": "weapon.dual-ended-sword",
       "name": "Espada de Duas Pontas",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Rápida: Quando você faz um ataque, pode marcar um Estresse para atingir outra criatura no alcance. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Concussive: On a successful attack, you can spend a Hope to knock the target back to far range. Damage bonus +11.",
       "id": "weapon.impact-gauntlet",
       "name": "Manopla de Impacto",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Concussiva: Em um ataque bem-sucedido, você pode gastar uma Esperança para empurrar o alvo para alcance longo. Bônus de dano +11."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 12
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Destructive: -1 to Agility; on a successful attack, all adversaries within very close range must mark a Stress. Damage bonus +13.",
       "id": "weapon.sledge-axe",
       "name": "Machado Marreta",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 12, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Destrutiva: -1 em Agility; em um ataque bem-sucedido, todos os adversários em alcance muito próximo devem marcar um Estresse. Bônus de dano +13."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Serrated: When you roll a 1 on a damage die, it deals 8 damage instead. Damage bonus +9.",
       "id": "weapon.curved-dagger",
       "name": "Adaga Curva",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Serrilhada: Quando você rola 1 em um dado de dano, ele causa 8 de dano em vez disso. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Long: This weapon's attack targets all adversaries in a line within range. Damage bonus +10.",
       "id": "weapon.extended-polearm",
       "name": "Arma de Haste Estendida",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "very_close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Longa: O ataque desta arma atinge todos os adversários em linha dentro do alcance. Bônus de dano +10."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Grappling: On a successful attack, you can spend a Hope to Restrain the target or pull them into melee range with you. Damage bonus +9.",
       "id": "weapon.swinging-ropeblade",
       "name": "Lâmina de Corda Giratória",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Presence",
       "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Agarradora: Em um ataque bem-sucedido, você pode gastar uma Esperança para Restringir o alvo ou puxá-lo para alcance corpo a corpo com você. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Presence"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Bouncing: Mark 1 or more Stress to hit that many targets in range of the attack. Damage bonus +11.",
       "id": "weapon.ricochet-axes",
       "name": "Machados Ricochete",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Rebatendo: Marque 1 ou mais Estresse para atingir essa quantidade de alvos dentro do alcance do ataque. Bônus de dano +11."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +11.",
       "id": "weapon.aantari-bow",
       "name": "Arco Aantari",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 2,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +11."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +12.",
       "id": "weapon.hand-cannon",
       "name": "Canhão de Mão",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Recarregar: Depois de fazer um ataque, role um d6. Com 1, você deve marcar um Estresse para recarregar esta arma antes de poder disparar novamente. Bônus de dano +12."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +12.",
       "id": "weapon.arcane-gauntlets-legendary",
       "name": "Manoplas Arcanas Lendárias",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +12."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +10.",
       "id": "weapon.hallowed-axe-legendary",
       "name": "Machado Sagrado Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +10."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +11.",
       "id": "weapon.glowing-rings-legendary",
       "name": "Anéis Luminosos Lendários",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +11."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +9.",
       "id": "weapon.hand-runes-legendary",
       "name": "Runas nas Mãos Lendárias",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "very_close",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +9."
-    },
-    {
-      "id": "weapon.returning-legendary",
-      "name": "Retornante Lendária",
-      "category": "primary",
       "tier": 4,
-      "trait": "Finesse",
-      "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Retornante: Quando esta arma é arremessada dentro do seu alcance, ela reaparece em sua mão após o ataque. Bônus de dano +9."
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +9.",
+      "id": "weapon.legendary-returning-blade",
+      "name": "Legendary Returning Blade",
+      "range": "close",
+      "tier": 4,
+      "trait": "Finesse"
+    },
+    {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +10.",
       "id": "weapon.shortstaff-legendary",
       "name": "Bastão Curto Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +10."
+      "tier": 4,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +12.",
       "id": "weapon.dualstaff-legendary",
       "name": "Bastão Duplo Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Bônus de dano +12."
+      "tier": 4,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +9.",
       "id": "weapon.scepter-legendary",
       "name": "Cetro Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Presence",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Versátil: Também pode ser usada como Presence, alcance corpo a corpo, d8 de dano. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Damage bonus +10.",
       "id": "weapon.wand-legendary",
       "name": "Varinha Lendária",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Knowledge",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Bônus de dano +10."
+      "tier": 4,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9.",
       "id": "weapon.greatstaff-legendary",
       "name": "Bastão Grande Lendário",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Knowledge",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Knowledge"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Hot: This weapon cuts through solid material. Damage bonus +11.",
       "id": "weapon.sword-of-light-and-flame",
       "name": "Espada de Luz e Chama",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Incandescente: Esta arma corta através de material sólido. Bônus de dano +11."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Lifestealing: On a successful attack, roll a d6. On a 6, clear a Hit Point or clear a Stress. Damage bonus +9.",
       "id": "weapon.siphoning-gauntlets",
       "name": "Manoplas Sugadoras",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Presence",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Roubavida: Em um ataque bem-sucedido, role um d6. Com 6, limpe um Ponto de Vida ou um Estresse. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Presence"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 10
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Greedy: Spend a handful of gold to gain +1 to your Proficiency on a damage roll. Damage bonus +9.",
       "id": "weapon.midas-scythe",
       "name": "Foice de Midas",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Knowledge",
       "range": "melee",
-      "damage_dice": [{"sides": 10, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Gananciosa: Gaste um punhado de ouro para ganhar +1 na sua Proficiência em uma rolagem de dano. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9.",
       "id": "weapon.floating-bladeshards",
       "name": "Fragmentos de Lâminas Flutuantes",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "close",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Poderosa: Em um ataque bem-sucedido, role um dado de dano adicional e descarte o menor resultado. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 20
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Painful: Each time you make a successful attack, you must mark a Stress. Damage bonus +7.",
       "id": "weapon.bloodstaff",
       "name": "Bastão de Sangue",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 20, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Dolorosa: Sempre que você fizer um ataque bem-sucedido, deve marcar um Estresse. Bônus de dano +7."
+      "tier": 4,
+      "trait": "Instinct"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +13.",
       "id": "weapon.thistlebow",
       "name": "Arco de Cardo",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Confiável: +1 em rolagens de ataque. Bônus de dano +13."
+      "tier": 4,
+      "trait": "Instinct"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Timebending: You can choose the target of your attack after making the roll. Damage bonus +13.",
       "id": "weapon.wand-of-essek",
       "name": "Varinha de Dobra do Tempo",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Knowledge",
       "range": "far",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Dobra do Tempo: Você pode escolher o alvo do ataque após fazer a rolagem. Bônus de dano +13."
+      "tier": 4,
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +13.",
       "id": "weapon.magus-revolver",
       "name": "Revólver do Magus",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 1,
-      "feature": "Recarregar: Depois de fazer um ataque, role um d6. Com 1, você deve marcar um Estresse para recarregar esta arma antes de poder disparar novamente. Bônus de dano +13."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 2,
+      "category": "primary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "magic",
+      "feature": "Bonded: Gain a bonus to your damage rolls equal to your level. Damage bonus +9.",
       "id": "weapon.fusion-gloves",
       "name": "Luvas de Fusão",
-      "category": "primary",
-      "tier": 4,
-      "trait": "Knowledge",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "magic",
-      "burden": 2,
-      "feature": "Vinculada: Ganhe um bônus nas suas rolagens de dano igual ao seu nível. Bônus de dano +9."
+      "tier": 4,
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +2 to primary weapon damage against targets within melee range.",
       "id": "weapon.shortsword",
       "name": "Espada Curta",
-      "category": "secondary",
-      "tier": 1,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +2 ao dano da arma primária contra alvos em alcance corpo a corpo."
+      "tier": 1,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 4
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Protective: +1 to Armor Score.",
       "id": "weapon.round-shield",
       "name": "Escudo Redondo",
-      "category": "secondary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 4, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Protetora: +1 no Valor de Armadura."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Barrier: +2 to Armor Score; -1 to Evasion.",
       "id": "weapon.tower-shield",
       "name": "Escudo Torre",
-      "category": "secondary",
-      "tier": 1,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Barreira: +2 no Valor de Armadura; -1 em Evasão."
+      "tier": 1,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +2 to primary weapon damage against targets within melee range.",
       "id": "weapon.small-dagger",
       "name": "Adaga Pequena",
-      "category": "secondary",
-      "tier": 1,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +2 ao dano da arma primária contra alvos em alcance corpo a corpo."
+      "tier": 1,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range.",
       "id": "weapon.whip",
       "name": "Chicote",
-      "category": "secondary",
-      "tier": 1,
-      "trait": "Presence",
       "range": "very_close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Assustadora: Marque um Estresse para estalar o chicote e forçar todos os adversários em alcance corpo a corpo a recuar para alcance próximo."
+      "tier": 1,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range.",
       "id": "weapon.grappler",
       "name": "Agarrador",
-      "category": "secondary",
-      "tier": 1,
-      "trait": "Finesse",
       "range": "close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Fisgadora: Em um ataque bem-sucedido, você pode puxar o alvo para alcance corpo a corpo."
+      "tier": 1,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +1.",
       "id": "weapon.hand-crossbow",
       "name": "Besta de Mão",
-      "category": "secondary",
-      "tier": 1,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +1."
+      "tier": 1,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +3 to primary weapon damage against targets within melee range. Damage bonus +2.",
       "id": "weapon.shortsword-improved",
       "name": "Espada Curta Aprimorada",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +3 ao dano da arma primária contra alvos em alcance corpo a corpo. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 4
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Protective: +2 to Armor Score. Damage bonus +2.",
       "id": "weapon.round-shield-improved",
       "name": "Escudo Redondo Aprimorado",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 4, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Protetora: +2 no Valor de Armadura. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Barrier: +3 to Armor Score; -1 to Evasion. Damage bonus +2.",
       "id": "weapon.tower-shield-improved",
       "name": "Escudo Torre Aprimorado",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Barreira: +3 no Valor de Armadura; -1 em Evasão. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +3 to primary weapon damage against targets within melee range. Damage bonus +2.",
       "id": "weapon.small-dagger-improved",
       "name": "Adaga Pequena Aprimorada",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +3 ao dano da arma primária contra alvos em alcance corpo a corpo. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +2.",
       "id": "weapon.whip-improved",
       "name": "Chicote Aprimorado",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Presence",
       "range": "very_close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Assustadora: Marque um Estresse para estalar o chicote e forçar todos os adversários em alcance corpo a corpo a recuar para alcance próximo. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +2.",
       "id": "weapon.grappler-improved",
       "name": "Agarrador Aprimorado",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Fisgadora: Em um ataque bem-sucedido, você pode puxar o alvo para alcance corpo a corpo. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +3.",
       "id": "weapon.hand-crossbow-improved",
       "name": "Besta de Mão Aprimorada",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +3."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Double Duty: +1 to Armor Score; +1 to primary weapon damage within melee range. Damage bonus +2.",
       "id": "weapon.spiked-shield",
       "name": "Escudo Cravejado",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Dupla Função: +1 no Valor de Armadura; +1 ao dano da arma primária em alcance corpo a corpo. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Parry: When you are attacked, roll this weapon's damage dice. If any of the attacker's damage dice match your results, discard the matching dice before totaling the damage you take. Damage bonus +2.",
       "id": "weapon.parrying-dagger",
       "name": "Adaga de Aparar",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Aparar: Quando você é atacado, role os dados de dano desta arma. Se algum dado de dano do atacante mostrar o mesmo valor que o seu, descarte os resultados correspondentes antes de totalizar o dano que você sofre. Bônus de dano +2."
+      "tier": 2,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Returning: When thrown within its range, it appears in your hand after the attack. Damage bonus +4.",
       "id": "weapon.returning-axe",
       "name": "Machado Retornante",
-      "category": "secondary",
-      "tier": 2,
-      "trait": "Agility",
       "range": "close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Retornante: Quando esta arma é arremessada dentro do seu alcance, ela reaparece em sua mão após o ataque. Bônus de dano +4."
+      "tier": 2,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +4 to primary weapon damage against targets within melee range. Damage bonus +4.",
       "id": "weapon.shortsword-advanced",
       "name": "Espada Curta Avançada",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +4 ao dano da arma primária contra alvos em alcance corpo a corpo. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 4
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Protective: +3 to Armor Score. Damage bonus +4.",
       "id": "weapon.round-shield-advanced",
       "name": "Escudo Redondo Avançado",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 4, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Protetora: +3 no Valor de Armadura. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Barrier: +4 to Armor Score; -1 to Evasion. Damage bonus +4.",
       "id": "weapon.tower-shield-advanced",
       "name": "Escudo Torre Avançado",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Barreira: +4 no Valor de Armadura; -1 em Evasão. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +4 to primary weapon damage against targets within melee range. Damage bonus +4.",
       "id": "weapon.small-dagger-advanced",
       "name": "Adaga Pequena Avançada",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +4 ao dano da arma primária contra alvos em alcance corpo a corpo. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +4.",
       "id": "weapon.whip-advanced",
       "name": "Chicote Avançado",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Presence",
       "range": "very_close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Assustadora: Marque um Estresse para estalar o chicote e forçar todos os adversários em alcance corpo a corpo a recuar para alcance próximo. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +4.",
       "id": "weapon.grappler-advanced",
       "name": "Agarrador Avançado",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Fisgadora: Em um ataque bem-sucedido, você pode puxar o alvo para alcance corpo a corpo. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +5.",
       "id": "weapon.hand-crossbow-advanced",
       "name": "Besta de Mão Avançada",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +5."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 4
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Deflecting: When you are attacked, you can mark an Armor Slot to gain an Evasion bonus equal to your available Armor Score against the attack. Damage bonus +4.",
       "id": "weapon.buckler",
       "name": "Broquel",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 4, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Defletora: Quando você é atacado, pode marcar um espaço de Armadura para ganhar um bônus na sua Evasão igual ao seu Valor de Armadura disponível contra o ataque. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Charged: Mark a Stress to gain +1 to your Proficiency on a primary weapon attack. Damage bonus +4.",
       "id": "weapon.powered-gauntlet",
       "name": "Manopla Energizada",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Knowledge",
       "range": "close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Carregada: Marque um Estresse para ganhar +1 na sua Proficiência em um ataque de arma primária. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Knowledge"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Versatile: You can also use it as Finesse, close range, d8 with damage bonus +4. Damage bonus +4.",
       "id": "weapon.hand-sling",
       "name": "Funda de Mão",
-      "category": "secondary",
-      "tier": 3,
-      "trait": "Finesse",
       "range": "very_far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Versátil: Também pode ser usada como Finesse, alcance próximo, d8 com bônus de dano +4. Bônus de dano +4."
+      "tier": 3,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +5 to primary weapon damage against targets within melee range. Damage bonus +6.",
       "id": "weapon.shortsword-legendary",
       "name": "Espada Curta Lendária",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +5 ao dano da arma primária contra alvos em alcance corpo a corpo. Bônus de dano +6."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 4
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Protective: +4 to Armor Score. Damage bonus +6.",
       "id": "weapon.round-shield-legendary",
       "name": "Escudo Redondo Lendário",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 4, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Protetora: +4 no Valor de Armadura. Bônus de dano +6."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Barrier: +5 to Armor Score; -1 to Evasion. Damage bonus +6.",
       "id": "weapon.tower-shield-legendary",
       "name": "Escudo Torre Lendário",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Barreira: +5 no Valor de Armadura; -1 em Evasão. Bônus de dano +6."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 8
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Paired: +5 to primary weapon damage against targets within melee range. Damage bonus +6.",
       "id": "weapon.small-dagger-legendary",
       "name": "Adaga Pequena Lendária",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "melee",
-      "damage_dice": [{"sides": 8, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Emparelhada: +5 ao dano da arma primária contra alvos em alcance corpo a corpo. Bônus de dano +6."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +6.",
       "id": "weapon.whip-legendary",
       "name": "Chicote Lendário",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Presence",
       "range": "very_close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Assustadora: Marque um Estresse para estalar o chicote e forçar todos os adversários em alcance corpo a corpo a recuar para alcance próximo. Bônus de dano +6."
+      "tier": 4,
+      "trait": "Presence"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +6.",
       "id": "weapon.grappler-legendary",
       "name": "Agarrador Lendário",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "close",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Fisgadora: Em um ataque bem-sucedido, você pode puxar o alvo para alcance corpo a corpo. Bônus de dano +6."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Damage bonus +7.",
       "id": "weapon.hand-crossbow-legendary",
       "name": "Besta de Mão Lendária",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Finesse",
       "range": "far",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Bônus de dano +7."
+      "tier": 4,
+      "trait": "Finesse"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 4
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Sheltering: When you mark an Armor Slot, it reduces damage for you and all allies within melee range who took the same damage. Damage bonus +6.",
       "id": "weapon.braveshield",
       "name": "Escudo Bravo",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Agility",
       "range": "melee",
-      "damage_dice": [{"sides": 4, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Abrigo: Quando você marca um espaço de Armadura, isso reduz o dano para você e todos os aliados em alcance corpo a corpo que sofreram o mesmo dano. Bônus de dano +6."
+      "tier": 4,
+      "trait": "Agility"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 6
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Doubled Up: When you make a primary weapon attack, you can deal damage to another target within melee range. Damage bonus +8.",
       "id": "weapon.knuckle-claws",
       "name": "Garras de Soqueira",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Strength",
       "range": "melee",
-      "damage_dice": [{"sides": 6, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Golpe Duplo: Quando você faz um ataque com a arma primária, pode causar dano a outro alvo em alcance corpo a corpo. Bônus de dano +8."
+      "tier": 4,
+      "trait": "Strength"
     },
     {
+      "burden": 1,
+      "category": "secondary",
+      "damage_dice": [
+        {
+          "count": 1,
+          "sides": 4
+        }
+      ],
+      "damage_type": "physical",
+      "feature": "Locked On: On a successful attack, your next primary weapon attack against the same target automatically succeeds.",
       "id": "weapon.primer-shard",
       "name": "Fragmento Primer",
-      "category": "secondary",
-      "tier": 4,
-      "trait": "Instinct",
       "range": "very_close",
-      "damage_dice": [{"sides": 4, "count": 1}],
-      "damage_type": "physical",
-      "burden": 1,
-      "feature": "Travada: Em um ataque bem-sucedido, seu próximo ataque com a arma primária contra o mesmo alvo tem sucesso automático."
+      "tier": 4,
+      "trait": "Instinct"
     }
-  ]
+  ],
+  "locale": "pt-BR",
+  "source": "Daggerheart SRD v1 (paraphrased)",
+  "system_id": "daggerheart",
+  "system_version": "v1"
 }
