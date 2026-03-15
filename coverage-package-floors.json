@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-15T03:45:30Z",
+  "updated_at": "2026-03-15T03:58:29Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -180,7 +180,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/tools/i18ncheck",
-      "floor": 73.1,
+      "floor": 73.3,
       "description": "CLI contract and token parity checks for locale catalogs."
     },
     {
