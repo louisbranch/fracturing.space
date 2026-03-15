@@ -1,7 +1,7 @@
 {
   "version": 1,
   "allow_drop": 0.1,
-  "updated_at": "2026-03-15T02:25:32Z",
+  "updated_at": "2026-03-15T02:40:46Z",
   "packages": [
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/action",
@@ -50,7 +50,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest",
-      "floor": 96.2,
+      "floor": 96.3,
       "description": "Built-in system descriptor and adapter wiring contracts."
     },
     {
@@ -70,7 +70,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/command",
-      "floor": 92.7,
+      "floor": 94.5,
       "description": "Command envelope normalization and registry validation."
     },
     {
@@ -110,7 +110,7 @@
     },
     {
       "package": "github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness",
-      "floor": 98.4,
+      "floor": 98.7,
       "description": "Session-start readiness invariants from aggregate state."
     },
     {
