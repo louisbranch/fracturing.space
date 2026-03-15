@@ -1,0 +1,337 @@
+package daggerheart
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+)
+
+func TestSessionActionRoll_Success(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   testTimestamp,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-success",
+				EntityType:  "roll",
+				EntityID:    "req-roll-success",
+				PayloadJSON: []byte(`{"request_id":"req-roll-success"}`),
+			}),
+		},
+	}}
+	svc.stores.Write.Executor = serviceDomain
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-success")
+	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+	if resp.Rng == nil {
+		t.Fatal("expected rng in response")
+	}
+}
+
+func TestSessionActionRoll_UsesDomainEngine(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := testTimestamp
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "roll",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
+	svc.stores.Write.Executor = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
+	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+	if domain.calls != 1 {
+		t.Fatalf("expected domain to be called once, got %d", domain.calls)
+	}
+	if len(domain.commands) != 1 {
+		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("action.roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "action.roll.resolve")
+	}
+	if got := len(eventStore.Events["camp-1"]); got != 1 {
+		t.Fatalf("expected 1 event, got %d", got)
+	}
+	if eventStore.Events["camp-1"][0].Type != event.Type("action.roll_resolved") {
+		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("action.roll_resolved"))
+	}
+}
+
+func TestSessionActionRoll_UsesDomainEngineForHopeSpend(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := testTimestamp
+
+	hopeBefore := 2
+	hopeAfter := 1
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID: "char-1",
+		Hope:        &hopeAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+
+	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("sys.daggerheart.hope.spend"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("sys.daggerheart.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-1",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-1",
+				EntityType:  "roll",
+				EntityID:    "req-roll-1",
+				PayloadJSON: []byte(`{"request_id":"req-roll-1"}`),
+			}),
+		},
+	}}
+	svc.stores.Write.Executor = domain
+
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-1")
+	_, err = svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+		Modifiers: []*pb.ActionRollModifier{
+			{Value: 1, Source: "experience"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if domain.calls != 2 {
+		t.Fatalf("expected domain to be called two times, got %d", domain.calls)
+	}
+	if len(domain.commands) != 2 {
+		t.Fatalf("expected 2 domain commands, got %d", len(domain.commands))
+	}
+	if domain.commands[0].Type != command.Type("sys.daggerheart.hope.spend") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.hope.spend")
+	}
+	if domain.commands[1].Type != command.Type("action.roll.resolve") {
+		t.Fatalf("command type = %s, want %s", domain.commands[1].Type, "action.roll.resolve")
+	}
+	if domain.commands[0].SystemID != daggerheart.SystemID {
+		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
+	}
+	if domain.commands[0].SystemVersion != daggerheart.SystemVersion {
+		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
+	}
+	var spend daggerheart.HopeSpendPayload
+	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &spend); err != nil {
+		t.Fatalf("decode hope spend command payload: %v", err)
+	}
+	if spend.CharacterID != "char-1" {
+		t.Fatalf("hope spend character id = %s, want %s", spend.CharacterID, "char-1")
+	}
+	if spend.Amount != 1 {
+		t.Fatalf("hope spend amount = %d, want %d", spend.Amount, 1)
+	}
+	if spend.Before != hopeBefore {
+		t.Fatalf("hope spend before = %d, want %d", spend.Before, hopeBefore)
+	}
+	if spend.After != hopeAfter {
+		t.Fatalf("hope spend after = %d, want %d", spend.After, hopeAfter)
+	}
+	if spend.Source != "experience" {
+		t.Fatalf("hope spend source = %s, want %s", spend.Source, "experience")
+	}
+	var foundPatchEvent bool
+	for _, evt := range eventStore.Events["camp-1"] {
+		if evt.Type == event.Type("sys.daggerheart.character_state_patched") {
+			foundPatchEvent = true
+			break
+		}
+	}
+	if !foundPatchEvent {
+		t.Fatal("expected character state patched event")
+	}
+	updated, err := svc.stores.Daggerheart.GetDaggerheartCharacterState(ctx, "camp-1", "char-1")
+	if err != nil {
+		t.Fatalf("load updated state: %v", err)
+	}
+	if updated.Hope != hopeAfter {
+		t.Fatalf("state hope = %d, want %d", updated.Hope, hopeAfter)
+	}
+}
+
+func TestSessionActionRoll_WithModifiers(t *testing.T) {
+	svc := newActionTestService()
+	eventStore := svc.stores.Event.(*fakeEventStore)
+	now := testTimestamp
+	hopeAfter := 1
+	patchPayload := daggerheart.CharacterStatePatchedPayload{
+		CharacterID: "char-1",
+		Hope:        &hopeAfter,
+	}
+	patchJSON, err := json.Marshal(patchPayload)
+	if err != nil {
+		t.Fatalf("encode patch payload: %v", err)
+	}
+	rollPayloadJSON, err := json.Marshal(map[string]string{"request_id": "req-roll-modifiers"})
+	if err != nil {
+		t.Fatalf("encode roll payload: %v", err)
+	}
+	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
+		command.Type("sys.daggerheart.hope.spend"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-modifiers",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("sys.daggerheart.character_state.patch"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.character_state_patched"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-roll-modifiers",
+				EntityType:    "character",
+				EntityID:      "char-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   patchJSON,
+			}),
+		},
+		command.Type("action.roll.resolve"): {
+			Decision: command.Accept(event.Event{
+				CampaignID:  "camp-1",
+				Type:        event.Type("action.roll_resolved"),
+				Timestamp:   now,
+				ActorType:   event.ActorTypeSystem,
+				SessionID:   "sess-1",
+				RequestID:   "req-roll-modifiers",
+				EntityType:  "roll",
+				EntityID:    "req-roll-modifiers",
+				PayloadJSON: rollPayloadJSON,
+			}),
+		},
+	}}
+	svc.stores.Write.Executor = serviceDomain
+	ctx := grpcmeta.WithRequestID(context.Background(), "req-roll-modifiers")
+	resp, err := svc.SessionActionRoll(ctx, &pb.SessionActionRollRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		Trait:       "agility",
+		Difficulty:  10,
+		Modifiers: []*pb.ActionRollModifier{
+			{Value: 2, Source: "experience"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("SessionActionRoll returned error: %v", err)
+	}
+	if resp.RollSeq == 0 {
+		t.Fatal("expected non-zero roll seq")
+	}
+	var foundPatchEvent bool
+	for _, evt := range eventStore.Events["camp-1"] {
+		if evt.Type == event.Type("sys.daggerheart.character_state_patched") {
+			foundPatchEvent = true
+			break
+		}
+	}
+	if !foundPatchEvent {
+		t.Fatal("expected character state patched event")
+	}
+	updated, err := svc.stores.Daggerheart.GetDaggerheartCharacterState(ctx, "camp-1", "char-1")
+	if err != nil {
+		t.Fatalf("load updated state: %v", err)
+	}
+	if updated.Hope != hopeAfter {
+		t.Fatalf("state hope = %d, want %d", updated.Hope, hopeAfter)
+	}
+}
