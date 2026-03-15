@@ -19,10 +19,54 @@ type ProjectionApplyOutboxShadowProcessor interface {
 	ProcessProjectionApplyOutboxShadow(ctx context.Context, now time.Time, limit int) (int, error)
 }
 
+// ProjectionApplyOutboxSummary reports queue depth and the oldest retry-eligible row.
+type ProjectionApplyOutboxSummary struct {
+	PendingCount            int
+	ProcessingCount         int
+	FailedCount             int
+	DeadCount               int
+	OldestPendingCampaignID string
+	OldestPendingSeq        uint64
+	OldestPendingAt         time.Time
+}
+
+// ProjectionApplyOutboxEntry describes one outbox row for inspection tooling.
+type ProjectionApplyOutboxEntry struct {
+	CampaignID    string
+	Seq           uint64
+	EventType     event.Type
+	Status        string
+	AttemptCount  int
+	NextAttemptAt time.Time
+	LastError     string
+	UpdatedAt     time.Time
+}
+
+// ProjectionApplyOutboxInspector reports queue state for maintenance tooling.
+type ProjectionApplyOutboxInspector interface {
+	GetProjectionApplyOutboxSummary(context.Context) (ProjectionApplyOutboxSummary, error)
+	ListProjectionApplyOutboxRows(context.Context, string, int) ([]ProjectionApplyOutboxEntry, error)
+}
+
+// ProjectionApplyOutboxRequeuer transitions dead queue rows back to pending.
+type ProjectionApplyOutboxRequeuer interface {
+	RequeueProjectionApplyOutboxRow(context.Context, string, uint64, time.Time) (bool, error)
+	RequeueProjectionApplyOutboxDeadRows(context.Context, int, time.Time) (int, error)
+}
+
+// ProjectionApplyOutboxStore groups worker, inspection, and requeue seams for
+// the event-journal-backed projection apply queue.
+type ProjectionApplyOutboxStore interface {
+	ProjectionApplyOutboxProcessor
+	ProjectionApplyOutboxShadowProcessor
+	ProjectionApplyOutboxInspector
+	ProjectionApplyOutboxRequeuer
+}
+
 // ProjectionApplyTxStore is the transaction-scoped projection contract needed
 // by exactly-once projection apply callbacks. Core projection stores only —
-// system-specific stores are accessed via type assertion on the concrete
-// implementation (e.g. DaggerheartStore) during adapter rebinding.
+// system-specific stores are extracted from explicit provider seams on the
+// concrete implementation during adapter rebinding.
 type ProjectionApplyTxStore interface {
 	CampaignStore
 	CharacterStore

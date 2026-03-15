@@ -9,7 +9,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -117,7 +117,7 @@ func TestCampaignHasActiveSession_LoadError(t *testing.T) {
 func TestCampaignReadinessAggregateState_DaggerheartStoreRequired(t *testing.T) {
 	_, err := campaignReadinessAggregateState(
 		context.Background(),
-		Stores{},
+		nil,
 		storage.CampaignRecord{
 			ID:     "c1",
 			Status: campaign.StatusActive,
@@ -136,7 +136,7 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileLoadError(t *testing.
 
 	_, err := campaignReadinessAggregateState(
 		context.Background(),
-		Stores{SystemStores: systemStoresWithDaggerheart(daggerheartStore)},
+		daggerheartStore,
 		storage.CampaignRecord{
 			ID:     "c1",
 			Status: campaign.StatusActive,
@@ -151,7 +151,7 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileLoadError(t *testing.
 
 func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) {
 	daggerheartStore := newFakeDaggerheartStore()
-	daggerheartStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	daggerheartStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"char-1": {
 			CampaignID:  "c1",
 			CharacterID: "char-1",
@@ -161,7 +161,7 @@ func TestCampaignReadinessAggregateState_DaggerheartProfileMapped(t *testing.T) 
 
 	state, err := campaignReadinessAggregateState(
 		context.Background(),
-		Stores{SystemStores: systemStoresWithDaggerheart(daggerheartStore)},
+		daggerheartStore,
 		storage.CampaignRecord{
 			ID:     "c1",
 			Status: campaign.StatusActive,
@@ -325,6 +325,6 @@ func (s *readinessCharacterPagingStore) ListCharacters(_ context.Context, _ stri
 	return storage.CharacterPage{}, nil
 }
 
-func systemStoresWithDaggerheart(store storage.DaggerheartStore) systemmanifest.ProjectionStores {
-	return systemmanifest.ProjectionStores{Daggerheart: store}
+func systemStoresWithDaggerheart(store projectionstore.Store) SystemStores {
+	return SystemStores{Daggerheart: store}
 }

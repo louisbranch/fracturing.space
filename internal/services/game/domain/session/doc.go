@@ -11,7 +11,7 @@
 // rules defined here.
 //
 // The package holds:
-//   - command deciders that translate session commands into events,
+//   - workflow-local command deciders that translate lifecycle, gate, and spotlight commands into events,
 //   - fold logic for replaying session history,
 //   - state constraints used by the command gate,
 //   - and workflow normalization/validation for active session gates.

@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"google.golang.org/grpc/codes"
 )
 
@@ -40,7 +41,7 @@ func TestApplyReactionOutcome_MissingSessionId(t *testing.T) {
 func TestApplyReactionOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
-	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyReactionOutcome(ctx, &pb.DaggerheartApplyReactionOutcomeRequest{
 		SessionId: "sess-1",
 	})

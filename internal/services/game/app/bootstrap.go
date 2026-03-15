@@ -6,30 +6,17 @@ import (
 	"log"
 	"net"
 	"strings"
-	"time"
 
-	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	statusv1 "github.com/louisbranch/fracturing.space/api/gen/go/status/v1"
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/interceptors"
-	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/health"
 )
 
 // serverBootstrap configures each startup phase for the game server.
@@ -49,18 +36,14 @@ type serverBootstrap struct {
 
 // serverBootstrapConfig defines per-phase seams and is intentionally internal.
 type serverBootstrapConfig struct {
-	loadEnv                         func() serverEnv
-	listen                          func(network, address string) (net.Listener, error)
-	openStorageBundle               storageBundleOpener
-	configureDomain                 func(serverEnv, *gamegrpc.Stores, engine.Registries) error
-	buildSystemRegistry             func() (*bridge.MetadataRegistry, error)
-	validateSystemRegistration      func([]module.Module, *bridge.MetadataRegistry, *bridge.AdapterRegistry) error
-	newManagedConn                  func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error)
-	newGRPCServer                   func(*storageBundle, serverEnv) *grpc.Server
-	newHealthServer                 func() *health.Server
-	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
-	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
-	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error)
+	loadEnv                     func() serverEnv
+	listen                      func(network, address string) (net.Listener, error)
+	openStorageBundle           storageBundleOpener
+	configureDomain             func(serverEnv, *gamegrpc.Stores, engine.Registries) error
+	systemsBootstrapper         systemsBootstrapper
+	dependencyDialer            dependencyDialer
+	transportBootstrapper       transportBootstrapper
+	projectionRuntimeConfigurer projectionRuntimeConfigurer
 }
 
 // storageBundleOpener creates startup storage bundles for the server.
@@ -76,6 +59,143 @@ type storageBundleOpenerFunc func(context.Context, serverEnv, *event.Registry) (
 // Open satisfies storageBundleOpener.
 func (openFn storageBundleOpenerFunc) Open(ctx context.Context, env serverEnv, eventRegistry *event.Registry) (*storageBundle, error) {
 	return openFn(ctx, env, eventRegistry)
+}
+
+// dependencyDialer owns startup-time outbound service connection wiring.
+type dependencyDialer interface {
+	Dial(context.Context, serverEnv, *platformstatus.Reporter) (dependencyConns, error)
+}
+
+type managedConnDependencyDialer struct {
+	newManagedConn func(context.Context, platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error)
+}
+
+func (d managedConnDependencyDialer) Dial(
+	ctx context.Context,
+	srvEnv serverEnv,
+	reporter *platformstatus.Reporter,
+) (dependencyConns, error) {
+	authMc, err := d.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "auth",
+		Addr: srvEnv.AuthAddr,
+		Mode: platformgrpc.ModeRequired,
+		Logf: startupLogf,
+	})
+	if err != nil {
+		return dependencyConns{}, fmt.Errorf("auth: %w", err)
+	}
+
+	socialMc, err := d.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "social",
+		Addr:             srvEnv.SocialAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             startupLogf,
+		StatusReporter:   reporter,
+		StatusCapability: "game.social.integration",
+	})
+	if err != nil {
+		authMc.Close()
+		return dependencyConns{}, fmt.Errorf("social: %w", err)
+	}
+
+	aiMc, err := d.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name:             "ai",
+		Addr:             srvEnv.AIAddr,
+		Mode:             platformgrpc.ModeOptional,
+		Logf:             startupLogf,
+		StatusReporter:   reporter,
+		StatusCapability: "game.ai.integration",
+	})
+	if err != nil {
+		authMc.Close()
+		socialMc.Close()
+		return dependencyConns{}, fmt.Errorf("ai: %w", err)
+	}
+
+	statusAddr := srvEnv.StatusAddr
+	if strings.TrimSpace(statusAddr) == "" {
+		statusAddr = serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceStatus)
+	}
+	statusMc, err := d.newManagedConn(ctx, platformgrpc.ManagedConnConfig{
+		Name: "status",
+		Addr: statusAddr,
+		Mode: platformgrpc.ModeOptional,
+		Logf: startupLogf,
+	})
+	if err != nil {
+		authMc.Close()
+		socialMc.Close()
+		aiMc.Close()
+		return dependencyConns{}, fmt.Errorf("status: %w", err)
+	}
+
+	bindCtx, bindCancel := context.WithCancel(ctx)
+	bindDone := make(chan struct{})
+	go func() {
+		defer close(bindDone)
+		if err := statusMc.WaitReady(bindCtx); err != nil {
+			startupLogf("status reporter: failed to bind client: %v", err)
+			return
+		}
+		reporter.SetClient(newStatusServiceClient(statusMc.Conn()))
+	}()
+
+	return dependencyConns{
+		auth:             authMc,
+		social:           socialMc,
+		ai:               aiMc,
+		status:           statusMc,
+		statusBindDone:   bindDone,
+		statusBindCancel: bindCancel,
+	}, nil
+}
+
+// projectionRuntimeConfigurer owns startup-time projection worker and
+// inline-apply runtime configuration.
+type projectionRuntimeConfigurer interface {
+	Configure(serverEnv, *gamegrpc.Stores, projectionApplyStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
+}
+
+type defaultProjectionRuntimeConfigurer struct {
+	resolveProjectionApplyModes     func(serverEnv) (bool, bool, string, error)
+	buildProjectionRegistries       func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error)
+	buildProjectionApplyOutboxApply func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error)
+}
+
+func (c defaultProjectionRuntimeConfigurer) Configure(
+	srvEnv serverEnv,
+	stores *gamegrpc.Stores,
+	projectionStore projectionApplyStore,
+	registries engine.Registries,
+	adapters *bridge.AdapterRegistry,
+) (projectionRuntimeState, error) {
+	enableApplyWorker, enableShadowWorker, projectionApplyMode, err := c.resolveProjectionApplyModes(srvEnv)
+	if err != nil {
+		return projectionRuntimeState{}, err
+	}
+	if stores != nil && stores.Write.Runtime != nil {
+		stores.Write.Runtime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
+	}
+	log.Printf("projection apply mode = %s", projectionApplyMode)
+
+	projectionRegistries, err := c.buildProjectionRegistries(registries, adapters)
+	if err != nil {
+		return projectionRuntimeState{}, err
+	}
+	if stores != nil && stores.Write.Runtime != nil {
+		stores.Write.Runtime.SetIntentFilter(projectionRegistries)
+	}
+
+	applyOutbox, err := c.buildProjectionApplyOutboxApply(projectionStore, projectionRegistries)
+	if err != nil {
+		return projectionRuntimeState{}, fmt.Errorf("build projection apply outbox: %w", err)
+	}
+
+	return projectionRuntimeState{
+		enableApplyWorker:  enableApplyWorker,
+		enableShadowWorker: enableShadowWorker,
+		applyOutbox:        applyOutbox,
+	}, nil
 }
 
 func newServerBootstrap() *serverBootstrap {
@@ -102,54 +222,31 @@ func normalizeServerBootstrapConfig(cfg serverBootstrapConfig) serverBootstrapCo
 	if cfg.configureDomain == nil {
 		cfg.configureDomain = configureDomain
 	}
-	if cfg.buildSystemRegistry == nil {
-		cfg.buildSystemRegistry = buildSystemRegistry
-	}
-	if cfg.validateSystemRegistration == nil {
-		cfg.validateSystemRegistration = validateSystemRegistrationParity
-	}
-	if cfg.newManagedConn == nil {
-		cfg.newManagedConn = platformgrpc.NewManagedConn
-	}
-	if cfg.newGRPCServer == nil {
-		cfg.newGRPCServer = func(bundle *storageBundle, srvEnv serverEnv) *grpc.Server {
-			internalIdentity := interceptors.InternalServiceIdentityConfig{
-				MethodPrefixes: []string{
-					"/game.v1.CampaignAIService/",
-					campaignv1.EventService_AppendEvent_FullMethodName,
-					"/game.v1.IntegrationService/",
-				},
-				AllowedServiceIDs: parseInternalServiceAllowlist(srvEnv.InternalServiceAllowlist),
-			}
-			return grpc.NewServer(
-				grpc.StatsHandler(otelgrpc.NewServerHandler()),
-				grpc.ChainUnaryInterceptor(
-					grpcmeta.UnaryServerInterceptor(nil),
-					interceptors.InternalServiceIdentityUnaryInterceptor(internalIdentity),
-					interceptors.AuditInterceptor(bundle.events),
-					interceptors.SessionLockInterceptor(bundle.projections),
-					interceptors.ErrorConversionUnaryInterceptor(),
-				),
-				grpc.ChainStreamInterceptor(
-					grpcmeta.StreamServerInterceptor(nil),
-					interceptors.InternalServiceIdentityStreamInterceptor(internalIdentity),
-					interceptors.StreamAuditInterceptor(bundle.events),
-					interceptors.ErrorConversionStreamInterceptor(),
-				),
-			)
+	if cfg.systemsBootstrapper == nil {
+		cfg.systemsBootstrapper = defaultSystemsBootstrapper{
+			buildSystemRegistry:        buildSystemRegistry,
+			validateSystemRegistration: validateSystemRegistrationParity,
+			validateSessionLockPolicy:  validateSessionLockPolicy,
+			repairProjectionGaps:       repairProjectionGaps,
 		}
 	}
-	if cfg.newHealthServer == nil {
-		cfg.newHealthServer = health.NewServer
+	if cfg.dependencyDialer == nil {
+		cfg.dependencyDialer = managedConnDependencyDialer{newManagedConn: platformgrpc.NewManagedConn}
 	}
-	if cfg.resolveProjectionApplyModes == nil {
-		cfg.resolveProjectionApplyModes = resolveProjectionApplyOutboxModes
+	if cfg.transportBootstrapper == nil {
+		cfg.transportBootstrapper = defaultTransportBootstrapper{
+			newGRPCServer:            newDefaultGRPCServer,
+			newHealthServer:          newDefaultHealthServer,
+			loadAISessionGrantConfig: loadAISessionGrantConfig,
+			registerServices:         transportServiceRegistrarFunc(registerServices),
+		}
 	}
-	if cfg.buildProjectionRegistries == nil {
-		cfg.buildProjectionRegistries = buildProjectionRegistries
-	}
-	if cfg.buildProjectionApplyOutboxApply == nil {
-		cfg.buildProjectionApplyOutboxApply = buildProjectionApplyOutboxApply
+	if cfg.projectionRuntimeConfigurer == nil {
+		cfg.projectionRuntimeConfigurer = defaultProjectionRuntimeConfigurer{
+			resolveProjectionApplyModes:     resolveProjectionApplyOutboxModes,
+			buildProjectionRegistries:       buildProjectionRegistries,
+			buildProjectionApplyOutboxApply: buildProjectionApplyOutboxApply,
+		}
 	}
 	return cfg
 }
@@ -186,7 +283,7 @@ func (b *serverBootstrap) configureStoresAndApplier(
 	writeRuntime := gamegrpc.NewWriteRuntime()
 	stores := gamegrpc.NewStoresFromProjection(gamegrpc.StoresFromProjectionConfig{
 		ProjectionStore: bundle.projections,
-		SystemStores:    systemmanifest.ExtractProjectionStores(bundle.projections),
+		SystemStores:    gamegrpc.SystemStores{Daggerheart: bundle.projections.DaggerheartProjectionStore()},
 		EventStore:      bundle.events,
 		ContentStore:    bundle.content,
 		WriteRuntime:    writeRuntime,
@@ -222,132 +319,7 @@ type dependencyConns struct {
 	statusBindCancel context.CancelFunc
 }
 
-func (b *serverBootstrap) dialDependencies(
-	ctx context.Context,
-	srvEnv serverEnv,
-	reporter *platformstatus.Reporter,
-) (dependencyConns, error) {
-	logf := func(format string, args ...any) {
-		log.Printf(format, args...)
-	}
-	newConn := b.config.newManagedConn
-
-	authMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
-		Name: "auth",
-		Addr: srvEnv.AuthAddr,
-		Mode: platformgrpc.ModeRequired,
-		Logf: logf,
-	})
-	if err != nil {
-		return dependencyConns{}, fmt.Errorf("auth: %w", err)
-	}
-
-	socialMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
-		Name:             "social",
-		Addr:             srvEnv.SocialAddr,
-		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
-		StatusReporter:   reporter,
-		StatusCapability: "game.social.integration",
-	})
-	if err != nil {
-		authMc.Close()
-		return dependencyConns{}, fmt.Errorf("social: %w", err)
-	}
-
-	aiMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
-		Name:             "ai",
-		Addr:             srvEnv.AIAddr,
-		Mode:             platformgrpc.ModeOptional,
-		Logf:             logf,
-		StatusReporter:   reporter,
-		StatusCapability: "game.ai.integration",
-	})
-	if err != nil {
-		authMc.Close()
-		socialMc.Close()
-		return dependencyConns{}, fmt.Errorf("ai: %w", err)
-	}
-
-	// Status service — optional, late-binds reporter when ready.
-	statusAddr := srvEnv.StatusAddr
-	if strings.TrimSpace(statusAddr) == "" {
-		statusAddr = serviceaddr.DefaultGRPCAddr(serviceaddr.ServiceStatus)
-	}
-	statusMc, err := newConn(ctx, platformgrpc.ManagedConnConfig{
-		Name: "status",
-		Addr: statusAddr,
-		Mode: platformgrpc.ModeOptional,
-		Logf: logf,
-	})
-	if err != nil {
-		authMc.Close()
-		socialMc.Close()
-		aiMc.Close()
-		return dependencyConns{}, fmt.Errorf("status: %w", err)
-	}
-
-	// Late-bind the reporter's client when the status service becomes reachable.
-	// The done channel is closed when the goroutine exits so the shutdown path
-	// can wait for it before tearing down statusMc and reporter.
-	bindCtx, bindCancel := context.WithCancel(ctx)
-	bindDone := make(chan struct{})
-	go func() {
-		defer close(bindDone)
-		if err := statusMc.WaitReady(bindCtx); err != nil {
-			log.Printf("status reporter: failed to bind client: %v", err)
-			return
-		}
-		reporter.SetClient(statusv1.NewStatusServiceClient(statusMc.Conn()))
-	}()
-
-	return dependencyConns{
-		auth:             authMc,
-		social:           socialMc,
-		ai:               aiMc,
-		status:           statusMc,
-		statusBindDone:   bindDone,
-		statusBindCancel: bindCancel,
-	}, nil
-}
-
-func (b *serverBootstrap) configureProjectionRuntime(
-	srvEnv serverEnv,
-	stores *gamegrpc.Stores,
-	projectionStore projectionApplyStore,
-	registries engine.Registries,
-	adapters *bridge.AdapterRegistry,
-) (projectionRuntimeState, error) {
-	enableApplyWorker, enableShadowWorker, projectionApplyMode, err := b.config.resolveProjectionApplyModes(srvEnv)
-	if err != nil {
-		return projectionRuntimeState{}, err
-	}
-	if stores != nil && stores.Write.Runtime != nil {
-		stores.Write.Runtime.SetInlineApplyEnabled(projectionApplyMode != projectionApplyModeOutboxApplyOnly)
-	}
-	log.Printf("projection apply mode = %s", projectionApplyMode)
-
-	projectionRegistries, err := b.config.buildProjectionRegistries(registries, adapters)
-	if err != nil {
-		return projectionRuntimeState{}, err
-	}
-	if stores != nil && stores.Write.Runtime != nil {
-		stores.Write.Runtime.SetIntentFilter(projectionRegistries)
-	}
-
-	applyOutbox, err := b.config.buildProjectionApplyOutboxApply(projectionStore, projectionRegistries)
-	if err != nil {
-		return projectionRuntimeState{}, fmt.Errorf("build projection apply outbox: %w", err)
-	}
-
-	return projectionRuntimeState{
-		enableApplyWorker:  enableApplyWorker,
-		enableShadowWorker: enableShadowWorker,
-		applyOutbox:        applyOutbox,
-	}, nil
-}
-
-func nilCatalogReadinessStore(bundle *storageBundle) storage.DaggerheartCatalogReadinessStore {
+func nilCatalogReadinessStore(bundle *storageBundle) contentstore.DaggerheartCatalogReadinessStore {
 	if bundle == nil {
 		return nil
 	}
@@ -392,18 +364,10 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	}
 	stores := storeState.stores
 
-	systemRegistry, err := b.config.buildSystemRegistry()
+	systemState, err := b.config.systemsBootstrapper.Bootstrap(startupCtx, bundle, registries, storeState.applier)
 	if err != nil {
-		return nil, wrapStartupError(startupPhaseSystems, "build system registry", err)
+		return nil, wrapStartupError(startupPhaseSystems, "bootstrap systems phase", err)
 	}
-
-	if err := b.config.validateSystemRegistration(registeredSystemModules(), systemRegistry, storeState.applier.Adapters); err != nil {
-		return nil, wrapStartupError(startupPhaseSystems, "validate system parity", err)
-	}
-	if err := interceptors.ValidateSessionLockPolicyCoverage(interceptors.BlockedCommandNamespaces()); err != nil {
-		return nil, wrapStartupError(startupPhaseSystems, "validate session lock policy", err)
-	}
-	repairProjectionGaps(startupCtx, bundle, storeState.applier)
 
 	// Status reporter — starts with nil client; bound later when statusMc is ready.
 	reporter := platformstatus.NewReporter("game", nil)
@@ -412,7 +376,7 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	catalogState := evaluateCatalogCapabilityState(startupCtx, nilCatalogReadinessStore(bundle))
 	applyCatalogCapabilityState(reporter, catalogState)
 
-	deps, err := b.dialDependencies(startupCtx, srvEnv, reporter)
+	deps, err := b.config.dependencyDialer.Dial(startupCtx, srvEnv, reporter)
 	if err != nil {
 		return nil, wrapStartupError(startupPhaseDependencies, "dial dependencies", err)
 	}
@@ -426,26 +390,19 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	// Build gRPC clients from managed connections — conn is always non-nil.
 	stores.Social = socialv1.NewSocialServiceClient(deps.social.Conn())
 
-	grpcServer := b.config.newGRPCServer(bundle, srvEnv)
-	healthServer := b.config.newHealthServer()
-	sessionGrantConfig, err := aisessiongrant.LoadConfigFromEnv(time.Now)
-	if err != nil {
-		return nil, wrapStartupError(startupPhaseDependencies, "load ai session grant config", err)
-	}
-	if err := b.registerServices(
-		grpcServer,
-		healthServer,
-		stores,
+	transportState, err := b.config.transportBootstrapper.Bootstrap(
 		bundle,
-		authv1.NewAuthServiceClient(deps.auth.Conn()),
-		aiv1.NewAgentServiceClient(deps.ai.Conn()),
-		systemRegistry,
-		sessionGrantConfig,
-	); err != nil {
-		return nil, wrapStartupError(startupPhaseTransport, "register gRPC services", err)
+		srvEnv,
+		stores,
+		newAuthServiceClient(deps.auth.Conn()),
+		newAIAgentServiceClient(deps.ai.Conn()),
+		systemState.systemRegistry,
+	)
+	if err != nil {
+		return nil, wrapStartupError(startupPhaseTransport, "bootstrap transport phase", err)
 	}
 
-	projectionRuntime, err := b.configureProjectionRuntime(
+	projectionRuntime, err := b.config.projectionRuntimeConfigurer.Configure(
 		srvEnv,
 		&stores,
 		bundle.projections,
@@ -458,8 +415,8 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 
 	server = &Server{
 		listener:                                 listener,
-		grpcServer:                               grpcServer,
-		health:                                   healthServer,
+		grpcServer:                               transportState.grpcServer,
+		health:                                   transportState.healthServer,
 		stores:                                   bundle,
 		authMc:                                   deps.auth,
 		socialMc:                                 deps.social,
@@ -475,17 +432,4 @@ func (b *serverBootstrap) NewWithAddr(ctx context.Context, addr string) (server 
 	}
 	rollback.release()
 	return server, nil
-}
-
-func parseInternalServiceAllowlist(raw string) map[string]struct{} {
-	values := strings.Split(strings.TrimSpace(raw), ",")
-	allowlist := make(map[string]struct{}, len(values))
-	for _, value := range values {
-		serviceID := strings.ToLower(strings.TrimSpace(value))
-		if serviceID == "" {
-			continue
-		}
-		allowlist[serviceID] = struct{}{}
-	}
-	return allowlist
 }

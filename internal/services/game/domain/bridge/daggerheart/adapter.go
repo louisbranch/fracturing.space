@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -14,12 +15,12 @@ import (
 
 // Adapter applies Daggerheart-specific events to system projections.
 type Adapter struct {
-	store  storage.DaggerheartStore
+	store  projectionstore.Store
 	router *module.AdapterRouter
 }
 
 // NewAdapter creates a Daggerheart adapter with all handlers registered.
-func NewAdapter(store storage.DaggerheartStore) *Adapter {
+func NewAdapter(store projectionstore.Store) *Adapter {
 	a := &Adapter{store: store}
 	a.router = a.buildRouter()
 	return a
@@ -227,7 +228,7 @@ func (a *Adapter) handleGMFearChanged(ctx context.Context, evt event.Event, payl
 }
 
 func (a *Adapter) handleCountdownCreated(ctx context.Context, evt event.Event, payload CountdownCreatedPayload) error {
-	return a.store.PutDaggerheartCountdown(ctx, storage.DaggerheartCountdown{
+	return a.store.PutDaggerheartCountdown(ctx, projectionstore.DaggerheartCountdown{
 		CampaignID:        string(evt.CampaignID),
 		CountdownID:       payload.CountdownID.String(),
 		Name:              payload.Name,
@@ -263,7 +264,7 @@ func (a *Adapter) handleAdversaryCreated(ctx context.Context, evt event.Event, p
 		return err
 	}
 	createdAt := evt.Timestamp.UTC()
-	return a.store.PutDaggerheartAdversary(ctx, storage.DaggerheartAdversary{
+	return a.store.PutDaggerheartAdversary(ctx, projectionstore.DaggerheartAdversary{
 		CampaignID:  string(evt.CampaignID),
 		AdversaryID: strings.TrimSpace(payload.AdversaryID.String()),
 		Name:        strings.TrimSpace(payload.Name),
@@ -293,7 +294,7 @@ func (a *Adapter) handleAdversaryUpdated(ctx context.Context, evt event.Event, p
 		return err
 	}
 	updatedAt := evt.Timestamp.UTC()
-	return a.store.PutDaggerheartAdversary(ctx, storage.DaggerheartAdversary{
+	return a.store.PutDaggerheartAdversary(ctx, projectionstore.DaggerheartAdversary{
 		CampaignID:  string(evt.CampaignID),
 		AdversaryID: adversaryID,
 		Name:        strings.TrimSpace(payload.Name),
@@ -404,7 +405,7 @@ func appendUnique(slice []string, value string) []string {
 	return append(slice, value)
 }
 
-func (a *Adapter) characterArmorMax(ctx context.Context, state storage.DaggerheartCharacterState) (int, error) {
+func (a *Adapter) characterArmorMax(ctx context.Context, state projectionstore.DaggerheartCharacterState) (int, error) {
 	armorMax := projection.FallbackArmorMaxFromState(state)
 	if strings.TrimSpace(state.CampaignID) == "" || strings.TrimSpace(state.CharacterID) == "" {
 		return armorMax, nil

@@ -3,7 +3,7 @@ package projection
 import (
 	"fmt"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 // ValidateAdversaryStats validates read-model adversary stat ranges.
@@ -36,7 +36,7 @@ func ValidateAdversaryStats(hp, hpMax, stress, stressMax, evasion, major, severe
 }
 
 // ApplyAdversaryConditionPatch replaces adversary conditions.
-func ApplyAdversaryConditionPatch(adversary storage.DaggerheartAdversary, conditions []string) storage.DaggerheartAdversary {
+func ApplyAdversaryConditionPatch(adversary projectionstore.DaggerheartAdversary, conditions []string) projectionstore.DaggerheartAdversary {
 	next := adversary
 	next.Conditions = append([]string(nil), conditions...)
 	return next
@@ -45,10 +45,10 @@ func ApplyAdversaryConditionPatch(adversary storage.DaggerheartAdversary, condit
 // ApplyAdversaryDamagePatch merges optional hp/armor updates and validates the
 // resulting state before persistence.
 func ApplyAdversaryDamagePatch(
-	adversary storage.DaggerheartAdversary,
+	adversary projectionstore.DaggerheartAdversary,
 	hpAfter *int,
 	armorAfter *int,
-) (storage.DaggerheartAdversary, error) {
+) (projectionstore.DaggerheartAdversary, error) {
 	next := adversary
 	if hpAfter != nil {
 		next.HP = *hpAfter
@@ -66,7 +66,7 @@ func ApplyAdversaryDamagePatch(
 		next.Severe,
 		next.Armor,
 	); err != nil {
-		return storage.DaggerheartAdversary{}, err
+		return projectionstore.DaggerheartAdversary{}, err
 	}
 	return next, nil
 }

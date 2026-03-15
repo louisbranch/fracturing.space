@@ -6,12 +6,12 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/reducer"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 // FallbackArmorMaxFromState derives a conservative armor cap from persisted
 // state when profile data is unavailable.
-func FallbackArmorMaxFromState(state storage.DaggerheartCharacterState) int {
+func FallbackArmorMaxFromState(state projectionstore.DaggerheartCharacterState) int {
 	temporaryArmor := 0
 	for _, bucket := range state.TemporaryArmor {
 		if bucket.Amount > 0 {
@@ -27,7 +27,7 @@ func FallbackArmorMaxFromState(state storage.DaggerheartCharacterState) int {
 
 // CharacterStateFromStorage converts persisted read-model state into
 // mechanics state for deterministic projection transforms.
-func CharacterStateFromStorage(state storage.DaggerheartCharacterState, armorMax int) mechanics.CharacterState {
+func CharacterStateFromStorage(state projectionstore.DaggerheartCharacterState, armorMax int) mechanics.CharacterState {
 	domainState := mechanics.NewCharacterState(mechanics.CharacterStateConfig{
 		CampaignID:  state.CampaignID,
 		CharacterID: state.CharacterID,
@@ -59,20 +59,20 @@ func CharacterStateFromStorage(state storage.DaggerheartCharacterState, armorMax
 
 // StorageCharacterStateFromDomain converts mechanics state back to persisted
 // read-model form.
-func StorageCharacterStateFromDomain(state *mechanics.CharacterState) storage.DaggerheartCharacterState {
+func StorageCharacterStateFromDomain(state *mechanics.CharacterState) projectionstore.DaggerheartCharacterState {
 	if state == nil {
-		return storage.DaggerheartCharacterState{}
+		return projectionstore.DaggerheartCharacterState{}
 	}
-	temporaryArmor := make([]storage.DaggerheartTemporaryArmor, 0, len(state.ArmorBonus))
+	temporaryArmor := make([]projectionstore.DaggerheartTemporaryArmor, 0, len(state.ArmorBonus))
 	for _, bucket := range state.ArmorBonus {
-		temporaryArmor = append(temporaryArmor, storage.DaggerheartTemporaryArmor{
+		temporaryArmor = append(temporaryArmor, projectionstore.DaggerheartTemporaryArmor{
 			Source:   strings.TrimSpace(bucket.Source),
 			Duration: strings.TrimSpace(bucket.Duration),
 			SourceID: strings.TrimSpace(bucket.SourceID),
 			Amount:   bucket.Amount,
 		})
 	}
-	return storage.DaggerheartCharacterState{
+	return projectionstore.DaggerheartCharacterState{
 		CampaignID:     strings.TrimSpace(state.CampaignID),
 		CharacterID:    strings.TrimSpace(state.CharacterID),
 		Hp:             state.HP,
@@ -88,11 +88,11 @@ func StorageCharacterStateFromDomain(state *mechanics.CharacterState) storage.Da
 
 // ApplyStatePatch applies a character state patch and normalizes bounds.
 func ApplyStatePatch(
-	state storage.DaggerheartCharacterState,
+	state projectionstore.DaggerheartCharacterState,
 	armorMax int,
 	hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int,
 	lifeStateAfter *string,
-) (storage.DaggerheartCharacterState, error) {
+) (projectionstore.DaggerheartCharacterState, error) {
 	domainState := CharacterStateFromStorage(state, armorMax)
 	reducer.ApplyCharacterStatePatch(&domainState, reducer.CharacterStatePatch{
 		HPAfter:        hpAfter,
@@ -103,13 +103,13 @@ func ApplyStatePatch(
 		LifeStateAfter: lifeStateAfter,
 	})
 	if err := reducer.NormalizeAndValidateCharacterState(&domainState); err != nil {
-		return storage.DaggerheartCharacterState{}, err
+		return projectionstore.DaggerheartCharacterState{}, err
 	}
 	return StorageCharacterStateFromDomain(&domainState), nil
 }
 
 // ApplyConditionPatch applies a normalized condition list to state.
-func ApplyConditionPatch(state storage.DaggerheartCharacterState, armorMax int, conditions []string) storage.DaggerheartCharacterState {
+func ApplyConditionPatch(state projectionstore.DaggerheartCharacterState, armorMax int, conditions []string) projectionstore.DaggerheartCharacterState {
 	domainState := CharacterStateFromStorage(state, armorMax)
 	reducer.ApplyConditionPatch(&domainState, conditions)
 	return StorageCharacterStateFromDomain(&domainState)
@@ -117,11 +117,11 @@ func ApplyConditionPatch(state storage.DaggerheartCharacterState, armorMax int, 
 
 // ApplyTemporaryArmor applies a temporary armor patch and normalizes bounds.
 func ApplyTemporaryArmor(
-	state storage.DaggerheartCharacterState,
+	state projectionstore.DaggerheartCharacterState,
 	armorMax int,
 	source, duration, sourceID string,
 	amount int,
-) (storage.DaggerheartCharacterState, error) {
+) (projectionstore.DaggerheartCharacterState, error) {
 	domainState := CharacterStateFromStorage(state, armorMax)
 	reducer.ApplyTemporaryArmor(&domainState, reducer.TemporaryArmorPatch{
 		Source:   strings.TrimSpace(source),
@@ -130,22 +130,22 @@ func ApplyTemporaryArmor(
 		Amount:   amount,
 	})
 	if err := reducer.NormalizeAndValidateCharacterState(&domainState); err != nil {
-		return storage.DaggerheartCharacterState{}, err
+		return projectionstore.DaggerheartCharacterState{}, err
 	}
 	return StorageCharacterStateFromDomain(&domainState), nil
 }
 
 // ApplyDowntimeMove applies downtime move effects and normalizes bounds.
 func ApplyDowntimeMove(
-	state storage.DaggerheartCharacterState,
+	state projectionstore.DaggerheartCharacterState,
 	armorMax int,
 	move string,
 	hopeAfter, stressAfter, armorAfter *int,
-) (storage.DaggerheartCharacterState, error) {
+) (projectionstore.DaggerheartCharacterState, error) {
 	domainState := CharacterStateFromStorage(state, armorMax)
 	reducer.ApplyDowntimeMove(&domainState, move, hopeAfter, stressAfter, armorAfter)
 	if err := reducer.NormalizeAndValidateCharacterState(&domainState); err != nil {
-		return storage.DaggerheartCharacterState{}, err
+		return projectionstore.DaggerheartCharacterState{}, err
 	}
 	return StorageCharacterStateFromDomain(&domainState), nil
 }
@@ -153,11 +153,11 @@ func ApplyDowntimeMove(
 // ClearRestTemporaryArmor removes temporary armor by rest duration and returns
 // whether persisted state should be updated.
 func ClearRestTemporaryArmor(
-	state storage.DaggerheartCharacterState,
+	state projectionstore.DaggerheartCharacterState,
 	armorMax int,
 	clearShortRest bool,
 	clearLongRest bool,
-) (storage.DaggerheartCharacterState, bool) {
+) (projectionstore.DaggerheartCharacterState, bool) {
 	domainState := CharacterStateFromStorage(state, armorMax)
 	beforeArmor := domainState.Armor
 	beforeArmorBonus := append([]mechanics.TemporaryArmorBucket(nil), domainState.ArmorBonus...)

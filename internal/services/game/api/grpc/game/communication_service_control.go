@@ -19,7 +19,7 @@ func (s *CommunicationService) OpenCommunicationGate(ctx context.Context, in *ca
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).OpenCommunicationGate(ctx, campaignID, in)
+	contextState, err := s.app.OpenCommunicationGate(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ func (s *CommunicationService) RequestGMHandoff(ctx context.Context, in *campaig
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).RequestGMHandoff(ctx, campaignID, in)
+	contextState, err := s.app.RequestGMHandoff(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *CommunicationService) ResolveCommunicationGate(ctx context.Context, in 
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).ResolveCommunicationGate(ctx, campaignID, in)
+	contextState, err := s.app.ResolveCommunicationGate(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (s *CommunicationService) RespondToCommunicationGate(ctx context.Context, i
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).RespondToCommunicationGate(ctx, campaignID, in)
+	contextState, err := s.app.RespondToCommunicationGate(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -87,7 +87,7 @@ func (s *CommunicationService) ResolveGMHandoff(ctx context.Context, in *campaig
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).ResolveGMHandoff(ctx, campaignID, in)
+	contextState, err := s.app.ResolveGMHandoff(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (s *CommunicationService) AbandonCommunicationGate(ctx context.Context, in 
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).AbandonCommunicationGate(ctx, campaignID, in)
+	contextState, err := s.app.AbandonCommunicationGate(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -121,7 +121,7 @@ func (s *CommunicationService) AbandonGMHandoff(ctx context.Context, in *campaig
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).AbandonGMHandoff(ctx, campaignID, in)
+	contextState, err := s.app.AbandonGMHandoff(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}

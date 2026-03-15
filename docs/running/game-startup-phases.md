@@ -4,7 +4,7 @@ parent: "Running"
 nav_order: 11
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-11"
 ---
 
 # Game Server Startup Phases
@@ -59,8 +59,11 @@ flowchart TD
 `engine.BuildRegistries(registeredSystemModules()...)`
 
 Initializes command, event, and system registries from declared game system
-modules. Validates that command types map to handlers and event types map to
-fold functions. Output drives all downstream wiring.
+modules. `registeredSystemModules()` is manifest-derived, so built-in system
+registration enters startup through the same `SystemDescriptor` list that also
+feeds metadata and adapters. The phase validates that command types map to
+handlers and event types map to fold functions. Output drives all downstream
+wiring.
 
 ### 2. Network
 
@@ -98,7 +101,7 @@ Builds the `Stores` struct and projection `Applier`:
 Three substeps:
 1. **System metadata registry** — loads game system metadata (Daggerheart)
 2. **Parity validation** — ensures module registries, adapter registries, and
-   metadata registries all agree
+   metadata registries all agree on the systems declared in the manifest
 3. **Projection gap repair** — detects campaigns with stale projections and
    replays missing events
 4. **Session lock policy validation** — ensures transport interceptor and domain

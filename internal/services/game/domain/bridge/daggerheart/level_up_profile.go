@@ -3,7 +3,7 @@ package daggerheart
 import (
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 func applyLevelUpToCharacterProfile(profile *CharacterProfile, payload LevelUpAppliedPayload) {
@@ -62,7 +62,7 @@ func applyCharacterProfileTraitIncrease(profile *CharacterProfile, trait string)
 	}
 }
 
-func applyProfileTraitIncrease(profile *storage.DaggerheartCharacterProfile, trait string) {
+func applyProfileTraitIncrease(profile *projectionstore.DaggerheartCharacterProfile, trait string) {
 	if profile == nil {
 		return
 	}

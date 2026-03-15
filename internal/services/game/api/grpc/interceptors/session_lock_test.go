@@ -3,11 +3,13 @@ package interceptors
 import (
 	"context"
 	"errors"
-	"strings"
 	"testing"
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
@@ -476,19 +478,33 @@ func TestCampaignIDFromRequest(t *testing.T) {
 }
 
 func TestValidateSessionLockPolicyCoverage_PassesWithCurrentConfig(t *testing.T) {
-	if err := ValidateSessionLockPolicyCoverage(BlockedCommandNamespaces()); err != nil {
+	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	if err := ValidateSessionLockPolicyCoverage(registries.Commands); err != nil {
 		t.Fatalf("expected no error, got: %v", err)
 	}
 }
 
 func TestValidateSessionLockPolicyCoverage_DetectsUncoveredNamespace(t *testing.T) {
-	namespaces := append(BlockedCommandNamespaces(), "uncovered")
-	err := ValidateSessionLockPolicyCoverage(namespaces)
+	registries, err := engine.BuildRegistries(daggerheart.NewModule())
+	if err != nil {
+		t.Fatalf("build registries: %v", err)
+	}
+	if err := registries.Commands.Register(command.Definition{
+		Type:          command.Type("custom.command"),
+		Owner:         command.OwnerCore,
+		ActiveSession: command.BlockedDuringActiveSession(),
+	}); err != nil {
+		t.Fatalf("register custom.command: %v", err)
+	}
+	err = ValidateSessionLockPolicyCoverage(registries.Commands)
 	if err == nil {
 		t.Fatal("expected error for uncovered namespace")
 	}
-	if !strings.Contains(err.Error(), "uncovered") {
-		t.Fatalf("error should mention uncovered namespace, got: %s", err.Error())
+	if err.Error() != "domain policy blocks namespace \"custom\" but no RPC method maps to it in session lock interceptor" {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

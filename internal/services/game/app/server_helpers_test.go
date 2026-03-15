@@ -7,7 +7,6 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -992,7 +991,7 @@ func TestStartProjectionApplyOutboxWorkerProcessesRowsWhenEnabled(t *testing.T) 
 
 	deadline := time.Now().Add(500 * time.Millisecond)
 	for time.Now().Before(deadline) {
-		rows, err := store.ListProjectionApplyOutboxRows(context.Background(), "", 10)
+		rows, err := store.ProjectionApplyOutboxStore().ListProjectionApplyOutboxRows(context.Background(), "", 10)
 		if err == nil {
 			remaining := false
 			for _, row := range rows {
@@ -1065,7 +1064,7 @@ func TestStartProjectionApplyOutboxShadowWorkerProcessesRowsWhenEnabled(t *testi
 
 	deadline := time.Now().Add(500 * time.Millisecond)
 	for time.Now().Before(deadline) {
-		rows, err := store.ListProjectionApplyOutboxRows(context.Background(), "failed", 10)
+		rows, err := store.ProjectionApplyOutboxStore().ListProjectionApplyOutboxRows(context.Background(), "failed", 10)
 		if err == nil {
 			for _, row := range rows {
 				if row.CampaignID == string(stored.CampaignID) && row.Seq == stored.Seq && row.AttemptCount == 1 {
@@ -1182,78 +1181,6 @@ func TestBuildDomainEngine_SystemCommand(t *testing.T) {
 	if store.events["c1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
 		t.Fatalf("event type = %s, want %s", store.events["c1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
 	}
-}
-
-func TestValidateSystemRegistrationParity(t *testing.T) {
-	t.Run("success", func(t *testing.T) {
-		modules := []module.Module{
-			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
-		}
-		registry := bridge.NewMetadataRegistry()
-		if err := registry.Register(fakeGameSystem{
-			id:      bridge.SystemIDDaggerheart,
-			version: "v1",
-		}); err != nil {
-			t.Fatalf("register metadata system: %v", err)
-		}
-		adapters := bridge.NewAdapterRegistry()
-		if err := adapters.Register(fakeSystemAdapter{
-			id:      "DAGGERHEART",
-			version: "v1",
-		}); err != nil {
-			t.Fatalf("register adapter: %v", err)
-		}
-		if err := validateSystemRegistrationParity(modules, registry, adapters); err != nil {
-			t.Fatalf("validate parity: %v", err)
-		}
-	})
-
-	t.Run("missing adapter", func(t *testing.T) {
-		modules := []module.Module{
-			fakeSystemModule{id: "DAGGERHEART", version: "v1"},
-		}
-		registry := bridge.NewMetadataRegistry()
-		if err := registry.Register(fakeGameSystem{
-			id:      bridge.SystemIDDaggerheart,
-			version: "v1",
-		}); err != nil {
-			t.Fatalf("register metadata system: %v", err)
-		}
-		adapters := bridge.NewAdapterRegistry()
-
-		err := validateSystemRegistrationParity(modules, registry, adapters)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-		if !strings.Contains(err.Error(), "adapter") {
-			t.Fatalf("error = %q, want adapter detail", err.Error())
-		}
-	})
-
-	t.Run("metadata without module", func(t *testing.T) {
-		registry := bridge.NewMetadataRegistry()
-		if err := registry.Register(fakeGameSystem{
-			id:      bridge.SystemIDDaggerheart,
-			version: "v1",
-		}); err != nil {
-			t.Fatalf("register metadata system: %v", err)
-		}
-		adapters := bridge.NewAdapterRegistry()
-		if err := adapters.Register(fakeSystemAdapter{
-			id:      "DAGGERHEART",
-			version: "v1",
-		}); err != nil {
-			t.Fatalf("register adapter: %v", err)
-		}
-
-		err := validateSystemRegistrationParity(nil, registry, adapters)
-		if err == nil {
-			t.Fatal("expected error")
-		}
-		if !errors.Is(err, errSystemModuleRegistryMismatch) {
-			t.Fatalf("error = %v, want %v", err, errSystemModuleRegistryMismatch)
-		}
-	})
 }
 
 func TestBuildDomainEngine_ReusesCheckpointedStateForReplay(t *testing.T) {

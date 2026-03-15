@@ -9,8 +9,6 @@ import (
 )
 
 func TestResolveLocalFallbackAddr_PreservesResolvedHost(t *testing.T) {
-	t.Parallel()
-
 	originalLookup := seed.LookupHost
 	t.Cleanup(func() {
 		seed.LookupHost = originalLookup
@@ -26,8 +24,6 @@ func TestResolveLocalFallbackAddr_PreservesResolvedHost(t *testing.T) {
 }
 
 func TestResolveLocalFallbackAddr_FallsBackToLoopback(t *testing.T) {
-	t.Parallel()
-
 	originalLookup := seed.LookupHost
 	t.Cleanup(func() {
 		seed.LookupHost = originalLookup

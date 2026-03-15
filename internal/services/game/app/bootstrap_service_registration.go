@@ -9,6 +9,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	daggerheartservice "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/gameplaystores"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
@@ -22,9 +23,9 @@ type grpcServiceDescriptor struct {
 	register      func(*grpc.Server)
 }
 
-// registerServices builds service descriptors, registers them on gRPC server,
-// and updates health statuses for each exposed service.
-func (b *serverBootstrap) registerServices(
+// registerServices builds service descriptors, registers them on the gRPC
+// server, and updates health statuses for each exposed service.
+func registerServices(
 	grpcServer *grpc.Server,
 	healthServer *health.Server,
 	stores gamegrpc.Stores,
@@ -61,23 +62,23 @@ func buildServiceDescriptors(
 	systemRegistry *bridge.MetadataRegistry,
 	sessionGrantConfig aisessiongrant.Config,
 ) ([]grpcServiceDescriptor, error) {
-	daggerheartStores := daggerheartservice.NewStoresFromProjection(daggerheartservice.StoresFromProjectionConfig{
-		ProjectionStore: bundle.projections,
-		EventStore:      bundle.events,
-		ContentStore:    bundle.content,
-		Domain:          stores.Write.Executor,
-		Events:          stores.Events,
-		WriteRuntime:    stores.Write.Runtime,
+	daggerheartStores := gameplaystores.NewFromProjection(gameplaystores.FromProjectionConfig{
+		ProjectionStore:  bundle.projections,
+		DaggerheartStore: stores.SystemStores.Daggerheart,
+		EventStore:       bundle.events,
+		Domain:           stores.Write.Executor,
+		Events:           stores.Events,
+		WriteRuntime:     stores.Write.Runtime,
 	})
 	daggerheartService, err := daggerheartservice.NewDaggerheartService(daggerheartStores, random.NewSeed)
 	if err != nil {
 		return nil, fmt.Errorf("create daggerheart service: %w", err)
 	}
-	contentService, err := daggerheartservice.NewDaggerheartContentService(daggerheartStores)
+	contentService, err := daggerheartservice.NewDaggerheartContentService(bundle.content)
 	if err != nil {
 		return nil, fmt.Errorf("create daggerheart content service: %w", err)
 	}
-	assetService, err := daggerheartservice.NewDaggerheartAssetService(daggerheartStores)
+	assetService, err := daggerheartservice.NewDaggerheartAssetService(bundle.content)
 	if err != nil {
 		return nil, fmt.Errorf("create daggerheart asset service: %w", err)
 	}
@@ -90,7 +91,7 @@ func buildServiceDescriptors(
 	sceneService := gamegrpc.NewSceneService(stores)
 	forkService := gamegrpc.NewForkService(stores)
 	eventService := gamegrpc.NewEventService(stores)
-	integrationService := gamegrpc.NewIntegrationService(stores.Event)
+	integrationService := gamegrpc.NewIntegrationService(bundle.events.IntegrationOutboxStore())
 	statisticsService := gamegrpc.NewStatisticsService(stores.Statistics)
 	systemService := gamegrpc.NewSystemService(systemRegistry)
 	authorizationService := gamegrpc.NewAuthorizationService(stores)

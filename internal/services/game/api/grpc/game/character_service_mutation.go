@@ -22,7 +22,7 @@ func (s *CharacterService) CreateCharacter(ctx context.Context, in *campaignv1.C
 		return nil, err
 	}
 
-	created, err := newCharacterApplication(s).CreateCharacter(ctx, campaignID, in)
+	created, err := s.app.CreateCharacter(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -41,7 +41,7 @@ func (s *CharacterService) UpdateCharacter(ctx context.Context, in *campaignv1.U
 		return nil, err
 	}
 
-	updated, err := newCharacterApplication(s).UpdateCharacter(ctx, campaignID, in)
+	updated, err := s.app.UpdateCharacter(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (s *CharacterService) DeleteCharacter(ctx context.Context, in *campaignv1.D
 		return nil, err
 	}
 
-	ch, err := newCharacterApplication(s).DeleteCharacter(ctx, campaignID, in)
+	ch, err := s.app.DeleteCharacter(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s *CharacterService) SetDefaultControl(ctx context.Context, in *campaignv1
 		return nil, err
 	}
 
-	characterID, participantID, err := newCharacterApplication(s).SetDefaultControl(ctx, campaignID, in)
+	characterID, participantID, err := s.app.SetDefaultControl(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +106,7 @@ func (s *CharacterService) ClaimCharacterControl(ctx context.Context, in *campai
 		return nil, err
 	}
 
-	characterID, participantID, err := newCharacterApplication(s).ClaimCharacterControl(ctx, campaignID, in)
+	characterID, participantID, err := s.app.ClaimCharacterControl(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (s *CharacterService) ReleaseCharacterControl(ctx context.Context, in *camp
 		return nil, err
 	}
 
-	characterID, err := newCharacterApplication(s).ReleaseCharacterControl(ctx, campaignID, in)
+	characterID, err := s.app.ReleaseCharacterControl(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (s *CharacterService) PatchCharacterProfile(ctx context.Context, in *campai
 		return nil, err
 	}
 
-	characterID, dhProfile, err := newCharacterApplication(s).PatchCharacterProfile(ctx, campaignID, in)
+	characterID, dhProfile, err := s.app.PatchCharacterProfile(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}

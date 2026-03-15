@@ -1,0 +1,126 @@
+package coreprojection
+
+import (
+	"context"
+	"path/filepath"
+	"testing"
+	"time"
+
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+)
+
+func TestCampaignPaging(t *testing.T) {
+	store := openTestStore(t)
+
+	for _, id := range []string{"camp-1", "camp-2", "camp-3"} {
+		if err := store.Put(context.Background(), storage.CampaignRecord{
+			ID:        id,
+			Name:      "Campaign",
+			Locale:    platformi18n.DefaultLocale(),
+			System:    bridge.SystemIDDaggerheart,
+			Status:    campaign.StatusActive,
+			GmMode:    campaign.GmModeHuman,
+			CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+			UpdatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+		}); err != nil {
+			t.Fatalf("put campaign: %v", err)
+		}
+	}
+
+	page, err := store.List(context.Background(), 2, "")
+	if err != nil {
+		t.Fatalf("list campaigns: %v", err)
+	}
+	if len(page.Campaigns) != 2 {
+		t.Fatalf("expected 2 campaigns, got %d", len(page.Campaigns))
+	}
+	if page.NextPageToken == "" {
+		t.Fatal("expected next page token")
+	}
+
+	second, err := store.List(context.Background(), 2, page.NextPageToken)
+	if err != nil {
+		t.Fatalf("list campaigns page 2: %v", err)
+	}
+	if len(second.Campaigns) != 1 {
+		t.Fatalf("expected 1 campaign, got %d", len(second.Campaigns))
+	}
+	if second.NextPageToken != "" {
+		t.Fatalf("expected empty next page token, got %s", second.NextPageToken)
+	}
+}
+
+func TestParticipantPaging(t *testing.T) {
+	store := openTestStore(t)
+
+	if err := store.Put(context.Background(), storage.CampaignRecord{
+		ID:        "camp-1",
+		Name:      "Campaign",
+		Locale:    platformi18n.DefaultLocale(),
+		System:    bridge.SystemIDDaggerheart,
+		Status:    campaign.StatusActive,
+		GmMode:    campaign.GmModeHuman,
+		CreatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+		UpdatedAt: time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+	}); err != nil {
+		t.Fatalf("put campaign: %v", err)
+	}
+
+	for _, id := range []string{"p-1", "p-2", "p-3"} {
+		if err := store.PutParticipant(context.Background(), storage.ParticipantRecord{
+			CampaignID:     "camp-1",
+			ID:             id,
+			UserID:         "user-" + id,
+			Name:           "Player " + id,
+			Role:           participant.RolePlayer,
+			Controller:     participant.ControllerHuman,
+			CampaignAccess: participant.CampaignAccessMember,
+			CreatedAt:      time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+			UpdatedAt:      time.Date(2026, 2, 1, 10, 0, 0, 0, time.UTC),
+		}); err != nil {
+			t.Fatalf("put participant: %v", err)
+		}
+	}
+
+	page, err := store.ListParticipants(context.Background(), "camp-1", 2, "")
+	if err != nil {
+		t.Fatalf("list participants: %v", err)
+	}
+	if len(page.Participants) != 2 {
+		t.Fatalf("expected 2 participants, got %d", len(page.Participants))
+	}
+	if page.NextPageToken == "" {
+		t.Fatal("expected next page token")
+	}
+
+	second, err := store.ListParticipants(context.Background(), "camp-1", 2, page.NextPageToken)
+	if err != nil {
+		t.Fatalf("list participants page 2: %v", err)
+	}
+	if len(second.Participants) != 1 {
+		t.Fatalf("expected 1 participant, got %d", len(second.Participants))
+	}
+	if second.NextPageToken != "" {
+		t.Fatalf("expected empty next page token, got %s", second.NextPageToken)
+	}
+}
+
+func openTestStore(t *testing.T) *Store {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), "store.sqlite")
+	store, err := OpenProjections(path)
+	if err != nil {
+		t.Fatalf("open store: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := store.Close(); err != nil {
+			t.Fatalf("close store: %v", err)
+		}
+	})
+	return store
+}

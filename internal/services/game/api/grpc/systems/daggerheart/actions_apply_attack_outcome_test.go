@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -49,7 +50,7 @@ func TestApplyAttackOutcome_MissingSessionId(t *testing.T) {
 func TestApplyAttackOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
-	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: "sess-1", Targets: []string{"adv-1"},
 	})
@@ -59,7 +60,7 @@ func TestApplyAttackOutcome_MissingRollSeq(t *testing.T) {
 func TestApplyAttackOutcome_MissingTargets(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
-	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAttackOutcome(ctx, &pb.DaggerheartApplyAttackOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1,
 	})
@@ -99,7 +100,7 @@ func TestApplyAdversaryAttackOutcome_MissingSessionId(t *testing.T) {
 func TestApplyAdversaryAttackOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
-	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		SessionId: "sess-1", Targets: []string{"char-1"},
 	})
@@ -109,7 +110,7 @@ func TestApplyAdversaryAttackOutcome_MissingRollSeq(t *testing.T) {
 func TestApplyAdversaryAttackOutcome_MissingTargets(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
-	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyAdversaryAttackOutcome(ctx, &pb.DaggerheartApplyAdversaryAttackOutcomeRequest{
 		SessionId: "sess-1", RollSeq: 1,
 	})
@@ -123,17 +124,17 @@ func TestApplyAdversaryAttackOutcome_UsesDomainEngine(t *testing.T) {
 	rollPayload := action.RollResolvePayload{
 		RequestID: "req-adv-atk-outcome-legacy",
 		RollSeq:   1,
-		Results:   map[string]any{"rolls": []int{4}, sdKeyRoll: 4, sdKeyModifier: 0, sdKeyTotal: 4, "advantage": 0, "disadvantage": 0},
+		Results:   map[string]any{"rolls": []int{4}, workflowtransport.KeyRoll: 4, workflowtransport.KeyModifier: 0, workflowtransport.KeyTotal: 4, "advantage": 0, "disadvantage": 0},
 		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
 		SystemData: map[string]any{
-			sdKeyCharacterID: "adv-1",
-			sdKeyAdversaryID: "adv-1",
-			sdKeyRollKind:    "adversary_roll",
-			sdKeyRoll:        4,
-			sdKeyModifier:    0,
-			sdKeyTotal:       4,
-			"advantage":      0,
-			"disadvantage":   0,
+			workflowtransport.KeyCharacterID: "adv-1",
+			workflowtransport.KeyAdversaryID: "adv-1",
+			workflowtransport.KeyRollKind:    "adversary_roll",
+			workflowtransport.KeyRoll:        4,
+			workflowtransport.KeyModifier:    0,
+			workflowtransport.KeyTotal:       4,
+			"advantage":                      0,
+			"disadvantage":                   0,
 		},
 	}
 	rollPayloadJSON, err := json.Marshal(rollPayload)

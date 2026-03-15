@@ -366,7 +366,7 @@ func TestRulesVersionReturnsMetadata(t *testing.T) {
 
 	expectedOutcomes := make([]pb.Outcome, 0, len(metadata.Outcomes))
 	for _, outcome := range metadata.Outcomes {
-		expectedOutcomes = append(expectedOutcomes, outcomeToProto(outcome))
+		expectedOutcomes = append(expectedOutcomes, wantOutcomeProto(outcome))
 	}
 	if !reflect.DeepEqual(response.Outcomes, expectedOutcomes) {
 		t.Fatalf("RulesVersion outcomes = %v, want %v", response.Outcomes, expectedOutcomes)
@@ -528,8 +528,8 @@ func assertResponseMatches(t *testing.T, response *pb.ActionRollResponse, seed i
 	if response.MeetsDifficulty != result.MeetsDifficulty {
 		t.Fatalf("ActionRoll meets_difficulty = %t, want %t", response.MeetsDifficulty, result.MeetsDifficulty)
 	}
-	if response.Outcome != outcomeToProto(result.Outcome) {
-		t.Fatalf("ActionRoll outcome = %v, want %v", response.Outcome, outcomeToProto(result.Outcome))
+	if response.Outcome != wantOutcomeProto(result.Outcome) {
+		t.Fatalf("ActionRoll outcome = %v, want %v", response.Outcome, wantOutcomeProto(result.Outcome))
 	}
 	if difficulty != nil && response.Difficulty == nil {
 		t.Fatal("ActionRoll difficulty is nil, want value")
@@ -567,8 +567,8 @@ func assertOutcomeResponse(t *testing.T, response *pb.DualityOutcomeResponse, re
 	if response.MeetsDifficulty != result.MeetsDifficulty {
 		t.Fatalf("DualityOutcome meets_difficulty = %t, want %t", response.MeetsDifficulty, result.MeetsDifficulty)
 	}
-	if response.Outcome != outcomeToProto(result.Outcome) {
-		t.Fatalf("DualityOutcome outcome = %v, want %v", response.Outcome, outcomeToProto(result.Outcome))
+	if response.Outcome != wantOutcomeProto(result.Outcome) {
+		t.Fatalf("DualityOutcome outcome = %v, want %v", response.Outcome, wantOutcomeProto(result.Outcome))
 	}
 	if request.Difficulty != nil && response.Difficulty == nil {
 		t.Fatal("DualityOutcome difficulty is nil, want value")
@@ -606,8 +606,8 @@ func assertExplainResponse(t *testing.T, response *pb.DualityExplainResponse, re
 	if response.MeetsDifficulty != result.MeetsDifficulty {
 		t.Fatalf("DualityExplain meets_difficulty = %t, want %t", response.MeetsDifficulty, result.MeetsDifficulty)
 	}
-	if response.Outcome != outcomeToProto(result.Outcome) {
-		t.Fatalf("DualityExplain outcome = %v, want %v", response.Outcome, outcomeToProto(result.Outcome))
+	if response.Outcome != wantOutcomeProto(result.Outcome) {
+		t.Fatalf("DualityExplain outcome = %v, want %v", response.Outcome, wantOutcomeProto(result.Outcome))
 	}
 	if response.RulesVersion != result.RulesVersion {
 		t.Fatalf("DualityExplain rules_version = %q, want %q", response.RulesVersion, result.RulesVersion)
@@ -686,12 +686,33 @@ func assertProbabilityResponse(t *testing.T, response *pb.DualityProbabilityResp
 
 	for i, count := range response.GetOutcomeCounts() {
 		want := result.OutcomeCounts[i]
-		if count.Outcome != outcomeToProto(want.Outcome) {
-			t.Fatalf("DualityProbability outcome[%d] = %v, want %v", i, count.Outcome, outcomeToProto(want.Outcome))
+		if count.Outcome != wantOutcomeProto(want.Outcome) {
+			t.Fatalf("DualityProbability outcome[%d] = %v, want %v", i, count.Outcome, wantOutcomeProto(want.Outcome))
 		}
 		if count.Count != int32(want.Count) {
 			t.Fatalf("DualityProbability count[%d] = %d, want %d", i, count.Count, want.Count)
 		}
+	}
+}
+
+func wantOutcomeProto(outcome daggerheartdomain.Outcome) pb.Outcome {
+	switch outcome {
+	case daggerheartdomain.OutcomeRollWithHope:
+		return pb.Outcome_ROLL_WITH_HOPE
+	case daggerheartdomain.OutcomeRollWithFear:
+		return pb.Outcome_ROLL_WITH_FEAR
+	case daggerheartdomain.OutcomeSuccessWithHope:
+		return pb.Outcome_SUCCESS_WITH_HOPE
+	case daggerheartdomain.OutcomeSuccessWithFear:
+		return pb.Outcome_SUCCESS_WITH_FEAR
+	case daggerheartdomain.OutcomeFailureWithHope:
+		return pb.Outcome_FAILURE_WITH_HOPE
+	case daggerheartdomain.OutcomeFailureWithFear:
+		return pb.Outcome_FAILURE_WITH_FEAR
+	case daggerheartdomain.OutcomeCriticalSuccess:
+		return pb.Outcome_CRITICAL_SUCCESS
+	default:
+		return pb.Outcome_OUTCOME_UNSPECIFIED
 	}
 }
 

@@ -21,12 +21,12 @@ const (
 // IntegrationService exposes worker-facing game integration outbox leasing.
 type IntegrationService struct {
 	gamev1.UnimplementedIntegrationServiceServer
-	store storage.EventStore
+	store storage.IntegrationOutboxStore
 	clock func() time.Time
 }
 
 // NewIntegrationService creates the internal game integration outbox service.
-func NewIntegrationService(store storage.EventStore) *IntegrationService {
+func NewIntegrationService(store storage.IntegrationOutboxStore) *IntegrationService {
 	return &IntegrationService{
 		store: store,
 		clock: time.Now,
@@ -38,8 +38,7 @@ func (s *IntegrationService) LeaseIntegrationOutboxEvents(ctx context.Context, i
 		return nil, status.Error(codes.InvalidArgument, "Lease integration outbox events request is required.")
 	}
 
-	outboxStore, ok := s.store.(storage.IntegrationOutboxStore)
-	if s == nil || s.store == nil || !ok {
+	if s == nil || s.store == nil {
 		return nil, status.Error(codes.Internal, "Integration outbox store is not configured.")
 	}
 
@@ -61,7 +60,7 @@ func (s *IntegrationService) LeaseIntegrationOutboxEvents(ctx context.Context, i
 		now = ts.AsTime().UTC()
 	}
 
-	leased, err := outboxStore.LeaseIntegrationOutboxEvents(ctx, consumer, limit, now, leaseTTL)
+	leased, err := s.store.LeaseIntegrationOutboxEvents(ctx, consumer, limit, now, leaseTTL)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Lease integration outbox events: %v", err)
 	}
@@ -80,8 +79,7 @@ func (s *IntegrationService) AckIntegrationOutboxEvent(ctx context.Context, in *
 		return nil, status.Error(codes.InvalidArgument, "Ack integration outbox event request is required.")
 	}
 
-	outboxStore, ok := s.store.(storage.IntegrationOutboxStore)
-	if s == nil || s.store == nil || !ok {
+	if s == nil || s.store == nil {
 		return nil, status.Error(codes.Internal, "Integration outbox store is not configured.")
 	}
 
@@ -98,15 +96,15 @@ func (s *IntegrationService) AckIntegrationOutboxEvent(ctx context.Context, in *
 	var err error
 	switch in.GetOutcome() {
 	case gamev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_SUCCEEDED:
-		err = outboxStore.MarkIntegrationOutboxSucceeded(ctx, eventID, consumer, now)
+		err = s.store.MarkIntegrationOutboxSucceeded(ctx, eventID, consumer, now)
 	case gamev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_RETRY:
 		nextAttemptAt := in.GetNextAttemptAt()
 		if nextAttemptAt == nil || !nextAttemptAt.IsValid() {
 			return nil, status.Error(codes.InvalidArgument, "Next attempt at is required for retry outcome.")
 		}
-		err = outboxStore.MarkIntegrationOutboxRetry(ctx, eventID, consumer, nextAttemptAt.AsTime().UTC(), in.GetLastError())
+		err = s.store.MarkIntegrationOutboxRetry(ctx, eventID, consumer, nextAttemptAt.AsTime().UTC(), in.GetLastError())
 	case gamev1.IntegrationOutboxAckOutcome_INTEGRATION_OUTBOX_ACK_OUTCOME_DEAD:
-		err = outboxStore.MarkIntegrationOutboxDead(ctx, eventID, consumer, in.GetLastError(), now)
+		err = s.store.MarkIntegrationOutboxDead(ctx, eventID, consumer, in.GetLastError(), now)
 	default:
 		return nil, status.Error(codes.InvalidArgument, "Ack outcome is required.")
 	}

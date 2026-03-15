@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/gameplaystores"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 )
@@ -12,6 +13,11 @@ import (
 // testRuntime is a shared write-path runtime configured once for all tests
 // in this package. It replaces the previous package-level global writeRuntime.
 var testRuntime *domainwrite.Runtime
+
+type Stores = gameplaystores.Stores
+type StoresFromProjectionConfig = gameplaystores.FromProjectionConfig
+
+var NewStoresFromProjection = gameplaystores.NewFromProjection
 
 func TestMain(m *testing.M) {
 	registries, err := engine.BuildRegistries(systemmanifest.Modules()...)

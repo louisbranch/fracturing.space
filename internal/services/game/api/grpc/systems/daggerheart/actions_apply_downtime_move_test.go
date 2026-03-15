@@ -102,12 +102,9 @@ func TestApplyDowntimeMove_Success(t *testing.T) {
 		ArmorMax:    profile.ArmorMax,
 		LifeState:   current.LifeState,
 	})
-	move, err := daggerheartDowntimeMoveFromProto(pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS)
-	if err != nil {
-		t.Fatalf("map downtime move: %v", err)
-	}
+	move := daggerheart.DowntimeClearAllStress
 	result := daggerheart.ApplyDowntimeMove(state, move, daggerheart.DowntimeOptions{})
-	moveName := daggerheartDowntimeMoveToString(move)
+	moveName := "clear_all_stress"
 	payload := daggerheart.DowntimeMoveAppliedPayload{
 		CharacterID: "char-1",
 		Move:        moveName,
@@ -182,12 +179,9 @@ func TestApplyDowntimeMove_UsesDomainEngine(t *testing.T) {
 		ArmorMax:    profile.ArmorMax,
 		LifeState:   current.LifeState,
 	})
-	move, err := daggerheartDowntimeMoveFromProto(pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS)
-	if err != nil {
-		t.Fatalf("map downtime move: %v", err)
-	}
+	move := daggerheart.DowntimeClearAllStress
 	result := daggerheart.ApplyDowntimeMove(state, move, daggerheart.DowntimeOptions{})
-	moveName := daggerheartDowntimeMoveToString(move)
+	moveName := "clear_all_stress"
 	payload := daggerheart.DowntimeMoveAppliedPayload{
 		CharacterID: "char-1",
 		Move:        moveName,

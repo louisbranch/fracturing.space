@@ -1524,6 +1524,64 @@ func TestScanEmitterValues_DetectsDecideFuncTransform(t *testing.T) {
 	}
 }
 
+func TestScanEmitterValues_SamePackageConstNamesDoNotCollideAcrossPackages(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/test"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
+
+	participantDir := filepath.Join(root, "participant")
+	if err := os.MkdirAll(participantDir, 0o755); err != nil {
+		t.Fatalf("mkdir participant: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(participantDir, "types.go"), []byte(strings.Join([]string{
+		"package participant",
+		"",
+		"type Type string",
+		"const EventTypeUpdated Type = \"participant.updated\"",
+	}, "\n")), 0o644); err != nil {
+		t.Fatalf("write participant types: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(participantDir, "emit.go"), []byte(strings.Join([]string{
+		"package participant",
+		"",
+		"import \"example.com/command\"",
+		"",
+		"func emit(cmd any) any {",
+		"\treturn command.NewEvent(cmd, EventTypeUpdated, \"participant\", \"p1\", nil, nil)",
+		"}",
+	}, "\n")), 0o644); err != nil {
+		t.Fatalf("write participant emit: %v", err)
+	}
+
+	sceneDir := filepath.Join(root, "scene")
+	if err := os.MkdirAll(sceneDir, 0o755); err != nil {
+		t.Fatalf("mkdir scene: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(sceneDir, "types.go"), []byte(strings.Join([]string{
+		"package scene",
+		"",
+		"type Type string",
+		"const EventTypeUpdated Type = \"scene.updated\"",
+	}, "\n")), 0o644); err != nil {
+		t.Fatalf("write scene types: %v", err)
+	}
+
+	lookup := map[string]string{
+		"EventTypeUpdated": "scene.updated",
+	}
+	emitters, err := scanEmitterValues(root, root, lookup)
+	if err != nil {
+		t.Fatalf("scanEmitterValues returned error: %v", err)
+	}
+	if len(emitters["participant.updated"]) != 1 {
+		t.Fatalf("expected one emitter for participant.updated, got %d (%v)", len(emitters["participant.updated"]), emitters["participant.updated"])
+	}
+	if len(emitters["scene.updated"]) != 0 {
+		t.Fatalf("expected no scene.updated emitters, got %d (%v)", len(emitters["scene.updated"]), emitters["scene.updated"])
+	}
+}
+
 func TestScanAppliers_DetectsHandleAdapter(t *testing.T) {
 	root := t.TempDir()
 	dir := filepath.Join(root, "applier")

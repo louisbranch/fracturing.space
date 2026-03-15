@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheartdomain "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -66,7 +67,7 @@ func campaignHasActiveSession(ctx context.Context, store storage.SessionStore, c
 
 func campaignReadinessAggregateState(
 	ctx context.Context,
-	stores Stores,
+	daggerheartStore projectionstore.Store,
 	campaignRecord storage.CampaignRecord,
 	participantRecords []storage.ParticipantRecord,
 	characterRecords []storage.CharacterRecord,
@@ -112,7 +113,7 @@ func campaignReadinessAggregateState(
 	}
 
 	if systemIDFromCampaignRecord(campaignRecord) == bridge.SystemIDDaggerheart {
-		if stores.SystemStores.Daggerheart == nil {
+		if daggerheartStore == nil {
 			return aggregate.State{}, status.Error(codes.Internal, "daggerheart projection store is not configured")
 		}
 		snapshot := daggerheartdomain.SnapshotState{
@@ -124,7 +125,7 @@ func campaignReadinessAggregateState(
 			CountdownStates:   make(map[ids.CountdownID]daggerheartdomain.CountdownState),
 		}
 		for characterID, characterState := range state.Characters {
-			profile, err := stores.SystemStores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, string(characterID))
+			profile, err := daggerheartStore.GetDaggerheartCharacterProfile(ctx, campaignRecord.ID, string(characterID))
 			if err != nil {
 				if errors.Is(err, storage.ErrNotFound) {
 					continue

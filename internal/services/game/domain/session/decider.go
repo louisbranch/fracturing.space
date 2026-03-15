@@ -1,15 +1,11 @@
 package session
 
 import (
-	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
 const (
@@ -54,255 +50,28 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 	switch cmd.Type {
 	case CommandTypeStart:
-		if state.Started {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionAlreadyStarted,
-				Message: "session already started",
-			})
-		}
-		var payload StartPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		sessionID := strings.TrimSpace(payload.SessionID.String())
-		if sessionID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionIDRequired,
-				Message: "session id is required",
-			})
-		}
-		sessionName := strings.TrimSpace(payload.SessionName)
-
-		normalizedPayload := StartPayload{SessionID: ids.SessionID(sessionID), SessionName: sessionName}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeStarted, "session", sessionID, payloadJSON, now().UTC())
-		evt.SessionID = ids.SessionID(sessionID)
-
-		return command.Accept(evt)
+		return decideStart(state, cmd, now)
 
 	case CommandTypeEnd:
-		if !state.Started {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionNotStarted,
-				Message: "session not started",
-			})
-		}
-		var payload EndPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		sessionID := strings.TrimSpace(payload.SessionID.String())
-		if sessionID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionIDRequired,
-				Message: "session id is required",
-			})
-		}
-
-		normalizedPayload := EndPayload{SessionID: ids.SessionID(sessionID)}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeEnded, "session", sessionID, payloadJSON, now().UTC())
-		evt.SessionID = ids.SessionID(sessionID)
-
-		return command.Accept(evt)
+		return decideEnd(state, cmd, now)
 
 	case CommandTypeGateOpen:
-		var payload GateOpenedPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		gateID := strings.TrimSpace(payload.GateID.String())
-		gateType, err := NormalizeGateType(payload.GateType)
-		if err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionGateTypeRequired,
-				Message: err.Error(),
-			})
-		}
-		reason := strings.TrimSpace(payload.Reason)
-		if gateID == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionGateIDRequired,
-				Message: "gate id is required",
-			})
-		}
-		if state.GateOpen {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionGateAlreadyOpen,
-				Message: "session gate is already open",
-			})
-		}
-		metadata, err := NormalizeGateWorkflowMetadata(gateType, payload.Metadata)
-		if err != nil {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionGateMetadataInvalid,
-				Message: err.Error(),
-			})
-		}
-
-		normalizedPayload := GateOpenedPayload{GateID: ids.GateID(gateID), GateType: gateType, Reason: reason, Metadata: metadata}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeGateOpened, "session_gate", gateID, payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return decideGateOpen(state, cmd, now)
 
 	case CommandTypeGateResolve:
-		return module.DecideFunc(
-			cmd,
-			EventTypeGateResolved,
-			"session_gate",
-			func(payload *GateResolvedPayload) string {
-				return payload.GateID.String()
-			},
-			func(payload *GateResolvedPayload, _ func() time.Time) *command.Rejection {
-				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
-				payload.Decision = strings.TrimSpace(payload.Decision)
-				if !state.GateOpen {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateNotOpen,
-						Message: "session gate is not open",
-					}
-				}
-				if payload.GateID == "" {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateIDRequired,
-						Message: "gate id is required",
-					}
-				}
-				if state.GateID != "" && payload.GateID != state.GateID {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateMismatch,
-						Message: "gate id does not match the active session gate",
-					}
-				}
-				return nil
-			},
-			now,
-		)
+		return decideGateResolve(state, cmd, now)
 
 	case CommandTypeGateRespond:
-		return module.DecideFunc(
-			cmd,
-			EventTypeGateResponseRecorded,
-			"session_gate",
-			func(payload *GateResponseRecordedPayload) string {
-				return payload.GateID.String()
-			},
-			func(payload *GateResponseRecordedPayload, _ func() time.Time) *command.Rejection {
-				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
-				payload.ParticipantID = ids.ParticipantID(strings.TrimSpace(payload.ParticipantID.String()))
-				if !state.GateOpen {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateNotOpen,
-						Message: "session gate is not open",
-					}
-				}
-				if payload.GateID == "" {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateIDRequired,
-						Message: "gate id is required",
-					}
-				}
-				if state.GateID != "" && payload.GateID != state.GateID {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateMismatch,
-						Message: "gate id does not match the active session gate",
-					}
-				}
-				if payload.ParticipantID == "" {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateParticipantRequired,
-						Message: "participant id is required",
-					}
-				}
-				decision, response, err := ValidateGateResponse(
-					state.GateType,
-					state.GateMetadataJSON,
-					payload.ParticipantID.String(),
-					payload.Decision,
-					payload.Response,
-				)
-				if err != nil {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateResponseInvalid,
-						Message: err.Error(),
-					}
-				}
-				payload.Decision = decision
-				payload.Response = response
-				return nil
-			},
-			now,
-		)
+		return decideGateRespond(state, cmd, now)
 
 	case CommandTypeGateAbandon:
-		return module.DecideFunc(
-			cmd,
-			EventTypeGateAbandoned,
-			"session_gate",
-			func(payload *GateAbandonedPayload) string {
-				return payload.GateID.String()
-			},
-			func(payload *GateAbandonedPayload, _ func() time.Time) *command.Rejection {
-				payload.GateID = ids.GateID(strings.TrimSpace(payload.GateID.String()))
-				payload.Reason = strings.TrimSpace(payload.Reason)
-				if !state.GateOpen {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateNotOpen,
-						Message: "session gate is not open",
-					}
-				}
-				if payload.GateID == "" {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateIDRequired,
-						Message: "gate id is required",
-					}
-				}
-				if state.GateID != "" && payload.GateID != state.GateID {
-					return &command.Rejection{
-						Code:    rejectionCodeSessionGateMismatch,
-						Message: "gate id does not match the active session gate",
-					}
-				}
-				return nil
-			},
-			now,
-		)
+		return decideGateAbandon(state, cmd, now)
 
 	case CommandTypeSpotlightSet:
-		var payload SpotlightSetPayload
-		if err := json.Unmarshal(cmd.PayloadJSON, &payload); err != nil {
-			return command.Reject(command.Rejection{Code: command.RejectionCodePayloadDecodeFailed, Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err)})
-		}
-		spotlightType := strings.TrimSpace(payload.SpotlightType)
-		characterID := strings.TrimSpace(payload.CharacterID.String())
-		if spotlightType == "" {
-			return command.Reject(command.Rejection{
-				Code:    rejectionCodeSessionSpotlightTypeRequired,
-				Message: "spotlight type is required",
-			})
-		}
-
-		normalizedPayload := SpotlightSetPayload{SpotlightType: spotlightType, CharacterID: ids.CharacterID(characterID)}
-		payloadJSON, _ := json.Marshal(normalizedPayload)
-		evt := command.NewEvent(cmd, EventTypeSpotlightSet, "session", cmd.SessionID.String(), payloadJSON, now().UTC())
-
-		return command.Accept(evt)
+		return decideSpotlightSet(cmd, now)
 
 	case CommandTypeSpotlightClear:
-		return module.DecideFunc(
-			cmd,
-			EventTypeSpotlightCleared,
-			"session",
-			func(_ *SpotlightClearedPayload) string {
-				return cmd.SessionID.String()
-			},
-			func(payload *SpotlightClearedPayload, _ func() time.Time) *command.Rejection {
-				payload.Reason = strings.TrimSpace(payload.Reason)
-				return nil
-			},
-			now,
-		)
+		return decideSpotlightClear(cmd, now)
 
 	default:
 		return command.Reject(command.Rejection{Code: command.RejectionCodeCommandTypeUnsupported, Message: fmt.Sprintf("command type %s is not supported by session decider", cmd.Type)})

@@ -37,21 +37,27 @@ type campaignCommandExecution struct {
 	Applier  projection.Applier
 }
 
-func newCampaignApplication(service *CampaignService) campaignApplication {
+func newCampaignApplicationWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+	aiClient aiv1.AgentServiceClient,
+) campaignApplication {
 	app := campaignApplication{
-		auth: newPolicyDependencies(service.stores),
+		auth: newPolicyDependencies(stores),
 		stores: campaignApplicationStores{
-			Campaign:    service.stores.Campaign,
-			Participant: service.stores.Participant,
-			Session:     service.stores.Session,
-			Social:      service.stores.Social,
+			Campaign:    stores.Campaign,
+			Participant: stores.Participant,
+			Session:     stores.Session,
+			Social:      stores.Social,
 		},
-		write:       service.stores.Write,
-		applier:     service.stores.Applier(),
-		clock:       service.clock,
-		idGenerator: service.idGenerator,
-		authClient:  service.authClient,
-		aiClient:    service.aiClient,
+		write:       stores.Write,
+		applier:     stores.Applier(),
+		clock:       clock,
+		idGenerator: idGenerator,
+		authClient:  authClient,
+		aiClient:    aiClient,
 	}
 	if app.clock == nil {
 		app.clock = time.Now

@@ -23,6 +23,15 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+func newParticipantServiceForTest(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+) *ParticipantService {
+	return newParticipantServiceWithDependencies(stores, clock, idGenerator, authClient)
+}
+
 func TestCreateParticipant_NilRequest(t *testing.T) {
 	svc := NewParticipantService(Stores{})
 	_, err := svc.CreateParticipant(context.Background(), nil)
@@ -180,11 +189,12 @@ func TestCreateParticipant_Success_GM(t *testing.T) {
 			}),
 		},
 	}}
-	svc := &ParticipantService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-123"),
-	}
+	svc := newParticipantServiceForTest(
+		Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		fixedClock(now),
+		fixedIDGenerator("participant-123"),
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
@@ -256,11 +266,12 @@ func TestCreateParticipant_Success_Player(t *testing.T) {
 			}),
 		},
 	}}
-	svc := &ParticipantService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-456"),
-	}
+	svc := newParticipantServiceForTest(
+		Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		fixedClock(now),
+		fixedIDGenerator("participant-456"),
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
@@ -311,11 +322,12 @@ func TestCreateParticipant_Success_ManagerAccess(t *testing.T) {
 			}),
 		},
 	}}
-	svc := &ParticipantService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-manager"),
-	}
+	svc := newParticipantServiceForTest(
+		Stores{Campaign: campaignStore, Participant: participantStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		fixedClock(now),
+		fixedIDGenerator("participant-manager"),
+		nil,
+	)
 
 	resp, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId:     "c1",
@@ -403,16 +415,17 @@ func TestCreateParticipant_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("participant-123"),
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateParticipant(ctx, &statev1.CreateParticipantRequest{
@@ -477,17 +490,18 @@ func TestCreateParticipant_UserLinkedRequestFieldsTakePrecedenceOverSocial(t *te
 		AvatarAssetId: "social-avatar",
 	}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 			Social:      socialClient,
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("participant-123"),
+		nil,
+	)
 
 	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId:    "c1",
@@ -559,17 +573,18 @@ func TestCreateParticipant_UserLinkedMissingFieldsHydrateFromSocial(t *testing.T
 		AvatarAssetId: "social-avatar",
 	}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 			Social:      socialClient,
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("participant-123"),
+		nil,
+	)
 
 	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
@@ -625,17 +640,17 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsername(t *testi
 	}}
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "user-handle"}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-123"),
-		authClient:  authClient,
-	}
+		fixedClock(now),
+		fixedIDGenerator("participant-123"),
+		authClient,
+	)
 
 	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
@@ -698,17 +713,18 @@ func TestCreateParticipant_UserLinkedMissingPronounsFallsBackToTheyThem(t *testi
 		AvatarAssetId: "social-avatar",
 	}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 			Social:      socialClient,
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("participant-123"),
+		nil,
+	)
 
 	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
@@ -769,17 +785,17 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsernameForLocale
 	}}
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "apelido"}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("participant-123"),
-		authClient:  authClient,
-	}
+		fixedClock(now),
+		fixedIDGenerator("participant-123"),
+		authClient,
+	)
 
 	_, err := svc.CreateParticipant(contextWithParticipantID("owner-1"), &statev1.CreateParticipantRequest{
 		CampaignId: "c1",
@@ -1016,15 +1032,17 @@ func TestUpdateParticipant_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.UpdateParticipant(ctx, &statev1.UpdateParticipantRequest{
@@ -1688,16 +1706,18 @@ func TestDeleteParticipant_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := &ParticipantService{
-		stores: Stores{
+	svc := newParticipantServiceForTest(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Character:   characterStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.DeleteParticipant(ctx, &statev1.DeleteParticipantRequest{

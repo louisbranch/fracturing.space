@@ -20,7 +20,7 @@ func (s *InviteService) CreateInvite(ctx context.Context, in *campaignv1.CreateI
 		return nil, err
 	}
 
-	inv, err := newInviteApplication(s).CreateInvite(ctx, campaignID, in)
+	inv, err := s.app.CreateInvite(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +38,7 @@ func (s *InviteService) ClaimInvite(ctx context.Context, in *campaignv1.ClaimInv
 		return nil, err
 	}
 
-	inv, participantRecord, err := newInviteApplication(s).ClaimInvite(ctx, campaignID, in)
+	inv, participantRecord, err := s.app.ClaimInvite(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (s *InviteService) DeclineInvite(ctx context.Context, in *campaignv1.Declin
 		return nil, err
 	}
 
-	updated, err := newInviteApplication(s).DeclineInvite(ctx, in)
+	updated, err := s.app.DeclineInvite(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (s *InviteService) RevokeInvite(ctx context.Context, in *campaignv1.RevokeI
 		return nil, err
 	}
 
-	updated, err := newInviteApplication(s).RevokeInvite(ctx, in)
+	updated, err := s.app.RevokeInvite(ctx, in)
 	if err != nil {
 		return nil, err
 	}

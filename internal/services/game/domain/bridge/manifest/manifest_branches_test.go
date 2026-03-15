@@ -10,7 +10,7 @@ import (
 )
 
 func TestRebindAdapterRegistry_RequiresBaseRegistry(t *testing.T) {
-	_, err := RebindAdapterRegistry(nil, ProjectionStores{})
+	_, err := RebindAdapterRegistry(nil, nil)
 	if err == nil {
 		t.Fatal("expected error for nil base registry")
 	}
@@ -27,21 +27,21 @@ func TestModules_SkipsNilBuildersAndNilModules(t *testing.T) {
 			Version:             "v1",
 			BuildModule:         nil,
 			BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
-			BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+			BuildAdapter:        func(any) domainbridge.Adapter { return nil },
 		},
 		{
 			ID:                  "skip-nil-module",
 			Version:             "v1",
 			BuildModule:         func() domainsystem.Module { return nil },
 			BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
-			BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+			BuildAdapter:        func(any) domainbridge.Adapter { return nil },
 		},
 		{
 			ID:                  "keep-module",
 			Version:             "v1",
 			BuildModule:         func() domainsystem.Module { return moduleStub{id: "keep-module", version: "v1"} },
 			BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
-			BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+			BuildAdapter:        func(any) domainbridge.Adapter { return nil },
 		},
 	}
 	defer func() { builtInSystems = orig }()
@@ -63,14 +63,14 @@ func TestMetadataSystems_SkipsNilBuildersAndNilSystems(t *testing.T) {
 			Version:             "v1",
 			BuildModule:         func() domainsystem.Module { return nil },
 			BuildMetadataSystem: nil,
-			BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+			BuildAdapter:        func(any) domainbridge.Adapter { return nil },
 		},
 		{
 			ID:                  "skip-nil-system",
 			Version:             "v1",
 			BuildModule:         func() domainsystem.Module { return nil },
 			BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
-			BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+			BuildAdapter:        func(any) domainbridge.Adapter { return nil },
 		},
 		{
 			ID:      "keep-system",
@@ -81,7 +81,7 @@ func TestMetadataSystems_SkipsNilBuildersAndNilSystems(t *testing.T) {
 			BuildMetadataSystem: func() domainbridge.GameSystem {
 				return metadataSystemStub{id: domainbridge.SystemIDDaggerheart, version: "v1"}
 			},
-			BuildAdapter: func(ProjectionStores) domainbridge.Adapter { return nil },
+			BuildAdapter: func(any) domainbridge.Adapter { return nil },
 		},
 	}
 	defer func() { builtInSystems = orig }()

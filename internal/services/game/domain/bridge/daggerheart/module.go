@@ -37,8 +37,8 @@ func (m *Module) Version() string {
 
 var daggerheartCommandDefinitions = []command.Definition{
 	{Type: commandTypeGMFearSet, Owner: command.OwnerSystem, ValidatePayload: validateGMFearSetPayload},
-	{Type: commandTypeCharacterProfileReplace, Owner: command.OwnerSystem, ValidatePayload: validateCharacterProfileReplacePayload},
-	{Type: commandTypeCharacterProfileDelete, Owner: command.OwnerSystem, ValidatePayload: validateCharacterProfileDeletePayload},
+	{Type: commandTypeCharacterProfileReplace, Owner: command.OwnerSystem, ValidatePayload: validateCharacterProfileReplacePayload, ActiveSession: command.BlockedDuringActiveSession()},
+	{Type: commandTypeCharacterProfileDelete, Owner: command.OwnerSystem, ValidatePayload: validateCharacterProfileDeletePayload, ActiveSession: command.BlockedDuringActiveSession()},
 	{Type: commandTypeCharacterStatePatch, Owner: command.OwnerSystem, ValidatePayload: validateCharacterStatePatchPayload},
 	{Type: commandTypeConditionChange, Owner: command.OwnerSystem, ValidatePayload: validateConditionChangePayload},
 	{Type: commandTypeHopeSpend, Owner: command.OwnerSystem, ValidatePayload: validateHopeSpendPayload},

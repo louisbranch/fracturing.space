@@ -2,7 +2,7 @@
 title: "Contributor map"
 parent: "Reference"
 nav_order: 4
-last_reviewed: "2026-03-09"
+last_reviewed: "2026-03-12"
 ---
 
 # Contributor map
@@ -28,7 +28,7 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update shared service infrastructure | `internal/services/shared/` |
 | Add/update web module routes/handlers | `internal/services/web/modules/<area>/` |
 | Add/update web module composition | `internal/services/web/modules/registry_*.go`, `internal/services/web/composition/compose.go` |
-| Add/update game transport handlers | `internal/services/game/api/grpc/game/`, `internal/services/game/api/grpc/systems/` |
+| Add/update game transport handlers or game-domain workflows | [Game service contributor map](game-service-contributor-map.md) |
 | Add/update campaign reads, campaign list behavior, or campaign protobuf mapping | `internal/services/game/api/grpc/game/campaign_read_application.go`, `internal/services/game/api/grpc/game/campaign_service_*.go`, `internal/services/game/api/grpc/game/campaigntransport/` |
 | Add/update participant reads, roster listing/get flows, or participant protobuf mapping | `internal/services/game/api/grpc/game/participant_read_application.go`, `internal/services/game/api/grpc/game/participant_service_*.go`, `internal/services/game/api/grpc/game/participanttransport/` |
 | Add/update character reads, sheet assembly, profile/state listing, or character protobuf mapping | `internal/services/game/api/grpc/game/character_read_application.go`, `internal/services/game/api/grpc/game/character_service_*.go`, `internal/services/game/api/grpc/game/charactertransport/` |
@@ -38,9 +38,9 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update authorization policy checks or batch authorization transport | `internal/services/game/api/grpc/game/authorization_application.go`, `internal/services/game/api/grpc/game/authorization_*service.go`, `internal/services/game/api/grpc/game/authorization_*evaluator.go`, `internal/services/game/api/grpc/game/authorization_policy.go` |
 | Add/update communication context/control flows | `internal/services/game/api/grpc/game/communication_service.go`, `internal/services/game/api/grpc/game/communication_service_control.go`, `internal/services/game/api/grpc/game/communication_application*.go`, `internal/services/game/api/grpc/game/session_read_application.go`, `internal/services/game/api/grpc/game/session_gate_command_execution.go`, `internal/services/game/api/grpc/game/sessiontransport/` |
 | Add/update session gRPC mapping and spotlight/gate protobuf conversions | `internal/services/game/api/grpc/game/sessiontransport/`, `internal/services/game/api/grpc/game/session_service_*.go`, `internal/services/game/api/grpc/game/session_spotlight_application.go`, `internal/services/game/api/grpc/game/session_command_execution.go` |
-| Add/update session-gate authority, workflow validation, or structured gate storage | `internal/services/game/domain/session/`, `internal/services/game/projection/apply_session.go`, `internal/services/game/storage/sqlite/store_projection_session.go` |
+| Add/update session-gate authority, workflow validation, progress tracking, or structured gate storage | `internal/services/game/domain/session/decider_gate.go`, the `internal/services/game/domain/session/gate_workflow_*.go`, `gate_progress_*.go`, and `gate_projection_*.go` families, `internal/services/game/projection/apply_session.go`, and `internal/services/game/storage/sqlite/coreprojection/store_projection_session_gate.go` |
 | Add/update game bootstrap/service registration | `internal/services/game/app/`, `internal/services/game/app/bootstrap_service_registration.go` |
-| Add/update projection/storage behavior | `internal/services/game/storage/sqlite/store_*.go`, `internal/services/game/projection/` |
+| Add/update projection/storage behavior | `internal/services/game/storage/sqlite/coreprojection/` for shared projection records, conversion seams, apply-once, snapshots, and watermarks; `internal/services/game/storage/sqlite/eventjournal/` for immutable event persistence; `internal/services/game/storage/sqlite/integrationoutbox/` for worker delivery persistence; and `internal/services/game/projection/` for apply logic |
 | Add/update command startup/config wiring | `internal/platform/cmd`, `internal/cmd/*` |
 
 ## Validation path
@@ -58,3 +58,4 @@ Run targeted tests first, then full checks:
 - Service runtime ownership map: [Small services topology](small-services-topology.md)
 - Write-path semantics: [Event-driven system](../architecture/foundations/event-driven-system.md)
 - System extension: [Game systems architecture](../architecture/systems/game-systems.md)
+- Game service routing: [Game service contributor map](game-service-contributor-map.md)

@@ -7,21 +7,21 @@ import (
 )
 
 func (s *DaggerheartService) CreateAdversary(ctx context.Context, in *pb.DaggerheartCreateAdversaryRequest) (*pb.DaggerheartCreateAdversaryResponse, error) {
-	return s.runCreateAdversary(ctx, in)
+	return s.adversaryHandler().CreateAdversary(ctx, in)
 }
 
 func (s *DaggerheartService) UpdateAdversary(ctx context.Context, in *pb.DaggerheartUpdateAdversaryRequest) (*pb.DaggerheartUpdateAdversaryResponse, error) {
-	return s.runUpdateAdversary(ctx, in)
+	return s.adversaryHandler().UpdateAdversary(ctx, in)
 }
 
 func (s *DaggerheartService) DeleteAdversary(ctx context.Context, in *pb.DaggerheartDeleteAdversaryRequest) (*pb.DaggerheartDeleteAdversaryResponse, error) {
-	return s.runDeleteAdversary(ctx, in)
+	return s.adversaryHandler().DeleteAdversary(ctx, in)
 }
 
 func (s *DaggerheartService) GetAdversary(ctx context.Context, in *pb.DaggerheartGetAdversaryRequest) (*pb.DaggerheartGetAdversaryResponse, error) {
-	return s.runGetAdversary(ctx, in)
+	return s.adversaryHandler().GetAdversary(ctx, in)
 }
 
 func (s *DaggerheartService) ListAdversaries(ctx context.Context, in *pb.DaggerheartListAdversariesRequest) (*pb.DaggerheartListAdversariesResponse, error) {
-	return s.runListAdversaries(ctx, in)
+	return s.adversaryHandler().ListAdversaries(ctx, in)
 }

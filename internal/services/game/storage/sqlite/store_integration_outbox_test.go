@@ -41,7 +41,11 @@ func TestAppendEvent_EnqueuesInviteIntegrationOutbox(t *testing.T) {
 		t.Fatalf("append event: %v", err)
 	}
 
-	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 1, storedEvent.Timestamp, time.Minute)
+	outboxStore := store.IntegrationOutboxStore()
+	if outboxStore == nil {
+		t.Fatal("expected integration outbox store")
+	}
+	leased, err := outboxStore.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 1, storedEvent.Timestamp, time.Minute)
 	if err != nil {
 		t.Fatalf("lease integration outbox events: %v", err)
 	}
@@ -96,78 +100,15 @@ func TestAppendEvent_SkipsUntargetedInviteCreatedIntegrationOutbox(t *testing.T)
 		t.Fatalf("append event: %v", err)
 	}
 
-	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 1, time.Date(2026, 3, 9, 12, 5, 0, 0, time.UTC), time.Minute)
+	outboxStore := store.IntegrationOutboxStore()
+	if outboxStore == nil {
+		t.Fatal("expected integration outbox store")
+	}
+	leased, err := outboxStore.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 1, time.Date(2026, 3, 9, 12, 5, 0, 0, time.UTC), time.Minute)
 	if err != nil {
 		t.Fatalf("lease integration outbox events: %v", err)
 	}
 	if len(leased) != 0 {
 		t.Fatalf("leased len = %d, want 0", len(leased))
-	}
-}
-
-func TestIntegrationOutbox_LeaseRetryAndSucceed(t *testing.T) {
-	store := openTestEventsStore(t)
-	now := time.Date(2026, 3, 9, 12, 10, 0, 0, time.UTC)
-	err := store.EnqueueIntegrationOutboxEvent(context.Background(), storage.IntegrationOutboxEvent{
-		ID:            "evt-1",
-		EventType:     gameintegration.InviteNotificationClaimedOutboxEventType,
-		PayloadJSON:   `{"invite_id":"invite-1","user_id":"user-2"}`,
-		DedupeKey:     gameintegration.InviteAcceptedNotificationDedupeKey("invite-1"),
-		Status:        storage.IntegrationOutboxStatusPending,
-		AttemptCount:  0,
-		NextAttemptAt: now,
-		CreatedAt:     now,
-		UpdatedAt:     now,
-	})
-	if err != nil {
-		t.Fatalf("enqueue integration outbox event: %v", err)
-	}
-
-	leased, err := store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 10, now, time.Minute)
-	if err != nil {
-		t.Fatalf("lease integration outbox events: %v", err)
-	}
-	if len(leased) != 1 {
-		t.Fatalf("leased len = %d, want 1", len(leased))
-	}
-	if leased[0].Status != storage.IntegrationOutboxStatusLeased {
-		t.Fatalf("leased status = %q, want %q", leased[0].Status, storage.IntegrationOutboxStatusLeased)
-	}
-
-	retryAt := now.Add(30 * time.Second)
-	if err := store.MarkIntegrationOutboxRetry(context.Background(), "evt-1", "worker-1", retryAt, "temporary"); err != nil {
-		t.Fatalf("mark retry: %v", err)
-	}
-	retried, err := store.GetIntegrationOutboxEvent(context.Background(), "evt-1")
-	if err != nil {
-		t.Fatalf("get retried event: %v", err)
-	}
-	if retried.Status != storage.IntegrationOutboxStatusPending {
-		t.Fatalf("status after retry = %q, want %q", retried.Status, storage.IntegrationOutboxStatusPending)
-	}
-	if retried.AttemptCount != 1 {
-		t.Fatalf("attempt count after retry = %d, want 1", retried.AttemptCount)
-	}
-
-	leased, err = store.LeaseIntegrationOutboxEvents(context.Background(), "worker-1", 10, retryAt, time.Minute)
-	if err != nil {
-		t.Fatalf("lease integration outbox events again: %v", err)
-	}
-	if len(leased) != 1 {
-		t.Fatalf("leased len after retry = %d, want 1", len(leased))
-	}
-
-	if err := store.MarkIntegrationOutboxSucceeded(context.Background(), "evt-1", "worker-1", retryAt.Add(time.Second)); err != nil {
-		t.Fatalf("mark succeeded: %v", err)
-	}
-	done, err := store.GetIntegrationOutboxEvent(context.Background(), "evt-1")
-	if err != nil {
-		t.Fatalf("get succeeded event: %v", err)
-	}
-	if done.Status != storage.IntegrationOutboxStatusSucceeded {
-		t.Fatalf("status after success = %q, want %q", done.Status, storage.IntegrationOutboxStatusSucceeded)
-	}
-	if done.ProcessedAt == nil {
-		t.Fatal("expected processed at to be set")
 	}
 }

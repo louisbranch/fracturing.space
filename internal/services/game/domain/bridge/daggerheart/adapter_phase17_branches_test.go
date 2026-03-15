@@ -7,14 +7,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestAdapterSnapshot_ReturnsStoredSnapshot(t *testing.T) {
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
-	if err := store.PutDaggerheartSnapshot(context.Background(), storage.DaggerheartSnapshot{
+	if err := store.PutDaggerheartSnapshot(context.Background(), projectionstore.DaggerheartSnapshot{
 		CampaignID:            "camp-1",
 		GMFear:                4,
 		ConsecutiveShortRests: 2,
@@ -26,9 +26,9 @@ func TestAdapterSnapshot_ReturnsStoredSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Snapshot() error = %v", err)
 	}
-	snapshot, ok := got.(storage.DaggerheartSnapshot)
+	snapshot, ok := got.(projectionstore.DaggerheartSnapshot)
 	if !ok {
-		t.Fatalf("Snapshot() type = %T, want storage.DaggerheartSnapshot", got)
+		t.Fatalf("Snapshot() type = %T, want projectionstore.DaggerheartSnapshot", got)
 	}
 	if snapshot.GMFear != 4 || snapshot.ConsecutiveShortRests != 2 {
 		t.Fatalf("Snapshot() = %+v, want gm_fear=4 short_rests=2", snapshot)
@@ -54,7 +54,7 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 	t.Run("profile read error", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
-		if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+		if err := store.PutDaggerheartCharacterState(context.Background(), projectionstore.DaggerheartCharacterState{
 			CampaignID:  "camp-1",
 			CharacterID: "char-1",
 			Hope:        2,
@@ -124,7 +124,7 @@ func TestHandleCharacterTemporaryArmorApplied_ErrorBranches(t *testing.T) {
 	t.Run("profile read error", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
-		if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+		if err := store.PutDaggerheartCharacterState(context.Background(), projectionstore.DaggerheartCharacterState{
 			CampaignID:  "camp-1",
 			CharacterID: "char-1",
 			Armor:       1,
@@ -250,7 +250,7 @@ func TestHandleAdversaryUpdated_ErrorBranches(t *testing.T) {
 	t.Run("adversary write error", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
-		if err := store.PutDaggerheartAdversary(context.Background(), storage.DaggerheartAdversary{
+		if err := store.PutDaggerheartAdversary(context.Background(), projectionstore.DaggerheartAdversary{
 			CampaignID:  "camp-1",
 			AdversaryID: "adv-1",
 			Name:        "Goblin",
@@ -306,7 +306,7 @@ func TestApplyConditionPatch_ErrorBranches(t *testing.T) {
 	t.Run("character profile read error", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
-		if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+		if err := store.PutDaggerheartCharacterState(context.Background(), projectionstore.DaggerheartCharacterState{
 			CampaignID:  "camp-1",
 			CharacterID: "char-1",
 			Armor:       1,

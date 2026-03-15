@@ -74,8 +74,8 @@ func TestDaggerheartArchScanIncludesNonLegacyFiles(t *testing.T) {
 	if err != nil {
 		t.Fatalf("load architecture scan files: %v", err)
 	}
-	if !containsFile(files, "conditions.go") {
-		t.Fatal("expected architecture scan to include conditions.go")
+	if !containsFile(files, "workflow_condition_handler.go") {
+		t.Fatal("expected architecture scan to include workflow_condition_handler.go")
 	}
 }
 

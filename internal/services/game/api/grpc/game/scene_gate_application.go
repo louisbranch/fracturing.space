@@ -32,7 +32,7 @@ func (a sceneApplication) OpenSceneGate(ctx context.Context, campaignID string, 
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 
@@ -92,7 +92,7 @@ func (a sceneApplication) ResolveSceneGate(ctx context.Context, campaignID strin
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 
@@ -143,7 +143,7 @@ func (a sceneApplication) AbandonSceneGate(ctx context.Context, campaignID strin
 	if err != nil {
 		return err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 

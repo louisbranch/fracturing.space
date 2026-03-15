@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 8
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-11"
 ---
 
 # Event System Reference
@@ -75,6 +75,7 @@ Runtime registration should remain coherent across these surfaces:
 - event registry (`domain/event`)
 - module registry (`domain/module`)
 - adapter registry (`domain/bridge/adapter_registry.go`)
+- metadata registry (`domain/bridge/registry_bridge.go`)
 
 For system modules, manifest-driven registration in
 `internal/services/game/domain/bridge/manifest/manifest.go` is the source of

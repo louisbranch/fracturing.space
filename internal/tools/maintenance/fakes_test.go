@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -85,16 +86,16 @@ type fakeProjectionStore struct {
 	put                        func(ctx context.Context, c storage.CampaignRecord) error
 	listCharacters             func(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error)
 	listCharactersByOwner      func(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error)
-	getDaggerheartSnapshot     func(ctx context.Context, campaignID string) (storage.DaggerheartSnapshot, error)
-	putDaggerheartSnapshot     func(ctx context.Context, snap storage.DaggerheartSnapshot) error
-	getDaggerheartCharState    func(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error)
-	putDaggerheartCharState    func(ctx context.Context, state storage.DaggerheartCharacterState) error
-	putDaggerheartCharProfile  func(ctx context.Context, profile storage.DaggerheartCharacterProfile) error
-	putDaggerheartCountdown    func(ctx context.Context, countdown storage.DaggerheartCountdown) error
-	getDaggerheartCountdown    func(ctx context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error)
+	getDaggerheartSnapshot     func(ctx context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error)
+	putDaggerheartSnapshot     func(ctx context.Context, snap projectionstore.DaggerheartSnapshot) error
+	getDaggerheartCharState    func(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
+	putDaggerheartCharState    func(ctx context.Context, state projectionstore.DaggerheartCharacterState) error
+	putDaggerheartCharProfile  func(ctx context.Context, profile projectionstore.DaggerheartCharacterProfile) error
+	putDaggerheartCountdown    func(ctx context.Context, countdown projectionstore.DaggerheartCountdown) error
+	getDaggerheartCountdown    func(ctx context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error)
 	deleteDaggerheartCountdown func(ctx context.Context, campaignID, countdownID string) error
-	putDaggerheartAdversary    func(ctx context.Context, adversary storage.DaggerheartAdversary) error
-	getDaggerheartAdversary    func(ctx context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error)
+	putDaggerheartAdversary    func(ctx context.Context, adversary projectionstore.DaggerheartAdversary) error
+	getDaggerheartAdversary    func(ctx context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error)
 	deleteDaggerheartAdversary func(ctx context.Context, campaignID, adversaryID string) error
 	listProjectionWatermarks   func(ctx context.Context) ([]storage.ProjectionWatermark, error)
 }
@@ -215,68 +216,68 @@ func (f *fakeProjectionStore) ListCharactersByOwnerParticipant(ctx context.Conte
 	return nil, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutDaggerheartCharacterProfile(ctx context.Context, profile storage.DaggerheartCharacterProfile) error {
+func (f *fakeProjectionStore) PutDaggerheartCharacterProfile(ctx context.Context, profile projectionstore.DaggerheartCharacterProfile) error {
 	if f.putDaggerheartCharProfile != nil {
 		return f.putDaggerheartCharProfile(ctx, profile)
 	}
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetDaggerheartCharacterProfile(context.Context, string, string) (storage.DaggerheartCharacterProfile, error) {
-	return storage.DaggerheartCharacterProfile{}, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) GetDaggerheartCharacterProfile(context.Context, string, string) (projectionstore.DaggerheartCharacterProfile, error) {
+	return projectionstore.DaggerheartCharacterProfile{}, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (storage.DaggerheartCharacterProfilePage, error) {
-	return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("not implemented")
+func (f *fakeProjectionStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (projectionstore.DaggerheartCharacterProfilePage, error) {
+	return projectionstore.DaggerheartCharacterProfilePage{}, fmt.Errorf("not implemented")
 }
 
 func (f *fakeProjectionStore) DeleteDaggerheartCharacterProfile(context.Context, string, string) error {
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutDaggerheartCharacterState(ctx context.Context, state storage.DaggerheartCharacterState) error {
+func (f *fakeProjectionStore) PutDaggerheartCharacterState(ctx context.Context, state projectionstore.DaggerheartCharacterState) error {
 	if f.putDaggerheartCharState != nil {
 		return f.putDaggerheartCharState(ctx, state)
 	}
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error) {
+func (f *fakeProjectionStore) GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
 	if f.getDaggerheartCharState != nil {
 		return f.getDaggerheartCharState(ctx, campaignID, characterID)
 	}
-	return storage.DaggerheartCharacterState{}, fmt.Errorf("not implemented")
+	return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutDaggerheartSnapshot(ctx context.Context, snap storage.DaggerheartSnapshot) error {
+func (f *fakeProjectionStore) PutDaggerheartSnapshot(ctx context.Context, snap projectionstore.DaggerheartSnapshot) error {
 	if f.putDaggerheartSnapshot != nil {
 		return f.putDaggerheartSnapshot(ctx, snap)
 	}
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetDaggerheartSnapshot(ctx context.Context, campaignID string) (storage.DaggerheartSnapshot, error) {
+func (f *fakeProjectionStore) GetDaggerheartSnapshot(ctx context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error) {
 	if f.getDaggerheartSnapshot != nil {
 		return f.getDaggerheartSnapshot(ctx, campaignID)
 	}
-	return storage.DaggerheartSnapshot{}, fmt.Errorf("not implemented")
+	return projectionstore.DaggerheartSnapshot{}, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutDaggerheartCountdown(ctx context.Context, countdown storage.DaggerheartCountdown) error {
+func (f *fakeProjectionStore) PutDaggerheartCountdown(ctx context.Context, countdown projectionstore.DaggerheartCountdown) error {
 	if f.putDaggerheartCountdown != nil {
 		return f.putDaggerheartCountdown(ctx, countdown)
 	}
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
+func (f *fakeProjectionStore) GetDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error) {
 	if f.getDaggerheartCountdown != nil {
 		return f.getDaggerheartCountdown(ctx, campaignID, countdownID)
 	}
-	return storage.DaggerheartCountdown{}, fmt.Errorf("not implemented")
+	return projectionstore.DaggerheartCountdown{}, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) ListDaggerheartCountdowns(context.Context, string) ([]storage.DaggerheartCountdown, error) {
+func (f *fakeProjectionStore) ListDaggerheartCountdowns(context.Context, string) ([]projectionstore.DaggerheartCountdown, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 
@@ -287,21 +288,21 @@ func (f *fakeProjectionStore) DeleteDaggerheartCountdown(ctx context.Context, ca
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) PutDaggerheartAdversary(ctx context.Context, adversary storage.DaggerheartAdversary) error {
+func (f *fakeProjectionStore) PutDaggerheartAdversary(ctx context.Context, adversary projectionstore.DaggerheartAdversary) error {
 	if f.putDaggerheartAdversary != nil {
 		return f.putDaggerheartAdversary(ctx, adversary)
 	}
 	return fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error) {
+func (f *fakeProjectionStore) GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 	if f.getDaggerheartAdversary != nil {
 		return f.getDaggerheartAdversary(ctx, campaignID, adversaryID)
 	}
-	return storage.DaggerheartAdversary{}, fmt.Errorf("not implemented")
+	return projectionstore.DaggerheartAdversary{}, fmt.Errorf("not implemented")
 }
 
-func (f *fakeProjectionStore) ListDaggerheartAdversaries(context.Context, string, string) ([]storage.DaggerheartAdversary, error) {
+func (f *fakeProjectionStore) ListDaggerheartAdversaries(context.Context, string, string) ([]projectionstore.DaggerheartAdversary, error) {
 	return nil, fmt.Errorf("not implemented")
 }
 

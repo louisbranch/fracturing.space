@@ -9,6 +9,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -103,7 +104,7 @@ func TestApplyDeathMove_AlreadyDead(t *testing.T) {
 	configureNoopDomain(svc)
 	// Set up state with hp=0 and life_state=dead
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
@@ -121,7 +122,7 @@ func TestApplyDeathMove_AlreadyDead(t *testing.T) {
 func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
@@ -131,10 +132,7 @@ func TestApplyDeathMove_AvoidDeath_Success(t *testing.T) {
 		LifeState:   daggerheart.LifeStateAlive,
 	}
 	profile := dhStore.Profiles["camp-1:char-1"]
-	move, err := daggerheartDeathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH)
-	if err != nil {
-		t.Fatalf("map death move: %v", err)
-	}
+	move := daggerheart.DeathMoveAvoidDeath
 	hpMax := profile.HpMax
 	if hpMax == 0 {
 		hpMax = daggerheartprofile.PCHpMax
@@ -215,7 +213,7 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := testTimestamp
 
-	state := storage.DaggerheartCharacterState{
+	state := projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
@@ -226,10 +224,7 @@ func TestApplyDeathMove_UsesDomainEngine(t *testing.T) {
 	}
 	dhStore.States["camp-1:char-1"] = state
 	profile := dhStore.Profiles["camp-1:char-1"]
-	move, err := daggerheartDeathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH)
-	if err != nil {
-		t.Fatalf("map death move: %v", err)
-	}
+	move := daggerheart.DeathMoveAvoidDeath
 
 	hpMax := profile.HpMax
 	if hpMax == 0 {
@@ -364,7 +359,7 @@ func TestResolveBlazeOfGlory_MissingSessionId(t *testing.T) {
 func TestResolveBlazeOfGlory_CharacterAlreadyDead(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		LifeState:   daggerheart.LifeStateDead,
@@ -388,7 +383,7 @@ func TestResolveBlazeOfGlory_NotInBlazeState(t *testing.T) {
 func TestResolveBlazeOfGlory_Success(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,
@@ -465,7 +460,7 @@ func TestResolveBlazeOfGlory_Success(t *testing.T) {
 func TestResolveBlazeOfGlory_UsesDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          0,

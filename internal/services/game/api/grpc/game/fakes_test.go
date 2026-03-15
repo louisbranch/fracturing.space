@@ -16,6 +16,7 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -455,13 +456,13 @@ func (s *fakeCharacterStore) CountCharacters(_ context.Context, campaignID strin
 	return len(byID), nil
 }
 
-// fakeDaggerheartStore is a test double for storage.DaggerheartStore.
+// fakeDaggerheartStore is a test double for projectionstore.Store.
 type fakeDaggerheartStore struct {
-	profiles    map[string]map[string]storage.DaggerheartCharacterProfile // campaignID -> characterID -> profile
-	states      map[string]map[string]storage.DaggerheartCharacterState   // campaignID -> characterID -> state
-	snapshots   map[string]storage.DaggerheartSnapshot                    // campaignID -> snapshot
-	countdowns  map[string]map[string]storage.DaggerheartCountdown        // campaignID -> countdownID -> countdown
-	adversaries map[string]map[string]storage.DaggerheartAdversary        // campaignID -> adversaryID -> adversary
+	profiles    map[string]map[string]projectionstore.DaggerheartCharacterProfile // campaignID -> characterID -> profile
+	states      map[string]map[string]projectionstore.DaggerheartCharacterState   // campaignID -> characterID -> state
+	snapshots   map[string]projectionstore.DaggerheartSnapshot                    // campaignID -> snapshot
+	countdowns  map[string]map[string]projectionstore.DaggerheartCountdown        // campaignID -> countdownID -> countdown
+	adversaries map[string]map[string]projectionstore.DaggerheartAdversary        // campaignID -> adversaryID -> adversary
 	statePuts   map[string]int
 	snapPuts    map[string]int
 	putErr      error
@@ -470,52 +471,52 @@ type fakeDaggerheartStore struct {
 
 func newFakeDaggerheartStore() *fakeDaggerheartStore {
 	return &fakeDaggerheartStore{
-		profiles:    make(map[string]map[string]storage.DaggerheartCharacterProfile),
-		states:      make(map[string]map[string]storage.DaggerheartCharacterState),
-		snapshots:   make(map[string]storage.DaggerheartSnapshot),
-		countdowns:  make(map[string]map[string]storage.DaggerheartCountdown),
-		adversaries: make(map[string]map[string]storage.DaggerheartAdversary),
+		profiles:    make(map[string]map[string]projectionstore.DaggerheartCharacterProfile),
+		states:      make(map[string]map[string]projectionstore.DaggerheartCharacterState),
+		snapshots:   make(map[string]projectionstore.DaggerheartSnapshot),
+		countdowns:  make(map[string]map[string]projectionstore.DaggerheartCountdown),
+		adversaries: make(map[string]map[string]projectionstore.DaggerheartAdversary),
 		statePuts:   make(map[string]int),
 		snapPuts:    make(map[string]int),
 	}
 }
 
-func (s *fakeDaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, p storage.DaggerheartCharacterProfile) error {
+func (s *fakeDaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, p projectionstore.DaggerheartCharacterProfile) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
 	if s.profiles[p.CampaignID] == nil {
-		s.profiles[p.CampaignID] = make(map[string]storage.DaggerheartCharacterProfile)
+		s.profiles[p.CampaignID] = make(map[string]projectionstore.DaggerheartCharacterProfile)
 	}
 	s.profiles[p.CampaignID][p.CharacterID] = p
 	return nil
 }
 
-func (s *fakeDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
+func (s *fakeDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error) {
 	if s.getErr != nil {
-		return storage.DaggerheartCharacterProfile{}, s.getErr
+		return projectionstore.DaggerheartCharacterProfile{}, s.getErr
 	}
 	byID, ok := s.profiles[campaignID]
 	if !ok {
-		return storage.DaggerheartCharacterProfile{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterProfile{}, storage.ErrNotFound
 	}
 	p, ok := byID[characterID]
 	if !ok {
-		return storage.DaggerheartCharacterProfile{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterProfile{}, storage.ErrNotFound
 	}
 	return p, nil
 }
 
-func (s *fakeDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.DaggerheartCharacterProfilePage, error) {
+func (s *fakeDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, pageSize int, pageToken string) (projectionstore.DaggerheartCharacterProfilePage, error) {
 	if s.getErr != nil {
-		return storage.DaggerheartCharacterProfilePage{}, s.getErr
+		return projectionstore.DaggerheartCharacterProfilePage{}, s.getErr
 	}
 	if pageSize <= 0 {
-		return storage.DaggerheartCharacterProfilePage{}, fmt.Errorf("page size must be greater than zero")
+		return projectionstore.DaggerheartCharacterProfilePage{}, fmt.Errorf("page size must be greater than zero")
 	}
 	byID, ok := s.profiles[campaignID]
 	if !ok {
-		return storage.DaggerheartCharacterProfilePage{}, nil
+		return projectionstore.DaggerheartCharacterProfilePage{}, nil
 	}
 	ids := make([]string, 0, len(byID))
 	for characterID := range byID {
@@ -526,8 +527,8 @@ func (s *fakeDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Contex
 	}
 	sort.Strings(ids)
 
-	page := storage.DaggerheartCharacterProfilePage{
-		Profiles: make([]storage.DaggerheartCharacterProfile, 0, min(pageSize, len(ids))),
+	page := projectionstore.DaggerheartCharacterProfilePage{
+		Profiles: make([]projectionstore.DaggerheartCharacterProfile, 0, min(pageSize, len(ids))),
 	}
 	for index, characterID := range ids {
 		if index >= pageSize {
@@ -554,34 +555,34 @@ func (s *fakeDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Conte
 	return nil
 }
 
-func (s *fakeDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st storage.DaggerheartCharacterState) error {
+func (s *fakeDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st projectionstore.DaggerheartCharacterState) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
 	if s.states[st.CampaignID] == nil {
-		s.states[st.CampaignID] = make(map[string]storage.DaggerheartCharacterState)
+		s.states[st.CampaignID] = make(map[string]projectionstore.DaggerheartCharacterState)
 	}
 	s.states[st.CampaignID][st.CharacterID] = st
 	s.statePuts[st.CampaignID]++
 	return nil
 }
 
-func (s *fakeDaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error) {
+func (s *fakeDaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
 	if s.getErr != nil {
-		return storage.DaggerheartCharacterState{}, s.getErr
+		return projectionstore.DaggerheartCharacterState{}, s.getErr
 	}
 	byID, ok := s.states[campaignID]
 	if !ok {
-		return storage.DaggerheartCharacterState{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterState{}, storage.ErrNotFound
 	}
 	st, ok := byID[characterID]
 	if !ok {
-		return storage.DaggerheartCharacterState{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterState{}, storage.ErrNotFound
 	}
 	return st, nil
 }
 
-func (s *fakeDaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap storage.DaggerheartSnapshot) error {
+func (s *fakeDaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap projectionstore.DaggerheartSnapshot) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
@@ -590,44 +591,44 @@ func (s *fakeDaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap st
 	return nil
 }
 
-func (s *fakeDaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (storage.DaggerheartSnapshot, error) {
+func (s *fakeDaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error) {
 	if s.getErr != nil {
-		return storage.DaggerheartSnapshot{}, s.getErr
+		return projectionstore.DaggerheartSnapshot{}, s.getErr
 	}
 	snap, ok := s.snapshots[campaignID]
 	if !ok {
-		return storage.DaggerheartSnapshot{}, storage.ErrNotFound
+		return projectionstore.DaggerheartSnapshot{}, storage.ErrNotFound
 	}
 	return snap, nil
 }
 
-func (s *fakeDaggerheartStore) PutDaggerheartCountdown(_ context.Context, countdown storage.DaggerheartCountdown) error {
+func (s *fakeDaggerheartStore) PutDaggerheartCountdown(_ context.Context, countdown projectionstore.DaggerheartCountdown) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
 	if s.countdowns[countdown.CampaignID] == nil {
-		s.countdowns[countdown.CampaignID] = make(map[string]storage.DaggerheartCountdown)
+		s.countdowns[countdown.CampaignID] = make(map[string]projectionstore.DaggerheartCountdown)
 	}
 	s.countdowns[countdown.CampaignID][countdown.CountdownID] = countdown
 	return nil
 }
 
-func (s *fakeDaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
+func (s *fakeDaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error) {
 	if s.getErr != nil {
-		return storage.DaggerheartCountdown{}, s.getErr
+		return projectionstore.DaggerheartCountdown{}, s.getErr
 	}
 	byID, ok := s.countdowns[campaignID]
 	if !ok {
-		return storage.DaggerheartCountdown{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCountdown{}, storage.ErrNotFound
 	}
 	countdown, ok := byID[countdownID]
 	if !ok {
-		return storage.DaggerheartCountdown{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCountdown{}, storage.ErrNotFound
 	}
 	return countdown, nil
 }
 
-func (s *fakeDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]storage.DaggerheartCountdown, error) {
+func (s *fakeDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]projectionstore.DaggerheartCountdown, error) {
 	if s.getErr != nil {
 		return nil, s.getErr
 	}
@@ -635,7 +636,7 @@ func (s *fakeDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, camp
 	if !ok {
 		return nil, nil
 	}
-	result := make([]storage.DaggerheartCountdown, 0, len(byID))
+	result := make([]projectionstore.DaggerheartCountdown, 0, len(byID))
 	for _, countdown := range byID {
 		result = append(result, countdown)
 	}
@@ -657,33 +658,33 @@ func (s *fakeDaggerheartStore) DeleteDaggerheartCountdown(_ context.Context, cam
 	return nil
 }
 
-func (s *fakeDaggerheartStore) PutDaggerheartAdversary(_ context.Context, adversary storage.DaggerheartAdversary) error {
+func (s *fakeDaggerheartStore) PutDaggerheartAdversary(_ context.Context, adversary projectionstore.DaggerheartAdversary) error {
 	if s.putErr != nil {
 		return s.putErr
 	}
 	if s.adversaries[adversary.CampaignID] == nil {
-		s.adversaries[adversary.CampaignID] = make(map[string]storage.DaggerheartAdversary)
+		s.adversaries[adversary.CampaignID] = make(map[string]projectionstore.DaggerheartAdversary)
 	}
 	s.adversaries[adversary.CampaignID][adversary.AdversaryID] = adversary
 	return nil
 }
 
-func (s *fakeDaggerheartStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error) {
+func (s *fakeDaggerheartStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 	if s.getErr != nil {
-		return storage.DaggerheartAdversary{}, s.getErr
+		return projectionstore.DaggerheartAdversary{}, s.getErr
 	}
 	byID, ok := s.adversaries[campaignID]
 	if !ok {
-		return storage.DaggerheartAdversary{}, storage.ErrNotFound
+		return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
 	}
 	adversary, ok := byID[adversaryID]
 	if !ok {
-		return storage.DaggerheartAdversary{}, storage.ErrNotFound
+		return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
 	}
 	return adversary, nil
 }
 
-func (s *fakeDaggerheartStore) ListDaggerheartAdversaries(_ context.Context, campaignID, sessionID string) ([]storage.DaggerheartAdversary, error) {
+func (s *fakeDaggerheartStore) ListDaggerheartAdversaries(_ context.Context, campaignID, sessionID string) ([]projectionstore.DaggerheartAdversary, error) {
 	if s.getErr != nil {
 		return nil, s.getErr
 	}
@@ -691,7 +692,7 @@ func (s *fakeDaggerheartStore) ListDaggerheartAdversaries(_ context.Context, cam
 	if !ok {
 		return nil, nil
 	}
-	result := make([]storage.DaggerheartAdversary, 0, len(byID))
+	result := make([]projectionstore.DaggerheartAdversary, 0, len(byID))
 	for _, adversary := range byID {
 		if strings.TrimSpace(sessionID) != "" && adversary.SessionID != sessionID {
 			continue

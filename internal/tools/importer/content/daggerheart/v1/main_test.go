@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	sqlitedaggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartcontent"
 )
 
 func TestListLocaleDirs(t *testing.T) {
@@ -124,7 +124,7 @@ func TestRunSkipIfReadySkipsWritesWhenCatalogAlreadyReady(t *testing.T) {
 		t.Fatalf("initial Run() error = %v", err)
 	}
 
-	store, err := storagesqlite.OpenContent(dbPath)
+	store, err := sqlitedaggerheartcontent.Open(dbPath)
 	if err != nil {
 		t.Fatalf("OpenContent() error = %v", err)
 	}
@@ -177,7 +177,7 @@ func TestRunSkipIfReadyImportsWhenCatalogNotReady(t *testing.T) {
 		t.Fatalf("output = %q, want import message", out.String())
 	}
 
-	store, err := storagesqlite.OpenContent(dbPath)
+	store, err := sqlitedaggerheartcontent.Open(dbPath)
 	if err != nil {
 		t.Fatalf("OpenContent() error = %v", err)
 	}
@@ -187,7 +187,7 @@ func TestRunSkipIfReadyImportsWhenCatalogNotReady(t *testing.T) {
 		}
 	}()
 
-	readiness, err := storage.EvaluateDaggerheartCatalogReadiness(context.Background(), store)
+	readiness, err := contentstore.EvaluateDaggerheartCatalogReadiness(context.Background(), store)
 	if err != nil {
 		t.Fatalf("EvaluateDaggerheartCatalogReadiness() error = %v", err)
 	}
@@ -269,7 +269,7 @@ func TestOpenContentStoreWithRetryRetriesBusyAndSucceeds(t *testing.T) {
 		if attempts < 3 {
 			return nil, busyErr
 		}
-		return storagesqlite.OpenContent(successPath)
+		return sqlitedaggerheartcontent.Open(successPath)
 	}
 
 	store, err := openContentStoreWithRetry(context.Background(), successPath, io.Discard, openStore)

@@ -29,7 +29,7 @@ func (s *EventService) SubscribeCampaignUpdates(in *campaignv1.SubscribeCampaign
 	if in == nil {
 		return status.Error(codes.InvalidArgument, "subscribe campaign updates request is required")
 	}
-	return newEventApplication(s).SubscribeCampaignUpdates(in, stream)
+	return s.app.SubscribeCampaignUpdates(in, stream)
 }
 
 func normalizeSubscribeCampaignUpdatesRequest(in *campaignv1.SubscribeCampaignUpdatesRequest) (normalizedSubscribeCampaignUpdatesRequest, error) {

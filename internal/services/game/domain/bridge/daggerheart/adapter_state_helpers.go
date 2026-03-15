@@ -5,13 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // putSnapshot centralizes snapshot write error wrapping so handler code stays
 // focused on payload-to-state transformation rules.
 func (a *Adapter) putSnapshot(ctx context.Context, campaignID string, gmFear, shortRests int) error {
-	if err := a.store.PutDaggerheartSnapshot(ctx, storage.DaggerheartSnapshot{
+	if err := a.store.PutDaggerheartSnapshot(ctx, projectionstore.DaggerheartSnapshot{
 		CampaignID:            campaignID,
 		GMFear:                gmFear,
 		ConsecutiveShortRests: shortRests,
@@ -33,32 +34,32 @@ func (a *Adapter) snapshotShortRests(ctx context.Context, campaignID string) int
 
 // getCharacterStateIfExists loads character state and reports existence. Missing
 // rows are not considered errors.
-func (a *Adapter) getCharacterStateIfExists(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, bool, error) {
+func (a *Adapter) getCharacterStateIfExists(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, bool, error) {
 	state, err := a.store.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return storage.DaggerheartCharacterState{}, false, nil
+			return projectionstore.DaggerheartCharacterState{}, false, nil
 		}
-		return storage.DaggerheartCharacterState{}, false, fmt.Errorf("get daggerheart character state: %w", err)
+		return projectionstore.DaggerheartCharacterState{}, false, fmt.Errorf("get daggerheart character state: %w", err)
 	}
 	return state, true, nil
 }
 
 // getCharacterStateOrDefault loads existing character state or builds a default
 // state for first-write projection paths.
-func (a *Adapter) getCharacterStateOrDefault(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error) {
+func (a *Adapter) getCharacterStateOrDefault(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
 	state, exists, err := a.getCharacterStateIfExists(ctx, campaignID, characterID)
 	if err != nil {
-		return storage.DaggerheartCharacterState{}, err
+		return projectionstore.DaggerheartCharacterState{}, err
 	}
 	if exists {
 		return state, nil
 	}
-	return storage.DaggerheartCharacterState{CampaignID: campaignID, CharacterID: characterID}, nil
+	return projectionstore.DaggerheartCharacterState{CampaignID: campaignID, CharacterID: characterID}, nil
 }
 
 // putCharacterState centralizes character state write error wrapping.
-func (a *Adapter) putCharacterState(ctx context.Context, state storage.DaggerheartCharacterState) error {
+func (a *Adapter) putCharacterState(ctx context.Context, state projectionstore.DaggerheartCharacterState) error {
 	if err := a.store.PutDaggerheartCharacterState(ctx, state); err != nil {
 		return fmt.Errorf("put daggerheart character state: %w", err)
 	}

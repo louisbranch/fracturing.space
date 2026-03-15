@@ -48,7 +48,7 @@ func (s *CampaignService) UpdateCampaign(ctx context.Context, in *campaignv1.Upd
 		return nil, status.Error(codes.InvalidArgument, "locale is invalid")
 	}
 
-	updated, err := newCampaignApplication(s).UpdateCampaign(ctx, campaignID, update)
+	updated, err := s.app.UpdateCampaign(ctx, campaignID, update)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (s *CampaignService) EndCampaign(ctx context.Context, in *campaignv1.EndCam
 		return nil, err
 	}
 
-	updated, err := newCampaignApplication(s).EndCampaign(ctx, campaignID)
+	updated, err := s.app.EndCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func (s *CampaignService) ArchiveCampaign(ctx context.Context, in *campaignv1.Ar
 		return nil, err
 	}
 
-	updated, err := newCampaignApplication(s).ArchiveCampaign(ctx, campaignID)
+	updated, err := s.app.ArchiveCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -105,7 +105,7 @@ func (s *CampaignService) RestoreCampaign(ctx context.Context, in *campaignv1.Re
 		return nil, err
 	}
 
-	updated, err := newCampaignApplication(s).RestoreCampaign(ctx, campaignID)
+	updated, err := s.app.RestoreCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +129,7 @@ func (s *CampaignService) SetCampaignCover(ctx context.Context, in *campaignv1.S
 	}
 	coverSetID := strings.TrimSpace(in.GetCoverSetId())
 
-	updated, err := newCampaignApplication(s).SetCampaignCover(ctx, campaignID, coverAssetID, coverSetID)
+	updated, err := s.app.SetCampaignCover(ctx, campaignID, coverAssetID, coverSetID)
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +152,7 @@ func (s *CampaignService) SetCampaignAIBinding(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	updated, err := newCampaignApplication(s).SetCampaignAIBinding(ctx, campaignID, aiAgentID)
+	updated, err := s.app.SetCampaignAIBinding(ctx, campaignID, aiAgentID)
 	if err != nil {
 		return nil, err
 	}
@@ -170,7 +170,7 @@ func (s *CampaignService) ClearCampaignAIBinding(ctx context.Context, in *campai
 		return nil, err
 	}
 
-	updated, err := newCampaignApplication(s).ClearCampaignAIBinding(ctx, campaignID)
+	updated, err := s.app.ClearCampaignAIBinding(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}

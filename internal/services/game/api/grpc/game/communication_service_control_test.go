@@ -18,6 +18,10 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
+func newCommunicationServiceForTest(stores Stores, idGenerator func() (string, error)) *CommunicationService {
+	return newCommunicationServiceWithDependencies(stores, idGenerator)
+}
+
 func TestRequestGMHandoffUsesResolvedParticipantIdentity(t *testing.T) {
 	campaignStore := newFakeCampaignStore()
 	characterStore := newFakeCharacterStore()
@@ -61,20 +65,17 @@ func TestRequestGMHandoffUsesResolvedParticipantIdentity(t *testing.T) {
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		idGenerator: fixedSequenceIDGenerator("gate-1"),
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedSequenceIDGenerator("gate-1"))
 
 	resp, err := svc.RequestGMHandoff(contextWithUserID("user-1"), &campaignv1.RequestGMHandoffRequest{
 		CampaignId: "c1",
@@ -128,20 +129,17 @@ func TestOpenCommunicationGateUsesManagerIdentity(t *testing.T) {
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		idGenerator: fixedSequenceIDGenerator("gate-1"),
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedSequenceIDGenerator("gate-1"))
 
 	resp, err := svc.OpenCommunicationGate(contextWithParticipantID("manager-1"), &campaignv1.OpenCommunicationGateRequest{
 		CampaignId: "c1",
@@ -196,20 +194,17 @@ func TestOpenCommunicationGateNormalizesReadyCheckWorkflowMetadata(t *testing.T)
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		idGenerator: fixedSequenceIDGenerator("gate-1"),
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedSequenceIDGenerator("gate-1"))
 
 	_, err := svc.OpenCommunicationGate(contextWithParticipantID("manager-1"), &campaignv1.OpenCommunicationGateRequest{
 		CampaignId: "c1",
@@ -259,18 +254,15 @@ func TestOpenCommunicationGateRejectsVoteMetadataWithSingleOption(t *testing.T) 
 		t.Fatalf("build metadata struct: %v", err)
 	}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-		},
-		idGenerator: fixedSequenceIDGenerator("gate-1"),
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+	}, fixedSequenceIDGenerator("gate-1"))
 
 	_, err = svc.OpenCommunicationGate(contextWithParticipantID("manager-1"), &campaignv1.OpenCommunicationGateRequest{
 		CampaignId: "c1",
@@ -319,18 +311,15 @@ func TestRequestGMHandoffReturnsExistingGateWhenAlreadyOpen(t *testing.T) {
 		t.Fatalf("put session gate: %v", err)
 	}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-		},
-		idGenerator: fixedSequenceIDGenerator("gate-2"),
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+	}, fixedSequenceIDGenerator("gate-2"))
 
 	resp, err := svc.RequestGMHandoff(contextWithUserID("user-1"), &campaignv1.RequestGMHandoffRequest{
 		CampaignId: "c1",
@@ -382,19 +371,17 @@ func TestResolveCommunicationGateUsesManagerAccessAndClearsActiveGate(t *testing
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, nil)
 
 	resp, err := svc.ResolveCommunicationGate(contextWithParticipantID("manager-1"), &campaignv1.ResolveCommunicationGateRequest{
 		CampaignId: "c1",
@@ -477,19 +464,17 @@ func TestRespondToCommunicationGateUsesParticipantIdentityAndRecordsPayload(t *t
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, nil)
 
 	response, err := structpb.NewStruct(map[string]any{"note": "ready to proceed"})
 	if err != nil {
@@ -568,20 +553,17 @@ func TestResolveGMHandoffUsesManagerAccessAndClearsActiveGate(t *testing.T) {
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		idGenerator: fixedSequenceIDGenerator("gate-1"),
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedSequenceIDGenerator("gate-1"))
 
 	resp, err := svc.ResolveGMHandoff(contextWithParticipantID("manager-1"), &campaignv1.ResolveGMHandoffRequest{
 		CampaignId: "c1",
@@ -640,19 +622,17 @@ func TestAbandonCommunicationGateUsesManagerAccessAndClearsActiveGate(t *testing
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, nil)
 
 	resp, err := svc.AbandonCommunicationGate(contextWithParticipantID("manager-1"), &campaignv1.AbandonCommunicationGateRequest{
 		CampaignId: "c1",
@@ -714,19 +694,17 @@ func TestAbandonGMHandoffUsesManagerAccessAndClearsActiveGate(t *testing.T) {
 		}),
 	}}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:       campaignStore,
-			Character:      characterStore,
-			Session:        sessionStore,
-			SessionGate:    gateStore,
-			Scene:          sceneStore,
-			SceneCharacter: sceneCharacterStore,
-			Participant:    participantStore,
-			Event:          eventStore,
-			Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:       campaignStore,
+		Character:      characterStore,
+		Session:        sessionStore,
+		SessionGate:    gateStore,
+		Scene:          sceneStore,
+		SceneCharacter: sceneCharacterStore,
+		Participant:    participantStore,
+		Event:          eventStore,
+		Write:          domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, nil)
 
 	resp, err := svc.AbandonGMHandoff(contextWithParticipantID("manager-1"), &campaignv1.AbandonGMHandoffRequest{
 		CampaignId: "c1",
@@ -770,14 +748,12 @@ func TestAbandonGMHandoffRejectsDifferentOpenGateType(t *testing.T) {
 		CreatedAt:  now,
 	}
 
-	svc := &CommunicationService{
-		stores: Stores{
-			Campaign:    campaignStore,
-			Session:     sessionStore,
-			SessionGate: gateStore,
-			Participant: participantStore,
-		},
-	}
+	svc := newCommunicationServiceForTest(Stores{
+		Campaign:    campaignStore,
+		Session:     sessionStore,
+		SessionGate: gateStore,
+		Participant: participantStore,
+	}, nil)
 
 	_, err := svc.AbandonGMHandoff(contextWithParticipantID("manager-1"), &campaignv1.AbandonGMHandoffRequest{
 		CampaignId: "c1",

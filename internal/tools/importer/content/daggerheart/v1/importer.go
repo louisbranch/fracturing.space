@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 )
 
 const (
@@ -31,13 +31,13 @@ const (
 	contentTypeBeastformFeature    = "beastform_feature"
 )
 
-func upsertClasses(ctx context.Context, store storage.DaggerheartContentStore, items []classRecord, locale string, isBase bool, now time.Time) error {
+func upsertClasses(ctx context.Context, store contentstore.DaggerheartContentStore, items []classRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("class id is required")
 		}
 		if isBase {
-			class := storage.DaggerheartClass{
+			class := contentstore.DaggerheartClass{
 				ID:              item.ID,
 				Name:            item.Name,
 				StartingEvasion: item.StartingEvasion,
@@ -60,7 +60,7 @@ func upsertClasses(ctx context.Context, store storage.DaggerheartContentStore, i
 	return nil
 }
 
-func upsertSubclasses(ctx context.Context, store storage.DaggerheartContentStore, items []subclassRecord, locale string, isBase bool, now time.Time) error {
+func upsertSubclasses(ctx context.Context, store contentstore.DaggerheartContentStore, items []subclassRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("subclass id is required")
@@ -69,7 +69,7 @@ func upsertSubclasses(ctx context.Context, store storage.DaggerheartContentStore
 			return fmt.Errorf("subclass class_id is required")
 		}
 		if isBase {
-			subclass := storage.DaggerheartSubclass{
+			subclass := contentstore.DaggerheartSubclass{
 				ID:                     item.ID,
 				Name:                   item.Name,
 				ClassID:                item.ClassID,
@@ -91,13 +91,13 @@ func upsertSubclasses(ctx context.Context, store storage.DaggerheartContentStore
 	return nil
 }
 
-func upsertHeritages(ctx context.Context, store storage.DaggerheartContentStore, items []heritageRecord, locale string, isBase bool, now time.Time) error {
+func upsertHeritages(ctx context.Context, store contentstore.DaggerheartContentStore, items []heritageRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("heritage id is required")
 		}
 		if isBase {
-			heritage := storage.DaggerheartHeritage{
+			heritage := contentstore.DaggerheartHeritage{
 				ID:        item.ID,
 				Name:      item.Name,
 				Kind:      item.Kind,
@@ -116,13 +116,13 @@ func upsertHeritages(ctx context.Context, store storage.DaggerheartContentStore,
 	return nil
 }
 
-func upsertExperiences(ctx context.Context, store storage.DaggerheartContentStore, items []experienceRecord, locale string, isBase bool, now time.Time) error {
+func upsertExperiences(ctx context.Context, store contentstore.DaggerheartContentStore, items []experienceRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("experience id is required")
 		}
 		if isBase {
-			experience := storage.DaggerheartExperienceEntry{
+			experience := contentstore.DaggerheartExperienceEntry{
 				ID:          item.ID,
 				Name:        item.Name,
 				Description: item.Description,
@@ -140,13 +140,13 @@ func upsertExperiences(ctx context.Context, store storage.DaggerheartContentStor
 	return nil
 }
 
-func upsertAdversaries(ctx context.Context, store storage.DaggerheartContentStore, items []adversaryRecord, locale string, isBase bool, now time.Time) error {
+func upsertAdversaries(ctx context.Context, store contentstore.DaggerheartContentStore, items []adversaryRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("adversary id is required")
 		}
 		if isBase {
-			entry := storage.DaggerheartAdversaryEntry{
+			entry := contentstore.DaggerheartAdversaryEntry{
 				ID:              item.ID,
 				Name:            item.Name,
 				Tier:            item.Tier,
@@ -177,13 +177,13 @@ func upsertAdversaries(ctx context.Context, store storage.DaggerheartContentStor
 	return nil
 }
 
-func upsertBeastforms(ctx context.Context, store storage.DaggerheartContentStore, items []beastformRecord, locale string, isBase bool, now time.Time) error {
+func upsertBeastforms(ctx context.Context, store contentstore.DaggerheartContentStore, items []beastformRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("beastform id is required")
 		}
 		if isBase {
-			entry := storage.DaggerheartBeastformEntry{
+			entry := contentstore.DaggerheartBeastformEntry{
 				ID:           item.ID,
 				Name:         item.Name,
 				Tier:         item.Tier,
@@ -208,13 +208,13 @@ func upsertBeastforms(ctx context.Context, store storage.DaggerheartContentStore
 	return nil
 }
 
-func upsertCompanionExperiences(ctx context.Context, store storage.DaggerheartContentStore, items []companionExperienceRecord, locale string, isBase bool, now time.Time) error {
+func upsertCompanionExperiences(ctx context.Context, store contentstore.DaggerheartContentStore, items []companionExperienceRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("companion experience id is required")
 		}
 		if isBase {
-			experience := storage.DaggerheartCompanionExperienceEntry{
+			experience := contentstore.DaggerheartCompanionExperienceEntry{
 				ID:          item.ID,
 				Name:        item.Name,
 				Description: item.Description,
@@ -232,13 +232,13 @@ func upsertCompanionExperiences(ctx context.Context, store storage.DaggerheartCo
 	return nil
 }
 
-func upsertLootEntries(ctx context.Context, store storage.DaggerheartContentStore, items []lootEntryRecord, locale string, isBase bool, now time.Time) error {
+func upsertLootEntries(ctx context.Context, store contentstore.DaggerheartContentStore, items []lootEntryRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("loot entry id is required")
 		}
 		if isBase {
-			entry := storage.DaggerheartLootEntry{
+			entry := contentstore.DaggerheartLootEntry{
 				ID:          item.ID,
 				Name:        item.Name,
 				Roll:        item.Roll,
@@ -257,13 +257,13 @@ func upsertLootEntries(ctx context.Context, store storage.DaggerheartContentStor
 	return nil
 }
 
-func upsertDamageTypes(ctx context.Context, store storage.DaggerheartContentStore, items []damageTypeRecord, locale string, isBase bool, now time.Time) error {
+func upsertDamageTypes(ctx context.Context, store contentstore.DaggerheartContentStore, items []damageTypeRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("damage type id is required")
 		}
 		if isBase {
-			entry := storage.DaggerheartDamageTypeEntry{
+			entry := contentstore.DaggerheartDamageTypeEntry{
 				ID:          item.ID,
 				Name:        item.Name,
 				Description: item.Description,
@@ -281,13 +281,13 @@ func upsertDamageTypes(ctx context.Context, store storage.DaggerheartContentStor
 	return nil
 }
 
-func upsertDomains(ctx context.Context, store storage.DaggerheartContentStore, items []domainRecord, locale string, isBase bool, now time.Time) error {
+func upsertDomains(ctx context.Context, store contentstore.DaggerheartContentStore, items []domainRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("domain id is required")
 		}
 		if isBase {
-			domain := storage.DaggerheartDomain{
+			domain := contentstore.DaggerheartDomain{
 				ID:          item.ID,
 				Name:        item.Name,
 				Description: item.Description,
@@ -305,13 +305,13 @@ func upsertDomains(ctx context.Context, store storage.DaggerheartContentStore, i
 	return nil
 }
 
-func upsertDomainCards(ctx context.Context, store storage.DaggerheartContentStore, items []domainCardRecord, locale string, isBase bool, now time.Time) error {
+func upsertDomainCards(ctx context.Context, store contentstore.DaggerheartContentStore, items []domainCardRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("domain card id is required")
 		}
 		if isBase {
-			card := storage.DaggerheartDomainCard{
+			card := contentstore.DaggerheartDomainCard{
 				ID:          item.ID,
 				Name:        item.Name,
 				DomainID:    item.DomainID,
@@ -334,13 +334,13 @@ func upsertDomainCards(ctx context.Context, store storage.DaggerheartContentStor
 	return nil
 }
 
-func upsertWeapons(ctx context.Context, store storage.DaggerheartContentStore, items []weaponRecord, locale string, isBase bool, now time.Time) error {
+func upsertWeapons(ctx context.Context, store contentstore.DaggerheartContentStore, items []weaponRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("weapon id is required")
 		}
 		if isBase {
-			weapon := storage.DaggerheartWeapon{
+			weapon := contentstore.DaggerheartWeapon{
 				ID:         item.ID,
 				Name:       item.Name,
 				Category:   item.Category,
@@ -365,13 +365,13 @@ func upsertWeapons(ctx context.Context, store storage.DaggerheartContentStore, i
 	return nil
 }
 
-func upsertArmor(ctx context.Context, store storage.DaggerheartContentStore, items []armorRecord, locale string, isBase bool, now time.Time) error {
+func upsertArmor(ctx context.Context, store contentstore.DaggerheartContentStore, items []armorRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("armor id is required")
 		}
 		if isBase {
-			armor := storage.DaggerheartArmor{
+			armor := contentstore.DaggerheartArmor{
 				ID:                  item.ID,
 				Name:                item.Name,
 				Tier:                item.Tier,
@@ -393,13 +393,13 @@ func upsertArmor(ctx context.Context, store storage.DaggerheartContentStore, ite
 	return nil
 }
 
-func upsertItems(ctx context.Context, store storage.DaggerheartContentStore, items []itemRecord, locale string, isBase bool, now time.Time) error {
+func upsertItems(ctx context.Context, store contentstore.DaggerheartContentStore, items []itemRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("item id is required")
 		}
 		if isBase {
-			entry := storage.DaggerheartItem{
+			entry := contentstore.DaggerheartItem{
 				ID:          item.ID,
 				Name:        item.Name,
 				Rarity:      item.Rarity,
@@ -421,13 +421,13 @@ func upsertItems(ctx context.Context, store storage.DaggerheartContentStore, ite
 	return nil
 }
 
-func upsertEnvironments(ctx context.Context, store storage.DaggerheartContentStore, items []environmentRecord, locale string, isBase bool, now time.Time) error {
+func upsertEnvironments(ctx context.Context, store contentstore.DaggerheartContentStore, items []environmentRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("environment id is required")
 		}
 		if isBase {
-			env := storage.DaggerheartEnvironment{
+			env := contentstore.DaggerheartEnvironment{
 				ID:                    item.ID,
 				Name:                  item.Name,
 				Tier:                  item.Tier,
@@ -451,10 +451,10 @@ func upsertEnvironments(ctx context.Context, store storage.DaggerheartContentSto
 	return nil
 }
 
-func toStorageFeatures(features []featureRecord) []storage.DaggerheartFeature {
-	items := make([]storage.DaggerheartFeature, 0, len(features))
+func toStorageFeatures(features []featureRecord) []contentstore.DaggerheartFeature {
+	items := make([]contentstore.DaggerheartFeature, 0, len(features))
 	for _, feature := range features {
-		items = append(items, storage.DaggerheartFeature{
+		items = append(items, contentstore.DaggerheartFeature{
 			ID:          feature.ID,
 			Name:        feature.Name,
 			Description: feature.Description,
@@ -464,18 +464,18 @@ func toStorageFeatures(features []featureRecord) []storage.DaggerheartFeature {
 	return items
 }
 
-func toStorageHopeFeature(feature hopeFeatureRecord) storage.DaggerheartHopeFeature {
-	return storage.DaggerheartHopeFeature{
+func toStorageHopeFeature(feature hopeFeatureRecord) contentstore.DaggerheartHopeFeature {
+	return contentstore.DaggerheartHopeFeature{
 		Name:        feature.Name,
 		Description: feature.Description,
 		HopeCost:    feature.HopeCost,
 	}
 }
 
-func toStorageDamageDice(dice []damageDieRecord) []storage.DaggerheartDamageDie {
-	items := make([]storage.DaggerheartDamageDie, 0, len(dice))
+func toStorageDamageDice(dice []damageDieRecord) []contentstore.DaggerheartDamageDie {
+	items := make([]contentstore.DaggerheartDamageDie, 0, len(dice))
 	for _, die := range dice {
-		items = append(items, storage.DaggerheartDamageDie{
+		items = append(items, contentstore.DaggerheartDamageDie{
 			Sides: die.Sides,
 			Count: die.Count,
 		})
@@ -483,8 +483,8 @@ func toStorageDamageDice(dice []damageDieRecord) []storage.DaggerheartDamageDie 
 	return items
 }
 
-func toStorageAdversaryAttack(attack adversaryAttackRecord) storage.DaggerheartAdversaryAttack {
-	return storage.DaggerheartAdversaryAttack{
+func toStorageAdversaryAttack(attack adversaryAttackRecord) contentstore.DaggerheartAdversaryAttack {
+	return contentstore.DaggerheartAdversaryAttack{
 		Name:        attack.Name,
 		Range:       attack.Range,
 		DamageDice:  toStorageDamageDice(attack.DamageDice),
@@ -493,10 +493,10 @@ func toStorageAdversaryAttack(attack adversaryAttackRecord) storage.DaggerheartA
 	}
 }
 
-func toStorageAdversaryExperiences(experiences []adversaryExperienceRecord) []storage.DaggerheartAdversaryExperience {
-	items := make([]storage.DaggerheartAdversaryExperience, 0, len(experiences))
+func toStorageAdversaryExperiences(experiences []adversaryExperienceRecord) []contentstore.DaggerheartAdversaryExperience {
+	items := make([]contentstore.DaggerheartAdversaryExperience, 0, len(experiences))
 	for _, experience := range experiences {
-		items = append(items, storage.DaggerheartAdversaryExperience{
+		items = append(items, contentstore.DaggerheartAdversaryExperience{
 			Name:     experience.Name,
 			Modifier: experience.Modifier,
 		})
@@ -504,10 +504,10 @@ func toStorageAdversaryExperiences(experiences []adversaryExperienceRecord) []st
 	return items
 }
 
-func toStorageAdversaryFeatures(features []adversaryFeatureRecord) []storage.DaggerheartAdversaryFeature {
-	items := make([]storage.DaggerheartAdversaryFeature, 0, len(features))
+func toStorageAdversaryFeatures(features []adversaryFeatureRecord) []contentstore.DaggerheartAdversaryFeature {
+	items := make([]contentstore.DaggerheartAdversaryFeature, 0, len(features))
 	for _, feature := range features {
-		items = append(items, storage.DaggerheartAdversaryFeature{
+		items = append(items, contentstore.DaggerheartAdversaryFeature{
 			ID:          feature.ID,
 			Name:        feature.Name,
 			Kind:        feature.Kind,
@@ -519,8 +519,8 @@ func toStorageAdversaryFeatures(features []adversaryFeatureRecord) []storage.Dag
 	return items
 }
 
-func toStorageBeastformAttack(attack beastformAttackRecord) storage.DaggerheartBeastformAttack {
-	return storage.DaggerheartBeastformAttack{
+func toStorageBeastformAttack(attack beastformAttackRecord) contentstore.DaggerheartBeastformAttack {
+	return contentstore.DaggerheartBeastformAttack{
 		Range:       attack.Range,
 		Trait:       attack.Trait,
 		DamageDice:  toStorageDamageDice(attack.DamageDice),
@@ -529,10 +529,10 @@ func toStorageBeastformAttack(attack beastformAttackRecord) storage.DaggerheartB
 	}
 }
 
-func toStorageBeastformFeatures(features []beastformFeatureRecord) []storage.DaggerheartBeastformFeature {
-	items := make([]storage.DaggerheartBeastformFeature, 0, len(features))
+func toStorageBeastformFeatures(features []beastformFeatureRecord) []contentstore.DaggerheartBeastformFeature {
+	items := make([]contentstore.DaggerheartBeastformFeature, 0, len(features))
 	for _, feature := range features {
-		items = append(items, storage.DaggerheartBeastformFeature{
+		items = append(items, contentstore.DaggerheartBeastformFeature{
 			ID:          feature.ID,
 			Name:        feature.Name,
 			Description: feature.Description,
@@ -541,7 +541,7 @@ func toStorageBeastformFeatures(features []beastformFeatureRecord) []storage.Dag
 	return items
 }
 
-func upsertClassStrings(ctx context.Context, store storage.DaggerheartContentStore, item classRecord, locale string, now time.Time) error {
+func upsertClassStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item classRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeClass, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -562,7 +562,7 @@ func upsertClassStrings(ctx context.Context, store storage.DaggerheartContentSto
 	return nil
 }
 
-func upsertSubclassStrings(ctx context.Context, store storage.DaggerheartContentStore, item subclassRecord, locale string, now time.Time) error {
+func upsertSubclassStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item subclassRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeSubclass, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -584,7 +584,7 @@ func upsertSubclassStrings(ctx context.Context, store storage.DaggerheartContent
 	return nil
 }
 
-func upsertHeritageStrings(ctx context.Context, store storage.DaggerheartContentStore, item heritageRecord, locale string, now time.Time) error {
+func upsertHeritageStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item heritageRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeHeritage, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -596,7 +596,7 @@ func upsertHeritageStrings(ctx context.Context, store storage.DaggerheartContent
 	return nil
 }
 
-func upsertExperienceStrings(ctx context.Context, store storage.DaggerheartContentStore, item experienceRecord, locale string, now time.Time) error {
+func upsertExperienceStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item experienceRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeExperience, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -606,7 +606,7 @@ func upsertExperienceStrings(ctx context.Context, store storage.DaggerheartConte
 	return nil
 }
 
-func upsertAdversaryStrings(ctx context.Context, store storage.DaggerheartContentStore, item adversaryRecord, locale string, now time.Time) error {
+func upsertAdversaryStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item adversaryRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeAdversary, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -630,7 +630,7 @@ func upsertAdversaryStrings(ctx context.Context, store storage.DaggerheartConten
 	return nil
 }
 
-func upsertBeastformStrings(ctx context.Context, store storage.DaggerheartContentStore, item beastformRecord, locale string, now time.Time) error {
+func upsertBeastformStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item beastformRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeBeastform, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -651,7 +651,7 @@ func upsertBeastformStrings(ctx context.Context, store storage.DaggerheartConten
 	return nil
 }
 
-func upsertCompanionExperienceStrings(ctx context.Context, store storage.DaggerheartContentStore, item companionExperienceRecord, locale string, now time.Time) error {
+func upsertCompanionExperienceStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item companionExperienceRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeCompanionExperience, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -661,7 +661,7 @@ func upsertCompanionExperienceStrings(ctx context.Context, store storage.Daggerh
 	return nil
 }
 
-func upsertLootEntryStrings(ctx context.Context, store storage.DaggerheartContentStore, item lootEntryRecord, locale string, now time.Time) error {
+func upsertLootEntryStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item lootEntryRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeLootEntry, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -671,7 +671,7 @@ func upsertLootEntryStrings(ctx context.Context, store storage.DaggerheartConten
 	return nil
 }
 
-func upsertDamageTypeStrings(ctx context.Context, store storage.DaggerheartContentStore, item damageTypeRecord, locale string, now time.Time) error {
+func upsertDamageTypeStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item damageTypeRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeDamageType, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -681,7 +681,7 @@ func upsertDamageTypeStrings(ctx context.Context, store storage.DaggerheartConte
 	return nil
 }
 
-func upsertDomainStrings(ctx context.Context, store storage.DaggerheartContentStore, item domainRecord, locale string, now time.Time) error {
+func upsertDomainStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item domainRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeDomain, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -691,7 +691,7 @@ func upsertDomainStrings(ctx context.Context, store storage.DaggerheartContentSt
 	return nil
 }
 
-func upsertDomainCardStrings(ctx context.Context, store storage.DaggerheartContentStore, item domainCardRecord, locale string, now time.Time) error {
+func upsertDomainCardStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item domainCardRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeDomainCard, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -704,7 +704,7 @@ func upsertDomainCardStrings(ctx context.Context, store storage.DaggerheartConte
 	return nil
 }
 
-func upsertWeaponStrings(ctx context.Context, store storage.DaggerheartContentStore, item weaponRecord, locale string, now time.Time) error {
+func upsertWeaponStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item weaponRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeWeapon, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -714,7 +714,7 @@ func upsertWeaponStrings(ctx context.Context, store storage.DaggerheartContentSt
 	return nil
 }
 
-func upsertArmorStrings(ctx context.Context, store storage.DaggerheartContentStore, item armorRecord, locale string, now time.Time) error {
+func upsertArmorStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item armorRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeArmor, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -724,7 +724,7 @@ func upsertArmorStrings(ctx context.Context, store storage.DaggerheartContentSto
 	return nil
 }
 
-func upsertItemStrings(ctx context.Context, store storage.DaggerheartContentStore, item itemRecord, locale string, now time.Time) error {
+func upsertItemStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item itemRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeItem, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -737,7 +737,7 @@ func upsertItemStrings(ctx context.Context, store storage.DaggerheartContentStor
 	return nil
 }
 
-func upsertEnvironmentStrings(ctx context.Context, store storage.DaggerheartContentStore, item environmentRecord, locale string, now time.Time) error {
+func upsertEnvironmentStrings(ctx context.Context, store contentstore.DaggerheartContentStore, item environmentRecord, locale string, now time.Time) error {
 	if err := putContentString(ctx, store, item.ID, contentTypeEnvironment, "name", locale, item.Name, now); err != nil {
 		return err
 	}
@@ -761,7 +761,7 @@ func upsertEnvironmentStrings(ctx context.Context, store storage.DaggerheartCont
 	return nil
 }
 
-func upsertFeatureStrings(ctx context.Context, store storage.DaggerheartContentStore, feature featureRecord, locale string, now time.Time) error {
+func upsertFeatureStrings(ctx context.Context, store contentstore.DaggerheartContentStore, feature featureRecord, locale string, now time.Time) error {
 	if strings.TrimSpace(feature.ID) == "" {
 		return fmt.Errorf("feature id is required")
 	}
@@ -774,7 +774,7 @@ func upsertFeatureStrings(ctx context.Context, store storage.DaggerheartContentS
 	return nil
 }
 
-func upsertAdversaryFeatureStrings(ctx context.Context, store storage.DaggerheartContentStore, feature adversaryFeatureRecord, locale string, now time.Time) error {
+func upsertAdversaryFeatureStrings(ctx context.Context, store contentstore.DaggerheartContentStore, feature adversaryFeatureRecord, locale string, now time.Time) error {
 	if strings.TrimSpace(feature.ID) == "" {
 		return fmt.Errorf("adversary feature id is required")
 	}
@@ -787,7 +787,7 @@ func upsertAdversaryFeatureStrings(ctx context.Context, store storage.Daggerhear
 	return nil
 }
 
-func upsertBeastformFeatureStrings(ctx context.Context, store storage.DaggerheartContentStore, feature beastformFeatureRecord, locale string, now time.Time) error {
+func upsertBeastformFeatureStrings(ctx context.Context, store contentstore.DaggerheartContentStore, feature beastformFeatureRecord, locale string, now time.Time) error {
 	if strings.TrimSpace(feature.ID) == "" {
 		return fmt.Errorf("beastform feature id is required")
 	}
@@ -800,11 +800,11 @@ func upsertBeastformFeatureStrings(ctx context.Context, store storage.Daggerhear
 	return nil
 }
 
-func putContentString(ctx context.Context, store storage.DaggerheartContentStore, contentID, contentType, field, locale, text string, now time.Time) error {
+func putContentString(ctx context.Context, store contentstore.DaggerheartContentStore, contentID, contentType, field, locale, text string, now time.Time) error {
 	if strings.TrimSpace(text) == "" {
 		return nil
 	}
-	entry := storage.DaggerheartContentString{
+	entry := contentstore.DaggerheartContentString{
 		ContentID:   contentID,
 		ContentType: contentType,
 		Field:       field,

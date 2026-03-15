@@ -15,16 +15,20 @@ const (
 // CharacterService implements the game.v1.CharacterService gRPC API.
 type CharacterService struct {
 	campaignv1.UnimplementedCharacterServiceServer
-	stores      Stores
-	clock       func() time.Time
-	idGenerator func() (string, error)
+	app characterApplication
 }
 
 // NewCharacterService creates a CharacterService with default dependencies.
 func NewCharacterService(stores Stores) *CharacterService {
+	return newCharacterServiceWithDependencies(stores, time.Now, id.NewID)
+}
+
+func newCharacterServiceWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+) *CharacterService {
 	return &CharacterService{
-		stores:      stores,
-		clock:       time.Now,
-		idGenerator: id.NewID,
+		app: newCharacterApplicationWithDependencies(stores, clock, idGenerator),
 	}
 }

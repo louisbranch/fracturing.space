@@ -164,11 +164,13 @@ func TestCreateInvite_RequiresDomainEngine(t *testing.T) {
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
 
-	svc := &InviteService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		idGenerator: fixedIDGenerator("invite-123"),
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		fixedIDGenerator("invite-123"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -204,17 +206,19 @@ func TestCreateInvite_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("invite-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("invite-123"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -265,17 +269,19 @@ func TestCreateInvite_UsesResolvedActorParticipantIDWhenOnlyUserIdentityIsPresen
 		}),
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("invite-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("invite-123"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithUserID("user-1")
 	if _, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -320,17 +326,19 @@ func TestCreateInvite_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("invite-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("invite-123"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -388,17 +396,19 @@ func TestCreateInvite_PersistsCreatorFromResolvedUserActor(t *testing.T) {
 		}),
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("invite-123"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("invite-123"),
+		nil,
+		nil,
+	)
 
 	resp, err := svc.CreateInvite(contextWithUserID("user-1"), &statev1.CreateInviteRequest{
 		CampaignId:    "campaign-1",
@@ -437,12 +447,13 @@ func TestCreateInvite_RecipientAlreadyParticipant(t *testing.T) {
 		"participant-2": {ID: "participant-2", CampaignID: "campaign-1", UserID: "user-2"},
 	}
 
-	svc := &InviteService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		idGenerator: fixedIDGenerator("invite-123"),
-		authClient:  authClient,
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		fixedIDGenerator("invite-123"),
+		authClient,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -484,12 +495,13 @@ func TestCreateInvite_RecipientAlreadyHasPendingInvite(t *testing.T) {
 		Status:          invite.StatusPending,
 	}
 
-	svc := &InviteService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		idGenerator: fixedIDGenerator("invite-123"),
-		authClient:  authClient,
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		fixedIDGenerator("invite-123"),
+		authClient,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -540,18 +552,19 @@ func TestCreateInvite_RecipientParticipantInOtherCampaignDoesNotBlock(t *testing
 		}),
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("invite-123"),
-		authClient:  authClient,
-	}
+		fixedClock(now),
+		fixedIDGenerator("invite-123"),
+		authClient,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -607,18 +620,19 @@ func TestCreateInvite_RecipientPendingInviteInOtherCampaignDoesNotBlock(t *testi
 		}),
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("invite-123"),
-		authClient:  authClient,
-	}
+		fixedClock(now),
+		fixedIDGenerator("invite-123"),
+		authClient,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.CreateInvite(ctx, &statev1.CreateInviteRequest{
@@ -651,11 +665,13 @@ func TestRevokeInvite_AlreadyClaimed(t *testing.T) {
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
-	svc := &InviteService{
-		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		idGenerator: fixedIDGenerator("invite-123"),
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore},
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		fixedIDGenerator("invite-123"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
@@ -674,11 +690,13 @@ func TestCreateInvite_MissingParticipantIdentity(t *testing.T) {
 		"participant-1": {ID: "participant-1", CampaignID: "campaign-1"},
 	}
 
-	svc := &InviteService{
-		stores:      Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		idGenerator: fixedIDGenerator("invite-123"),
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Campaign: campaignStore, Participant: participantStore, Invite: inviteStore, Event: eventStore},
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		fixedIDGenerator("invite-123"),
+		nil,
+		nil,
+	)
 
 	_, err := svc.CreateInvite(context.Background(), &statev1.CreateInviteRequest{
 		CampaignId:    "campaign-1",
@@ -708,18 +726,21 @@ func TestClaimInvite_Success(t *testing.T) {
 	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -783,18 +804,21 @@ func TestClaimInvite_UsesReplayStateForSeatOccupancy(t *testing.T) {
 	}, now)
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-new", "", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-new", "", svc.app.clock())
 	ctx := contextWithUserID("user-new")
 	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -829,18 +853,21 @@ func TestClaimInvite_DetectsExistingUserFromReplayState(t *testing.T) {
 	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-2"], now)
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -882,18 +909,21 @@ func TestClaimInvite_IgnoresLeftParticipantWhenCheckingExistingUser(t *testing.T
 	seedParticipantLeftEvent(t, eventStore, "campaign-1", "participant-2", now.Add(time.Second))
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -937,18 +967,21 @@ func TestClaimInvite_IgnoresUnboundParticipantWhenCheckingExistingUser(t *testin
 	seedParticipantUnboundEvent(t, eventStore, "campaign-1", "participant-2", "user-1", now.Add(time.Second))
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -992,18 +1025,21 @@ func TestClaimInvite_RejectsAIControlledSeatBinding(t *testing.T) {
 	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -1048,16 +1084,19 @@ func TestClaimInvite_MissingUserID(t *testing.T) {
 		},
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-	}
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		nil,
+		nil,
+		nil,
+	)
 
 	_, err := svc.ClaimInvite(context.Background(), &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -1087,18 +1126,21 @@ func TestClaimInvite_IdempotentGrant(t *testing.T) {
 	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-1"], now)
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "jti-1", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "jti-1", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -1161,18 +1203,21 @@ func TestClaimInvite_UserAlreadyClaimed(t *testing.T) {
 	seedParticipantJoinedEvent(t, eventStore, participantStore.participants["campaign-1"]["participant-2"], now)
 	seedInviteCreatedEvent(t, eventStore, inviteStore.invites["invite-1"], now)
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 			Event:       eventStore,
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "jti-2", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "jti-2", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	_, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -1225,8 +1270,8 @@ func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
 		},
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
@@ -1234,11 +1279,14 @@ func TestClaimInvite_HydratesParticipantFromSocialProfile(t *testing.T) {
 			Social:      socialClient,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+		nil,
+		nil,
+	)
 
 	signer := newJoinGrantSigner(t)
-	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.clock())
+	joinGrant := signer.Token(t, "campaign-1", "invite-1", "user-1", "", svc.app.clock())
 	ctx := contextWithUserID("user-1")
 	resp, err := svc.ClaimInvite(ctx, &statev1.ClaimInviteRequest{
 		CampaignId: "campaign-1",
@@ -1296,11 +1344,13 @@ func TestRevokeInvite_AlreadyRevoked(t *testing.T) {
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
-	svc := &InviteService{
-		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: newFakeEventStore()},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		idGenerator: fixedIDGenerator("x"),
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: newFakeEventStore()},
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		fixedIDGenerator("x"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
@@ -1332,11 +1382,13 @@ func TestRevokeInvite_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &InviteService{
-		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("x"),
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: eventStore, Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime}},
+		fixedClock(now),
+		fixedIDGenerator("x"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
@@ -1367,11 +1419,13 @@ func TestRevokeInvite_RequiresDomainEngine(t *testing.T) {
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
-	svc := &InviteService{
-		stores:      Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: newFakeEventStore()},
-		clock:       fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		idGenerator: fixedIDGenerator("x"),
-	}
+	svc := newInviteServiceWithDependencies(
+		Stores{Invite: inviteStore, Participant: participantStore, Campaign: campaignStore, Event: newFakeEventStore()},
+		fixedClock(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
+		fixedIDGenerator("x"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	_, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
@@ -1403,17 +1457,19 @@ func TestRevokeInvite_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Invite:      inviteStore,
 			Participant: participantStore,
 			Campaign:    campaignStore,
 			Event:       eventStore,
 			Write:       domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("x"),
-	}
+		fixedClock(now),
+		fixedIDGenerator("x"),
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.RevokeInvite(ctx, &statev1.RevokeInviteRequest{InviteId: "invite-1"})
@@ -1528,14 +1584,17 @@ func TestListPendingInvites_Success(t *testing.T) {
 		Status:        invite.StatusClaimed,
 	}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-		authClient: &fakeAuthClient{user: &authv1.User{Id: "user-1", Username: "owner"}},
-	}
+		nil,
+		nil,
+		&fakeAuthClient{user: &authv1.User{Id: "user-1", Username: "owner"}},
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.ListPendingInvites(ctx, &statev1.ListPendingInvitesRequest{CampaignId: "campaign-1"})
@@ -1596,13 +1655,17 @@ func TestGetInvite_Success(t *testing.T) {
 		Status:     invite.StatusPending,
 	}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-	}
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.GetInvite(ctx, &statev1.GetInviteRequest{InviteId: "invite-1"})
@@ -1629,13 +1692,17 @@ func TestGetInvite_MissingParticipantIdentity(t *testing.T) {
 		Status:     invite.StatusPending,
 	}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-	}
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
 	_, err := svc.GetInvite(context.Background(), &statev1.GetInviteRequest{InviteId: "invite-1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
@@ -1685,13 +1752,17 @@ func TestListInvites_Success(t *testing.T) {
 		Status:     invite.StatusClaimed,
 	}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-	}
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.ListInvites(ctx, &statev1.ListInvitesRequest{CampaignId: "campaign-1"})
@@ -1723,13 +1794,17 @@ func TestListInvites_WithStatusFilter(t *testing.T) {
 		Status:     invite.StatusClaimed,
 	}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-	}
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.ListInvites(ctx, &statev1.ListInvitesRequest{
@@ -1757,13 +1832,17 @@ func TestListInvites_EmptyResult(t *testing.T) {
 		"owner-1": {ID: "owner-1", CampaignID: "campaign-1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-	}
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
 	ctx := contextWithParticipantID("owner-1")
 	resp, err := svc.ListInvites(ctx, &statev1.ListInvitesRequest{CampaignId: "campaign-1"})
@@ -1801,13 +1880,17 @@ func TestListPendingInvitesForUser_Success(t *testing.T) {
 		Status:          invite.StatusPending,
 	}
 
-	svc := &InviteService{
-		stores: Stores{
+	svc := newInviteServiceWithDependencies(
+		Stores{
 			Campaign:    campaignStore,
 			Participant: participantStore,
 			Invite:      inviteStore,
 		},
-	}
+		nil,
+		nil,
+		nil,
+		nil,
+	)
 
 	ctx := contextWithUserID("user-1")
 	resp, err := svc.ListPendingInvitesForUser(ctx, &statev1.ListPendingInvitesForUserRequest{})

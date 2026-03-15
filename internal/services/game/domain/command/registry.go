@@ -67,6 +67,61 @@ type GatePolicy struct {
 	AllowWhenOpen bool
 }
 
+// ActiveSessionClassification declares how a command behaves while a campaign
+// has an active session.
+type ActiveSessionClassification string
+
+const (
+	// ActiveSessionClassificationAllowed permits command execution while active.
+	ActiveSessionClassificationAllowed ActiveSessionClassification = "allowed"
+	// ActiveSessionClassificationBlocked rejects command execution while active.
+	ActiveSessionClassificationBlocked ActiveSessionClassification = "blocked"
+)
+
+// ActiveSessionPolicy declares active-session behavior for a command type.
+type ActiveSessionPolicy struct {
+	Classification         ActiveSessionClassification
+	AllowInGameSystemActor bool
+}
+
+// TargetEntityPolicy declares how a command identifies the aggregate entity it
+// targets before the engine routes it.
+type TargetEntityPolicy struct {
+	EntityType   string
+	PayloadField string
+}
+
+// AllowedDuringActiveSession returns metadata for a command that stays allowed
+// while a campaign session is active.
+func AllowedDuringActiveSession() ActiveSessionPolicy {
+	return ActiveSessionPolicy{Classification: ActiveSessionClassificationAllowed}
+}
+
+// BlockedDuringActiveSession returns metadata for a command that is blocked
+// while a campaign session is active.
+func BlockedDuringActiveSession() ActiveSessionPolicy {
+	return ActiveSessionPolicy{Classification: ActiveSessionClassificationBlocked}
+}
+
+// BlockedDuringActiveSessionExceptInGameSystemActor returns metadata for a
+// command that is blocked during active sessions except when executed by a
+// system actor already scoped to the active session.
+func BlockedDuringActiveSessionExceptInGameSystemActor() ActiveSessionPolicy {
+	return ActiveSessionPolicy{
+		Classification:         ActiveSessionClassificationBlocked,
+		AllowInGameSystemActor: true,
+	}
+}
+
+// TargetEntity returns metadata for commands that target one aggregate entity
+// type and may need payload fallback when the transport did not set EntityID.
+func TargetEntity(entityType, payloadField string) TargetEntityPolicy {
+	return TargetEntityPolicy{
+		EntityType:   strings.TrimSpace(entityType),
+		PayloadField: strings.TrimSpace(payloadField),
+	}
+}
+
 // ActorType identifies the actor who initiated the command.
 type ActorType string
 
@@ -112,6 +167,8 @@ type Definition struct {
 	Owner           Owner
 	ValidatePayload PayloadValidator
 	Gate            GatePolicy
+	ActiveSession   ActiveSessionPolicy
+	Target          TargetEntityPolicy
 }
 
 // PayloadValidator validates a payload JSON document.
@@ -145,6 +202,7 @@ func (r *Registry) Register(def Definition) error {
 	default:
 		return fmt.Errorf("owner must be core or system")
 	}
+	def.Target = TargetEntity(def.Target.EntityType, def.Target.PayloadField)
 	if r.definitions == nil {
 		r.definitions = make(map[Type]Definition)
 	}
@@ -225,7 +283,42 @@ func (r *Registry) ValidateForDecision(cmd Command) (Command, error) {
 			return Command{}, fmt.Errorf("payload invalid: %w", err)
 		}
 	}
+	normalizeTargetEntity(&cmd, def.Target)
 	return cmd, nil
+}
+
+func normalizeTargetEntity(cmd *Command, target TargetEntityPolicy) {
+	if cmd == nil {
+		return
+	}
+	cmd.EntityID = strings.TrimSpace(cmd.EntityID)
+	cmd.EntityType = strings.TrimSpace(cmd.EntityType)
+	if cmd.EntityID == "" && target.PayloadField != "" {
+		cmd.EntityID = payloadStringField(cmd.PayloadJSON, target.PayloadField)
+	}
+	if cmd.EntityID != "" && cmd.EntityType == "" && target.EntityType != "" {
+		cmd.EntityType = target.EntityType
+	}
+}
+
+func payloadStringField(payloadJSON []byte, field string) string {
+	field = strings.TrimSpace(field)
+	if field == "" {
+		return ""
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(payloadJSON, &raw); err != nil {
+		return ""
+	}
+	fieldJSON, ok := raw[field]
+	if !ok {
+		return ""
+	}
+	var value string
+	if err := json.Unmarshal(fieldJSON, &value); err != nil {
+		return ""
+	}
+	return strings.TrimSpace(value)
 }
 
 // Definition returns the command definition for a given type.

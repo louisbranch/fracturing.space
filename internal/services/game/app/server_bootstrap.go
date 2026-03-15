@@ -14,7 +14,9 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	sqlitecoreprojection "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/coreprojection"
+	sqlitedaggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartcontent"
+	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
 )
 
 func New(port int) (*Server, error) {
@@ -43,7 +45,7 @@ func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, event
 	// Build a base adapter registry once at closure creation. Per-transaction
 	// callbacks rebind it with the transaction-scoped store so each adapter
 	// operates within the exactly-once transaction boundary.
-	baseAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(projectionStore))
+	baseAdapters, err := systemmanifest.AdapterRegistry(projectionStore)
 	if err != nil {
 		return nil, fmt.Errorf("build base adapter registry: %w", err)
 	}
@@ -52,7 +54,7 @@ func buildProjectionApplyOutboxApply(projectionStore projectionApplyStore, event
 			ctx,
 			evt,
 			func(applyCtx context.Context, applyEvt event.Event, txStore storage.ProjectionApplyTxStore) error {
-				systemAdapters, err := systemmanifest.RebindAdapterRegistry(baseAdapters, systemmanifest.ExtractProjectionStores(txStore))
+				systemAdapters, err := systemmanifest.RebindAdapterRegistry(baseAdapters, txStore)
 				if err != nil {
 					return fmt.Errorf("rebind projection system adapter registry: %w", err)
 				}
@@ -128,7 +130,7 @@ func openStorageBundle(ctx context.Context, srvEnv serverEnv, eventRegistry *eve
 }
 
 // openEventStore opens the immutable event store and verifies chain integrity on boot.
-func openEventStore(ctx context.Context, path string, projectionApplyOutboxEnabled bool, eventRegistry *event.Registry) (*storagesqlite.Store, error) {
+func openEventStore(ctx context.Context, path string, projectionApplyOutboxEnabled bool, eventRegistry *event.Registry) (eventBackend, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
 	}
@@ -136,11 +138,11 @@ func openEventStore(ctx context.Context, path string, projectionApplyOutboxEnabl
 	if err != nil {
 		return nil, err
 	}
-	store, err := storagesqlite.OpenEvents(
+	store, err := sqliteeventjournal.Open(
 		path,
 		keyring,
 		eventRegistry,
-		storagesqlite.WithProjectionApplyOutboxEnabled(projectionApplyOutboxEnabled),
+		sqliteeventjournal.WithProjectionApplyOutboxEnabled(projectionApplyOutboxEnabled),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("open events store: %w", err)
@@ -153,11 +155,11 @@ func openEventStore(ctx context.Context, path string, projectionApplyOutboxEnabl
 }
 
 // openProjectionStore opens the materialized views database.
-func openProjectionStore(path string) (*storagesqlite.Store, error) {
+func openProjectionStore(path string) (projectionBackend, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
 	}
-	store, err := storagesqlite.OpenProjections(path)
+	store, err := sqlitecoreprojection.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open projections store: %w", err)
 	}
@@ -165,11 +167,11 @@ func openProjectionStore(path string) (*storagesqlite.Store, error) {
 }
 
 // openContentStore opens the content reference database.
-func openContentStore(path string) (*storagesqlite.Store, error) {
+func openContentStore(path string) (contentBackend, error) {
 	if err := ensureDir(path); err != nil {
 		return nil, err
 	}
-	store, err := storagesqlite.OpenContent(path)
+	store, err := sqlitedaggerheartcontent.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open content store: %w", err)
 	}

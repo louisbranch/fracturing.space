@@ -7,29 +7,43 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
-func TestActiveSessionPolicyForCommandType(t *testing.T) {
+func TestActiveSessionPolicyForDefinition(t *testing.T) {
 	tests := []struct {
-		name    string
-		cmdType command.Type
-		want    ActiveSessionCommandPolicy
-		ok      bool
+		name string
+		def  command.Definition
+		cmd  command.Command
+		want command.ActiveSessionClassification
+		ok   bool
 	}{
-		{name: "campaign blocked", cmdType: command.Type("campaign.update"), want: ActiveSessionCommandPolicyBlocked, ok: true},
-		{name: "participant blocked", cmdType: command.Type("participant.join"), want: ActiveSessionCommandPolicyBlocked, ok: true},
-		{name: "invite blocked", cmdType: command.Type("invite.claim"), want: ActiveSessionCommandPolicyBlocked, ok: true},
-		{name: "character blocked", cmdType: command.Type("character.update"), want: ActiveSessionCommandPolicyBlocked, ok: true},
-		{name: "daggerheart profile replace blocked", cmdType: command.Type("sys.daggerheart.character_profile.replace"), want: ActiveSessionCommandPolicyBlocked, ok: true},
-		{name: "daggerheart profile delete blocked", cmdType: command.Type("sys.daggerheart.character_profile.delete"), want: ActiveSessionCommandPolicyBlocked, ok: true},
-		{name: "session allowed", cmdType: command.Type("session.end"), want: ActiveSessionCommandPolicyAllowed, ok: true},
-		{name: "action allowed", cmdType: command.Type("action.outcome.apply"), want: ActiveSessionCommandPolicyAllowed, ok: true},
-		{name: "story allowed", cmdType: command.Type("story.note.add"), want: ActiveSessionCommandPolicyAllowed, ok: true},
-		{name: "system allowed", cmdType: command.Type("sys.daggerheart.damage.apply"), want: ActiveSessionCommandPolicyAllowed, ok: true},
-		{name: "unknown family", cmdType: command.Type("custom.command"), ok: false},
+		{
+			name: "blocked",
+			def:  command.Definition{ActiveSession: command.BlockedDuringActiveSession()},
+			want: command.ActiveSessionClassificationBlocked,
+			ok:   true,
+		},
+		{
+			name: "allowed",
+			def:  command.Definition{ActiveSession: command.AllowedDuringActiveSession()},
+			want: command.ActiveSessionClassificationAllowed,
+			ok:   true,
+		},
+		{
+			name: "character override allows in-game system actor",
+			def:  command.Definition{ActiveSession: command.BlockedDuringActiveSessionExceptInGameSystemActor()},
+			cmd:  command.Command{ActorType: command.ActorTypeSystem, SessionID: "sess-1"},
+			want: command.ActiveSessionClassificationAllowed,
+			ok:   true,
+		},
+		{
+			name: "unspecified",
+			def:  command.Definition{},
+			ok:   false,
+		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := ActiveSessionPolicyForCommandType(tc.cmdType)
+			got, ok := ActiveSessionPolicyForDefinition(tc.def, tc.cmd)
 			if ok != tc.ok {
 				t.Fatalf("ok = %v, want %v", ok, tc.ok)
 			}
@@ -44,6 +58,7 @@ func TestRejectActiveSessionBlockedCommand(t *testing.T) {
 	decision, blocked := RejectActiveSessionBlockedCommand(
 		session.State{Started: true, SessionID: "sess-1"},
 		command.Command{Type: command.Type("campaign.update")},
+		command.Definition{ActiveSession: command.BlockedDuringActiveSession()},
 	)
 	if !blocked {
 		t.Fatal("expected command to be blocked")
@@ -61,10 +76,10 @@ func TestRejectActiveSessionBlockedCommand(t *testing.T) {
 }
 
 func TestRejectActiveSessionBlockedCommand_AllowsWhenInactiveOrAllowed(t *testing.T) {
-	if decision, blocked := RejectActiveSessionBlockedCommand(session.State{Started: false}, command.Command{Type: command.Type("campaign.update")}); blocked {
+	if decision, blocked := RejectActiveSessionBlockedCommand(session.State{Started: false}, command.Command{Type: command.Type("campaign.update")}, command.Definition{ActiveSession: command.BlockedDuringActiveSession()}); blocked {
 		t.Fatalf("unexpected blocked decision: %+v", decision)
 	}
-	if decision, blocked := RejectActiveSessionBlockedCommand(session.State{Started: true}, command.Command{Type: command.Type("action.roll.resolve")}); blocked {
+	if decision, blocked := RejectActiveSessionBlockedCommand(session.State{Started: true}, command.Command{Type: command.Type("action.roll.resolve")}, command.Definition{ActiveSession: command.AllowedDuringActiveSession()}); blocked {
 		t.Fatalf("unexpected blocked decision: %+v", decision)
 	}
 }
@@ -73,6 +88,7 @@ func TestRejectActiveSessionBlockedCommand_WithoutSessionIDUsesGenericMessage(t 
 	decision, blocked := RejectActiveSessionBlockedCommand(
 		session.State{Started: true},
 		command.Command{Type: command.Type("campaign.update")},
+		command.Definition{ActiveSession: command.BlockedDuringActiveSession()},
 	)
 	if !blocked {
 		t.Fatal("expected command to be blocked")
@@ -85,17 +101,17 @@ func TestRejectActiveSessionBlockedCommand_WithoutSessionIDUsesGenericMessage(t 
 	}
 }
 
-func TestActiveSessionPolicyForCommand_AllowsOnlyInGameCharacterMutations(t *testing.T) {
+func TestActiveSessionPolicyForDefinition_AllowsOnlyInGameCharacterMutations(t *testing.T) {
 	tests := []struct {
 		name string
 		cmd  command.Command
-		want ActiveSessionCommandPolicy
+		want command.ActiveSessionClassification
 		ok   bool
 	}{
 		{
 			name: "character update blocked by default",
 			cmd:  command.Command{Type: command.Type("character.update"), ActorType: command.ActorTypeParticipant},
-			want: ActiveSessionCommandPolicyBlocked,
+			want: command.ActiveSessionClassificationBlocked,
 			ok:   true,
 		},
 		{
@@ -105,7 +121,7 @@ func TestActiveSessionPolicyForCommand_AllowsOnlyInGameCharacterMutations(t *tes
 				ActorType: command.ActorTypeSystem,
 				SessionID: "sess-1",
 			},
-			want: ActiveSessionCommandPolicyAllowed,
+			want: command.ActiveSessionClassificationAllowed,
 			ok:   true,
 		},
 		{
@@ -114,39 +130,19 @@ func TestActiveSessionPolicyForCommand_AllowsOnlyInGameCharacterMutations(t *tes
 				Type:      command.Type("character.delete"),
 				ActorType: command.ActorTypeSystem,
 			},
-			want: ActiveSessionCommandPolicyBlocked,
+			want: command.ActiveSessionClassificationBlocked,
 			ok:   true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := ActiveSessionPolicyForCommand(tc.cmd)
+			got, ok := ActiveSessionPolicyForDefinition(command.Definition{ActiveSession: command.BlockedDuringActiveSessionExceptInGameSystemActor()}, tc.cmd)
 			if ok != tc.ok {
 				t.Fatalf("ok = %v, want %v", ok, tc.ok)
 			}
 			if got != tc.want {
 				t.Fatalf("policy = %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestCommandNamespace(t *testing.T) {
-	tests := []struct {
-		name    string
-		cmdType command.Type
-		want    string
-	}{
-		{name: "blank", cmdType: command.Type("   "), want: ""},
-		{name: "no dot", cmdType: command.Type("character"), want: "character"},
-		{name: "with dot", cmdType: command.Type("character.update"), want: "character"},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			if got := commandNamespace(tc.cmdType); got != tc.want {
-				t.Fatalf("commandNamespace(%q) = %q, want %q", tc.cmdType, got, tc.want)
 			}
 		})
 	}

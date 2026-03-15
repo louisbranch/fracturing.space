@@ -24,6 +24,8 @@ var characterCommandContracts = []commandContract{
 			Type:            CommandTypeCreate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateCreatePayload,
+			ActiveSession:   command.BlockedDuringActiveSessionExceptInGameSystemActor(),
+			Target:          command.TargetEntity("character", "character_id"),
 		},
 	},
 	{
@@ -31,6 +33,8 @@ var characterCommandContracts = []commandContract{
 			Type:            CommandTypeUpdate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUpdatePayload,
+			ActiveSession:   command.BlockedDuringActiveSessionExceptInGameSystemActor(),
+			Target:          command.TargetEntity("character", "character_id"),
 		},
 	},
 	{
@@ -38,6 +42,8 @@ var characterCommandContracts = []commandContract{
 			Type:            CommandTypeDelete,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateDeletePayload,
+			ActiveSession:   command.BlockedDuringActiveSessionExceptInGameSystemActor(),
+			Target:          command.TargetEntity("character", "character_id"),
 		},
 	},
 }

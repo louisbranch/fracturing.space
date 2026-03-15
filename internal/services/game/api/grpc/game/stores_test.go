@@ -6,7 +6,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -75,7 +75,7 @@ func TestNewStoresFromProjection(t *testing.T) {
 
 	stores := NewStoresFromProjection(StoresFromProjectionConfig{
 		ProjectionStore: projectionStore,
-		SystemStores:    systemmanifest.ProjectionStores{Daggerheart: &fakeDaggerheartStore{}},
+		SystemStores:    SystemStores{Daggerheart: &fakeDaggerheartStore{}},
 		EventStore: eventAuditStoreStub{
 			EventStore:      newFakeEventStore(),
 			AuditEventStore: stubAudit{},
@@ -152,7 +152,7 @@ func validStores() Stores {
 		ClaimIndex:         stubClaimIndex{},
 		Invite:             newFakeInviteStore(),
 		Character:          newFakeCharacterStore(),
-		SystemStores:       systemmanifest.ProjectionStores{Daggerheart: &fakeDaggerheartStore{}},
+		SystemStores:       SystemStores{Daggerheart: &fakeDaggerheartStore{}},
 		Session:            newFakeSessionStore(),
 		SessionGate:        &fakeSessionGateStore{},
 		SessionSpotlight:   &fakeSessionSpotlightStore{},
@@ -226,7 +226,7 @@ type stubProjectionWatermarkStore struct {
 	storage.ProjectionWatermarkStore
 }
 type stubDaggerheartContent struct {
-	storage.DaggerheartContentReadStore
+	contentstore.DaggerheartContentReadStore
 }
 
 type stubSceneStore struct{ storage.SceneStore }

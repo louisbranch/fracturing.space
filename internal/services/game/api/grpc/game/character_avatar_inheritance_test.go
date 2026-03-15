@@ -60,11 +60,7 @@ func TestCreateCharacter_InheritsControllerIdentityWhenAutoAssigned(t *testing.T
 		),
 	}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-123"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-123"))
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "part-1",
@@ -145,11 +141,7 @@ func TestCreateCharacter_ExplicitIdentityOverridesControllerSnapshot(t *testing.
 		),
 	}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-456"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-456"))
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "part-1",
@@ -233,11 +225,7 @@ func TestCreateCharacter_ExplicitEmptyPronounsDoesNotInheritControllerPronouns(t
 		),
 	}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-789"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-789"))
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		grpcmeta.ParticipantIDHeader, "part-1",

@@ -1,0 +1,211 @@
+package coreprojection
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
+)
+
+// Character methods.
+
+// PutCharacter persists a character record.
+func (s *Store) PutCharacter(ctx context.Context, c storage.CharacterRecord) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(c.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(c.ID) == "" {
+		return fmt.Errorf("character id is required")
+	}
+
+	aliases := c.Aliases
+	if aliases == nil {
+		aliases = []string{}
+	}
+	aliasesJSON, err := json.Marshal(aliases)
+	if err != nil {
+		return fmt.Errorf("encode character aliases: %w", err)
+	}
+
+	return s.q.PutCharacter(ctx, db.PutCharacterParams{
+		CampaignID:              c.CampaignID,
+		ID:                      c.ID,
+		OwnerParticipantID:      c.OwnerParticipantID,
+		ControllerParticipantID: toNullString(c.ParticipantID),
+		Name:                    c.Name,
+		Kind:                    enumToStorage(c.Kind),
+		Notes:                   c.Notes,
+		AvatarSetID:             c.AvatarSetID,
+		AvatarAssetID:           c.AvatarAssetID,
+		Pronouns:                c.Pronouns,
+		AliasesJson:             string(aliasesJSON),
+		CreatedAt:               toMillis(c.CreatedAt),
+		UpdatedAt:               toMillis(c.UpdatedAt),
+	})
+}
+
+// DeleteCharacter deletes a character record by IDs.
+func (s *Store) DeleteCharacter(ctx context.Context, campaignID, characterID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(characterID) == "" {
+		return fmt.Errorf("character id is required")
+	}
+
+	return s.q.DeleteCharacter(ctx, db.DeleteCharacterParams{
+		CampaignID: campaignID,
+		ID:         characterID,
+	})
+}
+
+// GetCharacter fetches a character record by IDs.
+func (s *Store) GetCharacter(ctx context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.CharacterRecord{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.CharacterRecord{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.CharacterRecord{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(characterID) == "" {
+		return storage.CharacterRecord{}, fmt.Errorf("character id is required")
+	}
+
+	row, err := s.q.GetCharacter(ctx, db.GetCharacterParams{
+		CampaignID: campaignID,
+		ID:         characterID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return storage.CharacterRecord{}, storage.ErrNotFound
+		}
+		return storage.CharacterRecord{}, fmt.Errorf("get character: %w", err)
+	}
+
+	return dbCharacterToDomain(row)
+}
+
+// ListCharactersByOwnerParticipant returns all character records owned by one participant.
+func (s *Store) ListCharactersByOwnerParticipant(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(participantID) == "" {
+		return nil, fmt.Errorf("participant id is required")
+	}
+
+	rows, err := s.q.ListCharactersByOwnerParticipant(ctx, db.ListCharactersByOwnerParticipantParams{
+		CampaignID:         campaignID,
+		OwnerParticipantID: participantID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("list owned characters: %w", err)
+	}
+
+	characters := make([]storage.CharacterRecord, 0, len(rows))
+	for _, row := range rows {
+		characterRecord, err := dbCharacterToDomain(row)
+		if err != nil {
+			return nil, err
+		}
+		characters = append(characters, characterRecord)
+	}
+	return characters, nil
+}
+
+// ListCharacters returns a page of character records.
+func (s *Store) ListCharacters(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
+	if err := ctx.Err(); err != nil {
+		return storage.CharacterPage{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return storage.CharacterPage{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return storage.CharacterPage{}, fmt.Errorf("campaign id is required")
+	}
+	if pageSize <= 0 {
+		return storage.CharacterPage{}, fmt.Errorf("page size must be greater than zero")
+	}
+
+	var rows []db.Character
+	var err error
+
+	if pageToken == "" {
+		rows, err = s.q.ListCharactersByCampaignPagedFirst(ctx, db.ListCharactersByCampaignPagedFirstParams{
+			CampaignID: campaignID,
+			Limit:      int64(pageSize + 1),
+		})
+	} else {
+		rows, err = s.q.ListCharactersByCampaignPaged(ctx, db.ListCharactersByCampaignPagedParams{
+			CampaignID: campaignID,
+			ID:         pageToken,
+			Limit:      int64(pageSize + 1),
+		})
+	}
+	if err != nil {
+		return storage.CharacterPage{}, fmt.Errorf("list characters: %w", err)
+	}
+
+	page := storage.CharacterPage{
+		Characters: make([]storage.CharacterRecord, 0, pageSize),
+	}
+
+	characters, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Character) string {
+		return row.ID
+	}, dbCharacterToDomain)
+	if err != nil {
+		return storage.CharacterPage{}, err
+	}
+	page.Characters = characters
+	page.NextPageToken = nextPageToken
+
+	return page, nil
+}
+
+// CountCharacters returns the number of characters for a campaign.
+func (s *Store) CountCharacters(ctx context.Context, campaignID string) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return 0, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return 0, fmt.Errorf("campaign id is required")
+	}
+	var count int64
+	err := s.projectionQueryable().QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM characters WHERE campaign_id = ?", campaignID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count characters: %w", err)
+	}
+	return int(count), nil
+}

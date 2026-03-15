@@ -40,8 +40,8 @@ func TestSetSessionSpotlight_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &SessionService{
-		stores: Stores{
+	svc := newSessionServiceWithDependencies(
+		Stores{
 			Campaign:         campaignStore,
 			Session:          sessionStore,
 			SessionSpotlight: spotlightStore,
@@ -49,8 +49,9 @@ func TestSetSessionSpotlight_Success(t *testing.T) {
 			Event:            eventStore,
 			Write:            domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+	)
 
 	resp, err := svc.SetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
@@ -88,7 +89,17 @@ func TestSetSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		"s1": {ID: "s1", CampaignID: "c1", Status: session.StatusActive, StartedAt: now, UpdatedAt: now},
 	}
 
-	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionSpotlight: spotlightStore, Participant: participantStore, Event: eventStore}}
+	svc := newSessionServiceWithDependencies(
+		Stores{
+			Campaign:         campaignStore,
+			Session:          sessionStore,
+			SessionSpotlight: spotlightStore,
+			Participant:      participantStore,
+			Event:            eventStore,
+		},
+		nil,
+		nil,
+	)
 	_, err := svc.SetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
 		SessionId:   "s1",
@@ -124,8 +135,8 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := &SessionService{
-		stores: Stores{
+	svc := newSessionServiceWithDependencies(
+		Stores{
 			Campaign:         campaignStore,
 			Session:          sessionStore,
 			SessionSpotlight: spotlightStore,
@@ -133,8 +144,9 @@ func TestSetSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Event:            eventStore,
 			Write:            domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+	)
 
 	_, err := svc.SetSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.SetSessionSpotlightRequest{
 		CampaignId:  "c1",
@@ -274,7 +286,17 @@ func TestClearSessionSpotlight_RequiresDomainEngine(t *testing.T) {
 		},
 	}
 
-	svc := &SessionService{stores: Stores{Campaign: campaignStore, Session: sessionStore, SessionSpotlight: spotlightStore, Participant: participantStore, Event: eventStore}}
+	svc := newSessionServiceWithDependencies(
+		Stores{
+			Campaign:         campaignStore,
+			Session:          sessionStore,
+			SessionSpotlight: spotlightStore,
+			Participant:      participantStore,
+			Event:            eventStore,
+		},
+		nil,
+		nil,
+	)
 	_, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1", SessionId: "s1", Reason: "break",
 	})
@@ -315,8 +337,8 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := &SessionService{
-		stores: Stores{
+	svc := newSessionServiceWithDependencies(
+		Stores{
 			Campaign:         campaignStore,
 			Session:          sessionStore,
 			SessionSpotlight: spotlightStore,
@@ -324,8 +346,9 @@ func TestClearSessionSpotlight_UsesDomainEngine(t *testing.T) {
 			Event:            eventStore,
 			Write:            domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 		},
-		clock: fixedClock(now),
-	}
+		fixedClock(now),
+		nil,
+	)
 
 	_, err := svc.ClearSessionSpotlight(contextWithParticipantID("manager-1"), &statev1.ClearSessionSpotlightRequest{
 		CampaignId: "c1",

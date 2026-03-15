@@ -25,6 +25,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeCreate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateCreatePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -32,6 +33,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeCreateWithParticipants,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateCreateWithParticipantsPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -39,6 +41,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeUpdate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUpdatePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -46,6 +49,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeAIBind,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateAIBindPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -53,6 +57,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeAIUnbind,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateAIUnbindPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -60,6 +65,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeAIAuthRotate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateAIAuthRotatePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -67,6 +73,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeFork,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateForkPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -74,6 +81,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeEnd,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateEmptyPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -81,6 +89,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeArchive,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateEmptyPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 	{
@@ -88,6 +97,7 @@ var campaignCommandContracts = []commandContract{
 			Type:            CommandTypeRestore,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateEmptyPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
 		},
 	},
 }

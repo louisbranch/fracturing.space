@@ -6,5 +6,6 @@
 // can meaningfully act in a campaign.
 //
 // The package defines invite command deciders, invite lifecycle states, and folds
-// used to validate claim/revoke/update behavior.
+// used to validate create/claim/decline/revoke/update behavior through
+// workflow-local decider files.
 package invite

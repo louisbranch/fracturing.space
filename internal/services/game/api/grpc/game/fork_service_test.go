@@ -12,7 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -23,6 +23,14 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
+
+func newForkServiceForTest(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+) *ForkService {
+	return newForkServiceWithDependencies(stores, clock, idGenerator)
+}
 
 func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 	ctx := contextWithAdminOverride("fork-test")
@@ -183,19 +191,15 @@ func TestForkCampaign_ReplaysEvents_CopyParticipantsFalse(t *testing.T) {
 		},
 	}}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			CampaignFork: forkStore,
-			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    characterStore,
+		SystemStores: SystemStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		CampaignFork: forkStore,
+		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	resp, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -276,16 +280,12 @@ func TestForkCampaign_RequiresCampaignManagePolicy(t *testing.T) {
 		Status: campaign.StatusActive,
 	}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			CampaignFork: newFakeCampaignForkStore(),
-			Event:        newFakeEventStore(),
-			Participant:  newFakeParticipantStore(),
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		CampaignFork: newFakeCampaignForkStore(),
+		Event:        newFakeEventStore(),
+		Participant:  newFakeParticipantStore(),
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(context.Background(), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -307,16 +307,12 @@ func TestForkCampaign_AllowsManagerManagePolicy(t *testing.T) {
 		"manager-1": {ID: "manager-1", CampaignID: "source", CampaignAccess: participant.CampaignAccessManager},
 	}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			CampaignFork: newFakeCampaignForkStore(),
-			Event:        newFakeEventStore(),
-			Participant:  participantStore,
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		CampaignFork: newFakeCampaignForkStore(),
+		Event:        newFakeEventStore(),
+		Participant:  participantStore,
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(contextWithParticipantID("manager-1"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -338,16 +334,12 @@ func TestForkCampaign_DeniesMemberManagePolicy(t *testing.T) {
 		"member-1": {ID: "member-1", CampaignID: "source", CampaignAccess: participant.CampaignAccessMember},
 	}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			CampaignFork: newFakeCampaignForkStore(),
-			Event:        newFakeEventStore(),
-			Participant:  participantStore,
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		CampaignFork: newFakeCampaignForkStore(),
+		Event:        newFakeEventStore(),
+		Participant:  participantStore,
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(contextWithParticipantID("member-1"), &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -363,13 +355,11 @@ func TestGetLineage_RequiresCampaignReadPolicy(t *testing.T) {
 		Status: campaign.StatusActive,
 	}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			CampaignFork: newFakeCampaignForkStore(),
-			Participant:  newFakeParticipantStore(),
-		},
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		CampaignFork: newFakeCampaignForkStore(),
+		Participant:  newFakeParticipantStore(),
+	}, nil, nil)
 
 	_, err := svc.GetLineage(context.Background(), &statev1.GetLineageRequest{CampaignId: "camp-1"})
 	assertStatusCode(t, err, codes.PermissionDenied)
@@ -465,19 +455,15 @@ func TestForkCampaign_CopiesAuditOnlyEventsWithoutProjectionApplyFailure(t *test
 		},
 	}}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			CampaignFork: forkStore,
-			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    characterStore,
+		SystemStores: SystemStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		CampaignFork: forkStore,
+		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	if _, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -530,18 +516,14 @@ func TestForkCampaign_RequiresDomainEngine(t *testing.T) {
 		}),
 	})
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			CampaignFork: forkStore,
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    characterStore,
+		SystemStores: SystemStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		CampaignFork: forkStore,
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -580,7 +562,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 			UpdatedAt:  now.Add(-8 * time.Hour),
 		},
 	}
-	dhStore.states["source"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["source"] = map[string]projectionstore.DaggerheartCharacterState{
 		"char-1": {
 			CampaignID:  "source",
 			CharacterID: "char-1",
@@ -589,7 +571,7 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 			Stress:      1,
 		},
 	}
-	dhStore.snapshots["source"] = storage.DaggerheartSnapshot{
+	dhStore.snapshots["source"] = projectionstore.DaggerheartSnapshot{
 		CampaignID: "source",
 		GMFear:     4,
 	}
@@ -745,19 +727,15 @@ func TestForkCampaign_SeedsSnapshotStateAtHead(t *testing.T) {
 		},
 	}}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			CampaignFork: forkStore,
-			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    characterStore,
+		SystemStores: SystemStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		CampaignFork: forkStore,
+		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	_, err = svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -858,19 +836,15 @@ func TestForkCampaign_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			CampaignFork: forkStore,
-			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    characterStore,
+		SystemStores: SystemStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		CampaignFork: forkStore,
+		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	_, err = svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -1036,20 +1010,16 @@ func TestForkCampaign_SessionBoundaryForkPoint(t *testing.T) {
 		},
 	}}
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Event:        eventStore,
-			CampaignFork: forkStore,
-			Session:      sessionStore,
-			Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    characterStore,
+		SystemStores: SystemStores{Daggerheart: dhStore},
+		Event:        eventStore,
+		CampaignFork: forkStore,
+		Session:      sessionStore,
+		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	resp, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -1103,20 +1073,16 @@ func TestForkCampaign_RejectsWhenSourceCampaignHasActiveSession(t *testing.T) {
 	}
 	sessionStore.activeSession["source"] = "sess-1"
 
-	svc := &ForkService{
-		stores: Stores{
-			Campaign:     campaignStore,
-			Participant:  participantStore,
-			Character:    characterStore,
-			SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
-			Session:      sessionStore,
-			Event:        eventStore,
-			CampaignFork: forkStore,
-			Write:        domainwriteexec.WritePath{Executor: &fakeDomainEngine{store: eventStore}},
-		},
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("fork-1"),
-	}
+	svc := newForkServiceForTest(Stores{
+		Campaign:     campaignStore,
+		Participant:  participantStore,
+		Character:    characterStore,
+		SystemStores: SystemStores{Daggerheart: dhStore},
+		Session:      sessionStore,
+		Event:        eventStore,
+		CampaignFork: forkStore,
+		Write:        domainwriteexec.WritePath{Executor: &fakeDomainEngine{store: eventStore}},
+	}, fixedClock(now), fixedIDGenerator("fork-1"))
 
 	_, err := svc.ForkCampaign(ctx, &statev1.ForkCampaignRequest{
 		SourceCampaignId: "source",
@@ -1281,19 +1247,19 @@ func TestForkEventForCampaign(t *testing.T) {
 }
 
 func TestListForks_NilRequest(t *testing.T) {
-	svc := &ForkService{stores: Stores{}}
+	svc := newForkServiceForTest(Stores{}, nil, nil)
 	_, err := svc.ListForks(context.Background(), nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListForks_MissingSourceCampaignId(t *testing.T) {
-	svc := &ForkService{stores: Stores{Campaign: newFakeCampaignStore()}}
+	svc := newForkServiceForTest(Stores{Campaign: newFakeCampaignStore()}, nil, nil)
 	_, err := svc.ListForks(context.Background(), &statev1.ListForksRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestListForks_Unimplemented(t *testing.T) {
-	svc := &ForkService{stores: Stores{Campaign: newFakeCampaignStore()}}
+	svc := newForkServiceForTest(Stores{Campaign: newFakeCampaignStore()}, nil, nil)
 	_, err := svc.ListForks(context.Background(), &statev1.ListForksRequest{SourceCampaignId: "camp-1"})
 	assertStatusCode(t, err, codes.Unimplemented)
 }

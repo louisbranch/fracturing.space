@@ -27,11 +27,11 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 	if err != nil {
 		return nil, err
 	}
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	campaignRecord, err := s.reads.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
-	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -40,7 +40,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 		Max:     maxListInvitesPageSize,
 	})
 
-	page, err := s.stores.Invite.ListPendingInvites(ctx, campaignID, pageSize, in.GetPageToken())
+	page, err := s.reads.stores.Invite.ListPendingInvites(ctx, campaignID, pageSize, in.GetPageToken())
 	if err != nil {
 		return nil, grpcerror.Internal("list pending invites", err)
 	}
@@ -50,7 +50,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 		return response, nil
 	}
 
-	participants, err := s.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
+	participants, err := s.reads.stores.Participant.ListParticipantsByCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, grpcerror.Internal("list participants", err)
 	}
@@ -75,12 +75,12 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 			}
 			creatorUserID := strings.TrimSpace(creator.UserID)
 			if creatorUserID != "" {
-				if s.authClient == nil {
+				if s.reads.authClient == nil {
 					return nil, status.Error(codes.Internal, "auth client is not configured")
 				}
 				cached, ok := userCache[creatorUserID]
 				if !ok {
-					userResponse, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: creatorUserID})
+					userResponse, err := s.reads.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: creatorUserID})
 					if err != nil {
 						return nil, grpcerror.Internal("get auth user", err)
 					}
@@ -119,7 +119,7 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 		Max:     maxListInvitesPageSize,
 	})
 
-	page, err := s.stores.Invite.ListPendingInvitesForRecipient(ctx, userID, pageSize, in.GetPageToken())
+	page, err := s.reads.stores.Invite.ListPendingInvitesForRecipient(ctx, userID, pageSize, in.GetPageToken())
 	if err != nil {
 		return nil, grpcerror.Internal("list pending invites for user", err)
 	}
@@ -135,7 +135,7 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 	for _, inv := range page.Invites {
 		campaignRecord, ok := campaignsByID[inv.CampaignID]
 		if !ok {
-			record, err := s.stores.Campaign.Get(ctx, inv.CampaignID)
+			record, err := s.reads.stores.Campaign.Get(ctx, inv.CampaignID)
 			if err != nil {
 				return nil, err
 			}
@@ -146,7 +146,7 @@ func (s *InviteService) ListPendingInvitesForUser(ctx context.Context, in *campa
 		participantKey := inv.CampaignID + ":" + inv.ParticipantID
 		seat, ok := participantsByID[participantKey]
 		if !ok {
-			record, err := s.stores.Participant.GetParticipant(ctx, inv.CampaignID, inv.ParticipantID)
+			record, err := s.reads.stores.Participant.GetParticipant(ctx, inv.CampaignID, inv.ParticipantID)
 			if err != nil {
 				return nil, err
 			}

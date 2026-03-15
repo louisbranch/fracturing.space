@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -23,19 +24,19 @@ import (
 )
 
 type fakeOutboxInspector struct {
-	summary storagesqlite.ProjectionApplyOutboxSummary
-	rows    []storagesqlite.ProjectionApplyOutboxEntry
+	summary storage.ProjectionApplyOutboxSummary
+	rows    []storage.ProjectionApplyOutboxEntry
 	err     error
 }
 
-func (f *fakeOutboxInspector) GetProjectionApplyOutboxSummary(context.Context) (storagesqlite.ProjectionApplyOutboxSummary, error) {
+func (f *fakeOutboxInspector) GetProjectionApplyOutboxSummary(context.Context) (storage.ProjectionApplyOutboxSummary, error) {
 	if f.err != nil {
-		return storagesqlite.ProjectionApplyOutboxSummary{}, f.err
+		return storage.ProjectionApplyOutboxSummary{}, f.err
 	}
 	return f.summary, nil
 }
 
-func (f *fakeOutboxInspector) ListProjectionApplyOutboxRows(context.Context, string, int) ([]storagesqlite.ProjectionApplyOutboxEntry, error) {
+func (f *fakeOutboxInspector) ListProjectionApplyOutboxRows(context.Context, string, int) ([]storage.ProjectionApplyOutboxEntry, error) {
 	if f.err != nil {
 		return nil, f.err
 	}
@@ -251,7 +252,7 @@ func TestParseConfigRejectsUnknownSubcommand(t *testing.T) {
 
 func TestRunOutboxReportTextOutput(t *testing.T) {
 	inspector := &fakeOutboxInspector{
-		summary: storagesqlite.ProjectionApplyOutboxSummary{
+		summary: storage.ProjectionApplyOutboxSummary{
 			PendingCount:            2,
 			ProcessingCount:         1,
 			FailedCount:             3,
@@ -260,7 +261,7 @@ func TestRunOutboxReportTextOutput(t *testing.T) {
 			OldestPendingSeq:        42,
 			OldestPendingAt:         time.Date(2026, 2, 16, 10, 0, 0, 0, time.UTC),
 		},
-		rows: []storagesqlite.ProjectionApplyOutboxEntry{
+		rows: []storage.ProjectionApplyOutboxEntry{
 			{
 				CampaignID:    "camp-oldest",
 				Seq:           42,
@@ -293,11 +294,11 @@ func TestRunOutboxReportTextOutput(t *testing.T) {
 
 func TestRunOutboxReportJSONOutput(t *testing.T) {
 	inspector := &fakeOutboxInspector{
-		summary: storagesqlite.ProjectionApplyOutboxSummary{
+		summary: storage.ProjectionApplyOutboxSummary{
 			PendingCount: 4,
 			DeadCount:    2,
 		},
-		rows: []storagesqlite.ProjectionApplyOutboxEntry{
+		rows: []storage.ProjectionApplyOutboxEntry{
 			{
 				CampaignID: "camp-json",
 				Seq:        9,
@@ -1499,8 +1500,8 @@ func TestCheckIntegrityWithStores_GMFearMismatch(t *testing.T) {
 		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
 			return storage.CampaignRecord{ID: "c1"}, nil
 		},
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{GMFear: 5}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{GMFear: 5}, nil
 		},
 		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 			return storage.CharacterPage{}, nil
@@ -1508,8 +1509,8 @@ func TestCheckIntegrityWithStores_GMFearMismatch(t *testing.T) {
 	}
 	scratch := &fakeProjectionStore{
 		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{GMFear: 3}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{GMFear: 3}, nil
 		},
 	}
 	report, _, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
@@ -1530,8 +1531,8 @@ func TestCheckIntegrityWithStores_GMFearMatch(t *testing.T) {
 		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
 			return storage.CampaignRecord{ID: "c1"}, nil
 		},
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{GMFear: 5}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{GMFear: 5}, nil
 		},
 		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 			return storage.CharacterPage{}, nil
@@ -1539,8 +1540,8 @@ func TestCheckIntegrityWithStores_GMFearMatch(t *testing.T) {
 	}
 	scratch := &fakeProjectionStore{
 		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{GMFear: 5}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{GMFear: 5}, nil
 		},
 	}
 	report, _, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
@@ -1558,25 +1559,25 @@ func TestCheckIntegrityWithStores_CharacterMismatch(t *testing.T) {
 		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
 			return storage.CampaignRecord{ID: "c1"}, nil
 		},
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{GMFear: 0}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{GMFear: 0}, nil
 		},
 		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 			return storage.CharacterPage{
 				Characters: []storage.CharacterRecord{{ID: "ch1"}},
 			}, nil
 		},
-		getDaggerheartCharState: func(_ context.Context, _, charID string) (storage.DaggerheartCharacterState, error) {
-			return storage.DaggerheartCharacterState{Hp: 10, Hope: 5, Stress: 2}, nil
+		getDaggerheartCharState: func(_ context.Context, _, charID string) (projectionstore.DaggerheartCharacterState, error) {
+			return projectionstore.DaggerheartCharacterState{Hp: 10, Hope: 5, Stress: 2}, nil
 		},
 	}
 	scratch := &fakeProjectionStore{
 		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{GMFear: 0}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{GMFear: 0}, nil
 		},
-		getDaggerheartCharState: func(_ context.Context, _, charID string) (storage.DaggerheartCharacterState, error) {
-			return storage.DaggerheartCharacterState{Hp: 8, Hope: 3, Stress: 2}, nil
+		getDaggerheartCharState: func(_ context.Context, _, charID string) (projectionstore.DaggerheartCharacterState, error) {
+			return projectionstore.DaggerheartCharacterState{Hp: 8, Hope: 3, Stress: 2}, nil
 		},
 	}
 	report, warnings, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)
@@ -1597,22 +1598,22 @@ func TestCheckIntegrityWithStores_MissingSourceState(t *testing.T) {
 		get: func(_ context.Context, _ string) (storage.CampaignRecord, error) {
 			return storage.CampaignRecord{ID: "c1"}, nil
 		},
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{}, nil
 		},
 		listCharacters: func(_ context.Context, _ string, _ int, _ string) (storage.CharacterPage, error) {
 			return storage.CharacterPage{
 				Characters: []storage.CharacterRecord{{ID: "ch1"}},
 			}, nil
 		},
-		getDaggerheartCharState: func(_ context.Context, _, _ string) (storage.DaggerheartCharacterState, error) {
-			return storage.DaggerheartCharacterState{}, storage.ErrNotFound
+		getDaggerheartCharState: func(_ context.Context, _, _ string) (projectionstore.DaggerheartCharacterState, error) {
+			return projectionstore.DaggerheartCharacterState{}, storage.ErrNotFound
 		},
 	}
 	scratch := &fakeProjectionStore{
 		put: func(_ context.Context, _ storage.CampaignRecord) error { return nil },
-		getDaggerheartSnapshot: func(_ context.Context, _ string) (storage.DaggerheartSnapshot, error) {
-			return storage.DaggerheartSnapshot{}, nil
+		getDaggerheartSnapshot: func(_ context.Context, _ string) (projectionstore.DaggerheartSnapshot, error) {
+			return projectionstore.DaggerheartSnapshot{}, nil
 		},
 	}
 	report, warnings, err := checkIntegrityWithStores(t.Context(), evtStore, source, scratch, "c1", 0, io.Discard)

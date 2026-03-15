@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/internal/projection"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -297,45 +298,45 @@ func intPtr(v int) *int {
 
 type parityDaggerheartStore struct {
 	mu          sync.Mutex
-	profiles    map[string]storage.DaggerheartCharacterProfile
-	states      map[string]storage.DaggerheartCharacterState
-	snapshots   map[string]storage.DaggerheartSnapshot
-	countdowns  map[string]storage.DaggerheartCountdown
-	adversaries map[string]storage.DaggerheartAdversary
+	profiles    map[string]projectionstore.DaggerheartCharacterProfile
+	states      map[string]projectionstore.DaggerheartCharacterState
+	snapshots   map[string]projectionstore.DaggerheartSnapshot
+	countdowns  map[string]projectionstore.DaggerheartCountdown
+	adversaries map[string]projectionstore.DaggerheartAdversary
 }
 
 func newParityDaggerheartStore() *parityDaggerheartStore {
 	return &parityDaggerheartStore{
-		profiles:    make(map[string]storage.DaggerheartCharacterProfile),
-		states:      make(map[string]storage.DaggerheartCharacterState),
-		snapshots:   make(map[string]storage.DaggerheartSnapshot),
-		countdowns:  make(map[string]storage.DaggerheartCountdown),
-		adversaries: make(map[string]storage.DaggerheartAdversary),
+		profiles:    make(map[string]projectionstore.DaggerheartCharacterProfile),
+		states:      make(map[string]projectionstore.DaggerheartCharacterState),
+		snapshots:   make(map[string]projectionstore.DaggerheartSnapshot),
+		countdowns:  make(map[string]projectionstore.DaggerheartCountdown),
+		adversaries: make(map[string]projectionstore.DaggerheartAdversary),
 	}
 }
 
-func (m *parityDaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, profile storage.DaggerheartCharacterProfile) error {
+func (m *parityDaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, profile projectionstore.DaggerheartCharacterProfile) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.profiles[m.characterKey(profile.CampaignID, profile.CharacterID)] = cloneCharacterProfile(profile)
 	return nil
 }
 
-func (m *parityDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
+func (m *parityDaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	profile, ok := m.profiles[m.characterKey(campaignID, characterID)]
 	if !ok {
-		return storage.DaggerheartCharacterProfile{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterProfile{}, storage.ErrNotFound
 	}
 	return cloneCharacterProfile(profile), nil
 }
 
-func (m *parityDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (storage.DaggerheartCharacterProfilePage, error) {
+func (m *parityDaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (projectionstore.DaggerheartCharacterProfilePage, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	page := storage.DaggerheartCharacterProfilePage{
-		Profiles: make([]storage.DaggerheartCharacterProfile, 0),
+	page := projectionstore.DaggerheartCharacterProfilePage{
+		Profiles: make([]projectionstore.DaggerheartCharacterProfile, 0),
 	}
 	prefix := campaignID + ":"
 	for key, profile := range m.profiles {
@@ -353,62 +354,62 @@ func (m *parityDaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Con
 	return nil
 }
 
-func (m *parityDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, state storage.DaggerheartCharacterState) error {
+func (m *parityDaggerheartStore) PutDaggerheartCharacterState(_ context.Context, state projectionstore.DaggerheartCharacterState) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.states[m.characterKey(state.CampaignID, state.CharacterID)] = cloneCharacterStateStorage(state)
 	return nil
 }
 
-func (m *parityDaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error) {
+func (m *parityDaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	state, ok := m.states[m.characterKey(campaignID, characterID)]
 	if !ok {
-		return storage.DaggerheartCharacterState{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterState{}, storage.ErrNotFound
 	}
 	return cloneCharacterStateStorage(state), nil
 }
 
-func (m *parityDaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap storage.DaggerheartSnapshot) error {
+func (m *parityDaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap projectionstore.DaggerheartSnapshot) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.snapshots[snap.CampaignID] = snap
 	return nil
 }
 
-func (m *parityDaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (storage.DaggerheartSnapshot, error) {
+func (m *parityDaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	snap, ok := m.snapshots[campaignID]
 	if !ok {
-		return storage.DaggerheartSnapshot{}, storage.ErrNotFound
+		return projectionstore.DaggerheartSnapshot{}, storage.ErrNotFound
 	}
 	return snap, nil
 }
 
-func (m *parityDaggerheartStore) PutDaggerheartCountdown(_ context.Context, countdown storage.DaggerheartCountdown) error {
+func (m *parityDaggerheartStore) PutDaggerheartCountdown(_ context.Context, countdown projectionstore.DaggerheartCountdown) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.countdowns[m.countdownKey(countdown.CampaignID, countdown.CountdownID)] = countdown
 	return nil
 }
 
-func (m *parityDaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
+func (m *parityDaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	countdown, ok := m.countdowns[m.countdownKey(campaignID, countdownID)]
 	if !ok {
-		return storage.DaggerheartCountdown{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCountdown{}, storage.ErrNotFound
 	}
 	return countdown, nil
 }
 
-func (m *parityDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]storage.DaggerheartCountdown, error) {
+func (m *parityDaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]projectionstore.DaggerheartCountdown, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	prefix := campaignID + "/"
-	out := make([]storage.DaggerheartCountdown, 0)
+	out := make([]projectionstore.DaggerheartCountdown, 0)
 	for key, countdown := range m.countdowns {
 		if strings.HasPrefix(key, prefix) {
 			out = append(out, countdown)
@@ -424,28 +425,28 @@ func (m *parityDaggerheartStore) DeleteDaggerheartCountdown(_ context.Context, c
 	return nil
 }
 
-func (m *parityDaggerheartStore) PutDaggerheartAdversary(_ context.Context, adversary storage.DaggerheartAdversary) error {
+func (m *parityDaggerheartStore) PutDaggerheartAdversary(_ context.Context, adversary projectionstore.DaggerheartAdversary) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.adversaries[m.adversaryKey(adversary.CampaignID, adversary.AdversaryID)] = cloneAdversary(adversary)
 	return nil
 }
 
-func (m *parityDaggerheartStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error) {
+func (m *parityDaggerheartStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	adversary, ok := m.adversaries[m.adversaryKey(campaignID, adversaryID)]
 	if !ok {
-		return storage.DaggerheartAdversary{}, storage.ErrNotFound
+		return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
 	}
 	return cloneAdversary(adversary), nil
 }
 
-func (m *parityDaggerheartStore) ListDaggerheartAdversaries(_ context.Context, campaignID, _ string) ([]storage.DaggerheartAdversary, error) {
+func (m *parityDaggerheartStore) ListDaggerheartAdversaries(_ context.Context, campaignID, _ string) ([]projectionstore.DaggerheartAdversary, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	prefix := campaignID + "/"
-	out := make([]storage.DaggerheartAdversary, 0)
+	out := make([]projectionstore.DaggerheartAdversary, 0)
 	for key, adversary := range m.adversaries {
 		if strings.HasPrefix(key, prefix) {
 			out = append(out, cloneAdversary(adversary))
@@ -550,22 +551,22 @@ func (m *parityDaggerheartStore) adversaryKey(campaignID, adversaryID string) st
 	return campaignID + "/" + adversaryID
 }
 
-func cloneCharacterProfile(profile storage.DaggerheartCharacterProfile) storage.DaggerheartCharacterProfile {
+func cloneCharacterProfile(profile projectionstore.DaggerheartCharacterProfile) projectionstore.DaggerheartCharacterProfile {
 	out := profile
-	out.Experiences = append([]storage.DaggerheartExperience(nil), profile.Experiences...)
+	out.Experiences = append([]projectionstore.DaggerheartExperience(nil), profile.Experiences...)
 	out.StartingWeaponIDs = append([]string(nil), profile.StartingWeaponIDs...)
 	out.DomainCardIDs = append([]string(nil), profile.DomainCardIDs...)
 	return out
 }
 
-func cloneCharacterStateStorage(state storage.DaggerheartCharacterState) storage.DaggerheartCharacterState {
+func cloneCharacterStateStorage(state projectionstore.DaggerheartCharacterState) projectionstore.DaggerheartCharacterState {
 	out := state
 	out.Conditions = append([]string(nil), state.Conditions...)
-	out.TemporaryArmor = append([]storage.DaggerheartTemporaryArmor(nil), state.TemporaryArmor...)
+	out.TemporaryArmor = append([]projectionstore.DaggerheartTemporaryArmor(nil), state.TemporaryArmor...)
 	return out
 }
 
-func cloneAdversary(adversary storage.DaggerheartAdversary) storage.DaggerheartAdversary {
+func cloneAdversary(adversary projectionstore.DaggerheartAdversary) projectionstore.DaggerheartAdversary {
 	out := adversary
 	out.Conditions = append([]string(nil), adversary.Conditions...)
 	return out
@@ -608,4 +609,4 @@ func canonicalizeSnapshotForParity(state SnapshotState) SnapshotState {
 	return state
 }
 
-var _ storage.DaggerheartStore = (*parityDaggerheartStore)(nil)
+var _ projectionstore.Store = (*parityDaggerheartStore)(nil)

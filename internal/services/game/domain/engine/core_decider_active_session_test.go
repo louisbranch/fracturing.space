@@ -13,6 +13,9 @@ import (
 
 func TestCoreDeciderDecide_BlocksOutOfGameCommandWhenSessionActive(t *testing.T) {
 	decider := CoreDecider{
+		definitions: map[command.Type]command.Definition{
+			command.Type("campaign.update"): {ActiveSession: command.BlockedDuringActiveSession()},
+		},
 		routes: map[command.Type]coreCommandRoute{
 			command.Type("campaign.update"): campaignRoute,
 		},
@@ -34,6 +37,9 @@ func TestCoreDeciderDecide_BlocksOutOfGameCommandWhenSessionActive(t *testing.T)
 
 func TestCoreDeciderDecide_AllowsSessionScopedFamiliesWhenSessionActive(t *testing.T) {
 	decider := CoreDecider{
+		definitions: map[command.Type]command.Definition{
+			command.Type("session.end"): {ActiveSession: command.AllowedDuringActiveSession()},
+		},
 		routes: map[command.Type]coreCommandRoute{
 			command.Type("session.end"): sessionRoute,
 		},
@@ -62,6 +68,9 @@ func sessionStateStarted(sessionID ids.SessionID) session.State {
 
 func TestCoreDeciderDecide_BlockedMessageIncludesSessionID(t *testing.T) {
 	decider := CoreDecider{
+		definitions: map[command.Type]command.Definition{
+			command.Type("campaign.update"): {ActiveSession: command.BlockedDuringActiveSession()},
+		},
 		routes: map[command.Type]coreCommandRoute{
 			command.Type("campaign.update"): campaignRoute,
 		},
@@ -87,6 +96,9 @@ func TestCoreDeciderDecide_BlockedMessageIncludesSessionID(t *testing.T) {
 
 func TestCoreDeciderDecide_AllowsInGameSystemCharacterCommandWhenSessionActive(t *testing.T) {
 	decider := CoreDecider{
+		definitions: map[command.Type]command.Definition{
+			command.Type("character.delete"): {ActiveSession: command.BlockedDuringActiveSessionExceptInGameSystemActor()},
+		},
 		routes: map[command.Type]coreCommandRoute{
 			command.Type("character.delete"): func(_ CoreDecider, _ aggregate.State, _ command.Command, _ func() time.Time) command.Decision {
 				return command.Accept()

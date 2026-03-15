@@ -7,7 +7,7 @@ import (
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -81,9 +81,9 @@ func TestApplyDaggerheartProfilePatch_RejectsDescriptionAsCreationWorkflowField(
 	}
 }
 
-func validPatchProfile() storage.DaggerheartCharacterProfile {
+func validPatchProfile() projectionstore.DaggerheartCharacterProfile {
 	defaults := daggerheartprofile.GetDefaults("PC")
-	return storage.DaggerheartCharacterProfile{
+	return projectionstore.DaggerheartCharacterProfile{
 		Level:           defaults.Level,
 		HpMax:           defaults.HpMax,
 		StressMax:       defaults.StressMax,

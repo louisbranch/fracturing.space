@@ -20,10 +20,10 @@ func RegisterCommands(registry *command.Registry) error {
 		return errors.New("command registry is required")
 	}
 	definitions := []command.Definition{
-		{Type: CommandTypeRollResolve, Owner: command.OwnerCore, ValidatePayload: validateRollResolvePayload},
-		{Type: CommandTypeOutcomeApply, Owner: command.OwnerCore, ValidatePayload: validateOutcomeApplyPayload},
-		{Type: CommandTypeOutcomeReject, Owner: command.OwnerCore, ValidatePayload: validateOutcomeRejectPayload},
-		{Type: CommandTypeNoteAdd, Owner: command.OwnerCore, ValidatePayload: validateNoteAddPayload},
+		{Type: CommandTypeRollResolve, Owner: command.OwnerCore, ValidatePayload: validateRollResolvePayload, ActiveSession: command.AllowedDuringActiveSession()},
+		{Type: CommandTypeOutcomeApply, Owner: command.OwnerCore, ValidatePayload: validateOutcomeApplyPayload, ActiveSession: command.AllowedDuringActiveSession()},
+		{Type: CommandTypeOutcomeReject, Owner: command.OwnerCore, ValidatePayload: validateOutcomeRejectPayload, ActiveSession: command.AllowedDuringActiveSession()},
+		{Type: CommandTypeNoteAdd, Owner: command.OwnerCore, ValidatePayload: validateNoteAddPayload, ActiveSession: command.AllowedDuringActiveSession()},
 	}
 	for _, definition := range definitions {
 		if err := registry.Register(definition); err != nil {

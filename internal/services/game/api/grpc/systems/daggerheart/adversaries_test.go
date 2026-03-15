@@ -9,8 +9,10 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/adversarytransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -24,31 +26,31 @@ import (
 // fakeDaggerheartAdversaryStore extends the fake store to support adversary CRUD.
 type fakeDaggerheartAdversaryStore struct {
 	fakeDaggerheartStore
-	adversaries map[string]storage.DaggerheartAdversary
+	adversaries map[string]projectionstore.DaggerheartAdversary
 }
 
 func newFakeDaggerheartAdversaryStore() *fakeDaggerheartAdversaryStore {
 	return &fakeDaggerheartAdversaryStore{
 		fakeDaggerheartStore: *newFakeDaggerheartStore(),
-		adversaries:          make(map[string]storage.DaggerheartAdversary),
+		adversaries:          make(map[string]projectionstore.DaggerheartAdversary),
 	}
 }
 
-func (s *fakeDaggerheartAdversaryStore) PutDaggerheartAdversary(_ context.Context, a storage.DaggerheartAdversary) error {
+func (s *fakeDaggerheartAdversaryStore) PutDaggerheartAdversary(_ context.Context, a projectionstore.DaggerheartAdversary) error {
 	s.adversaries[a.CampaignID+":"+a.AdversaryID] = a
 	return nil
 }
 
-func (s *fakeDaggerheartAdversaryStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error) {
+func (s *fakeDaggerheartAdversaryStore) GetDaggerheartAdversary(_ context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 	a, ok := s.adversaries[campaignID+":"+adversaryID]
 	if !ok {
-		return storage.DaggerheartAdversary{}, storage.ErrNotFound
+		return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
 	}
 	return a, nil
 }
 
-func (s *fakeDaggerheartAdversaryStore) ListDaggerheartAdversaries(_ context.Context, campaignID, sessionID string) ([]storage.DaggerheartAdversary, error) {
-	var result []storage.DaggerheartAdversary
+func (s *fakeDaggerheartAdversaryStore) ListDaggerheartAdversaries(_ context.Context, campaignID, sessionID string) ([]projectionstore.DaggerheartAdversary, error) {
+	var result []projectionstore.DaggerheartAdversary
 	for _, a := range s.adversaries {
 		if a.CampaignID != campaignID {
 			continue
@@ -690,7 +692,7 @@ func TestDeleteAdversary_UsesDomainEngine(t *testing.T) {
 
 func TestLoadAdversaryForSession_NotFound(t *testing.T) {
 	svc := newAdversaryTestService()
-	_, err := svc.loadAdversaryForSession(context.Background(), "camp-1", "sess-1", "nonexistent")
+	_, err := adversarytransport.LoadAdversaryForSession(context.Background(), svc.stores.Daggerheart, "camp-1", "sess-1", "nonexistent")
 	assertStatusCode(t, err, codes.NotFound)
 }
 
@@ -705,7 +707,7 @@ func TestLoadAdversaryForSession_WrongSession(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	_, err = svc.loadAdversaryForSession(context.Background(), "camp-1", "other-session", createResp.Adversary.Id)
+	_, err = adversarytransport.LoadAdversaryForSession(context.Background(), svc.stores.Daggerheart, "camp-1", "other-session", createResp.Adversary.Id)
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
@@ -720,7 +722,7 @@ func TestLoadAdversaryForSession_Success(t *testing.T) {
 		t.Fatalf("create: %v", err)
 	}
 
-	a, err := svc.loadAdversaryForSession(context.Background(), "camp-1", "sess-1", createResp.Adversary.Id)
+	a, err := adversarytransport.LoadAdversaryForSession(context.Background(), svc.stores.Daggerheart, "camp-1", "sess-1", createResp.Adversary.Id)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}
@@ -740,7 +742,7 @@ func TestLoadAdversaryForSession_NoSessionAssigned(t *testing.T) {
 	}
 
 	// Global adversaries (no session) can be loaded from any session.
-	a, err := svc.loadAdversaryForSession(context.Background(), "camp-1", "sess-1", createResp.Adversary.Id)
+	a, err := adversarytransport.LoadAdversaryForSession(context.Background(), svc.stores.Daggerheart, "camp-1", "sess-1", createResp.Adversary.Id)
 	if err != nil {
 		t.Fatalf("load: %v", err)
 	}

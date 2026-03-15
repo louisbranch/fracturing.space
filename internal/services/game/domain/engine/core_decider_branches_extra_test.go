@@ -187,6 +187,30 @@ func TestStateResolvers_ReturnZeroWhenAggregateMapsMissing(t *testing.T) {
 	}
 }
 
+func TestStateResolvers_ReturnZeroWhenEntityIDIsEmpty(t *testing.T) {
+	state := aggregate.State{
+		Participants: map[ids.ParticipantID]participant.State{
+			"p-1": {ParticipantID: "p-1", Joined: true},
+		},
+		Characters: map[ids.CharacterID]character.State{
+			"c-1": {CharacterID: "c-1", Created: true},
+		},
+		Invites: map[ids.InviteID]invite.State{
+			"i-1": {InviteID: "i-1", Created: true},
+		},
+	}
+
+	if got := participantStateFor(command.Command{EntityID: "   "}, state); !reflect.DeepEqual(got, participant.State{}) {
+		t.Fatalf("participantStateFor() = %+v, want zero state", got)
+	}
+	if got := characterStateFor(command.Command{EntityID: "   "}, state); !reflect.DeepEqual(got, character.State{}) {
+		t.Fatalf("characterStateFor() = %+v, want zero state", got)
+	}
+	if got := inviteStateFor(command.Command{EntityID: "   "}, state); !reflect.DeepEqual(got, invite.State{}) {
+		t.Fatalf("inviteStateFor() = %+v, want zero state", got)
+	}
+}
+
 func readySessionStartAggregateState(status campaign.Status) aggregate.State {
 	return aggregate.State{
 		Campaign: campaign.State{

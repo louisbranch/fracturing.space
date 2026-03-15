@@ -22,7 +22,7 @@ func (s *CharacterService) ListCharacters(ctx context.Context, in *campaignv1.Li
 	if err != nil {
 		return nil, err
 	}
-	page, err := newCharacterApplication(s).ListCharacters(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
+	page, err := s.app.ListCharacters(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +53,7 @@ func (s *CharacterService) ListCharacterProfiles(ctx context.Context, in *campai
 		return nil, err
 	}
 	response := &campaignv1.ListCharacterProfilesResponse{}
-	page, systemID, err := newCharacterApplication(s).ListCharacterProfiles(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
+	page, systemID, err := s.app.ListCharacterProfiles(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +90,7 @@ func (s *CharacterService) GetCharacterSheet(ctx context.Context, in *campaignv1
 		return nil, err
 	}
 
-	sheet, err := newCharacterApplication(s).GetCharacterSheet(ctx, campaignID, characterID)
+	sheet, err := s.app.GetCharacterSheet(ctx, campaignID, characterID)
 	if err != nil {
 		return nil, err
 	}

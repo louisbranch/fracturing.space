@@ -6,5 +6,6 @@
 //   - while character-level status and metadata live in the character aggregate.
 //
 // The package handles character lifecycle commands, profile updates, and replay
-// folds used by downstream projection and authorization checks.
+// folds used by downstream projection and authorization checks through
+// workflow-local decider files rather than one mixed command hub.
 package character

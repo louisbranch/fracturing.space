@@ -4,8 +4,8 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -23,8 +23,8 @@ type daggerheartCharacterStatePatch struct {
 }
 
 func buildDaggerheartCharacterStatePatch(
-	current storage.DaggerheartCharacterState,
-	profile storage.DaggerheartCharacterProfile,
+	current projectionstore.DaggerheartCharacterState,
+	profile projectionstore.DaggerheartCharacterProfile,
 	patch *daggerheartv1.DaggerheartCharacterState,
 ) (daggerheartCharacterStatePatch, error) {
 	hp := int(patch.Hp)
@@ -114,7 +114,7 @@ func buildDaggerheartCharacterStatePatch(
 	}, nil
 }
 
-func (p daggerheartCharacterStatePatch) stateUnchanged(current storage.DaggerheartCharacterState) bool {
+func (p daggerheartCharacterStatePatch) stateUnchanged(current projectionstore.DaggerheartCharacterState) bool {
 	lifeStateBefore := current.LifeState
 	if lifeStateBefore == "" {
 		lifeStateBefore = daggerheart.LifeStateAlive
@@ -127,7 +127,7 @@ func (p daggerheartCharacterStatePatch) stateUnchanged(current storage.Daggerhea
 		lifeStateBefore == p.lifeState
 }
 
-func (p daggerheartCharacterStatePatch) payload(characterID string, current storage.DaggerheartCharacterState) daggerheart.CharacterStatePatchPayload {
+func (p daggerheartCharacterStatePatch) payload(characterID string, current projectionstore.DaggerheartCharacterState) daggerheart.CharacterStatePatchPayload {
 	hpBefore := current.Hp
 	hpAfter := p.hp
 	hopeBefore := current.Hope

@@ -21,6 +21,28 @@ const (
 	maxListScenesPageSize     = pageMedium
 )
 
+type sceneReadDependencies struct {
+	auth   policyDependencies
+	stores sceneReadStores
+}
+
+type sceneReadStores struct {
+	Campaign       storage.CampaignStore
+	Scene          storage.SceneStore
+	SceneCharacter storage.SceneCharacterStore
+}
+
+func newSceneReadDependencies(stores Stores) sceneReadDependencies {
+	return sceneReadDependencies{
+		auth: newPolicyDependencies(stores),
+		stores: sceneReadStores{
+			Campaign:       stores.Campaign,
+			Scene:          stores.Scene,
+			SceneCharacter: stores.SceneCharacter,
+		},
+	}
+}
+
 // GetScene returns a scene by campaign ID and scene ID.
 func (s *SceneService) GetScene(ctx context.Context, in *campaignv1.GetSceneRequest) (*campaignv1.GetSceneResponse, error) {
 	if in == nil {
@@ -35,23 +57,23 @@ func (s *SceneService) GetScene(ctx context.Context, in *campaignv1.GetSceneRequ
 		return nil, err
 	}
 
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	campaignRecord, err := s.reads.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
+	if err := requireReadPolicyWithDependencies(ctx, s.reads.auth, campaignRecord); err != nil {
 		return nil, err
 	}
 
-	rec, err := s.stores.Scene.GetScene(ctx, campaignID, sceneID)
+	rec, err := s.reads.stores.Scene.GetScene(ctx, campaignID, sceneID)
 	if err != nil {
 		return nil, err
 	}
 
-	characters, err := s.stores.SceneCharacter.ListSceneCharacters(ctx, campaignID, sceneID)
+	characters, err := s.reads.stores.SceneCharacter.ListSceneCharacters(ctx, campaignID, sceneID)
 	if err != nil {
 		return nil, grpcerror.Internal("list scene characters", err)
 	}
@@ -75,14 +97,14 @@ func (s *SceneService) ListScenes(ctx context.Context, in *campaignv1.ListScenes
 		return nil, err
 	}
 
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	campaignRecord, err := s.reads.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requireReadPolicy(ctx, s.stores, campaignRecord); err != nil {
+	if err := requireReadPolicyWithDependencies(ctx, s.reads.auth, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +113,7 @@ func (s *SceneService) ListScenes(ctx context.Context, in *campaignv1.ListScenes
 		Max:     maxListScenesPageSize,
 	})
 
-	page, err := s.stores.Scene.ListScenes(ctx, campaignID, sessionID, pageSize, in.GetPageToken())
+	page, err := s.reads.stores.Scene.ListScenes(ctx, campaignID, sessionID, pageSize, in.GetPageToken())
 	if err != nil {
 		return nil, grpcerror.Internal("list scenes", err)
 	}

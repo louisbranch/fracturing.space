@@ -12,7 +12,6 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -96,12 +95,8 @@ func SessionLockInterceptor(sessionStore storage.SessionStore) grpc.UnaryServerI
 
 // isBlockedMethod reports whether a method is a mutator blocked during active sessions.
 func isBlockedMethod(fullMethod string) bool {
-	cmdType, ok := blockedMethodCommandTypes[fullMethod]
-	if !ok {
-		return false
-	}
-	policy, classified := engine.ActiveSessionPolicyForCommandType(cmdType)
-	return classified && policy == engine.ActiveSessionCommandPolicyBlocked
+	_, ok := blockedMethodCommandTypes[fullMethod]
+	return ok
 }
 
 // campaignIDFromRequest extracts the campaign_id field from a request if present.
@@ -123,25 +118,33 @@ func requiredCampaignIDField(fullMethod string) string {
 }
 
 // ValidateSessionLockPolicyCoverage checks that transport-layer blocking and
-// domain-layer policy agree. Every command type mapped from an RPC must be
-// classified as "blocked" by the domain policy. Every blocked command namespace
-// known to the domain must have at least one transport entry.
+// command-definition policy agree. Every command type mapped from an RPC must be
+// classified as "blocked" in the command registry. Every core blocked command
+// family must have at least one transport entry.
 //
 // Call this at startup to catch drift between transport interceptor and domain
 // policy when new commands or namespaces are added.
-func ValidateSessionLockPolicyCoverage(blockedNamespaces []string) error {
-	// Verify every mapped command type is actually "blocked" per domain policy.
+func ValidateSessionLockPolicyCoverage(registry *command.Registry) error {
+	if registry == nil {
+		return errors.New("command registry is required")
+	}
+
 	for method, cmdType := range blockedMethodCommandTypes {
-		policy, classified := engine.ActiveSessionPolicyForCommandType(cmdType)
-		if !classified {
-			return fmt.Errorf("session lock interceptor maps %s to unclassified command %s", method, cmdType)
+		definition, ok := registry.Definition(cmdType)
+		if !ok {
+			return fmt.Errorf("session lock interceptor maps %s to unknown command %s", method, cmdType)
 		}
-		if policy != engine.ActiveSessionCommandPolicyBlocked {
-			return fmt.Errorf("session lock interceptor maps %s to command %s which domain policy classifies as %q, not blocked", method, cmdType, policy)
+		if definition.ActiveSession.Classification != command.ActiveSessionClassificationBlocked {
+			return fmt.Errorf(
+				"session lock interceptor maps %s to command %s which registry classifies as %q, not blocked",
+				method,
+				cmdType,
+				definition.ActiveSession.Classification,
+			)
 		}
 	}
 
-	// Verify every blocked namespace has at least one transport entry.
+	blockedNamespaces := blockedCoreCommandNamespaces(registry.ListDefinitions())
 	transportNamespaces := make(map[string]bool)
 	for _, cmdType := range blockedMethodCommandTypes {
 		transportNamespaces[commandNamespaceFromType(cmdType)] = true
@@ -154,11 +157,26 @@ func ValidateSessionLockPolicyCoverage(blockedNamespaces []string) error {
 	return nil
 }
 
-// BlockedCommandNamespaces returns the namespaces the domain policy classifies
-// as blocked during active sessions. Used by startup validation to ensure
-// transport coverage.
-func BlockedCommandNamespaces() []string {
-	return []string{"campaign", "participant", "invite", "character"}
+func blockedCoreCommandNamespaces(definitions []command.Definition) []string {
+	namespaces := make(map[string]struct{})
+	for _, definition := range definitions {
+		if definition.Owner != command.OwnerCore {
+			continue
+		}
+		if definition.ActiveSession.Classification != command.ActiveSessionClassificationBlocked {
+			continue
+		}
+		namespace := commandNamespaceFromType(definition.Type)
+		if namespace == "" {
+			continue
+		}
+		namespaces[namespace] = struct{}{}
+	}
+	out := make([]string, 0, len(namespaces))
+	for namespace := range namespaces {
+		out = append(out, namespace)
+	}
+	return out
 }
 
 func commandNamespaceFromType(cmdType command.Type) string {

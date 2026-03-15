@@ -33,5 +33,5 @@ func (s *EventService) ListEvents(ctx context.Context, in *campaignv1.ListEvents
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "list events request is required")
 	}
-	return newEventApplication(s).ListEvents(ctx, in)
+	return s.app.ListEvents(ctx, in)
 }

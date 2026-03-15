@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	sqlitedaggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartcontent"
 )
 
 const (
@@ -32,8 +32,8 @@ var (
 )
 
 type contentStore interface {
-	storage.DaggerheartContentStore
-	storage.DaggerheartCatalogReadinessStore
+	contentstore.DaggerheartContentStore
+	contentstore.DaggerheartCatalogReadinessStore
 	Close() error
 }
 
@@ -54,7 +54,7 @@ func defaultRunDeps() runDeps {
 }
 
 func openSQLiteContentStore(path string) (contentStore, error) {
-	return storagesqlite.OpenContent(path)
+	return sqlitedaggerheartcontent.Open(path)
 }
 
 // Config holds configuration for the catalog importer.
@@ -143,7 +143,7 @@ func runWithDeps(ctx context.Context, cfg Config, out io.Writer, deps runDeps) e
 		store = contentStore
 
 		if cfg.SkipIfReady {
-			readiness, err := storage.EvaluateDaggerheartCatalogReadiness(ctx, contentStore)
+			readiness, err := contentstore.EvaluateDaggerheartCatalogReadiness(ctx, contentStore)
 			if err != nil {
 				return fmt.Errorf("check catalog readiness: %w", err)
 			}
@@ -168,7 +168,7 @@ func runWithDeps(ctx context.Context, cfg Config, out io.Writer, deps runDeps) e
 	return err
 }
 
-func processLocale(ctx context.Context, store storage.DaggerheartContentStore, rootDir, locale, baseLocale string, dryRun bool, now time.Time) error {
+func processLocale(ctx context.Context, store contentstore.DaggerheartContentStore, rootDir, locale, baseLocale string, dryRun bool, now time.Time) error {
 	localeDir := filepath.Join(rootDir, locale)
 	payloads, err := readLocalePayloads(localeDir)
 	if err != nil {
@@ -464,7 +464,7 @@ func validateLocalePayloads(locale string, payloads localePayloads) error {
 	return nil
 }
 
-func upsertLocale(ctx context.Context, store storage.DaggerheartContentStore, locale string, isBase bool, payloads localePayloads, now time.Time) error {
+func upsertLocale(ctx context.Context, store contentstore.DaggerheartContentStore, locale string, isBase bool, payloads localePayloads, now time.Time) error {
 	if store == nil {
 		return fmt.Errorf("content store is required")
 	}

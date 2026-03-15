@@ -7,7 +7,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/i18n"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"google.golang.org/grpc/codes"
 )
 
@@ -139,7 +139,7 @@ func findAssetRef(
 
 func newAssetTestService() *DaggerheartAssetService {
 	contentService := newContentTestService()
-	svc, err := NewDaggerheartAssetService(contentService.stores)
+	svc, err := NewDaggerheartAssetService(contentService.store)
 	if err != nil {
 		panic(err)
 	}
@@ -179,12 +179,12 @@ func TestGetClass_Success(t *testing.T) {
 
 func TestGetClass_LocaleOverride(t *testing.T) {
 	svc := newContentTestService()
-	store, ok := svc.stores.DaggerheartContent.(*fakeContentStore)
+	store, ok := svc.store.(*fakeContentStore)
 	if !ok {
-		t.Fatalf("expected fake content store, got %T", svc.stores.DaggerheartContent)
+		t.Fatalf("expected fake content store, got %T", svc.store)
 	}
 	locale := i18n.LocaleString(commonv1.Locale_LOCALE_PT_BR)
-	if err := store.PutDaggerheartContentString(context.Background(), storage.DaggerheartContentString{
+	if err := store.PutDaggerheartContentString(context.Background(), contentstore.DaggerheartContentString{
 		ContentID:   "class-1",
 		ContentType: "class",
 		Field:       "name",
@@ -588,7 +588,7 @@ func TestListEnvironments_Success(t *testing.T) {
 
 func TestNewDaggerheartContentService(t *testing.T) {
 	cs := newFakeContentStore()
-	svc, err := NewDaggerheartContentService(Stores{DaggerheartContent: cs})
+	svc, err := NewDaggerheartContentService(cs)
 	if err != nil {
 		t.Fatalf("unexpected constructor error: %v", err)
 	}
@@ -598,7 +598,7 @@ func TestNewDaggerheartContentService(t *testing.T) {
 }
 
 func TestNewDaggerheartContentServiceRejectsMissingStore(t *testing.T) {
-	svc, err := NewDaggerheartContentService(Stores{})
+	svc, err := NewDaggerheartContentService(nil)
 	if err == nil {
 		t.Fatal("expected constructor error for missing content store")
 	}

@@ -26,25 +26,29 @@ type forkApplicationStores struct {
 	Event        storage.EventStore
 }
 
-func newForkApplication(service *ForkService) forkApplication {
+func newForkApplicationWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+) forkApplication {
 	app := forkApplication{
-		auth: newPolicyDependencies(service.stores),
+		auth: newPolicyDependencies(stores),
 		stores: forkApplicationStores{
-			Campaign:     service.stores.Campaign,
-			Participant:  service.stores.Participant,
-			Session:      service.stores.Session,
-			CampaignFork: service.stores.CampaignFork,
-			Event:        service.stores.Event,
+			Campaign:     stores.Campaign,
+			Participant:  stores.Participant,
+			Session:      stores.Session,
+			CampaignFork: stores.CampaignFork,
+			Event:        stores.Event,
 		},
 		eventReplay: forkEventReplay{
-			events:  service.stores.Event,
-			applier: service.stores.Applier(),
-			runtime: service.stores.Write.Runtime,
+			events:  stores.Event,
+			applier: stores.Applier(),
+			runtime: stores.Write.Runtime,
 		},
-		write:       service.stores.Write,
-		applier:     service.stores.Applier(),
-		clock:       service.clock,
-		idGenerator: service.idGenerator,
+		write:       stores.Write,
+		applier:     stores.Applier(),
+		clock:       clock,
+		idGenerator: idGenerator,
 	}
 	if app.clock == nil {
 		app.clock = time.Now

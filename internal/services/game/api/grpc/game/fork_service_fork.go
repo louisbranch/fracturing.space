@@ -21,7 +21,7 @@ func (s *ForkService) ForkCampaign(ctx context.Context, in *campaignv1.ForkCampa
 		return nil, err
 	}
 
-	newCampaign, lineage, forkEventSeq, err := newForkApplication(s).ForkCampaign(ctx, sourceCampaignID, in)
+	newCampaign, lineage, forkEventSeq, err := s.app.ForkCampaign(ctx, sourceCampaignID, in)
 	if err != nil {
 		return nil, err
 	}

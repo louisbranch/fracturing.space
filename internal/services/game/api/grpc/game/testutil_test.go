@@ -1,9 +1,5 @@
 package game
 
-import (
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
-)
-
 // testStoresBuilder reduces repeated store construction in tests.
 // Default stores (campaign, participant, event) are created eagerly
 // since nearly every test needs them. Optional stores are added via
@@ -88,7 +84,7 @@ func (b *testStoresBuilder) build() Stores {
 		s.Character = b.Character
 	}
 	if b.Daggerheart != nil {
-		s.SystemStores = systemmanifest.ProjectionStores{Daggerheart: b.Daggerheart}
+		s.SystemStores = SystemStores{Daggerheart: b.Daggerheart}
 	}
 	if b.Session != nil {
 		s.Session = b.Session

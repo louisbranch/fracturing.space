@@ -6,7 +6,11 @@
 // tracks its own character roster, gate state, and spotlight independently.
 //
 // The package holds:
-//   - command deciders that translate scene commands into events,
+//   - workflow-local command deciders that translate scene commands into events,
 //   - fold logic for replaying scene history,
 //   - and state constraints used by the scene-scoped gate.
+//
+// Scene command handling is intentionally split by capability inside the
+// package so lifecycle, character, gate, and spotlight workflows stay
+// navigable without changing the aggregate boundary.
 package scene

@@ -14,7 +14,7 @@ func (s *EventService) AppendEvent(ctx context.Context, in *campaignv1.AppendEve
 		return nil, status.Error(codes.InvalidArgument, "append event request is required")
 	}
 
-	stored, err := newEventApplication(s).AppendEvent(ctx, in)
+	stored, err := s.app.AppendEvent(ctx, in)
 	if err != nil {
 		return nil, err
 	}

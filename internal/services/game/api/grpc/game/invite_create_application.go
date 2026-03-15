@@ -36,7 +36,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.InviteRecord{}, err
 	}
-	actor, err := requirePolicyActor(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord)
+	actor, err := requirePolicyActorWithDependencies(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord)
 	if err != nil {
 		return storage.InviteRecord{}, err
 	}
