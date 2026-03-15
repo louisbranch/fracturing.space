@@ -132,4 +132,82 @@
   .story-stage-card-sheet {
     @apply max-w-6xl;
   }
+
+  .hud-shell {
+    @apply mx-auto flex h-dvh max-h-dvh w-full max-w-screen-2xl flex-col overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6;
+  }
+
+  .hud-shell-main {
+    @apply flex min-h-0 flex-1 flex-col gap-4 pt-4;
+  }
+
+  .hud-header {
+    @apply shrink-0;
+  }
+
+  .hud-stage {
+    @apply flex min-h-0 flex-1;
+  }
+
+  .hud-stage-header {
+    @apply shrink-0 px-3 py-2;
+  }
+
+  .hud-stage-scroll {
+    @apply min-h-0 flex-1 overflow-y-auto border-t border-base-300/70 px-3 py-2;
+  }
+
+  .hud-stage-empty {
+    @apply flex h-full min-h-40 items-center justify-center border border-dashed border-base-300/70 bg-base-200/25 px-3 py-4 text-center;
+  }
+
+  .hud-composer {
+    @apply shrink-0 overflow-visible border border-base-300/70 bg-base-200/95 shadow-xl shadow-black/25 backdrop-blur;
+  }
+
+  .hud-composer-bar {
+    @apply border-b border-base-300/70 px-2 py-1.5;
+  }
+
+  .hud-composer-tabs {
+    @apply flex flex-wrap items-end gap-1;
+  }
+
+  .hud-composer-tab {
+    @apply h-9 min-w-[7.5rem] px-3 text-sm;
+  }
+
+  .hud-composer-toggle {
+    @apply inline-flex h-8 w-8 items-center justify-center rounded-md text-base-content/70 transition-colors hover:bg-base-100/50 hover:text-base-content focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-base-content/70;
+  }
+
+  .hud-composer-body {
+    @apply px-2 py-2;
+  }
+
+  .hud-composer-panel {
+    @apply bg-base-100/45 p-0;
+  }
+
+  .hud-composer-surface {
+    @apply flex items-stretch gap-2;
+  }
+
+  .hud-composer-editor {
+    @apply flex min-w-0 flex-1 flex-col gap-2;
+  }
+
+  .hud-composer-actions {
+    @apply flex w-28 shrink-0 flex-col justify-end gap-2;
+  }
+
+  .hud-composer-actions .btn {
+    @apply w-full;
+  }
+
+  .hud-composer-textarea {
+    @apply min-h-0 w-full flex-1 resize-none border-base-300/70 bg-base-100/80 px-3 py-2;
+    width: 100%;
+    max-width: none;
+  }
 }

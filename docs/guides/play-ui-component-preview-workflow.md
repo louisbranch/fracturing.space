@@ -19,10 +19,12 @@ development:
 - runtime bootstrapping is not required for component iteration,
 - fixtures and stories double as contributor-facing documentation.
 
-The first reference implementation is the Daggerheart Character Card.
-Its current content model is grounded in the web campaign character card and
-the web character detail Daggerheart summary, while Storybook frames each story
-inside a realistic single-card screen slot.
+The current catalog includes both:
+
+- interaction workflow slices for active-play concepts such as scenes, phases,
+  acting sets, player slots, OOC overlays, AI turn state, and the composition
+  shell
+- Daggerheart reference surfaces such as the character card and character sheet
 
 ## Run Storybook
 
@@ -50,11 +52,18 @@ http://localhost:6006
 
 ## Where to work
 
-The Character Card reference slice lives under:
+The Daggerheart reference slices live under:
 
 - `internal/services/play/ui/src/systems/daggerheart/character-card/`
+- `internal/services/play/ui/src/systems/daggerheart/character-sheet/`
 
-Keep concerns separate inside the component slice:
+The active interaction workflow slices live under:
+
+- `internal/services/play/ui/src/interaction/player-hud/`
+- older interaction workflow slices that are pending removal now live under
+  `internal/services/play/ui/src/interaction/legacy/`
+
+Keep concerns separate inside each component slice:
 
 - `contract.ts`
   exported prop and data types
@@ -105,6 +114,8 @@ npm run build-storybook
 When adding the next isolated component:
 
 1. create a system-owned component slice with its own contract, fixtures, and stories
+   for Daggerheart reference surfaces, or an interaction-owned slice under
+   `src/interaction/player-hud/` for active HUD workflow surfaces
 2. add Storybook stories that clearly separate overview, variants, and fixtures
 3. write component tests against the exported contract, not runtime internals
 4. remove temporary or superseded UI code instead of preserving compatibility by default
