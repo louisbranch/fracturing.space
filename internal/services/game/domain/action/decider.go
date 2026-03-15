@@ -23,6 +23,7 @@ const (
 	rejectionCodeOutcomeAlreadyApplied             = "OUTCOME_ALREADY_APPLIED"
 	rejectionCodeOutcomeEffectSystemOwnedForbidden = "OUTCOME_EFFECT_SYSTEM_OWNED_FORBIDDEN"
 	rejectionCodeOutcomeEffectTypeForbidden        = "OUTCOME_EFFECT_TYPE_FORBIDDEN"
+	rejectionCodeNoteContentRequired               = "NOTE_CONTENT_REQUIRED"
 )
 
 var coreOutcomeEffectPolicy = newOutcomeEffectPolicy("session.gate_opened", "session.spotlight_set")
@@ -33,10 +34,7 @@ var coreOutcomeEffectPolicy = newOutcomeEffectPolicy("session.gate_opened", "ses
 // becomes a typed domain event, keeping roll outcome logic and note-taking in one
 // replayable stream.
 func Decide(state State, cmd command.Command, now func() time.Time) command.Decision {
-	if now == nil {
-		now = time.Now
-	}
-
+	now = command.NowFunc(now)
 	switch cmd.Type {
 	case CommandTypeRollResolve:
 		return decideRollResolve(cmd, now)

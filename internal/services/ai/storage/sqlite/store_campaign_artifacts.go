@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -40,8 +41,8 @@ ON CONFLICT(campaign_id, path) DO UPDATE SET
 		record.Path,
 		record.Content,
 		record.ReadOnly,
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put campaign artifact: %w", err)
@@ -90,8 +91,8 @@ WHERE campaign_id = ? AND path = ?
 		}
 		return storage.CampaignArtifactRecord{}, fmt.Errorf("get campaign artifact: %w", err)
 	}
-	record.CreatedAt = fromMillis(createdAt)
-	record.UpdatedAt = fromMillis(updatedAt)
+	record.CreatedAt = sqliteutil.FromMillis(createdAt)
+	record.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	return record, nil
 }
 
@@ -136,8 +137,8 @@ ORDER BY path
 		); err != nil {
 			return nil, fmt.Errorf("scan campaign artifact row: %w", err)
 		}
-		record.CreatedAt = fromMillis(createdAt)
-		record.UpdatedAt = fromMillis(updatedAt)
+		record.CreatedAt = sqliteutil.FromMillis(createdAt)
+		record.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 		records = append(records, record)
 	}
 	if err := rows.Err(); err != nil {

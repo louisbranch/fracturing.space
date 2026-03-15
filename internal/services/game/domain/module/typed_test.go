@@ -153,7 +153,7 @@ func TestTypedDecider_Decide_DelegatesToFn(t *testing.T) {
 		},
 	}
 
-	decision := d.Decide(nil, command.Command{}, nil)
+	decision := d.Decide(nil, command.Command{}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -173,7 +173,7 @@ func TestTypedDecider_Decide_PropagatesAssertError(t *testing.T) {
 		},
 	}
 
-	decision := d.Decide("wrong", command.Command{}, nil)
+	decision := d.Decide("wrong", command.Command{}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -188,7 +188,7 @@ func TestTypedDecider_Decide_NilAssertRejects(t *testing.T) {
 			return command.Decision{}
 		},
 	}
-	decision := d.Decide(nil, command.Command{}, nil)
+	decision := d.Decide(nil, command.Command{}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -198,7 +198,7 @@ func TestTypedDecider_Decide_NilFnRejects(t *testing.T) {
 	d := TypedDecider[testState]{
 		Assert: func(any) (testState, error) { return testState{}, nil },
 	}
-	decision := d.Decide(nil, command.Command{}, nil)
+	decision := d.Decide(nil, command.Command{}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}

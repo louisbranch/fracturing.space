@@ -161,14 +161,14 @@ func TestCampaignAIOrchestrationServiceLifecycleRPCsReachWritePathBoundary(t *te
 func TestCampaignAIOrchestrationApplicationCampaignSupportsAI(t *testing.T) {
 	t.Parallel()
 
-	app := campaignAIOrchestrationApplication{}
-	if !app.campaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeAI}) {
+	app := newCampaignAIOrchestrationApplicationWithDependencies(Stores{}, gametest.FixedIDGenerator("unused"))
+	if !app.CampaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeAI}) {
 		t.Fatal("gm mode ai should be supported")
 	}
-	if !app.campaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeHybrid}) {
+	if !app.CampaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeHybrid}) {
 		t.Fatal("gm mode hybrid should be supported")
 	}
-	if app.campaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeHuman}) {
+	if app.CampaignSupportsAI(storage.CampaignRecord{GmMode: campaign.GmModeHuman}) {
 		t.Fatal("gm mode human should not be supported")
 	}
 }

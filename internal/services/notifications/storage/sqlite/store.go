@@ -17,14 +17,6 @@ type Store struct {
 	sqlDB *sql.DB
 }
 
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
-
 // Open opens a notifications SQLite store at the provided path.
 func Open(path string) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
@@ -53,7 +45,7 @@ func (s *Store) Close() error {
 }
 
 func (s *Store) runMigrations() error {
-	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "")
+	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "", time.Now)
 }
 
 var _ storage.NotificationStore = (*Store)(nil)

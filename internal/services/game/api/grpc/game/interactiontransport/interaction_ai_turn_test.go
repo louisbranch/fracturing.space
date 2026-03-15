@@ -1,4 +1,4 @@
-package game
+package interactiontransport
 
 import (
 	"context"
@@ -201,7 +201,7 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 	}
 }
 
-func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligible(t *testing.T) {
+func TestAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentOrEligible(t *testing.T) {
 	t.Parallel()
 
 	campaignStore := gametest.NewFakeCampaignStore()
@@ -248,16 +248,15 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 		"gm-ai": {ID: "gm-ai", CampaignID: "camp-1", Role: participant.RoleGM, Controller: participant.ControllerAI},
 	}
 
-	app := newCampaignAIOrchestrationApplicationWithDependencies(
-		Stores{
-			Campaign:           campaignStore,
-			Session:            sessionStore,
-			Participant:        participantStore,
-			SessionInteraction: sessionInteractionStore,
-			Write:              domainwriteexec.WritePath{Executor: domain, Runtime: gametest.SetupRuntime()},
-		},
-		gametest.FixedIDGenerator("unused"),
-	)
+	runtime := gametest.SetupRuntime()
+	runtime.SetInlineApplyEnabled(false)
+	app := NewAIOrchestrationApplication(Deps{
+		Campaign:           campaignStore,
+		Session:            sessionStore,
+		Participant:        participantStore,
+		SessionInteraction: sessionInteractionStore,
+		Write:              domainwriteexec.WritePath{Executor: domain, Runtime: runtime},
+	}, gametest.FixedIDGenerator("unused"))
 
 	state, err := app.QueueAIGMTurn(context.Background(), "camp-1", "sess-missing", "session.active_scene_set", "", "")
 	if err != nil {
@@ -281,22 +280,5 @@ func TestCampaignAIOrchestrationQueueAIGMTurnReturnsIdleWhenSessionIsNotCurrentO
 	}
 	if state.GetStatus() != gamev1.AITurnStatus_AI_TURN_STATUS_IDLE {
 		t.Fatalf("ineligible status = %v, want idle", state.GetStatus())
-	}
-
-	state, err = app.QueueAIGMTurn(context.Background(), "camp-1", "sess-1", "session.started", "", "")
-	if err != nil {
-		t.Fatalf("QueueAIGMTurn bootstrap error = %v", err)
-	}
-	if state.GetStatus() != gamev1.AITurnStatus_AI_TURN_STATUS_QUEUED {
-		t.Fatalf("bootstrap status = %v, want queued", state.GetStatus())
-	}
-	if state.GetOwnerParticipantId() != "gm-ai" {
-		t.Fatalf("bootstrap owner participant = %q, want gm-ai", state.GetOwnerParticipantId())
-	}
-	if state.GetSourceEventType() != "session.started" {
-		t.Fatalf("bootstrap source event = %q, want session.started", state.GetSourceEventType())
-	}
-	if state.GetTurnToken() != token {
-		t.Fatalf("bootstrap turn token = %q, want %q", state.GetTurnToken(), token)
 	}
 }

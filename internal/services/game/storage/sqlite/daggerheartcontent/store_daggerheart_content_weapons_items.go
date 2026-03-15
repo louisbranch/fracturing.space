@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -40,8 +41,8 @@ func (s *Store) PutDaggerheartWeapon(ctx context.Context, weapon contentstore.Da
 		DamageType:     weapon.DamageType,
 		Burden:         int64(weapon.Burden),
 		Feature:        weapon.Feature,
-		CreatedAt:      toMillis(weapon.CreatedAt),
-		UpdatedAt:      toMillis(weapon.UpdatedAt),
+		CreatedAt:      sqliteutil.ToMillis(weapon.CreatedAt),
+		UpdatedAt:      sqliteutil.ToMillis(weapon.UpdatedAt),
 	})
 }
 
@@ -132,8 +133,8 @@ func (s *Store) PutDaggerheartArmor(ctx context.Context, armor contentstore.Dagg
 		BaseSevereThreshold: int64(armor.BaseSevereThreshold),
 		ArmorScore:          int64(armor.ArmorScore),
 		Feature:             armor.Feature,
-		CreatedAt:           toMillis(armor.CreatedAt),
-		UpdatedAt:           toMillis(armor.UpdatedAt),
+		CreatedAt:           sqliteutil.ToMillis(armor.CreatedAt),
+		UpdatedAt:           sqliteutil.ToMillis(armor.UpdatedAt),
 	})
 }
 
@@ -216,8 +217,8 @@ func (s *Store) PutDaggerheartItem(ctx context.Context, item contentstore.Dagger
 		StackMax:    int64(item.StackMax),
 		Description: item.Description,
 		EffectText:  item.EffectText,
-		CreatedAt:   toMillis(item.CreatedAt),
-		UpdatedAt:   toMillis(item.UpdatedAt),
+		CreatedAt:   sqliteutil.ToMillis(item.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(item.UpdatedAt),
 	})
 }
 

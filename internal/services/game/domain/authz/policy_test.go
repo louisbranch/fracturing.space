@@ -31,8 +31,8 @@ func TestCapabilityFromActionResource(t *testing.T) {
 	if !ok {
 		t.Fatal("expected manage/session capability to be recognized")
 	}
-	if capability != CapabilityManageSessions {
-		t.Fatalf("capability = %#v, want %#v", capability, CapabilityManageSessions)
+	if capability != CapabilityManageSessions() {
+		t.Fatalf("capability = %#v, want %#v", capability, CapabilityManageSessions())
 	}
 	if _, ok := CapabilityFromActionResource(ActionManage, ResourceUnspecified); ok {
 		t.Fatal("expected unspecified resource capability to be rejected")
@@ -50,28 +50,28 @@ func TestCanCampaignAccess(t *testing.T) {
 		{
 			name:       "owner can manage campaign",
 			access:     participant.CampaignAccessOwner,
-			capability: CapabilityManageCampaign,
+			capability: CapabilityManageCampaign(),
 			allowed:    true,
 			reasonCode: ReasonAllowAccessLevel,
 		},
 		{
 			name:       "manager can manage campaign",
 			access:     participant.CampaignAccessManager,
-			capability: CapabilityManageCampaign,
+			capability: CapabilityManageCampaign(),
 			allowed:    true,
 			reasonCode: ReasonAllowAccessLevel,
 		},
 		{
 			name:       "member can mutate characters",
 			access:     participant.CampaignAccessMember,
-			capability: CapabilityMutateCharacters,
+			capability: CapabilityMutateCharacters(),
 			allowed:    true,
 			reasonCode: ReasonAllowAccessLevel,
 		},
 		{
 			name:       "member cannot read invites",
 			access:     participant.CampaignAccessMember,
-			capability: CapabilityReadInvites,
+			capability: CapabilityReadInvites(),
 			allowed:    false,
 			reasonCode: ReasonDenyAccessLevelRequired,
 		},

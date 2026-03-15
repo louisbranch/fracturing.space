@@ -89,7 +89,7 @@ func TestBuildCoreRouteTable_RejectsStaleStaticRoutesWithoutRegistration(t *test
 }
 
 func TestCoreDeciderDecide_RejectsUnsupportedCoreCommandType(t *testing.T) {
-	decision := CoreDecider{}.Decide(aggregate.State{}, command.Command{Type: command.Type("core.unknown")}, nil)
+	decision := CoreDecider{}.Decide(aggregate.State{}, command.Command{Type: command.Type("core.unknown")}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
 	}
@@ -103,7 +103,7 @@ func TestCoreDeciderDecide_RejectsSystemCommandWhenSystemRegistryMissing(t *test
 		Type:          command.Type("sys.stub.action"),
 		SystemID:      "stub",
 		SystemVersion: "v1",
-	}, nil)
+	}, time.Now)
 
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
@@ -124,7 +124,7 @@ func TestCoreDeciderDecide_UsesInjectedRouteTable(t *testing.T) {
 				return command.Accept(event.Event{Type: event.Type("custom.routed")})
 			},
 		},
-	}.Decide(&aggregate.State{Campaign: campaign.State{Created: true}}, command.Command{Type: customType}, nil)
+	}.Decide(&aggregate.State{Campaign: campaign.State{Created: true}}, command.Command{Type: customType}, time.Now)
 
 	if !called {
 		t.Fatal("expected custom route to be invoked")
@@ -158,7 +158,7 @@ func TestSessionStartRoute_UsesInjectedSessionStartWorkflow(t *testing.T) {
 		CoreDecider{SessionStartWorkflow: workflow},
 		aggregate.State{},
 		command.Command{Type: session.CommandTypeStart},
-		nil,
+		time.Now,
 	)
 
 	if !workflow.called {

@@ -66,7 +66,7 @@ func TestDecideCampaignCreate_NormalizesPayloadValues(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"  Sunfall  ","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -97,7 +97,7 @@ func TestDecideCampaignCreate_DefaultCoverAssetAssigned(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -122,8 +122,8 @@ func TestDecideCampaignCreate_DefaultCoverAssetDeterministic(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN"}`),
 	}
 
-	first := Decide(State{}, cmd, nil)
-	second := Decide(State{}, cmd, nil)
+	first := Decide(State{}, cmd, time.Now)
+	second := Decide(State{}, cmd, time.Now)
 	if len(first.Events) != 1 || len(second.Events) != 1 {
 		t.Fatal("expected one event per decision")
 	}
@@ -152,7 +152,7 @@ func TestDecideCampaignCreate_InvalidCoverAssetRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","cover_asset_id":"unknown-cover"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -172,7 +172,7 @@ func TestDecideCampaignCreate_IncludesMetadata(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"GAME_SYSTEM_DAGGERHEART","gm_mode":"GM_MODE_HUMAN","locale":"en-US","intent":"STANDARD","access_policy":"PUBLIC","theme_prompt":"A dark fantasy adventure"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -227,7 +227,7 @@ func TestDecideCampaignCreate_MissingName_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"game_system":"daggerheart","gm_mode":"human"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -247,7 +247,7 @@ func TestDecideCampaignCreate_WhitespaceName_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"   ","game_system":"daggerheart","gm_mode":"human"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -267,7 +267,7 @@ func TestDecideCampaignCreate_MissingGameSystem_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","gm_mode":"human"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -287,7 +287,7 @@ func TestDecideCampaignCreate_InvalidGameSystem_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"unknown","gm_mode":"human"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -307,7 +307,7 @@ func TestDecideCampaignCreate_MissingGmMode_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"daggerheart"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -327,7 +327,7 @@ func TestDecideCampaignCreate_InvalidGmMode_ReturnsRejection(t *testing.T) {
 		PayloadJSON: []byte(`{"name":"Sunfall","game_system":"daggerheart","gm_mode":"unknown"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -390,7 +390,7 @@ func TestDecideCampaignUpdate_UpdatesCoverAssetID(t *testing.T) {
 		PayloadJSON: []byte(`{"fields":{"cover_asset_id":"  ashen_city_gate  "}}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -415,7 +415,7 @@ func TestDecideCampaignUpdate_InvalidCoverAssetIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"fields":{"cover_asset_id":"unknown-cover"}}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -435,7 +435,7 @@ func TestDecideCampaignUpdate_InvalidStatusRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"fields":{"status":"UNKNOWN"}}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -455,7 +455,7 @@ func TestDecideCampaignUpdate_InvalidLocaleRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"fields":{"locale":"es-ES"}}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -475,7 +475,7 @@ func TestDecideCampaignUpdate_InvalidStatusTransitionRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"fields":{"status":"ARCHIVED"}}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -495,7 +495,7 @@ func TestDecideCampaignUpdate_EmptyFieldsRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"fields":{}}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusDraft}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -541,7 +541,7 @@ func TestDecideCampaignArchive_EmitsArchivedStatus(t *testing.T) {
 		PayloadJSON: []byte(`{}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusActive}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusActive}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -566,7 +566,7 @@ func TestDecideCampaignRestore_EmitsDraftStatus(t *testing.T) {
 		PayloadJSON: []byte(`{}`),
 	}
 
-	decision := Decide(State{Created: true, Status: StatusArchived}, cmd, nil)
+	decision := Decide(State{Created: true, Status: StatusArchived}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -591,7 +591,7 @@ func TestDecideCampaignStatusCommand_NotCreatedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -621,7 +621,7 @@ func TestDecideCampaignStatusCommand_InvalidTransitionRejected(t *testing.T) {
 				Type:        tt.cmd,
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: []byte(`{}`),
-			}, nil)
+			}, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}
@@ -690,7 +690,7 @@ func TestDecideCampaignFork_NotCreatedRejected(t *testing.T) {
 		Type:        command.Type("campaign.fork"),
 		ActorType:   command.ActorTypeSystem,
 		PayloadJSON: []byte(`{"parent_campaign_id":"camp-0","fork_event_seq":1,"origin_campaign_id":"camp-root"}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -738,7 +738,7 @@ func TestDecideCampaignAIBind_NotCreatedRejected(t *testing.T) {
 		Type:        command.Type("campaign.ai_bind"),
 		ActorType:   command.ActorTypeSystem,
 		PayloadJSON: []byte(`{"ai_agent_id":"agent-123"}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -756,7 +756,7 @@ func TestDecideCampaignAIBind_EmptyAgentIDRejected(t *testing.T) {
 		Type:        command.Type("campaign.ai_bind"),
 		ActorType:   command.ActorTypeSystem,
 		PayloadJSON: []byte(`{"ai_agent_id":"   "}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -801,7 +801,7 @@ func TestDecideCampaignAIUnbind_NotCreatedRejected(t *testing.T) {
 		Type:        command.Type("campaign.ai_unbind"),
 		ActorType:   command.ActorTypeSystem,
 		PayloadJSON: []byte(`{}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -855,7 +855,7 @@ func TestDecideCampaignAIAuthRotate_NotCreatedRejected(t *testing.T) {
 		Type:        command.Type("campaign.ai_auth_rotate"),
 		ActorType:   command.ActorTypeSystem,
 		PayloadJSON: []byte(`{"reason":"rotate"}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -873,7 +873,7 @@ func TestDecideCampaignAIAuthRotate_MalformedPayloadRejected(t *testing.T) {
 		Type:        command.Type("campaign.ai_auth_rotate"),
 		ActorType:   command.ActorTypeSystem,
 		PayloadJSON: []byte(`{`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -889,7 +889,7 @@ func TestDecide_UnrecognizedCommandTypeRejected(t *testing.T) {
 	decision := Decide(State{}, command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("campaign.nonexistent"),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -903,7 +903,7 @@ func TestDecide_MalformedCreatePayloadRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("campaign.create"),
 		PayloadJSON: []byte(`{corrupt`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}

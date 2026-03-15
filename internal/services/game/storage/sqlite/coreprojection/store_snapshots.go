@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -33,7 +34,7 @@ func (s *Store) PutSnapshot(ctx context.Context, snapshot storage.Snapshot) erro
 		CharacterStatesJson: snapshot.CharacterStatesJSON,
 		GmStateJson:         snapshot.GMStateJSON,
 		SystemStateJson:     snapshot.SystemStateJSON,
-		CreatedAt:           toMillis(snapshot.CreatedAt),
+		CreatedAt:           sqliteutil.ToMillis(snapshot.CreatedAt),
 	})
 }
 
@@ -201,6 +202,6 @@ func dbSnapshotToDomain(row db.Snapshot) (storage.Snapshot, error) {
 		CharacterStatesJSON: row.CharacterStatesJson,
 		GMStateJSON:         row.GmStateJson,
 		SystemStateJSON:     row.SystemStateJson,
-		CreatedAt:           fromMillis(row.CreatedAt),
+		CreatedAt:           sqliteutil.FromMillis(row.CreatedAt),
 	}, nil
 }

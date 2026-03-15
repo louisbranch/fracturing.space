@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -30,7 +31,7 @@ func (s *Store) GetProjectionWatermark(ctx context.Context, campaignID string) (
 	if err != nil {
 		return storage.ProjectionWatermark{}, fmt.Errorf("get projection watermark: %w", err)
 	}
-	wm.UpdatedAt = fromMillis(updatedAtMillis)
+	wm.UpdatedAt = sqliteutil.FromMillis(updatedAtMillis)
 	return wm, nil
 }
 
@@ -50,7 +51,7 @@ func (s *Store) SaveProjectionWatermark(ctx context.Context, wm storage.Projecti
 		wm.CampaignID,
 		int64(wm.AppliedSeq),
 		int64(wm.ExpectedNextSeq),
-		toMillis(wm.UpdatedAt),
+		sqliteutil.ToMillis(wm.UpdatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("save projection watermark: %w", err)
@@ -74,7 +75,7 @@ func (s *Store) ListProjectionWatermarks(ctx context.Context) ([]storage.Project
 		if err := rows.Scan(&wm.CampaignID, &wm.AppliedSeq, &wm.ExpectedNextSeq, &updatedAtMillis); err != nil {
 			return nil, fmt.Errorf("scan projection watermark: %w", err)
 		}
-		wm.UpdatedAt = fromMillis(updatedAtMillis)
+		wm.UpdatedAt = sqliteutil.FromMillis(updatedAtMillis)
 		watermarks = append(watermarks, wm)
 	}
 	return watermarks, rows.Err()

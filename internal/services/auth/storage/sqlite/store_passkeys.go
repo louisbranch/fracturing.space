@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite/db"
 )
@@ -68,15 +69,15 @@ func normalizePasskeyPutParams(credential storage.PasskeyCredential) (db.PutPass
 
 	lastUsed := sql.NullInt64{}
 	if credential.LastUsedAt != nil {
-		lastUsed = sql.NullInt64{Int64: toMillis(*credential.LastUsedAt), Valid: true}
+		lastUsed = sql.NullInt64{Int64: sqliteutil.ToMillis(*credential.LastUsedAt), Valid: true}
 	}
 
 	return db.PutPasskeyParams{
 		CredentialID:   credential.CredentialID,
 		UserID:         credential.UserID,
 		CredentialJson: credential.CredentialJSON,
-		CreatedAt:      toMillis(credential.CreatedAt),
-		UpdatedAt:      toMillis(credential.UpdatedAt),
+		CreatedAt:      sqliteutil.ToMillis(credential.CreatedAt),
+		UpdatedAt:      sqliteutil.ToMillis(credential.UpdatedAt),
 		LastUsedAt:     lastUsed,
 	}, nil
 }
@@ -178,7 +179,7 @@ func (s *Store) PutPasskeySession(ctx context.Context, session storage.PasskeySe
 		Kind:        session.Kind,
 		UserID:      userID,
 		SessionJson: session.SessionJSON,
-		ExpiresAt:   toMillis(session.ExpiresAt),
+		ExpiresAt:   sqliteutil.ToMillis(session.ExpiresAt),
 	})
 }
 
@@ -227,7 +228,7 @@ func (s *Store) DeleteExpiredPasskeySessions(ctx context.Context, now time.Time)
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("Storage is not configured.")
 	}
-	return s.q.DeleteExpiredPasskeySessions(ctx, toMillis(now))
+	return s.q.DeleteExpiredPasskeySessions(ctx, sqliteutil.ToMillis(now))
 }
 
 // PutRegistrationSession stores pending username signup state.
@@ -249,9 +250,9 @@ func (s *Store) PutRegistrationSession(ctx context.Context, session storage.Regi
 		RecoveryCodeHash: session.RecoveryCodeHash,
 		CredentialID:     session.CredentialID,
 		CredentialJson:   session.CredentialJSON,
-		ExpiresAt:        toMillis(session.ExpiresAt),
-		CreatedAt:        toMillis(session.CreatedAt),
-		UpdatedAt:        toMillis(session.UpdatedAt),
+		ExpiresAt:        sqliteutil.ToMillis(session.ExpiresAt),
+		CreatedAt:        sqliteutil.ToMillis(session.CreatedAt),
+		UpdatedAt:        sqliteutil.ToMillis(session.UpdatedAt),
 	})
 }
 
@@ -278,9 +279,9 @@ func (s *Store) GetRegistrationSession(ctx context.Context, id string) (storage.
 		RecoveryCodeHash: row.RecoveryCodeHash,
 		CredentialID:     row.CredentialID,
 		CredentialJSON:   row.CredentialJson,
-		ExpiresAt:        fromMillis(row.ExpiresAt),
-		CreatedAt:        fromMillis(row.CreatedAt),
-		UpdatedAt:        fromMillis(row.UpdatedAt),
+		ExpiresAt:        sqliteutil.FromMillis(row.ExpiresAt),
+		CreatedAt:        sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:        sqliteutil.FromMillis(row.UpdatedAt),
 	}, nil
 }
 
@@ -310,9 +311,9 @@ func (s *Store) GetRegistrationSessionByUsername(ctx context.Context, username s
 		RecoveryCodeHash: row.RecoveryCodeHash,
 		CredentialID:     row.CredentialID,
 		CredentialJSON:   row.CredentialJson,
-		ExpiresAt:        fromMillis(row.ExpiresAt),
-		CreatedAt:        fromMillis(row.CreatedAt),
-		UpdatedAt:        fromMillis(row.UpdatedAt),
+		ExpiresAt:        sqliteutil.FromMillis(row.ExpiresAt),
+		CreatedAt:        sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:        sqliteutil.FromMillis(row.UpdatedAt),
 	}, nil
 }
 
@@ -335,7 +336,7 @@ func (s *Store) DeleteExpiredRegistrationSessions(ctx context.Context, now time.
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("Storage is not configured.")
 	}
-	return s.q.DeleteExpiredRegistrationSessions(ctx, toMillis(now))
+	return s.q.DeleteExpiredRegistrationSessions(ctx, sqliteutil.ToMillis(now))
 }
 
 // PutRecoverySession stores narrow recovery-session state.
@@ -352,8 +353,8 @@ func (s *Store) PutRecoverySession(ctx context.Context, session storage.Recovery
 	return s.q.PutRecoverySession(ctx, db.PutRecoverySessionParams{
 		ID:        session.ID,
 		UserID:    session.UserID,
-		ExpiresAt: toMillis(session.ExpiresAt),
-		CreatedAt: toMillis(session.CreatedAt),
+		ExpiresAt: sqliteutil.ToMillis(session.ExpiresAt),
+		CreatedAt: sqliteutil.ToMillis(session.CreatedAt),
 	})
 }
 
@@ -375,8 +376,8 @@ func (s *Store) GetRecoverySession(ctx context.Context, id string) (storage.Reco
 	return storage.RecoverySession{
 		ID:        row.ID,
 		UserID:    row.UserID,
-		ExpiresAt: fromMillis(row.ExpiresAt),
-		CreatedAt: fromMillis(row.CreatedAt),
+		ExpiresAt: sqliteutil.FromMillis(row.ExpiresAt),
+		CreatedAt: sqliteutil.FromMillis(row.CreatedAt),
 	}, nil
 }
 
@@ -399,21 +400,21 @@ func (s *Store) DeleteExpiredRecoverySessions(ctx context.Context, now time.Time
 	if s == nil || s.sqlDB == nil {
 		return fmt.Errorf("Storage is not configured.")
 	}
-	return s.q.DeleteExpiredRecoverySessions(ctx, toMillis(now))
+	return s.q.DeleteExpiredRecoverySessions(ctx, sqliteutil.ToMillis(now))
 }
 
 func dbPasskeyToDomain(row db.Passkey) storage.PasskeyCredential {
 	var lastUsed *time.Time
 	if row.LastUsedAt.Valid {
-		value := fromMillis(row.LastUsedAt.Int64)
+		value := sqliteutil.FromMillis(row.LastUsedAt.Int64)
 		lastUsed = &value
 	}
 	return storage.PasskeyCredential{
 		CredentialID:   row.CredentialID,
 		UserID:         row.UserID,
 		CredentialJSON: row.CredentialJson,
-		CreatedAt:      fromMillis(row.CreatedAt),
-		UpdatedAt:      fromMillis(row.UpdatedAt),
+		CreatedAt:      sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:      sqliteutil.FromMillis(row.UpdatedAt),
 		LastUsedAt:     lastUsed,
 	}
 }
@@ -428,6 +429,6 @@ func dbPasskeySessionToDomain(row db.PasskeySession) storage.PasskeySession {
 		Kind:        row.Kind,
 		UserID:      userID,
 		SessionJSON: row.SessionJson,
-		ExpiresAt:   fromMillis(row.ExpiresAt),
+		ExpiresAt:   sqliteutil.FromMillis(row.ExpiresAt),
 	}
 }

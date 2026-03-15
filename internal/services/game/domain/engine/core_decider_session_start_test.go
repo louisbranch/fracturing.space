@@ -104,7 +104,7 @@ func TestCoreDeciderSessionStart_ReadinessFailureRejected(t *testing.T) {
 			ActorID:     "gm-1",
 			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
-		nil,
+		time.Now,
 	)
 
 	if len(decision.Events) != 0 {
@@ -154,7 +154,7 @@ func TestCoreDeciderSessionStart_ActiveSessionBoundaryRejected(t *testing.T) {
 			ActorID:     "gm-1",
 			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
-		nil,
+		time.Now,
 	)
 
 	if len(decision.Events) != 0 {
@@ -211,7 +211,7 @@ func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessChecker(t *testing.
 			ActorID:     "gm-1",
 			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
-		nil,
+		time.Now,
 	)
 
 	if len(decision.Events) != 0 {

@@ -120,7 +120,7 @@ func TestRouteCommand_UsesModuleDecider(t *testing.T) {
 		SystemID:      "daggerheart",
 		SystemVersion: "v1",
 	}
-	decision, err := RouteCommand(registry, "state", cmd, nil)
+	decision, err := RouteCommand(registry, "state", cmd, time.Now)
 	if err != nil {
 		t.Fatalf("route command: %v", err)
 	}
@@ -137,7 +137,7 @@ func TestRouteCommand_UsesModuleDecider(t *testing.T) {
 
 func TestRouteCommand_MissingSystemIDRejected(t *testing.T) {
 	registry := NewRegistry()
-	_, err := RouteCommand(registry, nil, command.Command{SystemVersion: "v1"}, nil)
+	_, err := RouteCommand(registry, nil, command.Command{SystemVersion: "v1"}, time.Now)
 	if !errors.Is(err, ErrSystemIDRequired) {
 		t.Fatalf("expected ErrSystemIDRequired, got %v", err)
 	}
@@ -148,7 +148,7 @@ func TestRouteCommand_MissingDeciderRejected(t *testing.T) {
 	if err := registry.Register(stubModule{id: "daggerheart", version: "v1"}); err != nil {
 		t.Fatalf("register module: %v", err)
 	}
-	_, err := RouteCommand(registry, nil, command.Command{SystemID: "daggerheart", SystemVersion: "v1"}, nil)
+	_, err := RouteCommand(registry, nil, command.Command{SystemID: "daggerheart", SystemVersion: "v1"}, time.Now)
 	if !errors.Is(err, ErrDeciderRequired) {
 		t.Fatalf("expected ErrDeciderRequired, got %v", err)
 	}
@@ -189,7 +189,7 @@ func TestRouteCommand_ModuleNotFoundIncludesSystemContext(t *testing.T) {
 		t.Fatalf("register module: %v", err)
 	}
 	cmd := command.Command{SystemID: "missing-system", SystemVersion: "v2"}
-	_, err := RouteCommand(registry, nil, cmd, nil)
+	_, err := RouteCommand(registry, nil, cmd, time.Now)
 	if !errors.Is(err, ErrModuleNotFound) {
 		t.Fatalf("expected ErrModuleNotFound, got %v", err)
 	}

@@ -165,7 +165,7 @@ func TestDecideGMFearSet_MissingAfterRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"reason":""}`),
 	}
 
-	decision := Decider{}.Decide(SnapshotState{}, cmd, nil)
+	decision := Decider{}.Decide(SnapshotState{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -187,7 +187,7 @@ func TestDecideGMFearSet_AfterOutOfRangeRejected(t *testing.T) {
 		PayloadJSON:   []byte(`{"after":13}`),
 	}
 
-	decision := Decider{}.Decide(SnapshotState{}, cmd, nil)
+	decision := Decider{}.Decide(SnapshotState{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -219,7 +219,7 @@ func TestDecideGMFearSet_UnchangedStateRejected(t *testing.T) {
 		GMFear:     4,
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -303,7 +303,7 @@ func TestDecideCharacterStatePatch_UnchangedStateRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -392,7 +392,7 @@ func TestDecideConditionChange_UnchangedStateRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -423,7 +423,7 @@ func TestDecideConditionChange_RemoveMissingConditionRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -792,7 +792,7 @@ func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -823,7 +823,7 @@ func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -914,7 +914,7 @@ func TestDecideDamageApply_BeforeMismatchRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -938,7 +938,7 @@ func TestDecideDamageApply_RejectsMultipleArmorSlotsSpent(t *testing.T) {
 		PayloadJSON:   []byte(`{"character_id":"char-1","hp_before":10,"hp_after":8,"armor_before":2,"armor_after":0,"damage_type":"physical","armor_spent":2,"marks":2}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, nil)
+	decision := Decider{}.Decide(nil, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -1029,7 +1029,7 @@ func TestDecideAdversaryDamageApply_BeforeMismatchRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -1144,7 +1144,7 @@ func TestDecideCountdownUpdate_UnchangedStateRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1175,7 +1175,7 @@ func TestDecideCountdownUpdate_BeforeMismatchRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1360,7 +1360,7 @@ func TestDecideAdversaryConditionChange_UnchangedStateRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1391,7 +1391,7 @@ func TestDecideAdversaryConditionChange_RemoveMissingConditionRejected(t *testin
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1483,7 +1483,7 @@ func TestDecideAdversaryCreate_UnchangedStateRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -1656,7 +1656,7 @@ func TestDecideMultiTargetDamageApply_RejectsEmptyTargets(t *testing.T) {
 		PayloadJSON:   []byte(`{"targets":[]}`),
 	}
 
-	decision := Decider{}.Decide(nil, cmd, nil)
+	decision := Decider{}.Decide(nil, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -1689,7 +1689,7 @@ func TestDecideMultiTargetDamageApply_BeforeMismatchRejected(t *testing.T) {
 		},
 	}
 
-	decision := Decider{}.Decide(state, cmd, nil)
+	decision := Decider{}.Decide(state, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}

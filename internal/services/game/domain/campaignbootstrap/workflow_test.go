@@ -85,7 +85,7 @@ func TestDecide_EmptyParticipantsRejected(t *testing.T) {
 			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
 			"participants":[]
 		}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -109,7 +109,7 @@ func TestDecide_DuplicateParticipantIDsRejected(t *testing.T) {
 				{"participant_id":" p-1 ","user_id":"user-2","name":"Bob","role":"player"}
 			]
 		}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -130,7 +130,7 @@ func TestDecide_JoinValidationRejected(t *testing.T) {
 			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
 			"participants":[{"participant_id":" ","user_id":"user-1","name":"Alice","role":"player"}]
 		}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -151,7 +151,7 @@ func TestDecide_WhenCampaignAlreadyCreatedRejected(t *testing.T) {
 			"campaign":{"name":"Sunfall","game_system":"daggerheart","gm_mode":"human"},
 			"participants":[{"participant_id":"p-1","user_id":"user-1","name":"Alice","role":"player"}]
 		}`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -169,7 +169,7 @@ func TestDecide_MalformedPayloadRejected(t *testing.T) {
 		Type:        campaign.CommandTypeCreateWithParticipants,
 		ActorType:   command.ActorTypeSystem,
 		PayloadJSON: []byte(`{`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}

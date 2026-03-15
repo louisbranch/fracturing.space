@@ -45,10 +45,16 @@ func decideCreate(state State, cmd command.Command, now func() time.Time) comman
 			Message: "character kind is invalid",
 		})
 	}
+	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID.String())
+	if ownerParticipantID == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeCharacterOwnerParticipantID,
+			Message: "owner participant id is required",
+		})
+	}
 	notes := strings.TrimSpace(payload.Notes)
 	pronouns := strings.TrimSpace(payload.Pronouns)
 	participantID := strings.TrimSpace(payload.ParticipantID.String())
-	ownerParticipantID := strings.TrimSpace(payload.OwnerParticipantID.String())
 	aliases := normalizeAliases(payload.Aliases)
 	avatarSetID, avatarAssetID, err := resolveCharacterAvatarSelection(
 		characterID,

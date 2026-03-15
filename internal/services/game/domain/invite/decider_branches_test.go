@@ -2,6 +2,7 @@ package invite
 
 import (
 	"testing"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 )
@@ -25,7 +26,7 @@ func TestDecideInviteCreate_Rejections(t *testing.T) {
 				Type:        CommandTypeCreate,
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: []byte(tc.payload),
-			}, nil)
+			}, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}
@@ -62,7 +63,7 @@ func TestDecideInviteClaim_Rejections(t *testing.T) {
 				ActorType:   command.ActorTypeParticipant,
 				ActorID:     "p-1",
 				PayloadJSON: []byte(tc.payload),
-			}, nil)
+			}, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}
@@ -99,7 +100,7 @@ func TestDecideInviteRevokeAndUpdate_Rejections(t *testing.T) {
 				Type:        tc.cmdType,
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: []byte(tc.payload),
-			}, nil)
+			}, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}
@@ -121,7 +122,7 @@ func TestDecideInviteCreateAndClaim_IgnoreCommandEntityRouting(t *testing.T) {
 		EntityType:  "override",
 		EntityID:    "override",
 		PayloadJSON: []byte(`{"invite_id":"inv-entity","participant_id":"p-1"}`),
-	}, nil)
+	}, time.Now)
 	if len(create.Events) != 1 {
 		t.Fatalf("expected 1 create event, got %d", len(create.Events))
 	}
@@ -136,7 +137,7 @@ func TestDecideInviteCreateAndClaim_IgnoreCommandEntityRouting(t *testing.T) {
 		EntityType:  "override",
 		EntityID:    "override",
 		PayloadJSON: []byte(`{"invite_id":"inv-entity","participant_id":"p-1","user_id":"u-1","jti":"j-1"}`),
-	}, nil)
+	}, time.Now)
 	if len(claim.Events) != 1 {
 		t.Fatalf("expected 1 claim event, got %d", len(claim.Events))
 	}

@@ -14,6 +14,7 @@ import (
 	discoveryv1 "github.com/louisbranch/fracturing.space/api/gen/go/discovery/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/discovery/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/discovery/storage/sqlite/migrations"
 	msqlite "modernc.org/sqlite"
@@ -25,14 +26,6 @@ type Store struct {
 	sqlDB *sql.DB
 }
 
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
-
 // Open opens a SQLite discovery store and applies embedded migrations.
 func Open(path string) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
@@ -42,7 +35,7 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, ""); err != nil {
+	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, "", time.Now); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}
@@ -119,8 +112,8 @@ func (s *Store) CreateDiscoveryEntry(ctx context.Context, entry storage.Discover
 		normalized.PreviewPlaystyleLabel,
 		normalized.PreviewCharacterName,
 		normalized.PreviewCharacterSummary,
-		toMillis(normalized.CreatedAt),
-		toMillis(normalized.UpdatedAt),
+		sqliteutil.ToMillis(normalized.CreatedAt),
+		sqliteutil.ToMillis(normalized.UpdatedAt),
 	)
 	if err != nil {
 		if isDiscoveryEntryUniqueViolation(err) {
@@ -233,8 +226,8 @@ func (s *Store) UpsertBuiltinDiscoveryEntry(ctx context.Context, entry storage.D
 		normalized.PreviewPlaystyleLabel,
 		normalized.PreviewCharacterName,
 		normalized.PreviewCharacterSummary,
-		toMillis(normalized.CreatedAt),
-		toMillis(normalized.UpdatedAt),
+		sqliteutil.ToMillis(normalized.CreatedAt),
+		sqliteutil.ToMillis(normalized.UpdatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("upsert discovery entry: %w", err)
@@ -269,7 +262,7 @@ func (s *Store) UpdateDiscoveryEntrySourceID(ctx context.Context, entryID string
 		    SET source_id = ?, updated_at = ?
 		  WHERE entry_id = ?`,
 		sourceID,
-		toMillis(updatedAt.UTC()),
+		sqliteutil.ToMillis(updatedAt.UTC()),
 		entryID,
 	)
 	if err != nil {
@@ -478,8 +471,8 @@ func scanEntry(scanner rowScanner) (storage.DiscoveryEntry, error) {
 	entry.PreviewPlaystyleLabel = strings.TrimSpace(previewPlaystyleLabel)
 	entry.PreviewCharacterName = strings.TrimSpace(previewCharacterName)
 	entry.PreviewCharacterSummary = strings.TrimSpace(previewCharacterSummary)
-	entry.CreatedAt = fromMillis(createdAt)
-	entry.UpdatedAt = fromMillis(updatedAt)
+	entry.CreatedAt = sqliteutil.FromMillis(createdAt)
+	entry.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	return entry, nil
 }
 

@@ -480,8 +480,8 @@ func TestDecide_PayloadDecodeErrors(t *testing.T) {
 
 // --- Missing field validation branches ---
 
-func TestDecide_NilNowFuncDefaultsToTimeNow(t *testing.T) {
-	d := Decide(nil, cmd(CommandTypeCreate, `{"scene_id":"s1","name":"x","character_ids":["c1"]}`), nil)
+func TestDecide_DefaultNowFunc(t *testing.T) {
+	d := Decide(nil, cmd(CommandTypeCreate, `{"scene_id":"s1","name":"x","character_ids":["c1"]}`), time.Now)
 	requireAccepted(t, d, 2)
 }
 

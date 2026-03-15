@@ -31,9 +31,7 @@ func NewSessionStartWorkflow(systems *module.Registry) SessionStartWorkflow {
 }
 
 func (w sessionStartWorkflow) Start(current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
-	if now == nil {
-		now = time.Now
-	}
+	now = command.NowFunc(now)
 	decisionTime := now().UTC()
 	fixedNow := func() time.Time { return decisionTime }
 

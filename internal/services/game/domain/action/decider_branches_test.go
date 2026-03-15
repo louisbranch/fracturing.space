@@ -98,6 +98,26 @@ func TestDecideActionOutcomeApply_EmitsPreThenOutcomeThenPost(t *testing.T) {
 	}
 }
 
+func TestDecideAction_RejectsEmptyNoteContent(t *testing.T) {
+	decision := Decide(State{}, command.Command{
+		CampaignID:  "camp-1",
+		Type:        CommandTypeNoteAdd,
+		ActorType:   command.ActorTypeSystem,
+		SessionID:   "sess-1",
+		PayloadJSON: []byte(`{"content":"  ","character_id":"char-1"}`),
+	}, time.Now)
+
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeNoteContentRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeNoteContentRequired)
+	}
+}
+
 func TestDecideAction_RejectsMalformedPayload(t *testing.T) {
 	tests := []struct {
 		name    string

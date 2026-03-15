@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
@@ -49,19 +50,19 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return RestResult{}, handleDomainError(err)
+		return RestResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return RestResult{}, handleDomainError(err)
+		return RestResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart rest"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart rest"); err != nil {
 		return RestResult{}, err
 	}
 	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
 	if err != nil {
 		return RestResult{}, err
 	}
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return RestResult{}, err
 	}
 	if in.Rest == nil {
@@ -86,7 +87,7 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 	}
 	outcome, err := daggerheart.ResolveRestOutcome(state, restType, in.Rest.Interrupted, seed, int(in.Rest.PartySize))
 	if err != nil {
-		return RestResult{}, handleDomainError(err)
+		return RestResult{}, grpcerror.HandleDomainError(err)
 	}
 
 	longTermCountdownID := strings.TrimSpace(in.Rest.GetLongTermCountdownId())
@@ -94,7 +95,7 @@ func (h *Handler) ApplyRest(ctx context.Context, in *pb.DaggerheartApplyRestRequ
 	if outcome.AdvanceCountdown && longTermCountdownID != "" {
 		storedCountdown, err := h.deps.Daggerheart.GetDaggerheartCountdown(ctx, campaignID, longTermCountdownID)
 		if err != nil {
-			return RestResult{}, handleDomainError(err)
+			return RestResult{}, grpcerror.HandleDomainError(err)
 		}
 		countdown := countdownFromStorage(storedCountdown)
 		longTermCountdown = &countdown
@@ -171,19 +172,19 @@ func (h *Handler) ApplyDowntimeMove(ctx context.Context, in *pb.DaggerheartApply
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart downtime"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart downtime"); err != nil {
 		return CharacterStateResult{}, err
 	}
 	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
 	if err != nil {
 		return CharacterStateResult{}, err
 	}
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return CharacterStateResult{}, err
 	}
 	if in.Move == nil {
@@ -195,11 +196,11 @@ func (h *Handler) ApplyDowntimeMove(ctx context.Context, in *pb.DaggerheartApply
 
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	current, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	state := daggerheart.NewCharacterState(daggerheart.CharacterStateConfig{
 		CampaignID:  campaignID,
@@ -285,12 +286,12 @@ func (h *Handler) ApplyTemporaryArmor(ctx context.Context, in *pb.DaggerheartApp
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart temporary armor"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart temporary armor"); err != nil {
 		return CharacterStateResult{}, err
 	}
 	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
@@ -298,17 +299,17 @@ func (h *Handler) ApplyTemporaryArmor(ctx context.Context, in *pb.DaggerheartApp
 		return CharacterStateResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return CharacterStateResult{}, err
 	}
 	if in.Armor == nil {
 		return CharacterStateResult{}, status.Error(codes.InvalidArgument, "armor is required")
 	}
 	if _, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	if _, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	payloadJSON, err := json.Marshal(daggerheart.CharacterTemporaryArmorApplyPayload{
 		CharacterID: ids.CharacterID(characterID),
@@ -359,12 +360,12 @@ func (h *Handler) SwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadout
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart loadout"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart loadout"); err != nil {
 		return CharacterStateResult{}, err
 	}
 	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
@@ -372,7 +373,7 @@ func (h *Handler) SwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadout
 		return CharacterStateResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return CharacterStateResult{}, err
 	}
 	if in.Swap == nil {
@@ -386,11 +387,11 @@ func (h *Handler) SwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadout
 	}
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	current, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterStateResult{}, handleDomainError(err)
+		return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 	}
 	state := daggerheart.NewCharacterState(daggerheart.CharacterStateConfig{
 		CampaignID:  campaignID,
@@ -408,7 +409,7 @@ func (h *Handler) SwapLoadout(ctx context.Context, in *pb.DaggerheartSwapLoadout
 	stressBefore := state.Stress
 	if !in.Swap.InRest && in.Swap.RecallCost > 0 {
 		if _, _, err := state.SpendResource(daggerheart.ResourceStress, int(in.Swap.RecallCost)); err != nil {
-			return CharacterStateResult{}, handleDomainError(err)
+			return CharacterStateResult{}, grpcerror.HandleDomainError(err)
 		}
 	}
 	stressAfter := state.Stress
@@ -502,12 +503,12 @@ func (h *Handler) ApplyDeathMove(ctx context.Context, in *pb.DaggerheartApplyDea
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart death moves"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart death moves"); err != nil {
 		return DeathMoveResult{}, err
 	}
 	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
@@ -515,7 +516,7 @@ func (h *Handler) ApplyDeathMove(ctx context.Context, in *pb.DaggerheartApplyDea
 		return DeathMoveResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return DeathMoveResult{}, err
 	}
 	move, err := deathMoveFromProto(in.Move)
@@ -531,11 +532,11 @@ func (h *Handler) ApplyDeathMove(ctx context.Context, in *pb.DaggerheartApplyDea
 	}
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, grpcerror.HandleDomainError(err)
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return DeathMoveResult{}, handleDomainError(err)
+		return DeathMoveResult{}, grpcerror.HandleDomainError(err)
 	}
 	if state.Hp > 0 {
 		return DeathMoveResult{}, status.Error(codes.FailedPrecondition, "death move requires hp to be zero")
@@ -697,12 +698,12 @@ func (h *Handler) ResolveBlazeOfGlory(ctx context.Context, in *pb.DaggerheartRes
 	}
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return BlazeResult{}, handleDomainError(err)
+		return BlazeResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return BlazeResult{}, handleDomainError(err)
+		return BlazeResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart blaze of glory"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart blaze of glory"); err != nil {
 		return BlazeResult{}, err
 	}
 	sessionID, err := validate.RequiredID(grpcmeta.SessionIDFromContext(ctx), "session id")
@@ -710,12 +711,12 @@ func (h *Handler) ResolveBlazeOfGlory(ctx context.Context, in *pb.DaggerheartRes
 		return BlazeResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return BlazeResult{}, err
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return BlazeResult{}, handleDomainError(err)
+		return BlazeResult{}, grpcerror.HandleDomainError(err)
 	}
 	if state.LifeState == "" {
 		state.LifeState = daggerheart.LifeStateAlive

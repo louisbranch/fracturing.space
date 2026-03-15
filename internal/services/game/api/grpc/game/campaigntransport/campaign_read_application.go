@@ -52,7 +52,7 @@ func (c campaignApplication) ListCampaigns(ctx context.Context, in *campaignv1.L
 			err := status.Error(codes.PermissionDenied, "admin override requires authenticated principal")
 			authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 				Store:      c.auth.Audit,
-				Capability: domainauthz.CapabilityReadCampaign,
+				Capability: domainauthz.CapabilityReadCampaign(),
 				Decision:   authz.DecisionDeny,
 				ReasonCode: authz.ReasonDenyMissingIdentity,
 				Err:        err,
@@ -63,7 +63,7 @@ func (c campaignApplication) ListCampaigns(ctx context.Context, in *campaignv1.L
 			err := status.Error(codes.PermissionDenied, "admin override reason is required")
 			authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 				Store:      c.auth.Audit,
-				Capability: domainauthz.CapabilityReadCampaign,
+				Capability: domainauthz.CapabilityReadCampaign(),
 				Decision:   authz.DecisionDeny,
 				ReasonCode: authz.ReasonDenyOverrideReasonRequired,
 				Err:        err,
@@ -72,7 +72,7 @@ func (c campaignApplication) ListCampaigns(ctx context.Context, in *campaignv1.L
 		}
 		authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 			Store:      c.auth.Audit,
-			Capability: domainauthz.CapabilityReadCampaign,
+			Capability: domainauthz.CapabilityReadCampaign(),
 			Decision:   authz.DecisionAllow,
 			ReasonCode: authz.ReasonAllowAdminOverride,
 		})
@@ -87,7 +87,7 @@ func (c campaignApplication) ListCampaigns(ctx context.Context, in *campaignv1.L
 		err := status.Error(codes.PermissionDenied, "missing participant identity")
 		authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 			Store:      c.auth.Audit,
-			Capability: domainauthz.CapabilityReadCampaign,
+			Capability: domainauthz.CapabilityReadCampaign(),
 			Decision:   authz.DecisionDeny,
 			ReasonCode: authz.ReasonDenyMissingIdentity,
 			Err:        err,

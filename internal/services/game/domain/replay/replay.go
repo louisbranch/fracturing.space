@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 const defaultPageSize = 200
@@ -24,7 +25,8 @@ var (
 	// ErrFolderRequired indicates a missing folder.
 	ErrFolderRequired = errors.New("folder is required")
 	// ErrCampaignIDRequired indicates a missing campaign id.
-	ErrCampaignIDRequired = errors.New("campaign id is required")
+	// Canonical definition in domain/ids; re-exported for caller compatibility.
+	ErrCampaignIDRequired = ids.ErrCampaignIDRequired
 	// ErrCheckpointNotFound indicates no checkpoint exists yet.
 	ErrCheckpointNotFound = errors.New("checkpoint not found")
 )
@@ -41,6 +43,11 @@ type CheckpointStore interface {
 }
 
 // Folder folds a domain event into aggregate state during replay.
+//
+// Intentionally defined at the consumption point (Go interface-at-consumer
+// pattern). Parallel definitions exist at:
+//   - domain/module.Folder (adds FoldHandledTypes for system fold coverage)
+//   - domain/engine.Folder (engine execution path)
 type Folder interface {
 	Fold(state any, evt event.Event) (any, error)
 }

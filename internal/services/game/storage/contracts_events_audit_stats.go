@@ -81,11 +81,14 @@ type ListEventsPageResult struct {
 	TotalCount int
 }
 
+// AuditSeverity represents the severity level of an audit event.
+type AuditSeverity = string
+
 // AuditEvent captures operational observations emitted during command execution.
 type AuditEvent struct {
 	Timestamp      time.Time
 	EventName      string
-	Severity       string
+	Severity       AuditSeverity
 	CampaignID     string
 	SessionID      string
 	ActorType      string

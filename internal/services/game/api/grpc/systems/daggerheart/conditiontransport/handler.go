@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
@@ -48,12 +49,12 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterConditionsResult{}, handleDomainError(err)
+		return CharacterConditionsResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterConditionsResult{}, handleDomainError(err)
+		return CharacterConditionsResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart conditions"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart conditions"); err != nil {
 		return CharacterConditionsResult{}, err
 	}
 
@@ -62,13 +63,13 @@ func (h *Handler) ApplyConditions(ctx context.Context, in *pb.DaggerheartApplyCo
 		return CharacterConditionsResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return CharacterConditionsResult{}, err
 	}
 
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterConditionsResult{}, handleDomainError(err)
+		return CharacterConditionsResult{}, grpcerror.HandleDomainError(err)
 	}
 
 	lifeStateProvided := in.GetLifeState() != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNSPECIFIED
@@ -269,12 +270,12 @@ func (h *Handler) ApplyAdversaryConditions(ctx context.Context, in *pb.Daggerhea
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return AdversaryConditionsResult{}, handleDomainError(err)
+		return AdversaryConditionsResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return AdversaryConditionsResult{}, handleDomainError(err)
+		return AdversaryConditionsResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart conditions"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart conditions"); err != nil {
 		return AdversaryConditionsResult{}, err
 	}
 
@@ -283,7 +284,7 @@ func (h *Handler) ApplyAdversaryConditions(ctx context.Context, in *pb.Daggerhea
 		return AdversaryConditionsResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return AdversaryConditionsResult{}, err
 	}
 
@@ -410,7 +411,7 @@ func (h *Handler) validateRollSeq(ctx context.Context, campaignID, sessionID str
 	}
 	rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 	if err != nil {
-		return handleDomainError(err)
+		return grpcerror.HandleDomainError(err)
 	}
 	if sessionID != "" && rollEvent.SessionID.String() != sessionID {
 		return status.Error(codes.InvalidArgument, "roll seq does not match session")

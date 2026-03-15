@@ -71,7 +71,7 @@ func TestDecideInviteDeclineRejections(t *testing.T) {
 				CampaignID:  "camp-1",
 				Type:        CommandTypeDecline,
 				PayloadJSON: []byte(tc.payload),
-			}, nil)
+			}, time.Now)
 			if len(decision.Events) != 0 {
 				t.Fatalf("expected no events, got %d", len(decision.Events))
 			}

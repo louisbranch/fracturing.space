@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -30,7 +31,7 @@ func TestDecideParticipantJoin_DefaultAvatarUsesUserIDWhenPresent(t *testing.T) 
 			)),
 		}
 
-		decision := Decide(State{}, cmd, nil)
+		decision := Decide(State{}, cmd, time.Now)
 		if len(decision.Rejections) != 0 {
 			t.Fatalf("participant %s rejections: %v", participantID, decision.Rejections)
 		}

@@ -194,7 +194,7 @@ func TestDecideSessionInteractionCommandsRejectInvalidState(t *testing.T) {
 				Type:        tc.cmdType,
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: payloadJSON,
-			}, nil)
+			}, time.Now)
 
 			if len(decision.Events) != 0 {
 				t.Fatalf("unexpected events: %#v", decision.Events)
@@ -355,7 +355,7 @@ func TestDecideSessionInteractionCommandsRejectInvalidPayloadFields(t *testing.T
 				Type:        tc.cmdType,
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: payloadJSON,
-			}, nil)
+			}, time.Now)
 
 			if len(decision.Events) != 0 {
 				t.Fatalf("unexpected events: %#v", decision.Events)
@@ -401,7 +401,7 @@ func TestDecideSessionInteractionCommandsRejectMalformedPayloadJSON(t *testing.T
 				Type:        tc.cmdType,
 				ActorType:   command.ActorTypeSystem,
 				PayloadJSON: []byte(`{`),
-			}, nil)
+			}, time.Now)
 
 			if len(decision.Events) != 0 {
 				t.Fatalf("unexpected events: %#v", decision.Events)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -39,7 +40,7 @@ func (s *Store) PutParticipantClaim(ctx context.Context, campaignID, userID, par
 		campaignID,
 		userID,
 		participantID,
-		toMillis(claimedAt),
+		sqliteutil.ToMillis(claimedAt),
 	)
 	if err == nil {
 		return nil
@@ -99,7 +100,7 @@ func (s *Store) GetParticipantClaim(ctx context.Context, campaignID, userID stri
 		CampaignID:    campaignID,
 		UserID:        userID,
 		ParticipantID: participantID,
-		ClaimedAt:     fromMillis(claimedAt),
+		ClaimedAt:     sqliteutil.FromMillis(claimedAt),
 	}, nil
 }
 

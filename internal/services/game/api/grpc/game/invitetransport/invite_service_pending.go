@@ -32,7 +32,7 @@ func (s *Service) ListPendingInvites(ctx context.Context, in *campaignv1.ListPen
 	if err != nil {
 		return nil, err
 	}
-	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites(), campaignRecord); err != nil {
 		return nil, err
 	}
 

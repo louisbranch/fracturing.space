@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -119,7 +120,7 @@ func (s *Store) AppendEvent(ctx context.Context, evt event.Event) (event.Event, 
 		ChainHash:      chainHash,
 		SignatureKeyID: keyID,
 		EventSignature: signature,
-		Timestamp:      toMillis(evt.Timestamp),
+		Timestamp:      sqliteutil.ToMillis(evt.Timestamp),
 		EventType:      string(evt.Type),
 		SessionID:      evt.SessionID.String(),
 		SceneID:        evt.SceneID.String(),
@@ -272,7 +273,7 @@ func (s *Store) BatchAppendEvents(ctx context.Context, events []event.Event) ([]
 			ChainHash:      chainHash,
 			SignatureKeyID: keyID,
 			EventSignature: signature,
-			Timestamp:      toMillis(evt.Timestamp),
+			Timestamp:      sqliteutil.ToMillis(evt.Timestamp),
 			EventType:      string(evt.Type),
 			SessionID:      evt.SessionID.String(),
 			SceneID:        evt.SceneID.String(),
@@ -429,15 +430,6 @@ func isConstraintError(err error) bool {
 	}
 	code := sqliteErr.Code()
 	return code == sqlite3.SQLITE_CONSTRAINT || code == sqlite3.SQLITE_CONSTRAINT_UNIQUE || code == sqlite3.SQLITE_CONSTRAINT_PRIMARYKEY
-}
-
-func isSQLiteBusyError(err error) bool {
-	var sqliteErr *sqlite.Error
-	if !errors.As(err, &sqliteErr) {
-		return false
-	}
-	code := sqliteErr.Code()
-	return code == sqlite3.SQLITE_BUSY || code == sqlite3.SQLITE_LOCKED
 }
 
 func isParticipantUserConflict(err error) bool {
@@ -738,7 +730,7 @@ func eventRowDataToDomain(row eventRowData) (event.Event, error) {
 		ChainHash:      row.ChainHash,
 		SignatureKeyID: row.SignatureKeyID,
 		Signature:      row.EventSignature,
-		Timestamp:      fromMillis(row.Timestamp),
+		Timestamp:      sqliteutil.FromMillis(row.Timestamp),
 		Type:           event.Type(row.EventType),
 		SessionID:      ids.SessionID(row.SessionID),
 		SceneID:        ids.SceneID(row.SceneID),

@@ -1,9 +1,7 @@
 package coreevent
 
 import (
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	domainevent "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -52,9 +50,3 @@ const (
 
 // SessionGateOpenedPayload aliases the canonical session gate payload.
 type SessionGateOpenedPayload = session.GateOpenedPayload
-
-// RollResolvedPayload aliases the canonical roll resolved payload.
-type RollResolvedPayload = action.RollResolvePayload
-
-// SceneCreatePayload aliases the canonical scene create payload.
-type SceneCreatePayload = scene.CreatePayload

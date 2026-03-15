@@ -15,7 +15,7 @@ func TestDecideCharacterCreate_EmitsCharacterCreatedEvent(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("character.create"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"character_id":"char-1","name":"  Aria  ","kind":"CHARACTER_KIND_PC","notes":"  new notes  "}`),
+		PayloadJSON: []byte(`{"character_id":"char-1","owner_participant_id":"part-1","name":"  Aria  ","kind":"CHARACTER_KIND_PC","notes":"  new notes  "}`),
 	}
 
 	decision := Decide(State{}, cmd, func() time.Time { return now })
@@ -125,10 +125,10 @@ func TestDecideCharacterCreate_MissingCharacterIDRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("character.create"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"character_id":" ","name":"Aria","kind":"PC"}`),
+		PayloadJSON: []byte(`{"character_id":" ","owner_participant_id":"part-1","name":"Aria","kind":"PC"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -140,15 +140,35 @@ func TestDecideCharacterCreate_MissingCharacterIDRejected(t *testing.T) {
 	}
 }
 
+func TestDecideCharacterCreate_EmptyOwnerParticipantIDRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("character.create"),
+		ActorType:   command.ActorTypeParticipant,
+		PayloadJSON: []byte(`{"character_id":"char-1","name":"Alice","kind":"pc","owner_participant_id":""}`),
+	}
+
+	decision := Decide(State{}, cmd, time.Now)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeCharacterOwnerParticipantID {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeCharacterOwnerParticipantID)
+	}
+}
+
 func TestDecideCharacterCreate_MissingNameRejected(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("character.create"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"character_id":"char-1","name":" ","kind":"PC"}`),
+		PayloadJSON: []byte(`{"character_id":"char-1","owner_participant_id":"part-1","name":" ","kind":"PC"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -165,10 +185,10 @@ func TestDecideCharacterCreate_InvalidKindRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("character.create"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"ALIEN"}`),
+		PayloadJSON: []byte(`{"character_id":"char-1","owner_participant_id":"part-1","name":"Aria","kind":"ALIEN"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -188,7 +208,7 @@ func TestDecideCharacterCreate_WhenAlreadyCreated_ReturnsRejection(t *testing.T)
 		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"PC"}`),
 	}
 
-	decision := Decide(State{Created: true}, cmd, nil)
+	decision := Decide(State{Created: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -283,7 +303,7 @@ func TestDecideCharacterUpdate_EmptyOwnerParticipantIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"owner_participant_id":"  "}}`),
 	}
 
-	decision := Decide(State{Created: true, OwnerParticipantID: "part-1"}, cmd, nil)
+	decision := Decide(State{Created: true, OwnerParticipantID: "part-1"}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -303,7 +323,7 @@ func TestDecideCharacterUpdate_WhenNotCreatedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"name":"Aria"}}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -323,7 +343,7 @@ func TestDecideCharacterUpdate_EmptyFieldsRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{}}`),
 	}
 
-	decision := Decide(State{Created: true}, cmd, nil)
+	decision := Decide(State{Created: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -343,7 +363,7 @@ func TestDecideCharacterUpdate_InvalidFieldRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"unknown":"value"}}`),
 	}
 
-	decision := Decide(State{Created: true}, cmd, nil)
+	decision := Decide(State{Created: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -363,7 +383,7 @@ func TestDecideCharacterUpdate_InvalidKindRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"kind":"ALIEN"}}`),
 	}
 
-	decision := Decide(State{Created: true}, cmd, nil)
+	decision := Decide(State{Created: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -383,7 +403,7 @@ func TestDecideCharacterUpdate_EmptyNameRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"name":"  "}}`),
 	}
 
-	decision := Decide(State{Created: true}, cmd, nil)
+	decision := Decide(State{Created: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -403,7 +423,7 @@ func TestDecideCharacterUpdate_MissingCharacterIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":" ","fields":{"name":"Aria"}}`),
 	}
 
-	decision := Decide(State{Created: true}, cmd, nil)
+	decision := Decide(State{Created: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -463,7 +483,7 @@ func TestDecideCharacterDelete_WhenNotCreatedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -483,7 +503,7 @@ func TestDecideCharacterDelete_MissingCharacterIDRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":" "}`),
 	}
 
-	decision := Decide(State{Created: true}, cmd, nil)
+	decision := Decide(State{Created: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -503,7 +523,7 @@ func TestDecideCharacterUpdate_WhenDeletedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1","fields":{"name":"Aria"}}`),
 	}
 
-	decision := Decide(State{Created: true, Deleted: true}, cmd, nil)
+	decision := Decide(State{Created: true, Deleted: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -523,7 +543,7 @@ func TestDecideCharacterDelete_WhenDeletedRejected(t *testing.T) {
 		PayloadJSON: []byte(`{"character_id":"char-1"}`),
 	}
 
-	decision := Decide(State{Created: true, Deleted: true}, cmd, nil)
+	decision := Decide(State{Created: true, Deleted: true}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -540,10 +560,10 @@ func TestDecideCharacterCreate_DefaultsAvatarSelection(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("character.create"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"PC"}`),
+		PayloadJSON: []byte(`{"character_id":"char-1","owner_participant_id":"part-1","name":"Aria","kind":"PC"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -568,10 +588,10 @@ func TestDecideCharacterCreate_InvalidAvatarSetRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("character.create"),
 		ActorType:   command.ActorTypeSystem,
-		PayloadJSON: []byte(`{"character_id":"char-1","name":"Aria","kind":"PC","avatar_set_id":"missing"}`),
+		PayloadJSON: []byte(`{"character_id":"char-1","owner_participant_id":"part-1","name":"Aria","kind":"PC","avatar_set_id":"missing"}`),
 	}
 
-	decision := Decide(State{}, cmd, nil)
+	decision := Decide(State{}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -597,7 +617,7 @@ func TestDecideCharacterUpdate_AvatarSetAlsoNormalizesAvatarAsset(t *testing.T) 
 		Created:       true,
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "missing",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Rejections) != 0 {
 		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
 	}
@@ -631,7 +651,7 @@ func TestDecideCharacterUpdate_InvalidAvatarAssetRejected(t *testing.T) {
 		Created:       true,
 		AvatarSetID:   "avatar_set_v1",
 		AvatarAssetID: "apothecary_journeyman",
-	}, cmd, nil)
+	}, cmd, time.Now)
 	if len(decision.Events) != 0 {
 		t.Fatalf("expected no events, got %d", len(decision.Events))
 	}
@@ -647,7 +667,7 @@ func TestDecide_UnrecognizedCommandTypeRejected(t *testing.T) {
 	decision := Decide(State{}, command.Command{
 		CampaignID: "camp-1",
 		Type:       command.Type("character.nonexistent"),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}
@@ -661,7 +681,7 @@ func TestDecide_MalformedCreatePayloadRejected(t *testing.T) {
 		CampaignID:  "camp-1",
 		Type:        command.Type("character.create"),
 		PayloadJSON: []byte(`{corrupt`),
-	}, nil)
+	}, time.Now)
 	if len(decision.Rejections) != 1 {
 		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
 	}

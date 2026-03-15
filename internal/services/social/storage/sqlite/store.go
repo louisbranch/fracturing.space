@@ -18,14 +18,6 @@ type Store struct {
 	sqlDB *sql.DB
 }
 
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
-
 // Open opens a SQLite social store and applies embedded migrations.
 func Open(path string) (*Store, error) {
 	if strings.TrimSpace(path) == "" {
@@ -35,7 +27,7 @@ func Open(path string) (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, ""); err != nil {
+	if err := sqlitemigrate.ApplyMigrations(sqlDB, migrations.FS, "", time.Now); err != nil {
 		_ = sqlDB.Close()
 		return nil, fmt.Errorf("run migrations: %w", err)
 	}

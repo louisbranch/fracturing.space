@@ -9,7 +9,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
+	bridgedaggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -54,23 +55,23 @@ func (h *Handler) ApplyGmMove(ctx context.Context, in *pb.DaggerheartApplyGmMove
 
 	record, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return Result{}, handleDomainError(err)
+		return Result{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpSessionAction); err != nil {
-		return Result{}, handleDomainError(err)
+		return Result{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(record, "campaign system does not support daggerheart gm moves"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "campaign system does not support daggerheart gm moves"); err != nil {
 		return Result{}, err
 	}
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return Result{}, handleDomainError(err)
+		return Result{}, grpcerror.HandleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return Result{}, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return Result{}, err
 	}
 
@@ -83,14 +84,14 @@ func (h *Handler) ApplyGmMove(ctx context.Context, in *pb.DaggerheartApplyGmMove
 
 	fearSpent := int(in.GetFearSpent())
 	if fearSpent > 0 {
-		before, after, err := daggerheart.ApplyGMFearSpend(gmFearBefore, fearSpent)
+		before, after, err := bridgedaggerheart.ApplyGMFearSpend(gmFearBefore, fearSpent)
 		if err != nil {
 			return Result{}, status.Error(codes.InvalidArgument, err.Error())
 		}
 		gmFearBefore = before
 		gmFearAfter = after
 
-		payloadJSON, err := json.Marshal(daggerheart.GMFearSetPayload{
+		payloadJSON, err := json.Marshal(bridgedaggerheart.GMFearSetPayload{
 			After:  &gmFearAfter,
 			Reason: "gm_move",
 		})

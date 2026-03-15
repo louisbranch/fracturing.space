@@ -65,7 +65,7 @@ func (s *Service) GetInvite(ctx context.Context, in *campaignv1.GetInviteRequest
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, err
 	}
-	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites(), campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -128,7 +128,7 @@ func (s *Service) ListInvites(ctx context.Context, in *campaignv1.ListInvitesReq
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites(), campaignRecord); err != nil {
 		return nil, err
 	}
 

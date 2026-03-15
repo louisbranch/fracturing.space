@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -95,7 +96,7 @@ func (s *Store) tryApplyProjectionEventExactlyOnce(
 ) (applied bool, retry bool, busyErr error, err error) {
 	tx, err := s.sqlDB.BeginTx(ctx, nil)
 	if err != nil {
-		if isSQLiteBusyError(err) {
+		if sqliteutil.IsSQLiteBusyError(err) {
 			return false, true, err, nil
 		}
 		return false, false, nil, fmt.Errorf("begin projection apply tx: %w", err)
@@ -109,10 +110,10 @@ func (s *Store) tryApplyProjectionEventExactlyOnce(
 		evt.CampaignID,
 		int64(evt.Seq),
 		string(evt.Type),
-		toMillis(time.Now().UTC()),
+		sqliteutil.ToMillis(time.Now().UTC()),
 	)
 	if err != nil {
-		if isSQLiteBusyError(err) {
+		if sqliteutil.IsSQLiteBusyError(err) {
 			return false, true, err, nil
 		}
 		return false, false, nil, fmt.Errorf("reserve projection apply checkpoint %s/%d: %w", evt.CampaignID, evt.Seq, err)
@@ -131,7 +132,7 @@ func (s *Store) tryApplyProjectionEventExactlyOnce(
 	}
 
 	if err := tx.Commit(); err != nil {
-		if isSQLiteBusyError(err) {
+		if sqliteutil.IsSQLiteBusyError(err) {
 			return false, true, err, nil
 		}
 		return false, false, nil, fmt.Errorf("commit projection apply tx: %w", err)

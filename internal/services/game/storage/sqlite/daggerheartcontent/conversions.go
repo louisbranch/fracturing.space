@@ -4,15 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
 
 func unmarshalOptionalJSON[T any](raw string, dest *T, label string) error {
 	if strings.TrimSpace(raw) == "" {
@@ -30,8 +26,8 @@ func dbDaggerheartClassToStorage(row db.DaggerheartClass) (contentstore.Daggerhe
 		Name:            row.Name,
 		StartingEvasion: int(row.StartingEvasion),
 		StartingHP:      int(row.StartingHp),
-		CreatedAt:       fromMillis(row.CreatedAt),
-		UpdatedAt:       fromMillis(row.UpdatedAt),
+		CreatedAt:       sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:       sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.StartingItemsJson, &class.StartingItems, "daggerheart class starting items"); err != nil {
 		return contentstore.DaggerheartClass{}, err
@@ -54,8 +50,8 @@ func dbDaggerheartSubclassToStorage(row db.DaggerheartSubclass) (contentstore.Da
 		Name:           row.Name,
 		ClassID:        row.ClassID,
 		SpellcastTrait: row.SpellcastTrait,
-		CreatedAt:      fromMillis(row.CreatedAt),
-		UpdatedAt:      fromMillis(row.UpdatedAt),
+		CreatedAt:      sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:      sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.FoundationFeaturesJson, &subclass.FoundationFeatures, "daggerheart subclass foundation features"); err != nil {
 		return contentstore.DaggerheartSubclass{}, err
@@ -74,8 +70,8 @@ func dbDaggerheartHeritageToStorage(row db.DaggerheartHeritage) (contentstore.Da
 		ID:        row.ID,
 		Name:      row.Name,
 		Kind:      row.Kind,
-		CreatedAt: fromMillis(row.CreatedAt),
-		UpdatedAt: fromMillis(row.UpdatedAt),
+		CreatedAt: sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt: sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.FeaturesJson, &heritage.Features, "daggerheart heritage features"); err != nil {
 		return contentstore.DaggerheartHeritage{}, err
@@ -88,8 +84,8 @@ func dbDaggerheartExperienceToStorage(row db.DaggerheartExperience) contentstore
 		ID:          row.ID,
 		Name:        row.Name,
 		Description: row.Description,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -108,8 +104,8 @@ func dbDaggerheartAdversaryEntryToStorage(row db.DaggerheartAdversaryEntry) (con
 		Stress:          int(row.Stress),
 		Armor:           int(row.Armor),
 		AttackModifier:  int(row.AttackModifier),
-		CreatedAt:       fromMillis(row.CreatedAt),
-		UpdatedAt:       fromMillis(row.UpdatedAt),
+		CreatedAt:       sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:       sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.StandardAttackJson, &entry.StandardAttack, "daggerheart adversary standard attack"); err != nil {
 		return contentstore.DaggerheartAdversaryEntry{}, err
@@ -132,8 +128,8 @@ func dbDaggerheartBeastformToStorage(row db.DaggerheartBeastform) (contentstore.
 		Trait:        row.Trait,
 		TraitBonus:   int(row.TraitBonus),
 		EvasionBonus: int(row.EvasionBonus),
-		CreatedAt:    fromMillis(row.CreatedAt),
-		UpdatedAt:    fromMillis(row.UpdatedAt),
+		CreatedAt:    sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:    sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.AttackJson, &entry.Attack, "daggerheart beastform attack"); err != nil {
 		return contentstore.DaggerheartBeastformEntry{}, err
@@ -152,8 +148,8 @@ func dbDaggerheartCompanionExperienceToStorage(row db.DaggerheartCompanionExperi
 		ID:          row.ID,
 		Name:        row.Name,
 		Description: row.Description,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -163,8 +159,8 @@ func dbDaggerheartLootEntryToStorage(row db.DaggerheartLootEntry) contentstore.D
 		Name:        row.Name,
 		Roll:        int(row.Roll),
 		Description: row.Description,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -173,8 +169,8 @@ func dbDaggerheartDamageTypeToStorage(row db.DaggerheartDamageType) contentstore
 		ID:          row.ID,
 		Name:        row.Name,
 		Description: row.Description,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -183,8 +179,8 @@ func dbDaggerheartDomainToStorage(row db.DaggerheartDomain) contentstore.Daggerh
 		ID:          row.ID,
 		Name:        row.Name,
 		Description: row.Description,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -198,8 +194,8 @@ func dbDaggerheartDomainCardToStorage(row db.DaggerheartDomainCard) contentstore
 		RecallCost:  int(row.RecallCost),
 		UsageLimit:  row.UsageLimit,
 		FeatureText: row.FeatureText,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -214,8 +210,8 @@ func dbDaggerheartWeaponToStorage(row db.DaggerheartWeapon) (contentstore.Dagger
 		DamageType: row.DamageType,
 		Burden:     int(row.Burden),
 		Feature:    row.Feature,
-		CreatedAt:  fromMillis(row.CreatedAt),
-		UpdatedAt:  fromMillis(row.UpdatedAt),
+		CreatedAt:  sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:  sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.DamageDiceJson, &weapon.DamageDice, "daggerheart weapon damage dice"); err != nil {
 		return contentstore.DaggerheartWeapon{}, err
@@ -232,8 +228,8 @@ func dbDaggerheartArmorToStorage(row db.DaggerheartArmor) contentstore.Daggerhea
 		BaseSevereThreshold: int(row.BaseSevereThreshold),
 		ArmorScore:          int(row.ArmorScore),
 		Feature:             row.Feature,
-		CreatedAt:           fromMillis(row.CreatedAt),
-		UpdatedAt:           fromMillis(row.UpdatedAt),
+		CreatedAt:           sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:           sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -246,8 +242,8 @@ func dbDaggerheartItemToStorage(row db.DaggerheartItem) contentstore.Daggerheart
 		StackMax:    int(row.StackMax),
 		Description: row.Description,
 		EffectText:  row.EffectText,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -258,8 +254,8 @@ func dbDaggerheartEnvironmentToStorage(row db.DaggerheartEnvironment) (contentst
 		Tier:       int(row.Tier),
 		Type:       row.Type,
 		Difficulty: int(row.Difficulty),
-		CreatedAt:  fromMillis(row.CreatedAt),
-		UpdatedAt:  fromMillis(row.UpdatedAt),
+		CreatedAt:  sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:  sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.ImpulsesJson, &env.Impulses, "daggerheart environment impulses"); err != nil {
 		return contentstore.DaggerheartEnvironment{}, err
@@ -283,7 +279,7 @@ func dbDaggerheartContentStringToStorage(row db.DaggerheartContentString) conten
 		Field:       row.Field,
 		Locale:      row.Locale,
 		Text:        row.Text,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }

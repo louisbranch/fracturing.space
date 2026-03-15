@@ -36,9 +36,7 @@ func DecideFunc[P any](
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	if now == nil {
-		now = time.Now
-	}
+	now = command.NowFunc(now)
 	if validate != nil {
 		if rejection := validate(&payload, now); rejection != nil {
 			return command.Reject(*rejection)
@@ -89,9 +87,7 @@ func DecideFuncTransform[S, PIn, POut any](
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	if now == nil {
-		now = time.Now
-	}
+	now = command.NowFunc(now)
 	if validate != nil {
 		if rejection := validate(state, hasState, &payload, now); rejection != nil {
 			return command.Reject(*rejection)
@@ -148,9 +144,7 @@ func DecideFuncMulti[S, P any](
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	if now == nil {
-		now = time.Now
-	}
+	now = command.NowFunc(now)
 	if validate != nil {
 		if rejection := validate(state, hasState, &payload, now); rejection != nil {
 			return command.Reject(*rejection)
@@ -209,9 +203,7 @@ func DecideFuncWithState[S, P any](
 			Message: fmt.Sprintf("decode %s payload: %v", cmd.Type, err),
 		})
 	}
-	if now == nil {
-		now = time.Now
-	}
+	now = command.NowFunc(now)
 	if validate != nil {
 		if rejection := validate(state, hasState, &payload, now); rejection != nil {
 			return command.Reject(*rejection)

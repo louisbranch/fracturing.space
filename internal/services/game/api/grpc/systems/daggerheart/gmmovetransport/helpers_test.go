@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -25,35 +26,35 @@ func (s testGateStore) GetOpenSessionGate(context.Context, string, string) (stor
 
 func TestRequireDaggerheartSystem(t *testing.T) {
 	record := storage.CampaignRecord{System: systembridge.SystemIDDaggerheart}
-	if err := requireDaggerheartSystem(record, "unsupported"); err != nil {
-		t.Fatalf("requireDaggerheartSystem returned error: %v", err)
+	if err := daggerheartguard.RequireDaggerheartSystem(record, "unsupported"); err != nil {
+		t.Fatalf("RequireDaggerheartSystem returned error: %v", err)
 	}
 }
 
 func TestRequireDaggerheartSystemRejectsOtherSystems(t *testing.T) {
 	record := storage.CampaignRecord{System: systembridge.SystemIDUnspecified}
-	err := requireDaggerheartSystem(record, "unsupported")
+	err := daggerheartguard.RequireDaggerheartSystem(record, "unsupported")
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}
 }
 
 func TestEnsureNoOpenSessionGateAllowsMissingGate(t *testing.T) {
-	err := ensureNoOpenSessionGate(context.Background(), testGateStore{err: storage.ErrNotFound}, "camp-1", "sess-1")
+	err := daggerheartguard.EnsureNoOpenSessionGate(context.Background(), testGateStore{err: storage.ErrNotFound}, "camp-1", "sess-1")
 	if err != nil {
-		t.Fatalf("ensureNoOpenSessionGate returned error: %v", err)
+		t.Fatalf("EnsureNoOpenSessionGate returned error: %v", err)
 	}
 }
 
 func TestEnsureNoOpenSessionGateRejectsOpenGate(t *testing.T) {
-	err := ensureNoOpenSessionGate(context.Background(), testGateStore{gate: storage.SessionGate{GateID: "gate-1"}}, "camp-1", "sess-1")
+	err := daggerheartguard.EnsureNoOpenSessionGate(context.Background(), testGateStore{gate: storage.SessionGate{GateID: "gate-1"}}, "camp-1", "sess-1")
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}
 }
 
 func TestEnsureNoOpenSessionGateWrapsStoreErrors(t *testing.T) {
-	err := ensureNoOpenSessionGate(context.Background(), testGateStore{err: errors.New("boom")}, "camp-1", "sess-1")
+	err := daggerheartguard.EnsureNoOpenSessionGate(context.Background(), testGateStore{err: errors.New("boom")}, "camp-1", "sess-1")
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.Internal)
 	}

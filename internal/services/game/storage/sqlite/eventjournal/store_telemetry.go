@@ -2,12 +2,12 @@ package eventjournal
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -38,24 +38,17 @@ func (s *Store) AppendAuditEvent(ctx context.Context, evt storage.AuditEvent) er
 	}
 
 	return s.q.AppendAuditEvent(ctx, db.AppendAuditEventParams{
-		Timestamp:      toMillis(evt.Timestamp),
+		Timestamp:      sqliteutil.ToMillis(evt.Timestamp),
 		EventName:      evt.EventName,
 		Severity:       evt.Severity,
-		CampaignID:     toNullString(evt.CampaignID),
-		SessionID:      toNullString(evt.SessionID),
-		ActorType:      toNullString(evt.ActorType),
-		ActorID:        toNullString(evt.ActorID),
-		RequestID:      toNullString(evt.RequestID),
-		InvocationID:   toNullString(evt.InvocationID),
-		TraceID:        toNullString(evt.TraceID),
-		SpanID:         toNullString(evt.SpanID),
+		CampaignID:     sqliteutil.ToNullString(evt.CampaignID),
+		SessionID:      sqliteutil.ToNullString(evt.SessionID),
+		ActorType:      sqliteutil.ToNullString(evt.ActorType),
+		ActorID:        sqliteutil.ToNullString(evt.ActorID),
+		RequestID:      sqliteutil.ToNullString(evt.RequestID),
+		InvocationID:   sqliteutil.ToNullString(evt.InvocationID),
+		TraceID:        sqliteutil.ToNullString(evt.TraceID),
+		SpanID:         sqliteutil.ToNullString(evt.SpanID),
 		AttributesJson: evt.AttributesJSON,
 	})
-}
-
-func toNullString(value string) sql.NullString {
-	if strings.TrimSpace(value) == "" {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: value, Valid: true}
 }

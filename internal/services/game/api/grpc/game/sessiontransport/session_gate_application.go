@@ -79,7 +79,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -149,7 +149,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -205,7 +205,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {

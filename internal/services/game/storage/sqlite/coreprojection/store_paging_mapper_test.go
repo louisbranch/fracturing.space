@@ -3,6 +3,8 @@ package coreprojection
 import (
 	"errors"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 )
 
 func TestMapPageRows_TruncatesAndReturnsNextToken(t *testing.T) {
@@ -15,7 +17,7 @@ func TestMapPageRows_TruncatesAndReturnsNextToken(t *testing.T) {
 		{id: "r3", name: "three"},
 	}
 
-	items, nextToken, err := mapPageRows(rows, 2, func(row struct {
+	items, nextToken, err := sqliteutil.MapPageRows(rows, 2, func(row struct {
 		id   string
 		name string
 	}) string {
@@ -27,7 +29,7 @@ func TestMapPageRows_TruncatesAndReturnsNextToken(t *testing.T) {
 		return row.name, nil
 	})
 	if err != nil {
-		t.Fatalf("mapPageRows() error = %v", err)
+		t.Fatalf("sqliteutil.MapPageRows() error = %v", err)
 	}
 	if len(items) != 2 {
 		t.Fatalf("len(items) = %d, want 2", len(items))
@@ -47,13 +49,13 @@ func TestMapPageRows_NoNextTokenWhenUnderLimit(t *testing.T) {
 		{id: "r1"},
 	}
 
-	items, nextToken, err := mapPageRows(rows, 2, func(row struct{ id string }) string {
+	items, nextToken, err := sqliteutil.MapPageRows(rows, 2, func(row struct{ id string }) string {
 		return row.id
 	}, func(row struct{ id string }) (string, error) {
 		return row.id, nil
 	})
 	if err != nil {
-		t.Fatalf("mapPageRows() error = %v", err)
+		t.Fatalf("sqliteutil.MapPageRows() error = %v", err)
 	}
 	if len(items) != 1 {
 		t.Fatalf("len(items) = %d, want 1", len(items))
@@ -74,13 +76,13 @@ func TestMapPageRows_MapperError(t *testing.T) {
 		{id: "r1"},
 	}
 
-	items, nextToken, err := mapPageRows(rows, 1, func(row struct{ id string }) string {
+	items, nextToken, err := sqliteutil.MapPageRows(rows, 1, func(row struct{ id string }) string {
 		return row.id
 	}, func(row struct{ id string }) (string, error) {
 		return "", boom
 	})
 	if !errors.Is(err, boom) {
-		t.Fatalf("mapPageRows() error = %v, want %v", err, boom)
+		t.Fatalf("sqliteutil.MapPageRows() error = %v, want %v", err, boom)
 	}
 	if items != nil {
 		t.Fatalf("items = %#v, want nil on mapper error", items)

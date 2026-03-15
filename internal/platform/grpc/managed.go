@@ -111,7 +111,7 @@ func NewManagedConn(ctx context.Context, cfg ManagedConnConfig) (*ManagedConn, e
 		dialOpts = LenientDialOptions()
 	}
 
-	conn, err := gogrpc.DialContext(ctx, cfg.Addr, dialOpts...)
+	conn, err := gogrpc.NewClient(cfg.Addr, dialOpts...)
 	if err != nil {
 		return nil, fmt.Errorf("managed conn %s: dial: %w", cfg.Name, err)
 	}
@@ -241,10 +241,12 @@ func (mc *ManagedConn) monitor(ctx context.Context) {
 			}
 		}
 
+		timer := time.NewTimer(interval)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return
-		case <-time.After(interval):
+		case <-timer.C:
 		}
 	}
 }

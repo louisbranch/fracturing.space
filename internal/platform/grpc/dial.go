@@ -47,7 +47,7 @@ func DialLenientWithTimeout(ctx context.Context, addr string, dialTimeout time.D
 	dialCtx, cancel := context.WithTimeout(ctx, dialTimeout)
 	defer cancel()
 
-	conn, err := gogrpc.DialContext(dialCtx, addr, opts...)
+	conn, err := gogrpc.NewClient(addr, opts...)
 	if err != nil {
 		logf("lenient dial %s failed: %v", addr, err)
 		return nil

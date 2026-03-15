@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -49,12 +50,12 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return CharacterDamageResult{}, handleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return CharacterDamageResult{}, handleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
 		return CharacterDamageResult{}, err
 	}
 
@@ -63,7 +64,7 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 		return CharacterDamageResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return CharacterDamageResult{}, err
 	}
 
@@ -79,16 +80,16 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 
 	profile, err := h.deps.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterDamageResult{}, handleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
 	}
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return CharacterDamageResult{}, handleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
 	}
 
 	result, mitigated, err := ResolveCharacterDamage(in.Damage, profile, state)
 	if err != nil {
-		return CharacterDamageResult{}, handleDomainError(err)
+		return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
 	}
 
 	hpBefore := result.HPBefore
@@ -108,7 +109,7 @@ func (h *Handler) ApplyDamage(ctx context.Context, in *pb.DaggerheartApplyDamage
 	if rollSeq != nil {
 		rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 		if err != nil {
-			return CharacterDamageResult{}, handleDomainError(err)
+			return CharacterDamageResult{}, grpcerror.HandleDomainError(err)
 		}
 		if rollEvent.Type != action.EventTypeRollResolved {
 			return CharacterDamageResult{}, status.Error(codes.InvalidArgument, "roll_seq must reference action.roll_resolved")
@@ -197,12 +198,12 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return AdversaryDamageResult{}, handleDomainError(err)
+		return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return AdversaryDamageResult{}, handleDomainError(err)
+		return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart damage"); err != nil {
 		return AdversaryDamageResult{}, err
 	}
 
@@ -211,7 +212,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 		return AdversaryDamageResult{}, err
 	}
 	sceneID := strings.TrimSpace(in.GetSceneId())
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return AdversaryDamageResult{}, err
 	}
 
@@ -232,7 +233,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 
 	result, mitigated, err := ResolveAdversaryDamage(in.Damage, adversary)
 	if err != nil {
-		return AdversaryDamageResult{}, handleDomainError(err)
+		return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
 	}
 
 	hpBefore := result.HPBefore
@@ -252,7 +253,7 @@ func (h *Handler) ApplyAdversaryDamage(ctx context.Context, in *pb.DaggerheartAp
 	if rollSeq != nil {
 		rollEvent, err := h.deps.Event.GetEventBySeq(ctx, campaignID, *rollSeq)
 		if err != nil {
-			return AdversaryDamageResult{}, handleDomainError(err)
+			return AdversaryDamageResult{}, grpcerror.HandleDomainError(err)
 		}
 		if rollEvent.Type != action.EventTypeRollResolved {
 			return AdversaryDamageResult{}, status.Error(codes.InvalidArgument, "roll_seq must reference action.roll_resolved")

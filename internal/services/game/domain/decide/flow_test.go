@@ -104,27 +104,23 @@ func TestDecideFunc_RejectsOnValidateRejection(t *testing.T) {
 	}
 }
 
-func TestDecideFunc_DefaultsNowToTimeNow(t *testing.T) {
+func TestDecideFunc_PanicsOnNilNow(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",
 		Type:        command.Type("sys.test.do"),
 		PayloadJSON: []byte(`{"name":"alice","id":"char-1"}`),
 	}
 
-	before := time.Now().UTC()
-	decision := DecideFunc(cmd, event.Type("sys.test.done"), "character",
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for nil now function, but did not panic")
+		}
+	}()
+
+	DecideFunc(cmd, event.Type("sys.test.done"), "character",
 		func(p *testPayload) string { return p.ID },
 		func(p *testPayload, _ func() time.Time) *command.Rejection { return nil },
 		nil)
-	after := time.Now().UTC()
-
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-	ts := decision.Events[0].Timestamp
-	if ts.Before(before) || ts.After(after) {
-		t.Fatalf("event timestamp %v not in expected range [%v, %v]", ts, before, after)
-	}
 }
 
 type decideTestState struct {

@@ -49,6 +49,20 @@ func TestFoldCampaignCreatedSetsFields(t *testing.T) {
 	}
 }
 
+func TestFoldCampaignCreatedSetsThemePrompt(t *testing.T) {
+	state := State{}
+	updated, err := Fold(state, event.Event{
+		Type:        EventTypeCreated,
+		PayloadJSON: []byte(`{"name":"Sunfall","theme_prompt":"  A dark fantasy world  "}`),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if updated.ThemePrompt != "A dark fantasy world" {
+		t.Fatalf("theme prompt = %q, want %q", updated.ThemePrompt, "A dark fantasy world")
+	}
+}
+
 func TestFoldCampaignCreated_ReturnsErrorOnCorruptPayload(t *testing.T) {
 	state := State{}
 	_, err := Fold(state, event.Event{

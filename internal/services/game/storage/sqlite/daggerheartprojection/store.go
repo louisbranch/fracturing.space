@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -172,7 +172,7 @@ func (s *Store) ListDaggerheartCharacterProfiles(ctx context.Context, campaignID
 		return projectionstore.DaggerheartCharacterProfilePage{}, fmt.Errorf("list daggerheart character profiles: %w", err)
 	}
 
-	profiles, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.DaggerheartCharacterProfile) string {
+	profiles, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.DaggerheartCharacterProfile) string {
 		return row.CharacterID
 	}, dbDaggerheartCharacterProfileToDomain)
 	if err != nil {
@@ -568,7 +568,7 @@ func (s *Store) PutDaggerheartAdversary(ctx context.Context, adversary projectio
 		AdversaryID:     adversary.AdversaryID,
 		Name:            adversary.Name,
 		Kind:            adversary.Kind,
-		SessionID:       toNullString(adversary.SessionID),
+		SessionID:       sqliteutil.ToNullString(adversary.SessionID),
 		Notes:           adversary.Notes,
 		Hp:              int64(adversary.HP),
 		HpMax:           int64(adversary.HPMax),
@@ -579,8 +579,8 @@ func (s *Store) PutDaggerheartAdversary(ctx context.Context, adversary projectio
 		SevereThreshold: int64(adversary.Severe),
 		Armor:           int64(adversary.Armor),
 		ConditionsJson:  string(conditionsJSON),
-		CreatedAt:       toMillis(adversary.CreatedAt),
-		UpdatedAt:       toMillis(adversary.UpdatedAt),
+		CreatedAt:       sqliteutil.ToMillis(adversary.CreatedAt),
+		UpdatedAt:       sqliteutil.ToMillis(adversary.UpdatedAt),
 	})
 }
 
@@ -637,8 +637,8 @@ func (s *Store) GetDaggerheartAdversary(ctx context.Context, campaignID, adversa
 		Severe:      int(row.SevereThreshold),
 		Armor:       int(row.Armor),
 		Conditions:  conditions,
-		CreatedAt:   fromMillis(row.CreatedAt),
-		UpdatedAt:   fromMillis(row.UpdatedAt),
+		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 	}, nil
 }
 
@@ -661,7 +661,7 @@ func (s *Store) ListDaggerheartAdversaries(ctx context.Context, campaignID, sess
 	} else {
 		rows, err = s.q.ListDaggerheartAdversariesBySession(ctx, db.ListDaggerheartAdversariesBySessionParams{
 			CampaignID: campaignID,
-			SessionID:  toNullString(sessionID),
+			SessionID:  sqliteutil.ToNullString(sessionID),
 		})
 	}
 	if err != nil {
@@ -696,8 +696,8 @@ func (s *Store) ListDaggerheartAdversaries(ctx context.Context, campaignID, sess
 			Severe:      int(row.SevereThreshold),
 			Armor:       int(row.Armor),
 			Conditions:  conditions,
-			CreatedAt:   fromMillis(row.CreatedAt),
-			UpdatedAt:   fromMillis(row.UpdatedAt),
+			CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
+			UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
 		})
 	}
 
@@ -723,45 +723,4 @@ func (s *Store) DeleteDaggerheartAdversary(ctx context.Context, campaignID, adve
 		CampaignID:  campaignID,
 		AdversaryID: adversaryID,
 	})
-}
-
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
-
-func toNullString(value string) sql.NullString {
-	if strings.TrimSpace(value) == "" {
-		return sql.NullString{}
-	}
-	return sql.NullString{String: value, Valid: true}
-}
-
-func mapPageRows[Row any, Item any](
-	rows []Row,
-	pageSize int,
-	rowID func(Row) string,
-	mapRow func(Row) (Item, error),
-) ([]Item, string, error) {
-	capHint := pageSize
-	if capHint > len(rows) {
-		capHint = len(rows)
-	}
-	items := make([]Item, 0, capHint)
-
-	for i, row := range rows {
-		if i >= pageSize {
-			return items, rowID(rows[pageSize-1]), nil
-		}
-		item, err := mapRow(row)
-		if err != nil {
-			return nil, "", err
-		}
-		items = append(items, item)
-	}
-
-	return items, "", nil
 }

@@ -29,7 +29,7 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -128,7 +128,7 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	if err != nil {
 		return storage.SessionRecord{}, err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return storage.SessionRecord{}, err
 	}
 

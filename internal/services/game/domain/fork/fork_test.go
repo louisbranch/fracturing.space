@@ -6,12 +6,6 @@ import (
 	"time"
 )
 
-func TestForkRequestValidate_RequiresSourceCampaignID(t *testing.T) {
-	if err := (ForkRequest{}).Validate(); !errors.Is(err, ErrEmptyCampaignID) {
-		t.Fatalf("expected ErrEmptyCampaignID, got %v", err)
-	}
-}
-
 func TestCreateFork_DefaultsOriginAndNormalizesCreatedAt(t *testing.T) {
 	now := time.Date(2026, 2, 1, 10, 11, 12, 0, time.FixedZone("local", -5*3600))
 	got, err := CreateFork(

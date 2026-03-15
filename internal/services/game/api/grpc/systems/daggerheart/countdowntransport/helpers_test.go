@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
-	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -92,22 +92,22 @@ func TestCountdownDirectionToProto(t *testing.T) {
 }
 
 func TestRequireDaggerheartSystemRejectsOtherSystems(t *testing.T) {
-	record := storage.CampaignRecord{System: systembridge.SystemIDUnspecified}
-	err := requireDaggerheartSystem(record, "unsupported")
+	record := storage.CampaignRecord{System: "unspecified"}
+	err := daggerheartguard.RequireDaggerheartSystem(record, "unsupported")
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}
 }
 
 func TestEnsureNoOpenSessionGateRejectsOpenGate(t *testing.T) {
-	err := ensureNoOpenSessionGate(context.Background(), testGateStore{gate: storage.SessionGate{GateID: "gate-1"}}, "camp-1", "sess-1")
+	err := daggerheartguard.EnsureNoOpenSessionGate(context.Background(), testGateStore{gate: storage.SessionGate{GateID: "gate-1"}}, "camp-1", "sess-1")
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}
 }
 
 func TestEnsureNoOpenSessionGateWrapsStoreErrors(t *testing.T) {
-	err := ensureNoOpenSessionGate(context.Background(), testGateStore{err: errors.New("boom")}, "camp-1", "sess-1")
+	err := daggerheartguard.EnsureNoOpenSessionGate(context.Background(), testGateStore{err: errors.New("boom")}, "camp-1", "sess-1")
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.Internal)
 	}

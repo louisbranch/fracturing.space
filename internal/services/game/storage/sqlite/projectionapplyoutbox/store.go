@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -73,8 +74,8 @@ ON CONFLICT(campaign_id, seq) DO NOTHING
 		evt.CampaignID,
 		int64(evt.Seq),
 		string(evt.Type),
-		toMillis(enqueuedAt),
-		toMillis(enqueuedAt),
+		sqliteutil.ToMillis(enqueuedAt),
+		sqliteutil.ToMillis(enqueuedAt),
 	); err != nil {
 		return fmt.Errorf("enqueue projection apply outbox: %w", err)
 	}
@@ -223,8 +224,8 @@ func (s *Store) claimDue(ctx context.Context, now time.Time, limit int) ([]row, 
 		 )
 		 ORDER BY next_attempt_at, seq
 		 LIMIT ?`,
-		toMillis(now),
-		toMillis(staleBefore),
+		sqliteutil.ToMillis(now),
+		sqliteutil.ToMillis(staleBefore),
 		limit,
 	)
 	if err != nil {
@@ -257,11 +258,11 @@ func (s *Store) claimDue(ctx context.Context, now time.Time, limit int) ([]row, 
 			   	(status IN ('pending', 'failed') AND next_attempt_at <= ?)
 			   	OR (status = 'processing' AND updated_at <= ?)
 			   )`,
-			toMillis(now),
+			sqliteutil.ToMillis(now),
 			candidate.CampaignID,
 			int64(candidate.Seq),
-			toMillis(now),
-			toMillis(staleBefore),
+			sqliteutil.ToMillis(now),
+			sqliteutil.ToMillis(staleBefore),
 		)
 		if err != nil {
 			return nil, fmt.Errorf("claim outbox row %s/%d: %w", candidate.CampaignID, candidate.Seq, err)
@@ -308,9 +309,9 @@ func (s *Store) markRetry(ctx context.Context, row row, now time.Time, attempt i
 		 WHERE campaign_id = ? AND seq = ? AND status = 'processing'`,
 		status,
 		attempt,
-		toMillis(nextAttempt),
+		sqliteutil.ToMillis(nextAttempt),
 		lastError,
-		toMillis(now),
+		sqliteutil.ToMillis(now),
 		row.CampaignID,
 		int64(row.Seq),
 	)
@@ -423,7 +424,7 @@ func (s *Store) GetProjectionApplyOutboxSummary(ctx context.Context) (storage.Pr
 	if err == nil {
 		summary.OldestPendingCampaignID = campaignID
 		summary.OldestPendingSeq = uint64(seq)
-		summary.OldestPendingAt = fromMillis(nextAttempt)
+		summary.OldestPendingAt = sqliteutil.FromMillis(nextAttempt)
 		return summary, nil
 	}
 	if err == sql.ErrNoRows {
@@ -498,8 +499,8 @@ func (s *Store) ListProjectionApplyOutboxRows(ctx context.Context, status string
 			return nil, fmt.Errorf("scan outbox row: %w", err)
 		}
 		entry.Seq = uint64(seq)
-		entry.NextAttemptAt = fromMillis(nextAttempt)
-		entry.UpdatedAt = fromMillis(updatedAt)
+		entry.NextAttemptAt = sqliteutil.FromMillis(nextAttempt)
+		entry.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 		if lastError.Valid {
 			entry.LastError = lastError.String
 		}
@@ -553,8 +554,8 @@ func (s *Store) RequeueProjectionApplyOutboxRow(ctx context.Context, campaignID 
 		     last_error = '',
 		     updated_at = ?
 		 WHERE campaign_id = ? AND seq = ? AND status = 'dead'`,
-		toMillis(now),
-		toMillis(now),
+		sqliteutil.ToMillis(now),
+		sqliteutil.ToMillis(now),
 		campaignID,
 		int64(seq),
 	)
@@ -613,8 +614,8 @@ func (s *Store) RequeueProjectionApplyOutboxDeadRows(ctx context.Context, limit 
 			    AND to_requeue.seq = projection_apply_outbox.seq
 		  )`,
 		limit,
-		toMillis(now),
-		toMillis(now),
+		sqliteutil.ToMillis(now),
+		sqliteutil.ToMillis(now),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("requeue dead outbox rows: %w", err)
@@ -627,12 +628,4 @@ func (s *Store) RequeueProjectionApplyOutboxDeadRows(ctx context.Context, limit 
 		return 0, fmt.Errorf("requeue dead outbox rows affected returned negative value: %d", affected)
 	}
 	return int(affected), nil
-}
-
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
 }

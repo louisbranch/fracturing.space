@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -55,6 +56,22 @@ func TestDecodeInvalidDirection(t *testing.T) {
 	_, err = Decode(token)
 	if err == nil {
 		t.Fatal("expected error for invalid direction")
+	}
+}
+
+func TestDecodeEmptyValues(t *testing.T) {
+	raw, err := json.Marshal(Cursor{Values: []CursorValue{}, Dir: DirectionForward})
+	if err != nil {
+		t.Fatalf("marshal cursor: %v", err)
+	}
+	token := base64.URLEncoding.EncodeToString(raw)
+
+	_, err = Decode(token)
+	if err == nil {
+		t.Fatal("expected error for cursor with no values")
+	}
+	if !strings.Contains(err.Error(), "no values") {
+		t.Fatalf("error = %v, want substring %q", err, "no values")
 	}
 }
 

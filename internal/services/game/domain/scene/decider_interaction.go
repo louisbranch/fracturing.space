@@ -416,13 +416,11 @@ func allActingParticipantsYieldedAfter(current State, next ids.ParticipantID) bo
 		return false
 	}
 	for participantID := range current.PlayerPhaseActingParticipants {
-		slot, ok := current.PlayerPhaseSlots[participantID]
 		if participantID == next {
-			if !ok || slot.Yielded {
-				continue
-			}
+			// The caller is about to yield; treat them as yielded.
 			continue
 		}
+		slot, ok := current.PlayerPhaseSlots[participantID]
 		if !ok || !slot.Yielded {
 			return false
 		}

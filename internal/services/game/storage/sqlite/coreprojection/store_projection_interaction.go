@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -73,7 +74,7 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 		interaction.AITurn.SourceSceneID,
 		interaction.AITurn.SourcePhaseID,
 		interaction.AITurn.LastError,
-		toMillis(interaction.UpdatedAt),
+		sqliteutil.ToMillis(interaction.UpdatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put session interaction: %w", err)
@@ -170,7 +171,7 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 			SourcePhaseID:      aiTurnSourcePhaseID,
 			LastError:          aiTurnLastError,
 		},
-		UpdatedAt: fromMillis(updatedAt),
+		UpdatedAt: sqliteutil.FromMillis(updatedAt),
 	}, nil
 }
 
@@ -233,8 +234,8 @@ func (s *Store) PutSceneInteraction(ctx context.Context, interaction storage.Sce
 		slotsJSON,
 		interaction.GMOutputText,
 		interaction.GMOutputParticipantID,
-		toNullMillis(interaction.GMOutputUpdatedAt),
-		toMillis(interaction.UpdatedAt),
+		sqliteutil.ToNullMillis(interaction.GMOutputUpdatedAt),
+		sqliteutil.ToMillis(interaction.UpdatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put scene interaction: %w", err)
@@ -331,8 +332,8 @@ func (s *Store) GetSceneInteraction(ctx context.Context, campaignID, sceneID str
 		Slots:                 slots,
 		GMOutputText:          gmOutputText,
 		GMOutputParticipantID: gmOutputParticipantID,
-		GMOutputUpdatedAt:     fromNullMillis(gmOutputUpdatedAt),
-		UpdatedAt:             fromMillis(updatedAt),
+		GMOutputUpdatedAt:     sqliteutil.FromNullMillis(gmOutputUpdatedAt),
+		UpdatedAt:             sqliteutil.FromMillis(updatedAt),
 	}, nil
 }
 

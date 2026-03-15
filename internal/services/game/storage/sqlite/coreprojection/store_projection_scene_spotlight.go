@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -40,7 +41,7 @@ func (s *Store) PutSceneSpotlight(ctx context.Context, spotlight storage.SceneSp
 		   updated_by_actor_type = excluded.updated_by_actor_type,
 		   updated_by_actor_id = excluded.updated_by_actor_id`,
 		spotlight.CampaignID, spotlight.SceneID, spotlightType, spotlight.CharacterID,
-		toMillis(spotlight.UpdatedAt), spotlight.UpdatedByActorType, spotlight.UpdatedByActorID,
+		sqliteutil.ToMillis(spotlight.UpdatedAt), spotlight.UpdatedByActorType, spotlight.UpdatedByActorID,
 	)
 	if err != nil {
 		return fmt.Errorf("put scene spotlight: %w", err)
@@ -81,7 +82,7 @@ func (s *Store) GetSceneSpotlight(ctx context.Context, campaignID, sceneID strin
 		return storage.SceneSpotlight{}, fmt.Errorf("get scene spotlight: %w", err)
 	}
 	spotlight.SpotlightType = scene.SpotlightType(strings.ToLower(strings.TrimSpace(spotlightType)))
-	spotlight.UpdatedAt = fromMillis(updatedAt)
+	spotlight.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	return spotlight, nil
 }
 

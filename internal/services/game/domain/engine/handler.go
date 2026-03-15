@@ -82,7 +82,6 @@ type FreshStateLoader interface {
 // BatchAppend guarantees that all events from a single command decision are
 // persisted atomically in one transaction.
 type EventJournal interface {
-	Append(ctx context.Context, evt event.Event) (event.Event, error)
 	BatchAppend(ctx context.Context, events []event.Event) ([]event.Event, error)
 }
 
@@ -92,6 +91,11 @@ type EventJournal interface {
 // so behavior is identical when handling new commands and reconstructing history.
 // Named "Folder" (not "Applier") to distinguish pure state folds from
 // projection.Applier, which performs side-effecting I/O writes to stores.
+//
+// Intentionally defined at the consumption point (Go interface-at-consumer
+// pattern). Parallel definitions exist at:
+//   - domain/replay.Folder (replay path)
+//   - domain/module.Folder (adds FoldHandledTypes for system fold coverage)
 type Folder interface {
 	Fold(state any, evt event.Event) (any, error)
 }

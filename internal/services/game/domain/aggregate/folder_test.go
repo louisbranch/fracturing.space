@@ -10,7 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
 
-func TestFolderApply_UpdatesSessionGateState(t *testing.T) {
+func TestFolderFold_UpdatesSessionGateState(t *testing.T) {
 	applier := Folder{}
 	state := State{}
 
@@ -72,7 +72,7 @@ func (fakeSystemModule) Decider() module.Decider                    { return nil
 func (fakeSystemModule) Folder() module.Folder                      { return fakeSystemFolder{} }
 func (fakeSystemModule) StateFactory() module.StateFactory          { return nil }
 
-func TestFolderApply_RoutesSystemEvents(t *testing.T) {
+func TestFolderFold_RoutesSystemEvents(t *testing.T) {
 	registry := module.NewRegistry()
 	if err := registry.Register(fakeSystemModule{}); err != nil {
 		t.Fatalf("register module: %v", err)
@@ -148,7 +148,7 @@ func TestFolderFold_SkipsSystemPathWhenBothEmpty(t *testing.T) {
 	}
 }
 
-func TestFolderApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
+func TestFolderFold_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	applier := Folder{SystemRegistry: module.NewRegistry()}
 	state := State{}
 
@@ -170,7 +170,7 @@ func TestFolderApply_ReturnsErrorForUnregisteredSystemEvents(t *testing.T) {
 	}
 }
 
-func TestFolderApply_PropagatesFoldError(t *testing.T) {
+func TestFolderFold_PropagatesFoldError(t *testing.T) {
 	applier := Folder{}
 	state := State{}
 
@@ -206,7 +206,7 @@ func TestFolderFold_ReturnsErrorWhenCoreFoldHandlerMissing(t *testing.T) {
 	}
 }
 
-func TestFolderApply_SkipsAuditOnlyEvents(t *testing.T) {
+func TestFolderFold_SkipsAuditOnlyEvents(t *testing.T) {
 	registry := event.NewRegistry()
 	if err := registry.Register(event.Definition{
 		Type:   event.Type("test.audit_event"),
@@ -327,7 +327,7 @@ func TestFolderFold_ReturnsErrorForEmptyEntityID_Invite(t *testing.T) {
 	}
 }
 
-func TestFolderApply_UpdatesInviteState(t *testing.T) {
+func TestFolderFold_UpdatesInviteState(t *testing.T) {
 	applier := Folder{}
 	state := State{}
 

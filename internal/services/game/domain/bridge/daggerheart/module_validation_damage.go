@@ -42,8 +42,8 @@ func validateDamageAppliedInvariants(payload DamageAppliedPayload) error {
 	if payload.ArmorSpent < 0 || payload.ArmorSpent > ArmorMaxCap {
 		return fmt.Errorf("armor_spent must be in range 0..%d", ArmorMaxCap)
 	}
-	if payload.Marks < 0 || payload.Marks > 4 {
-		return errors.New("marks must be in range 0..4")
+	if payload.Marks < 0 || payload.Marks > MaxDamageMarks {
+		return fmt.Errorf("marks must be in range 0..%d", MaxDamageMarks)
 	}
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return errors.New("roll_seq must be positive")
@@ -118,8 +118,8 @@ func validateDamageAdapterInvariants(payload DamageApplyPayload) error {
 	if payload.ArmorSpent < 0 || payload.ArmorSpent > ArmorMaxCap {
 		return fmt.Errorf("armor_spent must be in range 0..%d", ArmorMaxCap)
 	}
-	if payload.Marks < 0 || payload.Marks > 4 {
-		return errors.New("marks must be in range 0..4")
+	if payload.Marks < 0 || payload.Marks > MaxDamageMarks {
+		return fmt.Errorf("marks must be in range 0..%d", MaxDamageMarks)
 	}
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return errors.New("roll_seq must be positive")

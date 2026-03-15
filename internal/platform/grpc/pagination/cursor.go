@@ -135,6 +135,9 @@ func Decode(token string) (Cursor, error) {
 	if c.Dir != DirectionForward && c.Dir != DirectionBackward {
 		return Cursor{}, fmt.Errorf("invalid cursor direction: %q", c.Dir)
 	}
+	if len(c.Values) == 0 {
+		return Cursor{}, fmt.Errorf("cursor has no values")
+	}
 
 	return c, nil
 }

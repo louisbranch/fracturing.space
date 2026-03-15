@@ -31,7 +31,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return projectionstore.DaggerheartSnapshot{}, err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return projectionstore.DaggerheartSnapshot{}, err
 	}
 

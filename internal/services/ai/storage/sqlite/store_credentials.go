@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -41,7 +42,7 @@ func (s *Store) PutCredential(ctx context.Context, record storage.CredentialReco
 
 	var revokedAt sql.NullInt64
 	if record.RevokedAt != nil {
-		revokedAt = sql.NullInt64{Int64: toMillis(*record.RevokedAt), Valid: true}
+		revokedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.RevokedAt), Valid: true}
 	}
 
 	_, err := s.sqlDB.ExecContext(ctx, `
@@ -63,8 +64,8 @@ ON CONFLICT(id) DO UPDATE SET
 		record.Label,
 		record.SecretCiphertext,
 		record.Status,
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
 		revokedAt,
 	)
 	if err != nil {
@@ -191,7 +192,7 @@ func (s *Store) RevokeCredential(ctx context.Context, ownerUserID string, creden
 UPDATE ai_credentials
 SET status = 'revoked', updated_at = ?, revoked_at = ?
 WHERE owner_user_id = ? AND id = ?
-`, toMillis(updatedAt), toMillis(revokedAt.UTC()), ownerUserID, credentialID)
+`, sqliteutil.ToMillis(updatedAt), sqliteutil.ToMillis(revokedAt.UTC()), ownerUserID, credentialID)
 	if err != nil {
 		return fmt.Errorf("revoke credential: %w", err)
 	}
@@ -224,10 +225,10 @@ func scanCredentialRecord(scanner interface{ Scan(...any) error }) (storage.Cred
 		return storage.CredentialRecord{}, err
 	}
 
-	rec.CreatedAt = fromMillis(createdAt)
-	rec.UpdatedAt = fromMillis(updatedAt)
+	rec.CreatedAt = sqliteutil.FromMillis(createdAt)
+	rec.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if revokedAt.Valid {
-		value := fromMillis(revokedAt.Int64)
+		value := sqliteutil.FromMillis(revokedAt.Int64)
 		rec.RevokedAt = &value
 	}
 	return rec, nil

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
@@ -130,19 +131,19 @@ func TestDamageApplyInputFromProtoMixedDamage(t *testing.T) {
 }
 
 func TestCampaignSupportsDaggerheart(t *testing.T) {
-	if !campaignSupportsDaggerheart(storage.CampaignRecord{System: systembridge.SystemIDDaggerheart}) {
+	if !daggerheartguard.CampaignSupportsDaggerheart(storage.CampaignRecord{System: systembridge.SystemIDDaggerheart}) {
 		t.Fatal("expected daggerheart campaign to be supported")
 	}
-	if campaignSupportsDaggerheart(storage.CampaignRecord{System: systembridge.SystemID("not-a-system")}) {
+	if daggerheartguard.CampaignSupportsDaggerheart(storage.CampaignRecord{System: systembridge.SystemID("not-a-system")}) {
 		t.Fatal("unexpected support for non-daggerheart campaign")
 	}
 }
 
 func TestRequireDaggerheartSystem(t *testing.T) {
-	if err := requireDaggerheartSystem(storage.CampaignRecord{System: systembridge.SystemIDDaggerheart}, "unsupported"); err != nil {
-		t.Fatalf("requireDaggerheartSystem returned error for daggerheart: %v", err)
+	if err := daggerheartguard.RequireDaggerheartSystem(storage.CampaignRecord{System: systembridge.SystemIDDaggerheart}, "unsupported"); err != nil {
+		t.Fatalf("RequireDaggerheartSystem returned error for daggerheart: %v", err)
 	}
-	err := requireDaggerheartSystem(storage.CampaignRecord{System: systembridge.SystemID("other")}, "unsupported")
+	err := daggerheartguard.RequireDaggerheartSystem(storage.CampaignRecord{System: systembridge.SystemID("other")}, "unsupported")
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}
@@ -158,17 +159,17 @@ func (s gateStoreStub) GetOpenSessionGate(context.Context, string, string) (stor
 }
 
 func TestEnsureNoOpenSessionGate(t *testing.T) {
-	err := ensureNoOpenSessionGate(context.Background(), gateStoreStub{err: storage.ErrNotFound}, "camp-1", "sess-1")
+	err := daggerheartguard.EnsureNoOpenSessionGate(context.Background(), gateStoreStub{err: storage.ErrNotFound}, "camp-1", "sess-1")
 	if err != nil {
-		t.Fatalf("ensureNoOpenSessionGate returned error for missing gate: %v", err)
+		t.Fatalf("EnsureNoOpenSessionGate returned error for missing gate: %v", err)
 	}
 
-	err = ensureNoOpenSessionGate(context.Background(), gateStoreStub{gate: storage.SessionGate{GateID: "gate-1"}}, "camp-1", "sess-1")
+	err = daggerheartguard.EnsureNoOpenSessionGate(context.Background(), gateStoreStub{gate: storage.SessionGate{GateID: "gate-1"}}, "camp-1", "sess-1")
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
 	}
 
-	err = ensureNoOpenSessionGate(context.Background(), gateStoreStub{err: errors.New("boom")}, "camp-1", "sess-1")
+	err = daggerheartguard.EnsureNoOpenSessionGate(context.Background(), gateStoreStub{err: errors.New("boom")}, "camp-1", "sess-1")
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.Internal)
 	}

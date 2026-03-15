@@ -54,7 +54,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 			authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 				Store:      c.auth.Audit,
 				CampaignID: campaignID,
-				Capability: domainauthz.CapabilityManageParticipants,
+				Capability: domainauthz.CapabilityManageParticipants(),
 				Decision:   authz.DecisionDeny,
 				ReasonCode: decision.ReasonCode,
 				Actor:      policyActor,
@@ -127,7 +127,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 				authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 					Store:      c.auth.Audit,
 					CampaignID: campaignID,
-					Capability: domainauthz.CapabilityManageParticipants,
+					Capability: domainauthz.CapabilityManageParticipants(),
 					Decision:   authz.DecisionDeny,
 					ReasonCode: decision.ReasonCode,
 					Actor:      policyActor,
@@ -239,11 +239,11 @@ func resolveParticipantUpdateActor(
 	campaignRecord storage.CampaignRecord,
 	current storage.ParticipantRecord,
 ) (storage.ParticipantRecord, bool, error) {
-	actor, _, err := authz.AuthorizePolicyActorWithParticipantStore(ctx, auth.Participant, domainauthz.CapabilityReadCampaign, campaignRecord)
+	actor, _, err := authz.AuthorizePolicyActorWithParticipantStore(ctx, auth.Participant, domainauthz.CapabilityReadCampaign(), campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, false, err
 	}
-	if domainauthz.CanCampaignAccess(actor.CampaignAccess, domainauthz.CapabilityManageParticipants).Allowed {
+	if domainauthz.CanCampaignAccess(actor.CampaignAccess, domainauthz.CapabilityManageParticipants()).Allowed {
 		return actor, false, nil
 	}
 	if strings.EqualFold(strings.TrimSpace(actor.ID), strings.TrimSpace(current.ID)) {

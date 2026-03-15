@@ -44,14 +44,18 @@ type ProjectionApplyOutboxEntry struct {
 
 // ProjectionApplyOutboxInspector reports queue state for maintenance tooling.
 type ProjectionApplyOutboxInspector interface {
-	GetProjectionApplyOutboxSummary(context.Context) (ProjectionApplyOutboxSummary, error)
-	ListProjectionApplyOutboxRows(context.Context, string, int) ([]ProjectionApplyOutboxEntry, error)
+	// GetProjectionApplyOutboxSummary returns aggregate queue-depth statistics.
+	GetProjectionApplyOutboxSummary(ctx context.Context) (ProjectionApplyOutboxSummary, error)
+	// ListProjectionApplyOutboxRows returns outbox rows for a campaign, up to limit.
+	ListProjectionApplyOutboxRows(ctx context.Context, campaignID string, limit int) ([]ProjectionApplyOutboxEntry, error)
 }
 
 // ProjectionApplyOutboxRequeuer transitions dead queue rows back to pending.
 type ProjectionApplyOutboxRequeuer interface {
-	RequeueProjectionApplyOutboxRow(context.Context, string, uint64, time.Time) (bool, error)
-	RequeueProjectionApplyOutboxDeadRows(context.Context, int, time.Time) (int, error)
+	// RequeueProjectionApplyOutboxRow re-queues a single row by campaign and sequence.
+	RequeueProjectionApplyOutboxRow(ctx context.Context, campaignID string, seq uint64, now time.Time) (bool, error)
+	// RequeueProjectionApplyOutboxDeadRows re-queues up to limit dead rows.
+	RequeueProjectionApplyOutboxDeadRows(ctx context.Context, limit int, now time.Time) (int, error)
 }
 
 // ProjectionApplyOutboxStore groups worker, inspection, and requeue seams for

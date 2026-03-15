@@ -144,11 +144,11 @@ func TestSessionStartWorkflowStart(t *testing.T) {
 		}
 	})
 
-	t.Run("nil clock falls back to current time", func(t *testing.T) {
+	t.Run("default clock uses current time", func(t *testing.T) {
 		decision := sessionStartWorkflow{}.Start(
 			readyWorkflowState(campaign.StatusActive),
 			startCommand,
-			nil,
+			time.Now,
 		)
 
 		if len(decision.Rejections) != 0 {

@@ -11,6 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	daggerheartguard "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/guard"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/dice"
 	"github.com/louisbranch/fracturing.space/internal/services/game/core/random"
@@ -62,29 +63,29 @@ func (h *Handler) SessionActionRoll(ctx context.Context, in *pb.SessionActionRol
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart rolls"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart rolls"); err != nil {
 		return nil, err
 	}
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
 	state, err := h.deps.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 
 	modifierTotal, modifierList := normalizeActionModifiers(in.GetModifiers())
@@ -307,23 +308,23 @@ func (h *Handler) SessionDamageRoll(ctx context.Context, in *pb.SessionDamageRol
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart rolls"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart rolls"); err != nil {
 		return nil, err
 	}
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 
@@ -446,23 +447,23 @@ func (h *Handler) SessionAdversaryAttackRoll(ctx context.Context, in *pb.Session
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversary rolls"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart adversary rolls"); err != nil {
 		return nil, err
 	}
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 	if _, err := h.deps.LoadAdversaryForSession(ctx, campaignID, sessionID, adversaryID); err != nil {
@@ -605,23 +606,23 @@ func (h *Handler) SessionAdversaryActionCheck(ctx context.Context, in *pb.Sessio
 
 	c, err := h.deps.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
-	if err := requireDaggerheartSystem(c, "campaign system does not support daggerheart adversary checks"); err != nil {
+	if err := daggerheartguard.RequireDaggerheartSystem(c, "campaign system does not support daggerheart adversary checks"); err != nil {
 		return nil, err
 	}
 
 	sess, err := h.deps.Session.GetSession(ctx, campaignID, sessionID)
 	if err != nil {
-		return nil, handleDomainError(err)
+		return nil, grpcerror.HandleDomainError(err)
 	}
 	if sess.Status != session.StatusActive {
 		return nil, status.Error(codes.FailedPrecondition, "session is not active")
 	}
-	if err := ensureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
+	if err := daggerheartguard.EnsureNoOpenSessionGate(ctx, h.deps.SessionGate, campaignID, sessionID); err != nil {
 		return nil, err
 	}
 	if _, err := h.deps.LoadAdversaryForSession(ctx, campaignID, sessionID, adversaryID); err != nil {

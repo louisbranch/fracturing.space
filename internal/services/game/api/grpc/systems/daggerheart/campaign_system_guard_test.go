@@ -12,14 +12,14 @@ import (
 func TestCampaignSupportsDaggerheart(t *testing.T) {
 	t.Run("daggerheart", func(t *testing.T) {
 		record := storage.CampaignRecord{System: bridge.SystemIDDaggerheart}
-		if !campaignSupportsDaggerheart(record) {
+		if !CampaignSupportsDaggerheart(record) {
 			t.Fatal("expected daggerheart campaign to be supported")
 		}
 	})
 
 	t.Run("unspecified", func(t *testing.T) {
 		record := storage.CampaignRecord{System: bridge.SystemIDUnspecified}
-		if campaignSupportsDaggerheart(record) {
+		if CampaignSupportsDaggerheart(record) {
 			t.Fatal("expected unspecified campaign system to be unsupported")
 		}
 	})
@@ -27,7 +27,7 @@ func TestCampaignSupportsDaggerheart(t *testing.T) {
 
 func TestRequireDaggerheartSystem(t *testing.T) {
 	record := storage.CampaignRecord{System: bridge.SystemIDUnspecified}
-	err := requireDaggerheartSystem(record, "unsupported system")
+	err := RequireDaggerheartSystem(record, "unsupported system")
 	if err == nil {
 		t.Fatal("expected failed precondition error")
 	}
@@ -41,7 +41,7 @@ func TestRequireDaggerheartSystem(t *testing.T) {
 
 func TestRequireDaggerheartSystemf(t *testing.T) {
 	record := storage.CampaignRecord{System: bridge.SystemIDUnspecified}
-	err := requireDaggerheartSystemf(record, "unsupported %s", "operation")
+	err := RequireDaggerheartSystemf(record, "unsupported %s", "operation")
 	if err == nil {
 		t.Fatal("expected failed precondition error")
 	}

@@ -30,7 +30,7 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 	if err != nil {
 		return "", err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return "", err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -104,7 +104,7 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 	if err != nil {
 		return err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -160,7 +160,7 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 	if err != nil {
 		return err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -212,7 +212,7 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	if err != nil {
 		return "", err
 	}
-	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions(), c); err != nil {
 		return "", err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {

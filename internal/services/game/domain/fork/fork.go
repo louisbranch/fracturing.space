@@ -12,10 +12,6 @@ import (
 var (
 	// ErrEmptyCampaignID indicates a missing campaign ID.
 	ErrEmptyCampaignID = apperrors.New(apperrors.CodeForkEmptyCampaignID, "source campaign id is required")
-	// ErrInvalidForkPoint indicates an invalid fork point.
-	ErrInvalidForkPoint = apperrors.New(apperrors.CodeForkInvalidForkPoint, "fork point is invalid")
-	// ErrForkPointInFuture indicates the fork point is beyond the source campaign's current state.
-	ErrForkPointInFuture = apperrors.New(apperrors.CodeForkPointInFuture, "fork point is beyond current campaign state")
 )
 
 // ForkPoint identifies where to fork in the source campaign's event history.
@@ -31,27 +27,6 @@ type ForkPoint struct {
 // IsSessionBoundary reports whether this fork point is a session boundary.
 func (fp ForkPoint) IsSessionBoundary() bool {
 	return fp.SessionID != ""
-}
-
-// ForkRequest describes a request to fork a campaign.
-type ForkRequest struct {
-	// SourceCampaignID is the campaign to fork from (required).
-	SourceCampaignID string
-	// ForkPoint specifies where in the source campaign's history to fork.
-	ForkPoint ForkPoint
-	// NewCampaignName is the name for the forked campaign (optional).
-	// If empty, a name is auto-generated.
-	NewCampaignName string
-	// CopyParticipants controls whether participants are copied from the source.
-	CopyParticipants bool
-}
-
-// Validate validates the fork request.
-func (r ForkRequest) Validate() error {
-	if strings.TrimSpace(r.SourceCampaignID) == "" {
-		return ErrEmptyCampaignID
-	}
-	return nil
 }
 
 // Fork represents a completed fork operation result.
@@ -79,7 +54,7 @@ type CreateForkInput struct {
 // CreateFork creates a new Fork with a generated ID and timestamps.
 func CreateFork(input CreateForkInput, originCampaignID string, forkEventSeq uint64, now func() time.Time, idGenerator func() (string, error)) (Fork, error) {
 	if now == nil {
-		now = time.Now
+		panic("fork: now function must not be nil")
 	}
 	if idGenerator == nil {
 		idGenerator = id.NewID

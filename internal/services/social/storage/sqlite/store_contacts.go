@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/social/storage"
 )
 
@@ -38,8 +39,8 @@ func (s *Store) PutContact(ctx context.Context, contact storage.Contact) error {
 		   updated_at = excluded.updated_at`,
 		ownerUserID,
 		contactUserID,
-		toMillis(contact.CreatedAt),
-		toMillis(contact.UpdatedAt),
+		sqliteutil.ToMillis(contact.CreatedAt),
+		sqliteutil.ToMillis(contact.UpdatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("put contact: %w", err)
@@ -87,8 +88,8 @@ func (s *Store) GetContact(ctx context.Context, ownerUserID string, contactUserI
 		}
 		return storage.Contact{}, fmt.Errorf("get contact: %w", err)
 	}
-	contact.CreatedAt = fromMillis(createdAt)
-	contact.UpdatedAt = fromMillis(updatedAt)
+	contact.CreatedAt = sqliteutil.FromMillis(createdAt)
+	contact.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	return contact, nil
 }
 
@@ -190,8 +191,8 @@ func (s *Store) ListContacts(ctx context.Context, ownerUserID string, pageSize i
 		); err != nil {
 			return storage.ContactPage{}, fmt.Errorf("list contacts: %w", err)
 		}
-		contact.CreatedAt = fromMillis(createdAt)
-		contact.UpdatedAt = fromMillis(updatedAt)
+		contact.CreatedAt = sqliteutil.FromMillis(createdAt)
+		contact.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 		page.Contacts = append(page.Contacts, contact)
 	}
 	if err := rows.Err(); err != nil {

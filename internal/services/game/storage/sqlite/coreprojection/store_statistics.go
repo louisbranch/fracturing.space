@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
@@ -17,7 +18,7 @@ func (s *Store) GetGameStatistics(ctx context.Context, since *time.Time) (storag
 		return storage.GameStatistics{}, fmt.Errorf("storage is not configured")
 	}
 
-	sinceValue := toNullMillis(since)
+	sinceValue := sqliteutil.ToNullMillis(since)
 	row, err := s.q.GetGameStatistics(ctx, sinceValue)
 	if err != nil {
 		return storage.GameStatistics{}, fmt.Errorf("get game statistics: %w", err)

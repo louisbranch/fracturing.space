@@ -1,4 +1,4 @@
-package game
+package interactiontransport
 
 import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -40,8 +41,8 @@ func (s *Store) PutInvite(ctx context.Context, inv storage.InviteRecord) error {
 		RecipientUserID:        strings.TrimSpace(inv.RecipientUserID),
 		Status:                 enumToStorage(inv.Status),
 		CreatedByParticipantID: inv.CreatedByParticipantID,
-		CreatedAt:              toMillis(inv.CreatedAt),
-		UpdatedAt:              toMillis(inv.UpdatedAt),
+		CreatedAt:              sqliteutil.ToMillis(inv.CreatedAt),
+		UpdatedAt:              sqliteutil.ToMillis(inv.UpdatedAt),
 	})
 }
 
@@ -115,7 +116,7 @@ func (s *Store) ListInvites(ctx context.Context, campaignID string, recipientUse
 	}
 
 	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
-	invites, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Invite) string {
+	invites, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.Invite) string {
 		return row.ID
 	}, dbInviteToDomain)
 	if err != nil {
@@ -164,7 +165,7 @@ func (s *Store) ListPendingInvites(ctx context.Context, campaignID string, pageS
 	}
 
 	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
-	invites, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Invite) string {
+	invites, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.Invite) string {
 		return row.ID
 	}, dbInviteToDomain)
 	if err != nil {
@@ -213,7 +214,7 @@ func (s *Store) ListPendingInvitesForRecipient(ctx context.Context, userID strin
 	}
 
 	page := storage.InvitePage{Invites: make([]storage.InviteRecord, 0, pageSize)}
-	invites, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.Invite) string {
+	invites, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.Invite) string {
 		return row.ID
 	}, dbInviteToDomain)
 	if err != nil {
@@ -242,7 +243,7 @@ func (s *Store) UpdateInviteStatus(ctx context.Context, inviteID string, status 
 
 	return s.q.UpdateInviteStatus(ctx, db.UpdateInviteStatusParams{
 		Status:    enumToStorage(status),
-		UpdatedAt: toMillis(updatedAt),
+		UpdatedAt: sqliteutil.ToMillis(updatedAt),
 		ID:        inviteID,
 	})
 }

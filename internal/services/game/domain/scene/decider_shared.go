@@ -58,11 +58,6 @@ func sortedCharacterIDs(chars map[ids.CharacterID]bool) []ids.CharacterID {
 	return result
 }
 
-// sortStrings sorts a slice of strings in place.
-func sortStrings(s []string) {
-	slices.Sort(s)
-}
-
 func normalizeParticipantIDs(participantIDs []ids.ParticipantID) []ids.ParticipantID {
 	seen := make(map[ids.ParticipantID]bool, len(participantIDs))
 	result := make([]ids.ParticipantID, 0, len(participantIDs))

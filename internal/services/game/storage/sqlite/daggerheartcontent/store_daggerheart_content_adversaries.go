@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -54,8 +55,8 @@ func (s *Store) PutDaggerheartAdversaryEntry(ctx context.Context, adversary cont
 		StandardAttackJson: string(attackJSON),
 		ExperiencesJson:    string(experiencesJSON),
 		FeaturesJson:       string(featuresJSON),
-		CreatedAt:          toMillis(adversary.CreatedAt),
-		UpdatedAt:          toMillis(adversary.UpdatedAt),
+		CreatedAt:          sqliteutil.ToMillis(adversary.CreatedAt),
+		UpdatedAt:          sqliteutil.ToMillis(adversary.UpdatedAt),
 	})
 }
 
@@ -158,8 +159,8 @@ func (s *Store) PutDaggerheartBeastform(ctx context.Context, beastform contentst
 		AttackJson:     string(attackJSON),
 		AdvantagesJson: string(advantagesJSON),
 		FeaturesJson:   string(featuresJSON),
-		CreatedAt:      toMillis(beastform.CreatedAt),
-		UpdatedAt:      toMillis(beastform.UpdatedAt),
+		CreatedAt:      sqliteutil.ToMillis(beastform.CreatedAt),
+		UpdatedAt:      sqliteutil.ToMillis(beastform.UpdatedAt),
 	})
 }
 
@@ -242,8 +243,8 @@ func (s *Store) PutDaggerheartCompanionExperience(ctx context.Context, experienc
 		ID:          experience.ID,
 		Name:        experience.Name,
 		Description: experience.Description,
-		CreatedAt:   toMillis(experience.CreatedAt),
-		UpdatedAt:   toMillis(experience.UpdatedAt),
+		CreatedAt:   sqliteutil.ToMillis(experience.CreatedAt),
+		UpdatedAt:   sqliteutil.ToMillis(experience.UpdatedAt),
 	})
 }
 

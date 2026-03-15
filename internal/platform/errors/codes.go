@@ -54,10 +54,7 @@ const (
 	CodeSnapshotGMFearExceedsCap Code = "SNAPSHOT_GM_FEAR_EXCEEDS_CAP"
 
 	// Outcome errors
-	CodeOutcomeAlreadyApplied    Code = "OUTCOME_ALREADY_APPLIED"
-	CodeOutcomeCharacterNotFound Code = "OUTCOME_CHARACTER_NOT_FOUND"
-	CodeOutcomeGMFearInvalid     Code = "OUTCOME_GM_FEAR_INVALID"
-
+	CodeOutcomeAlreadyApplied Code = "OUTCOME_ALREADY_APPLIED"
 	// Storage errors
 	CodeNotFound            Code = "NOT_FOUND"
 	CodeActiveSessionExists Code = "ACTIVE_SESSION_EXISTS"
@@ -89,9 +86,7 @@ const (
 	CodeDaggerheartResourceAtCap        Code = "DAGGERHEART_RESOURCE_AT_CAP"
 
 	// Fork errors
-	CodeForkEmptyCampaignID  Code = "FORK_EMPTY_CAMPAIGN_ID"
-	CodeForkInvalidForkPoint Code = "FORK_INVALID_FORK_POINT"
-	CodeForkPointInFuture    Code = "FORK_POINT_IN_FUTURE"
+	CodeForkEmptyCampaignID Code = "FORK_EMPTY_CAMPAIGN_ID"
 )
 
 // GRPCCode maps domain codes to gRPC status codes.
@@ -137,8 +132,7 @@ func (c Code) GRPCCode() codes.Code {
 		CodeDaggerheartInvalidExperience,
 		CodeDaggerheartInvalidRestSequence,
 		CodeDaggerheartUnknownResource,
-		CodeForkEmptyCampaignID,
-		CodeForkInvalidForkPoint:
+		CodeForkEmptyCampaignID:
 		return codes.InvalidArgument
 
 	// FailedPrecondition - state doesn't allow operation
@@ -146,19 +140,16 @@ func (c Code) GRPCCode() codes.Code {
 		CodeCampaignStatusDisallowsOp,
 		CodeActiveSessionExists,
 		CodeOutcomeAlreadyApplied,
-		CodeOutcomeGMFearInvalid,
 		CodeSnapshotInsufficientFear,
 		CodeSnapshotGMFearExceedsCap,
 		CodeDaggerheartInsufficientResource,
 		CodeDaggerheartResourceAtCap,
 		CodeInviteJoinGrantExpired,
-		CodeInviteJoinGrantUsed,
-		CodeForkPointInFuture:
+		CodeInviteJoinGrantUsed:
 		return codes.FailedPrecondition
 
 	// NotFound - resource doesn't exist
-	case CodeNotFound,
-		CodeOutcomeCharacterNotFound:
+	case CodeNotFound:
 		return codes.NotFound
 
 	// AlreadyExists - unique resource constraint

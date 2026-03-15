@@ -14,12 +14,11 @@ func TestNowFunc_ReturnsProvidedFunction(t *testing.T) {
 	}
 }
 
-func TestNowFunc_DefaultsToTimeNow(t *testing.T) {
-	before := time.Now()
-	fn := NowFunc(nil)
-	got := fn()
-	after := time.Now()
-	if got.Before(before) || got.After(after) {
-		t.Fatalf("NowFunc(nil)() = %v, want between %v and %v", got, before, after)
-	}
+func TestNowFunc_PanicsOnNil(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for nil now function")
+		}
+	}()
+	NowFunc(nil)
 }

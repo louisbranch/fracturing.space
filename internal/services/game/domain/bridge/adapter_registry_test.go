@@ -2,6 +2,7 @@ package bridge_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
@@ -51,6 +52,18 @@ func TestAdapterRegistryHas(t *testing.T) {
 			t.Error("Has() = false with empty version, want true (default version)")
 		}
 	})
+}
+
+func TestAdapterRegistryRegister_EmptyIDRejected(t *testing.T) {
+	reg := bridge.NewAdapterRegistry()
+	adapter := &stubAdapter{id: "", version: "1.0"}
+	err := reg.Register(adapter)
+	if err == nil {
+		t.Fatal("expected error for adapter with empty ID")
+	}
+	if !errors.Is(err, bridge.ErrAdapterIDRequired) {
+		t.Fatalf("error = %v, want %v", err, bridge.ErrAdapterIDRequired)
+	}
 }
 
 func TestAdapterRegistryGetOptional(t *testing.T) {

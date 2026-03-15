@@ -1,4 +1,4 @@
-package game
+package interactiontransport
 
 import (
 	"context"
@@ -17,9 +17,9 @@ type InteractionService struct {
 }
 
 // NewInteractionService creates an InteractionService with default dependencies.
-func NewInteractionService(stores Stores) *InteractionService {
+func NewInteractionService(deps Deps) *InteractionService {
 	return &InteractionService{
-		app: newInteractionApplicationWithDependencies(stores, id.NewID),
+		app: newInteractionApplicationWithDependencies(deps, id.NewID),
 	}
 }
 

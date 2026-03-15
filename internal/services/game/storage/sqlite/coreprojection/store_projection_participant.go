@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -40,8 +41,8 @@ func (s *Store) PutParticipant(ctx context.Context, p storage.ParticipantRecord)
 		AvatarSetID:    p.AvatarSetID,
 		AvatarAssetID:  p.AvatarAssetID,
 		Pronouns:       p.Pronouns,
-		CreatedAt:      toMillis(p.CreatedAt),
-		UpdatedAt:      toMillis(p.UpdatedAt),
+		CreatedAt:      sqliteutil.ToMillis(p.CreatedAt),
+		UpdatedAt:      sqliteutil.ToMillis(p.UpdatedAt),
 	}); err != nil {
 		if isParticipantUserConflict(err) {
 			return apperrors.WithMetadata(
@@ -220,7 +221,7 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 		if err != nil {
 			return storage.ParticipantPage{}, fmt.Errorf("list participants: %w", err)
 		}
-		participants, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.ListParticipantsByCampaignPagedFirstRow) string {
+		participants, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.ListParticipantsByCampaignPagedFirstRow) string {
 			return row.ID
 		}, dbListParticipantsByCampaignPagedFirstRowToDomain)
 		if err != nil {
@@ -239,7 +240,7 @@ func (s *Store) ListParticipants(ctx context.Context, campaignID string, pageSiz
 	if err != nil {
 		return storage.ParticipantPage{}, fmt.Errorf("list participants: %w", err)
 	}
-	participants, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.ListParticipantsByCampaignPagedRow) string {
+	participants, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.ListParticipantsByCampaignPagedRow) string {
 		return row.ID
 	}, dbListParticipantsByCampaignPagedRowToDomain)
 	if err != nil {

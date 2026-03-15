@@ -99,7 +99,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", status.Error(codes.InvalidArgument, "participant id is required")
 	}
 	participantID := strings.TrimSpace(in.GetParticipantId().GetValue())
-	policyActor, err := authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageCharacters, campaignRecord)
+	policyActor, err := authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageCharacters(), campaignRecord)
 	if err != nil {
 		return "", "", err
 	}

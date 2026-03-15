@@ -480,13 +480,7 @@ func TestOpenStorageBundleProjectionFailure(t *testing.T) {
 }
 
 func TestLoadServerEnvDomainEnabledDefaults(t *testing.T) {
-	key := "FRACTURING_SPACE_GAME_DOMAIN_ENABLED"
-	if val, ok := os.LookupEnv(key); ok {
-		t.Cleanup(func() { _ = os.Setenv(key, val) })
-	} else {
-		t.Cleanup(func() { _ = os.Unsetenv(key) })
-	}
-	_ = os.Unsetenv(key)
+	t.Setenv("FRACTURING_SPACE_GAME_DOMAIN_ENABLED", "")
 
 	cfg, err := loadServerEnv()
 	if err != nil {
@@ -498,13 +492,7 @@ func TestLoadServerEnvDomainEnabledDefaults(t *testing.T) {
 }
 
 func TestLoadServerEnvAuthAddrDefaultsToServiceDNS(t *testing.T) {
-	key := "FRACTURING_SPACE_AUTH_ADDR"
-	if val, ok := os.LookupEnv(key); ok {
-		t.Cleanup(func() { _ = os.Setenv(key, val) })
-	} else {
-		t.Cleanup(func() { _ = os.Unsetenv(key) })
-	}
-	_ = os.Unsetenv(key)
+	t.Setenv("FRACTURING_SPACE_AUTH_ADDR", "")
 
 	cfg, err := loadServerEnv()
 	if err != nil {
@@ -528,13 +516,7 @@ func TestLoadServerEnvDomainEnabled(t *testing.T) {
 }
 
 func TestLoadServerEnvProjectionApplyOutboxDefaults(t *testing.T) {
-	key := "FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED"
-	if val, ok := os.LookupEnv(key); ok {
-		t.Cleanup(func() { _ = os.Setenv(key, val) })
-	} else {
-		t.Cleanup(func() { _ = os.Unsetenv(key) })
-	}
-	_ = os.Unsetenv(key)
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_ENABLED", "")
 
 	cfg, err := loadServerEnv()
 	if err != nil {
@@ -559,13 +541,7 @@ func TestLoadServerEnvProjectionApplyOutboxEnabled(t *testing.T) {
 }
 
 func TestLoadServerEnvProjectionApplyOutboxShadowWorkerDefaults(t *testing.T) {
-	key := "FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED"
-	if val, ok := os.LookupEnv(key); ok {
-		t.Cleanup(func() { _ = os.Setenv(key, val) })
-	} else {
-		t.Cleanup(func() { _ = os.Unsetenv(key) })
-	}
-	_ = os.Unsetenv(key)
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_SHADOW_WORKER_ENABLED", "")
 
 	cfg, err := loadServerEnv()
 	if err != nil {
@@ -590,13 +566,7 @@ func TestLoadServerEnvProjectionApplyOutboxShadowWorkerEnabled(t *testing.T) {
 }
 
 func TestLoadServerEnvProjectionApplyOutboxWorkerDefaults(t *testing.T) {
-	key := "FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED"
-	if val, ok := os.LookupEnv(key); ok {
-		t.Cleanup(func() { _ = os.Setenv(key, val) })
-	} else {
-		t.Cleanup(func() { _ = os.Unsetenv(key) })
-	}
-	_ = os.Unsetenv(key)
+	t.Setenv("FRACTURING_SPACE_GAME_PROJECTION_APPLY_OUTBOX_WORKER_ENABLED", "")
 
 	cfg, err := loadServerEnv()
 	if err != nil {

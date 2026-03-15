@@ -10,6 +10,7 @@ import (
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteconn"
 	sqlitemigrate "github.com/louisbranch/fracturing.space/internal/platform/storage/sqlitemigrate"
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite/db"
 	"github.com/louisbranch/fracturing.space/internal/services/auth/storage/sqlite/migrations"
@@ -21,16 +22,6 @@ SELECT COUNT(*)
 FROM users
 WHERE (?1 IS NULL OR created_at >= ?1);
 `
-
-// toMillis normalizes timestamps into millisecond precision for storage.
-func toMillis(value time.Time) int64 {
-	return value.UTC().UnixMilli()
-}
-
-// fromMillis restores millisecond precision and keeps UTC normalization.
-func fromMillis(value int64) time.Time {
-	return time.UnixMilli(value).UTC()
-}
 
 // Store implements auth persistence over SQLite.
 //
@@ -90,7 +81,7 @@ func (s *Store) Close() error {
 
 // runMigrations applies embedded DDL snapshots for known schema versions.
 func (s *Store) runMigrations() error {
-	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "")
+	return sqlitemigrate.ApplyMigrations(s.sqlDB, migrations.FS, "", time.Now)
 }
 
 // extractUpMigration extracts only the upgrade section from a migration file.
@@ -112,7 +103,7 @@ func dbUserToDomain(row db.User) user.User {
 
 	var recoveryReservedUntil *time.Time
 	if row.RecoveryReservedUntil.Valid {
-		value := fromMillis(row.RecoveryReservedUntil.Int64)
+		value := sqliteutil.FromMillis(row.RecoveryReservedUntil.Int64)
 		recoveryReservedUntil = &value
 	}
 
@@ -123,9 +114,9 @@ func dbUserToDomain(row db.User) user.User {
 		RecoveryCodeHash:          row.RecoveryCodeHash,
 		RecoveryReservedSessionID: row.RecoveryReservedSessionID,
 		RecoveryReservedUntil:     recoveryReservedUntil,
-		RecoveryCodeUpdatedAt:     fromMillis(row.RecoveryCodeUpdatedAt),
-		CreatedAt:                 fromMillis(row.CreatedAt),
-		UpdatedAt:                 fromMillis(row.UpdatedAt),
+		RecoveryCodeUpdatedAt:     sqliteutil.FromMillis(row.RecoveryCodeUpdatedAt),
+		CreatedAt:                 sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:                 sqliteutil.FromMillis(row.UpdatedAt),
 	}
 }
 
@@ -153,15 +144,15 @@ func scanIntegrationOutboxEvent(scan integrationOutboxScanner) (storage.Integrat
 	); err != nil {
 		return storage.IntegrationOutboxEvent{}, err
 	}
-	event.NextAttemptAt = fromMillis(nextAttemptAt)
-	event.CreatedAt = fromMillis(createdAt)
-	event.UpdatedAt = fromMillis(updatedAt)
+	event.NextAttemptAt = sqliteutil.FromMillis(nextAttemptAt)
+	event.CreatedAt = sqliteutil.FromMillis(createdAt)
+	event.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if leaseExpiresAt.Valid {
-		value := fromMillis(leaseExpiresAt.Int64)
+		value := sqliteutil.FromMillis(leaseExpiresAt.Int64)
 		event.LeaseExpiresAt = &value
 	}
 	if processedAt.Valid {
-		value := fromMillis(processedAt.Int64)
+		value := sqliteutil.FromMillis(processedAt.Int64)
 		event.ProcessedAt = &value
 	}
 	return event, nil
@@ -211,11 +202,11 @@ func enqueueIntegrationOutboxEvent(ctx context.Context, target execContexter, ev
 
 	var leaseExpiresAt sql.NullInt64
 	if normalized.LeaseExpiresAt != nil {
-		leaseExpiresAt = sql.NullInt64{Int64: toMillis(normalized.LeaseExpiresAt.UTC()), Valid: true}
+		leaseExpiresAt = sql.NullInt64{Int64: sqliteutil.ToMillis(normalized.LeaseExpiresAt.UTC()), Valid: true}
 	}
 	var processedAt sql.NullInt64
 	if normalized.ProcessedAt != nil {
-		processedAt = sql.NullInt64{Int64: toMillis(normalized.ProcessedAt.UTC()), Valid: true}
+		processedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(normalized.ProcessedAt.UTC()), Valid: true}
 	}
 
 	_, err = target.ExecContext(ctx, `
@@ -242,13 +233,13 @@ ON CONFLICT(dedupe_key) WHERE dedupe_key <> '' DO NOTHING
 		normalized.DedupeKey,
 		normalized.Status,
 		normalized.AttemptCount,
-		toMillis(normalized.NextAttemptAt),
+		sqliteutil.ToMillis(normalized.NextAttemptAt),
 		normalized.LeaseOwner,
 		leaseExpiresAt,
 		normalized.LastError,
 		processedAt,
-		toMillis(normalized.CreatedAt),
-		toMillis(normalized.UpdatedAt),
+		sqliteutil.ToMillis(normalized.CreatedAt),
+		sqliteutil.ToMillis(normalized.UpdatedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("Enqueue integration outbox event: %w", err)

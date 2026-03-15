@@ -83,7 +83,3 @@ func hasSystemOwnedOutcomeEffect(effects []OutcomeAppliedEffect) bool {
 func hasDisallowedCoreOutcomeEffect(effects []OutcomeAppliedEffect) bool {
 	return coreOutcomeEffectPolicy.hasDisallowed(effects)
 }
-
-func isAllowedCoreOutcomeEffectType(effectType string) bool {
-	return coreOutcomeEffectPolicy.isAllowed(effectType)
-}

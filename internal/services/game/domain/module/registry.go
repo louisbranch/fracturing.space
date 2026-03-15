@@ -42,6 +42,11 @@ type Decider interface {
 // type with replay intent has a corresponding fold handler.
 // Named "Folder" (not "Applier") because it performs a pure state fold,
 // not a side-effecting projection write (projection.Applier.Apply).
+//
+// Intentionally defined at the consumption point (Go interface-at-consumer
+// pattern). Parallel definitions with a subset of methods exist at:
+//   - domain/replay.Folder (Fold only, replay path)
+//   - domain/engine.Folder (Fold only, engine execution path)
 type Folder interface {
 	Fold(state any, evt event.Event) (any, error)
 	FoldHandledTypes() []event.Type

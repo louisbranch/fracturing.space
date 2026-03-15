@@ -14,20 +14,6 @@ const (
 	PostPersistStageCheckpoint PostPersistStage = "checkpoint"
 )
 
-// nonRetryableError wraps an error to signal that retrying the operation
-// would be harmful (e.g. duplicate event creation after a post-persist
-// fold failure). Transport middleware should use IsNonRetryable to detect
-// this condition and return a permanent failure instead of a retry hint.
-type nonRetryableError struct {
-	err error
-}
-
-func (e *nonRetryableError) Error() string { return e.err.Error() }
-func (e *nonRetryableError) Unwrap() error { return e.err }
-
-// NonRetryable returns true from IsNonRetryable checks.
-func (e *nonRetryableError) NonRetryable() bool { return true }
-
 // PostPersistError captures failures that happen after events were already
 // appended to the authoritative journal.
 //
@@ -56,14 +42,6 @@ func (e *PostPersistError) Unwrap() error {
 
 // NonRetryable returns true from IsNonRetryable checks.
 func (e *PostPersistError) NonRetryable() bool { return true }
-
-// wrapNonRetryable marks an error as non-retryable.
-func wrapNonRetryable(err error) error {
-	if err == nil {
-		return nil
-	}
-	return &nonRetryableError{err: err}
-}
 
 func newPostPersistError(stage PostPersistStage, campaignID string, lastSeq uint64, err error) error {
 	if err == nil {

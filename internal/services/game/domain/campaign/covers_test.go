@@ -2,23 +2,12 @@ package campaign
 
 import "testing"
 
-func TestIsCampaignCoverAssetID_AcceptsAllConfiguredPNGAssets(t *testing.T) {
-	for _, coverAssetID := range campaignCoverAssetCatalog {
-		if !isCampaignCoverAssetID(coverAssetID) {
-			t.Fatalf("expected %q to be a valid campaign cover asset id", coverAssetID)
-		}
-	}
-}
-
-func TestIsCampaignCoverAssetID_RejectsLegacySVGIDs(t *testing.T) {
-	if isCampaignCoverAssetID("camp-cover-01") {
-		t.Fatal("expected camp-cover-01 to be rejected after migrating to PNG cover ids")
-	}
-}
-
-func TestIsCampaignCoverAssetID_RejectsBlankValues(t *testing.T) {
-	if isCampaignCoverAssetID("   ") {
+func TestNormalizeCampaignCoverAssetID_RejectsBlankAndLegacyValues(t *testing.T) {
+	if _, ok := normalizeCampaignCoverAssetID("   "); ok {
 		t.Fatal("expected blank cover ids to be rejected")
+	}
+	if _, ok := normalizeCampaignCoverAssetID("camp-cover-01"); ok {
+		t.Fatal("expected legacy SVG cover ids to be rejected")
 	}
 }
 
@@ -48,7 +37,7 @@ func TestDefaultCampaignCoverAssetID_IsDeterministicForCampaignID(t *testing.T) 
 	if first != second {
 		t.Fatalf("defaultCampaignCoverAssetID mismatch: %q vs %q", first, second)
 	}
-	if !isCampaignCoverAssetID(first) {
+	if _, ok := normalizeCampaignCoverAssetID(first); !ok {
 		t.Fatalf("expected deterministic default %q to be in catalog", first)
 	}
 }

@@ -15,13 +15,6 @@ func TestForkPointIsSessionBoundary(t *testing.T) {
 	}
 }
 
-func TestForkRequestValidate_RejectsWhitespaceSourceCampaignID(t *testing.T) {
-	err := (ForkRequest{SourceCampaignID: "   "}).Validate()
-	if !errors.Is(err, ErrEmptyCampaignID) {
-		t.Fatalf("expected ErrEmptyCampaignID, got %v", err)
-	}
-}
-
 func TestCreateFork_RejectsMissingSourceCampaignID(t *testing.T) {
 	_, err := CreateFork(
 		CreateForkInput{SourceCampaignID: "   "},
@@ -35,25 +28,19 @@ func TestCreateFork_RejectsMissingSourceCampaignID(t *testing.T) {
 	}
 }
 
-func TestCreateFork_UsesDefaultNowWhenNil(t *testing.T) {
-	before := time.Now().UTC()
-	result, err := CreateFork(
+func TestCreateFork_PanicsOnNilNow(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Fatal("expected panic for nil now function")
+		}
+	}()
+	_, _ = CreateFork(
 		CreateForkInput{SourceCampaignID: "camp-1"},
 		"origin-1",
 		1,
 		nil,
 		func() (string, error) { return "fork-1", nil },
 	)
-	after := time.Now().UTC()
-	if err != nil {
-		t.Fatalf("CreateFork() unexpected error: %v", err)
-	}
-	if result.NewCampaignID != "fork-1" {
-		t.Fatalf("NewCampaignID = %q, want fork-1", result.NewCampaignID)
-	}
-	if result.CreatedAt.Before(before) || result.CreatedAt.After(after) {
-		t.Fatalf("CreatedAt = %s, expected within [%s, %s]", result.CreatedAt, before, after)
-	}
 }
 
 func TestCreateFork_UsesDefaultIDGeneratorWhenNil(t *testing.T) {

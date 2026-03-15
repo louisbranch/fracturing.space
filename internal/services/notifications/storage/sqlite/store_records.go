@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/notifications/storage"
 )
 
@@ -85,7 +86,7 @@ func normalizeDeliveryRecord(record storage.DeliveryRecord) (storage.DeliveryRec
 func putNotificationExec(ctx context.Context, execer sqlExecer, record storage.NotificationRecord) error {
 	var readAt sql.NullInt64
 	if record.ReadAt != nil {
-		readAt = sql.NullInt64{Int64: toMillis(*record.ReadAt), Valid: true}
+		readAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.ReadAt), Valid: true}
 	}
 
 	_, err := execer.ExecContext(ctx, `
@@ -108,8 +109,8 @@ func putNotificationExec(ctx context.Context, execer sqlExecer, record storage.N
 		record.PayloadJSON,
 		record.DedupeKey,
 		record.Source,
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
 		readAt,
 	)
 	if err != nil {
@@ -124,7 +125,7 @@ func putNotificationExec(ctx context.Context, execer sqlExecer, record storage.N
 func putDeliveryExec(ctx context.Context, execer sqlExecer, record storage.DeliveryRecord) error {
 	var deliveredAt sql.NullInt64
 	if record.DeliveredAt != nil {
-		deliveredAt = sql.NullInt64{Int64: toMillis(*record.DeliveredAt), Valid: true}
+		deliveredAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.DeliveredAt), Valid: true}
 	}
 
 	_, err := execer.ExecContext(ctx, `
@@ -143,10 +144,10 @@ func putDeliveryExec(ctx context.Context, execer sqlExecer, record storage.Deliv
 		record.Channel,
 		record.Status,
 		record.AttemptCount,
-		toMillis(record.NextAttemptAt),
+		sqliteutil.ToMillis(record.NextAttemptAt),
 		record.LastError,
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
 		deliveredAt,
 	)
 	if err != nil {
@@ -176,10 +177,10 @@ func scanNotification(scan scanner) (storage.NotificationRecord, error) {
 	); err != nil {
 		return storage.NotificationRecord{}, err
 	}
-	record.CreatedAt = fromMillis(createdAt)
-	record.UpdatedAt = fromMillis(updatedAt)
+	record.CreatedAt = sqliteutil.FromMillis(createdAt)
+	record.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if readAt.Valid {
-		value := fromMillis(readAt.Int64)
+		value := sqliteutil.FromMillis(readAt.Int64)
 		record.ReadAt = &value
 	}
 	return record, nil
@@ -225,11 +226,11 @@ func scanDelivery(scan scanner) (storage.DeliveryRecord, error) {
 	); err != nil {
 		return storage.DeliveryRecord{}, err
 	}
-	record.NextAttemptAt = fromMillis(nextAttemptAt)
-	record.CreatedAt = fromMillis(createdAt)
-	record.UpdatedAt = fromMillis(updatedAt)
+	record.NextAttemptAt = sqliteutil.FromMillis(nextAttemptAt)
+	record.CreatedAt = sqliteutil.FromMillis(createdAt)
+	record.UpdatedAt = sqliteutil.FromMillis(updatedAt)
 	if deliveredAt.Valid {
-		value := fromMillis(deliveredAt.Int64)
+		value := sqliteutil.FromMillis(deliveredAt.Int64)
 		record.DeliveredAt = &value
 	}
 	return record, nil

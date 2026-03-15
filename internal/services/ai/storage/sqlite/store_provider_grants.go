@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 )
 
@@ -41,15 +42,15 @@ func (s *Store) PutProviderGrant(ctx context.Context, record storage.ProviderGra
 
 	var revokedAt sql.NullInt64
 	if record.RevokedAt != nil {
-		revokedAt = sql.NullInt64{Int64: toMillis(*record.RevokedAt), Valid: true}
+		revokedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.RevokedAt), Valid: true}
 	}
 	var expiresAt sql.NullInt64
 	if record.ExpiresAt != nil {
-		expiresAt = sql.NullInt64{Int64: toMillis(*record.ExpiresAt), Valid: true}
+		expiresAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.ExpiresAt), Valid: true}
 	}
 	var lastRefreshedAt sql.NullInt64
 	if record.LastRefreshedAt != nil {
-		lastRefreshedAt = sql.NullInt64{Int64: toMillis(*record.LastRefreshedAt), Valid: true}
+		lastRefreshedAt = sql.NullInt64{Int64: sqliteutil.ToMillis(*record.LastRefreshedAt), Valid: true}
 	}
 
 	_, err = s.sqlDB.ExecContext(ctx, `
@@ -77,8 +78,8 @@ ON CONFLICT(id) DO UPDATE SET
 		record.RefreshSupported,
 		record.Status,
 		record.LastRefreshError,
-		toMillis(record.CreatedAt),
-		toMillis(record.UpdatedAt),
+		sqliteutil.ToMillis(record.CreatedAt),
+		sqliteutil.ToMillis(record.UpdatedAt),
 		revokedAt,
 		expiresAt,
 		lastRefreshedAt,
@@ -210,7 +211,7 @@ func (s *Store) RevokeProviderGrant(ctx context.Context, ownerUserID string, pro
 UPDATE ai_provider_grants
 SET status = 'revoked', updated_at = ?, revoked_at = ?
 WHERE owner_user_id = ? AND id = ?
-`, toMillis(updatedAt), toMillis(revokedAt.UTC()), ownerUserID, providerGrantID)
+`, sqliteutil.ToMillis(updatedAt), sqliteutil.ToMillis(revokedAt.UTC()), ownerUserID, providerGrantID)
 	if err != nil {
 		return fmt.Errorf("revoke provider grant: %w", err)
 	}
@@ -251,13 +252,13 @@ func (s *Store) UpdateProviderGrantToken(ctx context.Context, ownerUserID string
 
 	var expiresAtValue sql.NullInt64
 	if expiresAt != nil {
-		expiresAtValue = sql.NullInt64{Int64: toMillis(expiresAt.UTC()), Valid: true}
+		expiresAtValue = sql.NullInt64{Int64: sqliteutil.ToMillis(expiresAt.UTC()), Valid: true}
 	}
 	res, err := s.sqlDB.ExecContext(ctx, `
 UPDATE ai_provider_grants
 SET token_ciphertext = ?, status = ?, last_refresh_error = ?, updated_at = ?, expires_at = ?, last_refreshed_at = ?
 WHERE owner_user_id = ? AND id = ?
-`, tokenCiphertext, status, strings.TrimSpace(lastRefreshError), toMillis(refreshedAt.UTC()), expiresAtValue, toMillis(refreshedAt.UTC()), ownerUserID, providerGrantID)
+`, tokenCiphertext, status, strings.TrimSpace(lastRefreshError), sqliteutil.ToMillis(refreshedAt.UTC()), expiresAtValue, sqliteutil.ToMillis(refreshedAt.UTC()), ownerUserID, providerGrantID)
 	if err != nil {
 		return fmt.Errorf("update provider grant token: %w", err)
 	}

@@ -433,18 +433,6 @@ func hasCharacterStateChange(payload CharacterStatePatchPayload) bool {
 		hasStringFieldChange(payload.LifeStateBefore, payload.LifeStateAfter)
 }
 
-func hasConditionListMutation(before, after []string) bool {
-	beforeNormalized, err := NormalizeConditions(before)
-	if err != nil {
-		return true
-	}
-	afterNormalized, err := NormalizeConditions(after)
-	if err != nil {
-		return true
-	}
-	return !ConditionsEqual(beforeNormalized, afterNormalized)
-}
-
 func hasRestCharacterStateMutation(payload RestCharacterStatePatch) bool {
 	return hasIntFieldChange(payload.HopeBefore, payload.HopeAfter) ||
 		hasIntFieldChange(payload.StressBefore, payload.StressAfter) ||

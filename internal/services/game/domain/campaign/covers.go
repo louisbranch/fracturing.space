@@ -12,11 +12,6 @@ var campaignCoverManifest = catalog.CampaignCoverManifest()
 
 var campaignCoverAssetCatalog = campaignCoverManifest.Sets[defaultCampaignCoverSetID].AssetIDs
 
-func isCampaignCoverAssetID(raw string) bool {
-	_, ok := normalizeCampaignCoverAssetID(raw)
-	return ok
-}
-
 func normalizeCampaignCoverAssetID(raw string) (string, bool) {
 	coverAssetID := campaignCoverManifest.NormalizeAssetID(raw)
 	if coverAssetID == "" {
