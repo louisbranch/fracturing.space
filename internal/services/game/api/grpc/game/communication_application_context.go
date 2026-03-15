@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"sort"
 	"strings"
@@ -31,11 +33,11 @@ func (a communicationApplication) GetCommunicationContext(ctx context.Context, c
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, campaignRecord); err != nil {
 		return nil, err
 	}
 
-	actor, _, err := resolvePolicyActor(ctx, a.stores.Participant, campaignID)
+	actor, _, err := authz.ResolvePolicyActor(ctx, a.stores.Participant, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +60,7 @@ func (a communicationApplication) GetCommunicationContext(ctx context.Context, c
 	contextState := &campaignv1.CommunicationContext{
 		CampaignId:       campaignRecord.ID,
 		CampaignName:     campaignRecord.Name,
-		Locale:           campaignRecord.Locale,
+		Locale:           campaigntransport.LocaleStringToProto(campaignRecord.Locale),
 		GmMode:           campaigntransport.GMModeToProto(campaignRecord.GmMode),
 		AiAgentId:        campaignRecord.AIAgentID,
 		Participant:      communicationParticipantToProto(actor),

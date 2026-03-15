@@ -7,7 +7,6 @@ import (
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
@@ -764,7 +763,7 @@ func TestCreateParticipant_UserLinkedMissingNameFallsBackToAuthUsernameForLocale
 	campaignStore.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Status: campaign.StatusActive,
-		Locale: commonv1.Locale_LOCALE_PT_BR,
+		Locale: "pt-BR",
 	}
 
 	eventStore := newFakeEventStore()

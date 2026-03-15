@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -13,7 +15,7 @@ import (
 // participantApplication coordinates participant transport use-cases across
 // focused method files (create, update, delete, and policy helpers).
 type participantApplication struct {
-	auth        policyDependencies
+	auth        authz.PolicyDeps
 	stores      participantApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -36,7 +38,7 @@ func newParticipantApplicationWithDependencies(
 	authClient authv1.AuthServiceClient,
 ) participantApplication {
 	app := participantApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: participantApplicationStores{
 			Campaign:    stores.Campaign,
 			Participant: stores.Participant,

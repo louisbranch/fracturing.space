@@ -1,4 +1,4 @@
-package game
+package authz
 
 import (
 	"context"
@@ -9,7 +9,9 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-func adminOverrideFromContext(ctx context.Context) (string, bool) {
+// AdminOverrideFromContext checks whether the request carries an admin
+// platform-role override header and returns the stated reason.
+func AdminOverrideFromContext(ctx context.Context) (string, bool) {
 	if ctx == nil {
 		return "", false
 	}
@@ -17,26 +19,29 @@ func adminOverrideFromContext(ctx context.Context) (string, bool) {
 	if !ok {
 		return "", false
 	}
-	role := strings.ToUpper(strings.TrimSpace(grpcmeta.FirstMetadataValue(md, authzPlatformRoleHeader)))
-	if role != authzPlatformRoleAdmin {
+	role := strings.ToUpper(strings.TrimSpace(grpcmeta.FirstMetadataValue(md, PlatformRoleHeader)))
+	if role != PlatformRoleAdmin {
 		return "", false
 	}
-	reason := strings.TrimSpace(grpcmeta.FirstMetadataValue(md, authzOverrideReasonHeader))
+	reason := strings.TrimSpace(grpcmeta.FirstMetadataValue(md, OverrideReasonHeader))
 	return reason, true
 }
 
-func authzDecisionForReason(reasonCode string) string {
-	if reasonCode == authzReasonAllowAdminOverride {
-		return authzDecisionOverride
+// DecisionForReason maps a reason code to the high-level decision label.
+func DecisionForReason(reasonCode string) string {
+	if reasonCode == ReasonAllowAdminOverride {
+		return DecisionOverride
 	}
-	return authzDecisionAllow
+	return DecisionAllow
 }
 
-func authzExtraAttributesForReason(ctx context.Context, reasonCode string) map[string]any {
-	if reasonCode != authzReasonAllowAdminOverride {
+// ExtraAttributesForReason returns override-specific audit attributes when the
+// reason code indicates an admin override.
+func ExtraAttributesForReason(ctx context.Context, reasonCode string) map[string]any {
+	if reasonCode != ReasonAllowAdminOverride {
 		return nil
 	}
-	reason, requested := adminOverrideFromContext(ctx)
+	reason, requested := AdminOverrideFromContext(ctx)
 	if !requested || reason == "" {
 		return nil
 	}
@@ -48,7 +53,8 @@ func authzExtraAttributesForReason(ctx context.Context, reasonCode string) map[s
 	}
 }
 
-func mergeAuthzAttributes(attributes ...map[string]any) map[string]any {
+// MergeAttributes merges multiple attribute maps into one.
+func MergeAttributes(attributes ...map[string]any) map[string]any {
 	var merged map[string]any
 	for _, attrs := range attributes {
 		if len(attrs) == 0 {
@@ -64,7 +70,8 @@ func mergeAuthzAttributes(attributes ...map[string]any) map[string]any {
 	return merged
 }
 
-func policyCapabilityLabel(capability domainauthz.Capability) string {
+// PolicyCapabilityLabel returns a human-readable label for a capability.
+func PolicyCapabilityLabel(capability domainauthz.Capability) string {
 	switch capability {
 	case domainauthz.CapabilityManageParticipants:
 		return "manage_participants"

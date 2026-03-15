@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -46,8 +47,8 @@ func TestRotateCampaignAIAuthEpochSuccess(t *testing.T) {
 	if domain.calls != 1 {
 		t.Fatalf("domain calls = %d, want %d", domain.calls, 1)
 	}
-	if got := string(domain.lastCommand.Type); got != string(commandTypeCampaignAIAuthRotate) {
-		t.Fatalf("command type = %q, want %q", got, string(commandTypeCampaignAIAuthRotate))
+	if got := string(domain.lastCommand.Type); got != string(handler.CommandTypeCampaignAIAuthRotate) {
+		t.Fatalf("command type = %q, want %q", got, string(handler.CommandTypeCampaignAIAuthRotate))
 	}
 	if domain.lastCommand.ActorID != "actor-1" || domain.lastCommand.ActorType != command.ActorTypeParticipant {
 		t.Fatalf("unexpected actor in command: %+v", domain.lastCommand)

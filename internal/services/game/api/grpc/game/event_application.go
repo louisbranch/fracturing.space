@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"strings"
 	"time"
@@ -27,7 +30,7 @@ const (
 )
 
 type eventApplication struct {
-	auth   policyDependencies
+	auth   authz.PolicyDeps
 	stores eventApplicationStores
 	write  domainwriteexec.WritePath
 	clock  func() time.Time
@@ -50,7 +53,7 @@ func newEventApplication(service *EventService) eventApplication {
 
 func newEventApplicationWithDependencies(stores Stores, clock func() time.Time) eventApplication {
 	app := eventApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: eventApplicationStores{
 			Event:       stores.Event,
 			Campaign:    stores.Campaign,
@@ -95,7 +98,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 	cmd := commandbuild.Core(commandbuild.CoreInput{
 		CampaignID:   string(input.CampaignID),
 		Type:         cmdType,
-		ActorType:    commandActorTypeForEventActor(input.ActorType),
+		ActorType:    handler.CommandActorTypeForEventActor(input.ActorType),
 		ActorID:      input.ActorID,
 		SessionID:    input.SessionID.String(),
 		SceneID:      input.SceneID.String(),
@@ -105,7 +108,7 @@ func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.Append
 		EntityID:     input.EntityID,
 		PayloadJSON:  input.PayloadJSON,
 	})
-	result, err := executeDomainCommandWithoutInlineApply(ctx, a.write, cmd, domainwrite.Options{
+	result, err := handler.ExecuteWithoutInlineApply(ctx, a.write, cmd, domainwrite.Options{
 		RequireEvents:   true,
 		MissingEventMsg: "append event did not emit an event",
 		ExecuteErr: func(err error) error {
@@ -146,14 +149,14 @@ func appendEventScopeAllowed(ctx context.Context) bool {
 
 func domainCommandTypeForEvent(eventType event.Type) (command.Type, bool) {
 	switch eventType {
-	case eventTypeStoryNoteAdded:
-		return commandTypeStoryNoteAdd, true
-	case eventTypeActionRollResolved:
-		return commandTypeActionRollResolve, true
-	case eventTypeActionOutcomeApplied:
-		return commandTypeActionOutcomeApply, true
-	case eventTypeActionOutcomeRejected:
-		return commandTypeActionOutcomeReject, true
+	case handler.EventTypeStoryNoteAdded:
+		return handler.CommandTypeStoryNoteAdd, true
+	case handler.EventTypeActionRollResolved:
+		return handler.CommandTypeActionRollResolve, true
+	case handler.EventTypeActionOutcomeApplied:
+		return handler.CommandTypeActionOutcomeApply, true
+	case handler.EventTypeActionOutcomeRejected:
+		return handler.CommandTypeActionOutcomeReject, true
 	default:
 		return "", false
 	}

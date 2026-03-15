@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -10,7 +12,7 @@ import (
 // lifecycle, gate, spotlight, and read files using a narrow dependency bundle
 // plus explicit session-owned command executors for write paths.
 type sessionApplication struct {
-	auth         policyDependencies
+	auth         authz.PolicyDeps
 	stores       sessionApplicationStores
 	commands     sessionCommandExecutor
 	gateCommands sessionGateCommandExecutor
@@ -35,7 +37,7 @@ func newSessionApplication(service *SessionService) sessionApplication {
 
 func newSessionApplicationWithDependencies(stores Stores, clock func() time.Time, idGenerator func() (string, error)) sessionApplication {
 	app := sessionApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: sessionApplicationStores{
 			Campaign:         stores.Campaign,
 			Participant:      stores.Participant,

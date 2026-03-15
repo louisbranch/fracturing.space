@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"time"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
@@ -10,7 +12,7 @@ import (
 )
 
 type forkApplication struct {
-	auth        policyDependencies
+	auth        authz.PolicyDeps
 	stores      forkApplicationStores
 	eventReplay forkEventReplay
 	write       domainwriteexec.WritePath
@@ -35,7 +37,7 @@ func newForkApplicationWithDependencies(
 	idGenerator func() (string, error),
 ) forkApplication {
 	app := forkApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: forkApplicationStores{
 			Campaign:     stores.Campaign,
 			Participant:  stores.Participant,

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
@@ -380,8 +381,8 @@ func TestTransitionScene_UsesSourceSceneSessionID(t *testing.T) {
 		Name:          "Room B",
 	})
 
-	if domain.lastCommand.Type != commandTypeSceneTransition {
-		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandTypeSceneTransition)
+	if domain.lastCommand.Type != handler.CommandTypeSceneTransition {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, handler.CommandTypeSceneTransition)
 	}
 	if domain.lastCommand.SessionID != "sess-1" {
 		t.Fatalf("command session id = %q, want %q", domain.lastCommand.SessionID, "sess-1")

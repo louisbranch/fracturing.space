@@ -1,8 +1,9 @@
-package game
+package authz
 
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -15,25 +16,25 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type authzParticipantStore struct {
+type testParticipantStore struct {
 	get            func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error)
 	listByCampaign func(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error)
 }
 
-type authzAuditStore struct {
+type testAuditStore struct {
 	events []storage.AuditEvent
 	err    error
 }
 
-func authzCampaignRecord() storage.CampaignRecord {
+func testCampaignRecord() storage.CampaignRecord {
 	return storage.CampaignRecord{}
 }
 
-func authzParticipantWithAccess(access participant.CampaignAccess) storage.ParticipantRecord {
+func testParticipantWithAccess(access participant.CampaignAccess) storage.ParticipantRecord {
 	return storage.ParticipantRecord{CampaignAccess: access}
 }
 
-func (s *authzAuditStore) AppendAuditEvent(_ context.Context, evt storage.AuditEvent) error {
+func (s *testAuditStore) AppendAuditEvent(_ context.Context, evt storage.AuditEvent) error {
 	if s.err != nil {
 		return s.err
 	}
@@ -41,162 +42,218 @@ func (s *authzAuditStore) AppendAuditEvent(_ context.Context, evt storage.AuditE
 	return nil
 }
 
-func (f authzParticipantStore) PutParticipant(ctx context.Context, p storage.ParticipantRecord) error {
+func (f testParticipantStore) PutParticipant(ctx context.Context, p storage.ParticipantRecord) error {
 	return nil
 }
 
-func (f authzParticipantStore) GetParticipant(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+func (f testParticipantStore) GetParticipant(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 	if f.get == nil {
 		return storage.ParticipantRecord{}, errors.New("missing handler")
 	}
 	return f.get(ctx, campaignID, participantID)
 }
 
-func (f authzParticipantStore) DeleteParticipant(ctx context.Context, campaignID, participantID string) error {
+func (f testParticipantStore) DeleteParticipant(ctx context.Context, campaignID, participantID string) error {
 	return nil
 }
 
-func (f authzParticipantStore) ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
+func (f testParticipantStore) ListParticipantsByCampaign(ctx context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
 	if f.listByCampaign == nil {
 		return nil, nil
 	}
 	return f.listByCampaign(ctx, campaignID)
 }
 
-func (f authzParticipantStore) ListCampaignIDsByUser(ctx context.Context, userID string) ([]string, error) {
+func (f testParticipantStore) ListCampaignIDsByUser(ctx context.Context, userID string) ([]string, error) {
 	return nil, nil
 }
 
-func (f authzParticipantStore) ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error) {
+func (f testParticipantStore) ListCampaignIDsByParticipant(ctx context.Context, participantID string) ([]string, error) {
 	return nil, nil
 }
 
-func (f authzParticipantStore) CountParticipants(ctx context.Context, campaignID string) (int, error) {
+func (f testParticipantStore) CountParticipants(ctx context.Context, campaignID string) (int, error) {
 	return 0, nil
 }
 
-func (f authzParticipantStore) ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ParticipantPage, error) {
+func (f testParticipantStore) ListParticipants(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.ParticipantPage, error) {
 	return storage.ParticipantPage{}, nil
 }
 
+// testCharacterStore is a minimal in-memory character store for authz tests.
+type testCharacterStore struct {
+	characters map[string]map[string]storage.CharacterRecord
+}
+
+func newTestCharacterStore() *testCharacterStore {
+	return &testCharacterStore{characters: map[string]map[string]storage.CharacterRecord{}}
+}
+
+func (s *testCharacterStore) PutCharacter(_ context.Context, r storage.CharacterRecord) error {
+	camp := s.characters[r.CampaignID]
+	if camp == nil {
+		camp = map[string]storage.CharacterRecord{}
+		s.characters[r.CampaignID] = camp
+	}
+	camp[r.ID] = r
+	return nil
+}
+
+func (s *testCharacterStore) GetCharacter(_ context.Context, campaignID, characterID string) (storage.CharacterRecord, error) {
+	camp := s.characters[campaignID]
+	if camp == nil {
+		return storage.CharacterRecord{}, storage.ErrNotFound
+	}
+	r, ok := camp[characterID]
+	if !ok {
+		return storage.CharacterRecord{}, storage.ErrNotFound
+	}
+	return r, nil
+}
+
+func (s *testCharacterStore) DeleteCharacter(context.Context, string, string) error { return nil }
+
+func (s *testCharacterStore) ListCharacters(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error) {
+	camp := s.characters[campaignID]
+	var chars []storage.CharacterRecord
+	for _, c := range camp {
+		chars = append(chars, c)
+	}
+	return storage.CharacterPage{Characters: chars}, nil
+}
+
+func (s *testCharacterStore) CountCharacters(_ context.Context, campaignID string) (int, error) {
+	return len(s.characters[campaignID]), nil
+}
+
+func (s *testCharacterStore) ListCharactersByOwnerParticipant(_ context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error) {
+	var result []storage.CharacterRecord
+	for _, c := range s.characters[campaignID] {
+		if c.OwnerParticipantID == participantID {
+			result = append(result, c)
+		}
+	}
+	return result, nil
+}
+
 func TestRequirePolicyMissingActor(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{}}
-	err := requirePolicy(context.Background(), stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
+	deps := PolicyDeps{Participant: testParticipantStore{}}
+	err := RequirePolicy(context.Background(), deps, domainauthz.CapabilityManageParticipants, testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
 }
 
 func TestRequirePolicyNotFound(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 		return storage.ParticipantRecord{}, storage.ErrNotFound
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants, testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
 }
 
 func TestRequirePolicyLoadError(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 		return storage.ParticipantRecord{}, errors.New("boom")
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants, testCampaignRecord())
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("expected internal error, got %v", err)
 	}
 }
 
 func TestRequirePolicyDenied(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return authzParticipantWithAccess(participant.CampaignAccessMember), nil
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+		return testParticipantWithAccess(participant.CampaignAccessMember), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants, testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
 }
 
 func TestRequirePolicyAllowed(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return authzParticipantWithAccess(participant.CampaignAccessOwner), nil
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+		return testParticipantWithAccess(participant.CampaignAccessOwner), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants, testCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
 
 func TestRequirePolicyCampaignManageAllowedForManager(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return authzParticipantWithAccess(participant.CampaignAccessManager), nil
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+		return testParticipantWithAccess(participant.CampaignAccessManager), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageCampaign, testCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
 
 func TestRequirePolicyCampaignManageAllowedForOwner(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return authzParticipantWithAccess(participant.CampaignAccessOwner), nil
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+		return testParticipantWithAccess(participant.CampaignAccessOwner), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageCampaign, testCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
 
 func TestRequirePolicySessionManageAllowedForManager(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return authzParticipantWithAccess(participant.CampaignAccessManager), nil
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+		return testParticipantWithAccess(participant.CampaignAccessManager), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageSessions, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageSessions, testCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
 
 func TestRequirePolicySessionManageDeniedForMember(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return authzParticipantWithAccess(participant.CampaignAccessMember), nil
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+		return testParticipantWithAccess(participant.CampaignAccessMember), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageSessions, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageSessions, testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
 }
 
 func TestRequirePolicyCharacterManageAllowedForMember(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
-		return authzParticipantWithAccess(participant.CampaignAccessMember), nil
+	deps := PolicyDeps{Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+		return testParticipantWithAccess(participant.CampaignAccessMember), nil
 	}}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "participant"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityMutateCharacters, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityMutateCharacters, testCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
 
 func TestRequirePolicyAllowsOwnerByUserIDFallback(t *testing.T) {
-	stores := Stores{Participant: authzParticipantStore{
+	deps := PolicyDeps{Participant: testParticipantStore{
 		get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 			return storage.ParticipantRecord{}, storage.ErrNotFound
 		},
@@ -212,16 +269,16 @@ func TestRequirePolicyAllowsOwnerByUserIDFallback(t *testing.T) {
 	}}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-1"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageCampaign, testCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 }
 
 func TestRequirePolicyTelemetryDenied(t *testing.T) {
-	auditStore := &authzAuditStore{}
-	stores := Stores{
-		Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+	auditStore := &testAuditStore{}
+	deps := PolicyDeps{
+		Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 			return storage.ParticipantRecord{
 				ID:             "member-1",
 				CampaignID:     campaignID,
@@ -232,7 +289,7 @@ func TestRequirePolicyTelemetryDenied(t *testing.T) {
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
 
-	err := requirePolicy(ctx, stores, domainauthz.CapabilityManageParticipants, authzCampaignRecord())
+	err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageParticipants, testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -252,9 +309,9 @@ func TestRequirePolicyTelemetryDenied(t *testing.T) {
 }
 
 func TestRequirePolicyTelemetryAllowed(t *testing.T) {
-	auditStore := &authzAuditStore{}
-	stores := Stores{
-		Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+	auditStore := &testAuditStore{}
+	deps := PolicyDeps{
+		Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 			return storage.ParticipantRecord{
 				ID:             "owner-1",
 				CampaignID:     campaignID,
@@ -265,7 +322,7 @@ func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "owner-1"))
 
-	if err := requirePolicy(ctx, stores, domainauthz.CapabilityManageCampaign, authzCampaignRecord()); err != nil {
+	if err := RequirePolicy(ctx, deps, domainauthz.CapabilityManageCampaign, testCampaignRecord()); err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	if len(auditStore.events) != 1 {
@@ -281,19 +338,19 @@ func TestRequirePolicyTelemetryAllowed(t *testing.T) {
 }
 
 func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
-	auditStore := &authzAuditStore{}
-	characterStore := newFakeCharacterStore()
+	auditStore := &testAuditStore{}
+	characterStore := newTestCharacterStore()
 	if err := characterStore.PutCharacter(context.Background(), storage.CharacterRecord{
-		ID:            "char-1",
-		CampaignID:    "camp",
-		ParticipantID: "member-owner",
-		Name:          "Hero",
+		ID:                 "char-1",
+		CampaignID:         "camp",
+		OwnerParticipantID: "member-owner",
+		Name:               "Hero",
 	}); err != nil {
 		t.Fatalf("put character: %v", err)
 	}
 
-	stores := Stores{
-		Participant: authzParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+	deps := PolicyDeps{
+		Participant: testParticipantStore{get: func(ctx context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
 			return storage.ParticipantRecord{
 				ID:             "member-1",
 				CampaignID:     campaignID,
@@ -305,10 +362,10 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ParticipantIDHeader, "member-1"))
 
-	_, err := requireCharacterMutationPolicy(
+	_, err := RequireCharacterMutationPolicy(
 		ctx,
-		stores,
-		authzCampaignRecord(),
+		deps,
+		testCampaignRecord(),
 		"char-1",
 	)
 	if status.Code(err) != codes.PermissionDenied {
@@ -327,14 +384,14 @@ func TestRequireCharacterMutationPolicyTelemetryDeniedNotOwner(t *testing.T) {
 }
 
 func TestRequirePolicyTelemetryAdminOverride(t *testing.T) {
-	auditStore := &authzAuditStore{}
+	auditStore := &testAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 		"x-fracturing-space-authz-override-reason", "incident-ops",
 		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 
-	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
+	err := RequirePolicy(ctx, PolicyDeps{Audit: auditStore}, domainauthz.CapabilityManageCampaign, testCampaignRecord())
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}
@@ -354,13 +411,13 @@ func TestRequirePolicyTelemetryAdminOverride(t *testing.T) {
 }
 
 func TestRequirePolicyDeniesAdminOverrideWhenReasonMissing(t *testing.T) {
-	auditStore := &authzAuditStore{}
+	auditStore := &testAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 
-	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
+	err := RequirePolicy(ctx, PolicyDeps{Audit: auditStore}, domainauthz.CapabilityManageCampaign, testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -377,13 +434,13 @@ func TestRequirePolicyDeniesAdminOverrideWhenReasonMissing(t *testing.T) {
 }
 
 func TestRequirePolicyDeniesAdminOverrideWhenPrincipalMissing(t *testing.T) {
-	auditStore := &authzAuditStore{}
+	auditStore := &testAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 		"x-fracturing-space-authz-override-reason", "incident-ops",
 	))
 
-	err := requirePolicy(ctx, Stores{Audit: auditStore}, domainauthz.CapabilityManageCampaign, authzCampaignRecord())
+	err := RequirePolicy(ctx, PolicyDeps{Audit: auditStore}, domainauthz.CapabilityManageCampaign, testCampaignRecord())
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("expected permission denied, got %v", err)
 	}
@@ -397,17 +454,17 @@ func TestRequirePolicyDeniesAdminOverrideWhenPrincipalMissing(t *testing.T) {
 }
 
 func TestRequireCharacterMutationPolicyTelemetryAdminOverride(t *testing.T) {
-	auditStore := &authzAuditStore{}
+	auditStore := &testAuditStore{}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 		"x-fracturing-space-authz-override-reason", "moderation",
 		grpcmeta.UserIDHeader, "user-admin-1",
 	))
 
-	_, err := requireCharacterMutationPolicy(
+	_, err := RequireCharacterMutationPolicy(
 		ctx,
-		Stores{Audit: auditStore},
-		authzCampaignRecord(),
+		PolicyDeps{Audit: auditStore},
+		testCampaignRecord(),
 		"char-1",
 	)
 	if err != nil {
@@ -432,7 +489,7 @@ func TestRequireCharacterMutationPolicyTelemetryAdminOverride(t *testing.T) {
 }
 
 func TestAdminOverrideFromContext(t *testing.T) {
-	if reason, ok := adminOverrideFromContext(nil); ok || reason != "" {
+	if reason, ok := AdminOverrideFromContext(nil); ok || reason != "" {
 		t.Fatalf("nil context override = (%q, %v), want empty/false", reason, ok)
 	}
 
@@ -440,7 +497,7 @@ func TestAdminOverrideFromContext(t *testing.T) {
 		"x-fracturing-space-platform-role", "MANAGER",
 		"x-fracturing-space-authz-override-reason", "incident",
 	))
-	if reason, ok := adminOverrideFromContext(ctx); ok || reason != "" {
+	if reason, ok := AdminOverrideFromContext(ctx); ok || reason != "" {
 		t.Fatalf("non-admin override = (%q, %v), want empty/false", reason, ok)
 	}
 
@@ -448,13 +505,13 @@ func TestAdminOverrideFromContext(t *testing.T) {
 		"x-fracturing-space-platform-role", "ADMIN",
 		"x-fracturing-space-authz-override-reason", "incident",
 	))
-	if reason, ok := adminOverrideFromContext(adminCtx); !ok || reason != "incident" {
+	if reason, ok := AdminOverrideFromContext(adminCtx); !ok || reason != "incident" {
 		t.Fatalf("admin override = (%q, %v), want incident/true", reason, ok)
 	}
 }
 
-func TestAuthzExtraAttributesForReason(t *testing.T) {
-	attrs := authzExtraAttributesForReason(context.Background(), authzReasonAllowAccessLevel)
+func TestExtraAttributesForReason(t *testing.T) {
+	attrs := ExtraAttributesForReason(context.Background(), ReasonAllowAccessLevel)
 	if attrs != nil {
 		t.Fatalf("attrs = %#v, want nil for non-override reason", attrs)
 	}
@@ -462,14 +519,24 @@ func TestAuthzExtraAttributesForReason(t *testing.T) {
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(
 		"x-fracturing-space-platform-role", "ADMIN",
 	))
-	attrs = authzExtraAttributesForReason(ctx, authzReasonAllowAdminOverride)
+	attrs = ExtraAttributesForReason(ctx, ReasonAllowAdminOverride)
 	if attrs != nil {
 		t.Fatalf("attrs = %#v, want nil for missing override reason", attrs)
 	}
 }
 
 func TestPolicyCapabilityLabelUnknown(t *testing.T) {
-	if label := policyCapabilityLabel(domainauthz.Capability{}); label != "unknown" {
+	if label := PolicyCapabilityLabel(domainauthz.Capability{}); label != "unknown" {
 		t.Fatalf("label = %q, want unknown", label)
+	}
+}
+
+func TestCountCampaignOwnersNilStore(t *testing.T) {
+	_, err := CountCampaignOwners(context.Background(), nil, "c1")
+	if status.Code(err) != codes.Internal {
+		t.Fatalf("expected internal error, got %v", err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "participant store is not configured") {
+		t.Fatalf("error = %v, want participant store configuration message", err)
 	}
 }

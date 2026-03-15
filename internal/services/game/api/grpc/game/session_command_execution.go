@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
@@ -44,8 +45,8 @@ func (e sessionCommandExecutor) Execute(ctx context.Context, input sessionComman
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		e.write,
 		e.applier,

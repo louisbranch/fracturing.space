@@ -6,12 +6,13 @@ import (
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/joingrant"
 )
 
 const (
-	defaultListInvitesPageSize = pageSmall
-	maxListInvitesPageSize     = pageSmall
+	defaultListInvitesPageSize = handler.PageSmall
+	maxListInvitesPageSize     = handler.PageSmall
 )
 
 // InviteService implements the game.v1.InviteService gRPC API.

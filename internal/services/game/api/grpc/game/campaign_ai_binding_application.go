@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -41,14 +44,14 @@ func (c campaignApplication) SetCampaignAIBinding(ctx context.Context, campaignI
 	if err != nil {
 		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignAIBind,
+			Type:         handler.CommandTypeCampaignAIBind,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -88,7 +91,7 @@ func (c campaignApplication) ClearCampaignAIBinding(ctx context.Context, campaig
 		return campaignRecord, nil
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 	return clearCampaignAIBindingByCommand(
 		ctx,
 		c.commandExecution(),
@@ -116,8 +119,8 @@ func (c campaignApplication) validateAIBindingAgent(ctx context.Context, campaig
 	return nil
 }
 
-func requireCampaignOwner(ctx context.Context, deps policyDependencies, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, error) {
-	actor, err := requirePolicyActorWithDependencies(ctx, deps, domainauthz.CapabilityManageCampaign, campaignRecord)
+func requireCampaignOwner(ctx context.Context, deps authz.PolicyDeps, campaignRecord storage.CampaignRecord) (storage.ParticipantRecord, error) {
+	actor, err := authz.RequirePolicyActor(ctx, deps, domainauthz.CapabilityManageCampaign, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
@@ -143,13 +146,13 @@ func clearCampaignAIBindingByCommand(
 	if err != nil {
 		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		deps.Write,
 		deps.Applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignAIUnbind,
+			Type:         handler.CommandTypeCampaignAIUnbind,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,

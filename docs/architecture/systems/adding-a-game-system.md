@@ -29,6 +29,20 @@ any mismatches between the registered pieces automatically.
 | Adapter | `bridge.Adapter` | Projection event handlers, snapshot, profile adapter |
 | Manifest Entry | `manifest.SystemDescriptor` | Unifying builder that wires the three above |
 
+## Module vs bridge
+
+The component split above reflects a CQRS boundary. A **module** owns the
+write path: it implements command handling (Decider), event folding (Folder),
+and state initialization (StateFactory), giving the system its command-execution
+and event-replay behavior. A **bridge adapter** owns the read path: it
+implements projection application (Apply) and snapshot materialization, turning
+committed events into queryable state. The companion `bridge.GameSystem`
+provides system metadata for the read-side registry.
+
+Both sides are registered together through a single `SystemDescriptor` in the
+manifest, which validates parity at startup so that every event a module can
+emit has a corresponding projection handler in the adapter.
+
 ## Authoring path
 
 Built-in system registration should read as one sequence:

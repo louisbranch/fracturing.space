@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,7 +31,7 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 	if err != nil {
 		return "", err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return "", err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -65,15 +68,15 @@ func (a sceneApplication) CreateScene(ctx context.Context, campaignID string, in
 		return "", grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneCreate,
+			Type:         handler.CommandTypeSceneCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,
@@ -102,7 +105,7 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 	if err != nil {
 		return err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -125,15 +128,15 @@ func (a sceneApplication) UpdateScene(ctx context.Context, campaignID string, in
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneUpdate,
+			Type:         handler.CommandTypeSceneUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -158,7 +161,7 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 	if err != nil {
 		return err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -174,15 +177,15 @@ func (a sceneApplication) EndScene(ctx context.Context, campaignID string, in *c
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneEnd,
+			Type:         handler.CommandTypeSceneEnd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -210,7 +213,7 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 	if err != nil {
 		return "", err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return "", err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -247,15 +250,15 @@ func (a sceneApplication) TransitionScene(ctx context.Context, campaignID string
 		return "", grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneTransition,
+			Type:         handler.CommandTypeSceneTransition,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SessionID:    sessionID,

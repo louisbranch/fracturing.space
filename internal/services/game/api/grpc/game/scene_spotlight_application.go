@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -32,7 +35,7 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 	if err != nil {
 		return err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 
@@ -46,15 +49,15 @@ func (a sceneApplication) SetSceneSpotlight(ctx context.Context, campaignID stri
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneSpotlightSet,
+			Type:         handler.CommandTypeSceneSpotlightSet,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -79,7 +82,7 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 	if err != nil {
 		return err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 
@@ -92,15 +95,15 @@ func (a sceneApplication) ClearSceneSpotlight(ctx context.Context, campaignID st
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneSpotlightClear,
+			Type:         handler.CommandTypeSceneSpotlightClear,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,

@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 
@@ -30,7 +33,7 @@ func (a sceneApplication) AddCharacterToScene(ctx context.Context, campaignID st
 	if err != nil {
 		return err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -43,15 +46,15 @@ func (a sceneApplication) AddCharacterToScene(ctx context.Context, campaignID st
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneCharacterAdd,
+			Type:         handler.CommandTypeSceneCharacterAdd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -80,7 +83,7 @@ func (a sceneApplication) RemoveCharacterFromScene(ctx context.Context, campaign
 	if err != nil {
 		return err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -93,15 +96,15 @@ func (a sceneApplication) RemoveCharacterFromScene(ctx context.Context, campaign
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneCharacterRemove,
+			Type:         handler.CommandTypeSceneCharacterRemove,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sceneID,
@@ -134,7 +137,7 @@ func (a sceneApplication) TransferCharacter(ctx context.Context, campaignID stri
 	if err != nil {
 		return err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -151,15 +154,15 @@ func (a sceneApplication) TransferCharacter(ctx context.Context, campaignID stri
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeSceneCharacterTransfer,
+			Type:         handler.CommandTypeSceneCharacterTransfer,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			SceneID:      sourceSceneID,

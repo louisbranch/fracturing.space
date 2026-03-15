@@ -208,7 +208,7 @@ func TestGetCampaignSessionReadiness_BlocksWhenCharacterIncompleteIncludesAction
 	stores.campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:     "c1",
 		Name:   "Campaign One",
-		Locale: commonv1.Locale_LOCALE_EN_US,
+		Locale: "en-US",
 		Status: campaign.StatusActive,
 		GmMode: campaign.GmModeHuman,
 		System: bridge.SystemIDDaggerheart,
@@ -279,7 +279,7 @@ func TestGetCampaignSessionReadiness_FallsBackToCampaignLocale(t *testing.T) {
 		gmMode:      campaign.GmModeAI,
 		aiAgentID:   "agent-1",
 		includeAIGM: false,
-		locale:      commonv1.Locale_LOCALE_PT_BR,
+		locale:      "pt-BR",
 	})
 
 	resp, err := svc.GetCampaignSessionReadiness(contextWithParticipantID("gm-1"), &statev1.GetCampaignSessionReadinessRequest{
@@ -426,7 +426,7 @@ type readinessServiceFixtureConfig struct {
 	status            campaign.Status
 	gmMode            campaign.GmMode
 	aiAgentID         string
-	locale            commonv1.Locale
+	locale            string
 	includeHumanGM    bool
 	includeAIGM       bool
 	includePlayerSeat bool
@@ -449,8 +449,8 @@ func newReadinessServiceFixture(config readinessServiceFixtureConfig) (*Campaign
 		gmMode = campaign.GmModeHuman
 	}
 	locale := config.locale
-	if locale == commonv1.Locale_LOCALE_UNSPECIFIED {
-		locale = commonv1.Locale_LOCALE_EN_US
+	if locale == "" {
+		locale = "en-US"
 	}
 	stores.campaign.campaigns["c1"] = storage.CampaignRecord{
 		ID:        "c1",

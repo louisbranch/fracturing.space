@@ -1,4 +1,4 @@
-package game
+package authz
 
 import (
 	"context"
@@ -15,18 +15,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// resolveCanCharacterOwnerParticipantID resolves owner context for optional
-// character ownership authorization checks.
-func resolveCanCharacterOwnerParticipantID(
-	ctx context.Context,
-	stores Stores,
-	campaignID string,
-	target *campaignv1.AuthorizationTarget,
-) (string, bool, error) {
-	return resolveCanCharacterOwnerParticipantIDWithCharacterStore(ctx, stores.Character, campaignID, target)
-}
-
-func resolveCanCharacterOwnerParticipantIDWithCharacterStore(
+// ResolveCanCharacterOwnerParticipantIDWithCharacterStore resolves owner
+// context for optional character ownership authorization checks.
+func ResolveCanCharacterOwnerParticipantIDWithCharacterStore(
 	ctx context.Context,
 	characters storage.CharacterStore,
 	campaignID string,
@@ -43,24 +34,16 @@ func resolveCanCharacterOwnerParticipantIDWithCharacterStore(
 	if characterID == "" {
 		return "", false, nil
 	}
-	ownerParticipantID, err := resolveCharacterMutationOwnerParticipantIDFromStore(ctx, characters, campaignID, characterID)
+	ownerParticipantID, err := ResolveCharacterMutationOwnerParticipantIDFromStore(ctx, characters, campaignID, characterID)
 	if err != nil {
 		return "", false, err
 	}
 	return ownerParticipantID, true, nil
 }
 
-func evaluateCanParticipantGovernanceTarget(
-	ctx context.Context,
-	stores Stores,
-	campaignID string,
-	actor storage.ParticipantRecord,
-	target *campaignv1.AuthorizationTarget,
-) (domainauthz.PolicyDecision, map[string]any, bool, error) {
-	return evaluateCanParticipantGovernanceTargetWithStores(ctx, stores.Participant, stores.Character, campaignID, actor, target)
-}
-
-func evaluateCanParticipantGovernanceTargetWithStores(
+// EvaluateCanParticipantGovernanceTargetWithStores evaluates participant
+// governance authorization targets.
+func EvaluateCanParticipantGovernanceTargetWithStores(
 	ctx context.Context,
 	participants storage.ParticipantStore,
 	characters storage.CharacterStore,
@@ -117,11 +100,11 @@ func evaluateCanParticipantGovernanceTargetWithStores(
 			}
 			return decision, extraAttributes, true, nil
 		}
-		ownerCount, err := countCampaignOwners(ctx, participants, campaignID)
+		ownerCount, err := CountCampaignOwners(ctx, participants, campaignID)
 		if err != nil {
 			return domainauthz.PolicyDecision{}, extraAttributes, false, err
 		}
-		targetOwnsActiveCharacters, err := participantOwnsActiveCharacters(ctx, characters, campaignID, targetParticipantID)
+		targetOwnsActiveCharacters, err := ParticipantOwnsActiveCharacters(ctx, characters, campaignID, targetParticipantID)
 		if err != nil {
 			return domainauthz.PolicyDecision{}, extraAttributes, false, err
 		}
@@ -145,7 +128,7 @@ func evaluateCanParticipantGovernanceTargetWithStores(
 		return decision, extraAttributes, true, nil
 	}
 
-	ownerCount, err := countCampaignOwners(ctx, participants, campaignID)
+	ownerCount, err := CountCampaignOwners(ctx, participants, campaignID)
 	if err != nil {
 		return domainauthz.PolicyDecision{}, extraAttributes, false, err
 	}

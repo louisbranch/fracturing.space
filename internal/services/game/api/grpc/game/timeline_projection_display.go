@@ -2,6 +2,7 @@ package game
 
 import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -15,7 +16,7 @@ func campaignProjectionDisplay(entry storage.CampaignRecord) *campaignv1.Project
 	display := &campaignv1.ProjectionDisplay{
 		Title: entry.Name,
 	}
-	switch systemIDFromCampaignRecord(entry) {
+	switch handler.SystemIDFromCampaignRecord(entry) {
 	case bridge.SystemIDDaggerheart:
 		display.Subtitle = "DAGGERHEART"
 	}

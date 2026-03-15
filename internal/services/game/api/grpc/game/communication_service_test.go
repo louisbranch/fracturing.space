@@ -32,7 +32,7 @@ func TestGetCommunicationContextForPlayerScopesSceneStreamsToOwnedCharacters(t *
 	if err := campaignStore.Put(context.Background(), storage.CampaignRecord{
 		ID:           "camp-1",
 		Name:         "Ashes of the Vale",
-		Locale:       commonv1.Locale_LOCALE_EN_US,
+		Locale:       "en-US",
 		System:       bridge.SystemIDDaggerheart,
 		Status:       campaign.StatusActive,
 		AccessPolicy: campaign.AccessPolicyPrivate,
@@ -231,7 +231,7 @@ func TestGetCommunicationContextForGMIncludesAllActiveSceneStreams(t *testing.T)
 	_ = campaignStore.Put(context.Background(), storage.CampaignRecord{
 		ID:           "camp-1",
 		Name:         "Ashes of the Vale",
-		Locale:       commonv1.Locale_LOCALE_PT_BR,
+		Locale:       "pt-BR",
 		System:       bridge.SystemIDDaggerheart,
 		Status:       campaign.StatusActive,
 		AccessPolicy: campaign.AccessPolicyPrivate,
@@ -324,7 +324,7 @@ func TestGetCommunicationContextRequiresParticipantIdentity(t *testing.T) {
 	_ = campaignStore.Put(context.Background(), storage.CampaignRecord{
 		ID:           "camp-1",
 		Name:         "Ashes of the Vale",
-		Locale:       commonv1.Locale_LOCALE_EN_US,
+		Locale:       "en-US",
 		System:       bridge.SystemIDDaggerheart,
 		Status:       campaign.StatusActive,
 		AccessPolicy: campaign.AccessPolicyPrivate,

@@ -1,4 +1,7 @@
-package game
+// Package handler provides shared handler utilities used across entity-scoped
+// transport subpackages: domain write helpers, pagination, mappers, actor
+// resolution, social profile loading, and other cross-cutting handler concerns.
+package handler
 
 import (
 	"context"
@@ -11,11 +14,14 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 )
 
-type domainWriteDeps = domainwriteexec.Deps
+// DomainWriteDeps is the dependency bundle for domain write execution.
+type DomainWriteDeps = domainwriteexec.Deps
 
-func executeAndApplyDomainCommand(
+// ExecuteAndApplyDomainCommand executes a domain command and applies the
+// resulting events inline when enabled.
+func ExecuteAndApplyDomainCommand(
 	ctx context.Context,
-	deps domainWriteDeps,
+	deps DomainWriteDeps,
 	applier projection.Applier,
 	cmd command.Command,
 	options domainwrite.Options,
@@ -34,9 +40,11 @@ func executeAndApplyDomainCommand(
 	return result, nil
 }
 
-func executeDomainCommandWithoutInlineApply(
+// ExecuteWithoutInlineApply executes a domain command without inline event
+// application.
+func ExecuteWithoutInlineApply(
 	ctx context.Context,
-	deps domainWriteDeps,
+	deps DomainWriteDeps,
 	cmd command.Command,
 	options domainwrite.Options,
 ) (engine.Result, error) {
@@ -53,6 +61,8 @@ func executeDomainCommandWithoutInlineApply(
 	return result, nil
 }
 
-func domainApplyErrorWithCodePreserve(message string) func(error) error {
+// ApplyErrorWithCodePreserve returns an error wrapper that maps apply errors
+// while preserving domain status codes.
+func ApplyErrorWithCodePreserve(message string) func(error) error {
 	return grpcerror.ApplyErrorWithDomainCodePreserve(message)
 }

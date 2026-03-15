@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
@@ -13,7 +15,7 @@ import (
 // characterApplication coordinates character transport use-cases across focused
 // method files (create, update, delete, control, workflow, and profile patching).
 type characterApplication struct {
-	auth        policyDependencies
+	auth        authz.PolicyDeps
 	stores      characterApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -35,7 +37,7 @@ func newCharacterApplicationWithDependencies(
 	idGenerator func() (string, error),
 ) characterApplication {
 	app := characterApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: characterApplicationStores{
 			Campaign:           stores.Campaign,
 			Character:          stores.Character,

@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -71,7 +72,7 @@ func TestExecuteAndApplyDomainCommand_AppliesEventsByDefault(t *testing.T) {
 		},
 	}
 	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
-	_, err := executeAndApplyDomainCommand(
+	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
 		projection.Applier{},
@@ -92,7 +93,7 @@ func TestExecuteAndApplyDomainCommand_SkipsInlineApplyWhenDisabled(t *testing.T)
 		},
 	}
 	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
-	_, err := executeAndApplyDomainCommand(
+	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
 		projection.Applier{},
@@ -123,7 +124,7 @@ func TestExecuteAndApplyDomainCommand_SkipsJournalOnlyInlineApply(t *testing.T) 
 		},
 	}
 	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
-	_, err := executeAndApplyDomainCommand(
+	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
 		projection.Applier{},
@@ -141,7 +142,7 @@ func TestExecuteAndApplyDomainCommand_MapsNonRetryableExecutionError(t *testing.
 		err: nonRetryableTestError{err: errors.New("post-persist checkpoint failed")},
 	}
 	stores := Stores{Write: domainwriteexec.WritePath{Executor: domain, Runtime: runtime}}
-	_, err := executeAndApplyDomainCommand(
+	_, err := handler.ExecuteAndApplyDomainCommand(
 		context.Background(),
 		stores.Write,
 		projection.Applier{},

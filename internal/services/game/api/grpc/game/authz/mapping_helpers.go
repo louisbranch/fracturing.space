@@ -1,4 +1,4 @@
-package game
+package authz
 
 import (
 	"strings"
@@ -9,7 +9,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func canResponse(allowed bool, reasonCode string, actor storage.ParticipantRecord) *campaignv1.CanResponse {
+// CanResponse builds a CanResponse proto from the given decision components.
+func CanResponse(allowed bool, reasonCode string, actor storage.ParticipantRecord) *campaignv1.CanResponse {
 	return &campaignv1.CanResponse{
 		Allowed:             allowed,
 		ReasonCode:          strings.TrimSpace(reasonCode),
@@ -18,8 +19,8 @@ func canResponse(allowed bool, reasonCode string, actor storage.ParticipantRecor
 	}
 }
 
-// authorizationActionFromProto maps proto action values to domain authz actions.
-func authorizationActionFromProto(action campaignv1.AuthorizationAction) (domainauthz.Action, bool) {
+// ActionFromProto maps proto action values to domain authz actions.
+func ActionFromProto(action campaignv1.AuthorizationAction) (domainauthz.Action, bool) {
 	switch action {
 	case campaignv1.AuthorizationAction_AUTHORIZATION_ACTION_READ:
 		return domainauthz.ActionRead, true
@@ -34,8 +35,8 @@ func authorizationActionFromProto(action campaignv1.AuthorizationAction) (domain
 	}
 }
 
-// authorizationResourceFromProto maps proto resource values to domain authz resources.
-func authorizationResourceFromProto(resource campaignv1.AuthorizationResource) (domainauthz.Resource, bool) {
+// ResourceFromProto maps proto resource values to domain authz resources.
+func ResourceFromProto(resource campaignv1.AuthorizationResource) (domainauthz.Resource, bool) {
 	switch resource {
 	case campaignv1.AuthorizationResource_AUTHORIZATION_RESOURCE_CAMPAIGN:
 		return domainauthz.ResourceCampaign, true

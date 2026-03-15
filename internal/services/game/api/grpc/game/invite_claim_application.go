@@ -10,6 +10,7 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -176,10 +177,10 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 		return storage.InviteRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode participant payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 	bindCmd := commandbuild.Core(commandbuild.CoreInput{
 		CampaignID:   campaignID,
-		Type:         commandTypeParticipantBind,
+		Type:         handler.CommandTypeParticipantBind,
 		ActorType:    actorType,
 		ActorID:      actorID,
 		RequestID:    requestID,
@@ -209,7 +210,7 @@ func (a inviteApplication) ClaimInvite(ctx context.Context, campaignID string, i
 	}
 	claimCmd := commandbuild.Core(commandbuild.CoreInput{
 		CampaignID:   campaignID,
-		Type:         commandTypeInviteClaim,
+		Type:         handler.CommandTypeInviteClaim,
 		ActorType:    inviteActorType,
 		ActorID:      actorID,
 		RequestID:    requestID,
@@ -426,7 +427,7 @@ func appendAndApplyInviteClaimEvents(
 	if err != nil {
 		return nil, grpcerror.Internal("append invite claim events", err)
 	}
-	applyErr := domainApplyErrorWithCodePreserve("apply invite claim event")
+	applyErr := handler.ApplyErrorWithCodePreserve("apply invite claim event")
 	for _, evt := range stored {
 		if err := applier.Apply(ctx, evt); err != nil {
 			return nil, applyErr(err)
@@ -460,7 +461,7 @@ func findInviteClaimByJTI(ctx context.Context, store storage.EventStore, campaig
 			CursorDir:  "fwd",
 			Descending: false,
 			Filter: storage.EventQueryFilter{
-				EventType: string(eventTypeInviteClaimed),
+				EventType: string(handler.EventTypeInviteClaimed),
 			},
 		})
 		if err != nil {
@@ -468,7 +469,7 @@ func findInviteClaimByJTI(ctx context.Context, store storage.EventStore, campaig
 		}
 		for i := range page.Events {
 			evt := page.Events[i]
-			if evt.Type != eventTypeInviteClaimed {
+			if evt.Type != handler.EventTypeInviteClaimed {
 				continue
 			}
 			var payload invite.ClaimPayload

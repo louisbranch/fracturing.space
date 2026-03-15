@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -36,7 +39,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.InviteRecord{}, err
 	}
-	actor, err := requirePolicyActorWithDependencies(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord)
+	actor, err := authz.RequirePolicyActor(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord)
 	if err != nil {
 		return storage.InviteRecord{}, err
 	}
@@ -82,14 +85,14 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 	if err != nil {
 		return storage.InviteRecord{}, grpcerror.Internal("encode invite payload", err)
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeInviteCreate,
+			Type:         handler.CommandTypeInviteCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -99,7 +102,7 @@ func (a inviteApplication) CreateInvite(ctx context.Context, campaignID string, 
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply invite event"),
 		},
 	)
 	if err != nil {

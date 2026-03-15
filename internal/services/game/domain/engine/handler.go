@@ -95,13 +95,25 @@ type Decider interface {
 }
 
 // Handler is the domain write orchestrator:
-// 1) validate intent against command registry,
-// 2) enforce optional session gate policy,
-// 3) execute deciders over replay-derived state,
-// 4) validate events against event registry,
-// 5) append events to the journal,
-// 6) apply events to in-memory state,
-// 7) checkpoint and snapshot state for fast future replays.
+//  1. validate intent against command registry,
+//  2. enforce optional session gate policy,
+//  3. execute deciders over replay-derived state,
+//  4. validate events against event registry,
+//  5. append events to the journal,
+//  6. apply events to in-memory state,
+//  7. checkpoint and snapshot state for fast future replays.
+//
+// Required fields (validated by [NewHandler]):
+//   - Commands, Events, Journal, Decider
+//   - GateStateLoader — required when any registered command uses [command.GateScopeSession]
+//   - SceneGateStateLoader — required when any registered command uses [command.GateScopeScene]
+//
+// Optional fields (nil-safe at call sites):
+//   - Checkpoints, Snapshots — enable fast replay resume; omit to replay from the beginning
+//   - StateLoader — loads reconstructed state; nil skips state loading (useful in stateless test harnesses)
+//   - Folder — folds events into state after append; nil skips in-memory fold
+//   - Now — clock source; defaults to [time.Now] when nil
+//   - Gate — auto-configured by [NewHandler] from Commands; callers should not set Gate.Registry directly
 type Handler struct {
 	Commands             *command.Registry
 	Events               *event.Registry

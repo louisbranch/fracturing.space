@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"errors"
 
@@ -14,7 +16,7 @@ func (a forkApplication) GetLineage(ctx context.Context, campaignID string) (*ca
 	if err != nil {
 		return nil, grpcerror.EnsureStatus(err)
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, campaignRecord); err != nil {
 		return nil, err
 	}
 

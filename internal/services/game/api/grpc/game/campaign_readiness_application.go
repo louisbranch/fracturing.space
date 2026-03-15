@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -13,7 +16,7 @@ import (
 )
 
 type campaignReadinessApplication struct {
-	auth   policyDependencies
+	auth   authz.PolicyDeps
 	stores campaignReadinessStores
 }
 
@@ -27,7 +30,7 @@ type campaignReadinessStores struct {
 
 func newCampaignReadinessApplication(stores Stores) campaignReadinessApplication {
 	return campaignReadinessApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: campaignReadinessStores{
 			Campaign:    stores.Campaign,
 			Participant: stores.Participant,
@@ -50,7 +53,7 @@ func (a campaignReadinessApplication) GetCampaignSessionReadiness(
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, record); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, record); err != nil {
 		return nil, err
 	}
 
@@ -75,7 +78,7 @@ func (a campaignReadinessApplication) GetCampaignSessionReadiness(
 	}
 
 	report := readiness.EvaluateSessionStartReport(state, readiness.ReportOptions{
-		SystemReadiness:        systemReadinessChecker(systemIDFromCampaignRecord(record), state),
+		SystemReadiness:        systemReadinessChecker(handler.SystemIDFromCampaignRecord(record), state),
 		IncludeSessionBoundary: true,
 		HasActiveSession:       hasActiveSession,
 	})

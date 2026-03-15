@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -38,7 +41,7 @@ func (c characterApplication) workflowProviderForCampaign(ctx context.Context, c
 	if err != nil {
 		return characterworkflow.CampaignContext{}, nil, err
 	}
-	systemID := systemIDFromCampaignRecord(campaignRecord)
+	systemID := handler.SystemIDFromCampaignRecord(campaignRecord)
 	provider, ok := characterCreationWorkflowProviderForSystem(systemID)
 	if !ok {
 		return characterworkflow.CampaignContext{}, nil, status.Errorf(codes.Unimplemented, "character creation workflow is not supported for game system %s", campaignRecord.System.String())
@@ -117,7 +120,7 @@ func (d *characterWorkflowDeps) ExecuteProfileDelete(ctx context.Context, campai
 }
 
 func (d *characterWorkflowDeps) RequireReadPolicy(ctx context.Context, campaignContext characterworkflow.CampaignContext) error {
-	return requireReadPolicyWithDependencies(ctx, d.app.auth, storage.CampaignRecord{ID: campaignContext.ID})
+	return authz.RequireReadPolicy(ctx, d.app.auth, storage.CampaignRecord{ID: campaignContext.ID})
 }
 
 func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, profile projectionstore.DaggerheartCharacterProfile) *campaignv1.CharacterProfile {
@@ -125,7 +128,7 @@ func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, p
 }
 
 func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {
-	policyActor, err := requireCharacterMutationPolicyWithDependencies(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
+	policyActor, err := authz.RequireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
 	}
@@ -148,14 +151,14 @@ func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Conte
 		actorType = command.ActorTypeParticipant
 	}
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignContext.ID,
-				Type:         commandTypeDaggerheartCharacterProfileReplace,
+				Type:         handler.CommandTypeDaggerheartCharacterProfileReplace,
 				ActorType:    actorType,
 				ActorID:      actorID,
 				RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -173,7 +176,7 @@ func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Conte
 }
 
 func (c characterApplication) executeDaggerheartProfileDelete(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string) error {
-	policyActor, err := requireCharacterMutationPolicyWithDependencies(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
+	policyActor, err := authz.RequireCharacterMutationPolicy(ctx, c.auth, storage.CampaignRecord{ID: campaignContext.ID}, characterID)
 	if err != nil {
 		return err
 	}
@@ -194,14 +197,14 @@ func (c characterApplication) executeDaggerheartProfileDelete(ctx context.Contex
 		actorType = command.ActorTypeParticipant
 	}
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignContext.ID,
-				Type:         commandTypeDaggerheartCharacterProfileDelete,
+				Type:         handler.CommandTypeDaggerheartCharacterProfileDelete,
 				ActorType:    actorType,
 				ActorID:      actorID,
 				RequestID:    grpcmeta.RequestIDFromContext(ctx),

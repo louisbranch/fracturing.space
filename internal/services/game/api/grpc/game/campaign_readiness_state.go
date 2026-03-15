@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
@@ -22,7 +23,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const readinessCharacterPageSize = pageLarge
+const readinessCharacterPageSize = handler.PageLarge
 
 func listAllCharactersByCampaign(ctx context.Context, store storage.CharacterStore, campaignID string) ([]storage.CharacterRecord, error) {
 	if store == nil {
@@ -112,7 +113,7 @@ func campaignReadinessAggregateState(
 		}
 	}
 
-	if systemIDFromCampaignRecord(campaignRecord) == bridge.SystemIDDaggerheart {
+	if handler.SystemIDFromCampaignRecord(campaignRecord) == bridge.SystemIDDaggerheart {
 		if daggerheartStore == nil {
 			return aggregate.State{}, status.Error(codes.Internal, "daggerheart projection store is not configured")
 		}

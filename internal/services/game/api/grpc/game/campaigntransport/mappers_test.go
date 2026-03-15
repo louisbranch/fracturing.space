@@ -19,7 +19,7 @@ func TestCampaignToProto(t *testing.T) {
 	record := storage.CampaignRecord{
 		ID:               "camp-1",
 		Name:             "Alpha",
-		Locale:           commonv1.Locale_LOCALE_PT_BR,
+		Locale:           "pt-BR",
 		System:           bridge.SystemIDDaggerheart,
 		Status:           campaign.StatusActive,
 		GmMode:           campaign.GmModeHybrid,

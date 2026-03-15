@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/participanttransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -27,7 +28,7 @@ func TestCampaignToProto(t *testing.T) {
 	proto := campaigntransport.CampaignToProto(storage.CampaignRecord{
 		ID:               "camp-1",
 		Name:             "Campaign",
-		Locale:           commonv1.Locale_LOCALE_PT_BR,
+		Locale:           "pt-BR",
 		System:           bridge.SystemIDDaggerheart,
 		Status:           campaign.StatusActive,
 		GmMode:           campaign.GmModeHybrid,
@@ -234,7 +235,7 @@ func TestInviteStatusFromProto(t *testing.T) {
 }
 
 func TestStructToMap(t *testing.T) {
-	if got := structToMap(nil); got != nil {
+	if got := handler.StructToMap(nil); got != nil {
 		t.Fatalf("expected nil for nil input, got %v", got)
 	}
 
@@ -242,7 +243,7 @@ func TestStructToMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create struct: %v", err)
 	}
-	m := structToMap(s)
+	m := handler.StructToMap(s)
 	if m["key"] != "value" {
 		t.Fatalf("expected key=value, got %v", m["key"])
 	}
@@ -252,19 +253,19 @@ func TestStructToMap(t *testing.T) {
 }
 
 func TestValidateStructPayload(t *testing.T) {
-	if err := validateStructPayload(map[string]any{"valid": "ok"}); err != nil {
+	if err := handler.ValidateStructPayload(map[string]any{"valid": "ok"}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if err := validateStructPayload(map[string]any{"": "bad"}); err == nil {
+	if err := handler.ValidateStructPayload(map[string]any{"": "bad"}); err == nil {
 		t.Fatal("expected error for empty key")
 	}
-	if err := validateStructPayload(map[string]any{"  ": "bad"}); err == nil {
+	if err := handler.ValidateStructPayload(map[string]any{"  ": "bad"}); err == nil {
 		t.Fatal("expected error for whitespace key")
 	}
-	if err := validateStructPayload(nil); err != nil {
+	if err := handler.ValidateStructPayload(nil); err != nil {
 		t.Fatalf("unexpected error for nil: %v", err)
 	}
-	if err := validateStructPayload(map[string]any{}); err != nil {
+	if err := handler.ValidateStructPayload(map[string]any{}); err != nil {
 		t.Fatalf("unexpected error for empty map: %v", err)
 	}
 }

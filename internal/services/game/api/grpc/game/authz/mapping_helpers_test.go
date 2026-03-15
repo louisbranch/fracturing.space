@@ -1,4 +1,4 @@
-package game
+package authz
 
 import (
 	"testing"
@@ -10,7 +10,7 @@ import (
 )
 
 func TestCanResponseTrimsReasonAndActorID(t *testing.T) {
-	resp := canResponse(true, "  allow.read  ", storage.ParticipantRecord{
+	resp := CanResponse(true, "  allow.read  ", storage.ParticipantRecord{
 		ID:             "  p-1  ",
 		CampaignAccess: participant.CampaignAccessManager,
 	})
@@ -28,7 +28,7 @@ func TestCanResponseTrimsReasonAndActorID(t *testing.T) {
 	}
 }
 
-func TestAuthorizationActionFromProto(t *testing.T) {
+func TestActionFromProto(t *testing.T) {
 	tests := []struct {
 		name   string
 		action campaignv1.AuthorizationAction
@@ -45,15 +45,15 @@ func TestAuthorizationActionFromProto(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := authorizationActionFromProto(tc.action)
+			got, ok := ActionFromProto(tc.action)
 			if got != tc.want || ok != tc.wantOK {
-				t.Fatalf("authorizationActionFromProto(%v) = (%v,%v), want (%v,%v)", tc.action, got, ok, tc.want, tc.wantOK)
+				t.Fatalf("ActionFromProto(%v) = (%v,%v), want (%v,%v)", tc.action, got, ok, tc.want, tc.wantOK)
 			}
 		})
 	}
 }
 
-func TestAuthorizationResourceFromProto(t *testing.T) {
+func TestResourceFromProto(t *testing.T) {
 	tests := []struct {
 		name     string
 		resource campaignv1.AuthorizationResource
@@ -71,9 +71,9 @@ func TestAuthorizationResourceFromProto(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, ok := authorizationResourceFromProto(tc.resource)
+			got, ok := ResourceFromProto(tc.resource)
 			if got != tc.want || ok != tc.wantOK {
-				t.Fatalf("authorizationResourceFromProto(%v) = (%v,%v), want (%v,%v)", tc.resource, got, ok, tc.want, tc.wantOK)
+				t.Fatalf("ResourceFromProto(%v) = (%v,%v), want (%v,%v)", tc.resource, got, ok, tc.want, tc.wantOK)
 			}
 		})
 	}

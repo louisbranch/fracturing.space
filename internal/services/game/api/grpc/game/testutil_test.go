@@ -1,5 +1,7 @@
 package game
 
+import "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 // testStoresBuilder reduces repeated store construction in tests.
 // Default stores (campaign, participant, event) are created eagerly
 // since nearly every test needs them. Optional stores are added via
@@ -23,7 +25,7 @@ type testStoresBuilder struct {
 	Invite      *fakeInviteStore
 	Fork        *fakeCampaignForkStore
 
-	domain       Domain
+	domain       handler.Domain
 	writeRuntime bool
 }
 
@@ -68,7 +70,7 @@ func (b *testStoresBuilder) withFork() *testStoresBuilder {
 	return b
 }
 
-func (b *testStoresBuilder) withDomain(d Domain) *testStoresBuilder {
+func (b *testStoresBuilder) withDomain(d handler.Domain) *testStoresBuilder {
 	b.domain = d
 	b.writeRuntime = true
 	return b

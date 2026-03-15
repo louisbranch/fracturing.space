@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"strings"
 
@@ -31,7 +33,7 @@ func (s *InviteService) ListPendingInvites(ctx context.Context, in *campaignv1.L
 	if err != nil {
 		return nil, err
 	}
-	if err := requirePolicyWithDependencies(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 

@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"errors"
 	"strings"
@@ -13,7 +15,7 @@ import (
 )
 
 func TestCountCampaignOwnersNilStore(t *testing.T) {
-	_, err := countCampaignOwners(context.Background(), nil, "c1")
+	_, err := authz.CountCampaignOwners(context.Background(), nil, "c1")
 	assertStatusCode(t, err, codes.Internal)
 	if err == nil || !strings.Contains(err.Error(), "participant store is not configured") {
 		t.Fatalf("error = %v, want participant store configuration message", err)
@@ -28,7 +30,7 @@ func TestCountCampaignOwnersReturnsOwnerCount(t *testing.T) {
 		"p3": {ID: "p3", CampaignID: "c1", CampaignAccess: participant.CampaignAccessOwner},
 	}
 
-	ownerCount, err := countCampaignOwners(context.Background(), participantStore, "c1")
+	ownerCount, err := authz.CountCampaignOwners(context.Background(), participantStore, "c1")
 	if err != nil {
 		t.Fatalf("countCampaignOwners returned error: %v", err)
 	}
@@ -41,7 +43,7 @@ func TestCountCampaignOwnersListErrorReturnsInternal(t *testing.T) {
 	participantStore := newFakeParticipantStore()
 	participantStore.listErr = errors.New("boom")
 
-	_, err := countCampaignOwners(context.Background(), participantStore, "c1")
+	_, err := authz.CountCampaignOwners(context.Background(), participantStore, "c1")
 	assertStatusCode(t, err, codes.Internal)
 	if err == nil || !strings.Contains(err.Error(), "list participants") {
 		t.Fatalf("error = %v, want list participants context", err)

@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -49,11 +52,11 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		decision := domainauthz.CanParticipantMutation(policyActor.CampaignAccess, targetAccessBefore)
 		if !decision.Allowed {
 			authErr := participantPolicyDecisionError(decision.ReasonCode)
-			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+			authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 				Store:      c.auth.Audit,
 				CampaignID: campaignID,
 				Capability: domainauthz.CapabilityManageParticipants,
-				Decision:   authzDecisionDeny,
+				Decision:   authz.DecisionDeny,
 				ReasonCode: decision.ReasonCode,
 				Actor:      policyActor,
 				Err:        authErr,
@@ -115,18 +118,18 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 				return storage.ParticipantRecord{}, status.Error(codes.PermissionDenied, "participants may only edit their own profile fields")
 			}
 		} else {
-			ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
+			ownerCount, err := authz.CountCampaignOwners(ctx, c.stores.Participant, campaignID)
 			if err != nil {
 				return storage.ParticipantRecord{}, err
 			}
 			decision := domainauthz.CanParticipantAccessChange(policyActor.CampaignAccess, targetAccessBefore, access, ownerCount)
 			if !decision.Allowed {
 				authErr := participantPolicyDecisionError(decision.ReasonCode)
-				emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+				authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 					Store:      c.auth.Audit,
 					CampaignID: campaignID,
 					Capability: domainauthz.CapabilityManageParticipants,
-					Decision:   authzDecisionDeny,
+					Decision:   authz.DecisionDeny,
 					ReasonCode: decision.ReasonCode,
 					Actor:      policyActor,
 					Err:        authErr,
@@ -180,14 +183,14 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeParticipantUpdate,
+			Type:         handler.CommandTypeParticipantUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -197,7 +200,7 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply event"),
 		},
 	)
 	if err != nil {
@@ -238,11 +241,11 @@ func (c participantApplication) UpdateParticipant(ctx context.Context, campaignI
 
 func resolveParticipantUpdateActor(
 	ctx context.Context,
-	auth policyDependencies,
+	auth authz.PolicyDeps,
 	campaignRecord storage.CampaignRecord,
 	current storage.ParticipantRecord,
 ) (storage.ParticipantRecord, bool, error) {
-	actor, _, err := authorizePolicyActorWithParticipantStore(ctx, auth.Participant, domainauthz.CapabilityReadCampaign, campaignRecord)
+	actor, _, err := authz.AuthorizePolicyActorWithParticipantStore(ctx, auth.Participant, domainauthz.CapabilityReadCampaign, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, false, err
 	}

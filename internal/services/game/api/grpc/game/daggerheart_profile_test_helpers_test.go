@@ -4,6 +4,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -65,7 +66,7 @@ func testCreateCharacterResults(
 ) map[command.Type]engine.Result {
 	t.Helper()
 	return map[command.Type]engine.Result{
-		commandTypeCharacterCreate: {
+		handler.CommandTypeCharacterCreate: {
 			Decision: command.Accept(event.Event{
 				CampaignID:  ids.CampaignID(campaignID),
 				Type:        event.Type("character.created"),

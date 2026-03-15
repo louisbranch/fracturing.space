@@ -1,4 +1,4 @@
-package game
+package handler
 
 import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
@@ -6,7 +6,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func systemIDFromGameSystemProto(system commonv1.GameSystem) bridge.SystemID {
+// SystemIDFromGameSystemProto maps a proto game system to the domain system ID.
+func SystemIDFromGameSystemProto(system commonv1.GameSystem) bridge.SystemID {
 	switch system {
 	case commonv1.GameSystem_GAME_SYSTEM_DAGGERHEART:
 		return bridge.SystemIDDaggerheart
@@ -15,7 +16,9 @@ func systemIDFromGameSystemProto(system commonv1.GameSystem) bridge.SystemID {
 	}
 }
 
-func systemIDFromCampaignRecord(record storage.CampaignRecord) bridge.SystemID {
+// SystemIDFromCampaignRecord resolves the domain system ID from a campaign
+// record's system field.
+func SystemIDFromCampaignRecord(record storage.CampaignRecord) bridge.SystemID {
 	if normalized, ok := bridge.NormalizeSystemID(record.System.String()); ok {
 		return normalized
 	}

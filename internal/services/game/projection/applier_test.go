@@ -8,8 +8,6 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheartsys "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -2042,7 +2040,7 @@ func TestApplyCampaignUpdated_Locale(t *testing.T) {
 	store.campaigns["camp-1"] = storage.CampaignRecord{
 		ID:     "camp-1",
 		Status: campaign.StatusDraft,
-		Locale: platformi18n.DefaultLocale(),
+		Locale: "en-US",
 	}
 	applier := Applier{Campaign: store}
 
@@ -2054,8 +2052,8 @@ func TestApplyCampaignUpdated_Locale(t *testing.T) {
 		t.Fatalf("apply: %v", err)
 	}
 	c, _ := store.Get(ctx, "camp-1")
-	if c.Locale != commonv1.Locale_LOCALE_PT_BR {
-		t.Fatalf("Locale = %v, want %v", c.Locale, commonv1.Locale_LOCALE_PT_BR)
+	if c.Locale != "pt-BR" {
+		t.Fatalf("Locale = %v, want %v", c.Locale, "pt-BR")
 	}
 }
 

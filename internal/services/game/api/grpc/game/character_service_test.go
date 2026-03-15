@@ -10,6 +10,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -278,8 +279,8 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != commandTypeCharacterCreate {
-		t.Fatalf("command[0] type = %s, want %s", domain.commands[0].Type, commandTypeCharacterCreate)
+	if domain.commands[0].Type != handler.CommandTypeCharacterCreate {
+		t.Fatalf("command[0] type = %s, want %s", domain.commands[0].Type, handler.CommandTypeCharacterCreate)
 	}
 	if _, err := ts.Character.GetCharacter(context.Background(), "c1", "char-123"); err != nil {
 		t.Fatalf("Character not persisted: %v", err)
@@ -1993,7 +1994,7 @@ func TestPatchCharacterProfile_DeniesMissingIdentity(t *testing.T) {
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeDaggerheartCharacterProfileReplace: {
+		handler.CommandTypeDaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -2049,7 +2050,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	ts.Event.nextSeq["c1"] = 2
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeDaggerheartCharacterProfileReplace: {
+		handler.CommandTypeDaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -2105,7 +2106,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeDaggerheartCharacterProfileReplace: {
+		handler.CommandTypeDaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -2151,7 +2152,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeDaggerheartCharacterProfileReplace: {
+		handler.CommandTypeDaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -2210,7 +2211,7 @@ func TestPatchCharacterProfile_SynthesizesDefaultsWhenProfileMissing(t *testing.
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeDaggerheartCharacterProfileReplace: {
+		handler.CommandTypeDaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -2255,7 +2256,7 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeDaggerheartCharacterProfileReplace: {
+		handler.CommandTypeDaggerheartCharacterProfileReplace: {
 			Decision: command.Accept(testDaggerheartProfileReplacedEvent(
 				t,
 				now,
@@ -2292,8 +2293,8 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != commandTypeDaggerheartCharacterProfileReplace {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeDaggerheartCharacterProfileReplace)
+	if domain.commands[0].Type != handler.CommandTypeDaggerheartCharacterProfileReplace {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeDaggerheartCharacterProfileReplace)
 	}
 	if got := len(ts.Event.events["c1"]); got != 1 {
 		t.Fatalf("expected 1 event, got %d", got)

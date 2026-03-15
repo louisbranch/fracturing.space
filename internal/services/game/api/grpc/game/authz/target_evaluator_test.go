@@ -1,4 +1,4 @@
-package game
+package authz
 
 import (
 	"context"
@@ -13,11 +13,80 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// testParticipantStoreWithData is an in-memory participant store for tests that
+// need pre-populated records.
+type testParticipantStoreWithData struct {
+	participants map[string]map[string]storage.ParticipantRecord
+	getErr       error
+	listErr      error
+}
+
+func newTestParticipantStoreWithData() *testParticipantStoreWithData {
+	return &testParticipantStoreWithData{participants: map[string]map[string]storage.ParticipantRecord{}}
+}
+
+func (s *testParticipantStoreWithData) PutParticipant(_ context.Context, p storage.ParticipantRecord) error {
+	camp := s.participants[p.CampaignID]
+	if camp == nil {
+		camp = map[string]storage.ParticipantRecord{}
+		s.participants[p.CampaignID] = camp
+	}
+	camp[p.ID] = p
+	return nil
+}
+
+func (s *testParticipantStoreWithData) GetParticipant(_ context.Context, campaignID, participantID string) (storage.ParticipantRecord, error) {
+	if s.getErr != nil {
+		return storage.ParticipantRecord{}, s.getErr
+	}
+	camp := s.participants[campaignID]
+	if camp == nil {
+		return storage.ParticipantRecord{}, storage.ErrNotFound
+	}
+	r, ok := camp[participantID]
+	if !ok {
+		return storage.ParticipantRecord{}, storage.ErrNotFound
+	}
+	return r, nil
+}
+
+func (s *testParticipantStoreWithData) DeleteParticipant(context.Context, string, string) error {
+	return nil
+}
+
+func (s *testParticipantStoreWithData) ListParticipantsByCampaign(_ context.Context, campaignID string) ([]storage.ParticipantRecord, error) {
+	if s.listErr != nil {
+		return nil, s.listErr
+	}
+	camp := s.participants[campaignID]
+	var result []storage.ParticipantRecord
+	for _, r := range camp {
+		result = append(result, r)
+	}
+	return result, nil
+}
+
+func (s *testParticipantStoreWithData) ListCampaignIDsByUser(context.Context, string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *testParticipantStoreWithData) ListCampaignIDsByParticipant(context.Context, string) ([]string, error) {
+	return nil, nil
+}
+
+func (s *testParticipantStoreWithData) CountParticipants(context.Context, string) (int, error) {
+	return 0, nil
+}
+
+func (s *testParticipantStoreWithData) ListParticipants(context.Context, string, int, string) (storage.ParticipantPage, error) {
+	return storage.ParticipantPage{}, nil
+}
+
 func TestResolveCanCharacterOwnerParticipantID(t *testing.T) {
 	t.Run("nil target skips ownership resolution", func(t *testing.T) {
-		ownerParticipantID, evaluateOwnership, err := resolveCanCharacterOwnerParticipantID(
+		ownerParticipantID, evaluateOwnership, err := ResolveCanCharacterOwnerParticipantIDWithCharacterStore(
 			context.Background(),
-			Stores{},
+			nil,
 			"camp-1",
 			nil,
 		)
@@ -33,9 +102,9 @@ func TestResolveCanCharacterOwnerParticipantID(t *testing.T) {
 	})
 
 	t.Run("owner participant id in target bypasses store lookup", func(t *testing.T) {
-		ownerParticipantID, evaluateOwnership, err := resolveCanCharacterOwnerParticipantID(
+		ownerParticipantID, evaluateOwnership, err := ResolveCanCharacterOwnerParticipantIDWithCharacterStore(
 			context.Background(),
-			Stores{},
+			nil,
 			"camp-1",
 			&campaignv1.AuthorizationTarget{OwnerParticipantId: "owner-1"},
 		)
@@ -51,7 +120,7 @@ func TestResolveCanCharacterOwnerParticipantID(t *testing.T) {
 	})
 
 	t.Run("resource id resolves owner from character projection", func(t *testing.T) {
-		characters := newFakeCharacterStore()
+		characters := newTestCharacterStore()
 		if err := characters.PutCharacter(context.Background(), storage.CharacterRecord{
 			ID:                 "char-1",
 			CampaignID:         "camp-1",
@@ -60,9 +129,9 @@ func TestResolveCanCharacterOwnerParticipantID(t *testing.T) {
 			t.Fatalf("put character: %v", err)
 		}
 
-		ownerParticipantID, evaluateOwnership, err := resolveCanCharacterOwnerParticipantID(
+		ownerParticipantID, evaluateOwnership, err := ResolveCanCharacterOwnerParticipantIDWithCharacterStore(
 			context.Background(),
-			Stores{Character: characters},
+			characters,
 			"camp-1",
 			&campaignv1.AuthorizationTarget{ResourceId: "char-1"},
 		)
@@ -80,7 +149,7 @@ func TestResolveCanCharacterOwnerParticipantID(t *testing.T) {
 
 func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 	t.Run("loads target access from participant store when target access missing", func(t *testing.T) {
-		participants := newFakeParticipantStore()
+		participants := newTestParticipantStoreWithData()
 		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
 			ID:             "owner-1",
 			CampaignID:     "camp-1",
@@ -89,9 +158,10 @@ func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 			t.Fatalf("put participant: %v", err)
 		}
 
-		decision, attrs, evaluated, err := evaluateCanParticipantGovernanceTarget(
+		decision, attrs, evaluated, err := EvaluateCanParticipantGovernanceTargetWithStores(
 			context.Background(),
-			Stores{Participant: participants},
+			participants,
+			nil,
 			"camp-1",
 			storage.ParticipantRecord{
 				ID:             "manager-1",
@@ -118,9 +188,10 @@ func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 	})
 
 	t.Run("access change operation requires requested access", func(t *testing.T) {
-		decision, attrs, evaluated, err := evaluateCanParticipantGovernanceTarget(
+		decision, attrs, evaluated, err := EvaluateCanParticipantGovernanceTargetWithStores(
 			context.Background(),
-			Stores{},
+			nil,
+			nil,
 			"camp-1",
 			storage.ParticipantRecord{
 				ID:             "owner-1",
@@ -151,7 +222,7 @@ func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 	})
 
 	t.Run("remove operation denies participants who still own active characters", func(t *testing.T) {
-		participants := newFakeParticipantStore()
+		participants := newTestParticipantStoreWithData()
 		if err := participants.PutParticipant(context.Background(), storage.ParticipantRecord{
 			ID:             "owner-1",
 			CampaignID:     "camp-1",
@@ -174,7 +245,7 @@ func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 			t.Fatalf("put participant member-1: %v", err)
 		}
 
-		characters := newFakeCharacterStore()
+		characters := newTestCharacterStore()
 		if err := characters.PutCharacter(context.Background(), storage.CharacterRecord{
 			ID:                 "char-1",
 			CampaignID:         "camp-1",
@@ -183,9 +254,10 @@ func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 			t.Fatalf("put character: %v", err)
 		}
 
-		decision, attrs, evaluated, err := evaluateCanParticipantGovernanceTarget(
+		decision, attrs, evaluated, err := EvaluateCanParticipantGovernanceTargetWithStores(
 			context.Background(),
-			Stores{Participant: participants, Character: characters},
+			participants,
+			characters,
 			"camp-1",
 			storage.ParticipantRecord{
 				ID:             "owner-1",
@@ -216,12 +288,13 @@ func TestEvaluateCanParticipantGovernanceTarget(t *testing.T) {
 	})
 
 	t.Run("returns internal error when participant store lookup fails", func(t *testing.T) {
-		participants := newFakeParticipantStore()
+		participants := newTestParticipantStoreWithData()
 		participants.getErr = errors.New("boom")
 
-		decision, attrs, evaluated, err := evaluateCanParticipantGovernanceTarget(
+		decision, attrs, evaluated, err := EvaluateCanParticipantGovernanceTargetWithStores(
 			context.Background(),
-			Stores{Participant: participants},
+			participants,
+			nil,
 			"camp-1",
 			storage.ParticipantRecord{
 				ID:             "owner-1",

@@ -1,3 +1,11 @@
+// Compatibility conditions re-exported for gRPC transport and snapshot
+// packages.
+//
+// Removal criteria: these can be removed when the transport packages under
+// api/grpc/systems/daggerheart/ and api/grpc/game/ (19+ consumers) either
+// import an internal conditions package directly or define their own boundary
+// types. Until then, this file is the stable public interface for condition
+// logic used outside the domain layer.
 package daggerheart
 
 import (

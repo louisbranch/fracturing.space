@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
@@ -28,15 +29,15 @@ func applyDaggerheartCharacterStatePatchCommand(
 	if err != nil {
 		return grpcerror.Internal("encode payload", err)
 	}
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		write,
 		applier,
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignID,
-				Type:         commandTypeDaggerheartCharacterStatePatch,
-				ActorType:    commandActorTypeForEventActor(actorType),
+				Type:         handler.CommandTypeDaggerheartCharacterStatePatch,
+				ActorType:    handler.CommandActorTypeForEventActor(actorType),
 				ActorID:      actorID,
 				SessionID:    grpcmeta.SessionIDFromContext(ctx),
 				RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -51,7 +52,7 @@ func applyDaggerheartCharacterStatePatchCommand(
 		domainwrite.Options{
 			RequireEvents:   true,
 			MissingEventMsg: "character state patch did not emit an event",
-			ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			ApplyErr:        handler.ApplyErrorWithCodePreserve("apply event"),
 		},
 	)
 	if err != nil {
@@ -76,15 +77,15 @@ func executeDaggerheartConditionChangeCommand(
 	if err != nil {
 		return grpcerror.Internal("encode condition payload", err)
 	}
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		write,
 		applier,
 		commandbuild.System(commandbuild.SystemInput{
 			CoreInput: commandbuild.CoreInput{
 				CampaignID:   campaignID,
-				Type:         commandTypeDaggerheartConditionChange,
-				ActorType:    commandActorTypeForEventActor(actorType),
+				Type:         handler.CommandTypeDaggerheartConditionChange,
+				ActorType:    handler.CommandActorTypeForEventActor(actorType),
 				ActorID:      actorID,
 				SessionID:    sessionID,
 				RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -99,7 +100,7 @@ func executeDaggerheartConditionChangeCommand(
 		domainwrite.Options{
 			RequireEvents:   true,
 			MissingEventMsg: "condition change did not emit an event",
-			ApplyErr:        domainApplyErrorWithCodePreserve(applyErrMessage),
+			ApplyErr:        handler.ApplyErrorWithCodePreserve(applyErrMessage),
 		},
 	)
 	if err != nil {

@@ -1,4 +1,4 @@
-package game
+package handler
 
 import (
 	"context"
@@ -14,9 +14,9 @@ type Domain interface {
 	Execute(ctx context.Context, cmd command.Command) (engine.Result, error)
 }
 
-// resolveCommandActor returns the actor identity and type from gRPC context metadata.
+// ResolveCommandActor returns the actor identity and type from gRPC context metadata.
 // Returns ActorTypeParticipant when a participant ID is present, ActorTypeSystem otherwise.
-func resolveCommandActor(ctx context.Context) (string, command.ActorType) {
+func ResolveCommandActor(ctx context.Context) (string, command.ActorType) {
 	actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
 	if actorID != "" {
 		return actorID, command.ActorTypeParticipant

@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"errors"
 	"strings"
@@ -29,7 +31,7 @@ func (c campaignApplication) GetCampaign(ctx context.Context, campaignID string)
 	if err := campaign.ValidateCampaignOperation(record.Status, campaign.CampaignOpRead); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, c.auth, record); err != nil {
+	if err := authz.RequireReadPolicy(ctx, c.auth, record); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	return record, nil
@@ -44,36 +46,36 @@ func (c campaignApplication) ListCampaigns(ctx context.Context, in *campaignv1.L
 
 	participantID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
 	userID := strings.TrimSpace(grpcmeta.UserIDFromContext(ctx))
-	overrideReason, overrideRequested := adminOverrideFromContext(ctx)
+	overrideReason, overrideRequested := authz.AdminOverrideFromContext(ctx)
 
 	if overrideRequested {
 		if userID == "" {
 			err := status.Error(codes.PermissionDenied, "admin override requires authenticated principal")
-			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+			authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 				Store:      c.auth.Audit,
 				Capability: domainauthz.CapabilityReadCampaign,
-				Decision:   authzDecisionDeny,
-				ReasonCode: authzReasonDenyMissingIdentity,
+				Decision:   authz.DecisionDeny,
+				ReasonCode: authz.ReasonDenyMissingIdentity,
 				Err:        err,
 			})
 			return campaignListPage{}, err
 		}
 		if overrideReason == "" {
 			err := status.Error(codes.PermissionDenied, "admin override reason is required")
-			emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+			authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 				Store:      c.auth.Audit,
 				Capability: domainauthz.CapabilityReadCampaign,
-				Decision:   authzDecisionDeny,
-				ReasonCode: authzReasonDenyOverrideReasonRequired,
+				Decision:   authz.DecisionDeny,
+				ReasonCode: authz.ReasonDenyOverrideReasonRequired,
 				Err:        err,
 			})
 			return campaignListPage{}, err
 		}
-		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+		authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 			Store:      c.auth.Audit,
 			Capability: domainauthz.CapabilityReadCampaign,
-			Decision:   authzDecisionAllow,
-			ReasonCode: authzReasonAllowAdminOverride,
+			Decision:   authz.DecisionAllow,
+			ReasonCode: authz.ReasonAllowAdminOverride,
 		})
 		campaignRecords, nextPageToken, err := c.listCampaignsFromStore(ctx, pageSize, in.GetPageToken(), statusFilter)
 		if err != nil {
@@ -84,11 +86,11 @@ func (c campaignApplication) ListCampaigns(ctx context.Context, in *campaignv1.L
 
 	if participantID == "" && userID == "" {
 		err := status.Error(codes.PermissionDenied, "missing participant identity")
-		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+		authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 			Store:      c.auth.Audit,
 			Capability: domainauthz.CapabilityReadCampaign,
-			Decision:   authzDecisionDeny,
-			ReasonCode: authzReasonDenyMissingIdentity,
+			Decision:   authz.DecisionDeny,
+			ReasonCode: authz.ReasonDenyMissingIdentity,
 			Err:        err,
 		})
 		return campaignListPage{}, err

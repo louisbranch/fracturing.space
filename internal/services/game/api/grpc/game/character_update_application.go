@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -112,12 +115,12 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 
 	var policyActor storage.ParticipantRecord
 	if transferOwnershipRequested {
-		policyActor, err = requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
+		policyActor, err = authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityTransferCharacterOwnership, campaignRecord)
 		if err != nil {
 			return storage.CharacterRecord{}, err
 		}
 	} else {
-		policyActor, err = requireCharacterMutationPolicyWithDependencies(
+		policyActor, err = authz.RequireCharacterMutationPolicy(
 			ctx,
 			c.auth,
 			campaignRecord,
@@ -153,13 +156,13 @@ func (c characterApplication) UpdateCharacter(ctx context.Context, campaignID st
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCharacterUpdate,
+			Type:         handler.CommandTypeCharacterUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

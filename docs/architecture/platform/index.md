@@ -24,6 +24,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [Asset catalog ownership](asset-catalog-ownership.md)
 - [Developer tools architecture](developer-tools-architecture.md)
 - [Observability gaps](observability-gaps.md)
+- [Game gRPC package split](game-grpc-package-split.md)
 
 Operational/reference addenda:
 

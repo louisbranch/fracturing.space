@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -26,8 +27,8 @@ func (a communicationApplication) OpenCommunicationGate(
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	controlMetadata := structToMap(in.GetMetadata())
-	if err := validateStructPayload(controlMetadata); err != nil {
+	controlMetadata := handler.StructToMap(in.GetMetadata())
+	if err := handler.ValidateStructPayload(controlMetadata); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	controlMetadata, err = session.NormalizeGateWorkflowMetadata(gateType, controlMetadata)
@@ -61,8 +62,8 @@ func (a communicationApplication) RequestGMHandoff(
 	campaignID string,
 	in *campaignv1.RequestGMHandoffRequest,
 ) (*campaignv1.CommunicationContext, error) {
-	controlMetadata := structToMap(in.GetMetadata())
-	if err := validateStructPayload(controlMetadata); err != nil {
+	controlMetadata := handler.StructToMap(in.GetMetadata())
+	if err := handler.ValidateStructPayload(controlMetadata); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -96,8 +97,8 @@ func (a communicationApplication) ResolveCommunicationGate(
 	campaignID string,
 	in *campaignv1.ResolveCommunicationGateRequest,
 ) (*campaignv1.CommunicationContext, error) {
-	resolution := structToMap(in.GetResolution())
-	if err := validateStructPayload(resolution); err != nil {
+	resolution := handler.StructToMap(in.GetResolution())
+	if err := handler.ValidateStructPayload(resolution); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -122,8 +123,8 @@ func (a communicationApplication) RespondToCommunicationGate(
 	campaignID string,
 	in *campaignv1.RespondToCommunicationGateRequest,
 ) (*campaignv1.CommunicationContext, error) {
-	responsePayload := structToMap(in.GetResponse())
-	if err := validateStructPayload(responsePayload); err != nil {
+	responsePayload := handler.StructToMap(in.GetResponse())
+	if err := handler.ValidateStructPayload(responsePayload); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -160,8 +161,8 @@ func (a communicationApplication) ResolveGMHandoff(
 	campaignID string,
 	in *campaignv1.ResolveGMHandoffRequest,
 ) (*campaignv1.CommunicationContext, error) {
-	resolution := structToMap(in.GetResolution())
-	if err := validateStructPayload(resolution); err != nil {
+	resolution := handler.StructToMap(in.GetResolution())
+	if err := handler.ValidateStructPayload(resolution); err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 
@@ -251,7 +252,7 @@ func (a communicationApplication) executeCommunicationGateOpen(
 ) (*campaignv1.CommunicationContext, error) {
 	if err := a.gateCommands.Execute(
 		ctx,
-		commandTypeSessionGateOpen,
+		handler.CommandTypeSessionGateOpen,
 		campaignID,
 		sessionID,
 		string(payload.GateID),
@@ -273,7 +274,7 @@ func (a communicationApplication) executeCommunicationGateResolve(
 ) (*campaignv1.CommunicationContext, error) {
 	if err := a.gateCommands.Execute(
 		ctx,
-		commandTypeSessionGateResolve,
+		handler.CommandTypeSessionGateResolve,
 		campaignID,
 		sessionID,
 		gateID,
@@ -295,7 +296,7 @@ func (a communicationApplication) executeCommunicationGateResponse(
 ) (*campaignv1.CommunicationContext, error) {
 	if err := a.gateCommands.Execute(
 		ctx,
-		commandTypeSessionGateRespond,
+		handler.CommandTypeSessionGateRespond,
 		campaignID,
 		sessionID,
 		gateID,
@@ -317,7 +318,7 @@ func (a communicationApplication) executeCommunicationGateAbandon(
 ) (*campaignv1.CommunicationContext, error) {
 	if err := a.gateCommands.Execute(
 		ctx,
-		commandTypeSessionGateAbandon,
+		handler.CommandTypeSessionGateAbandon,
 		campaignID,
 		sessionID,
 		gateID,

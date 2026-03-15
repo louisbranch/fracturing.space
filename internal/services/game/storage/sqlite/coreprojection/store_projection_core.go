@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strings"
 
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
@@ -30,7 +29,7 @@ func (s *Store) Put(ctx context.Context, c storage.CampaignRecord) error {
 	return s.q.PutCampaign(ctx, db.PutCampaignParams{
 		ID:               c.ID,
 		Name:             c.Name,
-		Locale:           platformi18n.LocaleString(c.Locale),
+		Locale:           c.Locale,
 		GameSystem:       enumToStorage(c.System),
 		Status:           enumToStorage(c.Status),
 		GmMode:           enumToStorage(c.GmMode),

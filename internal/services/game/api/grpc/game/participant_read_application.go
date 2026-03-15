@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
@@ -22,7 +24,7 @@ func (c participantApplication) ListParticipants(ctx context.Context, campaignID
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return participantListPage{}, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, c.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, c.auth, campaignRecord); err != nil {
 		return participantListPage{}, err
 	}
 
@@ -48,7 +50,7 @@ func (c participantApplication) GetParticipant(ctx context.Context, campaignID, 
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, c.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, c.auth, campaignRecord); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
 

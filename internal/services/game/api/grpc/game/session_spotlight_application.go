@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"strings"
 
@@ -36,7 +39,7 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -54,12 +57,12 @@ func (a sessionApplication) SetSessionSpotlight(ctx context.Context, campaignID 
 		CharacterID:   ids.CharacterID(characterID),
 	}
 	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
-		CommandType: commandTypeSessionSpotlightSet,
+		CommandType: handler.CommandTypeSessionSpotlightSet,
 		CampaignID:  campaignID,
 		SessionID:   sessionID,
 		Payload:     payload,
 		Options: domainwrite.Options{
-			ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			ApplyErr:        handler.ApplyErrorWithCodePreserve("apply event"),
 			RequireEvents:   true,
 			MissingEventMsg: "session.spotlight_set did not emit an event",
 		},
@@ -85,7 +88,7 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	if err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -98,12 +101,12 @@ func (a sessionApplication) ClearSessionSpotlight(ctx context.Context, campaignI
 	}
 	payload := session.SpotlightClearedPayload{Reason: reason}
 	if err := a.commands.Execute(ctx, sessionCommandExecutionInput{
-		CommandType: commandTypeSessionSpotlightClear,
+		CommandType: handler.CommandTypeSessionSpotlightClear,
 		CampaignID:  campaignID,
 		SessionID:   sessionID,
 		Payload:     payload,
 		Options: domainwrite.Options{
-			ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
+			ApplyErr:        handler.ApplyErrorWithCodePreserve("apply event"),
 			RequireEvents:   true,
 			MissingEventMsg: "session.spotlight_clear did not emit an event",
 		},

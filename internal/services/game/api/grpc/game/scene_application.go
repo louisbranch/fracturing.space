@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
@@ -12,7 +14,7 @@ import (
 // (lifecycle, character membership, gates, and spotlight operations) while
 // keeping scene-owned reads and write execution explicit.
 type sceneApplication struct {
-	auth        policyDependencies
+	auth        authz.PolicyDeps
 	stores      sceneApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -34,7 +36,7 @@ func newSceneApplication(service *SceneService) sceneApplication {
 
 func newSceneApplicationWithDependencies(stores Stores, clock func() time.Time, idGenerator func() (string, error)) sceneApplication {
 	app := sceneApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: sceneApplicationStores{
 			Campaign: stores.Campaign,
 			Scene:    stores.Scene,

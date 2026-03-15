@@ -168,8 +168,8 @@ func TestSessionApplicationWriteFlowsUseSessionCommandExecutor(t *testing.T) {
 			lines func(string) ([]int, error)
 		}{
 			{
-				label: "executeAndApplyDomainCommand",
-				lines: func(path string) ([]int, error) { return namedCallLines(path, "executeAndApplyDomainCommand") },
+				label: "handler.ExecuteAndApplyDomainCommand",
+				lines: func(path string) ([]int, error) { return namedCallLines(path, "handler.ExecuteAndApplyDomainCommand") },
 			},
 			{
 				label: "commandbuild.Core",
@@ -912,6 +912,74 @@ func TestSessionGateStoreDoesNotUseLegacyProjectionJSONBlobs(t *testing.T) {
 		return
 	}
 	t.Fatalf("session gate SQLite path still depends on legacy JSON blob fields:\n%s", strings.Join(violations, "\n"))
+}
+
+// TestHandlerPipelineImportDirectionIsLayered enforces the import DAG between
+// the five handler-pipeline packages (validate, commandbuild, domainwrite,
+// domainwriteexec, grpcerror).
+//
+// Invariant: lower-layer packages must not import higher-layer packages.
+// The allowed directions are:
+//
+//	domainwriteexec → domainwrite, grpcerror
+//	grpcerror       → domainwrite
+//	validate        → (none of the above)
+//	commandbuild    → (none of the above)
+//	domainwrite     → (none of the above)
+func TestHandlerPipelineImportDirectionIsLayered(t *testing.T) {
+	repoRoot := repoRootFromThisFile(t)
+	pipelineBase := filepath.Join(repoRoot, "internal", "services", "game", "api", "grpc", "internal")
+	pipelinePkgSuffix := "internal/services/game/api/grpc/internal/"
+
+	// allowedImports defines which pipeline packages each package may import.
+	allowedImports := map[string]map[string]struct{}{
+		"validate":        {},
+		"commandbuild":    {},
+		"domainwrite":     {},
+		"grpcerror":       {"domainwrite": {}},
+		"domainwriteexec": {"domainwrite": {}, "grpcerror": {}},
+	}
+
+	var violations []string
+	for pkg, allowed := range allowedImports {
+		pkgDir := filepath.Join(pipelineBase, pkg)
+		entries, err := os.ReadDir(pkgDir)
+		if err != nil {
+			t.Fatalf("read %s dir: %v", pkg, err)
+		}
+		for _, entry := range entries {
+			if entry.IsDir() || filepath.Ext(entry.Name()) != ".go" || strings.HasSuffix(entry.Name(), "_test.go") {
+				continue
+			}
+			path := filepath.Join(pkgDir, entry.Name())
+			fset := token.NewFileSet()
+			node, parseErr := parser.ParseFile(fset, path, nil, parser.ImportsOnly)
+			if parseErr != nil {
+				t.Fatalf("parse %s: %v", path, parseErr)
+			}
+			for _, spec := range node.Imports {
+				importPath := strings.Trim(spec.Path.Value, "\"")
+				idx := strings.Index(importPath, pipelinePkgSuffix)
+				if idx < 0 {
+					continue
+				}
+				imported := importPath[idx+len(pipelinePkgSuffix):]
+				if _, ok := allowedImports[imported]; !ok {
+					// Not a pipeline package import.
+					continue
+				}
+				if _, ok := allowed[imported]; !ok {
+					violations = append(violations, fmt.Sprintf("%s/%s imports %s", pkg, entry.Name(), imported))
+				}
+			}
+		}
+	}
+
+	sort.Strings(violations)
+	if len(violations) == 0 {
+		return
+	}
+	t.Fatalf("handler pipeline import direction violations:\n%s", strings.Join(violations, "\n"))
 }
 
 func repoRootFromThisFile(t *testing.T) string {

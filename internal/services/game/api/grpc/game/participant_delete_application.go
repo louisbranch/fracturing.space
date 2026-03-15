@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -26,7 +29,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
+	policyActor, err := authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
@@ -40,11 +43,11 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
+	ownerCount, err := authz.CountCampaignOwners(ctx, c.stores.Participant, campaignID)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	targetOwnsActiveCharacters, err := participantOwnsActiveCharacters(ctx, c.stores.Character, campaignID, participantID)
+	targetOwnsActiveCharacters, err := authz.ParticipantOwnsActiveCharacters(ctx, c.stores.Character, campaignID, participantID)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
@@ -56,11 +59,11 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 	)
 	if !decision.Allowed {
 		authErr := participantPolicyDecisionError(decision.ReasonCode)
-		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+		authz.EmitDecisionTelemetry(ctx, authz.DecisionEvent{
 			Store:      c.auth.Audit,
 			CampaignID: campaignID,
 			Capability: domainauthz.CapabilityManageParticipants,
-			Decision:   authzDecisionDeny,
+			Decision:   authz.DecisionDeny,
 			ReasonCode: decision.ReasonCode,
 			Actor:      policyActor,
 			Err:        authErr,
@@ -83,14 +86,14 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeParticipantLeave,
+			Type:         handler.CommandTypeParticipantLeave,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -100,7 +103,7 @@ func (c participantApplication) DeleteParticipant(ctx context.Context, campaignI
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply event"),
 		},
 	)
 	if err != nil {

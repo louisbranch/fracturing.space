@@ -3,7 +3,6 @@ package coreprojection
 import (
 	"database/sql"
 
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -34,14 +33,10 @@ type campaignRowData struct {
 }
 
 func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error) {
-	locale := platformi18n.DefaultLocale()
-	if parsed, ok := platformi18n.ParseLocale(row.Locale); ok {
-		locale = parsed
-	}
 	c := storage.CampaignRecord{
 		ID:               row.ID,
 		Name:             row.Name,
-		Locale:           locale,
+		Locale:           row.Locale,
 		System:           enumFromStorage(row.GameSystem, bridge.NormalizeSystemID),
 		Status:           enumFromStorage(row.Status, campaign.NormalizeStatus),
 		GmMode:           enumFromStorage(row.GmMode, campaign.NormalizeGmMode),

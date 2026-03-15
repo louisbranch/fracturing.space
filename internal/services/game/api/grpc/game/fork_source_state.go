@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"errors"
 	"strings"
@@ -37,7 +39,7 @@ func (a forkApplication) loadForkSourceState(ctx context.Context, sourceCampaign
 			return forkSourceState{}, status.Error(codes.Unauthenticated, "authenticated user is required to fork public campaigns")
 		}
 	} else {
-		if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
+		if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageCampaign, sourceCampaign); err != nil {
 			return forkSourceState{}, err
 		}
 	}

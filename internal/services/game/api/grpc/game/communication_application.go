@@ -1,11 +1,15 @@
 package game
 
-import "github.com/louisbranch/fracturing.space/internal/services/game/storage"
+import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+)
 
 // communicationApplication coordinates communication-specific read assembly and
 // control workflows behind a narrow dependency bundle.
 type communicationApplication struct {
-	auth         policyDependencies
+	auth         authz.PolicyDeps
 	stores       communicationApplicationStores
 	sessions     sessionApplication
 	gateCommands sessionGateCommandExecutor
@@ -24,7 +28,7 @@ func newCommunicationApplicationWithDependencies(
 	idGenerator func() (string, error),
 ) communicationApplication {
 	return communicationApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: communicationApplicationStores{
 			Campaign:    stores.Campaign,
 			Participant: stores.Participant,

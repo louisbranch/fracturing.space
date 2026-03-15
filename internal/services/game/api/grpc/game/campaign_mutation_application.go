@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -27,7 +30,7 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
@@ -47,26 +50,26 @@ func (c campaignApplication) UpdateCampaign(ctx context.Context, campaignID stri
 			fields["theme_prompt"] = normalizedThemePrompt
 		}
 	}
-	if input.Locale != nil && *input.Locale != campaignRecord.Locale {
+	if input.Locale != nil && platformi18n.LocaleString(*input.Locale) != campaignRecord.Locale {
 		fields["locale"] = platformi18n.LocaleString(*input.Locale)
 	}
 	if len(fields) == 0 {
 		return campaignRecord, nil
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 	payloadJSON, err := json.Marshal(campaign.UpdatePayload{Fields: fields})
 	if err != nil {
 		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignUpdate,
+			Type:         handler.CommandTypeCampaignUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -93,14 +96,14 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 
 	fields := map[string]string{"cover_asset_id": coverAssetID}
 	if strings.TrimSpace(coverSetID) != "" {
@@ -112,13 +115,13 @@ func (c campaignApplication) SetCampaignCover(ctx context.Context, campaignID, c
 		return storage.CampaignRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignUpdate,
+			Type:         handler.CommandTypeCampaignUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

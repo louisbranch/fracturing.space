@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
@@ -36,7 +37,7 @@ func applyParticipantProfileSnapshot(
 		return
 	}
 
-	snapshot := loadSocialProfileSnapshot(ctx, socialClient, userID)
+	snapshot := handler.LoadSocialProfileSnapshot(ctx, socialClient, userID)
 	fields := map[string]string{}
 	if snapshot.Name != "" {
 		fields["name"] = snapshot.Name
@@ -62,13 +63,13 @@ func applyParticipantProfileSnapshot(
 		return
 	}
 
-	_, _ = executeAndApplyDomainCommand(
+	_, _ = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		write,
 		applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeParticipantUpdate,
+			Type:         handler.CommandTypeParticipantUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -78,7 +79,7 @@ func applyParticipantProfileSnapshot(
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply participant event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply participant event"),
 		},
 	)
 }

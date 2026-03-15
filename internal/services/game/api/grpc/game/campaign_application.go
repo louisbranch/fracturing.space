@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"time"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
@@ -14,7 +16,7 @@ import (
 // campaignApplication coordinates campaign transport use-cases across focused
 // method files (creation, mutation, status transitions, and AI binding).
 type campaignApplication struct {
-	auth        policyDependencies
+	auth        authz.PolicyDeps
 	stores      campaignApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -45,7 +47,7 @@ func newCampaignApplicationWithDependencies(
 	aiClient aiv1.AgentServiceClient,
 ) campaignApplication {
 	app := campaignApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: campaignApplicationStores{
 			Campaign:    stores.Campaign,
 			Participant: stores.Participant,

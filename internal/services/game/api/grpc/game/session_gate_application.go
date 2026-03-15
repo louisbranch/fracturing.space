@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"errors"
 	"strings"
@@ -37,7 +40,7 @@ func (a sessionApplication) LoadActiveSessionGateControlState(
 	if err != nil {
 		return activeSessionGateControlState{}, err
 	}
-	actor, err := requirePolicyActorWithDependencies(ctx, a.auth, capability, campaignRecord)
+	actor, err := authz.RequirePolicyActor(ctx, a.auth, capability, campaignRecord)
 	if err != nil {
 		return activeSessionGateControlState{}, err
 	}
@@ -76,7 +79,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpSessionAction); err != nil {
@@ -104,8 +107,8 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 		}
 	}
 	reason := session.NormalizeGateReason(in.GetReason())
-	metadata := structToMap(in.GetMetadata())
-	if err := validateStructPayload(metadata); err != nil {
+	metadata := handler.StructToMap(in.GetMetadata())
+	if err := handler.ValidateStructPayload(metadata); err != nil {
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	payload := session.GateOpenedPayload{
@@ -116,7 +119,7 @@ func (a sessionApplication) OpenSessionGate(ctx context.Context, campaignID stri
 	}
 	if err := a.gateCommands.Execute(
 		ctx,
-		commandTypeSessionGateOpen,
+		handler.CommandTypeSessionGateOpen,
 		campaignID,
 		sessionID,
 		gateID,
@@ -146,7 +149,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -161,8 +164,8 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 		return gate, nil
 	}
 
-	resolution := structToMap(in.GetResolution())
-	if err := validateStructPayload(resolution); err != nil {
+	resolution := handler.StructToMap(in.GetResolution())
+	if err := handler.ValidateStructPayload(resolution); err != nil {
 		return storage.SessionGate{}, status.Error(codes.InvalidArgument, err.Error())
 	}
 	payload := session.GateResolvedPayload{
@@ -172,7 +175,7 @@ func (a sessionApplication) ResolveSessionGate(ctx context.Context, campaignID s
 	}
 	if err := a.gateCommands.Execute(
 		ctx,
-		commandTypeSessionGateResolve,
+		handler.CommandTypeSessionGateResolve,
 		campaignID,
 		sessionID,
 		gateID,
@@ -202,7 +205,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	if err != nil {
 		return storage.SessionGate{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return storage.SessionGate{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {
@@ -222,7 +225,7 @@ func (a sessionApplication) AbandonSessionGate(ctx context.Context, campaignID s
 	}
 	if err := a.gateCommands.Execute(
 		ctx,
-		commandTypeSessionGateAbandon,
+		handler.CommandTypeSessionGateAbandon,
 		campaignID,
 		sessionID,
 		gateID,

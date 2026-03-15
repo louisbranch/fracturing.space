@@ -5,11 +5,12 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 )
 
 const (
-	defaultListSessionsPageSize = pageSmall
-	maxListSessionsPageSize     = pageSmall
+	defaultListSessionsPageSize = handler.PageSmall
+	maxListSessionsPageSize     = handler.PageSmall
 )
 
 // SessionService implements the game.v1.SessionService gRPC API.

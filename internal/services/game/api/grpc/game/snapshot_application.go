@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
@@ -11,7 +13,7 @@ import (
 // state patch/update helper files using Daggerheart-specific reads and explicit
 // write execution seams.
 type snapshotApplication struct {
-	auth    policyDependencies
+	auth    authz.PolicyDeps
 	stores  snapshotApplicationStores
 	write   domainwriteexec.WritePath
 	applier projection.Applier
@@ -32,7 +34,7 @@ func newSnapshotApplication(service *SnapshotService) snapshotApplication {
 
 func newSnapshotApplicationWithDependencies(stores Stores) snapshotApplication {
 	return snapshotApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: snapshotApplicationStores{
 			Campaign:    stores.Campaign,
 			Character:   stores.Character,

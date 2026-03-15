@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -34,7 +37,7 @@ func (c characterApplication) ClaimCharacterControl(ctx context.Context, campaig
 		return "", "", status.Error(codes.FailedPrecondition, "character already has controller")
 	}
 
-	actor, _, err := resolvePolicyActor(ctx, c.stores.Participant, campaignRecord.ID)
+	actor, _, err := authz.ResolvePolicyActor(ctx, c.stores.Participant, campaignRecord.ID)
 	if err != nil {
 		return "", "", err
 	}
@@ -61,7 +64,7 @@ func (c characterApplication) ReleaseCharacterControl(ctx context.Context, campa
 		return "", err
 	}
 
-	actor, _, err := resolvePolicyActor(ctx, c.stores.Participant, campaignRecord.ID)
+	actor, _, err := authz.ResolvePolicyActor(ctx, c.stores.Participant, campaignRecord.ID)
 	if err != nil {
 		return "", err
 	}
@@ -96,7 +99,7 @@ func (c characterApplication) SetDefaultControl(ctx context.Context, campaignID 
 		return "", "", status.Error(codes.InvalidArgument, "participant id is required")
 	}
 	participantID := strings.TrimSpace(in.GetParticipantId().GetValue())
-	policyActor, err := requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCharacters, campaignRecord)
+	policyActor, err := authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageCharacters, campaignRecord)
 	if err != nil {
 		return "", "", err
 	}
@@ -139,7 +142,7 @@ func (c characterApplication) applyCharacterControlUpdate(ctx context.Context, c
 		return grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
+	actorID, actorType := handler.ResolveCommandActor(ctx)
 	if actorID == "" {
 		actorID = strings.TrimSpace(fallbackActorID)
 		if actorID != "" {
@@ -147,13 +150,13 @@ func (c characterApplication) applyCharacterControlUpdate(ctx context.Context, c
 		}
 	}
 
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCharacterUpdate,
+			Type:         handler.CommandTypeCharacterUpdate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

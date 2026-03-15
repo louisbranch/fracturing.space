@@ -18,7 +18,7 @@ func CampaignToProto(c storage.CampaignRecord) *campaignv1.Campaign {
 	return &campaignv1.Campaign{
 		Id:               c.ID,
 		Name:             c.Name,
-		Locale:           platformi18n.NormalizeLocale(c.Locale),
+		Locale:           LocaleStringToProto(c.Locale),
 		System:           GameSystemToProto(c.System),
 		Status:           CampaignStatusToProto(c.Status),
 		GmMode:           GMModeToProto(c.GmMode),
@@ -158,6 +158,13 @@ func GameSystemFromProto(system commonv1.GameSystem) bridge.SystemID {
 	default:
 		return ""
 	}
+}
+
+// LocaleStringToProto converts a BCP-47 locale string to the proto enum,
+// falling back to the default locale for unrecognized values.
+func LocaleStringToProto(locale string) commonv1.Locale {
+	parsed, _ := platformi18n.ParseLocale(locale)
+	return platformi18n.NormalizeLocale(parsed)
 }
 
 func timestampOrNil(value *time.Time) *timestamppb.Timestamp {

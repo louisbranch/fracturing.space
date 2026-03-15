@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -68,14 +69,14 @@ func (a inviteApplication) DeclineInvite(ctx context.Context, in *campaignv1.Dec
 	if err != nil {
 		return storage.InviteRecord{}, grpcerror.Internal("encode invite payload", err)
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   inv.CampaignID,
-			Type:         commandTypeInviteDecline,
+			Type:         handler.CommandTypeInviteDecline,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -85,7 +86,7 @@ func (a inviteApplication) DeclineInvite(ctx context.Context, in *campaignv1.Dec
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply invite event"),
 		},
 	)
 	if err != nil {
