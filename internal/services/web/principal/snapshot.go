@@ -9,9 +9,9 @@ import (
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 )
 
-// requestSnapshot caches principal lookups for one request so repeated handler
-// and template resolution does not duplicate backend calls.
-type requestSnapshot struct {
+// requestPrincipal caches principal lookups for one request so auth gating,
+// handlers, and templates all read from the same visible request-scoped state.
+type requestPrincipal struct {
 	userIDOnce         sync.Once
 	userID             string
 	viewerOnce         sync.Once
@@ -36,7 +36,7 @@ func contextFromRequest(request *http.Request) context.Context {
 
 // snapshotFromRequest returns the per-request principal snapshot when the
 // middleware has attached one.
-func snapshotFromRequest(request *http.Request) *requestSnapshot {
+func snapshotFromRequest(request *http.Request) *requestPrincipal {
 	if request == nil {
 		return nil
 	}
@@ -44,10 +44,10 @@ func snapshotFromRequest(request *http.Request) *requestSnapshot {
 }
 
 // snapshotFromContext returns the per-request principal snapshot when present.
-func snapshotFromContext(ctx context.Context) *requestSnapshot {
+func snapshotFromContext(ctx context.Context) *requestPrincipal {
 	if ctx == nil {
 		return nil
 	}
-	snapshot, _ := ctx.Value(snapshotContextKey{}).(*requestSnapshot)
+	snapshot, _ := ctx.Value(snapshotContextKey{}).(*requestPrincipal)
 	return snapshot
 }

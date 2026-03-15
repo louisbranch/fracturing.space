@@ -40,7 +40,7 @@ func (h handlers) handleSessionStart(w http.ResponseWriter, r *http.Request, cam
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.sessionMutate.StartSession(ctx, campaignID, parseStartSessionInput(r.Form)); err != nil {
+	if err := h.sessions.mutation.StartSession(ctx, campaignID, parseStartSessionInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_start_session", routepath.AppCampaignSessions(campaignID))
 		return
 	}
@@ -56,7 +56,7 @@ func (h handlers) handleSessionEnd(w http.ResponseWriter, r *http.Request, campa
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.sessionMutate.EndSession(ctx, campaignID, parseEndSessionInput(r.Form)); err != nil {
+	if err := h.sessions.mutation.EndSession(ctx, campaignID, parseEndSessionInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_end_session", routepath.AppCampaignSessions(campaignID))
 		return
 	}
@@ -78,15 +78,15 @@ func (h handlers) handleCharacterCreate(w http.ResponseWriter, r *http.Request, 
 	}
 
 	ctx, _ := h.RequestContextAndUserID(r)
-	created, err := h.characterMutate.CreateCharacter(ctx, campaignID, input)
+	created, err := h.characters.mutation.CreateCharacter(ctx, campaignID, input)
 	if err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_character", routepath.AppCampaign(campaignID))
 		return
 	}
 
 	// Redirect to creation page if the campaign has a character creation workflow.
-	workspace, err := h.workspace.CampaignWorkspace(ctx, campaignID)
-	if err == nil && h.creationPages.Enabled(workspace.System) {
+	workspace, err := h.pages.workspace.CampaignWorkspace(ctx, campaignID)
+	if err == nil && h.creation.pages.Enabled(workspace.System) {
 		h.writeMutationSuccess(w, r, "web.campaigns.notice_character_created", routepath.AppCampaignCharacterCreation(campaignID, created.CharacterID))
 		return
 	}
@@ -99,7 +99,7 @@ func (h handlers) handleCharacterUpdate(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.characterMutate.UpdateCharacter(ctx, campaignID, characterID, parseUpdateCharacterInput(r.Form)); err != nil {
+	if err := h.characters.mutation.UpdateCharacter(ctx, campaignID, characterID, parseUpdateCharacterInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_update_character", routepath.AppCampaignCharacter(campaignID, characterID))
 		return
 	}
@@ -113,7 +113,7 @@ func (h handlers) handleCharacterControlSet(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.characterControl.SetCharacterController(ctx, campaignID, characterID, parseSetCharacterControllerInput(r.Form)); err != nil {
+	if err := h.characters.control.SetCharacterController(ctx, campaignID, characterID, parseSetCharacterControllerInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_set_character_controller", redirectURL)
 		return
 	}
@@ -127,7 +127,7 @@ func (h handlers) handleCharacterControlClaim(w http.ResponseWriter, r *http.Req
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.characterControl.ClaimCharacterControl(ctx, campaignID, characterID, userID); err != nil {
+	if err := h.characters.control.ClaimCharacterControl(ctx, campaignID, characterID, userID); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_claim_character_control", redirectURL)
 		return
 	}
@@ -141,7 +141,7 @@ func (h handlers) handleCharacterControlRelease(w http.ResponseWriter, r *http.R
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.characterControl.ReleaseCharacterControl(ctx, campaignID, characterID, userID); err != nil {
+	if err := h.characters.control.ReleaseCharacterControl(ctx, campaignID, characterID, userID); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_release_character_control", redirectURL)
 		return
 	}
@@ -155,7 +155,7 @@ func (h handlers) handleCharacterDelete(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.characterMutate.DeleteCharacter(ctx, campaignID, characterID); err != nil {
+	if err := h.characters.mutation.DeleteCharacter(ctx, campaignID, characterID); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_delete_character", redirectURL)
 		return
 	}
@@ -168,7 +168,7 @@ func (h handlers) handleInviteCreate(w http.ResponseWriter, r *http.Request, cam
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.inviteMutate.CreateInvite(ctx, campaignID, parseCreateInviteInput(r.Form)); err != nil {
+	if err := h.invites.mutation.CreateInvite(ctx, campaignID, parseCreateInviteInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_invite", routepath.AppCampaignInvites(campaignID))
 		return
 	}
@@ -185,7 +185,7 @@ func (h handlers) handleParticipantCreate(w http.ResponseWriter, r *http.Request
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if _, err := h.participantMutate.CreateParticipant(ctx, campaignID, parseCreateParticipantInput(r.Form)); err != nil {
+	if _, err := h.participants.mutation.CreateParticipant(ctx, campaignID, parseCreateParticipantInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_participant", redirectURL)
 		return
 	}
@@ -198,7 +198,7 @@ func (h handlers) handleInviteRevoke(w http.ResponseWriter, r *http.Request, cam
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	if err := h.inviteMutate.RevokeInvite(ctx, campaignID, parseRevokeInviteInput(r.Form)); err != nil {
+	if err := h.invites.mutation.RevokeInvite(ctx, campaignID, parseRevokeInviteInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_revoke_invite", routepath.AppCampaignInvites(campaignID))
 		return
 	}
@@ -214,7 +214,7 @@ func (h handlers) handleParticipantUpdate(w http.ResponseWriter, r *http.Request
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.participantMutate.UpdateParticipant(ctx, campaignID, parseUpdateParticipantInput(participantID, r.Form)); err != nil {
+	if err := h.participants.mutation.UpdateParticipant(ctx, campaignID, parseUpdateParticipantInput(participantID, r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_update_participant", routepath.AppCampaignParticipants(campaignID))
 		return
 	}
@@ -228,7 +228,7 @@ func (h handlers) handleCampaignAIBinding(w http.ResponseWriter, r *http.Request
 	}
 	input := parseUpdateCampaignAIBindingInput(r.Form)
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.automationMutate.UpdateCampaignAIBinding(ctx, campaignID, input); err != nil {
+	if err := h.overview.automationMutate.UpdateCampaignAIBinding(ctx, campaignID, input); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_update_ai_binding", routepath.AppCampaignAIBinding(campaignID))
 		return
 	}
@@ -241,7 +241,7 @@ func (h handlers) handleCampaignUpdate(w http.ResponseWriter, r *http.Request, c
 		return
 	}
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.configuration.UpdateCampaign(ctx, campaignID, parseUpdateCampaignInput(r.Form)); err != nil {
+	if err := h.overview.configuration.UpdateCampaign(ctx, campaignID, parseUpdateCampaignInput(r.Form)); err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_update_campaign", routepath.AppCampaign(campaignID))
 		return
 	}

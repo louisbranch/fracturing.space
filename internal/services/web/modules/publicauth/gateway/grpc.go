@@ -32,10 +32,7 @@ type GRPCGateway struct {
 }
 
 // NewGRPCGateway builds a publicauth gateway backed by gRPC auth client calls.
-func NewGRPCGateway(client AuthClient) publicauthapp.Gateway {
-	if client == nil {
-		return publicauthapp.NewUnavailableGateway()
-	}
+func NewGRPCGateway(client AuthClient) GRPCGateway {
 	return newGRPCGateway(client)
 }
 
@@ -60,6 +57,9 @@ func mapGRPCErrorWithKey(err error, fallbackKind apperrors.Kind, fallbackKey str
 
 // BeginAccountRegistration starts username-backed registration.
 func (g GRPCGateway) BeginAccountRegistration(ctx context.Context, username string) (publicauthapp.PasskeyChallenge, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().BeginAccountRegistration(ctx, username)
+	}
 	resp, err := g.Client.BeginAccountRegistration(ctx, &authv1.BeginAccountRegistrationRequest{Username: username})
 	if err != nil {
 		return publicauthapp.PasskeyChallenge{}, mapGRPCErrorWithKey(err, apperrors.KindInvalidInput, "error.http.failed_to_create_user", "Failed to create user.")
@@ -73,6 +73,9 @@ func (g GRPCGateway) BeginAccountRegistration(ctx context.Context, username stri
 
 // CheckUsernameAvailability returns advisory signup validation state.
 func (g GRPCGateway) CheckUsernameAvailability(ctx context.Context, username string) (publicauthapp.UsernameAvailability, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().CheckUsernameAvailability(ctx, username)
+	}
 	resp, err := g.Client.CheckUsernameAvailability(ctx, &authv1.CheckUsernameAvailabilityRequest{Username: username})
 	if err != nil {
 		return publicauthapp.UsernameAvailability{}, mapGRPCError(err, apperrors.KindUnavailable, "Unable to validate the username.")
@@ -85,6 +88,9 @@ func (g GRPCGateway) CheckUsernameAvailability(ctx context.Context, username str
 
 // FinishAccountRegistration centralizes this staged-signup behavior in one helper seam.
 func (g GRPCGateway) FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (publicauthapp.PasskeyRegistrationReveal, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().FinishAccountRegistration(ctx, sessionID, credential)
+	}
 	resp, err := g.Client.FinishAccountRegistration(ctx, &authv1.FinishAccountRegistrationRequest{
 		SessionId:              sessionID,
 		CredentialResponseJson: credential,
@@ -99,6 +105,9 @@ func (g GRPCGateway) FinishAccountRegistration(ctx context.Context, sessionID st
 
 // AcknowledgeAccountRegistration activates one staged signup and returns the signed-in session.
 func (g GRPCGateway) AcknowledgeAccountRegistration(ctx context.Context, sessionID string, pendingID string) (publicauthapp.PasskeyFinish, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().AcknowledgeAccountRegistration(ctx, sessionID, pendingID)
+	}
 	resp, err := g.Client.AcknowledgeAccountRegistration(ctx, &authv1.AcknowledgeAccountRegistrationRequest{
 		SessionId: sessionID,
 		PendingId: strings.TrimSpace(pendingID),
@@ -122,6 +131,9 @@ func (g GRPCGateway) AcknowledgeAccountRegistration(ctx context.Context, session
 
 // BeginPasskeyLogin centralizes this web behavior in one helper seam.
 func (g GRPCGateway) BeginPasskeyLogin(ctx context.Context, username string) (publicauthapp.PasskeyChallenge, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().BeginPasskeyLogin(ctx, username)
+	}
 	resp, err := g.Client.BeginPasskeyLogin(ctx, &authv1.BeginPasskeyLoginRequest{Username: username})
 	if err != nil {
 		return publicauthapp.PasskeyChallenge{}, mapGRPCError(err, apperrors.KindInvalidInput, "Failed to start passkey login.")
@@ -135,6 +147,9 @@ func (g GRPCGateway) BeginPasskeyLogin(ctx context.Context, username string) (pu
 
 // FinishPasskeyLogin centralizes this web behavior in one helper seam.
 func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (string, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().FinishPasskeyLogin(ctx, sessionID, credential, pendingID)
+	}
 	resp, err := g.Client.FinishPasskeyLogin(ctx, &authv1.FinishPasskeyLoginRequest{
 		SessionId:              sessionID,
 		CredentialResponseJson: credential,
@@ -152,6 +167,9 @@ func (g GRPCGateway) FinishPasskeyLogin(ctx context.Context, sessionID string, c
 
 // BeginAccountRecovery verifies a recovery code and returns a recovery session ID.
 func (g GRPCGateway) BeginAccountRecovery(ctx context.Context, username string, recoveryCode string) (string, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().BeginAccountRecovery(ctx, username, recoveryCode)
+	}
 	resp, err := g.Client.BeginAccountRecovery(ctx, &authv1.BeginAccountRecoveryRequest{
 		Username:     username,
 		RecoveryCode: recoveryCode,
@@ -168,6 +186,9 @@ func (g GRPCGateway) BeginAccountRecovery(ctx context.Context, username string, 
 
 // BeginRecoveryPasskeyRegistration starts replacement passkey enrollment.
 func (g GRPCGateway) BeginRecoveryPasskeyRegistration(ctx context.Context, recoverySessionID string) (publicauthapp.PasskeyChallenge, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().BeginRecoveryPasskeyRegistration(ctx, recoverySessionID)
+	}
 	resp, err := g.Client.BeginRecoveryPasskeyRegistration(ctx, &authv1.BeginRecoveryPasskeyRegistrationRequest{
 		RecoverySessionId: recoverySessionID,
 	})
@@ -183,6 +204,9 @@ func (g GRPCGateway) BeginRecoveryPasskeyRegistration(ctx context.Context, recov
 
 // FinishRecoveryPasskeyRegistration completes recovery and returns the signed-in session.
 func (g GRPCGateway) FinishRecoveryPasskeyRegistration(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (publicauthapp.PasskeyFinish, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().FinishRecoveryPasskeyRegistration(ctx, recoverySessionID, sessionID, credential, pendingID)
+	}
 	resp, err := g.Client.FinishRecoveryPasskeyRegistration(ctx, &authv1.FinishRecoveryPasskeyRegistrationRequest{
 		RecoverySessionId:      recoverySessionID,
 		SessionId:              sessionID,
@@ -209,6 +233,9 @@ func (g GRPCGateway) FinishRecoveryPasskeyRegistration(ctx context.Context, reco
 
 // CreateWebSession executes package-scoped creation behavior for this flow.
 func (g GRPCGateway) CreateWebSession(ctx context.Context, userID string) (string, error) {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().CreateWebSession(ctx, userID)
+	}
 	resp, err := g.Client.CreateWebSession(ctx, &authv1.CreateWebSessionRequest{UserId: userID})
 	if err != nil {
 		return "", mapGRPCError(err, apperrors.KindUnknown, "Failed to create a web session.")
@@ -222,6 +249,9 @@ func (g GRPCGateway) CreateWebSession(ctx context.Context, userID string) (strin
 
 // RevokeWebSession applies this package workflow transition.
 func (g GRPCGateway) RevokeWebSession(ctx context.Context, sessionID string) error {
+	if g.Client == nil {
+		return publicauthapp.NewUnavailableGateway().RevokeWebSession(ctx, sessionID)
+	}
 	_, err := g.Client.RevokeWebSession(ctx, &authv1.RevokeWebSessionRequest{SessionId: sessionID})
 	return mapGRPCError(err, apperrors.KindUnknown, "Failed to revoke the web session.")
 }

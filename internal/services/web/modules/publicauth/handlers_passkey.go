@@ -5,7 +5,6 @@ import (
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
 )
 
@@ -94,6 +93,6 @@ func (h handlers) handleUsernameCheck(w http.ResponseWriter, r *http.Request) {
 
 // writeJSONError centralizes this web behavior in one helper seam.
 func (h handlers) writeJSONError(w http.ResponseWriter, r *http.Request, err error) {
-	page := requestresolver.ResolveLocalizedPage(w, r, nil)
-	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(page.Localizer, err, page.Language))
+	loc, lang := h.PageLocalizer(w, r)
+	_ = httpx.WriteJSONError(w, apperrors.HTTPStatus(err), weberror.PublicMessage(loc, err, lang))
 }

@@ -1,12 +1,11 @@
 package publicauth
 
 import (
-	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
-func newConfigFromGateway(gateway publicauthapp.Gateway, authBaseURL string) Config {
+func newConfigFromGateway(gateway gatewayServices, authBaseURL string) Config {
 	return Config{
 		Services: newHandlerServicesFromGateway(gateway, authBaseURL),
 	}
@@ -30,7 +29,7 @@ func withSurface(surface Surface) func(*Config) {
 	}
 }
 
-func newModuleFromGateway(gateway publicauthapp.Gateway, authBaseURL string, opts ...func(*Config)) Module {
+func newModuleFromGateway(gateway gatewayServices, authBaseURL string, opts ...func(*Config)) Module {
 	config := newConfigFromGateway(gateway, authBaseURL)
 	for _, opt := range opts {
 		opt(&config)

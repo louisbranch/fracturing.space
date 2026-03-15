@@ -38,6 +38,7 @@ For web changes, also read:
 
 - [Web architecture](docs/architecture/platform/web-architecture.md)
 - [Web contributor map](docs/architecture/platform/web-contributor-map.md)
+- [Web testing map](docs/architecture/platform/web-testing-map.md)
 - [Web module playbook](docs/guides/web-module-playbook.md)
 
 ------------------------------------------------------------------------

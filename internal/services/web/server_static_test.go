@@ -197,13 +197,12 @@ func TestCampaignGamePageIsExposedOnDefaultCampaignSurface(t *testing.T) {
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
 		PlayLaunchGrant: fakePlayLaunchGrantConfig(),
-		Dependencies: newDependencyBundle(
+		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{SessionClient: auth},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           fakeCampaignClient{response: &statev1.ListCampaignsResponse{Campaigns: []*statev1.Campaign{{Id: "c1", Name: "Remote"}}}},
-					InteractionClient:        defaultInteractionClient(),
 					AgentClient:              fakeAgentClient{},
 					ParticipantClient:        defaultParticipantClient(),
 					CharacterClient:          defaultCharacterClient(),

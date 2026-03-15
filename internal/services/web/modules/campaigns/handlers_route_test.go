@@ -342,5 +342,5 @@ func TestWithCampaignAndSessionIDReturnsNotFoundForMissingSessionID(t *testing.T
 // --- helpers ---
 
 func newTestHandlers(gw fakeGateway) handlers {
-	return newHandlersFromConfig(serviceConfigWithGateway(gw), modulehandler.NewTestBase(), nil)
+	return newHandlersFromConfig(serviceConfigsWithGateway(gw), modulehandler.NewTestBase(), nil)
 }

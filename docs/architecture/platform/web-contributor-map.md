@@ -114,5 +114,20 @@ Canonical implementation path: `internal/services/web/`.
 - `internal/services/web/templates/routes_guardrails_test.go`
 - per-module `routes_test.go` files
 
+## High-Signal Coverage Entrypoints
+
+- Root runtime and shell behavior:
+  `internal/services/web/server_test.go`
+  `internal/services/web/server_locale_test.go`
+  `internal/services/web/server_viewer_test.go`
+  `internal/services/web/server_static_test.go`
+- Root test harness ownership and explicit dependency completion:
+  `internal/services/web/server_test_harness_defaults_test.go`
+  `internal/services/web/server_test_harness_helpers_test.go`
+- Startup dependency policy and runtime wiring:
+  `internal/cmd/web/web_test.go`
+- Canonical test map:
+  `docs/architecture/platform/web-testing-map.md`
+
 When changing boundaries, update docs and guardrails in the same slice so the
 next contributor inherits the new shape rather than reverse-engineering it.

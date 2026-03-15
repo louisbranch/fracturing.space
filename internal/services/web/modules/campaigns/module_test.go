@@ -17,7 +17,6 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
 	campaigngateway "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/gateway"
-	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	flashnotice "github.com/louisbranch/fracturing.space/internal/services/web/platform/flash"
@@ -538,7 +537,7 @@ func TestCampaignBreadcrumbsFallbackToCampaignID(t *testing.T) {
 func TestWriteCampaignHTMLHandlesRenderFailure(t *testing.T) {
 	t.Parallel()
 
-	h := newHandlersFromConfig(serviceConfigWithGateway(fakeGateway{}), modulehandler.NewTestBase(), nil)
+	h := newHandlersFromConfig(serviceConfigsWithGateway(fakeGateway{}), modulehandler.NewTestBase(), nil)
 	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaigns, nil)
 	rr := httptest.NewRecorder()
 
@@ -704,8 +703,8 @@ func (testCreationWorkflow) BuildView(
 	progress campaignworkflow.Progress,
 	catalog campaignworkflow.Catalog,
 	profile campaignworkflow.Profile,
-) campaignrender.CampaignCharacterCreationView {
-	view := campaignrender.CampaignCharacterCreationView{
+) campaignworkflow.CharacterCreationView {
+	view := campaignworkflow.CharacterCreationView{
 		Ready:             progress.Ready,
 		NextStep:          progress.NextStep,
 		UnmetReasons:      append([]string(nil), progress.UnmetReasons...),
@@ -726,19 +725,19 @@ func (testCreationWorkflow) BuildView(
 		Background:        profile.Background,
 		DomainCardIDs:     append([]string(nil), profile.DomainCardIDs...),
 		Connections:       profile.Connections,
-		Steps:             make([]campaignrender.CampaignCharacterCreationStepView, 0, len(progress.Steps)),
+		Steps:             make([]campaignworkflow.CharacterCreationStepView, 0, len(progress.Steps)),
 	}
 	for _, step := range progress.Steps {
-		view.Steps = append(view.Steps, campaignrender.CampaignCharacterCreationStepView{Step: step.Step, Key: step.Key, Complete: step.Complete})
+		view.Steps = append(view.Steps, campaignworkflow.CharacterCreationStepView{Step: step.Step, Key: step.Key, Complete: step.Complete})
 	}
 	for _, c := range catalog.Classes {
-		view.Classes = append(view.Classes, campaignrender.CampaignCreationClassView{ID: c.ID, Name: c.Name})
+		view.Classes = append(view.Classes, campaignworkflow.CreationClassView{ID: c.ID, Name: c.Name})
 	}
 	for _, s := range catalog.Subclasses {
-		view.Subclasses = append(view.Subclasses, campaignrender.CampaignCreationSubclassView{ID: s.ID, Name: s.Name, ClassID: s.ClassID})
+		view.Subclasses = append(view.Subclasses, campaignworkflow.CreationSubclassView{ID: s.ID, Name: s.Name, ClassID: s.ClassID})
 	}
 	for _, h := range catalog.Heritages {
-		entry := campaignrender.CampaignCreationHeritageView{ID: h.ID, Name: h.Name}
+		entry := campaignworkflow.CreationHeritageView{ID: h.ID, Name: h.Name}
 		switch h.Kind {
 		case "ancestry":
 			view.Ancestries = append(view.Ancestries, entry)
@@ -747,7 +746,7 @@ func (testCreationWorkflow) BuildView(
 		}
 	}
 	for _, w := range catalog.Weapons {
-		entry := campaignrender.CampaignCreationWeaponView{ID: w.ID, Name: w.Name}
+		entry := campaignworkflow.CreationWeaponView{ID: w.ID, Name: w.Name}
 		switch w.Category {
 		case "primary":
 			view.PrimaryWeapons = append(view.PrimaryWeapons, entry)
@@ -756,13 +755,13 @@ func (testCreationWorkflow) BuildView(
 		}
 	}
 	for _, a := range catalog.Armor {
-		view.Armor = append(view.Armor, campaignrender.CampaignCreationArmorView{ID: a.ID, Name: a.Name})
+		view.Armor = append(view.Armor, campaignworkflow.CreationArmorView{ID: a.ID, Name: a.Name})
 	}
 	for _, i := range catalog.Items {
-		view.PotionItems = append(view.PotionItems, campaignrender.CampaignCreationItemView{ID: i.ID, Name: i.Name})
+		view.PotionItems = append(view.PotionItems, campaignworkflow.CreationItemView{ID: i.ID, Name: i.Name})
 	}
 	for _, d := range catalog.DomainCards {
-		view.DomainCards = append(view.DomainCards, campaignrender.CampaignCreationDomainCardView{ID: d.ID, Name: d.Name, DomainID: d.DomainID, Level: d.Level})
+		view.DomainCards = append(view.DomainCards, campaignworkflow.CreationDomainCardView{ID: d.ID, Name: d.Name, DomainID: d.DomainID, Level: d.Level})
 	}
 	return view
 }
@@ -803,8 +802,6 @@ type fakeGateway struct {
 	workspaceIntent                   string
 	workspaceAccessPolicy             string
 	workspaceAIAgentID                string
-	gameSurface                       campaignapp.CampaignGameSurface
-	gameSurfaceErr                    error
 	campaignAIAgents                  []campaignapp.CampaignAIAgentOption
 	campaignAIAgentsErr               error
 	participants                      []campaignapp.CampaignParticipant
@@ -967,51 +964,6 @@ func (f fakeGateway) CampaignWorkspace(_ context.Context, campaignID string) (ca
 		}, nil
 	}
 	return campaignapp.CampaignWorkspace{}, apperrors.E(apperrors.KindNotFound, "campaign not found")
-}
-
-func (f fakeGateway) CampaignGameSurface(_ context.Context, campaignID string) (campaignapp.CampaignGameSurface, error) {
-	if f.gameSurfaceErr != nil {
-		return campaignapp.CampaignGameSurface{}, f.gameSurfaceErr
-	}
-	surface := f.gameSurface
-	if strings.TrimSpace(surface.Participant.ID) == "" {
-		surface.Participant.ID = "p1"
-	}
-	if strings.TrimSpace(surface.Participant.Name) == "" {
-		surface.Participant.Name = "Owner"
-	}
-	if strings.TrimSpace(surface.Participant.Role) == "" {
-		surface.Participant.Role = "Player"
-	}
-	if strings.TrimSpace(surface.SessionID) == "" {
-		surface.SessionID = "sess-1"
-	}
-	if strings.TrimSpace(surface.SessionName) == "" {
-		surface.SessionName = "Session One"
-	}
-	if surface.ActiveScene == nil {
-		surface.ActiveScene = &campaignapp.CampaignGameScene{
-			ID:        "scene-1",
-			SessionID: surface.SessionID,
-			Name:      "Session One Scene",
-			Characters: []campaignapp.CampaignGameCharacter{
-				{ID: "char-1", Name: "Owner", OwnerParticipantID: surface.Participant.ID},
-			},
-		}
-	}
-	if surface.PlayerPhase == nil {
-		surface.PlayerPhase = &campaignapp.CampaignGamePlayerPhase{
-			PhaseID:              "phase-1",
-			Status:               "players",
-			ActingCharacterIDs:   []string{"char-1"},
-			ActingParticipantIDs: []string{surface.Participant.ID},
-			Slots:                []campaignapp.CampaignGamePlayerSlot{},
-		}
-	}
-	if len(surface.OOC.Posts) == 0 {
-		surface.OOC.Posts = []campaignapp.CampaignGameOOCPost{}
-	}
-	return surface, nil
 }
 
 func (f fakeGateway) CampaignAIAgents(context.Context) ([]campaignapp.CampaignAIAgentOption, error) {
@@ -1503,9 +1455,6 @@ func completeGRPCDeps(deps campaigngateway.GRPCGatewayDeps) campaigngateway.GRPC
 	if deps.AutomationMutate.Campaign == nil {
 		deps.AutomationMutate.Campaign = deps.CatalogMutation.Campaign
 	}
-	if deps.GameRead.Interaction == nil {
-		deps.GameRead.Interaction = stubInteractionClient{}
-	}
 	if deps.AutomationRead.Agent == nil {
 		deps.AutomationRead.Agent = stubAgentClient{}
 	}
@@ -1581,9 +1530,6 @@ type stubParticipantReadClient struct {
 }
 type stubParticipantMutationClient struct {
 	campaigngateway.ParticipantMutationClient
-}
-type stubInteractionClient struct {
-	campaigngateway.InteractionClient
 }
 type stubDiscoveryClient struct {
 	campaigngateway.DiscoveryClient

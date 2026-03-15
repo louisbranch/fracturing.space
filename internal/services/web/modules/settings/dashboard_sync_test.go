@@ -16,7 +16,7 @@ func TestMountProfilePostTriggersDashboardSyncOnSuccess(t *testing.T) {
 	t.Parallel()
 
 	sync := &settingsDashboardSyncStub{}
-	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase(), DashboardSync: sync})
+	m := New(Config{AccountGateway: newPopulatedFakeGateway(), Base: settingsTestBase(), DashboardSync: sync})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -37,7 +37,7 @@ func TestMountProfilePostDoesNotTriggerDashboardSyncOnValidationError(t *testing
 	t.Parallel()
 
 	sync := &settingsDashboardSyncStub{}
-	m := New(Config{Gateway: newPopulatedFakeGateway(), Base: settingsTestBase(), DashboardSync: sync})
+	m := New(Config{AccountGateway: newPopulatedFakeGateway(), Base: settingsTestBase(), DashboardSync: sync})
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)

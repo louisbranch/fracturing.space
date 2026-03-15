@@ -9,6 +9,14 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
+// gatewayServices keeps module-owned app assembly on the shared auth adapter
+// while transport depends on narrower route seams.
+type gatewayServices interface {
+	publicauthapp.SessionGateway
+	publicauthapp.PasskeyGateway
+	publicauthapp.RecoveryGateway
+}
+
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	publichandler.Base
@@ -29,9 +37,9 @@ type handlerServices struct {
 
 // newHandlerServicesFromGateway keeps publicauth-owned app-service assembly in
 // the publicauth package while transport depends on the narrower route seams.
-func newHandlerServicesFromGateway(gateway publicauthapp.Gateway, authBaseURL string) handlerServices {
+func newHandlerServicesFromGateway(gateway gatewayServices, authBaseURL string) handlerServices {
 	return handlerServices{
-		Pages:    publicauthapp.NewPageService(gateway, authBaseURL),
+		Pages:    publicauthapp.NewPageService(authBaseURL),
 		Session:  publicauthapp.NewSessionService(gateway, authBaseURL),
 		Passkeys: publicauthapp.NewPasskeyService(gateway, authBaseURL),
 		Recovery: publicauthapp.NewRecoveryService(gateway, authBaseURL),
@@ -42,7 +50,7 @@ func newHandlerServicesFromGateway(gateway publicauthapp.Gateway, authBaseURL st
 // instead of leaving nil route services behind.
 func normalizeHandlerServices(services handlerServices) handlerServices {
 	if services.Pages == nil {
-		services.Pages = publicauthapp.NewPageService(nil, "")
+		services.Pages = publicauthapp.NewPageService("")
 	}
 	if services.Session == nil {
 		services.Session = publicauthapp.NewSessionService(nil, "")

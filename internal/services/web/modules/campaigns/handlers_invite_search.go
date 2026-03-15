@@ -40,7 +40,7 @@ func (h handlers) handleInviteSearch(w http.ResponseWriter, r *http.Request, cam
 		return
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
-	results, err := h.inviteReads.SearchInviteUsers(ctx, campaignID, campaignapp.SearchInviteUsersInput{
+	results, err := h.invites.reads.SearchInviteUsers(ctx, campaignID, campaignapp.SearchInviteUsersInput{
 		ViewerUserID: userID,
 		Query:        input.Query,
 		Limit:        input.Limit,

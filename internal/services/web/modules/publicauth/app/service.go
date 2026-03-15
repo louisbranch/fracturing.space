@@ -15,36 +15,69 @@ import (
 
 // service centralizes public auth orchestration so handlers stay transport-focused.
 type service struct {
-	auth        Gateway
+	session     SessionGateway
+	passkeys    PasskeyGateway
+	recovery    RecoveryGateway
 	authBaseURL string
 }
 
+// serviceConfig keeps ceremony-owned auth dependencies explicit.
+type serviceConfig struct {
+	SessionGateway  SessionGateway
+	PasskeyGateway  PasskeyGateway
+	RecoveryGateway RecoveryGateway
+	AuthBaseURL     string
+}
+
 // newServiceState wires auth-backed public auth flows behind input validation.
-func newServiceState(gateway Gateway, authBaseURL string) service {
-	if gateway == nil {
-		gateway = unavailableGateway{}
+func newServiceState(config serviceConfig) service {
+	sessionGateway := config.SessionGateway
+	if sessionGateway == nil {
+		sessionGateway = unavailableGateway{}
 	}
-	return service{auth: gateway, authBaseURL: strings.TrimSpace(authBaseURL)}
+	passkeyGateway := config.PasskeyGateway
+	if passkeyGateway == nil {
+		passkeyGateway = unavailableGateway{}
+	}
+	recoveryGateway := config.RecoveryGateway
+	if recoveryGateway == nil {
+		recoveryGateway = unavailableGateway{}
+	}
+	return service{
+		session:     sessionGateway,
+		passkeys:    passkeyGateway,
+		recovery:    recoveryGateway,
+		authBaseURL: strings.TrimSpace(config.AuthBaseURL),
+	}
 }
 
 // NewPageService wires page-only public auth flows behind input validation.
-func NewPageService(gateway Gateway, authBaseURL string) PageService {
-	return newServiceState(gateway, authBaseURL)
+func NewPageService(authBaseURL string) PageService {
+	return newServiceState(serviceConfig{AuthBaseURL: authBaseURL})
 }
 
 // NewSessionService wires session-only public auth flows behind input validation.
-func NewSessionService(gateway Gateway, authBaseURL string) SessionService {
-	return newServiceState(gateway, authBaseURL)
+func NewSessionService(gateway SessionGateway, authBaseURL string) SessionService {
+	return newServiceState(serviceConfig{
+		SessionGateway: gateway,
+		AuthBaseURL:    authBaseURL,
+	})
 }
 
 // NewPasskeyService wires passkey-only public auth flows behind input validation.
-func NewPasskeyService(gateway Gateway, authBaseURL string) PasskeyService {
-	return newServiceState(gateway, authBaseURL)
+func NewPasskeyService(gateway PasskeyGateway, authBaseURL string) PasskeyService {
+	return newServiceState(serviceConfig{
+		PasskeyGateway: gateway,
+		AuthBaseURL:    authBaseURL,
+	})
 }
 
 // NewRecoveryService wires recovery-only public auth flows behind input validation.
-func NewRecoveryService(gateway Gateway, authBaseURL string) RecoveryService {
-	return newServiceState(gateway, authBaseURL)
+func NewRecoveryService(gateway RecoveryGateway, authBaseURL string) RecoveryService {
+	return newServiceState(serviceConfig{
+		RecoveryGateway: gateway,
+		AuthBaseURL:     authBaseURL,
+	})
 }
 
 // HealthBody returns the plain-text health response expected by the endpoint.
@@ -58,7 +91,7 @@ func (s service) CheckUsernameAvailability(ctx context.Context, username string)
 	if username == "" {
 		return UsernameAvailability{State: UsernameAvailabilityStateInvalid}, nil
 	}
-	return s.auth.CheckUsernameAvailability(ctx, username)
+	return s.passkeys.CheckUsernameAvailability(ctx, username)
 }
 
 // PasskeyLoginStart normalizes the username before asking auth to begin login.
@@ -67,7 +100,7 @@ func (s service) PasskeyLoginStart(ctx context.Context, username string) (Passke
 	if err != nil {
 		return PasskeyChallenge{}, err
 	}
-	return s.auth.BeginPasskeyLogin(ctx, resolvedUsername)
+	return s.passkeys.BeginPasskeyLogin(ctx, resolvedUsername)
 }
 
 // PasskeyLoginFinish validates the ceremony response, then creates a web session.
@@ -79,7 +112,7 @@ func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, crede
 	if err := requireCredential(credential); err != nil {
 		return PasskeyFinish{}, err
 	}
-	userID, err := s.auth.FinishPasskeyLogin(ctx, resolvedSessionID, credential, strings.TrimSpace(pendingID))
+	userID, err := s.passkeys.FinishPasskeyLogin(ctx, resolvedSessionID, credential, strings.TrimSpace(pendingID))
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
@@ -87,7 +120,7 @@ func (s service) PasskeyLoginFinish(ctx context.Context, sessionID string, crede
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
-	webSessionID, err := s.auth.CreateWebSession(ctx, resolvedUserID)
+	webSessionID, err := s.passkeys.CreateWebSession(ctx, resolvedUserID)
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
@@ -104,7 +137,7 @@ func (s service) PasskeyRegisterStart(ctx context.Context, username string) (Pas
 	if err != nil {
 		return PasskeyRegisterResult{}, err
 	}
-	challenge, err := s.auth.BeginAccountRegistration(ctx, resolvedUsername)
+	challenge, err := s.passkeys.BeginAccountRegistration(ctx, resolvedUsername)
 	if err != nil {
 		return PasskeyRegisterResult{}, err
 	}
@@ -124,7 +157,7 @@ func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, cr
 	if err := requireCredential(credential); err != nil {
 		return PasskeyRegistrationReveal{}, err
 	}
-	finished, err := s.auth.FinishAccountRegistration(ctx, resolvedSessionID, credential)
+	finished, err := s.passkeys.FinishAccountRegistration(ctx, resolvedSessionID, credential)
 	if err != nil {
 		return PasskeyRegistrationReveal{}, err
 	}
@@ -141,7 +174,7 @@ func (s service) PasskeyRegisterAcknowledge(ctx context.Context, sessionID strin
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
-	finished, err := s.auth.AcknowledgeAccountRegistration(ctx, resolvedSessionID, strings.TrimSpace(pendingID))
+	finished, err := s.passkeys.AcknowledgeAccountRegistration(ctx, resolvedSessionID, strings.TrimSpace(pendingID))
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
@@ -166,7 +199,7 @@ func (s service) RecoveryStart(ctx context.Context, username string, recoveryCod
 	if err != nil {
 		return RecoveryChallenge{}, err
 	}
-	recoverySessionID, err := s.auth.BeginAccountRecovery(ctx, resolvedUsername, resolvedRecoveryCode)
+	recoverySessionID, err := s.recovery.BeginAccountRecovery(ctx, resolvedUsername, resolvedRecoveryCode)
 	if err != nil {
 		return RecoveryChallenge{}, err
 	}
@@ -174,7 +207,7 @@ func (s service) RecoveryStart(ctx context.Context, username string, recoveryCod
 	if err != nil {
 		return RecoveryChallenge{}, err
 	}
-	challenge, err := s.auth.BeginRecoveryPasskeyRegistration(ctx, resolvedRecoverySessionID)
+	challenge, err := s.recovery.BeginRecoveryPasskeyRegistration(ctx, resolvedRecoverySessionID)
 	if err != nil {
 		return RecoveryChallenge{}, err
 	}
@@ -202,7 +235,7 @@ func (s service) RecoveryFinish(ctx context.Context, recoverySessionID string, s
 	if err := requireCredential(credential); err != nil {
 		return PasskeyFinish{}, err
 	}
-	finished, err := s.auth.FinishRecoveryPasskeyRegistration(ctx, resolvedRecoverySessionID, resolvedSessionID, credential, strings.TrimSpace(pendingID))
+	finished, err := s.recovery.FinishRecoveryPasskeyRegistration(ctx, resolvedRecoverySessionID, resolvedSessionID, credential, strings.TrimSpace(pendingID))
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
@@ -254,7 +287,7 @@ func (s service) RevokeWebSession(ctx context.Context, sessionID string) error {
 	if resolvedSessionID == "" {
 		return nil
 	}
-	return s.auth.RevokeWebSession(ctx, resolvedSessionID)
+	return s.session.RevokeWebSession(ctx, resolvedSessionID)
 }
 
 // requireSessionID rejects empty ceremony and cookie session identifiers early.

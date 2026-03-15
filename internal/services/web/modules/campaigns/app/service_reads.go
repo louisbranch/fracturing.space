@@ -23,11 +23,6 @@ func (s workspaceService) CampaignWorkspace(ctx context.Context, campaignID stri
 	return s.campaignWorkspace(ctx, campaignID)
 }
 
-// CampaignGameSurface centralizes this web behavior in one helper seam.
-func (s gameService) CampaignGameSurface(ctx context.Context, campaignID string) (CampaignGameSurface, error) {
-	return s.campaignGameSurface(ctx, campaignID)
-}
-
 // listCampaigns returns the package view collection for this workflow.
 func (s catalogService) listCampaigns(ctx context.Context) ([]CampaignSummary, error) {
 	items, err := s.read.ListCampaigns(ctx)
@@ -72,107 +67,6 @@ func (s workspaceService) campaignWorkspace(ctx context.Context, campaignID stri
 		return CampaignWorkspace{}, err
 	}
 	return normalizeCampaignWorkspace(campaignID, workspace), nil
-}
-
-// campaignGameSurface centralizes this web behavior in one helper seam.
-func (s gameService) campaignGameSurface(ctx context.Context, campaignID string) (CampaignGameSurface, error) {
-	campaignID = strings.TrimSpace(campaignID)
-	if campaignID == "" {
-		return CampaignGameSurface{}, apperrors.E(apperrors.KindInvalidInput, "campaign id is required")
-	}
-	surface, err := s.read.CampaignGameSurface(ctx, campaignID)
-	if err != nil {
-		return CampaignGameSurface{}, err
-	}
-	surface.Participant.ID = strings.TrimSpace(surface.Participant.ID)
-	surface.Participant.Name = strings.TrimSpace(surface.Participant.Name)
-	if surface.Participant.Name == "" {
-		surface.Participant.Name = surface.Participant.ID
-	}
-	surface.Participant.Role = strings.TrimSpace(surface.Participant.Role)
-	if surface.Participant.Role == "" {
-		surface.Participant.Role = "Unspecified"
-	}
-	surface.SessionID = strings.TrimSpace(surface.SessionID)
-	surface.SessionName = strings.TrimSpace(surface.SessionName)
-	if surface.ActiveScene != nil {
-		surface.ActiveScene.ID = strings.TrimSpace(surface.ActiveScene.ID)
-		surface.ActiveScene.SessionID = strings.TrimSpace(surface.ActiveScene.SessionID)
-		surface.ActiveScene.Name = strings.TrimSpace(surface.ActiveScene.Name)
-		if surface.ActiveScene.Name == "" {
-			surface.ActiveScene.Name = surface.ActiveScene.ID
-		}
-		surface.ActiveScene.Description = strings.TrimSpace(surface.ActiveScene.Description)
-		if len(surface.ActiveScene.Characters) == 0 {
-			surface.ActiveScene.Characters = []CampaignGameCharacter{}
-		}
-		for i := range surface.ActiveScene.Characters {
-			surface.ActiveScene.Characters[i].ID = strings.TrimSpace(surface.ActiveScene.Characters[i].ID)
-			surface.ActiveScene.Characters[i].Name = strings.TrimSpace(surface.ActiveScene.Characters[i].Name)
-			if surface.ActiveScene.Characters[i].Name == "" {
-				surface.ActiveScene.Characters[i].Name = surface.ActiveScene.Characters[i].ID
-			}
-			surface.ActiveScene.Characters[i].OwnerParticipantID = strings.TrimSpace(surface.ActiveScene.Characters[i].OwnerParticipantID)
-		}
-	}
-	if surface.PlayerPhase != nil {
-		surface.PlayerPhase.PhaseID = strings.TrimSpace(surface.PlayerPhase.PhaseID)
-		surface.PlayerPhase.Status = strings.TrimSpace(surface.PlayerPhase.Status)
-		if surface.PlayerPhase.Status == "" {
-			surface.PlayerPhase.Status = "gm"
-		}
-		surface.PlayerPhase.FrameText = strings.TrimSpace(surface.PlayerPhase.FrameText)
-		surface.PlayerPhase.ActingCharacterIDs = trimStringSlice(surface.PlayerPhase.ActingCharacterIDs)
-		surface.PlayerPhase.ActingParticipantIDs = trimStringSlice(surface.PlayerPhase.ActingParticipantIDs)
-		if len(surface.PlayerPhase.Slots) == 0 {
-			surface.PlayerPhase.Slots = []CampaignGamePlayerSlot{}
-		}
-		for i := range surface.PlayerPhase.Slots {
-			surface.PlayerPhase.Slots[i].ParticipantID = strings.TrimSpace(surface.PlayerPhase.Slots[i].ParticipantID)
-			surface.PlayerPhase.Slots[i].SummaryText = strings.TrimSpace(surface.PlayerPhase.Slots[i].SummaryText)
-			surface.PlayerPhase.Slots[i].CharacterIDs = trimStringSlice(surface.PlayerPhase.Slots[i].CharacterIDs)
-			surface.PlayerPhase.Slots[i].ReviewStatus = strings.TrimSpace(surface.PlayerPhase.Slots[i].ReviewStatus)
-			surface.PlayerPhase.Slots[i].ReviewReason = strings.TrimSpace(surface.PlayerPhase.Slots[i].ReviewReason)
-			surface.PlayerPhase.Slots[i].ReviewCharacterIDs = trimStringSlice(surface.PlayerPhase.Slots[i].ReviewCharacterIDs)
-		}
-	}
-	surface.OOC.ReadyToResumeParticipantIDs = trimStringSlice(surface.OOC.ReadyToResumeParticipantIDs)
-	if len(surface.OOC.Posts) == 0 {
-		surface.OOC.Posts = []CampaignGameOOCPost{}
-	}
-	for i := range surface.OOC.Posts {
-		surface.OOC.Posts[i].PostID = strings.TrimSpace(surface.OOC.Posts[i].PostID)
-		surface.OOC.Posts[i].ParticipantID = strings.TrimSpace(surface.OOC.Posts[i].ParticipantID)
-		surface.OOC.Posts[i].Body = strings.TrimSpace(surface.OOC.Posts[i].Body)
-	}
-	surface.GMAuthorityParticipantID = strings.TrimSpace(surface.GMAuthorityParticipantID)
-	surface.AITurn.Status = strings.TrimSpace(surface.AITurn.Status)
-	if surface.AITurn.Status == "" {
-		surface.AITurn.Status = "idle"
-	}
-	surface.AITurn.TurnToken = strings.TrimSpace(surface.AITurn.TurnToken)
-	surface.AITurn.OwnerParticipantID = strings.TrimSpace(surface.AITurn.OwnerParticipantID)
-	surface.AITurn.SourceEventType = strings.TrimSpace(surface.AITurn.SourceEventType)
-	surface.AITurn.SourceSceneID = strings.TrimSpace(surface.AITurn.SourceSceneID)
-	surface.AITurn.SourcePhaseID = strings.TrimSpace(surface.AITurn.SourcePhaseID)
-	surface.AITurn.LastError = strings.TrimSpace(surface.AITurn.LastError)
-	return surface, nil
-}
-
-// trimStringSlice normalizes transport slices into compact, non-empty values.
-func trimStringSlice(values []string) []string {
-	if len(values) == 0 {
-		return []string{}
-	}
-	trimmed := make([]string, 0, len(values))
-	for _, value := range values {
-		value = strings.TrimSpace(value)
-		if value == "" {
-			continue
-		}
-		trimmed = append(trimmed, value)
-	}
-	return trimmed
 }
 
 // loadCampaignWorkspace fetches raw workspace state from one owned read seam.

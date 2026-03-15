@@ -6,7 +6,6 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 	"google.golang.org/grpc"
 )
 
@@ -56,10 +55,7 @@ type GRPCGateway struct {
 // NewGRPCGateway builds the production settings gateway from the configured clients.
 // Surface health is derived per settings area so account outages do not hide AI
 // settings, and AI outages do not hide account settings.
-func NewGRPCGateway(socialClient SocialClient, accountClient AccountClient, passkeyClient PasskeyClient, credentialClient CredentialClient, agentClient AgentClient) settingsapp.Gateway {
-	if socialClient == nil && accountClient == nil && passkeyClient == nil && credentialClient == nil && agentClient == nil {
-		return settingsapp.NewUnavailableGateway()
-	}
+func NewGRPCGateway(socialClient SocialClient, accountClient AccountClient, passkeyClient PasskeyClient, credentialClient CredentialClient, agentClient AgentClient) GRPCGateway {
 	return GRPCGateway{
 		SocialClient:     socialClient,
 		AccountClient:    accountClient,

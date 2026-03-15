@@ -1,6 +1,7 @@
 package web
 
 import (
+	"testing"
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -13,6 +14,53 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/modules"
 	"github.com/louisbranch/fracturing.space/internal/services/web/principal"
 )
+
+func TestNewDependencyBundleKeepsPartialModuleDependenciesExplicit(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	bundle := newDependencyBundle(
+		principal.Dependencies{SessionClient: auth},
+		modules.Dependencies{
+			Campaigns: modules.CampaignDependencies{
+				CampaignClient: defaultCampaignClient(),
+			},
+		},
+	)
+	if bundle == nil {
+		t.Fatalf("expected non-nil dependency bundle")
+	}
+	if bundle.Modules.Campaigns.DiscoveryClient != nil {
+		t.Fatalf("newDependencyBundle() unexpectedly completed discovery dependency")
+	}
+	if bundle.Modules.Campaigns.InviteClient != nil {
+		t.Fatalf("newDependencyBundle() unexpectedly completed invite dependency")
+	}
+}
+
+func TestNewCompletedDependencyBundleOptsIntoTestDefaults(t *testing.T) {
+	t.Parallel()
+
+	auth := newFakeWebAuthClient()
+	bundle := newCompletedDependencyBundle(
+		principal.Dependencies{SessionClient: auth},
+		modules.Dependencies{
+			Campaigns: modules.CampaignDependencies{
+				CampaignClient: defaultCampaignClient(),
+				AuthClient:     auth,
+			},
+		},
+	)
+	if bundle == nil {
+		t.Fatalf("expected non-nil dependency bundle")
+	}
+	if bundle.Modules.Campaigns.DiscoveryClient == nil {
+		t.Fatalf("expected completed discovery dependency")
+	}
+	if bundle.Modules.Campaigns.InviteClient == nil {
+		t.Fatalf("expected completed invite dependency")
+	}
+}
 
 func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{
@@ -35,7 +83,6 @@ func defaultProtectedConfig(auth *fakeWebAuthClient) Config {
 				},
 				Campaigns: modules.CampaignDependencies{
 					CampaignClient:           defaultCampaignClient(),
-					InteractionClient:        defaultInteractionClient(),
 					DiscoveryClient:          defaultDiscoveryClient(),
 					AgentClient:              fakeAgentClient{},
 					ParticipantClient:        defaultParticipantClient(),
@@ -97,10 +144,6 @@ func defaultParticipantClient() fakeWebParticipantClient {
 		Name:           "Owner",
 		CampaignAccess: statev1.CampaignAccess_CAMPAIGN_ACCESS_OWNER,
 	}}}}
-}
-
-func defaultInteractionClient() fakeWebInteractionClient {
-	return fakeWebInteractionClient{}
 }
 
 func defaultCharacterClient() fakeWebCharacterClient {

@@ -7,7 +7,6 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/httpx"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/publichandler"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/routeparam"
 	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
@@ -47,14 +46,14 @@ func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 
 // renderProfilePage centralizes this web behavior in one helper seam.
 func (h handlers) renderProfilePage(w http.ResponseWriter, r *http.Request, profile profileapp.Profile) {
-	page := requestresolver.ResolveLocalizedPage(w, r, nil)
+	loc, lang := h.PageLocalizer(w, r)
 	h.WritePublicPage(
 		w,
 		r,
 		profile.Username,
-		webtemplates.T(page.Localizer, "layout.meta_description"),
-		page.Language,
+		webtemplates.T(loc, "layout.meta_description"),
+		lang,
 		http.StatusOK,
-		PublicProfilePage(mapPublicProfileTemplateView(profile, h.assetBaseURL, h.IsViewerSignedIn(r)), page.Localizer),
+		PublicProfilePage(mapPublicProfileTemplateView(profile, h.assetBaseURL, h.IsViewerSignedIn(r)), loc),
 	)
 }

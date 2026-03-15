@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
-	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"golang.org/x/text/language"
 )
@@ -132,11 +131,11 @@ func (w testWorkflow) BuildView(
 	progress Progress,
 	catalog Catalog,
 	profile Profile,
-) campaignrender.CampaignCharacterCreationView {
-	return campaignrender.CampaignCharacterCreationView{
+) CharacterCreationView {
+	return CharacterCreationView{
 		NextStep: progress.NextStep,
 		ClassID:  profile.ClassID,
-		Classes: []campaignrender.CampaignCreationClassView{{
+		Classes: []CreationClassView{{
 			ID: catalog.Classes[0].ID,
 		}},
 	}

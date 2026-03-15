@@ -7,7 +7,7 @@ import (
 	settingsapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/settings/app"
 )
 
-// fakeGateway implements settingsapp.Gateway for tests with configurable return
+// fakeGateway implements the split settings gateway seams for tests with configurable return
 // values, error injection, and call recording.
 type fakeGateway struct {
 	profile          settingsapp.SettingsProfile

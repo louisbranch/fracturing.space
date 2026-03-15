@@ -80,59 +80,59 @@ func (m Module) Mount() (module.Mount, error) {
 // validateHandlerServices enforces fail-fast route wiring once campaigns is selected for mounting.
 func validateHandlerServices(services handlerServices) error {
 	missing := []string{}
-	if services.Catalog == nil {
+	if services.Page.workspace == nil {
+		missing = append(missing, "page-workspace")
+	}
+	if services.Page.sessionReads == nil {
+		missing = append(missing, "page-sessions")
+	}
+	if services.Page.authorization == nil {
+		missing = append(missing, "page-authorization")
+	}
+	if services.Catalog.campaigns == nil {
 		missing = append(missing, "catalog")
 	}
-	if services.Workspace == nil {
-		missing = append(missing, "workspace")
+	if services.Overview.automationReads == nil {
+		missing = append(missing, "overview-automation-reads")
 	}
-	if services.Game == nil {
-		missing = append(missing, "game")
+	if services.Overview.automationMutate == nil {
+		missing = append(missing, "overview-automation-mutation")
 	}
-	if services.ParticipantReads == nil {
+	if services.Overview.configuration == nil {
+		missing = append(missing, "overview-configuration")
+	}
+	if services.Participants.reads == nil {
 		missing = append(missing, "participant-reads")
 	}
-	if services.ParticipantMutate == nil {
+	if services.Participants.mutation == nil {
 		missing = append(missing, "participant-mutation")
 	}
-	if services.AutomationReads == nil {
-		missing = append(missing, "automation-reads")
-	}
-	if services.AutomationMutation == nil {
-		missing = append(missing, "automation-mutation")
-	}
-	if services.CharacterReads == nil {
+	if services.Characters.reads == nil {
 		missing = append(missing, "character-reads")
 	}
-	if services.CharacterControl == nil {
+	if services.Characters.control == nil {
 		missing = append(missing, "character-control")
 	}
-	if services.CharacterMutation == nil {
+	if services.Characters.mutation == nil {
 		missing = append(missing, "character-mutation")
 	}
-	if services.SessionReads == nil {
-		missing = append(missing, "session-reads")
-	}
-	if services.SessionMutation == nil {
-		missing = append(missing, "session-mutation")
-	}
-	if services.InviteReads == nil {
-		missing = append(missing, "invite-reads")
-	}
-	if services.InviteMutation == nil {
-		missing = append(missing, "invite-mutation")
-	}
-	if services.Configuration == nil {
-		missing = append(missing, "configuration")
-	}
-	if services.Authorization == nil {
-		missing = append(missing, "authorization")
-	}
-	if services.CreationPages == nil {
+	if services.Creation.Pages == nil {
 		missing = append(missing, "creation-pages")
 	}
-	if services.CreationFlow == nil {
+	if services.Creation.Flow == nil {
 		missing = append(missing, "creation-flow")
+	}
+	if services.Sessions.mutation == nil {
+		missing = append(missing, "session-mutation")
+	}
+	if services.Invites.reads == nil {
+		missing = append(missing, "invite-reads")
+	}
+	if services.Invites.mutation == nil {
+		missing = append(missing, "invite-mutation")
+	}
+	if services.Invites.participantReads == nil {
+		missing = append(missing, "invite-participant-reads")
 	}
 	if len(missing) == 0 {
 		return nil

@@ -22,10 +22,9 @@ import (
 	grpcHealthV1 "google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func stubManagedConn(t *testing.T) {
+func testManagedConnFactory(t *testing.T) managedConnFactory {
 	t.Helper()
-	previous := newManagedConn
-	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+	return func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
 		cfg.Mode = platformgrpc.ModeOptional
 		cfg.DialOpts = []grpc.DialOption{
 			grpc.WithTransportCredentials(insecure.NewCredentials()),
@@ -34,9 +33,6 @@ func stubManagedConn(t *testing.T) {
 		cfg.Logf = func(string, ...any) {}
 		return platformgrpc.NewManagedConn(ctx, cfg)
 	}
-	t.Cleanup(func() {
-		newManagedConn = previous
-	})
 }
 
 func TestParseConfigDefaults(t *testing.T) {
@@ -70,6 +66,9 @@ func TestParseConfigDefaults(t *testing.T) {
 	}
 	if cfg.UserHubAddr != "userhub:8092" {
 		t.Fatalf("UserHubAddr = %q, want %q", cfg.UserHubAddr, "userhub:8092")
+	}
+	if cfg.StatusAddr != "status:8093" {
+		t.Fatalf("StatusAddr = %q, want %q", cfg.StatusAddr, "status:8093")
 	}
 	if cfg.TrustForwardedProto {
 		t.Fatalf("TrustForwardedProto = %t, want false", cfg.TrustForwardedProto)
@@ -157,6 +156,19 @@ func TestParseConfigOverrideNotificationsAddr(t *testing.T) {
 	}
 }
 
+func TestParseConfigOverrideStatusAddr(t *testing.T) {
+	t.Parallel()
+
+	fs := flag.NewFlagSet("web", flag.ContinueOnError)
+	cfg, err := ParseConfig(fs, []string{"-status-addr", "127.0.0.1:18093"})
+	if err != nil {
+		t.Fatalf("ParseConfig() error = %v", err)
+	}
+	if cfg.StatusAddr != "127.0.0.1:18093" {
+		t.Fatalf("StatusAddr = %q, want %q", cfg.StatusAddr, "127.0.0.1:18093")
+	}
+}
+
 func testDependencyConfig() Config {
 	return Config{
 		AuthAddr:          "auth:8083",
@@ -166,6 +178,7 @@ func testDependencyConfig() Config {
 		DiscoveryAddr:     "discovery:8091",
 		UserHubAddr:       "userhub:8092",
 		NotificationsAddr: "notifications:8088",
+		StatusAddr:        "status:8093",
 	}
 }
 
@@ -180,7 +193,7 @@ func TestDependencyRequirementsRequiredPolicy(t *testing.T) {
 		}
 	}
 	slices.Sort(requiredNames)
-	want := []string{dependencyNameAuth, dependencyNameGame, dependencyNameSocial}
+	want := []string{web.DependencyNameAuth, web.DependencyNameGame, web.DependencyNameSocial}
 	if !slices.Equal(requiredNames, want) {
 		t.Fatalf("required dependencies = %v, want %v", requiredNames, want)
 	}
@@ -199,14 +212,14 @@ func TestDependencyRequirementsOwnedSurfacesAreExplicit(t *testing.T) {
 	}
 
 	tests := map[string][]string{
-		dependencyNameAuth:          {"principal", "publicauth", "profile", "settings"},
-		dependencyNameSocial:        {"principal", "profile", "settings", "campaigns"},
-		dependencyNameGame:          {"campaigns", "dashboard-sync"},
-		dependencyNameAI:            {"settings.ai", "campaigns.ai"},
-		dependencyNameDiscovery:     {"discovery"},
-		dependencyNameUserHub:       {"dashboard", "dashboard-sync"},
-		dependencyNameNotifications: {"principal", "notifications"},
-		dependencyNameStatus:        {"dashboard.health"},
+		web.DependencyNameAuth:          {"principal", "publicauth", "profile", "settings"},
+		web.DependencyNameSocial:        {"principal", "profile", "settings", "campaigns"},
+		web.DependencyNameGame:          {"campaigns", "dashboard-sync"},
+		web.DependencyNameAI:            {"settings.ai", "campaigns.ai"},
+		web.DependencyNameDiscovery:     {"discovery"},
+		web.DependencyNameUserHub:       {"dashboard", "dashboard-sync"},
+		web.DependencyNameNotifications: {"principal", "notifications"},
+		web.DependencyNameStatus:        {"dashboard.health"},
 	}
 	for name, want := range tests {
 		if !slices.Equal(got[name], want) {
@@ -246,30 +259,25 @@ func TestDependencyRequirementManagedConnModeMatchesPolicy(t *testing.T) {
 }
 
 func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
-	stubManagedConn(t)
-
 	cfg := testDependencyConfig()
 	cfg.AssetBaseURL = "https://cdn.example.com/assets"
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, reporter, nil)
+	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, cfg.AssetBaseURL, reporter, nil, testManagedConnFactory(t))
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
 	defer closeManagedConns(conns, nil)
 
-	if len(conns) != 7 {
-		t.Fatalf("managed conns = %d, want 7", len(conns))
+	if len(conns) != 8 {
+		t.Fatalf("managed conns = %d, want 8", len(conns))
 	}
 	if bundle.Principal.SessionClient == nil {
 		t.Fatal("expected principal session client")
 	}
 	if bundle.Modules.Campaigns.CampaignClient == nil {
 		t.Fatal("expected campaign client")
-	}
-	if bundle.Modules.Campaigns.InteractionClient == nil {
-		t.Fatal("expected campaign interaction client")
 	}
 	if bundle.Modules.Campaigns.AuthClient == nil {
 		t.Fatal("expected campaign auth client")
@@ -289,6 +297,9 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 	if bundle.Modules.Dashboard.UserHubClient == nil {
 		t.Fatal("expected userhub client")
 	}
+	if bundle.Modules.Dashboard.StatusClient == nil {
+		t.Fatal("expected status client")
+	}
 	if bundle.Modules.Notifications.NotificationClient == nil {
 		t.Fatal("expected notification client")
 	}
@@ -304,13 +315,11 @@ func TestBootstrapDependenciesWiresAllClients(t *testing.T) {
 }
 
 func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
-	stubManagedConn(t)
-
 	cfg := testDependencyConfig()
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil)
+	bundle, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil, testManagedConnFactory(t))
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
@@ -325,11 +334,10 @@ func TestBootstrapDependenciesProvideHealthyCampaignsGateway(t *testing.T) {
 }
 
 func TestBootstrapDependenciesErrorClosesConns(t *testing.T) {
-	previous := newManagedConn
 	callCount := 0
-	newManagedConn = func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
+	newConn := func(ctx context.Context, cfg platformgrpc.ManagedConnConfig) (*platformgrpc.ManagedConn, error) {
 		callCount++
-		if cfg.Name == dependencyNameGame {
+		if cfg.Name == web.DependencyNameGame {
 			return nil, errors.New("game unavailable")
 		}
 		cfg.Mode = platformgrpc.ModeOptional
@@ -340,15 +348,12 @@ func TestBootstrapDependenciesErrorClosesConns(t *testing.T) {
 		cfg.Logf = func(string, ...any) {}
 		return platformgrpc.NewManagedConn(ctx, cfg)
 	}
-	t.Cleanup(func() {
-		newManagedConn = previous
-	})
 
 	cfg := testDependencyConfig()
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	_, _, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil)
+	_, _, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil, newConn)
 	if err == nil {
 		t.Fatal("expected error for game dependency failure")
 	}
@@ -362,36 +367,31 @@ func TestBootstrapDependenciesErrorClosesConns(t *testing.T) {
 }
 
 func TestBootstrapDependenciesSkipsEmptyAddress(t *testing.T) {
-	stubManagedConn(t)
-
 	cfg := testDependencyConfig()
 	cfg.AIAddr = ""
 	cfg.DiscoveryAddr = "  "
 	requirements := dependencyRequirements(cfg, nil)
 	reporter := platformstatus.NewReporter("web", nil)
 
-	_, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil)
+	_, conns, err := bootstrapDependencies(context.Background(), requirements, "", reporter, nil, testManagedConnFactory(t))
 	if err != nil {
 		t.Fatalf("bootstrapDependencies() error = %v", err)
 	}
 	defer closeManagedConns(conns, nil)
 
-	// 8 requirements - 3 empty addresses = 5 connections.
-	if len(conns) != 5 {
-		t.Fatalf("managed conns = %d, want 5", len(conns))
+	// 8 requirements - 2 empty addresses = 6 connections.
+	if len(conns) != 6 {
+		t.Fatalf("managed conns = %d, want 6", len(conns))
 	}
 }
 
 func TestBootstrapRuntimeDependenciesWiresStatusClientIntoDashboard(t *testing.T) {
 	t.Parallel()
 
-	stubManagedConn(t)
-
 	cfg := testDependencyConfig()
-	cfg.StatusAddr = "status:8093"
 	reporter := platformstatus.NewReporter("web", nil)
 
-	runtimeDeps, err := bootstrapRuntimeDependencies(context.Background(), cfg, reporter)
+	runtimeDeps, err := bootstrapRuntimeDependenciesWithConnFactory(context.Background(), cfg, reporter, testManagedConnFactory(t))
 	if err != nil {
 		t.Fatalf("bootstrapRuntimeDependencies() error = %v", err)
 	}

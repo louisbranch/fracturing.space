@@ -1,13 +1,12 @@
 package publicauth
 
 import (
-	publicauthapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/publicauth/app"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestmeta"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 )
 
 func newHandlersFromGateway(
-	gateway publicauthapp.Gateway,
+	gateway gatewayServices,
 	authBaseURL string,
 	policy requestmeta.SchemePolicy,
 	principal ...requestresolver.PrincipalResolver,

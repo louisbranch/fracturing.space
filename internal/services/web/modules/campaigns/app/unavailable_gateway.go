@@ -31,11 +31,6 @@ func (unavailableGateway) CampaignWorkspace(context.Context, string) (CampaignWo
 	return CampaignWorkspace{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
 }
 
-// CampaignGameSurface centralizes this web behavior in one helper seam.
-func (unavailableGateway) CampaignGameSurface(context.Context, string) (CampaignGameSurface, error) {
-	return CampaignGameSurface{}, apperrors.E(apperrors.KindUnavailable, "campaigns service is not configured")
-}
-
 // CampaignAIAgents centralizes this web behavior in one helper seam.
 func (unavailableGateway) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {
 	return nil, apperrors.E(apperrors.KindUnavailable, "campaign ai agents are not configured")

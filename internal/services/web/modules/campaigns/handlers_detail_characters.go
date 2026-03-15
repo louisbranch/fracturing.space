@@ -19,12 +19,12 @@ func (h handlers) handleCharacters(w http.ResponseWriter, r *http.Request, campa
 		Locale:       page.locale,
 		ViewerUserID: viewerUserID,
 	}
-	items, err := h.characterReads.CampaignCharacters(ctx, campaignID, readContext)
+	items, err := h.characters.reads.CampaignCharacters(ctx, campaignID, readContext)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	view := page.charactersView(campaignID, items, h.authorization.RequireMutateCharacters(ctx, campaignID) == nil, h.creationPages.Enabled(page.workspace.System))
+	view := page.charactersView(campaignID, items, h.pages.authorization.RequireMutateCharacters(ctx, campaignID) == nil, h.creation.pages.Enabled(page.workspace.System))
 	h.writeCampaignDetailPage(w, r, page, campaignID, campaignrender.CharactersFragment(view, page.loc), page.charactersBreadcrumbs()...)
 }
 
@@ -34,7 +34,7 @@ func (h handlers) handleCharacterCreatePage(w http.ResponseWriter, r *http.Reque
 	if !ok {
 		return
 	}
-	if err := h.authorization.RequireMutateCharacters(ctx, campaignID); err != nil {
+	if err := h.pages.authorization.RequireMutateCharacters(ctx, campaignID); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
@@ -55,7 +55,7 @@ func (h handlers) handleCharacterEdit(w http.ResponseWriter, r *http.Request, ca
 	if !ok {
 		return
 	}
-	editor, err := h.characterReads.CampaignCharacterEditor(ctx, campaignID, characterID, campaignapp.CharacterReadContext{
+	editor, err := h.characters.reads.CampaignCharacterEditor(ctx, campaignID, characterID, campaignapp.CharacterReadContext{
 		System:       page.workspace.System,
 		Locale:       page.locale,
 		ViewerUserID: h.RequestUserID(r),
@@ -87,25 +87,25 @@ func (h handlers) handleCharacterDetail(w http.ResponseWriter, r *http.Request, 
 		Locale:       page.locale,
 		ViewerUserID: userID,
 	}
-	characterItem, err := h.characterReads.CampaignCharacter(ctx, campaignID, characterID, readContext)
+	characterItem, err := h.characters.reads.CampaignCharacter(ctx, campaignID, characterID, readContext)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	control, err := h.characterControl.CampaignCharacterControl(ctx, campaignID, characterID, userID, readContext)
+	control, err := h.characters.control.CampaignCharacterControl(ctx, campaignID, characterID, userID, readContext)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	creationEnabled := h.creationPages.Enabled(page.workspace.System)
+	creationEnabled := h.creation.pages.Enabled(page.workspace.System)
 	var creation campaignrender.CampaignCharacterCreationView
 	if creationEnabled {
-		creationPage, err := h.creationPages.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
+		creationPage, err := h.creation.pages.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
 		if err != nil {
 			h.WriteError(w, r, err)
 			return
 		}
-		creation = creationPage.Creation
+		creation = campaignrender.NewCharacterCreationView(creationPage.Creation)
 	}
 	view := page.characterDetailView(campaignID, characterID, characterItem, control, creationEnabled, creation)
 	h.writeCampaignDetailPage(

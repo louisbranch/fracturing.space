@@ -20,16 +20,16 @@ func (h handlers) handleCharacterCreationStep(w http.ResponseWriter, r *http.Req
 
 	ctx, _ := h.RequestContextAndUserID(r)
 
-	workspace, err := h.workspace.CampaignWorkspace(ctx, campaignID)
+	workspace, err := h.pages.workspace.CampaignWorkspace(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	if !h.creationPages.Enabled(workspace.System) {
+	if !h.creation.pages.Enabled(workspace.System) {
 		h.WriteNotFound(w, r)
 		return
 	}
-	if err := h.creationMutation.ApplyStep(ctx, campaignID, characterID, workspace.System, r.Form); err != nil {
+	if err := h.creation.mutation.ApplyStep(ctx, campaignID, characterID, workspace.System, r.Form); err != nil {
 		h.writeCreationStepError(w, r, err, campaignID, characterID)
 		return
 	}
@@ -51,7 +51,7 @@ func (h handlers) writeCreationStepError(w http.ResponseWriter, r *http.Request,
 // handleCharacterCreationReset handles this route in the module transport layer.
 func (h handlers) handleCharacterCreationReset(w http.ResponseWriter, r *http.Request, campaignID, characterID string) {
 	ctx, _ := h.RequestContextAndUserID(r)
-	if err := h.creationMutation.Reset(ctx, campaignID, characterID); err != nil {
+	if err := h.creation.mutation.Reset(ctx, campaignID, characterID); err != nil {
 		h.writeCreationStepError(w, r, err, campaignID, characterID)
 		return
 	}

@@ -20,8 +20,6 @@ type campaignGatewayStub struct {
 	campaignNameErr                         error
 	campaignWorkspace                       CampaignWorkspace
 	campaignWorkspaceErr                    error
-	campaignGameSurface                     CampaignGameSurface
-	campaignGameSurfaceErr                  error
 	campaignAIAgents                        []CampaignAIAgentOption
 	campaignAIAgentsErr                     error
 	campaignParticipants                    []CampaignParticipant
@@ -122,51 +120,6 @@ func (f *campaignGatewayStub) CampaignWorkspace(_ context.Context, campaignID st
 		workspace.ID = campaignID
 	}
 	return workspace, nil
-}
-
-func (f *campaignGatewayStub) CampaignGameSurface(_ context.Context, campaignID string) (CampaignGameSurface, error) {
-	if f.campaignGameSurfaceErr != nil {
-		return CampaignGameSurface{}, f.campaignGameSurfaceErr
-	}
-	surface := f.campaignGameSurface
-	if strings.TrimSpace(surface.SessionID) == "" {
-		surface.SessionID = "sess-1"
-	}
-	if strings.TrimSpace(surface.SessionName) == "" {
-		surface.SessionName = "Session One"
-	}
-	if strings.TrimSpace(surface.Participant.ID) == "" {
-		surface.Participant.ID = "p1"
-	}
-	if strings.TrimSpace(surface.Participant.Name) == "" {
-		surface.Participant.Name = "Owner"
-	}
-	if strings.TrimSpace(surface.Participant.Role) == "" {
-		surface.Participant.Role = "Player"
-	}
-	if surface.ActiveScene == nil {
-		surface.ActiveScene = &CampaignGameScene{
-			ID:        "scene-1",
-			SessionID: surface.SessionID,
-			Name:      "Bridge Watch",
-			Characters: []CampaignGameCharacter{
-				{ID: "char-1", Name: "Aria", OwnerParticipantID: surface.Participant.ID},
-			},
-		}
-	}
-	if surface.PlayerPhase == nil {
-		surface.PlayerPhase = &CampaignGamePlayerPhase{
-			PhaseID:              "phase-1",
-			Status:               "players",
-			ActingCharacterIDs:   []string{"char-1"},
-			ActingParticipantIDs: []string{surface.Participant.ID},
-			Slots:                []CampaignGamePlayerSlot{},
-		}
-	}
-	if len(surface.OOC.Posts) == 0 {
-		surface.OOC.Posts = []CampaignGameOOCPost{}
-	}
-	return surface, nil
 }
 
 func (f *campaignGatewayStub) CampaignAIAgents(context.Context) ([]CampaignAIAgentOption, error) {

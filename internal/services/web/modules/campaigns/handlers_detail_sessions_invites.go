@@ -15,7 +15,7 @@ func (h handlers) handleSessions(w http.ResponseWriter, r *http.Request, campaig
 	if !ok {
 		return
 	}
-	readiness, err := h.sessionReads.CampaignSessionReadiness(ctx, campaignID, page.locale)
+	readiness, err := h.pages.sessionReads.CampaignSessionReadiness(ctx, campaignID, page.locale)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -51,7 +51,7 @@ func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaign
 	if !ok {
 		return
 	}
-	items, err := h.inviteReads.CampaignInvites(ctx, campaignID)
+	items, err := h.invites.reads.CampaignInvites(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -59,7 +59,7 @@ func (h handlers) handleInvites(w http.ResponseWriter, r *http.Request, campaign
 	var participants []campaignapp.CampaignParticipant
 	if page.canManageInvites {
 		var err error
-		participants, err = h.participantReads.CampaignParticipants(ctx, campaignID)
+		participants, err = h.invites.participantReads.CampaignParticipants(ctx, campaignID)
 		if err != nil {
 			h.WriteError(w, r, err)
 			return

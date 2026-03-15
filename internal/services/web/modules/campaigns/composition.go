@@ -68,7 +68,6 @@ type CompositionConfig struct {
 	AssetBaseURL     string
 
 	CampaignClient           CampaignClient
-	InteractionClient        campaigngateway.InteractionClient
 	DiscoveryClient          DiscoveryClient
 	AgentClient              campaigngateway.AgentClient
 	CampaignArtifactClient   campaigngateway.CampaignArtifactClient
@@ -101,9 +100,9 @@ func Compose(config CompositionConfig) module.Module {
 	workflows := campaignworkflow.Registry{
 		campaignapp.GameSystemDaggerheart: daggerheart.New(config.AssetBaseURL),
 	}
-	serviceConfig := newServiceConfigFromGRPCDeps(newGatewayDeps(config), config.AssetBaseURL)
+	serviceConfigs := newServiceConfigsFromGRPCDeps(newGatewayDeps(config), config.AssetBaseURL)
 	return New(Config{
-		Services:         newHandlerServices(serviceConfig),
+		Services:         newHandlerServices(serviceConfigs),
 		Base:             config.Base,
 		PlayFallbackPort: config.PlayFallbackPort,
 		PlayLaunchGrant:  config.PlayLaunchGrant,
@@ -125,7 +124,6 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 		DashboardSync:            options.DashboardSync,
 		AssetBaseURL:             options.AssetBaseURL,
 		CampaignClient:           deps.CampaignClient,
-		InteractionClient:        deps.InteractionClient,
 		DiscoveryClient:          deps.DiscoveryClient,
 		AgentClient:              deps.AgentClient,
 		CampaignArtifactClient:   deps.CampaignArtifactClient,
@@ -150,7 +148,6 @@ func ComposeProtected(options ProtectedSurfaceOptions, deps Dependencies) (modul
 // required for production composition.
 func (config CompositionConfig) configured() bool {
 	return config.CampaignClient != nil &&
-		config.InteractionClient != nil &&
 		config.DiscoveryClient != nil &&
 		config.AgentClient != nil &&
 		config.ParticipantClient != nil &&

@@ -289,7 +289,7 @@ func TestUnknownRootRouteRendersNotFoundPage(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(
+		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
@@ -322,7 +322,7 @@ func TestLoginPageIncludesAuthShellAndPasskeyEndpoints(t *testing.T) {
 	t.Parallel()
 
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(
+		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{},
 			modules.Dependencies{PublicAuth: modules.PublicAuthDependencies{AuthClient: newFakeWebAuthClient()}},
 		),
@@ -469,7 +469,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 	auth := newFakeWebAuthClient()
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Username: "rhea", Locale: commonv1.Locale_LOCALE_EN_US}}}
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(
+		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{
 				SessionClient: auth,
 				AccountClient: account,
@@ -486,7 +486,7 @@ func TestAppPageRendersUserDropdownFromSocial(t *testing.T) {
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})
@@ -547,7 +547,7 @@ func TestAppPageUserDropdownProfileUsesAuthUsernameWhenSocialProfileHasNoUsernam
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})
@@ -591,7 +591,7 @@ func TestAppPageUsesDeterministicAvatarWhenProfileHasNoAssetSelection(t *testing
 					CredentialClient: fakeCredentialClient{},
 					AgentClient:      fakeAgentClient{},
 				},
-				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
+				Campaigns: modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 			},
 		),
 	})

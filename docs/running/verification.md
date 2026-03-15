@@ -21,6 +21,10 @@ Use this 3-command surface for normal development:
 | `make smoke` | Quick runtime confidence across integration and scenario smoke coverage | When runtime paths need quick feedback |
 | `make check` | Full local guard including static checks, smart architecture gates, full runtime coverage, and coverage baselines | Immediately before push, PR open, or PR update |
 
+For web changes, use the canonical [Web testing map](../architecture/platform/web-testing-map.md)
+to choose the right focused test files before broadening to the public command
+surface.
+
 ## Focused diagnostics
 
 These commands remain supported, but they are not part of the default command

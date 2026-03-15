@@ -21,9 +21,6 @@ func newGatewayDeps(config CompositionConfig) campaigngateway.GRPCGatewayDeps {
 		WorkspaceRead: campaigngateway.WorkspaceReadDeps{
 			Campaign: config.CampaignClient,
 		},
-		GameRead: campaigngateway.GameReadDeps{
-			Interaction: config.InteractionClient,
-		},
 		ParticipantRead: campaigngateway.ParticipantReadDeps{
 			Participant: config.ParticipantClient,
 		},

@@ -54,7 +54,7 @@ func campaignCreateHeader(loc webtemplates.Localizer) *webtemplates.AppMainHeade
 func (h handlers) handleIndex(w http.ResponseWriter, r *http.Request) {
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
-	items, err := h.catalog.ListCampaigns(ctx)
+	items, err := h.catalog.campaigns.ListCampaigns(ctx)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -104,7 +104,7 @@ func (h handlers) handleCreateCampaignSubmit(w http.ResponseWriter, r *http.Requ
 	}
 	ctx, userID := h.RequestContextAndUserID(r)
 	input.Locale = h.RequestLocaleTag(r)
-	created, err := h.catalog.CreateCampaign(ctx, input)
+	created, err := h.catalog.campaigns.CreateCampaign(ctx, input)
 	if err != nil {
 		h.writeMutationError(w, r, err, "error.web.message.failed_to_create_campaign", routepath.AppCampaignsCreate)
 		return

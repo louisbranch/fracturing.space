@@ -5,7 +5,6 @@ package app
 type testGatewayBundle interface {
 	CampaignCatalogReadGateway
 	CampaignWorkspaceReadGateway
-	CampaignGameReadGateway
 	CampaignParticipantReadGateway
 	CampaignCharacterReadGateway
 	CampaignSessionReadGateway
@@ -30,7 +29,6 @@ type testGatewayBundle interface {
 type testServiceBundle struct {
 	catalogService
 	workspaceService
-	gameService
 	participantReadService
 	participantMutationService
 	automationReadService
@@ -59,9 +57,6 @@ func newService(gateway testGatewayBundle) testServiceBundle {
 			mutation: gateway,
 		},
 		workspaceService: workspaceService{
-			read: gateway,
-		},
-		gameService: gameService{
 			read: gateway,
 		},
 		participantReadService: participantReadService{

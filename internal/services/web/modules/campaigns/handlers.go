@@ -19,56 +19,102 @@ type DashboardSync interface {
 	InviteChanged(context.Context, []string, string)
 }
 
+// campaignPageHandlerServices groups the shared workspace shell dependencies
+// used by multiple campaign detail surfaces.
+type campaignPageHandlerServices struct {
+	workspace     campaignapp.CampaignWorkspaceService
+	sessionReads  campaignapp.CampaignSessionReadService
+	authorization campaignapp.CampaignAuthorizationService
+}
+
+// catalogHandlerServices groups campaign list and creation behavior.
+type catalogHandlerServices struct {
+	campaigns campaignapp.CampaignCatalogService
+}
+
+// starterHandlerServices groups protected starter preview and launch behavior.
+type starterHandlerServices struct {
+	starters campaignapp.CampaignStarterService
+}
+
+// overviewHandlerServices groups campaign overview, configuration, and AI
+// binding behavior.
+type overviewHandlerServices struct {
+	automationReads  campaignapp.CampaignAutomationReadService
+	automationMutate campaignapp.CampaignAutomationMutationService
+	configuration    campaignapp.CampaignConfigurationService
+}
+
+// participantHandlerServices groups participant read and mutation behavior.
+type participantHandlerServices struct {
+	reads    campaignapp.CampaignParticipantReadService
+	mutation campaignapp.CampaignParticipantMutationService
+}
+
+// characterHandlerServices groups character read, control, and mutation
+// behavior.
+type characterHandlerServices struct {
+	reads    campaignapp.CampaignCharacterReadService
+	control  campaignapp.CampaignCharacterControlService
+	mutation campaignapp.CampaignCharacterMutationService
+}
+
+// creationHandlerServices groups character-creation workflow behavior.
+type creationHandlerServices struct {
+	pages    campaignworkflow.PageService
+	mutation campaignworkflow.MutationService
+}
+
+// sessionHandlerServices groups session lifecycle behavior.
+type sessionHandlerServices struct {
+	mutation campaignapp.CampaignSessionMutationService
+}
+
+// inviteHandlerServices groups invite reads, mutations, and recipient lookup
+// behavior.
+type inviteHandlerServices struct {
+	reads            campaignapp.CampaignInviteReadService
+	mutation         campaignapp.CampaignInviteMutationService
+	participantReads campaignapp.CampaignParticipantReadService
+}
+
 // handlers defines an internal contract used at this web package boundary.
 type handlers struct {
 	modulehandler.Base
-	catalog           campaignapp.CampaignCatalogService
-	starters          campaignapp.CampaignStarterService
-	workspace         campaignapp.CampaignWorkspaceService
-	game              campaignapp.CampaignGameService
-	participantReads  campaignapp.CampaignParticipantReadService
-	participantMutate campaignapp.CampaignParticipantMutationService
-	automationReads   campaignapp.CampaignAutomationReadService
-	automationMutate  campaignapp.CampaignAutomationMutationService
-	characterReads    campaignapp.CampaignCharacterReadService
-	characterControl  campaignapp.CampaignCharacterControlService
-	characterMutate   campaignapp.CampaignCharacterMutationService
-	sessionReads      campaignapp.CampaignSessionReadService
-	sessionMutate     campaignapp.CampaignSessionMutationService
-	inviteReads       campaignapp.CampaignInviteReadService
-	inviteMutate      campaignapp.CampaignInviteMutationService
-	configuration     campaignapp.CampaignConfigurationService
-	authorization     campaignapp.CampaignAuthorizationService
-	creationPages     campaignworkflow.PageService
-	creationMutation  campaignworkflow.MutationService
-	playFallbackPort  string
-	playLaunchGrant   playlaunchgrant.Config
-	requestMeta       requestmeta.SchemePolicy
-	nowFunc           func() time.Time
-	sync              DashboardSync
+	pages            campaignPageHandlerServices
+	catalog          catalogHandlerServices
+	starters         starterHandlerServices
+	overview         overviewHandlerServices
+	participants     participantHandlerServices
+	characters       characterHandlerServices
+	creation         creationHandlerServices
+	sessions         sessionHandlerServices
+	invites          inviteHandlerServices
+	playFallbackPort string
+	playLaunchGrant  playlaunchgrant.Config
+	requestMeta      requestmeta.SchemePolicy
+	nowFunc          func() time.Time
+	sync             DashboardSync
 }
 
 // handlerServices groups the app-facing seams consumed by the transport layer.
 type handlerServices struct {
-	Catalog            campaignapp.CampaignCatalogService
-	Starters           campaignapp.CampaignStarterService
-	Workspace          campaignapp.CampaignWorkspaceService
-	Game               campaignapp.CampaignGameService
-	ParticipantReads   campaignapp.CampaignParticipantReadService
-	ParticipantMutate  campaignapp.CampaignParticipantMutationService
-	AutomationReads    campaignapp.CampaignAutomationReadService
-	AutomationMutation campaignapp.CampaignAutomationMutationService
-	CharacterReads     campaignapp.CampaignCharacterReadService
-	CharacterControl   campaignapp.CampaignCharacterControlService
-	CharacterMutation  campaignapp.CampaignCharacterMutationService
-	SessionReads       campaignapp.CampaignSessionReadService
-	SessionMutation    campaignapp.CampaignSessionMutationService
-	InviteReads        campaignapp.CampaignInviteReadService
-	InviteMutation     campaignapp.CampaignInviteMutationService
-	Configuration      campaignapp.CampaignConfigurationService
-	Authorization      campaignapp.CampaignAuthorizationService
-	CreationPages      campaignworkflow.PageAppService
-	CreationFlow       campaignworkflow.MutationAppService
+	Page         campaignPageHandlerServices
+	Catalog      catalogHandlerServices
+	Starter      starterHandlerServices
+	Overview     overviewHandlerServices
+	Participants participantHandlerServices
+	Characters   characterHandlerServices
+	Creation     campaignCreationAppServices
+	Sessions     sessionHandlerServices
+	Invites      inviteHandlerServices
+}
+
+// campaignCreationAppServices keeps creation app-service assembly separate
+// from workflow-owned transport services.
+type campaignCreationAppServices struct {
+	Pages campaignworkflow.PageAppService
+	Flow  campaignworkflow.MutationAppService
 }
 
 // handlersConfig keeps the root transport constructor explicit by owned seam.
@@ -83,28 +129,53 @@ type handlersConfig struct {
 }
 
 // newHandlerServices constructs the handler-facing capability bundle from
-// explicit app service constructors.
-func newHandlerServices(config campaignapp.ServiceConfig) handlerServices {
+// route-surface-owned app configs.
+func newHandlerServices(config serviceConfigs) handlerServices {
+	workspace := campaignapp.NewWorkspaceService(config.Page.Workspace)
+	authorization := campaignapp.NewAuthorizationService(config.Page.Authorization)
+	sessionReads := campaignapp.NewSessionReadService(config.Page.SessionRead)
+	participantReads := campaignapp.NewParticipantReadService(config.Participants.Read, config.Participants.Authorization)
+	inviteParticipantReads := campaignapp.NewParticipantReadService(config.Invites.ParticipantRead, config.Invites.Authorization)
+	creationPages := campaignworkflow.NewPageAppService(campaignapp.NewCharacterCreationPageService(config.Characters.Creation))
+	creationFlow := campaignworkflow.NewMutationAppService(campaignapp.NewCharacterCreationMutationService(config.Characters.Creation, config.Characters.Authorization))
 	return handlerServices{
-		Catalog:            campaignapp.NewCatalogService(config.Catalog),
-		Starters:           campaignapp.NewStarterService(config.Starter),
-		Workspace:          campaignapp.NewWorkspaceService(config.Workspace),
-		Game:               campaignapp.NewGameService(config.Game),
-		ParticipantReads:   campaignapp.NewParticipantReadService(config.ParticipantRead, config.Authorization),
-		ParticipantMutate:  campaignapp.NewParticipantMutationService(config.ParticipantMutation, config.Authorization),
-		AutomationReads:    campaignapp.NewAutomationReadService(config.AutomationRead, config.Authorization),
-		AutomationMutation: campaignapp.NewAutomationMutationService(config.AutomationMutation, config.Authorization),
-		CharacterReads:     campaignapp.NewCharacterReadService(config.CharacterRead, config.Authorization),
-		CharacterControl:   campaignapp.NewCharacterControlService(config.CharacterControl, config.Authorization),
-		CharacterMutation:  campaignapp.NewCharacterMutationService(config.CharacterMutation, config.Authorization),
-		SessionReads:       campaignapp.NewSessionReadService(config.SessionRead),
-		SessionMutation:    campaignapp.NewSessionMutationService(config.SessionMutation, config.Authorization),
-		InviteReads:        campaignapp.NewInviteReadService(config.InviteRead, config.Authorization),
-		InviteMutation:     campaignapp.NewInviteMutationService(config.InviteMutation, config.Authorization),
-		Configuration:      campaignapp.NewConfigurationService(config.Configuration, config.Authorization),
-		Authorization:      campaignapp.NewAuthorizationService(config.Authorization),
-		CreationPages:      campaignworkflow.NewPageAppService(campaignapp.NewCharacterCreationPageService(config.Creation)),
-		CreationFlow:       campaignworkflow.NewMutationAppService(campaignapp.NewCharacterCreationMutationService(config.Creation, config.Authorization)),
+		Page: campaignPageHandlerServices{
+			workspace:     workspace,
+			sessionReads:  sessionReads,
+			authorization: authorization,
+		},
+		Catalog: catalogHandlerServices{
+			campaigns: campaignapp.NewCatalogService(config.Catalog.Catalog),
+		},
+		Starter: starterHandlerServices{
+			starters: campaignapp.NewStarterService(config.Starter.Starter),
+		},
+		Overview: overviewHandlerServices{
+			automationReads:  campaignapp.NewAutomationReadService(config.Overview.AutomationRead, config.Overview.Authorization),
+			automationMutate: campaignapp.NewAutomationMutationService(config.Overview.AutomationMutation, config.Overview.Authorization),
+			configuration:    campaignapp.NewConfigurationService(config.Overview.Configuration, config.Overview.Authorization),
+		},
+		Participants: participantHandlerServices{
+			reads:    participantReads,
+			mutation: campaignapp.NewParticipantMutationService(config.Participants.Mutation, config.Participants.Authorization),
+		},
+		Characters: characterHandlerServices{
+			reads:    campaignapp.NewCharacterReadService(config.Characters.Read, config.Characters.Authorization),
+			control:  campaignapp.NewCharacterControlService(config.Characters.Control, config.Characters.Authorization),
+			mutation: campaignapp.NewCharacterMutationService(config.Characters.Mutation, config.Characters.Authorization),
+		},
+		Creation: campaignCreationAppServices{
+			Pages: creationPages,
+			Flow:  creationFlow,
+		},
+		Sessions: sessionHandlerServices{
+			mutation: campaignapp.NewSessionMutationService(config.Sessions.Mutation, config.Page.Authorization),
+		},
+		Invites: inviteHandlerServices{
+			reads:            campaignapp.NewInviteReadService(config.Invites.Read, config.Invites.Authorization),
+			mutation:         campaignapp.NewInviteMutationService(config.Invites.Mutation, config.Invites.Authorization),
+			participantReads: inviteParticipantReads,
+		},
 	}
 }
 
@@ -116,38 +187,37 @@ func newHandlers(config handlersConfig) handlers {
 	}
 	services := config.Services
 	return handlers{
-		Base:              config.Base,
-		catalog:           services.Catalog,
-		starters:          services.Starters,
-		workspace:         services.Workspace,
-		game:              services.Game,
-		participantReads:  services.ParticipantReads,
-		participantMutate: services.ParticipantMutate,
-		automationReads:   services.AutomationReads,
-		automationMutate:  services.AutomationMutation,
-		characterReads:    services.CharacterReads,
-		characterControl:  services.CharacterControl,
-		characterMutate:   services.CharacterMutation,
-		sessionReads:      services.SessionReads,
-		sessionMutate:     services.SessionMutation,
-		inviteReads:       services.InviteReads,
-		inviteMutate:      services.InviteMutation,
-		configuration:     services.Configuration,
-		authorization:     services.Authorization,
-		creationPages:     campaignworkflow.NewPageService(services.CreationPages, workflowMap),
-		creationMutation:  campaignworkflow.NewMutationService(services.CreationFlow, workflowMap),
-		playFallbackPort:  config.PlayFallbackPort,
-		playLaunchGrant:   config.PlayLaunchGrant,
-		requestMeta:       config.RequestMeta,
-		nowFunc:           time.Now,
-		sync:              config.Sync,
+		Base:         config.Base,
+		pages:        services.Page,
+		catalog:      services.Catalog,
+		starters:     services.Starter,
+		overview:     services.Overview,
+		participants: services.Participants,
+		characters:   services.Characters,
+		creation: creationHandlerServices{
+			pages:    campaignworkflow.NewPageService(services.Creation.Pages, workflowMap),
+			mutation: campaignworkflow.NewMutationService(services.Creation.Flow, workflowMap),
+		},
+		sessions: sessionHandlerServices{
+			mutation: services.Sessions.mutation,
+		},
+		invites: inviteHandlerServices{
+			reads:            services.Invites.reads,
+			mutation:         services.Invites.mutation,
+			participantReads: services.Invites.participantReads,
+		},
+		playFallbackPort: config.PlayFallbackPort,
+		playLaunchGrant:  config.PlayLaunchGrant,
+		requestMeta:      config.RequestMeta,
+		nowFunc:          time.Now,
+		sync:             config.Sync,
 	}
 }
 
 // newHandlersFromConfig keeps production and test wiring convenient while
 // routing transport ownership through narrower service groups.
 func newHandlersFromConfig(
-	serviceConfig campaignapp.ServiceConfig,
+	config serviceConfigs,
 	base modulehandler.Base,
 	sync DashboardSync,
 	workflows ...campaignworkflow.Registry,
@@ -157,7 +227,7 @@ func newHandlersFromConfig(
 		workflowMap = workflows[0]
 	}
 	return newHandlers(handlersConfig{
-		Services:  newHandlerServices(serviceConfig),
+		Services:  newHandlerServices(config),
 		Base:      base,
 		Sync:      sync,
 		Workflows: workflowMap,

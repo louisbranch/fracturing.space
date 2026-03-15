@@ -29,7 +29,7 @@ type aiAgentGatewayHealthReporter interface {
 type unavailableGateway struct{}
 
 // NewUnavailableGateway returns a fail-closed settings gateway.
-func NewUnavailableGateway() Gateway {
+func NewUnavailableGateway() unavailableGateway {
 	return unavailableGateway{}
 }
 
@@ -101,9 +101,4 @@ func IsAccountGatewayHealthy(gateway AccountGateway) bool {
 // IsAIGatewayHealthy reports whether any AI-owned settings surface is available.
 func IsAIGatewayHealthy(gateway AIGateway) bool {
 	return IsAIKeyGatewayHealthy(gateway) || IsAIAgentGatewayHealthy(gateway)
-}
-
-// IsGatewayHealthy reports whether any settings surface is configured and usable.
-func IsGatewayHealthy(gateway Gateway) bool {
-	return IsAccountGatewayHealthy(gateway) || IsAIGatewayHealthy(gateway)
 }

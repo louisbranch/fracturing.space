@@ -190,6 +190,70 @@ func TestSelectedModulesKeepContributorOwnedAppAndGatewaySplits(t *testing.T) {
 	}
 }
 
+func TestWebContributorDocsReferenceCoverageEntrypoints(t *testing.T) {
+	t.Parallel()
+
+	docRefs := map[string][]string{
+		filepath.Join("..", "..", "..", "..", "docs", "architecture", "platform", "web-contributor-map.md"): {
+			"internal/services/web/server_test.go",
+			"internal/services/web/server_locale_test.go",
+			"internal/services/web/server_viewer_test.go",
+			"internal/services/web/server_static_test.go",
+			"internal/services/web/server_test_harness_defaults_test.go",
+			"internal/services/web/server_test_harness_helpers_test.go",
+			"internal/cmd/web/web_test.go",
+			"docs/architecture/platform/web-testing-map.md",
+		},
+		filepath.Join("..", "..", "..", "..", "docs", "architecture", "platform", "web-testing-map.md"): {
+			"internal/services/web/server_test.go",
+			"internal/services/web/server_locale_test.go",
+			"internal/services/web/server_viewer_test.go",
+			"internal/services/web/server_static_test.go",
+			"internal/services/web/server_test_harness_defaults_test.go",
+			"internal/services/web/server_test_harness_helpers_test.go",
+			"internal/cmd/web/web_test.go",
+			"internal/services/web/modules/architecture_test.go",
+			"internal/services/web/modules/boundary_guardrails_test.go",
+			"make test",
+			"make web-architecture-check",
+			"make smoke",
+			"make check",
+		},
+		filepath.Join("..", "..", "..", "..", "docs", "guides", "web-module-playbook.md"): {
+			"web-testing-map.md",
+			"internal/services/web/modules/architecture_test.go",
+			"internal/services/web/modules/boundary_guardrails_test.go",
+			"routes_test.go",
+			"handlers*_test.go",
+		},
+		filepath.Join("..", "..", "..", "..", "CONTRIBUTING.md"): {
+			"docs/architecture/platform/web-testing-map.md",
+		},
+		filepath.Join("..", "..", "..", "..", "docs", "running", "verification.md"): {
+			"web-testing-map.md",
+		},
+	}
+
+	for docPath, refs := range docRefs {
+		content, err := os.ReadFile(docPath)
+		if err != nil {
+			t.Fatalf("ReadFile(%q) error = %v", docPath, err)
+		}
+		body := string(content)
+		for _, ref := range refs {
+			if !strings.Contains(body, ref) {
+				t.Fatalf("%s does not mention %q", docPath, ref)
+			}
+			if strings.HasPrefix(ref, "internal/") || strings.HasPrefix(ref, "docs/") || ref == "CONTRIBUTING.md" {
+				repoPath := filepath.Join("..", "..", "..", "..", ref)
+				if _, err := os.Stat(repoPath); err != nil {
+					t.Fatalf("doc reference %q from %s is not present in repo: %v", ref, docPath, err)
+				}
+			}
+		}
+	}
+}
+
 func TestModulesMountDoNotReadGatewayClientsFromDependencies(t *testing.T) {
 	t.Parallel()
 
@@ -377,6 +441,24 @@ func TestCampaignWorkflowPackagesDoNotImportRootCampaignsPackage(t *testing.T) {
 			path := strings.Trim(imp.Path.Value, "\"")
 			if path == rootCampaignsImport {
 				t.Errorf("%s imports %s; use campaigns/app contracts to avoid parent-package coupling", file, path)
+			}
+		}
+	}
+}
+
+func TestCampaignWorkflowPackagesDoNotImportCampaignRender(t *testing.T) {
+	t.Parallel()
+
+	const renderImport = "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
+	for _, file := range goFilesUnder(t, filepath.Join("campaigns", "workflow"), false) {
+		parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, parser.ImportsOnly)
+		if err != nil {
+			t.Fatalf("parse workflow file %s: %v", file, err)
+		}
+		for _, imp := range parsed.Imports {
+			path := strings.Trim(imp.Path.Value, "\"")
+			if path == renderImport {
+				t.Errorf("%s imports %s; workflow-owned models should adapt at the render seam instead", file, path)
 			}
 		}
 	}

@@ -53,12 +53,6 @@ type AIGateway interface {
 	AIAgentGateway
 }
 
-// Gateway loads and updates settings data for web handlers.
-type Gateway interface {
-	AccountGateway
-	AIGateway
-}
-
 // ProfileService exposes profile orchestration used by transport handlers.
 type ProfileService interface {
 	LoadProfile(context.Context, string) (SettingsProfile, error)

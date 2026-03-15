@@ -56,6 +56,7 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	fs.StringVar(&cfg.DiscoveryAddr, "discovery-addr", cfg.DiscoveryAddr, "Discovery service gRPC address")
 	fs.StringVar(&cfg.NotificationsAddr, "notifications-addr", cfg.NotificationsAddr, "Notifications service gRPC address")
 	fs.StringVar(&cfg.UserHubAddr, "userhub-addr", cfg.UserHubAddr, "Userhub service gRPC address")
+	fs.StringVar(&cfg.StatusAddr, "status-addr", cfg.StatusAddr, "Status service gRPC address")
 	fs.StringVar(&cfg.AssetBaseURL, "asset-base-url", cfg.AssetBaseURL, "Asset base URL for image delivery")
 	fs.BoolVar(&cfg.TrustForwardedProto, "trust-forwarded-proto", cfg.TrustForwardedProto, "Trust X-Forwarded-Proto when resolving request scheme")
 	if err := entrypoint.ParseArgs(fs, args); err != nil {

@@ -24,11 +24,6 @@ type CampaignWorkspaceService interface {
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
 }
 
-// CampaignGameService exposes game-surface reads used by transport.
-type CampaignGameService interface {
-	CampaignGameSurface(context.Context, string) (CampaignGameSurface, error)
-}
-
 // CampaignParticipantReadService exposes participant-focused reads and editor
 // state.
 type CampaignParticipantReadService interface {

@@ -1,139 +1,43 @@
 package render
 
-// CampaignCharacterCreationStepView carries one step status row for the character-creation workflow.
-type CampaignCharacterCreationStepView struct {
-	Step     int32
-	Key      string
-	Complete bool
-}
+import campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 
-// CampaignCreationClassFeatureView carries one feature paragraph for class, heritage, and subclass cards.
-type CampaignCreationClassFeatureView struct {
-	Name        string
-	Description string
-}
+// CampaignCharacterCreationStepView carries one step status row for the
+// character-creation workflow.
+type CampaignCharacterCreationStepView = campaignworkflow.CharacterCreationStepView
 
-// CampaignCreationDomainWatermarkView carries class-domain icon metadata for selectable cards.
-type CampaignCreationDomainWatermarkView struct {
-	ID      string
-	Name    string
-	IconURL string
-}
+// CampaignCreationClassFeatureView carries one feature paragraph for class,
+// heritage, and subclass cards.
+type CampaignCreationClassFeatureView = campaignworkflow.CreationClassFeatureView
+
+// CampaignCreationDomainWatermarkView carries class-domain icon metadata for
+// selectable cards.
+type CampaignCreationDomainWatermarkView = campaignworkflow.CreationDomainWatermarkView
 
 // CampaignCreationClassView carries one class option card.
-type CampaignCreationClassView struct {
-	ID               string
-	Name             string
-	ImageURL         string
-	StartingHP       int32
-	StartingEvasion  int32
-	HopeFeature      CampaignCreationClassFeatureView
-	Features         []CampaignCreationClassFeatureView
-	DomainNames      []string
-	DomainWatermarks []CampaignCreationDomainWatermarkView
-}
+type CampaignCreationClassView = campaignworkflow.CreationClassView
 
 // CampaignCreationSubclassView carries one subclass option card.
-type CampaignCreationSubclassView struct {
-	ID             string
-	Name           string
-	ImageURL       string
-	ClassID        string
-	SpellcastTrait string
-	Foundation     []CampaignCreationClassFeatureView
-}
+type CampaignCreationSubclassView = campaignworkflow.CreationSubclassView
 
 // CampaignCreationHeritageView carries one ancestry or community option card.
-type CampaignCreationHeritageView struct {
-	ID       string
-	Name     string
-	ImageURL string
-	Features []CampaignCreationClassFeatureView
-}
+type CampaignCreationHeritageView = campaignworkflow.CreationHeritageView
 
 // CampaignCreationWeaponView carries one weapon choice.
-type CampaignCreationWeaponView struct {
-	ID       string
-	Name     string
-	ImageURL string
-	Burden   int32
-	Trait    string
-	Range    string
-	Damage   string
-	Feature  string
-}
+type CampaignCreationWeaponView = campaignworkflow.CreationWeaponView
 
 // CampaignCreationArmorView carries one armor choice.
-type CampaignCreationArmorView struct {
-	ID             string
-	Name           string
-	ImageURL       string
-	ArmorScore     int32
-	BaseThresholds string
-	Feature        string
-}
+type CampaignCreationArmorView = campaignworkflow.CreationArmorView
 
 // CampaignCreationItemView carries one item choice.
-type CampaignCreationItemView struct {
-	ID          string
-	Name        string
-	ImageURL    string
-	Description string
-}
+type CampaignCreationItemView = campaignworkflow.CreationItemView
 
 // CampaignCreationExperienceView carries one freeform experience row.
-type CampaignCreationExperienceView struct {
-	Name     string
-	Modifier string
-}
+type CampaignCreationExperienceView = campaignworkflow.CreationExperienceView
 
 // CampaignCreationDomainCardView carries one domain-card choice.
-type CampaignCreationDomainCardView struct {
-	ID          string
-	Name        string
-	ImageURL    string
-	DomainID    string
-	DomainName  string
-	Level       int32
-	Type        string
-	RecallCost  int32
-	FeatureText string
-}
+type CampaignCreationDomainCardView = campaignworkflow.CreationDomainCardView
 
-// CampaignCharacterCreationView carries the full transport/render contract for one character-creation workflow state.
-type CampaignCharacterCreationView struct {
-	Ready                       bool
-	NextStep                    int32
-	UnmetReasons                []string
-	ClassID                     string
-	SubclassID                  string
-	AncestryID                  string
-	CommunityID                 string
-	Agility                     string
-	Strength                    string
-	Finesse                     string
-	Instinct                    string
-	Presence                    string
-	Knowledge                   string
-	PrimaryWeaponID             string
-	SecondaryWeaponID           string
-	ArmorID                     string
-	PotionItemID                string
-	Background                  string
-	Description                 string
-	Experiences                 []CampaignCreationExperienceView
-	DomainCardIDs               []string
-	Connections                 string
-	NextStepPrefetchURLs        []string
-	Steps                       []CampaignCharacterCreationStepView
-	Classes                     []CampaignCreationClassView
-	Subclasses                  []CampaignCreationSubclassView
-	Ancestries                  []CampaignCreationHeritageView
-	Communities                 []CampaignCreationHeritageView
-	PrimaryWeapons              []CampaignCreationWeaponView
-	SecondaryWeapons            []CampaignCreationWeaponView
-	SecondaryWeaponNoneImageURL string
-	Armor                       []CampaignCreationArmorView
-	PotionItems                 []CampaignCreationItemView
-	DomainCards                 []CampaignCreationDomainCardView
-}
+// CampaignCharacterCreationView carries the full render contract for one
+// character-creation workflow state.
+type CampaignCharacterCreationView = campaignworkflow.CharacterCreationView

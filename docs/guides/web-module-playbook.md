@@ -13,6 +13,10 @@ This playbook defines the default way to add or modify a web area module.
 
 Canonical implementation path: `internal/services/web/`.
 
+Use the canonical [Web testing map](../architecture/platform/web-testing-map.md)
+when deciding whether a change belongs in root web coverage, module route
+coverage, or cross-module architecture guardrails.
+
 ## Module Template
 
 Create a package under `internal/services/web/modules/<area>/` with this
@@ -257,6 +261,12 @@ app/gateway seam stops being cohesive:
   `gateway` contracts.
 - Register routes with stdlib method+path patterns and keep method/path guards
   out of handlers.
+- Keep module coverage local and durable:
+  - route contract checks in the owning `routes_test.go`
+  - handler/page branching in owned `handlers*_test.go`
+  - cross-module boundary expectations in
+    `internal/services/web/modules/architecture_test.go` or
+    `internal/services/web/modules/boundary_guardrails_test.go`
 - Prefer route-param guard helpers for multi-param routes (for example
   `withCampaignAndCharacterID`) so 404 behavior is centralized and testable.
 - Prefer `internal/services/web/platform/routeparam` for single-parameter
