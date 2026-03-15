@@ -357,7 +357,7 @@ func TestStableMutationRoutesRedirectWithHTMXParity(t *testing.T) {
 			name:         "session start",
 			path:         routepath.AppCampaignSessionStart("c1"),
 			body:         "name=Session+Two",
-			wantLocation: routepath.AppCampaignSessions("c1"),
+			wantLocation: routepath.AppCampaignGame("c1"),
 			wantFlashKey: "web.campaigns.notice_session_started",
 		},
 		{
