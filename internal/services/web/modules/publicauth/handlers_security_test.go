@@ -11,7 +11,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-func TestHandleRecoveryCodeGetConsumesRevealCookie(t *testing.T) {
+func TestHandleRecoveryCodeGetPreservesRevealCookieUntilAcknowledge(t *testing.T) {
 	t.Parallel()
 
 	h := newHandlersFromGateway(nil, "", requestmeta.SchemePolicy{})
@@ -52,17 +52,14 @@ func TestHandleRecoveryCodeGetConsumesRevealCookie(t *testing.T) {
 		t.Fatalf("body missing recovery code: %s", rr.Body.String())
 	}
 
-	var clearedCookie *http.Cookie
+	var preservedCookie *http.Cookie
 	for _, cookie := range rr.Result().Cookies() {
 		if cookie.Name == recoveryRevealCookieName {
-			clearedCookie = cookie
+			preservedCookie = cookie
 			break
 		}
 	}
-	if clearedCookie == nil {
-		t.Fatal("expected recovery reveal cookie to be cleared")
-	}
-	if clearedCookie.MaxAge != -1 {
-		t.Fatalf("cleared cookie MaxAge = %d, want -1", clearedCookie.MaxAge)
+	if preservedCookie != nil && preservedCookie.MaxAge == -1 {
+		t.Fatalf("reveal cookie was unexpectedly cleared")
 	}
 }

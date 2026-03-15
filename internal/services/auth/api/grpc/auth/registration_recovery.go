@@ -39,10 +39,22 @@ func (s *AuthService) BeginAccountRegistration(ctx context.Context, in *authv1.B
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
+	now := s.clock().UTC()
+	if err := s.passkeyStore.DeleteExpiredRegistrationSessions(ctx, now); err != nil {
+		return nil, status.Errorf(codes.Internal, "Delete expired registration sessions: %v", err)
+	}
+	if err := s.passkeyStore.DeleteExpiredPasskeySessions(ctx, now); err != nil {
+		return nil, status.Errorf(codes.Internal, "Delete expired passkey sessions: %v", err)
+	}
 	if _, err := s.store.GetUserByUsername(ctx, normalized.Username); err == nil {
 		return nil, status.Error(codes.AlreadyExists, "Username is already in use.")
 	} else if err != storage.ErrNotFound {
 		return nil, handleDomainError(err)
+	}
+	if _, err := s.passkeyStore.GetRegistrationSessionByUsername(ctx, normalized.Username); err == nil {
+		return nil, status.Error(codes.AlreadyExists, "Username is already reserved by an unfinished signup.")
+	} else if err != storage.ErrNotFound {
+		return nil, status.Errorf(codes.Internal, "Get registration session by username: %v", err)
 	}
 
 	userID, err := s.idGenerator()
@@ -59,22 +71,22 @@ func (s *AuthService) BeginAccountRegistration(ctx context.Context, in *authv1.B
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "Create registration session: %v", err)
 	}
-	now := s.clock().UTC()
-	if err := s.passkeyStore.DeleteExpiredRegistrationSessions(ctx, now); err != nil {
-		return nil, status.Errorf(codes.Internal, "Delete expired registration sessions: %v", err)
+	signupSessionTTL := s.passkeyConfig.SignupSessionTTL
+	if signupSessionTTL <= 0 {
+		signupSessionTTL = s.passkeyConfig.SessionTTL
 	}
 	if err := s.passkeyStore.PutRegistrationSession(ctx, storage.RegistrationSession{
 		ID:        sessionID,
 		UserID:    userID,
 		Username:  normalized.Username,
 		Locale:    platformi18n.LocaleString(normalized.Locale),
-		ExpiresAt: now.Add(s.passkeyConfig.SessionTTL),
+		ExpiresAt: now.Add(signupSessionTTL),
 		CreatedAt: now,
 		UpdatedAt: now,
 	}); err != nil {
 		return nil, status.Errorf(codes.Internal, "Store registration session: %v", err)
 	}
-	if err := s.storePasskeySession(ctx, sessionID, passkey.SessionKindRegistration, userID, session); err != nil {
+	if err := s.storePasskeySessionWithTTL(ctx, sessionID, passkey.SessionKindRegistration, userID, session, signupSessionTTL); err != nil {
 		_ = s.passkeyStore.DeleteRegistrationSession(ctx, sessionID)
 		return nil, status.Errorf(codes.Internal, "Store passkey session: %v", err)
 	}
@@ -88,7 +100,7 @@ func (s *AuthService) BeginAccountRegistration(ctx context.Context, in *authv1.B
 	}, nil
 }
 
-// FinishAccountRegistration creates the account, stores the first passkey, and issues recovery state.
+// FinishAccountRegistration validates the first passkey and stages recovery acknowledgement state.
 func (s *AuthService) FinishAccountRegistration(ctx context.Context, in *authv1.FinishAccountRegistrationRequest) (*authv1.FinishAccountRegistrationResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "Finish account registration request is required.")
@@ -106,6 +118,7 @@ func (s *AuthService) FinishAccountRegistration(ctx context.Context, in *authv1.
 	}
 	if registration.ExpiresAt.Before(s.clock().UTC()) {
 		_ = s.passkeyStore.DeleteRegistrationSession(ctx, sessionID)
+		_ = s.passkeyStore.DeletePasskeySession(ctx, sessionID)
 		return nil, status.Error(codes.InvalidArgument, "Registration session expired.")
 	}
 	loaded, err := s.loadPasskeySession(ctx, sessionID, passkey.SessionKindRegistration)
@@ -118,6 +131,54 @@ func (s *AuthService) FinishAccountRegistration(ctx context.Context, in *authv1.
 	if len(in.GetCredentialResponseJson()) == 0 {
 		return nil, status.Error(codes.InvalidArgument, "Credential response JSON is required.")
 	}
+	if registration.CredentialID != "" || registration.CredentialJSON != "" || registration.RecoveryCodeHash != "" {
+		return nil, status.Error(codes.FailedPrecondition, "Registration is already waiting for recovery-code acknowledgement.")
+	}
+
+	recoveryCode, recoveryHash, err := s.generateRecoveryCode()
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Generate recovery code: %v", err)
+	}
+
+	passkeyUser := &passkeyUser{user: user.User{ID: registration.UserID, Username: registration.Username}}
+	parsed, err := s.passkeyParser.ParseCredentialCreationResponseBytes(in.GetCredentialResponseJson())
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "Parse credential response: %v", err)
+	}
+	credential, err := s.passkeyWebAuthn.CreateCredential(passkeyUser, loaded.Data, parsed)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Validate credential response: %v", err)
+	}
+	stagedCredential, err := s.buildPasskeyCredentialRecord(ctx, registration.UserID, *credential, false)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "Prepare staged passkey credential: %v", err)
+	}
+	registration.CredentialID = stagedCredential.CredentialID
+	registration.CredentialJSON = stagedCredential.CredentialJSON
+	registration.RecoveryCodeHash = recoveryHash
+	registration.ExpiresAt = s.clock().UTC().Add(defaultPendingSignupTTL)
+	registration.UpdatedAt = s.clock().UTC()
+	if err := s.passkeyStore.PutRegistrationSession(ctx, registration); err != nil {
+		return nil, status.Errorf(codes.Internal, "Store staged registration session: %v", err)
+	}
+	_ = s.passkeyStore.DeletePasskeySession(ctx, sessionID)
+	return &authv1.FinishAccountRegistrationResponse{
+		RecoveryCode: recoveryCode,
+	}, nil
+}
+
+// AcknowledgeAccountRegistration activates one staged signup after the recovery code is acknowledged.
+func (s *AuthService) AcknowledgeAccountRegistration(ctx context.Context, in *authv1.AcknowledgeAccountRegistrationRequest) (*authv1.AcknowledgeAccountRegistrationResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "Acknowledge account registration request is required.")
+	}
+	registration, err := s.loadActiveRegistrationSession(ctx, in.GetSessionId())
+	if err != nil {
+		return nil, err
+	}
+	if registration.CredentialID == "" || registration.CredentialJSON == "" || registration.RecoveryCodeHash == "" {
+		return nil, status.Error(codes.FailedPrecondition, "Registration is not ready for acknowledgement.")
+	}
 
 	locale := parseStoredLocale(registration.Locale)
 	created, err := user.CreateUser(user.CreateUserInput{
@@ -127,43 +188,49 @@ func (s *AuthService) FinishAccountRegistration(ctx context.Context, in *authv1.
 	if err != nil {
 		return nil, handleDomainError(err)
 	}
-	recoveryCode, recoveryHash, err := s.generateRecoveryCode()
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Generate recovery code: %v", err)
-	}
-	created.RecoveryCodeHash = recoveryHash
+	created.RecoveryCodeHash = registration.RecoveryCodeHash
 
-	passkeyUser := &passkeyUser{user: created}
-	parsed, err := s.passkeyParser.ParseCredentialCreationResponseBytes(in.GetCredentialResponseJson())
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "Parse credential response: %v", err)
+	attachedPendingID := ""
+	if pendingID := strings.TrimSpace(in.GetPendingId()); pendingID != "" {
+		if err := s.attachPendingAuthorization(ctx, pendingID, created.ID); err != nil {
+			return nil, err
+		}
+		attachedPendingID = pendingID
 	}
-	credential, err := s.passkeyWebAuthn.CreateCredential(passkeyUser, loaded.Data, parsed)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Validate credential response: %v", err)
-	}
-	storedCredential, err := s.buildPasskeyCredentialRecord(ctx, created.ID, *credential, false)
-	if err != nil {
-		return nil, status.Errorf(codes.Internal, "Prepare passkey credential: %v", err)
+
+	now := s.clock().UTC()
+	storedCredential := storage.PasskeyCredential{
+		CredentialID:   registration.CredentialID,
+		UserID:         created.ID,
+		CredentialJSON: registration.CredentialJSON,
+		CreatedAt:      now,
+		UpdatedAt:      now,
 	}
 	event, err := s.signupCompletedOutboxEvent(created, "passkey")
 	if err != nil {
+		if rollbackErr := s.rollbackPendingAuthorizationUserID(attachedPendingID); rollbackErr != nil {
+			return nil, status.Errorf(codes.Internal, "Prepare signup outbox event: %v (rollback pending authorization: %v)", err, rollbackErr)
+		}
 		return nil, status.Errorf(codes.Internal, "Prepare signup outbox event: %v", err)
 	}
 	webSession, err := s.buildWebSession(created.ID, defaultWebSessionTTL)
 	if err != nil {
+		if rollbackErr := s.rollbackPendingAuthorizationUserID(attachedPendingID); rollbackErr != nil {
+			return nil, status.Errorf(codes.Internal, "Build web session: %v (rollback pending authorization: %v)", err, rollbackErr)
+		}
 		return nil, err
 	}
 	if err := s.persistRegisteredUser(ctx, created, storedCredential, webSession, event); err != nil {
-		return nil, status.Errorf(codes.Internal, "Persist registered user: %v", err)
+		if rollbackErr := s.rollbackPendingAuthorizationUserID(attachedPendingID); rollbackErr != nil {
+			return nil, status.Errorf(codes.Internal, "Persist acknowledged user: %v (rollback pending authorization: %v)", err, rollbackErr)
+		}
+		return nil, status.Errorf(codes.Internal, "Persist acknowledged user: %v", err)
 	}
-	_ = s.passkeyStore.DeletePasskeySession(ctx, sessionID)
-	_ = s.passkeyStore.DeleteRegistrationSession(ctx, sessionID)
-	return &authv1.FinishAccountRegistrationResponse{
-		User:         userToProto(created),
-		CredentialId: encodeCredentialID(credential.ID),
-		Session:      webSessionToProto(webSession),
-		RecoveryCode: recoveryCode,
+	_ = s.passkeyStore.DeleteRegistrationSession(ctx, registration.ID)
+
+	return &authv1.AcknowledgeAccountRegistrationResponse{
+		User:    userToProto(created),
+		Session: webSessionToProto(webSession),
 	}, nil
 }
 
@@ -180,6 +247,13 @@ func (s *AuthService) persistRegisteredUser(ctx context.Context, baseUser user.U
 		return fmt.Errorf("Signup persistence is not configured.")
 	}
 	return txStore.PutUserPasskeyWithIntegrationOutboxEvent(ctx, baseUser, credential, session, event)
+}
+
+func (s *AuthService) rollbackPendingAuthorizationUserID(pendingID string) error {
+	if strings.TrimSpace(pendingID) == "" || s.oauthStore == nil {
+		return nil
+	}
+	return s.oauthStore.UpdatePendingAuthorizationUserID(pendingID, "")
 }
 
 // BeginAccountRecovery verifies a recovery code and creates a narrow recovery session.
@@ -377,6 +451,28 @@ func parseStoredLocale(raw string) commonv1.Locale {
 		return parsed
 	}
 	return platformi18n.DefaultLocale()
+}
+
+func (s *AuthService) loadActiveRegistrationSession(ctx context.Context, sessionID string) (storage.RegistrationSession, error) {
+	if s.passkeyStore == nil {
+		return storage.RegistrationSession{}, status.Error(codes.Internal, "Passkey store is not configured.")
+	}
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return storage.RegistrationSession{}, status.Error(codes.InvalidArgument, "Session ID is required.")
+	}
+	registration, err := s.passkeyStore.GetRegistrationSession(ctx, sessionID)
+	if err != nil {
+		if err == storage.ErrNotFound {
+			return storage.RegistrationSession{}, status.Error(codes.NotFound, "Registration session not found.")
+		}
+		return storage.RegistrationSession{}, status.Errorf(codes.Internal, "Get registration session: %v", err)
+	}
+	if registration.ExpiresAt.Before(s.clock().UTC()) {
+		_ = s.passkeyStore.DeleteRegistrationSession(ctx, sessionID)
+		return storage.RegistrationSession{}, status.Error(codes.FailedPrecondition, "Registration session expired.")
+	}
+	return registration, nil
 }
 
 func (s *AuthService) loadRecoverySessionUser(ctx context.Context, recoverySessionID string) (storage.RecoverySession, user.User, error) {

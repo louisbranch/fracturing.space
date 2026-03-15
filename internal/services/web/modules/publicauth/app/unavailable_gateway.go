@@ -28,7 +28,12 @@ func (unavailableGateway) CheckUsernameAvailability(context.Context, string) (Us
 }
 
 // FinishAccountRegistration fails fast because signup cannot complete without auth.
-func (unavailableGateway) FinishAccountRegistration(context.Context, string, json.RawMessage) (PasskeyFinish, error) {
+func (unavailableGateway) FinishAccountRegistration(context.Context, string, json.RawMessage) (PasskeyRegistrationReveal, error) {
+	return PasskeyRegistrationReveal{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
+}
+
+// AcknowledgeAccountRegistration fails fast because staged signup cannot activate without auth.
+func (unavailableGateway) AcknowledgeAccountRegistration(context.Context, string, string) (PasskeyFinish, error) {
 	return PasskeyFinish{}, apperrors.E(apperrors.KindUnavailable, authServiceUnavailableMessage)
 }
 

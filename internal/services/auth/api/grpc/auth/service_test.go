@@ -46,7 +46,7 @@ func TestLookupUserByUsername_Success(t *testing.T) {
 }
 
 func TestCheckUsernameAvailability_Available(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
 	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "  ALIce  "})
 	if err != nil {
 		t.Fatalf("check username availability: %v", err)
@@ -64,7 +64,7 @@ func TestCheckUsernameAvailability_Unavailable(t *testing.T) {
 	now := time.Date(2026, 2, 23, 15, 0, 0, 0, time.UTC)
 	store.users["user-1"] = user.User{ID: "user-1", Username: "alice", CreatedAt: now, UpdatedAt: now}
 
-	svc := NewAuthService(store, nil, nil)
+	svc := NewAuthService(store, newFakePasskeyStore(), nil)
 	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "Alice"})
 	if err != nil {
 		t.Fatalf("check username availability: %v", err)
@@ -75,7 +75,7 @@ func TestCheckUsernameAvailability_Unavailable(t *testing.T) {
 }
 
 func TestCheckUsernameAvailability_Invalid(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
 	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "a"})
 	if err != nil {
 		t.Fatalf("check username availability: %v", err)
@@ -89,7 +89,7 @@ func TestCheckUsernameAvailability_Invalid(t *testing.T) {
 }
 
 func TestCheckUsernameAvailability_NonASCIIInvalid(t *testing.T) {
-	svc := NewAuthService(newFakeUserStore(), nil, nil)
+	svc := NewAuthService(newFakeUserStore(), newFakePasskeyStore(), nil)
 	resp, err := svc.CheckUsernameAvailability(context.Background(), &authv1.CheckUsernameAvailabilityRequest{Username: "álvaro"})
 	if err != nil {
 		t.Fatalf("check username availability: %v", err)

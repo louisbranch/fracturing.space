@@ -11,8 +11,10 @@ type Gateway interface {
 	BeginAccountRegistration(ctx context.Context, username string) (PasskeyChallenge, error)
 	// CheckUsernameAvailability validates and checks username availability.
 	CheckUsernameAvailability(ctx context.Context, username string) (UsernameAvailability, error)
-	// FinishAccountRegistration completes account creation and returns the signed-in session.
-	FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
+	// FinishAccountRegistration stages signup completion and returns the recovery code reveal.
+	FinishAccountRegistration(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyRegistrationReveal, error)
+	// AcknowledgeAccountRegistration activates a staged signup and returns the signed-in session.
+	AcknowledgeAccountRegistration(ctx context.Context, sessionID string, pendingID string) (PasskeyFinish, error)
 	// BeginPasskeyLogin starts a username-scoped passkey login flow.
 	BeginPasskeyLogin(ctx context.Context, username string) (PasskeyChallenge, error)
 	// FinishPasskeyLogin completes login and returns the user ID.
@@ -47,7 +49,8 @@ type PasskeyService interface {
 	PasskeyLoginStart(ctx context.Context, username string) (PasskeyChallenge, error)
 	PasskeyLoginFinish(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
 	PasskeyRegisterStart(ctx context.Context, username string) (PasskeyRegisterResult, error)
-	PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error)
+	PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyRegistrationReveal, error)
+	PasskeyRegisterAcknowledge(ctx context.Context, sessionID string, pendingID string) (PasskeyFinish, error)
 }
 
 // RecoveryService exposes account recovery ceremonies.
@@ -66,6 +69,11 @@ type PasskeyChallenge struct {
 type PasskeyRegisterResult struct {
 	SessionID string
 	PublicKey json.RawMessage
+}
+
+// PasskeyRegistrationReveal stores the one-time recovery code shown before activation.
+type PasskeyRegistrationReveal struct {
+	RecoveryCode string
 }
 
 // UsernameAvailabilityState identifies the live validation outcome for signup input.

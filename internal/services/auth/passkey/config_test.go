@@ -21,6 +21,9 @@ func TestLoadConfigFromEnvDefaults(t *testing.T) {
 	if cfg.SessionTTL != 5*time.Minute {
 		t.Fatalf("SessionTTL = %v, want %v", cfg.SessionTTL, 5*time.Minute)
 	}
+	if cfg.SignupSessionTTL != 2*time.Minute {
+		t.Fatalf("SignupSessionTTL = %v, want %v", cfg.SignupSessionTTL, 2*time.Minute)
+	}
 }
 
 func TestLoadConfigFromEnvCustomRPID(t *testing.T) {
@@ -58,6 +61,14 @@ func TestLoadConfigFromEnvValidSessionTTL(t *testing.T) {
 	}
 }
 
+func TestLoadConfigFromEnvValidSignupSessionTTL(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_WEBAUTHN_SIGNUP_SESSION_TTL", "90s")
+	cfg := LoadConfigFromEnv()
+	if cfg.SignupSessionTTL != 90*time.Second {
+		t.Fatalf("SignupSessionTTL = %v, want %v", cfg.SignupSessionTTL, 90*time.Second)
+	}
+}
+
 func TestLoadConfigFromEnvInvalidSessionTTLKeepsRPID(t *testing.T) {
 	t.Setenv("FRACTURING_SPACE_WEBAUTHN_RP_ID", "example.com")
 	t.Setenv("FRACTURING_SPACE_WEBAUTHN_SESSION_TTL", "bad-duration")
@@ -68,5 +79,18 @@ func TestLoadConfigFromEnvInvalidSessionTTLKeepsRPID(t *testing.T) {
 	}
 	if cfg.SessionTTL != 5*time.Minute {
 		t.Fatalf("SessionTTL = %v, want %v", cfg.SessionTTL, 5*time.Minute)
+	}
+}
+
+func TestLoadConfigFromEnvInvalidSignupSessionTTLKeepsRPID(t *testing.T) {
+	t.Setenv("FRACTURING_SPACE_WEBAUTHN_RP_ID", "example.com")
+	t.Setenv("FRACTURING_SPACE_WEBAUTHN_SIGNUP_SESSION_TTL", "bad-duration")
+
+	cfg := LoadConfigFromEnv()
+	if cfg.RPID != "example.com" {
+		t.Fatalf("RPID = %q, want %q", cfg.RPID, "example.com")
+	}
+	if cfg.SignupSessionTTL != 2*time.Minute {
+		t.Fatalf("SignupSessionTTL = %v, want %v", cfg.SignupSessionTTL, 2*time.Minute)
 	}
 }

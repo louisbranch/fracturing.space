@@ -115,16 +115,33 @@ func (s service) PasskeyRegisterStart(ctx context.Context, username string) (Pas
 	return PasskeyRegisterResult{SessionID: resolvedChallengeSessionID, PublicKey: challenge.PublicKey}, nil
 }
 
-// PasskeyRegisterFinish completes signup and normalizes returned identity fields.
-func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyFinish, error) {
+// PasskeyRegisterFinish stages signup and normalizes the recovery-code reveal.
+func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, credential json.RawMessage) (PasskeyRegistrationReveal, error) {
+	resolvedSessionID, err := requireSessionID(sessionID)
+	if err != nil {
+		return PasskeyRegistrationReveal{}, err
+	}
+	if err := requireCredential(credential); err != nil {
+		return PasskeyRegistrationReveal{}, err
+	}
+	finished, err := s.auth.FinishAccountRegistration(ctx, resolvedSessionID, credential)
+	if err != nil {
+		return PasskeyRegistrationReveal{}, err
+	}
+	finished.RecoveryCode, err = requireRecoveryCode(finished.RecoveryCode)
+	if err != nil {
+		return PasskeyRegistrationReveal{}, err
+	}
+	return finished, nil
+}
+
+// PasskeyRegisterAcknowledge activates one staged signup and returns the signed-in session.
+func (s service) PasskeyRegisterAcknowledge(ctx context.Context, sessionID string, pendingID string) (PasskeyFinish, error) {
 	resolvedSessionID, err := requireSessionID(sessionID)
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
-	if err := requireCredential(credential); err != nil {
-		return PasskeyFinish{}, err
-	}
-	finished, err := s.auth.FinishAccountRegistration(ctx, resolvedSessionID, credential)
+	finished, err := s.auth.AcknowledgeAccountRegistration(ctx, resolvedSessionID, strings.TrimSpace(pendingID))
 	if err != nil {
 		return PasskeyFinish{}, err
 	}
@@ -133,10 +150,6 @@ func (s service) PasskeyRegisterFinish(ctx context.Context, sessionID string, cr
 		return PasskeyFinish{}, err
 	}
 	finished.SessionID, err = requireGatewaySessionID(finished.SessionID)
-	if err != nil {
-		return PasskeyFinish{}, err
-	}
-	finished.RecoveryCode, err = requireRecoveryCode(finished.RecoveryCode)
 	if err != nil {
 		return PasskeyFinish{}, err
 	}

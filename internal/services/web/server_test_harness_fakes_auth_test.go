@@ -57,9 +57,14 @@ func (f *fakeWebAuthClient) CheckUsernameAvailability(_ context.Context, req *au
 
 func (f *fakeWebAuthClient) FinishAccountRegistration(context.Context, *authv1.FinishAccountRegistrationRequest, ...grpc.CallOption) (*authv1.FinishAccountRegistrationResponse, error) {
 	return &authv1.FinishAccountRegistrationResponse{
-		User:         &authv1.User{Id: "user-1", Username: "louis"},
-		Session:      &authv1.WebSession{Id: "ws-1", UserId: "user-1"},
 		RecoveryCode: "ABCD-EFGH",
+	}, nil
+}
+
+func (f *fakeWebAuthClient) AcknowledgeAccountRegistration(context.Context, *authv1.AcknowledgeAccountRegistrationRequest, ...grpc.CallOption) (*authv1.AcknowledgeAccountRegistrationResponse, error) {
+	return &authv1.AcknowledgeAccountRegistrationResponse{
+		User:    &authv1.User{Id: "user-1", Username: "louis"},
+		Session: &authv1.WebSession{Id: "ws-1", UserId: "user-1"},
 	}, nil
 }
 

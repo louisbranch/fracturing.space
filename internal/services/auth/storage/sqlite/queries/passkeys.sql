@@ -44,18 +44,23 @@ DELETE FROM passkey_sessions WHERE expires_at <= ?;
 
 -- name: PutRegistrationSession :exec
 INSERT INTO registration_sessions (
-    id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    id, user_id, username, locale, recovery_code_hash, credential_id, credential_json, expires_at, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     user_id = excluded.user_id,
     username = excluded.username,
     locale = excluded.locale,
     recovery_code_hash = excluded.recovery_code_hash,
+    credential_id = excluded.credential_id,
+    credential_json = excluded.credential_json,
     expires_at = excluded.expires_at,
     updated_at = excluded.updated_at;
 
 -- name: GetRegistrationSession :one
 SELECT * FROM registration_sessions WHERE id = ?;
+
+-- name: GetRegistrationSessionByUsername :one
+SELECT * FROM registration_sessions WHERE username = ?;
 
 -- name: DeleteRegistrationSession :exec
 DELETE FROM registration_sessions WHERE id = ?;

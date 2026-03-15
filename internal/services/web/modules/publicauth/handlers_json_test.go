@@ -64,9 +64,6 @@ func TestPasskeyRegisterFinishReturnsTypedJSONContract(t *testing.T) {
 	if err := json.NewDecoder(rr.Body).Decode(&payload); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
-	if payload.UserID != "user-1" {
-		t.Fatalf("user_id = %q, want %q", payload.UserID, "user-1")
-	}
 	if payload.RedirectURL != routepath.LoginRecoveryCode {
 		t.Fatalf("redirect_url = %q, want %q", payload.RedirectURL, routepath.LoginRecoveryCode)
 	}

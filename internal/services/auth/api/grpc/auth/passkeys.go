@@ -379,6 +379,10 @@ func (s *AuthService) storePasskeyCredential(ctx context.Context, userID string,
 }
 
 func (s *AuthService) storePasskeySession(ctx context.Context, sessionID string, kind passkey.SessionKind, userID string, session *webauthn.SessionData) error {
+	return s.storePasskeySessionWithTTL(ctx, sessionID, kind, userID, session, s.passkeyConfig.SessionTTL)
+}
+
+func (s *AuthService) storePasskeySessionWithTTL(ctx context.Context, sessionID string, kind passkey.SessionKind, userID string, session *webauthn.SessionData, ttl time.Duration) error {
 	if session == nil {
 		return fmt.Errorf("Session data is required.")
 	}
@@ -391,7 +395,7 @@ func (s *AuthService) storePasskeySession(ctx context.Context, sessionID string,
 		Kind:        string(kind),
 		UserID:      userID,
 		SessionJSON: string(payload),
-		ExpiresAt:   s.clock().UTC().Add(s.passkeyConfig.SessionTTL),
+		ExpiresAt:   s.clock().UTC().Add(ttl),
 	})
 }
 

@@ -148,7 +148,7 @@ func (q *Queries) GetRecoverySession(ctx context.Context, id string) (RecoverySe
 }
 
 const getRegistrationSession = `-- name: GetRegistrationSession :one
-SELECT id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at FROM registration_sessions WHERE id = ?
+SELECT id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at, credential_id, credential_json FROM registration_sessions WHERE id = ?
 `
 
 func (q *Queries) GetRegistrationSession(ctx context.Context, id string) (RegistrationSession, error) {
@@ -163,6 +163,30 @@ func (q *Queries) GetRegistrationSession(ctx context.Context, id string) (Regist
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.CredentialID,
+		&i.CredentialJson,
+	)
+	return i, err
+}
+
+const getRegistrationSessionByUsername = `-- name: GetRegistrationSessionByUsername :one
+SELECT id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at, credential_id, credential_json FROM registration_sessions WHERE username = ?
+`
+
+func (q *Queries) GetRegistrationSessionByUsername(ctx context.Context, username string) (RegistrationSession, error) {
+	row := q.db.QueryRowContext(ctx, getRegistrationSessionByUsername, username)
+	var i RegistrationSession
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Username,
+		&i.Locale,
+		&i.RecoveryCodeHash,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CredentialID,
+		&i.CredentialJson,
 	)
 	return i, err
 }
@@ -292,13 +316,15 @@ func (q *Queries) PutRecoverySession(ctx context.Context, arg PutRecoverySession
 
 const putRegistrationSession = `-- name: PutRegistrationSession :exec
 INSERT INTO registration_sessions (
-    id, user_id, username, locale, recovery_code_hash, expires_at, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    id, user_id, username, locale, recovery_code_hash, credential_id, credential_json, expires_at, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     user_id = excluded.user_id,
     username = excluded.username,
     locale = excluded.locale,
     recovery_code_hash = excluded.recovery_code_hash,
+    credential_id = excluded.credential_id,
+    credential_json = excluded.credential_json,
     expires_at = excluded.expires_at,
     updated_at = excluded.updated_at
 `
@@ -309,6 +335,8 @@ type PutRegistrationSessionParams struct {
 	Username         string `json:"username"`
 	Locale           string `json:"locale"`
 	RecoveryCodeHash string `json:"recovery_code_hash"`
+	CredentialID     string `json:"credential_id"`
+	CredentialJson   string `json:"credential_json"`
 	ExpiresAt        int64  `json:"expires_at"`
 	CreatedAt        int64  `json:"created_at"`
 	UpdatedAt        int64  `json:"updated_at"`
@@ -321,6 +349,8 @@ func (q *Queries) PutRegistrationSession(ctx context.Context, arg PutRegistratio
 		arg.Username,
 		arg.Locale,
 		arg.RecoveryCodeHash,
+		arg.CredentialID,
+		arg.CredentialJson,
 		arg.ExpiresAt,
 		arg.CreatedAt,
 		arg.UpdatedAt,

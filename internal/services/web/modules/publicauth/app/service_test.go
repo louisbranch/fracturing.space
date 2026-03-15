@@ -19,12 +19,9 @@ func TestPasskeyLoginStartRequiresUsername(t *testing.T) {
 
 func TestPasskeyRegisterStartAndFinish(t *testing.T) {
 	stub := &authGatewayStub{
-		beginRegistrationResp: PasskeyChallenge{SessionID: "reg-1", PublicKey: json.RawMessage(`{"publicKey":{}}`)},
-		finishRegistrationResp: PasskeyFinish{
-			SessionID:    "web-1",
-			UserID:       "user-1",
-			RecoveryCode: "ABCD-EFGH",
-		},
+		beginRegistrationResp:  PasskeyChallenge{SessionID: "reg-1", PublicKey: json.RawMessage(`{"publicKey":{}}`)},
+		finishRegistrationResp: PasskeyRegistrationReveal{RecoveryCode: "ABCD-EFGH"},
+		ackRegistrationResp:    PasskeyFinish{SessionID: "web-1", UserID: "user-1"},
 	}
 	svc := newService(stub, "")
 
@@ -40,8 +37,16 @@ func TestPasskeyRegisterStartAndFinish(t *testing.T) {
 	if err != nil {
 		t.Fatalf("PasskeyRegisterFinish() error = %v", err)
 	}
-	if finish.SessionID != "web-1" || finish.UserID != "user-1" || finish.RecoveryCode != "ABCD-EFGH" {
+	if finish.RecoveryCode != "ABCD-EFGH" {
 		t.Fatalf("finish = %+v", finish)
+	}
+
+	ack, err := svc.PasskeyRegisterAcknowledge(context.Background(), "reg-1", "")
+	if err != nil {
+		t.Fatalf("PasskeyRegisterAcknowledge() error = %v", err)
+	}
+	if ack.SessionID != "web-1" || ack.UserID != "user-1" {
+		t.Fatalf("ack = %+v", ack)
 	}
 }
 
@@ -132,7 +137,8 @@ func TestResolvePostAuthRedirectPathRejectsUnsafeTargets(t *testing.T) {
 type authGatewayStub struct {
 	beginRegistrationResp  PasskeyChallenge
 	usernameAvailability   UsernameAvailability
-	finishRegistrationResp PasskeyFinish
+	finishRegistrationResp PasskeyRegistrationReveal
+	ackRegistrationResp    PasskeyFinish
 	beginLoginResp         PasskeyChallenge
 	finishLoginUserID      string
 	webSessionID           string
@@ -146,8 +152,12 @@ func (f *authGatewayStub) CheckUsernameAvailability(context.Context, string) (Us
 	return f.usernameAvailability, nil
 }
 
-func (f *authGatewayStub) FinishAccountRegistration(context.Context, string, json.RawMessage) (PasskeyFinish, error) {
+func (f *authGatewayStub) FinishAccountRegistration(context.Context, string, json.RawMessage) (PasskeyRegistrationReveal, error) {
 	return f.finishRegistrationResp, nil
+}
+
+func (f *authGatewayStub) AcknowledgeAccountRegistration(context.Context, string, string) (PasskeyFinish, error) {
+	return f.ackRegistrationResp, nil
 }
 
 func (f *authGatewayStub) BeginPasskeyLogin(context.Context, string) (PasskeyChallenge, error) {
