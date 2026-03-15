@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
@@ -28,44 +29,48 @@ func userIDFromContext(ctx context.Context) string {
 	}
 	return strings.TrimSpace(values[0])
 }
-func credentialProviderFromProto(value aiv1.Provider) (credential.Provider, error) {
+
+func providerFromProto(value aiv1.Provider) (provider.Provider, error) {
 	switch value {
 	case aiv1.Provider_PROVIDER_OPENAI:
-		return credential.ProviderOpenAI, nil
+		return provider.OpenAI, nil
 	default:
 		return "", status.Error(codes.InvalidArgument, "provider is required")
 	}
 }
 
-func agentProviderFromProto(value aiv1.Provider) (agent.Provider, error) {
-	switch value {
-	case aiv1.Provider_PROVIDER_OPENAI:
-		return agent.ProviderOpenAI, nil
-	default:
-		return "", status.Error(codes.InvalidArgument, "provider is required")
+func providerFromString(value string) provider.Provider {
+	normalized, err := provider.Normalize(value)
+	if err != nil {
+		return ""
 	}
+	return normalized
 }
 
-func providerGrantProviderFromProto(value aiv1.Provider) (providergrant.Provider, error) {
-	switch value {
-	case aiv1.Provider_PROVIDER_OPENAI:
-		return providergrant.ProviderOpenAI, nil
-	default:
-		return "", status.Error(codes.InvalidArgument, "provider is required")
-	}
-}
 func providerToProto(value string) aiv1.Provider {
-	if strings.EqualFold(strings.TrimSpace(value), "openai") {
+	if providerFromString(value) == provider.OpenAI {
 		return aiv1.Provider_PROVIDER_OPENAI
 	}
 	return aiv1.Provider_PROVIDER_UNSPECIFIED
 }
 
+func usageToProto(value provider.Usage) *aiv1.Usage {
+	if value.IsZero() {
+		return nil
+	}
+	return &aiv1.Usage{
+		InputTokens:     value.InputTokens,
+		OutputTokens:    value.OutputTokens,
+		ReasoningTokens: value.ReasoningTokens,
+		TotalTokens:     value.TotalTokens,
+	}
+}
+
 func credentialStatusToProto(value string) aiv1.CredentialStatus {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "active":
+	switch credential.ParseStatus(value) {
+	case credential.StatusActive:
 		return aiv1.CredentialStatus_CREDENTIAL_STATUS_ACTIVE
-	case "revoked":
+	case credential.StatusRevoked:
 		return aiv1.CredentialStatus_CREDENTIAL_STATUS_REVOKED
 	default:
 		return aiv1.CredentialStatus_CREDENTIAL_STATUS_UNSPECIFIED
@@ -73,8 +78,8 @@ func credentialStatusToProto(value string) aiv1.CredentialStatus {
 }
 
 func agentStatusToProto(value string) aiv1.AgentStatus {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "active":
+	switch agent.ParseStatus(value) {
+	case agent.StatusActive:
 		return aiv1.AgentStatus_AGENT_STATUS_ACTIVE
 	default:
 		return aiv1.AgentStatus_AGENT_STATUS_UNSPECIFIED
@@ -82,14 +87,14 @@ func agentStatusToProto(value string) aiv1.AgentStatus {
 }
 
 func providerGrantStatusToProto(value string) aiv1.ProviderGrantStatus {
-	switch strings.ToLower(strings.TrimSpace(value)) {
-	case "active":
+	switch providergrant.ParseStatus(value) {
+	case providergrant.StatusActive:
 		return aiv1.ProviderGrantStatus_PROVIDER_GRANT_STATUS_ACTIVE
-	case "revoked":
+	case providergrant.StatusRevoked:
 		return aiv1.ProviderGrantStatus_PROVIDER_GRANT_STATUS_REVOKED
-	case "expired":
+	case providergrant.StatusExpired:
 		return aiv1.ProviderGrantStatus_PROVIDER_GRANT_STATUS_EXPIRED
-	case "refresh_failed":
+	case providergrant.StatusRefreshFailed:
 		return aiv1.ProviderGrantStatus_PROVIDER_GRANT_STATUS_REFRESH_FAILED
 	default:
 		return aiv1.ProviderGrantStatus_PROVIDER_GRANT_STATUS_UNSPECIFIED

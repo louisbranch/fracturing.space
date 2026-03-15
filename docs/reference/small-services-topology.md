@@ -61,5 +61,6 @@ Runtime and ownership map for service processes outside `web`, `game`, and
 ## Related docs
 
 - [Contributor map](contributor-map.md)
+- [AI service contributor map](ai-service-contributor-map.md)
 - [System architecture](../architecture/foundations/architecture.md)
 - [Local development](../running/local-dev.md)

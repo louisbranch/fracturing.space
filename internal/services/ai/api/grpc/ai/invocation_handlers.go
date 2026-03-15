@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,7 +52,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 		return nil, status.Error(codes.NotFound, "agent not found")
 	}
 
-	provider := providergrant.Provider(strings.ToLower(strings.TrimSpace(agentRecord.Provider)))
+	provider := providerFromString(agentRecord.Provider)
 	adapter, ok := s.providerInvocationAdapters[provider]
 	if !ok || adapter == nil {
 		return nil, status.Error(codes.FailedPrecondition, "provider invocation adapter is unavailable")
@@ -67,6 +66,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 		Model:            agentRecord.Model,
 		Input:            input,
 		Instructions:     strings.TrimSpace(agentRecord.Instructions),
+		ReasoningEffort:  strings.TrimSpace(in.GetReasoningEffort()),
 		CredentialSecret: invokeToken,
 	})
 	if err != nil {
@@ -94,6 +94,7 @@ func (s *Service) InvokeAgent(ctx context.Context, in *aiv1.InvokeAgentRequest) 
 		OutputText: outputText,
 		Provider:   providerToProto(agentRecord.Provider),
 		Model:      agentRecord.Model,
+		Usage:      usageToProto(result.Usage),
 	}, nil
 }
 
@@ -101,7 +102,7 @@ func (s *Service) resolveAgentInvokeToken(ctx context.Context, ownerUserID strin
 	return s.resolveAuthReferenceToken(
 		ctx,
 		ownerUserID,
-		agentRecord.Provider,
+		providerFromString(agentRecord.Provider),
 		agentRecord.CredentialID,
 		agentRecord.ProviderGrantID,
 	)

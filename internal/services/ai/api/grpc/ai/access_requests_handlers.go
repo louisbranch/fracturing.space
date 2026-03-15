@@ -8,6 +8,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/accessrequest"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,7 +40,7 @@ func (s *Service) CreateAccessRequest(ctx context.Context, in *aiv1.CreateAccess
 		}
 		return nil, status.Errorf(codes.Internal, "get agent: %v", err)
 	}
-	if !strings.EqualFold(strings.TrimSpace(agentRecord.Status), "active") {
+	if !agent.ParseStatus(agentRecord.Status).IsActive() {
 		return nil, status.Error(codes.FailedPrecondition, "agent is unavailable")
 	}
 
@@ -234,15 +235,14 @@ func (s *Service) ReviewAccessRequest(ctx context.Context, in *aiv1.ReviewAccess
 	if updatedDomain.ReviewedAt == nil {
 		return nil, status.Error(codes.Internal, "review timestamp is unavailable")
 	}
-	if err := s.accessRequestStore.ReviewAccessRequest(
-		ctx,
-		userID,
-		existing.ID,
-		string(updatedDomain.Status),
-		updatedDomain.ReviewerUserID,
-		updatedDomain.ReviewNote,
-		*updatedDomain.ReviewedAt,
-	); err != nil {
+	if err := s.accessRequestStore.ReviewAccessRequest(ctx, storage.ReviewAccessRequestInput{
+		OwnerUserID:     userID,
+		AccessRequestID: existing.ID,
+		Status:          string(updatedDomain.Status),
+		ReviewerUserID:  updatedDomain.ReviewerUserID,
+		ReviewNote:      updatedDomain.ReviewNote,
+		ReviewedAt:      *updatedDomain.ReviewedAt,
+	}); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "access request not found")
 		}
@@ -330,15 +330,14 @@ func (s *Service) RevokeAccessRequest(ctx context.Context, in *aiv1.RevokeAccess
 		}
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	if err := s.accessRequestStore.RevokeAccessRequest(
-		ctx,
-		userID,
-		existing.ID,
-		string(updatedDomain.Status),
-		updatedDomain.ReviewerUserID,
-		updatedDomain.ReviewNote,
-		updatedDomain.UpdatedAt,
-	); err != nil {
+	if err := s.accessRequestStore.RevokeAccessRequest(ctx, storage.RevokeAccessRequestInput{
+		OwnerUserID:     userID,
+		AccessRequestID: existing.ID,
+		Status:          string(updatedDomain.Status),
+		ReviewerUserID:  updatedDomain.ReviewerUserID,
+		ReviewNote:      updatedDomain.ReviewNote,
+		RevokedAt:       updatedDomain.UpdatedAt,
+	}); err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
 			return nil, status.Error(codes.NotFound, "access request not found")
 		}

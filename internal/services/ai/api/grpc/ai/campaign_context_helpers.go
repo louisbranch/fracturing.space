@@ -11,13 +11,29 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (s *Service) validateCampaignContext(ctx context.Context, campaignID string, action gamev1.AuthorizationAction) error {
+type campaignContextValidator struct {
+	authorizationClient      gamev1.AuthorizationServiceClient
+	internalServiceAllowlist map[string]struct{}
+}
+
+func newCampaignContextValidator(client gamev1.AuthorizationServiceClient, allowlist map[string]struct{}) campaignContextValidator {
+	copiedAllowlist := make(map[string]struct{}, len(allowlist))
+	for serviceID := range allowlist {
+		copiedAllowlist[serviceID] = struct{}{}
+	}
+	return campaignContextValidator{
+		authorizationClient:      client,
+		internalServiceAllowlist: copiedAllowlist,
+	}
+}
+
+func (v campaignContextValidator) validateCampaignContext(ctx context.Context, campaignID string, action gamev1.AuthorizationAction) error {
 	campaignID = strings.TrimSpace(campaignID)
 	if campaignID == "" {
 		return status.Error(codes.InvalidArgument, "campaign_id is required")
 	}
 
-	if s.isAllowedInternalCampaignContextCaller(ctx) {
+	if v.isAllowedInternalCampaignContextCaller(ctx) {
 		return nil
 	}
 
@@ -25,12 +41,12 @@ func (s *Service) validateCampaignContext(ctx context.Context, campaignID string
 	if userID == "" {
 		return status.Error(codes.PermissionDenied, "missing caller identity")
 	}
-	if s == nil || s.gameAuthorizationClient == nil {
+	if v.authorizationClient == nil {
 		return status.Error(codes.FailedPrecondition, "campaign authorization client is unavailable")
 	}
 
 	authCtx := grpcauthctx.WithUserID(ctx, userID)
-	resp, err := s.gameAuthorizationClient.Can(authCtx, &gamev1.CanRequest{
+	resp, err := v.authorizationClient.Can(authCtx, &gamev1.CanRequest{
 		CampaignId: campaignID,
 		Action:     action,
 		Resource:   gamev1.AuthorizationResource_AUTHORIZATION_RESOURCE_CAMPAIGN,
@@ -44,14 +60,14 @@ func (s *Service) validateCampaignContext(ctx context.Context, campaignID string
 	return nil
 }
 
-func (s *Service) isAllowedInternalCampaignContextCaller(ctx context.Context) bool {
-	if s == nil || len(s.internalServiceAllowlist) == 0 {
+func (v campaignContextValidator) isAllowedInternalCampaignContextCaller(ctx context.Context) bool {
+	if len(v.internalServiceAllowlist) == 0 {
 		return false
 	}
 	serviceID := strings.ToLower(strings.TrimSpace(gamegrpcmeta.ServiceIDFromContext(ctx)))
 	if serviceID == "" {
 		return false
 	}
-	_, ok := s.internalServiceAllowlist[serviceID]
+	_, ok := v.internalServiceAllowlist[serviceID]
 	return ok
 }

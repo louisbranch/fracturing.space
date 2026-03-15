@@ -1,4 +1,4 @@
-package ai
+package openai
 
 import (
 	"context"
@@ -9,38 +9,13 @@ import (
 	"strings"
 	"testing"
 
+	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
 
-type roundTripFunc func(req *http.Request) (*http.Response, error)
-
-func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
-	return f(req)
-}
-
-func response(status int, body string) *http.Response {
-	header := make(http.Header)
-	header.Set("Content-Type", "application/json")
-	return &http.Response{
-		StatusCode: status,
-		Header:     header,
-		Body:       io.NopCloser(strings.NewReader(body)),
-	}
-}
-
-type failingReadCloser struct{}
-
-func (f failingReadCloser) Read(_ []byte) (int, error) {
-	return 0, io.ErrUnexpectedEOF
-}
-
-func (f failingReadCloser) Close() error {
-	return nil
-}
-
-func TestOpenAIInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
-	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+func TestInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
+	adapter := &invokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -53,7 +28,7 @@ func TestOpenAIInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
 		},
 	}}
 
-	_, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
+	_, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
 		Model:            "gpt-4o-mini",
 		Input:            "Say hello",
 		CredentialSecret: "sk-1",
@@ -63,11 +38,11 @@ func TestOpenAIInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
 	}
 }
 
-func TestNewOpenAIInvokeAdapterDefaults(t *testing.T) {
-	adapter := NewOpenAIInvokeAdapter(OpenAIInvokeConfig{})
-	typed, ok := adapter.(*openAIInvokeAdapter)
+func TestNewInvokeAdapterDefaults(t *testing.T) {
+	adapter := NewInvokeAdapter(InvokeConfig{})
+	typed, ok := adapter.(*invokeAdapter)
 	if !ok {
-		t.Fatalf("adapter type = %T, want *openAIInvokeAdapter", adapter)
+		t.Fatalf("adapter type = %T, want *invokeAdapter", adapter)
 	}
 	if typed.cfg.HTTPClient == nil {
 		t.Fatal("expected non-nil HTTP client")
@@ -77,59 +52,19 @@ func TestNewOpenAIInvokeAdapterDefaults(t *testing.T) {
 	}
 }
 
-func TestSetOpenAIInvocationAdapterNoopOnNilInputs(t *testing.T) {
-	var svc *Service
-	svc.SetOpenAIInvocationAdapter(&fakeProviderInvocationAdapter{})
-
-	svc = &Service{}
-	svc.SetOpenAIInvocationAdapter(nil)
-	if svc.providerInvocationAdapters != nil {
-		t.Fatalf("provider invocation adapters = %v, want nil", svc.providerInvocationAdapters)
-	}
-}
-
-func TestSetOpenAIInvocationAdapterStoresAdapter(t *testing.T) {
-	svc := &Service{}
-	adapter := &fakeProviderInvocationAdapter{}
-	svc.SetOpenAIInvocationAdapter(adapter)
-	if got := svc.providerInvocationAdapters[providergrant.ProviderOpenAI]; got != adapter {
-		t.Fatalf("stored adapter = %v, want %v", got, adapter)
-	}
-	if got := svc.providerModelAdapters[providergrant.ProviderOpenAI]; got != adapter {
-		t.Fatalf("stored model adapter = %v, want %v", got, adapter)
-	}
-}
-
 func TestOpenAIBaseURLFromResponsesURL(t *testing.T) {
 	tests := []struct {
 		name         string
 		responsesURL string
 		want         string
 	}{
-		{
-			name:         "default base url",
-			responsesURL: "",
-			want:         "https://api.openai.com/v1",
-		},
-		{
-			name:         "responses path trimmed",
-			responsesURL: "https://provider.example.com/v1/responses",
-			want:         "https://provider.example.com/v1",
-		},
-		{
-			name:         "trailing slash trimmed",
-			responsesURL: "https://provider.example.com/v1/responses/",
-			want:         "https://provider.example.com/v1",
-		},
-		{
-			name:         "custom endpoint without responses suffix",
-			responsesURL: "https://provider.example.com/custom",
-			want:         "https://provider.example.com/custom",
-		},
+		{name: "default base url", responsesURL: "", want: "https://api.openai.com/v1"},
+		{name: "responses path trimmed", responsesURL: "https://provider.example.com/v1/responses", want: "https://provider.example.com/v1"},
+		{name: "trailing slash trimmed", responsesURL: "https://provider.example.com/v1/responses/", want: "https://provider.example.com/v1"},
+		{name: "custom endpoint without responses suffix", responsesURL: "https://provider.example.com/custom", want: "https://provider.example.com/custom"},
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			if got := openAIBaseURLFromResponsesURL(tt.responsesURL); got != tt.want {
 				t.Fatalf("base url = %q, want %q", got, tt.want)
@@ -138,30 +73,18 @@ func TestOpenAIBaseURLFromResponsesURL(t *testing.T) {
 	}
 }
 
-func TestOpenAIInvokeAdapterInvokeValidation(t *testing.T) {
+func TestInvokeAdapterInvokeValidation(t *testing.T) {
 	tests := []struct {
 		name  string
-		input ProviderInvokeInput
+		input aiservice.ProviderInvokeInput
 		want  string
 	}{
-		{
-			name:  "missing credential secret",
-			input: ProviderInvokeInput{Model: "gpt-4o-mini", Input: "hello"},
-			want:  "credential secret is required",
-		},
-		{
-			name:  "missing model",
-			input: ProviderInvokeInput{Input: "hello", CredentialSecret: "sk-1"},
-			want:  "model is required",
-		},
-		{
-			name:  "missing input",
-			input: ProviderInvokeInput{Model: "gpt-4o-mini", CredentialSecret: "sk-1"},
-			want:  "input is required",
-		},
+		{name: "missing credential secret", input: aiservice.ProviderInvokeInput{Model: "gpt-4o-mini", Input: "hello"}, want: "credential secret is required"},
+		{name: "missing model", input: aiservice.ProviderInvokeInput{Input: "hello", CredentialSecret: "sk-1"}, want: "model is required"},
+		{name: "missing input", input: aiservice.ProviderInvokeInput{Model: "gpt-4o-mini", CredentialSecret: "sk-1"}, want: "input is required"},
 	}
 
-	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+	adapter := &invokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -172,7 +95,6 @@ func TestOpenAIInvokeAdapterInvokeValidation(t *testing.T) {
 	}}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := adapter.Invoke(context.Background(), tt.input)
 			if err == nil || !strings.Contains(err.Error(), tt.want) {
@@ -182,8 +104,8 @@ func TestOpenAIInvokeAdapterInvokeValidation(t *testing.T) {
 	}
 }
 
-func TestOpenAIInvokeAdapterInvokeProviderError(t *testing.T) {
-	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+func TestInvokeAdapterInvokeProviderError(t *testing.T) {
+	adapter := &invokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -192,7 +114,7 @@ func TestOpenAIInvokeAdapterInvokeProviderError(t *testing.T) {
 		},
 	}}
 
-	_, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
+	_, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
 		Model:            "gpt-4o-mini",
 		Input:            "Say hello",
 		CredentialSecret: "sk-1",
@@ -202,7 +124,7 @@ func TestOpenAIInvokeAdapterInvokeProviderError(t *testing.T) {
 	}
 }
 
-func TestOpenAIInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
+func TestInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 	tests := []struct {
 		name string
 		body string
@@ -214,9 +136,8 @@ func TestOpenAIInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+			adapter := &invokeAdapter{cfg: InvokeConfig{
 				ResponsesURL: "https://provider.example.com/v1/responses",
 				HTTPClient: &http.Client{
 					Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -225,7 +146,7 @@ func TestOpenAIInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 				},
 			}}
 
-			if _, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
+			if _, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
 				Model:            "gpt-4o-mini",
 				Input:            "Say hello",
 				CredentialSecret: "sk-1",
@@ -236,7 +157,7 @@ func TestOpenAIInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 	}
 }
 
-func TestOpenAIInvokeAdapterInvokeAndListModels(t *testing.T) {
+func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Authorization") != "Bearer sk-1" {
 			t.Fatalf("authorization = %q", r.Header.Get("Authorization"))
@@ -244,9 +165,10 @@ func TestOpenAIInvokeAdapterInvokeAndListModels(t *testing.T) {
 		switch {
 		case r.Method == http.MethodPost && r.URL.Path == "/v1/responses":
 			var body struct {
-				Model        string `json:"model"`
-				Input        string `json:"input"`
-				Instructions string `json:"instructions"`
+				Model        string         `json:"model"`
+				Input        string         `json:"input"`
+				Instructions string         `json:"instructions"`
+				Reasoning    map[string]any `json:"reasoning"`
 			}
 			if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 				t.Fatalf("decode request body: %v", err)
@@ -260,27 +182,28 @@ func TestOpenAIInvokeAdapterInvokeAndListModels(t *testing.T) {
 			if body.Input != "Say hello" {
 				t.Fatalf("input = %q, want %q", body.Input, "Say hello")
 			}
+			if got := body.Reasoning["effort"]; got != "low" {
+				t.Fatalf("reasoning.effort = %#v, want %q", got, "low")
+			}
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"output_text": "Hello from OpenAI",
+				"usage": map[string]any{
+					"input_tokens":  12,
+					"output_tokens": 7,
+					"total_tokens":  19,
+					"output_tokens_details": map[string]any{
+						"reasoning_tokens": 3,
+					},
+				},
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/models":
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"object": "list",
 				"data": []map[string]any{
-					{
-						"id":       "gpt-4o-mini",
-						"object":   "model",
-						"created":  1,
-						"owned_by": "openai",
-					},
-					{
-						"id":       "gpt-4o",
-						"object":   "model",
-						"created":  1,
-						"owned_by": "openai",
-					},
+					{"id": "gpt-4o-mini", "object": "model", "created": 1, "owned_by": "openai"},
+					{"id": "gpt-4o", "object": "model", "created": 1, "owned_by": "openai"},
 				},
 			})
 		default:
@@ -289,13 +212,14 @@ func TestOpenAIInvokeAdapterInvokeAndListModels(t *testing.T) {
 	}))
 	defer server.Close()
 
-	adapter := NewOpenAIInvokeAdapter(OpenAIInvokeConfig{
+	adapter := NewInvokeAdapter(InvokeConfig{
 		ResponsesURL: server.URL + "/v1/responses",
 	})
-	got, err := adapter.Invoke(context.Background(), ProviderInvokeInput{
+	got, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
 		Model:            "gpt-4o-mini",
 		Input:            "Say hello",
 		Instructions:     "Stay in character.",
+		ReasoningEffort:  "low",
 		CredentialSecret: "sk-1",
 	})
 	if err != nil {
@@ -304,12 +228,15 @@ func TestOpenAIInvokeAdapterInvokeAndListModels(t *testing.T) {
 	if got.OutputText != "Hello from OpenAI" {
 		t.Fatalf("output_text = %q, want %q", got.OutputText, "Hello from OpenAI")
 	}
+	if got.Usage != (provider.Usage{InputTokens: 12, OutputTokens: 7, ReasoningTokens: 3, TotalTokens: 19}) {
+		t.Fatalf("usage = %#v", got.Usage)
+	}
 
-	modelAdapter, ok := adapter.(ProviderModelAdapter)
+	modelAdapter, ok := adapter.(aiservice.ProviderModelAdapter)
 	if !ok {
 		t.Fatalf("adapter type %T does not implement ProviderModelAdapter", adapter)
 	}
-	models, err := modelAdapter.ListModels(context.Background(), ProviderListModelsInput{CredentialSecret: "sk-1"})
+	models, err := modelAdapter.ListModels(context.Background(), aiservice.ProviderListModelsInput{CredentialSecret: "sk-1"})
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
@@ -324,8 +251,8 @@ func TestOpenAIInvokeAdapterInvokeAndListModels(t *testing.T) {
 	}
 }
 
-func TestOpenAIInvokeAdapterListModelsValidationAndError(t *testing.T) {
-	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+func TestInvokeAdapterListModelsValidationAndError(t *testing.T) {
+	adapter := &invokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: "https://provider.example.com/v1/responses",
 		HTTPClient: &http.Client{
 			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
@@ -334,15 +261,15 @@ func TestOpenAIInvokeAdapterListModelsValidationAndError(t *testing.T) {
 		},
 	}}
 
-	if _, err := adapter.ListModels(context.Background(), ProviderListModelsInput{}); err == nil || !strings.Contains(err.Error(), "credential secret is required") {
+	if _, err := adapter.ListModels(context.Background(), aiservice.ProviderListModelsInput{}); err == nil || !strings.Contains(err.Error(), "credential secret is required") {
 		t.Fatalf("error = %v, want missing credential secret", err)
 	}
-	if _, err := adapter.ListModels(context.Background(), ProviderListModelsInput{CredentialSecret: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
+	if _, err := adapter.ListModels(context.Background(), aiservice.ProviderListModelsInput{CredentialSecret: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
 		t.Fatalf("error = %v, want list models provider error", err)
 	}
 }
 
-func TestOpenAIInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
+func TestInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/v1/responses" {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -383,14 +310,19 @@ func TestOpenAIInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":          "resp-1",
 			"output_text": "Scene established.",
+			"usage": map[string]any{
+				"input_tokens":  11,
+				"output_tokens": 5,
+				"total_tokens":  16,
+				"output_tokens_details": map[string]any{
+					"reasoning_tokens": 2,
+				},
+			},
 			"output": []map[string]any{
 				{
 					"type": "message",
 					"content": []map[string]any{
-						{
-							"type": "output_text",
-							"text": "Scene established.",
-						},
+						{"type": "output_text", "text": "Scene established."},
 					},
 				},
 			},
@@ -398,7 +330,7 @@ func TestOpenAIInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 	}))
 	defer server.Close()
 
-	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+	adapter := &invokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: server.URL + "/v1/responses",
 		HTTPClient:   server.Client(),
 	}}
@@ -407,11 +339,7 @@ func TestOpenAIInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 		Prompt:           "Start the scene.",
 		CredentialSecret: "sk-1",
 		Tools: []orchestration.Tool{
-			{
-				Name:        "duality_rules_version",
-				Description: "Describe the ruleset",
-				InputSchema: map[string]any{"type": "object"},
-			},
+			{Name: "duality_rules_version", Description: "Describe the ruleset", InputSchema: map[string]any{"type": "object"}},
 			{
 				Name:        "scene_create",
 				Description: "Create a scene",
@@ -430,9 +358,12 @@ func TestOpenAIInvokeAdapterRunNormalizesZeroArgToolSchema(t *testing.T) {
 	if res.OutputText != "Scene established." {
 		t.Fatalf("output_text = %q", res.OutputText)
 	}
+	if res.Usage != (provider.Usage{InputTokens: 11, OutputTokens: 5, ReasoningTokens: 2, TotalTokens: 16}) {
+		t.Fatalf("usage = %#v", res.Usage)
+	}
 }
 
-func TestOpenAIInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
+func TestInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost || r.URL.Path != "/v1/responses" {
 			t.Fatalf("unexpected request: %s %s", r.Method, r.URL.Path)
@@ -454,14 +385,19 @@ func TestOpenAIInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"id":          "resp-1",
 			"output_text": "Scene established.",
+			"usage": map[string]any{
+				"input_tokens":  9,
+				"output_tokens": 4,
+				"total_tokens":  13,
+				"output_tokens_details": map[string]any{
+					"reasoning_tokens": 1,
+				},
+			},
 			"output": []map[string]any{
 				{
 					"type": "message",
 					"content": []map[string]any{
-						{
-							"type": "output_text",
-							"text": "Scene established.",
-						},
+						{"type": "output_text", "text": "Scene established."},
 					},
 				},
 			},
@@ -469,7 +405,7 @@ func TestOpenAIInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
 	}))
 	defer server.Close()
 
-	adapter := &openAIInvokeAdapter{cfg: OpenAIInvokeConfig{
+	adapter := &invokeAdapter{cfg: InvokeConfig{
 		ResponsesURL: server.URL + "/v1/responses",
 		HTTPClient:   server.Client(),
 	}}
@@ -484,5 +420,8 @@ func TestOpenAIInvokeAdapterRunIncludesReasoningEffort(t *testing.T) {
 	}
 	if res.OutputText != "Scene established." {
 		t.Fatalf("output_text = %q", res.OutputText)
+	}
+	if res.Usage != (provider.Usage{InputTokens: 9, OutputTokens: 4, ReasoningTokens: 1, TotalTokens: 13}) {
+		t.Fatalf("usage = %#v", res.Usage)
 	}
 }

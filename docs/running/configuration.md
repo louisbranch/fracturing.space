@@ -51,12 +51,16 @@ For setup steps, see [quickstart](quickstart.md) or
 
 - `FRACTURING_SPACE_AI_PORT`: gRPC port for AI service. Default: `8087`.
 - `FRACTURING_SPACE_AI_MCP_URL`: internal MCP bridge URL used by AI orchestration. Default: `http://localhost:8085/mcp`.
+- `FRACTURING_SPACE_AI_MCP_DIAL_TIMEOUT`: timeout for opening one MCP orchestration session. Default: `10s`.
 - `FRACTURING_SPACE_AI_DB_PATH`: AI SQLite path. Default: `data/ai.db`.
 - `FRACTURING_SPACE_AI_ENCRYPTION_KEY`: base64-encoded AES key used to encrypt provider secrets at rest (must decode to 16/24/32 bytes).
 - `FRACTURING_SPACE_AI_SESSION_GRANT_ISSUER`: issuer claim used by game to sign and AI to validate campaign AI session grants.
 - `FRACTURING_SPACE_AI_SESSION_GRANT_AUDIENCE`: audience claim used by game to sign and AI to validate campaign AI session grants.
 - `FRACTURING_SPACE_AI_SESSION_GRANT_HMAC_KEY`: base64 HMAC key for campaign AI session grant signing/verification (must decode to at least 32 bytes).
 - `FRACTURING_SPACE_AI_SESSION_GRANT_TTL`: campaign AI session grant TTL. Default: `10m`.
+- `FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT`: overall timeout for one campaign AI orchestration run. Default: `2m`.
+- `FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS`: max provider/tool loop steps for one campaign AI turn. Default: `8`.
+- `FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES`: max bytes from one MCP tool result fed back into the provider loop before truncation. Default: `32768`.
 
 ### Notifications
 

@@ -12,14 +12,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-)
-
-// Provider identifies an AI provider integration.
-type Provider string
-
-const (
-	// ProviderOpenAI is the only provider supported in phase 1.
-	ProviderOpenAI Provider = "openai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
 
 // Status represents lifecycle state for an AI agent.
@@ -37,8 +30,6 @@ var (
 	ErrEmptyOwnerUserID = errors.New("owner user id is required")
 	// ErrEmptyLabel indicates agent label is required.
 	ErrEmptyLabel = errors.New("label is required")
-	// ErrInvalidProvider indicates unsupported provider value.
-	ErrInvalidProvider = errors.New("provider is invalid")
 	// ErrEmptyModel indicates model is required.
 	ErrEmptyModel = errors.New("model is required")
 	// ErrMissingAuthReference indicates one auth reference is required.
@@ -57,7 +48,7 @@ type Agent struct {
 	OwnerUserID     string
 	Label           string
 	Instructions    string
-	Provider        Provider
+	Provider        provider.Provider
 	Model           string
 	CredentialID    string
 	ProviderGrantID string
@@ -71,7 +62,7 @@ type CreateInput struct {
 	OwnerUserID     string
 	Label           string
 	Instructions    string
-	Provider        Provider
+	Provider        provider.Provider
 	Model           string
 	CredentialID    string
 	ProviderGrantID string
@@ -104,10 +95,11 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 	}
 	input.Instructions = strings.TrimSpace(input.Instructions)
 
-	input.Provider = Provider(strings.ToLower(strings.TrimSpace(string(input.Provider))))
-	if input.Provider != ProviderOpenAI {
-		return CreateInput{}, ErrInvalidProvider
+	normalizedProvider, err := provider.Normalize(string(input.Provider))
+	if err != nil {
+		return CreateInput{}, err
 	}
+	input.Provider = normalizedProvider
 
 	input.Model = strings.TrimSpace(input.Model)
 	if input.Model == "" {
@@ -187,6 +179,35 @@ func Create(input CreateInput, now func() time.Time, idGenerator func() (string,
 		CreatedAt:       createdAt,
 		UpdatedAt:       createdAt,
 	}, nil
+}
+
+// ParseStatus trims and normalizes one persisted agent status.
+func ParseStatus(raw string) Status {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case string(StatusActive):
+		return StatusActive
+	default:
+		return ""
+	}
+}
+
+// IsActive reports whether the agent status allows invocation and campaign use.
+func (s Status) IsActive() bool {
+	return ParseStatus(string(s)) == StatusActive
+}
+
+// AuthRefType returns which auth reference shape the agent uses.
+func (a Agent) AuthRefType() string {
+	hasCredential := strings.TrimSpace(a.CredentialID) != ""
+	hasProviderGrant := strings.TrimSpace(a.ProviderGrantID) != ""
+	switch {
+	case hasCredential && !hasProviderGrant:
+		return "credential"
+	case hasProviderGrant && !hasCredential:
+		return "provider_grant"
+	default:
+		return ""
+	}
 }
 
 // normalizeAuthReference keeps agent auth references mutually exclusive to avoid

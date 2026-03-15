@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -10,7 +11,8 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/platform/config"
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
-	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 )
 
@@ -21,14 +23,18 @@ type serverEnv struct {
 	GameAddr                 string `env:"FRACTURING_SPACE_GAME_ADDR"`
 	InternalServiceAllowlist string `env:"FRACTURING_SPACE_AI_INTERNAL_SERVICE_ALLOWLIST" envDefault:"ai,mcp,worker,game"`
 
-	OpenAIOAuthAuthURL       string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
-	OpenAIOAuthTokenURL      string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
-	OpenAIOAuthClientID      string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID"`
-	OpenAIOAuthClientSecret  string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
-	OpenAIOAuthRedirectURI   string `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
-	OpenAIResponsesURL       string `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
-	MCPURL                   string `env:"FRACTURING_SPACE_AI_MCP_URL"`
-	DaggerheartReferenceRoot string `env:"FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT"`
+	OpenAIOAuthAuthURL       string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_AUTH_URL"`
+	OpenAIOAuthTokenURL      string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_TOKEN_URL"`
+	OpenAIOAuthClientID      string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_ID"`
+	OpenAIOAuthClientSecret  string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_CLIENT_SECRET"`
+	OpenAIOAuthRedirectURI   string        `env:"FRACTURING_SPACE_AI_OPENAI_OAUTH_REDIRECT_URI"`
+	OpenAIResponsesURL       string        `env:"FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL"`
+	MCPURL                   string        `env:"FRACTURING_SPACE_AI_MCP_URL"`
+	MCPDialTimeout           time.Duration `env:"FRACTURING_SPACE_AI_MCP_DIAL_TIMEOUT" envDefault:"10s"`
+	OrchestrationTurnTimeout time.Duration `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT" envDefault:"2m"`
+	OrchestrationMaxSteps    int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS" envDefault:"8"`
+	ToolResultMaxBytes       int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES" envDefault:"32768"`
+	DaggerheartReferenceRoot string        `env:"FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT"`
 }
 
 // runtimeConfig is the normalized startup configuration used by the AI runtime.
@@ -37,27 +43,63 @@ type runtimeConfig struct {
 	EncryptionKey            string
 	GameAddr                 string
 	InternalServiceAllowlist map[string]struct{}
-	OpenAIOAuthConfig        *aiservice.OpenAIOAuthConfig
+	OpenAIOAuthConfig        *openaiprovider.OAuthConfig
 	OpenAIResponsesURL       string
 	MCPURL                   string
+	MCPDialTimeout           time.Duration
+	OrchestrationTurnTimeout time.Duration
+	OrchestrationMaxSteps    int
+	ToolResultMaxBytes       int
 	DaggerheartReferenceRoot string
 	SessionGrantConfig       *aisessiongrant.Config
 }
 
-func loadServerEnv() serverEnv {
+// Validate rejects incomplete runtime configuration before server
+// construction allocates listeners, stores, or client connections.
+func (cfg runtimeConfig) Validate() error {
+	if strings.TrimSpace(cfg.EncryptionKey) == "" {
+		return fmt.Errorf("FRACTURING_SPACE_AI_ENCRYPTION_KEY is required")
+	}
+	if _, err := decodeBase64Key(cfg.EncryptionKey); err != nil {
+		return fmt.Errorf("decode encryption key: %w", err)
+	}
+	if strings.TrimSpace(cfg.MCPURL) != "" && cfg.SessionGrantConfig == nil {
+		return fmt.Errorf("FRACTURING_SPACE_AI_MCP_URL requires AI session grant config")
+	}
+	if cfg.MCPDialTimeout <= 0 {
+		return fmt.Errorf("FRACTURING_SPACE_AI_MCP_DIAL_TIMEOUT must be positive")
+	}
+	if cfg.OrchestrationTurnTimeout <= 0 {
+		return fmt.Errorf("FRACTURING_SPACE_AI_ORCHESTRATION_TURN_TIMEOUT must be positive")
+	}
+	if cfg.OrchestrationMaxSteps <= 0 {
+		return fmt.Errorf("FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS must be positive")
+	}
+	if cfg.ToolResultMaxBytes <= 0 {
+		return fmt.Errorf("FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES must be positive")
+	}
+	return nil
+}
+
+func loadServerEnv() (serverEnv, error) {
 	var cfg serverEnv
-	_ = config.ParseEnv(&cfg)
+	if err := config.ParseEnv(&cfg); err != nil {
+		return serverEnv{}, err
+	}
 	cfg.GameAddr = serviceaddr.OrDefaultGRPCAddr(cfg.GameAddr, serviceaddr.ServiceGame)
 	if strings.TrimSpace(cfg.DBPath) == "" {
 		cfg.DBPath = filepath.Join("data", "ai.db")
 	}
-	return cfg
+	return cfg, nil
 }
 
 // loadRuntimeConfigFromEnv parses and validates AI runtime startup config once
 // so server construction has one deterministic config source.
 func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
-	srvEnv := loadServerEnv()
+	srvEnv, err := loadServerEnv()
+	if err != nil {
+		return runtimeConfig{}, fmt.Errorf("load AI runtime env: %w", err)
+	}
 	openAIOAuthConfig, err := openAIOAuthConfig(srvEnv)
 	if err != nil {
 		return runtimeConfig{}, fmt.Errorf("load OpenAI OAuth config: %w", err)
@@ -67,7 +109,7 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		return runtimeConfig{}, fmt.Errorf("load AI session grant config: %w", err)
 	}
 
-	return runtimeConfig{
+	cfg := runtimeConfig{
 		DBPath:                   strings.TrimSpace(srvEnv.DBPath),
 		EncryptionKey:            strings.TrimSpace(srvEnv.EncryptionKey),
 		GameAddr:                 strings.TrimSpace(srvEnv.GameAddr),
@@ -75,20 +117,49 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		OpenAIOAuthConfig:        openAIOAuthConfig,
 		OpenAIResponsesURL:       strings.TrimSpace(srvEnv.OpenAIResponsesURL),
 		MCPURL:                   strings.TrimSpace(srvEnv.MCPURL),
+		MCPDialTimeout:           srvEnv.MCPDialTimeout,
+		OrchestrationTurnTimeout: srvEnv.OrchestrationTurnTimeout,
+		OrchestrationMaxSteps:    srvEnv.OrchestrationMaxSteps,
+		ToolResultMaxBytes:       srvEnv.ToolResultMaxBytes,
 		DaggerheartReferenceRoot: strings.TrimSpace(srvEnv.DaggerheartReferenceRoot),
 		SessionGrantConfig:       sessionGrantConfig,
-	}, nil
+	}
+	if err := cfg.Validate(); err != nil {
+		return runtimeConfig{}, err
+	}
+	return cfg, nil
+}
+
+func (cfg runtimeConfig) mcpDialerConfig(httpClient *http.Client) orchestration.MCPDialerConfig {
+	return orchestration.MCPDialerConfig{
+		URL:         cfg.MCPURL,
+		HTTPClient:  httpClient,
+		DialTimeout: cfg.MCPDialTimeout,
+	}
+}
+
+func (cfg runtimeConfig) campaignTurnRunnerConfig(dialer orchestration.Dialer) orchestration.RunnerConfig {
+	return orchestration.RunnerConfig{
+		Dialer:             dialer,
+		MaxSteps:           cfg.OrchestrationMaxSteps,
+		TurnTimeout:        cfg.OrchestrationTurnTimeout,
+		ToolResultMaxBytes: cfg.ToolResultMaxBytes,
+	}
 }
 
 // openAIOAuthConfigFromEnv loads optional OpenAI OAuth config.
 //
 // If all OpenAI OAuth variables are present they are wired in together; partial
 // configuration is rejected to avoid accidental half-configured runtime.
-func openAIOAuthConfigFromEnv() (*aiservice.OpenAIOAuthConfig, error) {
-	return openAIOAuthConfig(loadServerEnv())
+func openAIOAuthConfigFromEnv() (*openaiprovider.OAuthConfig, error) {
+	env, err := loadServerEnv()
+	if err != nil {
+		return nil, fmt.Errorf("load AI runtime env: %w", err)
+	}
+	return openAIOAuthConfig(env)
 }
 
-func openAIOAuthConfig(env serverEnv) (*aiservice.OpenAIOAuthConfig, error) {
+func openAIOAuthConfig(env serverEnv) (*openaiprovider.OAuthConfig, error) {
 	authURL := strings.TrimSpace(env.OpenAIOAuthAuthURL)
 	tokenURL := strings.TrimSpace(env.OpenAIOAuthTokenURL)
 	clientID := strings.TrimSpace(env.OpenAIOAuthClientID)
@@ -121,7 +192,7 @@ func openAIOAuthConfig(env serverEnv) (*aiservice.OpenAIOAuthConfig, error) {
 	}
 
 	// Keep provider secrets in-memory only; callers must never log this struct.
-	return &aiservice.OpenAIOAuthConfig{
+	return &openaiprovider.OAuthConfig{
 		AuthorizationURL: authURL,
 		TokenURL:         tokenURL,
 		ClientID:         clientID,

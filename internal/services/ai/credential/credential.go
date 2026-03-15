@@ -12,14 +12,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-)
-
-// Provider identifies an AI provider integration.
-type Provider string
-
-const (
-	// ProviderOpenAI is the only provider supported in phase 1.
-	ProviderOpenAI Provider = "openai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
 
 // Status represents credential lifecycle state.
@@ -35,8 +28,6 @@ const (
 var (
 	// ErrEmptyOwnerUserID indicates owner user ID is required.
 	ErrEmptyOwnerUserID = errors.New("owner user id is required")
-	// ErrInvalidProvider indicates unsupported provider value.
-	ErrInvalidProvider = errors.New("provider is invalid")
 	// ErrEmptyLabel indicates credential label is required.
 	ErrEmptyLabel = errors.New("label is required")
 	// ErrEmptySecret indicates secret input is required.
@@ -47,7 +38,7 @@ var (
 type Credential struct {
 	ID          string
 	OwnerUserID string
-	Provider    Provider
+	Provider    provider.Provider
 	Label       string
 	// Secret is plaintext in the domain model; the service/storage boundary is
 	// responsible for encryption before persistence.
@@ -61,7 +52,7 @@ type Credential struct {
 // CreateInput contains user-provided fields needed to create a credential.
 type CreateInput struct {
 	OwnerUserID string
-	Provider    Provider
+	Provider    provider.Provider
 	Label       string
 	Secret      string
 }
@@ -73,10 +64,11 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, ErrEmptyOwnerUserID
 	}
 
-	input.Provider = Provider(strings.ToLower(strings.TrimSpace(string(input.Provider))))
-	if input.Provider != ProviderOpenAI {
-		return CreateInput{}, ErrInvalidProvider
+	normalizedProvider, err := provider.Normalize(string(input.Provider))
+	if err != nil {
+		return CreateInput{}, err
 	}
+	input.Provider = normalizedProvider
 
 	input.Label = strings.TrimSpace(input.Label)
 	if input.Label == "" {
@@ -121,4 +113,45 @@ func Create(input CreateInput, now func() time.Time, idGenerator func() (string,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
 	}, nil
+}
+
+// ParseStatus trims and normalizes one persisted credential status.
+func ParseStatus(raw string) Status {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case string(StatusActive):
+		return StatusActive
+	case string(StatusRevoked):
+		return StatusRevoked
+	default:
+		return ""
+	}
+}
+
+// IsActive reports whether the credential may still be used.
+func (s Status) IsActive() bool {
+	return ParseStatus(string(s)) == StatusActive
+}
+
+// IsRevoked reports whether the credential is explicitly revoked.
+func (s Status) IsRevoked() bool {
+	return ParseStatus(string(s)) == StatusRevoked
+}
+
+// IsUsableBy reports whether the credential is active, owned by the caller, and
+// matches the requested provider when one is supplied.
+func (c Credential) IsUsableBy(ownerUserID string, requestedProvider provider.Provider) bool {
+	if strings.TrimSpace(c.OwnerUserID) != strings.TrimSpace(ownerUserID) {
+		return false
+	}
+	if !c.Status.IsActive() {
+		return false
+	}
+	credentialProvider, err := provider.Normalize(string(c.Provider))
+	if err != nil {
+		return false
+	}
+	if requestedProvider == "" {
+		return true
+	}
+	return credentialProvider == requestedProvider
 }

@@ -3,12 +3,14 @@ package providergrant
 import (
 	"testing"
 	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
 
 func TestNormalizeCreateInput(t *testing.T) {
 	in := CreateInput{
 		OwnerUserID:      " user-1 ",
-		Provider:         Provider(" OPENAI "),
+		Provider:         provider.Provider(" OPENAI "),
 		GrantedScopes:    []string{" profile ", "", "profile", "responses.read"},
 		TokenCiphertext:  " enc:abc ",
 		RefreshSupported: true,
@@ -21,8 +23,8 @@ func TestNormalizeCreateInput(t *testing.T) {
 	if got.OwnerUserID != "user-1" {
 		t.Fatalf("owner_user_id = %q, want %q", got.OwnerUserID, "user-1")
 	}
-	if got.Provider != ProviderOpenAI {
-		t.Fatalf("provider = %q, want %q", got.Provider, ProviderOpenAI)
+	if got.Provider != provider.OpenAI {
+		t.Fatalf("provider = %q, want %q", got.Provider, provider.OpenAI)
 	}
 	if got.TokenCiphertext != "enc:abc" {
 		t.Fatalf("token_ciphertext = %q, want %q", got.TokenCiphertext, "enc:abc")
@@ -42,7 +44,7 @@ func TestCreateProviderGrant(t *testing.T) {
 
 	got, err := Create(CreateInput{
 		OwnerUserID:     "user-1",
-		Provider:        ProviderOpenAI,
+		Provider:        provider.OpenAI,
 		GrantedScopes:   []string{"responses.read"},
 		TokenCiphertext: "enc:token",
 	}, now, idGen)
@@ -67,7 +69,7 @@ func TestRevokeProviderGrant(t *testing.T) {
 	grant := ProviderGrant{
 		ID:              "grant-1",
 		OwnerUserID:     "user-1",
-		Provider:        ProviderOpenAI,
+		Provider:        provider.OpenAI,
 		TokenCiphertext: "enc:token",
 		Status:          StatusActive,
 		CreatedAt:       createdAt,
@@ -86,5 +88,38 @@ func TestRevokeProviderGrant(t *testing.T) {
 	}
 	if !got.RevokedAt.Equal(revokedAt) || !got.UpdatedAt.Equal(revokedAt) {
 		t.Fatalf("revocation timestamps = (%v, %v), want (%v, %v)", got.RevokedAt, got.UpdatedAt, revokedAt, revokedAt)
+	}
+}
+
+func TestStatusAndGrantHelpers(t *testing.T) {
+	expiresAt := time.Date(2026, 2, 16, 0, 0, 0, 0, time.UTC)
+	grant := ProviderGrant{
+		OwnerUserID:      "user-1",
+		Provider:         provider.OpenAI,
+		RefreshSupported: true,
+		Status:           Status(" active "),
+		ExpiresAt:        &expiresAt,
+	}
+
+	if !grant.Status.IsActive() {
+		t.Fatal("expected active status helper to normalize whitespace")
+	}
+	if !Status(" revoked ").IsRevoked() {
+		t.Fatal("expected revoked status helper to normalize whitespace")
+	}
+	if grant.IsExpired(expiresAt.Add(-time.Second)) {
+		t.Fatal("expected grant to be valid before expiry")
+	}
+	if !grant.IsExpired(expiresAt) {
+		t.Fatal("expected grant to expire at expiry time")
+	}
+	if !grant.ShouldRefresh(expiresAt.Add(-time.Minute), 2*time.Minute) {
+		t.Fatal("expected grant to refresh inside the refresh window")
+	}
+	if !grant.IsUsableBy("user-1", provider.OpenAI) {
+		t.Fatal("expected grant to be usable by matching owner/provider")
+	}
+	if grant.IsUsableBy("user-2", provider.OpenAI) {
+		t.Fatal("expected grant usability to reject wrong owner")
 	}
 }

@@ -9,11 +9,13 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"github.com/louisbranch/fracturing.space/internal/test/mock/aifakes"
+	"google.golang.org/genproto/googleapis/rpc/errdetails"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
@@ -102,6 +104,41 @@ func (f *fakeProviderOAuthAdapter) RevokeToken(_ context.Context, input Provider
 	return f.revokeErr
 }
 
+type defaultProviderOAuthAdapterForTests struct{}
+
+func (d *defaultProviderOAuthAdapterForTests) BuildAuthorizationURL(input ProviderAuthorizationURLInput) (string, error) {
+	return "https://oauth.fracturing.space/openai?state=" + strings.TrimSpace(input.State), nil
+}
+
+func (d *defaultProviderOAuthAdapterForTests) ExchangeAuthorizationCode(_ context.Context, input ProviderAuthorizationCodeInput) (ProviderTokenExchangeResult, error) {
+	code := strings.TrimSpace(input.AuthorizationCode)
+	if code == "" {
+		return ProviderTokenExchangeResult{}, errors.New("authorization code is required")
+	}
+	return ProviderTokenExchangeResult{
+		TokenPlaintext:   "token:" + code,
+		RefreshSupported: true,
+	}, nil
+}
+
+func (d *defaultProviderOAuthAdapterForTests) RefreshToken(_ context.Context, input ProviderRefreshTokenInput) (ProviderTokenExchangeResult, error) {
+	refreshToken := strings.TrimSpace(input.RefreshToken)
+	if refreshToken == "" {
+		return ProviderTokenExchangeResult{}, errors.New("refresh token is required")
+	}
+	return ProviderTokenExchangeResult{
+		TokenPlaintext:   "token:refresh:" + refreshToken,
+		RefreshSupported: true,
+	}, nil
+}
+
+func (d *defaultProviderOAuthAdapterForTests) RevokeToken(_ context.Context, input ProviderRevokeTokenInput) error {
+	if strings.TrimSpace(input.Token) == "" {
+		return errors.New("token is required")
+	}
+	return nil
+}
+
 type fakeProviderInvocationAdapter struct {
 	invokeErr           error
 	invokeResult        ProviderInvokeResult
@@ -147,14 +184,126 @@ func (f *fakeCampaignTurnRunner) Run(_ context.Context, input orchestration.Inpu
 	return f.runResult, nil
 }
 
+type fakeProviderToolAdapter struct {
+	runErr    error
+	runResult orchestration.ProviderOutput
+	lastInput orchestration.ProviderInput
+}
+
+func (f *fakeProviderToolAdapter) Run(_ context.Context, input orchestration.ProviderInput) (orchestration.ProviderOutput, error) {
+	f.lastInput = input
+	if f.runErr != nil {
+		return orchestration.ProviderOutput{}, f.runErr
+	}
+	return f.runResult, nil
+}
+
 func newTestService(store *fakeStore) *Service {
-	svc := NewService(store, store, &fakeSealer{})
-	svc.SetOpenAIInvocationAdapter(&fakeProviderInvocationAdapter{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	adapter := &fakeProviderInvocationAdapter{}
+	svc.providerInvocationAdapters[provider.OpenAI] = adapter
+	svc.providerModelAdapters[provider.OpenAI] = adapter
 	return svc
 }
 
+func newCredentialHandlersWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *CredentialHandlers {
+	return NewCredentialHandlers(CredentialHandlersConfig{
+		CredentialStore: credentialStore,
+		AgentStore:      agentStore,
+		Sealer:          sealer,
+	})
+}
+
+func newProviderGrantHandlersWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *ProviderGrantHandlers {
+	cfg := ProviderGrantHandlersConfig{
+		AgentStore: agentStore,
+		Sealer:     sealer,
+		ProviderOAuthAdapters: map[provider.Provider]ProviderOAuthAdapter{
+			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
+		},
+	}
+	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
+		cfg.ProviderGrantStore = store
+	}
+	if cfg.ProviderGrantStore == nil {
+		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
+			cfg.ProviderGrantStore = store
+		}
+	}
+	if store, ok := credentialStore.(storage.ProviderConnectSessionStore); ok {
+		cfg.ConnectSessionStore = store
+	}
+	if cfg.ConnectSessionStore == nil {
+		if store, ok := agentStore.(storage.ProviderConnectSessionStore); ok {
+			cfg.ConnectSessionStore = store
+		}
+	}
+	return NewProviderGrantHandlers(cfg)
+}
+
+func newServiceWithStores(credentialStore storage.CredentialStore, agentStore storage.AgentStore, sealer SecretSealer) *Service {
+	cfg := ServiceConfig{
+		CredentialStore: credentialStore,
+		AgentStore:      agentStore,
+		Sealer:          sealer,
+		ProviderOAuthAdapters: map[provider.Provider]ProviderOAuthAdapter{
+			provider.OpenAI: &defaultProviderOAuthAdapterForTests{},
+		},
+		ProviderInvocationAdapters: map[provider.Provider]ProviderInvocationAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{},
+		},
+		ProviderToolAdapters: map[provider.Provider]orchestration.Provider{
+			provider.OpenAI: &fakeProviderToolAdapter{},
+		},
+		ProviderModelAdapters: map[provider.Provider]ProviderModelAdapter{
+			provider.OpenAI: &fakeProviderInvocationAdapter{},
+		},
+	}
+	if store, ok := credentialStore.(storage.ProviderGrantStore); ok {
+		cfg.ProviderGrantStore = store
+	}
+	if cfg.ProviderGrantStore == nil {
+		if store, ok := agentStore.(storage.ProviderGrantStore); ok {
+			cfg.ProviderGrantStore = store
+		}
+	}
+	if store, ok := credentialStore.(storage.ProviderConnectSessionStore); ok {
+		cfg.ConnectSessionStore = store
+	}
+	if cfg.ConnectSessionStore == nil {
+		if store, ok := agentStore.(storage.ProviderConnectSessionStore); ok {
+			cfg.ConnectSessionStore = store
+		}
+	}
+	if store, ok := credentialStore.(storage.AccessRequestStore); ok {
+		cfg.AccessRequestStore = store
+	}
+	if cfg.AccessRequestStore == nil {
+		if store, ok := agentStore.(storage.AccessRequestStore); ok {
+			cfg.AccessRequestStore = store
+		}
+	}
+	if store, ok := credentialStore.(storage.AuditEventStore); ok {
+		cfg.AuditEventStore = store
+	}
+	if cfg.AuditEventStore == nil {
+		if store, ok := agentStore.(storage.AuditEventStore); ok {
+			cfg.AuditEventStore = store
+		}
+	}
+	if store, ok := credentialStore.(storage.CampaignArtifactStore); ok {
+		cfg.CampaignArtifactStore = store
+	}
+	if cfg.CampaignArtifactStore == nil {
+		if store, ok := agentStore.(storage.CampaignArtifactStore); ok {
+			cfg.CampaignArtifactStore = store
+		}
+	}
+	return NewService(cfg)
+}
+
 func TestCreateCredentialRequiresUserID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newCredentialHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.CreateCredential(context.Background(), &aiv1.CreateCredentialRequest{
 		Provider: aiv1.Provider_PROVIDER_OPENAI,
 		Label:    "Main",
@@ -165,7 +314,7 @@ func TestCreateCredentialRequiresUserID(t *testing.T) {
 
 func TestCreateCredentialEncryptsSecret(t *testing.T) {
 	store := newFakeStore()
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newCredentialHandlersWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 50, 0, 0, time.UTC) }
 	svc.idGenerator = func() (string, error) { return "cred-1", nil }
 
@@ -193,7 +342,7 @@ func TestListCredentialsReturnsOwnerRecords(t *testing.T) {
 	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 	store.Credentials["cred-2"] = storage.CredentialRecord{ID: "cred-2", OwnerUserID: "user-2", Provider: "openai", Label: "B", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newCredentialHandlersWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListCredentials(ctx, &aiv1.ListCredentialsRequest{PageSize: 10})
 	if err != nil {
@@ -211,7 +360,7 @@ func TestRevokeCredential(t *testing.T) {
 	store := newFakeStore()
 	store.Credentials["cred-1"] = storage.CredentialRecord{ID: "cred-1", OwnerUserID: "user-1", Provider: "openai", Label: "A", Status: "active", CreatedAt: time.Now(), UpdatedAt: time.Now()}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newCredentialHandlersWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 22, 55, 0, 0, time.UTC) }
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
@@ -240,10 +389,10 @@ func TestRevokeCredentialFailsWhenReferencedAgentIsBoundToActiveCampaigns(t *tes
 		UpdatedAt:    now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
+	svc := newCredentialHandlersWithStores(store, store, &fakeSealer{})
+	svc.usageGuard.gameCampaignAIClient = &fakeCampaignAIAuthStateClient{
 		usageByAgent: map[string]int32{"agent-1": 1},
-	})
+	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	_, err := svc.RevokeCredential(ctx, &aiv1.RevokeCredentialRequest{CredentialId: "cred-1"})
@@ -317,8 +466,9 @@ func TestListProviderModelsReturnsNewestFirst(t *testing.T) {
 			{ID: "", OwnedBy: "openai", Created: 300},
 		},
 	}
-	svc := NewService(store, store, &fakeSealer{})
-	svc.SetOpenAIInvocationAdapter(adapter)
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = adapter
+	svc.providerModelAdapters[provider.OpenAI] = adapter
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderModels(ctx, &aiv1.ListProviderModelsRequest{
@@ -432,7 +582,7 @@ func TestListAgentsReturnsOwnerRecords(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAgents(ctx, &aiv1.ListAgentsRequest{PageSize: 10})
 	if err != nil {
@@ -471,7 +621,7 @@ func TestListAgentsIncludesAuthStateAndUsage(t *testing.T) {
 		UpdatedAt:    now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
 		usageByAgent: map[string]int32{"agent-1": 2},
 	})
@@ -516,7 +666,7 @@ func TestValidateCampaignAgentBindingRejectsRevokedCredentialBackedAgent(t *test
 		UpdatedAt:    now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	_, err := svc.ValidateCampaignAgentBinding(ctx, &aiv1.ValidateCampaignAgentBindingRequest{
@@ -562,7 +712,7 @@ func TestListAccessibleAgentsIncludesOwnedAndApprovedShared(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	if err != nil {
@@ -667,7 +817,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	if err != nil {
@@ -682,7 +832,7 @@ func TestListAccessibleAgentsExcludesPendingDeniedAndStale(t *testing.T) {
 }
 
 func TestListAccessibleAgentsRequiresUserID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.ListAccessibleAgents(context.Background(), &aiv1.ListAccessibleAgentsRequest{PageSize: 10})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
@@ -744,7 +894,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	first, err := svc.ListAccessibleAgents(ctx, &aiv1.ListAccessibleAgentsRequest{PageSize: 2})
@@ -783,7 +933,7 @@ func TestListAccessibleAgentsPaginatesByAgentID(t *testing.T) {
 }
 
 func TestGetAccessibleAgentRequiresUserID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.GetAccessibleAgent(context.Background(), &aiv1.GetAccessibleAgentRequest{
 		AgentId: "agent-1",
 	})
@@ -791,14 +941,14 @@ func TestGetAccessibleAgentRequiresUserID(t *testing.T) {
 }
 
 func TestGetAccessibleAgentRequiresAgentID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestGetAccessibleAgentMissingAgent(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-missing"})
 	assertStatusCode(t, err, codes.NotFound)
@@ -819,7 +969,7 @@ func TestGetAccessibleAgentOwner(t *testing.T) {
 		UpdatedAt:    now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-1"})
 	if err != nil {
@@ -855,7 +1005,7 @@ func TestGetAccessibleAgentApprovedRequester(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-shared"})
 	if err != nil {
@@ -891,7 +1041,7 @@ func TestGetAccessibleAgentPendingRequesterHidden(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.GetAccessibleAgent(ctx, &aiv1.GetAccessibleAgentRequest{AgentId: "agent-shared"})
 	assertStatusCode(t, err, codes.NotFound)
@@ -976,8 +1126,9 @@ func TestUpdateAgentMetadataEditDoesNotRequireLiveModelListing(t *testing.T) {
 	}
 
 	adapter := &fakeProviderInvocationAdapter{listModelsErr: errors.New("provider unavailable")}
-	svc := NewService(store, store, &fakeSealer{})
-	svc.SetOpenAIInvocationAdapter(adapter)
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = adapter
+	svc.providerModelAdapters[provider.OpenAI] = adapter
 	svc.clock = func() time.Time { return now }
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
@@ -1016,7 +1167,7 @@ func TestDeleteAgentRemovesOwnedRecord(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	if _, err := svc.DeleteAgent(ctx, &aiv1.DeleteAgentRequest{AgentId: "agent-1"}); err != nil {
 		t.Fatalf("delete agent: %v", err)
@@ -1027,7 +1178,7 @@ func TestDeleteAgentRemovesOwnedRecord(t *testing.T) {
 }
 
 func TestCreateCredentialSealError(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{SealErr: errors.New("seal fail")})
+	svc := newCredentialHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{SealErr: errors.New("seal fail")})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateCredential(ctx, &aiv1.CreateCredentialRequest{
 		Provider: aiv1.Provider_PROVIDER_OPENAI,
@@ -1038,7 +1189,7 @@ func TestCreateCredentialSealError(t *testing.T) {
 }
 
 func TestInvokeAgentRequiresUserID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.InvokeAgent(context.Background(), &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
 		Input:   "Say hello",
@@ -1047,14 +1198,14 @@ func TestInvokeAgentRequiresUserID(t *testing.T) {
 }
 
 func TestInvokeAgentRequiresRequest(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, nil)
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
 func TestInvokeAgentRequiresAgentID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: " ",
@@ -1064,7 +1215,7 @@ func TestInvokeAgentRequiresAgentID(t *testing.T) {
 }
 
 func TestInvokeAgentRequiresInput(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -1097,7 +1248,7 @@ func TestInvokeAgentRequiresActiveOwnedCredential(t *testing.T) {
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -1129,8 +1280,8 @@ func TestInvokeAgentProviderGrantPathWithoutCredentialStore(t *testing.T) {
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := NewService(nil, store, &fakeSealer{})
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{
+	svc := newServiceWithStores(nil, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Hello"},
 	}
 
@@ -1158,8 +1309,8 @@ func TestInvokeAgentCredentialPathWithoutCredentialStore(t *testing.T) {
 		UpdatedAt:    time.Now(),
 	}
 
-	svc := NewService(nil, store, &fakeSealer{})
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{
+	svc := newServiceWithStores(nil, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Hello"},
 	}
 
@@ -1195,18 +1346,20 @@ func TestInvokeAgentSuccess(t *testing.T) {
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	adapter := &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{
 			OutputText: "Hello from AI",
+			Usage:      provider.Usage{InputTokens: 12, OutputTokens: 7, ReasoningTokens: 3, TotalTokens: 19},
 		},
 	}
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = adapter
+	svc.providerInvocationAdapters[provider.OpenAI] = adapter
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
-		AgentId: "agent-1",
-		Input:   "Say hello",
+		AgentId:         "agent-1",
+		Input:           "Say hello",
+		ReasoningEffort: "low",
 	})
 	if err != nil {
 		t.Fatalf("invoke agent: %v", err)
@@ -1220,8 +1373,14 @@ func TestInvokeAgentSuccess(t *testing.T) {
 	if adapter.lastInput.Input != "Say hello" {
 		t.Fatalf("input = %q, want %q", adapter.lastInput.Input, "Say hello")
 	}
+	if adapter.lastInput.ReasoningEffort != "low" {
+		t.Fatalf("reasoning effort = %q, want %q", adapter.lastInput.ReasoningEffort, "low")
+	}
 	if resp.GetOutputText() != "Hello from AI" {
 		t.Fatalf("output_text = %q, want %q", resp.GetOutputText(), "Hello from AI")
+	}
+	if resp.GetUsage().GetTotalTokens() != 19 {
+		t.Fatalf("usage.total_tokens = %d", resp.GetUsage().GetTotalTokens())
 	}
 }
 
@@ -1254,7 +1413,7 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	oauthAdapter := &fakeProviderOAuthAdapter{
 		refreshResult: ProviderTokenExchangeResult{
@@ -1268,8 +1427,8 @@ func TestInvokeAgentWithProviderGrantRefreshesNearExpiry(t *testing.T) {
 			OutputText: "Hello from refreshed grant",
 		},
 	}
-	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = oauthAdapter
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = invokeAdapter
+	svc.providerOAuthAdapters[provider.OpenAI] = oauthAdapter
+	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -1315,9 +1474,9 @@ func TestInvokeAgentWithRefreshFailedGrantWithoutRefreshSupport(t *testing.T) {
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Hello"},
 	}
 
@@ -1356,12 +1515,12 @@ func TestInvokeAgentWithExpiredGrantWithoutRefreshSupport(t *testing.T) {
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	invokeAdapter := &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Hello"},
 	}
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = invokeAdapter
+	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -1399,9 +1558,9 @@ func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
-	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = &fakeProviderOAuthAdapter{
+	svc.providerOAuthAdapters[provider.OpenAI] = &fakeProviderOAuthAdapter{
 		refreshResult: ProviderTokenExchangeResult{
 			TokenPlaintext:   `{"access_token":"at-2","refresh_token":"rt-2"}`,
 			RefreshSupported: true,
@@ -1411,7 +1570,7 @@ func TestInvokeAgentWithRefreshFailedGrantRefreshesAndInvokes(t *testing.T) {
 	invokeAdapter := &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Hello"},
 	}
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = invokeAdapter
+	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	if _, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -1450,8 +1609,8 @@ func TestInvokeAgentWithProviderGrantMissingAccessToken(t *testing.T) {
 		UpdatedAt:        now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Hello"},
 	}
 
@@ -1464,7 +1623,7 @@ func TestInvokeAgentWithProviderGrantMissingAccessToken(t *testing.T) {
 }
 
 func TestInvokeAgentMissingAgentIsNotFound(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "missing",
@@ -1487,7 +1646,7 @@ func TestInvokeAgentHiddenForNonOwner(t *testing.T) {
 		UpdatedAt:    time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -1531,11 +1690,11 @@ func TestInvokeAgentApprovedRequesterCanInvokeOwnerAgent(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	invokeAdapter := &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Shared response"},
 	}
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = invokeAdapter
+	svc.providerInvocationAdapters[provider.OpenAI] = invokeAdapter
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-requester"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -1588,8 +1747,8 @@ func TestInvokeAgentApprovedRequesterWritesAuditEvent(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Shared response"},
 	}
 
@@ -1644,11 +1803,11 @@ func TestInvokeAgentSharedAccessUsesTargetedLookup(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	adapter := &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Hello from shared access"},
 	}
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = adapter
+	svc.providerInvocationAdapters[provider.OpenAI] = adapter
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -1704,8 +1863,8 @@ func TestInvokeAgentApprovedRequesterDeniedAfterRevocation(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "Shared response"},
 	}
 	ownerCtx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-owner"))
@@ -1759,7 +1918,7 @@ func TestInvokeAgentPendingRequesterCannotInvokeOwnerAgent(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-requester"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -1803,7 +1962,7 @@ func TestInvokeAgentDeniedRequesterCannotInvokeOwnerAgent(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-requester"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -1826,7 +1985,7 @@ func TestInvokeAgentMissingCredentialIsFailedPrecondition(t *testing.T) {
 		UpdatedAt:    time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -1859,8 +2018,8 @@ func TestInvokeAgentProviderInvokeError(t *testing.T) {
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{invokeErr: errors.New("provider unavailable")}
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{invokeErr: errors.New("provider unavailable")}
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -1894,8 +2053,8 @@ func TestInvokeAgentEmptyProviderOutputIsInternal(t *testing.T) {
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	svc.providerInvocationAdapters[providergrant.ProviderOpenAI] = &fakeProviderInvocationAdapter{
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	svc.providerInvocationAdapters[provider.OpenAI] = &fakeProviderInvocationAdapter{
 		invokeResult: ProviderInvokeResult{OutputText: "   "},
 	}
 
@@ -1931,8 +2090,8 @@ func TestInvokeAgentAdapterUnavailable(t *testing.T) {
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	delete(svc.providerInvocationAdapters, providergrant.ProviderOpenAI)
+	svc := newServiceWithStores(store, store, &fakeSealer{})
+	delete(svc.providerInvocationAdapters, provider.OpenAI)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
@@ -1966,7 +2125,7 @@ func TestInvokeAgentSecretOpenError(t *testing.T) {
 		UpdatedAt:        time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{OpenErr: errors.New("open fail")})
+	svc := newServiceWithStores(store, store, &fakeSealer{OpenErr: errors.New("open fail")})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.InvokeAgent(ctx, &aiv1.InvokeAgentRequest{
 		AgentId: "agent-1",
@@ -1976,7 +2135,7 @@ func TestInvokeAgentSecretOpenError(t *testing.T) {
 }
 
 func TestStartProviderConnectRequiresUserID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.StartProviderConnect(context.Background(), &aiv1.StartProviderConnectRequest{
 		Provider: aiv1.Provider_PROVIDER_OPENAI,
 	})
@@ -1986,8 +2145,8 @@ func TestStartProviderConnectRequiresUserID(t *testing.T) {
 func TestStartProviderConnectUsesS256CodeChallenge(t *testing.T) {
 	store := newFakeStore()
 	oauthAdapter := &fakeProviderOAuthAdapter{}
-	svc := NewService(store, store, &fakeSealer{})
-	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = oauthAdapter
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
+	svc.providerOAuthAdapters[provider.OpenAI] = oauthAdapter
 
 	idValues := []string{"session-1", "state-1"}
 	svc.idGenerator = func() (string, error) {
@@ -2029,7 +2188,7 @@ func TestStartProviderConnectUsesS256CodeChallenge(t *testing.T) {
 
 func TestFinishProviderConnectCreatesProviderGrant(t *testing.T) {
 	store := newFakeStore()
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 30, 0, 0, time.UTC) }
 
 	idValues := []string{"session-1", "state-1", "grant-1"}
@@ -2070,7 +2229,7 @@ func TestFinishProviderConnectCreatesProviderGrant(t *testing.T) {
 
 func TestFinishProviderConnectDoesNotSealRawAuthorizationCode(t *testing.T) {
 	store := newFakeStore()
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 30, 0, 0, time.UTC) }
 
 	idValues := []string{"session-1", "state-1", "grant-1"}
@@ -2108,8 +2267,8 @@ func TestFinishProviderConnectDoesNotSealRawAuthorizationCode(t *testing.T) {
 
 func TestFinishProviderConnectKeepsSessionPendingOnExchangeFailure(t *testing.T) {
 	store := newFakeStore()
-	svc := NewService(store, store, &fakeSealer{})
-	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = &fakeProviderOAuthAdapter{
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
+	svc.providerOAuthAdapters[provider.OpenAI] = &fakeProviderOAuthAdapter{
 		exchangeErr: errors.New("exchange failed"),
 	}
 
@@ -2168,7 +2327,7 @@ func TestListProviderGrantsReturnsOwnerRecords(t *testing.T) {
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderGrants(ctx, &aiv1.ListProviderGrantsRequest{PageSize: 10})
 	if err != nil {
@@ -2216,7 +2375,7 @@ func TestListProviderGrantsFiltersByProvider(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderGrants(ctx, &aiv1.ListProviderGrantsRequest{
 		PageSize: 10,
@@ -2267,7 +2426,7 @@ func TestListProviderGrantsFiltersByStatus(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	resp, err := svc.ListProviderGrants(ctx, &aiv1.ListProviderGrantsRequest{
 		PageSize: 10,
@@ -2297,9 +2456,9 @@ func TestRevokeProviderGrant(t *testing.T) {
 		UpdatedAt:       time.Now(),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
 	adapter := &fakeProviderOAuthAdapter{}
-	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = adapter
+	svc.providerOAuthAdapters[provider.OpenAI] = adapter
 	svc.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 31, 0, 0, time.UTC) }
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
@@ -2340,10 +2499,10 @@ func TestRevokeProviderGrantFailsWhenReferencedAgentIsBoundToActiveCampaigns(t *
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
-	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
+	svc := newProviderGrantHandlersWithStores(store, store, &fakeSealer{})
+	svc.usageGuard.gameCampaignAIClient = &fakeCampaignAIAuthStateClient{
 		usageByAgent: map[string]int32{"agent-1": 1},
-	})
+	}
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 
 	_, err := svc.RevokeProviderGrant(ctx, &aiv1.RevokeProviderGrantRequest{ProviderGrantId: "grant-1"})
@@ -2369,7 +2528,7 @@ func TestRefreshProviderGrantSuccessUpdatesStoredToken(t *testing.T) {
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	adapter := &fakeProviderOAuthAdapter{
 		refreshResult: ProviderTokenExchangeResult{
@@ -2378,7 +2537,7 @@ func TestRefreshProviderGrantSuccessUpdatesStoredToken(t *testing.T) {
 			ExpiresAt:        ptrTime(now.Add(time.Hour)),
 		},
 	}
-	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = adapter
+	svc.providerOAuthAdapters[provider.OpenAI] = adapter
 
 	got, err := svc.refreshProviderGrant(context.Background(), "user-1", "grant-1")
 	if err != nil {
@@ -2410,10 +2569,10 @@ func TestRefreshProviderGrantMarksRefreshFailed(t *testing.T) {
 		UpdatedAt:        now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	adapter := &fakeProviderOAuthAdapter{refreshErr: errors.New("provider timeout")}
-	svc.providerOAuthAdapters[providergrant.ProviderOpenAI] = adapter
+	svc.providerOAuthAdapters[provider.OpenAI] = adapter
 
 	if _, err := svc.refreshProviderGrant(context.Background(), "user-1", "grant-1"); err == nil {
 		t.Fatal("expected refresh error")
@@ -2442,7 +2601,7 @@ func TestCreateAccessRequestSuccess(t *testing.T) {
 		UpdatedAt:    now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	svc.idGenerator = func() (string, error) { return "request-1", nil }
 
@@ -2478,7 +2637,7 @@ func TestCreateAccessRequestWritesAuditEvent(t *testing.T) {
 		UpdatedAt:    now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	svc.idGenerator = func() (string, error) { return "request-1", nil }
 
@@ -2513,7 +2672,7 @@ func TestCreateAccessRequestRejectsOwnAgent(t *testing.T) {
 		UpdatedAt:    now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
 		AgentId: "agent-1",
@@ -2537,7 +2696,7 @@ func TestCreateAccessRequestRejectsUnsupportedScope(t *testing.T) {
 		UpdatedAt:    now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	_, err := svc.CreateAccessRequest(ctx, &aiv1.CreateAccessRequestRequest{
 		AgentId: "agent-1",
@@ -2553,7 +2712,7 @@ func TestListAccessRequestsByRole(t *testing.T) {
 	store.AccessRequests["request-2"] = storage.AccessRequestRecord{ID: "request-2", RequesterUserID: "user-1", OwnerUserID: "owner-2", AgentID: "agent-2", Scope: "invoke", Status: "pending", CreatedAt: now, UpdatedAt: now}
 	store.AccessRequests["request-3"] = storage.AccessRequestRecord{ID: "request-3", RequesterUserID: "user-3", OwnerUserID: "owner-1", AgentID: "agent-3", Scope: "invoke", Status: "approved", CreatedAt: now, UpdatedAt: now}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 
 	requesterCtx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-1"))
 	requesterResp, err := svc.ListAccessRequests(requesterCtx, &aiv1.ListAccessRequestsRequest{
@@ -2579,7 +2738,7 @@ func TestListAccessRequestsByRole(t *testing.T) {
 }
 
 func TestListAuditEventsRequiresUserID(t *testing.T) {
-	svc := NewService(newFakeStore(), newFakeStore(), &fakeSealer{})
+	svc := newServiceWithStores(newFakeStore(), newFakeStore(), &fakeSealer{})
 	_, err := svc.ListAuditEvents(context.Background(), &aiv1.ListAuditEventsRequest{PageSize: 10})
 	assertStatusCode(t, err, codes.PermissionDenied)
 }
@@ -2593,7 +2752,7 @@ func TestListAuditEventsOwnerScoped(t *testing.T) {
 		{ID: "3", EventName: "access_request.created", ActorUserID: "user-2", OwnerUserID: "owner-2", RequesterUserID: "user-2", AgentID: "agent-2", AccessRequestID: "request-2", Outcome: "pending", CreatedAt: now},
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{PageSize: 10})
 	if err != nil {
@@ -2619,7 +2778,7 @@ func TestListAuditEventsPaginates(t *testing.T) {
 		{ID: "3", EventName: "access_request.revoked", ActorUserID: "owner-1", OwnerUserID: "owner-1", RequesterUserID: "user-1", AgentID: "agent-1", AccessRequestID: "request-1", Outcome: "revoked", CreatedAt: now.Add(2 * time.Minute)},
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 
 	first, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{PageSize: 2})
@@ -2659,7 +2818,7 @@ func TestListAuditEventsFiltersByEventName(t *testing.T) {
 		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(time.Minute)},
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize:  10,
@@ -2684,7 +2843,7 @@ func TestListAuditEventsFiltersByAgentID(t *testing.T) {
 		{ID: "2", EventName: "access_request.reviewed", OwnerUserID: "owner-1", AgentID: "agent-2", CreatedAt: now.Add(time.Minute)},
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize: 10,
@@ -2710,7 +2869,7 @@ func TestListAuditEventsFiltersByTimeWindow(t *testing.T) {
 		{ID: "3", EventName: "access_request.revoked", OwnerUserID: "owner-1", AgentID: "agent-1", CreatedAt: now.Add(4 * time.Minute)},
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	resp, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize:      10,
@@ -2731,7 +2890,7 @@ func TestListAuditEventsFiltersByTimeWindow(t *testing.T) {
 func TestListAuditEventsRejectsInvalidTimeWindow(t *testing.T) {
 	store := newFakeStore()
 	now := time.Date(2026, 2, 16, 3, 20, 0, 0, time.UTC)
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	_, err := svc.ListAuditEvents(ctx, &aiv1.ListAuditEventsRequest{
 		PageSize:      10,
@@ -2755,7 +2914,7 @@ func TestReviewAccessRequestByOwner(t *testing.T) {
 		UpdatedAt:       now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	resp, err := svc.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
@@ -2785,7 +2944,7 @@ func TestReviewAccessRequestWritesAuditEvent(t *testing.T) {
 		UpdatedAt:       now.Add(-time.Hour),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	if _, err := svc.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
@@ -2817,7 +2976,7 @@ func TestReviewAccessRequestRejectsNonOwner(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-2"))
 	_, err := svc.ReviewAccessRequest(ctx, &aiv1.ReviewAccessRequestRequest{
 		AccessRequestId: "request-1",
@@ -2844,7 +3003,7 @@ func TestRevokeAccessRequestByOwner(t *testing.T) {
 		ReviewedAt:      ptrTime(now.Add(-time.Minute)),
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	svc.clock = func() time.Time { return now }
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	resp, err := svc.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
@@ -2879,7 +3038,7 @@ func TestRevokeAccessRequestRejectsNonOwner(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-2"))
 	_, err := svc.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
 		AccessRequestId: "request-1",
@@ -2902,7 +3061,7 @@ func TestRevokeAccessRequestRejectsNonApproved(t *testing.T) {
 		UpdatedAt:       now,
 	}
 
-	svc := NewService(store, store, &fakeSealer{})
+	svc := newServiceWithStores(store, store, &fakeSealer{})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "owner-1"))
 	_, err := svc.RevokeAccessRequest(ctx, &aiv1.RevokeAccessRequestRequest{
 		AccessRequestId: "request-1",
@@ -2949,6 +3108,108 @@ func TestRunCampaignTurnRejectsStaleGrant(t *testing.T) {
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
+func TestRunCampaignTurnMapsRunnerTimeout(t *testing.T) {
+	store := newFakeStore()
+	now := time.Now().UTC()
+	store.Credentials["cred-1"] = storage.CredentialRecord{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            "main",
+		Status:           "active",
+		SecretCiphertext: "enc:sk-1",
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	store.Agents["agent-1"] = storage.AgentRecord{
+		ID:           "agent-1",
+		OwnerUserID:  "user-1",
+		Label:        "gm",
+		Provider:     "openai",
+		Model:        "gpt-4.1-mini",
+		CredentialID: "cred-1",
+		Status:       "active",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	svc := newTestService(store)
+	svc.SetCampaignTurnRunner(&fakeCampaignTurnRunner{runErr: context.DeadlineExceeded})
+	svc.SetAISessionGrantConfig(testAISessionGrantConfig())
+	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
+		authState: &gamev1.GetCampaignAIAuthStateResponse{
+			CampaignId:      "camp-1",
+			AiAgentId:       "agent-1",
+			ActiveSessionId: "sess-1",
+			AuthEpoch:       7,
+			ParticipantId:   "gm-1",
+		},
+	})
+
+	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
+		SessionGrant: mustIssueAISessionGrant(t, testAISessionGrantConfig(), aisessiongrant.IssueInput{
+			GrantID:       "grant-1",
+			CampaignID:    "camp-1",
+			SessionID:     "sess-1",
+			ParticipantID: "gm-1",
+			AuthEpoch:     7,
+		}),
+	})
+	assertStatusCode(t, err, codes.DeadlineExceeded)
+	assertStatusReason(t, err, apperrors.CodeAIOrchestrationTimedOut)
+}
+
+func TestRunCampaignTurnMapsRunnerStepLimit(t *testing.T) {
+	store := newFakeStore()
+	now := time.Now().UTC()
+	store.Credentials["cred-1"] = storage.CredentialRecord{
+		ID:               "cred-1",
+		OwnerUserID:      "user-1",
+		Provider:         "openai",
+		Label:            "main",
+		Status:           "active",
+		SecretCiphertext: "enc:sk-1",
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	store.Agents["agent-1"] = storage.AgentRecord{
+		ID:           "agent-1",
+		OwnerUserID:  "user-1",
+		Label:        "gm",
+		Provider:     "openai",
+		Model:        "gpt-4.1-mini",
+		CredentialID: "cred-1",
+		Status:       "active",
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+
+	svc := newTestService(store)
+	svc.SetCampaignTurnRunner(&fakeCampaignTurnRunner{runErr: orchestration.ErrStepLimit})
+	svc.SetAISessionGrantConfig(testAISessionGrantConfig())
+	svc.SetGameCampaignAIClient(&fakeCampaignAIAuthStateClient{
+		authState: &gamev1.GetCampaignAIAuthStateResponse{
+			CampaignId:      "camp-1",
+			AiAgentId:       "agent-1",
+			ActiveSessionId: "sess-1",
+			AuthEpoch:       7,
+			ParticipantId:   "gm-1",
+		},
+	})
+
+	_, err := svc.RunCampaignTurn(context.Background(), &aiv1.RunCampaignTurnRequest{
+		SessionGrant: mustIssueAISessionGrant(t, testAISessionGrantConfig(), aisessiongrant.IssueInput{
+			GrantID:       "grant-1",
+			CampaignID:    "camp-1",
+			SessionID:     "sess-1",
+			ParticipantID: "gm-1",
+			AuthEpoch:     7,
+		}),
+	})
+	assertStatusCode(t, err, codes.Internal)
+	assertStatusReason(t, err, apperrors.CodeAIOrchestrationStepLimitExceeded)
+}
+
 func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 	store := newFakeStore()
 	now := time.Now().UTC()
@@ -2977,7 +3238,10 @@ func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 
 	svc := newTestService(store)
 	runner := &fakeCampaignTurnRunner{
-		runResult: orchestration.Result{OutputText: "The storm breaks over the ridge."},
+		runResult: orchestration.Result{
+			OutputText: "The storm breaks over the ridge.",
+			Usage:      provider.Usage{InputTokens: 14, OutputTokens: 9, ReasoningTokens: 4, TotalTokens: 23},
+		},
 	}
 	svc.SetCampaignTurnRunner(runner)
 	svc.SetAISessionGrantConfig(testAISessionGrantConfig())
@@ -2999,7 +3263,8 @@ func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 			ParticipantID: "gm-1",
 			AuthEpoch:     7,
 		}),
-		Input: "Frame the next scene.",
+		Input:           "Frame the next scene.",
+		ReasoningEffort: "medium",
 	})
 	if err != nil {
 		t.Fatalf("run campaign turn: %v", err)
@@ -3028,8 +3293,14 @@ func TestRunCampaignTurnRunsOrchestration(t *testing.T) {
 	if runner.lastInput.Input != "Frame the next scene." {
 		t.Fatalf("runner input = %q", runner.lastInput.Input)
 	}
+	if runner.lastInput.ReasoningEffort != "medium" {
+		t.Fatalf("runner reasoning effort = %q", runner.lastInput.ReasoningEffort)
+	}
 	if runner.lastInput.Provider == nil {
 		t.Fatal("runner provider = nil")
+	}
+	if resp.GetUsage().GetTotalTokens() != 23 {
+		t.Fatalf("usage.total_tokens = %d", resp.GetUsage().GetTotalTokens())
 	}
 }
 
@@ -3063,7 +3334,7 @@ func TestFinishProviderConnectAcrossServiceInstances(t *testing.T) {
 	store := newFakeStore()
 	sealer := &fakeSealer{}
 
-	svcStart := NewService(store, store, sealer)
+	svcStart := newProviderGrantHandlersWithStores(store, store, sealer)
 	svcStart.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 40, 0, 0, time.UTC) }
 	idValuesStart := []string{"session-1", "state-1"}
 	svcStart.idGenerator = func() (string, error) {
@@ -3084,7 +3355,7 @@ func TestFinishProviderConnectAcrossServiceInstances(t *testing.T) {
 		t.Fatalf("start provider connect: %v", err)
 	}
 
-	svcFinish := NewService(store, store, sealer)
+	svcFinish := newProviderGrantHandlersWithStores(store, store, sealer)
 	svcFinish.clock = func() time.Time { return time.Date(2026, 2, 15, 23, 41, 0, 0, time.UTC) }
 	svcFinish.idGenerator = func() (string, error) { return "grant-1", nil }
 
@@ -3113,4 +3384,18 @@ func assertStatusCode(t *testing.T, err error, want codes.Code) {
 	if st.Code() != want {
 		t.Fatalf("expected status %v, got %v", want, st.Code())
 	}
+}
+
+func assertStatusReason(t *testing.T, err error, want apperrors.Code) {
+	t.Helper()
+	st := status.Convert(err)
+	for _, detail := range st.Details() {
+		if info, ok := detail.(*errdetails.ErrorInfo); ok {
+			if info.Reason != string(want) {
+				t.Fatalf("expected reason %q, got %q", want, info.Reason)
+			}
+			return
+		}
+	}
+	t.Fatalf("missing ErrorInfo detail in %v", err)
 }

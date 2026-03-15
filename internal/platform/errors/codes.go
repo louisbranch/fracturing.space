@@ -87,6 +87,17 @@ const (
 
 	// Fork errors
 	CodeForkEmptyCampaignID Code = "FORK_EMPTY_CAMPAIGN_ID"
+
+	// AI orchestration errors
+	CodeAIOrchestrationInvalidInput          Code = "AI_ORCHESTRATION_INVALID_INPUT"
+	CodeAIOrchestrationUnavailable           Code = "AI_ORCHESTRATION_UNAVAILABLE"
+	CodeAIOrchestrationPromptBuildFailed     Code = "AI_ORCHESTRATION_PROMPT_BUILD_FAILED"
+	CodeAIOrchestrationExecutionFailed       Code = "AI_ORCHESTRATION_EXECUTION_FAILED"
+	CodeAIOrchestrationStepLimitExceeded     Code = "AI_ORCHESTRATION_STEP_LIMIT_EXCEEDED"
+	CodeAIOrchestrationNarrationNotCommitted Code = "AI_ORCHESTRATION_NARRATION_NOT_COMMITTED"
+	CodeAIOrchestrationEmptyOutput           Code = "AI_ORCHESTRATION_EMPTY_OUTPUT"
+	CodeAIOrchestrationTimedOut              Code = "AI_ORCHESTRATION_TIMED_OUT"
+	CodeAIOrchestrationCanceled              Code = "AI_ORCHESTRATION_CANCELED"
 )
 
 // GRPCCode maps domain codes to gRPC status codes.
@@ -132,7 +143,8 @@ func (c Code) GRPCCode() codes.Code {
 		CodeDaggerheartInvalidExperience,
 		CodeDaggerheartInvalidRestSequence,
 		CodeDaggerheartUnknownResource,
-		CodeForkEmptyCampaignID:
+		CodeForkEmptyCampaignID,
+		CodeAIOrchestrationInvalidInput:
 		return codes.InvalidArgument
 
 	// FailedPrecondition - state doesn't allow operation
@@ -145,7 +157,8 @@ func (c Code) GRPCCode() codes.Code {
 		CodeDaggerheartInsufficientResource,
 		CodeDaggerheartResourceAtCap,
 		CodeInviteJoinGrantExpired,
-		CodeInviteJoinGrantUsed:
+		CodeInviteJoinGrantUsed,
+		CodeAIOrchestrationUnavailable:
 		return codes.FailedPrecondition
 
 	// NotFound - resource doesn't exist
@@ -156,6 +169,12 @@ func (c Code) GRPCCode() codes.Code {
 	case CodeParticipantUserAlreadyClaimed,
 		CodeInviteRecipientAlreadyInvited:
 		return codes.AlreadyExists
+
+	case CodeAIOrchestrationTimedOut:
+		return codes.DeadlineExceeded
+
+	case CodeAIOrchestrationCanceled:
+		return codes.Canceled
 
 	default:
 		return codes.Internal

@@ -7,8 +7,9 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/agent"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/aisessiongrant"
 	"google.golang.org/grpc/codes"
@@ -72,7 +73,7 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 		}
 		return nil, status.Errorf(codes.Internal, "get campaign ai runtime: %v", err)
 	}
-	if !strings.EqualFold(strings.TrimSpace(agentRecord.Status), "active") {
+	if !agent.ParseStatus(agentRecord.Status).IsActive() {
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai runtime is inactive")
 	}
 	if s.campaignArtifactManager != nil {
@@ -81,7 +82,7 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 		}
 	}
 
-	provider := providergrant.Provider(strings.ToLower(strings.TrimSpace(agentRecord.Provider)))
+	provider := providerFromString(agentRecord.Provider)
 	adapter, ok := s.providerToolAdapters[provider]
 	if !ok || adapter == nil {
 		return nil, status.Error(codes.FailedPrecondition, "campaign ai provider adapter is unavailable")
@@ -98,24 +99,45 @@ func (s *Service) RunCampaignTurn(ctx context.Context, in *aiv1.RunCampaignTurnR
 		ParticipantID:    strings.TrimSpace(state.GetParticipantId()),
 		Input:            strings.TrimSpace(in.GetInput()),
 		Model:            strings.TrimSpace(agentRecord.Model),
+		ReasoningEffort:  strings.TrimSpace(in.GetReasoningEffort()),
 		Instructions:     strings.TrimSpace(agentRecord.Instructions),
 		CredentialSecret: token,
 		Provider:         adapter,
 	})
 	if err != nil {
-		if errors.Is(err, orchestration.ErrStepLimit) {
-			return nil, status.Error(codes.Internal, "campaign turn exceeded tool step limit")
-		}
-		return nil, status.Errorf(codes.Internal, "run campaign turn: %v", err)
+		return nil, campaignTurnGRPCError(err)
 	}
 	if strings.TrimSpace(result.OutputText) == "" {
-		return nil, status.Error(codes.Internal, "campaign turn returned empty output")
+		return nil, campaignTurnGRPCError(orchestration.ErrEmptyOutput)
 	}
 	return &aiv1.RunCampaignTurnResponse{
 		OutputText: result.OutputText,
 		Provider:   providerToProto(agentRecord.Provider),
 		Model:      agentRecord.Model,
+		Usage:      usageToProto(result.Usage),
 	}, nil
+}
+
+func campaignTurnGRPCError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if apperrors.GetCode(err) != apperrors.CodeUnknown {
+		return apperrors.HandleError(err, apperrors.DefaultLocale)
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return apperrors.HandleError(
+			apperrors.Wrap(apperrors.CodeAIOrchestrationTimedOut, "campaign turn timed out", err),
+			apperrors.DefaultLocale,
+		)
+	}
+	if errors.Is(err, context.Canceled) {
+		return apperrors.HandleError(
+			apperrors.Wrap(apperrors.CodeAIOrchestrationCanceled, "campaign turn canceled", err),
+			apperrors.DefaultLocale,
+		)
+	}
+	return status.Errorf(codes.Internal, "run campaign turn: %v", err)
 }
 
 func staleGrant(claims aisessiongrant.Claims, state *gamev1.GetCampaignAIAuthStateResponse) bool {

@@ -7,6 +7,8 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/credential"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/providergrant"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -34,7 +36,7 @@ func (s *Service) agentProtoWithAuthState(ctx context.Context, record storage.Ag
 
 // agentAuthState derives a non-mutating runtime auth-health view for an agent.
 func (s *Service) agentAuthState(ctx context.Context, record storage.AgentRecord) aiv1.AgentAuthState {
-	provider := strings.TrimSpace(record.Provider)
+	requestedProvider := providerFromString(record.Provider)
 	credentialID := strings.TrimSpace(record.CredentialID)
 	if credentialID != "" {
 		if s == nil || s.credentialStore == nil {
@@ -48,9 +50,13 @@ func (s *Service) agentAuthState(ctx context.Context, record storage.AgentRecord
 			return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE
 		}
 		switch {
-		case isCredentialActiveForUser(credentialRecord, record.OwnerUserID, provider):
+		case (credential.Credential{
+			OwnerUserID: credentialRecord.OwnerUserID,
+			Provider:    providerFromString(credentialRecord.Provider),
+			Status:      credential.ParseStatus(credentialRecord.Status),
+		}).IsUsableBy(record.OwnerUserID, requestedProvider):
 			return aiv1.AgentAuthState_AGENT_AUTH_STATE_READY
-		case strings.EqualFold(strings.TrimSpace(credentialRecord.Status), "revoked"):
+		case credential.ParseStatus(credentialRecord.Status).IsRevoked():
 			return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_REVOKED
 		default:
 			return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE
@@ -72,9 +78,13 @@ func (s *Service) agentAuthState(ctx context.Context, record storage.AgentRecord
 		return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE
 	}
 	switch {
-	case isProviderGrantActiveForUser(grantRecord, record.OwnerUserID, provider):
+	case (providergrant.ProviderGrant{
+		OwnerUserID: grantRecord.OwnerUserID,
+		Provider:    providerFromString(grantRecord.Provider),
+		Status:      providergrant.ParseStatus(grantRecord.Status),
+	}).IsUsableBy(record.OwnerUserID, requestedProvider):
 		return aiv1.AgentAuthState_AGENT_AUTH_STATE_READY
-	case strings.EqualFold(strings.TrimSpace(grantRecord.Status), "revoked"):
+	case providergrant.ParseStatus(grantRecord.Status).IsRevoked():
 		return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_REVOKED
 	default:
 		return aiv1.AgentAuthState_AGENT_AUTH_STATE_AUTH_REFERENCE_UNAVAILABLE

@@ -11,14 +11,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
-)
-
-// Provider identifies an AI provider integration.
-type Provider string
-
-const (
-	// ProviderOpenAI is the only provider supported in this phase.
-	ProviderOpenAI Provider = "openai"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
 
 // Status represents provider grant lifecycle state.
@@ -38,8 +31,6 @@ const (
 var (
 	// ErrEmptyOwnerUserID indicates owner user ID is required.
 	ErrEmptyOwnerUserID = errors.New("owner user id is required")
-	// ErrInvalidProvider indicates unsupported provider value.
-	ErrInvalidProvider = errors.New("provider is invalid")
 	// ErrEmptyTokenCiphertext indicates sealed token payload is required.
 	ErrEmptyTokenCiphertext = errors.New("token ciphertext is required")
 	// ErrEmptyID indicates grant ID is required.
@@ -51,7 +42,7 @@ type ProviderGrant struct {
 	ID string
 
 	OwnerUserID string
-	Provider    Provider
+	Provider    provider.Provider
 
 	GrantedScopes []string
 
@@ -71,7 +62,7 @@ type ProviderGrant struct {
 // CreateInput contains fields required to create a provider grant.
 type CreateInput struct {
 	OwnerUserID string
-	Provider    Provider
+	Provider    provider.Provider
 
 	GrantedScopes []string
 
@@ -87,10 +78,11 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, ErrEmptyOwnerUserID
 	}
 
-	input.Provider = Provider(strings.ToLower(strings.TrimSpace(string(input.Provider))))
-	if input.Provider != ProviderOpenAI {
-		return CreateInput{}, ErrInvalidProvider
+	normalizedProvider, err := provider.Normalize(string(input.Provider))
+	if err != nil {
+		return CreateInput{}, err
 	}
+	input.Provider = normalizedProvider
 
 	input.TokenCiphertext = strings.TrimSpace(input.TokenCiphertext)
 	if input.TokenCiphertext == "" {
@@ -176,4 +168,66 @@ func Revoke(grant ProviderGrant, now func() time.Time) (ProviderGrant, error) {
 	grant.RevokedAt = &revokedAt
 	grant.UpdatedAt = revokedAt
 	return grant, nil
+}
+
+// ParseStatus trims and normalizes one persisted provider-grant status.
+func ParseStatus(raw string) Status {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case string(StatusActive):
+		return StatusActive
+	case string(StatusRevoked):
+		return StatusRevoked
+	case string(StatusExpired):
+		return StatusExpired
+	case string(StatusRefreshFailed):
+		return StatusRefreshFailed
+	default:
+		return ""
+	}
+}
+
+// IsActive reports whether the grant is ready for use.
+func (s Status) IsActive() bool {
+	return ParseStatus(string(s)) == StatusActive
+}
+
+// IsRevoked reports whether the grant is explicitly revoked.
+func (s Status) IsRevoked() bool {
+	return ParseStatus(string(s)) == StatusRevoked
+}
+
+// IsExpired reports whether the grant has passed its expiry time.
+func (g ProviderGrant) IsExpired(now time.Time) bool {
+	if g.ExpiresAt == nil {
+		return false
+	}
+	return !g.ExpiresAt.After(now)
+}
+
+// ShouldRefresh reports whether the grant should refresh before a call based on
+// expiry proximity and refresh support.
+func (g ProviderGrant) ShouldRefresh(now time.Time, window time.Duration) bool {
+	if !g.RefreshSupported || g.ExpiresAt == nil {
+		return false
+	}
+	return !g.ExpiresAt.After(now.Add(window))
+}
+
+// IsUsableBy reports whether the grant is active, owned by the caller, and
+// matches the requested provider when one is supplied.
+func (g ProviderGrant) IsUsableBy(ownerUserID string, requestedProvider provider.Provider) bool {
+	if strings.TrimSpace(g.OwnerUserID) != strings.TrimSpace(ownerUserID) {
+		return false
+	}
+	if !g.Status.IsActive() {
+		return false
+	}
+	grantProvider, err := provider.Normalize(string(g.Provider))
+	if err != nil {
+		return false
+	}
+	if requestedProvider == "" {
+		return true
+	}
+	return grantProvider == requestedProvider
 }

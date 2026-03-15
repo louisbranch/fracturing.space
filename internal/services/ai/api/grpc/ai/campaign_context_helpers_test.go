@@ -38,10 +38,10 @@ func (f *fakeGameAuthorizationClient) BatchCan(context.Context, *gamev1.BatchCan
 
 func TestValidateCampaignContextForwardsUserIDToAuthorization(t *testing.T) {
 	authz := &fakeGameAuthorizationClient{canResp: &gamev1.CanResponse{Allowed: true}}
-	svc := &Service{gameAuthorizationClient: authz}
+	validator := newCampaignContextValidator(authz, nil)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(userIDHeader, "user-123"))
 
-	if err := svc.validateCampaignContext(ctx, "campaign-1", gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
+	if err := validator.validateCampaignContext(ctx, "campaign-1", gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
 		t.Fatalf("validateCampaignContext() error = %v", err)
 	}
 	if authz.lastReq == nil {
@@ -65,23 +65,19 @@ func TestValidateCampaignContextForwardsUserIDToAuthorization(t *testing.T) {
 }
 
 func TestValidateCampaignContextAllowsConfiguredInternalService(t *testing.T) {
-	svc := &Service{
-		internalServiceAllowlist: map[string]struct{}{
-			"mcp": {},
-		},
-	}
+	validator := newCampaignContextValidator(nil, map[string]struct{}{"mcp": {}})
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "mcp"))
 
-	if err := svc.validateCampaignContext(ctx, "campaign-1", gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
+	if err := validator.validateCampaignContext(ctx, "campaign-1", gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ); err != nil {
 		t.Fatalf("validateCampaignContext() error = %v", err)
 	}
 }
 
 func TestValidateCampaignContextRejectsMissingCallerIdentity(t *testing.T) {
-	svc := &Service{}
+	validator := newCampaignContextValidator(nil, nil)
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.ServiceIDHeader, "web"))
 
-	err := svc.validateCampaignContext(ctx, "campaign-1", gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ)
+	err := validator.validateCampaignContext(ctx, "campaign-1", gamev1.AuthorizationAction_AUTHORIZATION_ACTION_READ)
 	if status.Code(err) != codes.PermissionDenied {
 		t.Fatalf("status code = %v, want %v (err=%v)", status.Code(err), codes.PermissionDenied, err)
 	}

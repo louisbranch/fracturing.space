@@ -290,37 +290,37 @@ func (s *Store) ListAccessRequestsByOwner(_ context.Context, ownerUserID string,
 }
 
 // ReviewAccessRequest transitions a pending request to a reviewed status.
-func (s *Store) ReviewAccessRequest(_ context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, reviewedAt time.Time) error {
-	rec, ok := s.AccessRequests[accessRequestID]
-	if !ok || rec.OwnerUserID != ownerUserID {
+func (s *Store) ReviewAccessRequest(_ context.Context, input storage.ReviewAccessRequestInput) error {
+	rec, ok := s.AccessRequests[input.AccessRequestID]
+	if !ok || rec.OwnerUserID != input.OwnerUserID {
 		return storage.ErrNotFound
 	}
 	if rec.Status != "pending" {
 		return storage.ErrConflict
 	}
-	rec.Status = status
-	rec.ReviewerUserID = reviewerUserID
-	rec.ReviewNote = reviewNote
-	rec.UpdatedAt = reviewedAt
-	rec.ReviewedAt = &reviewedAt
-	s.AccessRequests[accessRequestID] = rec
+	rec.Status = input.Status
+	rec.ReviewerUserID = input.ReviewerUserID
+	rec.ReviewNote = input.ReviewNote
+	rec.UpdatedAt = input.ReviewedAt
+	rec.ReviewedAt = &input.ReviewedAt
+	s.AccessRequests[input.AccessRequestID] = rec
 	return nil
 }
 
 // RevokeAccessRequest transitions an approved request to a revoked status.
-func (s *Store) RevokeAccessRequest(_ context.Context, ownerUserID string, accessRequestID string, status string, reviewerUserID string, reviewNote string, revokedAt time.Time) error {
-	rec, ok := s.AccessRequests[accessRequestID]
-	if !ok || rec.OwnerUserID != ownerUserID {
+func (s *Store) RevokeAccessRequest(_ context.Context, input storage.RevokeAccessRequestInput) error {
+	rec, ok := s.AccessRequests[input.AccessRequestID]
+	if !ok || rec.OwnerUserID != input.OwnerUserID {
 		return storage.ErrNotFound
 	}
 	if rec.Status != "approved" {
 		return storage.ErrConflict
 	}
-	rec.Status = status
-	rec.ReviewerUserID = reviewerUserID
-	rec.ReviewNote = reviewNote
-	rec.UpdatedAt = revokedAt
-	s.AccessRequests[accessRequestID] = rec
+	rec.Status = input.Status
+	rec.ReviewerUserID = input.ReviewerUserID
+	rec.ReviewNote = input.ReviewNote
+	rec.UpdatedAt = input.RevokedAt
+	s.AccessRequests[input.AccessRequestID] = rec
 	return nil
 }
 
@@ -465,18 +465,18 @@ func (s *Store) RevokeProviderGrant(_ context.Context, ownerUserID string, provi
 }
 
 // UpdateProviderGrantToken updates provider token metadata.
-func (s *Store) UpdateProviderGrantToken(_ context.Context, ownerUserID string, providerGrantID string, tokenCiphertext string, refreshedAt time.Time, expiresAt *time.Time, status string, lastRefreshError string) error {
-	rec, ok := s.ProviderGrants[providerGrantID]
-	if !ok || rec.OwnerUserID != ownerUserID {
+func (s *Store) UpdateProviderGrantToken(_ context.Context, input storage.UpdateProviderGrantTokenInput) error {
+	rec, ok := s.ProviderGrants[input.ProviderGrantID]
+	if !ok || rec.OwnerUserID != input.OwnerUserID {
 		return storage.ErrNotFound
 	}
-	rec.TokenCiphertext = tokenCiphertext
-	rec.UpdatedAt = refreshedAt
-	rec.LastRefreshedAt = &refreshedAt
-	rec.ExpiresAt = expiresAt
-	rec.Status = status
-	rec.LastRefreshError = lastRefreshError
-	s.ProviderGrants[providerGrantID] = rec
+	rec.TokenCiphertext = input.TokenCiphertext
+	rec.UpdatedAt = input.RefreshedAt
+	rec.LastRefreshedAt = &input.RefreshedAt
+	rec.ExpiresAt = input.ExpiresAt
+	rec.Status = input.Status
+	rec.LastRefreshError = input.LastRefreshError
+	s.ProviderGrants[input.ProviderGrantID] = rec
 	return nil
 }
 

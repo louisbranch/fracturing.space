@@ -19,6 +19,8 @@ import (
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
+	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/secret"
 	aisqlite "github.com/louisbranch/fracturing.space/internal/services/ai/storage/sqlite"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
@@ -115,10 +117,50 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		grpc.ChainUnaryInterceptor(serviceIdentityValidationUnaryInterceptor(cfg.InternalServiceAllowlist)),
 		grpc.ChainStreamInterceptor(serviceIdentityValidationStreamInterceptor(cfg.InternalServiceAllowlist)),
 	)
-	service := aiservice.NewService(store, store, sealer)
-	service.SetInternalServiceAllowlist(cfg.InternalServiceAllowlist)
+	providerOAuthAdapters := map[provider.Provider]aiservice.ProviderOAuthAdapter{
+		provider.OpenAI: openaiprovider.NewDefaultOAuthAdapter(),
+	}
+	if cfg.OpenAIOAuthConfig != nil {
+		providerOAuthAdapters[provider.OpenAI] = openaiprovider.NewOAuthAdapter(*cfg.OpenAIOAuthConfig)
+	}
+	openAIAdapter := openaiprovider.NewInvokeAdapter(openaiprovider.InvokeConfig{
+		ResponsesURL: cfg.OpenAIResponsesURL,
+	})
+	providerInvocationAdapters := map[provider.Provider]aiservice.ProviderInvocationAdapter{
+		provider.OpenAI: openAIAdapter,
+	}
+	providerToolAdapters := make(map[provider.Provider]orchestration.Provider, 1)
+	if toolAdapter, ok := openAIAdapter.(orchestration.Provider); ok {
+		providerToolAdapters[provider.OpenAI] = toolAdapter
+	}
+	providerModelAdapters := make(map[provider.Provider]aiservice.ProviderModelAdapter, 1)
+	if modelAdapter, ok := openAIAdapter.(aiservice.ProviderModelAdapter); ok {
+		providerModelAdapters[provider.OpenAI] = modelAdapter
+	}
+	campaignArtifactManager := campaigncontext.NewManager(store, nil)
+	service := aiservice.NewService(aiservice.ServiceConfig{
+		CredentialStore:            store,
+		AgentStore:                 store,
+		ProviderGrantStore:         store,
+		ConnectSessionStore:        store,
+		AccessRequestStore:         store,
+		AuditEventStore:            store,
+		CampaignArtifactStore:      store,
+		CampaignArtifactManager:    campaignArtifactManager,
+		ProviderOAuthAdapters:      providerOAuthAdapters,
+		ProviderInvocationAdapters: providerInvocationAdapters,
+		ProviderToolAdapters:       providerToolAdapters,
+		ProviderModelAdapters:      providerModelAdapters,
+		Sealer:                     sealer,
+	})
+	systemReferenceHandlers := aiservice.NewSystemReferenceHandlers(nil)
+	if strings.TrimSpace(cfg.DaggerheartReferenceRoot) != "" {
+		systemReferenceHandlers = aiservice.NewSystemReferenceHandlers(campaigncontext.NewReferenceCorpus(cfg.DaggerheartReferenceRoot))
+	}
 
 	var gameMc *platformgrpc.ManagedConn
+	var gameCampaignAIClient gamev1.CampaignAIServiceClient
+	var gameAuthorizationClient gamev1.AuthorizationServiceClient
 	if gameAddr := strings.TrimSpace(cfg.GameAddr); gameAddr != "" {
 		mc, err := newManagedConn(ctx, platformgrpc.ManagedConnConfig{
 			Name: "game",
@@ -135,41 +177,45 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 			log.Printf("ai: game managed conn unavailable; agent usage guard disabled: %v", err)
 		} else {
 			gameMc = mc
-			service.SetGameCampaignAIClient(gamev1.NewCampaignAIServiceClient(mc.Conn()))
-			service.SetGameAuthorizationClient(gamev1.NewAuthorizationServiceClient(mc.Conn()))
+			gameCampaignAIClient = gamev1.NewCampaignAIServiceClient(mc.Conn())
+			service.SetGameCampaignAIClient(gameCampaignAIClient)
+			gameAuthorizationClient = gamev1.NewAuthorizationServiceClient(mc.Conn())
 		}
 	}
-
-	if cfg.OpenAIOAuthConfig != nil {
-		service.SetOpenAIOAuthAdapter(aiservice.NewOpenAIOAuthAdapter(*cfg.OpenAIOAuthConfig))
-	}
-	if cfg.OpenAIResponsesURL != "" {
-		adapter := aiservice.NewOpenAIInvokeAdapter(aiservice.OpenAIInvokeConfig{
-			ResponsesURL: cfg.OpenAIResponsesURL,
-		})
-		service.SetOpenAIInvocationAdapter(adapter)
-		if toolAdapter, ok := adapter.(orchestration.Provider); ok {
-			service.SetOpenAICampaignTurnAdapter(toolAdapter)
-		}
-	}
+	credentialHandlers := aiservice.NewCredentialHandlers(aiservice.CredentialHandlersConfig{
+		CredentialStore:      store,
+		AgentStore:           store,
+		GameCampaignAIClient: gameCampaignAIClient,
+		Sealer:               sealer,
+	})
+	campaignArtifactHandlers := aiservice.NewCampaignArtifactHandlers(aiservice.CampaignArtifactHandlersConfig{
+		Manager:                  campaignArtifactManager,
+		AuthorizationClient:      gameAuthorizationClient,
+		InternalServiceAllowlist: cfg.InternalServiceAllowlist,
+	})
+	providerGrantHandlers := aiservice.NewProviderGrantHandlers(aiservice.ProviderGrantHandlersConfig{
+		ProviderGrantStore:    store,
+		ConnectSessionStore:   store,
+		AgentStore:            store,
+		GameCampaignAIClient:  gameCampaignAIClient,
+		Sealer:                sealer,
+		ProviderOAuthAdapters: providerOAuthAdapters,
+	})
 	if cfg.SessionGrantConfig != nil {
 		service.SetAISessionGrantConfig(*cfg.SessionGrantConfig)
 	}
-	if strings.TrimSpace(cfg.DaggerheartReferenceRoot) != "" {
-		service.SetSystemReferenceCorpus(campaigncontext.NewReferenceCorpus(cfg.DaggerheartReferenceRoot))
-	}
 	if strings.TrimSpace(cfg.MCPURL) != "" {
-		service.SetCampaignTurnRunner(orchestration.NewRunner(orchestration.NewMCPDialer(cfg.MCPURL, nil), 8))
+		service.SetCampaignTurnRunner(orchestration.NewRunner(cfg.campaignTurnRunnerConfig(orchestration.NewMCPDialer(cfg.mcpDialerConfig(nil)))))
 	}
 
 	healthServer := health.NewServer()
-	aiv1.RegisterCredentialServiceServer(grpcServer, service)
+	aiv1.RegisterCredentialServiceServer(grpcServer, credentialHandlers)
 	aiv1.RegisterAgentServiceServer(grpcServer, service)
 	aiv1.RegisterInvocationServiceServer(grpcServer, service)
 	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, service)
-	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, service)
-	aiv1.RegisterSystemReferenceServiceServer(grpcServer, service)
-	aiv1.RegisterProviderGrantServiceServer(grpcServer, service)
+	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, campaignArtifactHandlers)
+	aiv1.RegisterSystemReferenceServiceServer(grpcServer, systemReferenceHandlers)
+	aiv1.RegisterProviderGrantServiceServer(grpcServer, providerGrantHandlers)
 	aiv1.RegisterAccessRequestServiceServer(grpcServer, service)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)

@@ -19,7 +19,7 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update MCP AI campaign artifacts or system-reference tools/resources | `internal/services/mcp/campaigncontext/`, `internal/services/mcp/service/server_registration.go`, `internal/services/shared/mcpbridge/` |
 | Add/update MCP HTTP bridge transport, session lifecycle, or host validation | `internal/services/mcp/httptransport/`, `internal/services/mcp/service/server_runtime.go`, `internal/services/mcp/service/http_transport_runtime_adapter.go` |
 | Add/update auth identity/OAuth/passkey behavior | `internal/services/auth/api/grpc/auth/`, `internal/services/auth/oauth/`, `internal/services/auth/storage/sqlite/` |
-| Add/update AI orchestration/agent invocation | `internal/services/ai/api/grpc/ai/`, `internal/services/ai/storage/sqlite/`, `internal/services/ai/app/` |
+| Add/update AI orchestration/agent invocation | [AI service contributor map](ai-service-contributor-map.md) |
 | Add/update play realtime transport, transcript flow, or play-session/auth handoff | `internal/services/play/app/`, `internal/services/play/storage/sqlite/`, `internal/services/shared/playlaunchgrant/`, `internal/services/shared/playorigin/` |
 | Add/update play SPA UI, system-specific game views, or websocket/bootstrap client behavior | `internal/services/play/ui/src/`, `internal/services/play/ui/src/app_mode.ts`, `internal/services/play/ui/src/systems/` |
 | Add/update social profiles/contacts | `internal/services/social/api/grpc/social/`, `internal/services/social/storage/sqlite/` |
