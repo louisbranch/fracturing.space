@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"errors"
@@ -29,7 +32,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return projectionstore.DaggerheartSnapshot{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
 		return projectionstore.DaggerheartSnapshot{}, err
 	}
 
@@ -67,14 +70,14 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		if actorID != "" {
 			actorTypeForCommand = command.ActorTypeGM
 		}
-		_, err = executeAndApplyDomainCommand(
+		_, err = handler.ExecuteAndApplyDomainCommand(
 			ctx,
 			a.write,
 			a.applier,
 			commandbuild.System(commandbuild.SystemInput{
 				CoreInput: commandbuild.CoreInput{
 					CampaignID:   campaignID,
-					Type:         commandTypeDaggerheartGMFearSet,
+					Type:         handler.CommandTypeDaggerheartGMFearSet,
 					ActorType:    actorTypeForCommand,
 					ActorID:      actorID,
 					SessionID:    grpcmeta.SessionIDFromContext(ctx),
@@ -90,7 +93,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			domainwrite.Options{
 				RequireEvents:   true,
 				MissingEventMsg: "gm fear update did not emit an event",
-				ApplyErr:        domainApplyErrorWithCodePreserve("apply event"),
+				ApplyErr:        handler.ApplyErrorWithCodePreserve("apply event"),
 			},
 		)
 		if err != nil {

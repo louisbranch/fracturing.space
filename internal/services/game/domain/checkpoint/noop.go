@@ -33,3 +33,23 @@ func (n *Noop) Save(ctx context.Context, _ replay.Checkpoint) error {
 	}
 	return nil
 }
+
+// GetState always reports that no snapshot exists.
+func (n *Noop) GetState(ctx context.Context, _ string) (any, uint64, error) {
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return nil, 0, err
+		}
+	}
+	return nil, 0, replay.ErrCheckpointNotFound
+}
+
+// SaveState is a no-op.
+func (n *Noop) SaveState(ctx context.Context, _ string, _ uint64, _ any) error {
+	if ctx != nil {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
+	return nil
+}

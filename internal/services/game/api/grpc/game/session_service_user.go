@@ -4,14 +4,15 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/sessiontransport"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 const (
-	defaultListActiveSessionsForUserPageSize = pageSmall
-	maxListActiveSessionsForUserPageSize     = pageSmall
+	defaultListActiveSessionsForUserPageSize = handler.PageSmall
+	maxListActiveSessionsForUserPageSize     = handler.PageSmall
 )
 
 // ListActiveSessionsForUser returns active sessions across campaigns for the current user.

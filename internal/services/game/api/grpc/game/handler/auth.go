@@ -1,4 +1,4 @@
-package game
+package handler
 
 import (
 	"context"
@@ -9,8 +9,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// authUsername loads the canonical auth-owned username for a linked user.
-func authUsername(ctx context.Context, authClient authv1.AuthServiceClient, userID string, notFoundErr error) (string, error) {
+// AuthUsername loads the canonical auth-owned username for a linked user.
+func AuthUsername(ctx context.Context, authClient authv1.AuthServiceClient, userID string, notFoundErr error) (string, error) {
 	trimmedUserID := strings.TrimSpace(userID)
 	if trimmedUserID == "" {
 		return "", nil

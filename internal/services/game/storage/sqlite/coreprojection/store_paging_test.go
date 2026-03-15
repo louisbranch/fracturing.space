@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
@@ -20,7 +19,7 @@ func TestCampaignPaging(t *testing.T) {
 		if err := store.Put(context.Background(), storage.CampaignRecord{
 			ID:        id,
 			Name:      "Campaign",
-			Locale:    platformi18n.DefaultLocale(),
+			Locale:    "en-US",
 			System:    bridge.SystemIDDaggerheart,
 			Status:    campaign.StatusActive,
 			GmMode:    campaign.GmModeHuman,
@@ -60,7 +59,7 @@ func TestParticipantPaging(t *testing.T) {
 	if err := store.Put(context.Background(), storage.CampaignRecord{
 		ID:        "camp-1",
 		Name:      "Campaign",
-		Locale:    platformi18n.DefaultLocale(),
+		Locale:    "en-US",
 		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,

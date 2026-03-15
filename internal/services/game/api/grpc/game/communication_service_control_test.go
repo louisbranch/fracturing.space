@@ -7,6 +7,7 @@ import (
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -492,8 +493,8 @@ func TestRespondToCommunicationGateUsesParticipantIdentityAndRecordsPayload(t *t
 	if resp.GetContext().GetActiveSessionGate().GetId() != "gate-1" {
 		t.Fatalf("active gate id = %q, want %q", resp.GetContext().GetActiveSessionGate().GetId(), "gate-1")
 	}
-	if domain.lastCommand.Type != commandTypeSessionGateRespond {
-		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandTypeSessionGateRespond)
+	if domain.lastCommand.Type != handler.CommandTypeSessionGateRespond {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, handler.CommandTypeSessionGateRespond)
 	}
 	if domain.lastCommand.ActorType != command.ActorTypeParticipant {
 		t.Fatalf("command actor type = %q, want %q", domain.lastCommand.ActorType, command.ActorTypeParticipant)
@@ -644,8 +645,8 @@ func TestAbandonCommunicationGateUsesManagerAccessAndClearsActiveGate(t *testing
 	if resp.GetContext().GetActiveSessionGate() != nil {
 		t.Fatalf("expected active session gate to be cleared, got %+v", resp.GetContext().GetActiveSessionGate())
 	}
-	if domain.lastCommand.Type != commandTypeSessionGateAbandon {
-		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandTypeSessionGateAbandon)
+	if domain.lastCommand.Type != handler.CommandTypeSessionGateAbandon {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, handler.CommandTypeSessionGateAbandon)
 	}
 	if domain.lastCommand.ActorType != command.ActorTypeParticipant {
 		t.Fatalf("command actor type = %q, want %q", domain.lastCommand.ActorType, command.ActorTypeParticipant)
@@ -716,8 +717,8 @@ func TestAbandonGMHandoffUsesManagerAccessAndClearsActiveGate(t *testing.T) {
 	if resp.GetContext().GetActiveSessionGate() != nil {
 		t.Fatalf("expected active session gate to be cleared, got %+v", resp.GetContext().GetActiveSessionGate())
 	}
-	if domain.lastCommand.Type != commandTypeSessionGateAbandon {
-		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, commandTypeSessionGateAbandon)
+	if domain.lastCommand.Type != handler.CommandTypeSessionGateAbandon {
+		t.Fatalf("command type = %q, want %q", domain.lastCommand.Type, handler.CommandTypeSessionGateAbandon)
 	}
 	if domain.lastCommand.ActorType != command.ActorTypeParticipant {
 		t.Fatalf("command actor type = %q, want %q", domain.lastCommand.ActorType, command.ActorTypeParticipant)

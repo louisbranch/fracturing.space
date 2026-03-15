@@ -8,6 +8,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/characterworkflow"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
@@ -51,7 +52,7 @@ func (c characterApplication) PatchCharacterProfile(ctx context.Context, campaig
 
 	if err := c.executeDaggerheartProfileReplace(ctx, characterworkflow.CampaignContext{
 		ID:     campaignRecord.ID,
-		System: systemIDFromCampaignRecord(campaignRecord),
+		System: handler.SystemIDFromCampaignRecord(campaignRecord),
 		Status: campaignRecord.Status,
 	}, characterID, daggerheart.CharacterProfileFromStorage(dhProfile)); err != nil {
 		return "", projectionstore.DaggerheartCharacterProfile{}, err

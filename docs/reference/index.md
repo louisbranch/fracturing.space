@@ -30,6 +30,8 @@ Exact and integration-facing contracts.
 - Icon rendering: [icon-rendering.md](icon-rendering.md)
 - Icon catalog: [icon-catalog.md](icon-catalog.md)
 - I18n status artifact: [i18n-status.md](i18n-status.md)
+- Rejection codes: [rejection-codes.md](rejection-codes.md)
+- SQLC workflow: [sqlc-process.md](sqlc-process.md)
 - Generated command/event contracts: [events/index.md](../events/index.md)
 
 If you are changing behavior rather than consuming contracts, start from [Contributors](../audience/contributors.md).

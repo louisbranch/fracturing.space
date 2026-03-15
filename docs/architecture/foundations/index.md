@@ -19,6 +19,7 @@ Core explanations for system model, vocabulary, and write-path behavior.
 - [Event-driven system](event-driven-system.md)
 - [gRPC write path](grpc-write-path.md)
 - [Event replay](event-replay.md)
+- [Storage database separation](storage-database-separation.md)
 
 Deep reference addenda:
 

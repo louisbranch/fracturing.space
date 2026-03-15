@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/checkpoint"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -48,7 +49,7 @@ func configureDomain(srvEnv serverEnv, stores *gamegrpc.Stores, registries engin
 //
 // It composes registries, replay-based state loading, gate evaluation, and
 // decider routing once, so command execution stays consistent for every request.
-func buildDomainEngine(eventStore storage.EventStore, registries engine.Registries) (gamegrpc.Domain, error) {
+func buildDomainEngine(eventStore storage.EventStore, registries engine.Registries) (handler.Domain, error) {
 	if eventStore == nil {
 		return nil, errors.New("event store is required")
 	}

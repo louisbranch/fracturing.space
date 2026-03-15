@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
@@ -80,13 +81,13 @@ func (a forkApplication) reassignForkedPublicOwnerSeat(
 
 	requestID := grpcmeta.RequestIDFromContext(ctx)
 	invocationID := grpcmeta.InvocationIDFromContext(ctx)
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   forkCampaignID,
-			Type:         commandTypeParticipantSeatReassign,
+			Type:         handler.CommandTypeParticipantSeatReassign,
 			ActorType:    command.ActorTypeSystem,
 			ActorID:      "",
 			RequestID:    requestID,
@@ -96,7 +97,7 @@ func (a forkApplication) reassignForkedPublicOwnerSeat(
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply participant seat event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply participant seat event"),
 		},
 	)
 	if err != nil {

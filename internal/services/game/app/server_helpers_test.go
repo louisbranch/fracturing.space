@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamegrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -239,7 +238,7 @@ func TestBuildProjectionApplyOutboxApplySkipsDuplicateSeq(t *testing.T) {
 	if err := store.Put(context.Background(), storage.CampaignRecord{
 		ID:               "camp-outbox-exactly-once",
 		Name:             "Exactly Once",
-		Locale:           commonv1.Locale_LOCALE_EN_US,
+		Locale:           "en-US",
 		System:           bridge.SystemIDDaggerheart,
 		Status:           campaign.StatusDraft,
 		GmMode:           campaign.GmModeHuman,

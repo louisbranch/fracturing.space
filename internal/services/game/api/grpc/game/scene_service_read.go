@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -15,14 +18,14 @@ import (
 )
 
 const (
-	// Scenes use a slightly larger default than pageSmall because scene lists
+	// Scenes use a slightly larger default than handler.PageSmall because scene lists
 	// are typically displayed in a timeline view where more items improve UX.
 	defaultListScenesPageSize = 20
-	maxListScenesPageSize     = pageMedium
+	maxListScenesPageSize     = handler.PageMedium
 )
 
 type sceneReadDependencies struct {
-	auth   policyDependencies
+	auth   authz.PolicyDeps
 	stores sceneReadStores
 }
 
@@ -34,7 +37,7 @@ type sceneReadStores struct {
 
 func newSceneReadDependencies(stores Stores) sceneReadDependencies {
 	return sceneReadDependencies{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: sceneReadStores{
 			Campaign:       stores.Campaign,
 			Scene:          stores.Scene,
@@ -64,7 +67,7 @@ func (s *SceneService) GetScene(ctx context.Context, in *campaignv1.GetSceneRequ
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, s.reads.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, s.reads.auth, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -104,7 +107,7 @@ func (s *SceneService) ListScenes(ctx context.Context, in *campaignv1.ListScenes
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, s.reads.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, s.reads.auth, campaignRecord); err != nil {
 		return nil, err
 	}
 

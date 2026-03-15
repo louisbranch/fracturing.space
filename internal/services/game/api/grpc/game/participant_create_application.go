@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -31,20 +34,20 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return storage.ParticipantRecord{}, err
 	}
-	policyActor, err := requirePolicyActorWithDependencies(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
+	policyActor, err := authz.RequirePolicyActor(ctx, c.auth, domainauthz.CapabilityManageParticipants, campaignRecord)
 	if err != nil {
 		return storage.ParticipantRecord{}, err
 	}
 
 	userID := strings.TrimSpace(in.GetUserId())
-	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
+	profile := handler.LoadSocialProfileSnapshot(ctx, c.stores.Social, userID)
 
 	name := strings.TrimSpace(in.GetName())
 	if name == "" {
 		if profile.Name != "" {
 			name = profile.Name
 		} else if userID != "" {
-			name, err = authUsername(
+			name, err = handler.AuthUsername(
 				ctx,
 				c.authClient,
 				userID,
@@ -76,7 +79,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 	if access == participant.CampaignAccessUnspecified {
 		access = participant.CampaignAccessMember
 	} else {
-		ownerCount, err := countCampaignOwners(ctx, c.stores.Participant, campaignID)
+		ownerCount, err := authz.CountCampaignOwners(ctx, c.stores.Participant, campaignID)
 		if err != nil {
 			return storage.ParticipantRecord{}, err
 		}
@@ -106,7 +109,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		pronouns = profile.Pronouns
 	}
 	if pronouns == "" && userID != "" {
-		pronouns = defaultUnknownParticipantPronouns()
+		pronouns = handler.DefaultUnknownParticipantPronouns()
 	}
 
 	payload := participant.JoinPayload{
@@ -125,14 +128,14 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 		return storage.ParticipantRecord{}, grpcerror.Internal("encode payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeParticipantJoin,
+			Type:         handler.CommandTypeParticipantJoin,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -142,7 +145,7 @@ func (c participantApplication) CreateParticipant(ctx context.Context, campaignI
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply event"),
 		},
 	)
 	if err != nil {

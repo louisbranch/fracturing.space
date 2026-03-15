@@ -1,4 +1,4 @@
-package game
+package authz
 
 import (
 	"context"
@@ -14,9 +14,9 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// authzDecisionEvent groups the parameters for an authorization decision
-// audit log entry, replacing the previous 9-argument positional call.
-type authzDecisionEvent struct {
+// DecisionEvent groups the parameters for an authorization decision
+// audit log entry.
+type DecisionEvent struct {
 	Store           storage.AuditEventStore
 	CampaignID      string
 	Capability      domainauthz.Capability
@@ -27,7 +27,8 @@ type authzDecisionEvent struct {
 	ExtraAttributes map[string]any
 }
 
-func emitAuthzDecisionTelemetry(ctx context.Context, evt authzDecisionEvent) {
+// EmitDecisionTelemetry writes an authorization decision audit event.
+func EmitDecisionTelemetry(ctx context.Context, evt DecisionEvent) {
 	severity := audit.SeverityInfo
 	code := codes.OK
 	if evt.Err != nil {
@@ -58,7 +59,7 @@ func emitAuthzDecisionTelemetry(ctx context.Context, evt authzDecisionEvent) {
 	attributes := map[string]any{
 		"decision":      evt.Decision,
 		"reason_code":   evt.ReasonCode,
-		"policy_action": policyCapabilityLabel(evt.Capability),
+		"policy_action": PolicyCapabilityLabel(evt.Capability),
 		"grpc_code":     code.String(),
 	}
 	if access := strings.TrimSpace(string(evt.Actor.CampaignAccess)); access != "" {
@@ -73,7 +74,7 @@ func emitAuthzDecisionTelemetry(ctx context.Context, evt authzDecisionEvent) {
 
 	emitter := audit.NewEmitter(evt.Store)
 	if err := emitter.Emit(ctx, storage.AuditEvent{
-		EventName:    authzEventDecisionName,
+		EventName:    EventDecisionName,
 		Severity:     string(severity),
 		CampaignID:   strings.TrimSpace(evt.CampaignID),
 		ActorType:    actorType,
@@ -84,6 +85,6 @@ func emitAuthzDecisionTelemetry(ctx context.Context, evt authzDecisionEvent) {
 		SpanID:       spanID,
 		Attributes:   attributes,
 	}); err != nil {
-		slog.Error("audit emit failed", "event", authzEventDecisionName, "error", err)
+		slog.Error("audit emit failed", "event", EventDecisionName, "error", err)
 	}
 }

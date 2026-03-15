@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
@@ -51,7 +50,7 @@ func seedCampaign(t *testing.T, store *testStore, id string, now time.Time) stor
 	record := storage.CampaignRecord{
 		ID:        id,
 		Name:      "Campaign",
-		Locale:    i18n.DefaultLocale(),
+		Locale:    "en-US",
 		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,

@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"errors"
 	"sort"
@@ -46,7 +48,7 @@ func (a sessionApplication) ListSessions(ctx context.Context, in *campaignv1.Lis
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return storage.SessionPage{}, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, campaignRecord); err != nil {
 		return storage.SessionPage{}, err
 	}
 
@@ -78,7 +80,7 @@ func (a sessionApplication) GetSession(ctx context.Context, in *campaignv1.GetSe
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return storage.SessionRecord{}, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, campaignRecord); err != nil {
 		return storage.SessionRecord{}, err
 	}
 
@@ -106,7 +108,7 @@ func (a sessionApplication) GetSessionSpotlight(ctx context.Context, in *campaig
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, campaignRecord); err != nil {
 		return storage.SessionSpotlight{}, err
 	}
 	if _, err := a.stores.Session.GetSession(ctx, campaignID, sessionID); err != nil {

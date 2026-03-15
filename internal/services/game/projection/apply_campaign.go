@@ -43,9 +43,9 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event, payl
 	if err != nil {
 		return err
 	}
-	locale := platformi18n.DefaultLocale()
+	localeStr := platformi18n.LocaleString(platformi18n.DefaultLocale())
 	if parsed, ok := platformi18n.ParseLocale(normalized.Locale); ok {
-		locale = parsed
+		localeStr = platformi18n.LocaleString(parsed)
 	}
 
 	createdAt, err := ensureTimestamp(evt.Timestamp)
@@ -55,7 +55,7 @@ func (a Applier) applyCampaignCreated(ctx context.Context, evt event.Event, payl
 	return a.Campaign.Put(ctx, storage.CampaignRecord{
 		ID:               evt.EntityID,
 		Name:             normalized.Name,
-		Locale:           locale,
+		Locale:           localeStr,
 		System:           system,
 		Status:           campaign.StatusDraft,
 		GmMode:           normalized.GmMode,
@@ -108,11 +108,11 @@ func (a Applier) applyCampaignUpdated(ctx context.Context, evt event.Event, payl
 		case "theme_prompt":
 			updated.ThemePrompt = strings.TrimSpace(value)
 		case "locale":
-			locale, ok := platformi18n.ParseLocale(value)
+			parsed, ok := platformi18n.ParseLocale(value)
 			if !ok {
 				return fmt.Errorf("campaign locale is invalid")
 			}
-			updated.Locale = locale
+			updated.Locale = platformi18n.LocaleString(parsed)
 		case "cover_asset_id":
 			updated.CoverAssetID = strings.TrimSpace(value)
 		case "cover_set_id":

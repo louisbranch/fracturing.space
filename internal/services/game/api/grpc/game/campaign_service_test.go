@@ -11,6 +11,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
@@ -146,7 +147,7 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			commandTypeCampaignCreateWithParticipants: {
+			handler.CommandTypeCampaignCreateWithParticipants: {
 				Decision: command.Accept(
 					event.Event{
 						CampaignID:  "campaign-123",
@@ -204,8 +205,8 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("domain command count = %d, want %d", len(domain.commands), 1)
 	}
-	if domain.commands[0].Type != commandTypeCampaignCreateWithParticipants {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeCampaignCreateWithParticipants)
+	if domain.commands[0].Type != handler.CommandTypeCampaignCreateWithParticipants {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeCampaignCreateWithParticipants)
 	}
 	var workflowPayload campaign.CreateWithParticipantsPayload
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &workflowPayload); err != nil {
@@ -328,7 +329,7 @@ func TestCreateCampaign_Success(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			commandTypeCampaignCreateWithParticipants: {
+			handler.CommandTypeCampaignCreateWithParticipants: {
 				Decision: command.Accept(
 					event.Event{
 						CampaignID:  "campaign-123",
@@ -424,7 +425,7 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 	domain := &fakeDomainEngine{
 		store: ts.Event,
 		resultsByType: map[command.Type]engine.Result{
-			commandTypeCampaignCreateWithParticipants: {
+			handler.CommandTypeCampaignCreateWithParticipants: {
 				Decision: command.Accept(
 					event.Event{
 						CampaignID:  "campaign-123",
@@ -481,8 +482,8 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != commandTypeCampaignCreateWithParticipants {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeCampaignCreateWithParticipants)
+	if domain.commands[0].Type != handler.CommandTypeCampaignCreateWithParticipants {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeCampaignCreateWithParticipants)
 	}
 	if got := len(ts.Event.events["campaign-123"]); got != 2 {
 		t.Fatalf("expected 2 events, got %d", got)
@@ -528,7 +529,7 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 			domain := &fakeDomainEngine{
 				store: ts.Event,
 				resultsByType: map[command.Type]engine.Result{
-					commandTypeCampaignCreateWithParticipants: {
+					handler.CommandTypeCampaignCreateWithParticipants: {
 						Decision: command.Accept(
 							event.Event{
 								CampaignID:  "campaign-123",
@@ -594,8 +595,8 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 			if len(domain.commands) != 1 {
 				t.Fatalf("domain command count = %d, want %d", len(domain.commands), 1)
 			}
-			if domain.commands[0].Type != commandTypeCampaignCreateWithParticipants {
-				t.Fatalf("command type = %s, want %s", domain.commands[0].Type, commandTypeCampaignCreateWithParticipants)
+			if domain.commands[0].Type != handler.CommandTypeCampaignCreateWithParticipants {
+				t.Fatalf("command type = %s, want %s", domain.commands[0].Type, handler.CommandTypeCampaignCreateWithParticipants)
 			}
 
 			var workflowPayload campaign.CreateWithParticipantsPayload
@@ -651,7 +652,7 @@ func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) 
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeCampaignCreateWithParticipants: {
+		handler.CommandTypeCampaignCreateWithParticipants: {
 			Decision: command.Accept(
 				event.Event{
 					CampaignID:  "campaign-123",
@@ -734,7 +735,7 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeCampaignCreateWithParticipants: {
+		handler.CommandTypeCampaignCreateWithParticipants: {
 			Decision: command.Accept(
 				event.Event{
 					CampaignID:  "campaign-123",
@@ -799,7 +800,7 @@ func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameWithoutSocialProf
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeCampaignCreateWithParticipants: {
+		handler.CommandTypeCampaignCreateWithParticipants: {
 			Decision: command.Accept(
 				event.Event{
 					CampaignID:  "campaign-123",
@@ -873,7 +874,7 @@ func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameForLocale(t *test
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeCampaignCreateWithParticipants: {
+		handler.CommandTypeCampaignCreateWithParticipants: {
 			Decision: command.Accept(
 				event.Event{
 					CampaignID:  "campaign-123",
@@ -938,7 +939,7 @@ func TestCreateCampaign_AIUsesLocalizedNameAndOwnerFallsBackToAuthUsernameForLoc
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
 
 	domain := &fakeDomainEngine{store: ts.Event, resultsByType: map[command.Type]engine.Result{
-		commandTypeCampaignCreateWithParticipants: {
+		handler.CommandTypeCampaignCreateWithParticipants: {
 			Decision: command.Accept(
 				event.Event{
 					CampaignID:  "campaign-123",
@@ -1818,7 +1819,7 @@ func TestUpdateCampaign_Success(t *testing.T) {
 	storedCampaign := testCampaignRecordWithStatus(campaign.StatusActive)
 	storedCampaign.Name = "Old Name"
 	storedCampaign.ThemePrompt = "Old theme"
-	storedCampaign.Locale = commonv1.Locale_LOCALE_EN_US
+	storedCampaign.Locale = "en-US"
 	ts.Campaign.campaigns["c1"] = storedCampaign
 
 	domain := &fakeDomainEngine{store: ts.Event, result: engine.Result{
@@ -1882,7 +1883,7 @@ func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
 	storedCampaign := testCampaignRecordWithStatus(campaign.StatusActive)
 	storedCampaign.Name = "Existing Name"
 	storedCampaign.ThemePrompt = "Existing theme"
-	storedCampaign.Locale = commonv1.Locale_LOCALE_EN_US
+	storedCampaign.Locale = "en-US"
 	ts.Campaign.campaigns["c1"] = storedCampaign
 
 	domain := &fakeDomainEngine{store: ts.Event}

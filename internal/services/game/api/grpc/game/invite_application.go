@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"time"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
@@ -14,7 +16,7 @@ import (
 // inviteApplication coordinates invite transport use-cases across focused
 // create, claim, and revoke files.
 type inviteApplication struct {
-	auth              policyDependencies
+	auth              authz.PolicyDeps
 	stores            inviteApplicationStores
 	write             domainwriteexec.WritePath
 	applier           projection.Applier
@@ -48,7 +50,7 @@ func newInviteApplicationWithDependencies(
 	joinGrantVerifier joingrant.Verifier,
 ) inviteApplication {
 	app := inviteApplication{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: inviteApplicationStores{
 			Campaign:    stores.Campaign,
 			Participant: stores.Participant,

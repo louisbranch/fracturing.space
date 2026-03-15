@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"errors"
 	"strings"
@@ -30,7 +32,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 	if err != nil {
 		return "", projectionstore.DaggerheartCharacterState{}, err
 	}
-	if _, err := requireCharacterMutationPolicyWithDependencies(ctx, a.auth, c, characterID); err != nil {
+	if _, err := authz.RequireCharacterMutationPolicy(ctx, a.auth, c, characterID); err != nil {
 		return "", projectionstore.DaggerheartCharacterState{}, err
 	}
 

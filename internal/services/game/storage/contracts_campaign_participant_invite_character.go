@@ -4,7 +4,6 @@ import (
 	"context"
 	"time"
 
-	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -16,7 +15,7 @@ import (
 type CampaignRecord struct {
 	ID               string
 	Name             string
-	Locale           commonv1.Locale
+	Locale           string
 	System           bridge.SystemID
 	Status           campaign.Status
 	GmMode           campaign.GmMode

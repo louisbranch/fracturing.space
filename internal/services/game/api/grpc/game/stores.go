@@ -2,6 +2,7 @@ package game
 
 import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
@@ -52,7 +53,7 @@ type Stores struct {
 
 	// Write groups the domain executor, runtime controls, and audit store
 	// used by the write path. It satisfies domainwriteexec.Deps so handlers
-	// can pass it directly to executeAndApplyDomainCommand.
+	// can pass it directly to handler.ExecuteAndApplyDomainCommand.
 	Write domainwriteexec.WritePath
 
 	// Events is the event registry used for intent filtering and applier
@@ -84,7 +85,7 @@ type StoresFromProjectionConfig struct {
 	AuditStore      storage.AuditEventStore
 	ContentStore    contentstore.DaggerheartContentReadStore
 	SocialClient    socialv1.SocialServiceClient
-	Domain          Domain
+	Domain          handler.Domain
 	WriteRuntime    *domainwrite.Runtime
 	Events          *event.Registry
 }

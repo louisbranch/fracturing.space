@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 	"strings"
@@ -36,7 +39,7 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	if err != nil {
 		return storage.CharacterRecord{}, err
 	}
-	policyActor, err := requireCharacterMutationPolicyWithDependencies(
+	policyActor, err := authz.RequireCharacterMutationPolicy(
 		ctx,
 		c.auth,
 		campaignRecord,
@@ -64,13 +67,13 @@ func (c characterApplication) DeleteCharacter(ctx context.Context, campaignID st
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCharacterDelete,
+			Type:         handler.CommandTypeCharacterDelete,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

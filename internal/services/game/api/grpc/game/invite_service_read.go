@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"strings"
 
@@ -20,7 +22,7 @@ import (
 )
 
 type inviteReadDependencies struct {
-	auth       policyDependencies
+	auth       authz.PolicyDeps
 	stores     inviteReadStores
 	authClient authv1.AuthServiceClient
 }
@@ -33,7 +35,7 @@ type inviteReadStores struct {
 
 func newInviteReadDependencies(stores Stores, authClient authv1.AuthServiceClient) inviteReadDependencies {
 	return inviteReadDependencies{
-		auth: newPolicyDependencies(stores),
+		auth: authz.PolicyDeps{Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit},
 		stores: inviteReadStores{
 			Campaign:    stores.Campaign,
 			Participant: stores.Participant,
@@ -64,7 +66,7 @@ func (s *InviteService) GetInvite(ctx context.Context, in *campaignv1.GetInviteR
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, err
 	}
-	if err := requirePolicyWithDependencies(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -127,7 +129,7 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requirePolicyWithDependencies(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 

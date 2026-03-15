@@ -1,4 +1,4 @@
-package game
+package authz
 
 import (
 	"context"
@@ -12,33 +12,28 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-type authorizationEvaluatorStores struct {
+// EvaluatorStores holds the stores required by the authorization evaluator.
+type EvaluatorStores struct {
 	Campaign    storage.CampaignStore
 	Participant storage.ParticipantStore
 	Character   storage.CharacterStore
 	Audit       storage.AuditEventStore
 }
 
-func newAuthorizationEvaluatorDependencies(stores Stores) authorizationEvaluatorStores {
-	return authorizationEvaluatorStores{
-		Campaign:    stores.Campaign,
-		Participant: stores.Participant,
-		Character:   stores.Character,
-		Audit:       stores.Audit,
-	}
+// Evaluator implements authorization policy evaluation for the Can/BatchCan
+// gRPC API surface.
+type Evaluator struct {
+	stores EvaluatorStores
 }
 
-type authorizationEvaluator struct {
-	stores authorizationEvaluatorStores
+// NewEvaluator constructs an Evaluator with the given store dependencies.
+func NewEvaluator(stores EvaluatorStores) Evaluator {
+	return Evaluator{stores: stores}
 }
 
-func newAuthorizationEvaluator(stores authorizationEvaluatorStores) authorizationEvaluator {
-	return authorizationEvaluator{
-		stores: stores,
-	}
-}
-
-func (e authorizationEvaluator) Evaluate(ctx context.Context, in *campaignv1.CanRequest) (*campaignv1.CanResponse, error) {
+// Evaluate checks whether the calling actor can perform the requested
+// action/resource combination in the target campaign.
+func (e Evaluator) Evaluate(ctx context.Context, in *campaignv1.CanRequest) (*campaignv1.CanResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "authorization request is required")
 	}
@@ -47,11 +42,11 @@ func (e authorizationEvaluator) Evaluate(ctx context.Context, in *campaignv1.Can
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	action, ok := authorizationActionFromProto(in.GetAction())
+	action, ok := ActionFromProto(in.GetAction())
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "authorization action is required")
 	}
-	resource, ok := authorizationResourceFromProto(in.GetResource())
+	resource, ok := ResourceFromProto(in.GetResource())
 	if !ok {
 		return nil, status.Error(codes.InvalidArgument, "authorization resource is required")
 	}
@@ -65,33 +60,33 @@ func (e authorizationEvaluator) Evaluate(ctx context.Context, in *campaignv1.Can
 		return nil, err
 	}
 
-	actor, reasonCode, err := authorizePolicyActorWithParticipantStore(ctx, e.stores.Participant, capability, campaignRecord)
+	actor, reasonCode, err := AuthorizePolicyActorWithParticipantStore(ctx, e.stores.Participant, capability, campaignRecord)
 	if err != nil {
-		emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+		EmitDecisionTelemetry(ctx, DecisionEvent{
 			Store:      e.stores.Audit,
 			CampaignID: campaignID,
 			Capability: capability,
-			Decision:   authzDecisionDeny,
+			Decision:   DecisionDeny,
 			ReasonCode: reasonCode,
 			Actor:      actor,
 			Err:        err,
 		})
 		if status.Code(err) == codes.PermissionDenied {
-			return canResponse(false, reasonCode, actor), nil
+			return CanResponse(false, reasonCode, actor), nil
 		}
 		return nil, err
 	}
 
-	extraAttributes := authzExtraAttributesForReason(ctx, reasonCode)
-	if reasonCode != authzReasonAllowAdminOverride {
+	extraAttributes := ExtraAttributesForReason(ctx, reasonCode)
+	if reasonCode != ReasonAllowAdminOverride {
 		if capability == domainauthz.CapabilityMutateCharacters {
-			ownerParticipantID, evaluateOwnership, resolveErr := resolveCanCharacterOwnerParticipantIDWithCharacterStore(ctx, e.stores.Character, campaignID, in.GetTarget())
+			ownerParticipantID, evaluateOwnership, resolveErr := ResolveCanCharacterOwnerParticipantIDWithCharacterStore(ctx, e.stores.Character, campaignID, in.GetTarget())
 			if resolveErr != nil {
-				emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+				EmitDecisionTelemetry(ctx, DecisionEvent{
 					Store:      e.stores.Audit,
 					CampaignID: campaignID,
 					Capability: capability,
-					Decision:   authzDecisionDeny,
+					Decision:   DecisionDeny,
 					ReasonCode: domainauthz.ReasonErrorOwnerResolution,
 					Actor:      actor,
 					Err:        resolveErr,
@@ -107,28 +102,28 @@ func (e authorizationEvaluator) Evaluate(ctx context.Context, in *campaignv1.Can
 					"character_id":         characterID,
 					"owner_participant_id": ownerParticipantID,
 				}
-				extraAttributes = mergeAuthzAttributes(extraAttributes, characterAttributes)
+				extraAttributes = MergeAttributes(extraAttributes, characterAttributes)
 				decision := domainauthz.CanCharacterMutation(actor.CampaignAccess, ids.ParticipantID(actor.ID), ids.ParticipantID(ownerParticipantID))
 				if !decision.Allowed {
 					authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
-					emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+					EmitDecisionTelemetry(ctx, DecisionEvent{
 						Store:           e.stores.Audit,
 						CampaignID:      campaignID,
 						Capability:      capability,
-						Decision:        authzDecisionDeny,
+						Decision:        DecisionDeny,
 						ReasonCode:      decision.ReasonCode,
 						Actor:           actor,
 						Err:             authErr,
 						ExtraAttributes: extraAttributes,
 					})
-					return canResponse(false, decision.ReasonCode, actor), nil
+					return CanResponse(false, decision.ReasonCode, actor), nil
 				}
 				reasonCode = decision.ReasonCode
 			}
 		}
 
 		if capability == domainauthz.CapabilityManageParticipants {
-			decision, participantAttributes, evaluated, evaluationErr := evaluateCanParticipantGovernanceTargetWithStores(
+			decision, participantAttributes, evaluated, evaluationErr := EvaluateCanParticipantGovernanceTargetWithStores(
 				ctx,
 				e.stores.Participant,
 				e.stores.Character,
@@ -137,12 +132,12 @@ func (e authorizationEvaluator) Evaluate(ctx context.Context, in *campaignv1.Can
 				in.GetTarget(),
 			)
 			if evaluationErr != nil {
-				emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+				EmitDecisionTelemetry(ctx, DecisionEvent{
 					Store:           e.stores.Audit,
 					CampaignID:      campaignID,
 					Capability:      capability,
-					Decision:        authzDecisionDeny,
-					ReasonCode:      authzReasonErrorActorLoad,
+					Decision:        DecisionDeny,
+					ReasonCode:      ReasonErrorActorLoad,
 					Actor:           actor,
 					Err:             evaluationErr,
 					ExtraAttributes: participantAttributes,
@@ -150,34 +145,34 @@ func (e authorizationEvaluator) Evaluate(ctx context.Context, in *campaignv1.Can
 				return nil, evaluationErr
 			}
 			if evaluated {
-				extraAttributes = mergeAuthzAttributes(extraAttributes, participantAttributes)
+				extraAttributes = MergeAttributes(extraAttributes, participantAttributes)
 				if !decision.Allowed {
 					authErr := status.Error(codes.PermissionDenied, "participant lacks permission")
-					emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+					EmitDecisionTelemetry(ctx, DecisionEvent{
 						Store:           e.stores.Audit,
 						CampaignID:      campaignID,
 						Capability:      capability,
-						Decision:        authzDecisionDeny,
+						Decision:        DecisionDeny,
 						ReasonCode:      decision.ReasonCode,
 						Actor:           actor,
 						Err:             authErr,
 						ExtraAttributes: extraAttributes,
 					})
-					return canResponse(false, decision.ReasonCode, actor), nil
+					return CanResponse(false, decision.ReasonCode, actor), nil
 				}
 				reasonCode = decision.ReasonCode
 			}
 		}
 	}
 
-	emitAuthzDecisionTelemetry(ctx, authzDecisionEvent{
+	EmitDecisionTelemetry(ctx, DecisionEvent{
 		Store:           e.stores.Audit,
 		CampaignID:      campaignID,
 		Capability:      capability,
-		Decision:        authzDecisionForReason(reasonCode),
+		Decision:        DecisionForReason(reasonCode),
 		ReasonCode:      reasonCode,
 		Actor:           actor,
 		ExtraAttributes: extraAttributes,
 	})
-	return canResponse(true, reasonCode, actor), nil
+	return CanResponse(true, reasonCode, actor), nil
 }

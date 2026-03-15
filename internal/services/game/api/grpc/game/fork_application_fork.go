@@ -6,8 +6,8 @@ import (
 	"fmt"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -61,7 +61,7 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	}
 	campaignPayload := campaign.CreatePayload{
 		Name:         newCampaignName,
-		Locale:       platformi18n.LocaleString(sourceCampaign.Locale),
+		Locale:       sourceCampaign.Locale,
 		GameSystem:   sourceCampaign.System.String(),
 		GmMode:       campaigntransport.GMModeToProto(sourceCampaign.GmMode).String(),
 		Intent:       campaigntransport.CampaignIntentToProto(sourceCampaign.Intent).String(),
@@ -72,14 +72,14 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	if err != nil {
 		return storage.CampaignRecord{}, nil, 0, grpcerror.Internal("encode payload", err)
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
-			Type:         commandTypeCampaignCreate,
+			Type:         handler.CommandTypeCampaignCreate,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -110,13 +110,13 @@ func (a forkApplication) ForkCampaign(ctx context.Context, sourceCampaignID stri
 	if actorID != "" {
 		actorType = command.ActorTypeParticipant
 	}
-	_, err = executeAndApplyDomainCommand(
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   f.NewCampaignID,
-			Type:         commandTypeCampaignFork,
+			Type:         handler.CommandTypeCampaignFork,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,

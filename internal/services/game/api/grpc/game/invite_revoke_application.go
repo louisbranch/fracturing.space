@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"encoding/json"
 
@@ -32,7 +35,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	if err != nil {
 		return storage.InviteRecord{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
 		return storage.InviteRecord{}, err
 	}
 	if inv.Status == invite.StatusRevoked {
@@ -49,14 +52,14 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	if err != nil {
 		return storage.InviteRecord{}, grpcerror.Internal("encode invite payload", err)
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		a.write,
 		a.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   inv.CampaignID,
-			Type:         commandTypeInviteRevoke,
+			Type:         handler.CommandTypeInviteRevoke,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    requestID,
@@ -66,7 +69,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 			PayloadJSON:  payloadJSON,
 		}),
 		domainwrite.Options{
-			ApplyErr: domainApplyErrorWithCodePreserve("apply invite event"),
+			ApplyErr: handler.ApplyErrorWithCodePreserve("apply invite event"),
 		},
 	)
 	if err != nil {

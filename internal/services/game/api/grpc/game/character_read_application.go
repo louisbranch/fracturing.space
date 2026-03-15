@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"errors"
 	"strings"
@@ -54,7 +57,7 @@ func (c characterApplication) ListCharacterProfiles(ctx context.Context, campaig
 	if err != nil {
 		return characterProfileListPage{}, "", err
 	}
-	systemID := systemIDFromCampaignRecord(campaignRecord)
+	systemID := handler.SystemIDFromCampaignRecord(campaignRecord)
 	if !strings.EqualFold(string(systemID), string(bridge.SystemIDDaggerheart)) {
 		return characterProfileListPage{}, systemID, nil
 	}
@@ -109,7 +112,7 @@ func (c characterApplication) loadReadableCampaign(ctx context.Context, campaign
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, c.auth, campaignRecord); err != nil {
+	if err := authz.RequireReadPolicy(ctx, c.auth, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	return campaignRecord, nil

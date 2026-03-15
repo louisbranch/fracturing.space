@@ -1,6 +1,9 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
+
 	"context"
 	"fmt"
 
@@ -19,7 +22,7 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -29,14 +32,14 @@ func (c campaignApplication) EndCampaign(ctx context.Context, campaignID string)
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusCompleted); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignEnd,
+			Type:         handler.CommandTypeCampaignEnd,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -62,7 +65,7 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 
@@ -72,14 +75,14 @@ func (c campaignApplication) ArchiveCampaign(ctx context.Context, campaignID str
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusArchived); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignArchive,
+			Type:         handler.CommandTypeCampaignArchive,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),
@@ -105,20 +108,20 @@ func (c campaignApplication) RestoreCampaign(ctx context.Context, campaignID str
 	if err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	if err := requirePolicyWithDependencies(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
+	if err := authz.RequirePolicy(ctx, c.auth, domainauthz.CapabilityManageCampaign, campaignRecord); err != nil {
 		return storage.CampaignRecord{}, err
 	}
 	if err := validateCampaignStatusTransition(campaignRecord, campaign.StatusDraft); err != nil {
 		return storage.CampaignRecord{}, err
 	}
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignRestore,
+			Type:         handler.CommandTypeCampaignRestore,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

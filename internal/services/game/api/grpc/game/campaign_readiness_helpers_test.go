@@ -216,25 +216,25 @@ func TestResolveReadinessLocale(t *testing.T) {
 	tests := []struct {
 		name      string
 		requested commonv1.Locale
-		campaign  commonv1.Locale
+		campaign  string
 		expected  commonv1.Locale
 	}{
 		{
 			name:      "requested locale wins",
 			requested: commonv1.Locale_LOCALE_PT_BR,
-			campaign:  commonv1.Locale_LOCALE_EN_US,
+			campaign:  "en-US",
 			expected:  commonv1.Locale_LOCALE_PT_BR,
 		},
 		{
 			name:      "campaign locale fallback",
 			requested: commonv1.Locale_LOCALE_UNSPECIFIED,
-			campaign:  commonv1.Locale_LOCALE_PT_BR,
+			campaign:  "pt-BR",
 			expected:  commonv1.Locale_LOCALE_PT_BR,
 		},
 		{
 			name:      "default locale fallback",
 			requested: commonv1.Locale_LOCALE_UNSPECIFIED,
-			campaign:  commonv1.Locale_LOCALE_UNSPECIFIED,
+			campaign:  "",
 			expected:  commonv1.Locale_LOCALE_EN_US,
 		},
 	}

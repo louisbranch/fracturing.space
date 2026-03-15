@@ -10,6 +10,7 @@ import (
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
 	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/campaigntransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/commandbuild"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
@@ -92,13 +93,13 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		defaultLocale = platformi18n.DefaultLocale()
 	}
 
-	profile := loadSocialProfileSnapshot(ctx, c.stores.Social, userID)
-	creatorDisplayName := defaultUnknownParticipantName(defaultLocale)
-	creatorPronouns := defaultUnknownParticipantPronouns()
+	profile := handler.LoadSocialProfileSnapshot(ctx, c.stores.Social, userID)
+	creatorDisplayName := handler.DefaultUnknownParticipantName(defaultLocale)
+	creatorPronouns := handler.DefaultUnknownParticipantPronouns()
 	if !ownerlessStarterTemplate {
 		creatorDisplayName = strings.TrimSpace(profile.Name)
 		if creatorDisplayName == "" {
-			creatorDisplayName, err = authUsername(
+			creatorDisplayName, err = handler.AuthUsername(
 				ctx,
 				c.authClient,
 				userID,
@@ -110,7 +111,7 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		}
 		creatorPronouns = strings.TrimSpace(profile.Pronouns)
 		if creatorPronouns == "" {
-			creatorPronouns = defaultUnknownParticipantPronouns()
+			creatorPronouns = handler.DefaultUnknownParticipantPronouns()
 		}
 	}
 
@@ -140,11 +141,11 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		participantPayloads = append(participantPayloads, participant.JoinPayload{
 			ParticipantID:  ids.ParticipantID(aiParticipantID),
 			UserID:         "",
-			Name:           defaultAIParticipantName(defaultLocale),
+			Name:           handler.DefaultAIParticipantName(defaultLocale),
 			Role:           "GM",
 			Controller:     "AI",
 			CampaignAccess: "MEMBER",
-			Pronouns:       defaultAIParticipantPronouns(),
+			Pronouns:       handler.DefaultAIParticipantPronouns(),
 		})
 	}
 
@@ -156,14 +157,14 @@ func (c campaignApplication) CreateCampaign(ctx context.Context, in *campaignv1.
 		return storage.CampaignRecord{}, storage.ParticipantRecord{}, grpcerror.Internal("encode create workflow payload", err)
 	}
 
-	actorID, actorType := resolveCommandActor(ctx)
-	_, err = executeAndApplyDomainCommand(
+	actorID, actorType := handler.ResolveCommandActor(ctx)
+	_, err = handler.ExecuteAndApplyDomainCommand(
 		ctx,
 		c.write,
 		c.applier,
 		commandbuild.Core(commandbuild.CoreInput{
 			CampaignID:   campaignID,
-			Type:         commandTypeCampaignCreateWithParticipants,
+			Type:         handler.CommandTypeCampaignCreateWithParticipants,
 			ActorType:    actorType,
 			ActorID:      actorID,
 			RequestID:    grpcmeta.RequestIDFromContext(ctx),

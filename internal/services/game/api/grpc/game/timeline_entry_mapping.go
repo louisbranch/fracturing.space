@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -37,7 +38,7 @@ func timelineEntryFromEvent(ctx context.Context, resolver *timelineProjectionRes
 
 func timelineChangeFields(evt event.Event) []*campaignv1.ProjectionField {
 	switch evt.Type {
-	case eventTypeDaggerheartCharacterStatePatched:
+	case handler.EventTypeDaggerheartCharacterStatePatched:
 		return daggerheartStateChangeFields(evt.PayloadJSON)
 	default:
 		return nil

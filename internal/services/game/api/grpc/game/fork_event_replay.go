@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	domainwrite "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -84,13 +85,13 @@ func (r forkEventReplay) CopyToCampaign(
 
 func shouldCopyForkEvent(evt event.Event, copyParticipants bool) (bool, error) {
 	switch evt.Type {
-	case eventTypeCampaignCreated, eventTypeCampaignForked:
+	case handler.EventTypeCampaignCreated, handler.EventTypeCampaignForked:
 		return false, nil
-	case eventTypeCampaignAIBound, eventTypeCampaignAIUnbound:
+	case handler.EventTypeCampaignAIBound, handler.EventTypeCampaignAIUnbound:
 		return false, nil
-	case eventTypeParticipantJoined, eventTypeParticipantUpdated, eventTypeParticipantLeft:
+	case handler.EventTypeParticipantJoined, handler.EventTypeParticipantUpdated, handler.EventTypeParticipantLeft:
 		return copyParticipants, nil
-	case eventTypeCharacterUpdated:
+	case handler.EventTypeCharacterUpdated:
 		if copyParticipants {
 			return true, nil
 		}

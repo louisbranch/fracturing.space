@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"strings"
 
@@ -10,12 +12,12 @@ import (
 )
 
 type authorizationApplication struct {
-	evaluator authorizationEvaluator
+	evaluator authz.Evaluator
 }
 
 func newAuthorizationApplication(stores Stores) authorizationApplication {
 	return authorizationApplication{
-		evaluator: newAuthorizationEvaluator(newAuthorizationEvaluatorDependencies(stores)),
+		evaluator: authz.NewEvaluator(authz.EvaluatorStores{Campaign: stores.Campaign, Participant: stores.Participant, Character: stores.Character, Audit: stores.Audit}),
 	}
 }
 

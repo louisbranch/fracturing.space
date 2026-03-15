@@ -8,7 +8,6 @@ import (
 	"time"
 
 	apperrors "github.com/louisbranch/fracturing.space/internal/platform/errors"
-	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
@@ -42,7 +41,7 @@ func TestOpenAlias(t *testing.T) {
 	if err := store.Put(context.Background(), storage.CampaignRecord{
 		ID:        "camp-open",
 		Name:      "Test",
-		Locale:    platformi18n.DefaultLocale(),
+		Locale:    "en-US",
 		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusActive,
 		GmMode:    campaign.GmModeHuman,
@@ -386,7 +385,7 @@ func TestCampaignPutUpdate(t *testing.T) {
 	c := storage.CampaignRecord{
 		ID:        "camp-update",
 		Name:      "Original",
-		Locale:    platformi18n.DefaultLocale(),
+		Locale:    "en-US",
 		System:    bridge.SystemIDDaggerheart,
 		Status:    campaign.StatusDraft,
 		GmMode:    campaign.GmModeAI,

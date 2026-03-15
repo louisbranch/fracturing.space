@@ -1,6 +1,8 @@
 package game
 
 import (
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
+
 	"context"
 	"strconv"
 	"strings"
@@ -35,7 +37,7 @@ func (a eventApplication) ListEvents(ctx context.Context, in *campaignv1.ListEve
 		return nil, err
 	}
 
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
 		return nil, err
 	}
 
@@ -112,7 +114,7 @@ func (a eventApplication) SubscribeCampaignUpdates(
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
 		return err
 	}
 
@@ -175,7 +177,7 @@ func (a eventApplication) ListTimelineEntries(ctx context.Context, in *campaignv
 	if err != nil {
 		return nil, err
 	}
-	if err := requireReadPolicyWithDependencies(ctx, a.auth, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
+	if err := authz.RequireReadPolicy(ctx, a.auth, storage.CampaignRecord{ID: normalized.campaignID}); err != nil {
 		return nil, err
 	}
 

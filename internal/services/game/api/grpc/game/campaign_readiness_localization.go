@@ -10,12 +10,13 @@ import (
 	"golang.org/x/text/message"
 )
 
-func resolveReadinessLocale(requested commonv1.Locale, campaignLocale commonv1.Locale) commonv1.Locale {
+func resolveReadinessLocale(requested commonv1.Locale, campaignLocale string) commonv1.Locale {
 	if requested != commonv1.Locale_LOCALE_UNSPECIFIED {
 		return platformi18n.NormalizeLocale(requested)
 	}
-	if campaignLocale != commonv1.Locale_LOCALE_UNSPECIFIED {
-		return platformi18n.NormalizeLocale(campaignLocale)
+	if campaignLocale != "" {
+		parsed, _ := platformi18n.ParseLocale(campaignLocale)
+		return platformi18n.NormalizeLocale(parsed)
 	}
 	return commonv1.Locale_LOCALE_EN_US
 }

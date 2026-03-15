@@ -5,13 +5,14 @@ import (
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	"github.com/louisbranch/fracturing.space/internal/platform/id"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 )
 
 const (
-	defaultListForksPageSize = pageSmall
-	maxListForksPageSize     = pageMedium
-	forkEventPageSize        = pageLarge
-	forkSnapshotPageSize     = pageLarge
+	defaultListForksPageSize = handler.PageSmall
+	maxListForksPageSize     = handler.PageMedium
+	forkEventPageSize        = handler.PageLarge
+	forkSnapshotPageSize     = handler.PageLarge
 )
 
 // ForkService implements the game.v1.ForkService gRPC API.
