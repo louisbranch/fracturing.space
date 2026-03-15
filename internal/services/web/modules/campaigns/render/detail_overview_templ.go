@@ -39,7 +39,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.menu.overview"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 12, Col: 67}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 12, Col: 67}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -58,7 +58,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var3 string
 				templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.tooltip_actions_locked"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 16, Col: 99}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 16, Col: 99}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 				if templ_7745c5c3_Err != nil {
@@ -71,7 +71,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var4 string
 				templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.action_manage"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 17, Col: 171}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 17, Col: 171}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 				if templ_7745c5c3_Err != nil {
@@ -89,7 +89,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var5 templ.SafeURL
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignAIBinding(view.CampaignID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 20, Col: 96}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 20, Col: 96}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -102,7 +102,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var6 string
 				templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.action_manage"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 20, Col: 195}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 20, Col: 195}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 				if templ_7745c5c3_Err != nil {
@@ -123,7 +123,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.tooltip_actions_locked"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 25, Col: 99}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 25, Col: 99}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -136,7 +136,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var8 string
 				templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.action_edit"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 26, Col: 152}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 26, Col: 152}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 				if templ_7745c5c3_Err != nil {
@@ -154,7 +154,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var9 templ.SafeURL
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignEdit(view.CampaignID))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 29, Col: 91}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 29, Col: 91}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -167,7 +167,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 				var templ_7745c5c3_Var10 string
 				templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.action_edit"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 29, Col: 171}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 29, Col: 171}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 				if templ_7745c5c3_Err != nil {
@@ -186,7 +186,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_campaign_name"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 36, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 36, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -199,7 +199,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(view.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 37, Col: 49}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 37, Col: 49}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -212,7 +212,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(view.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 37, Col: 63}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 37, Col: 63}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -225,7 +225,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_campaign_id"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 40, Col: 81}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 40, Col: 81}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -238,7 +238,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(view.CampaignID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 41, Col: 62}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 41, Col: 62}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -251,7 +251,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(view.CampaignID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 41, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 41, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -264,7 +264,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaigns.table.system"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 44, Col: 68}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 44, Col: 68}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -277,7 +277,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var18 string
 		templ_7745c5c3_Var18, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewSystem(loc, view.System))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 45, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 45, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var18))
 		if templ_7745c5c3_Err != nil {
@@ -290,7 +290,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewSystem(loc, view.System))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 45, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 45, Col: 127}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -303,7 +303,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var20 string
 		templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaigns.table.gm_mode"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 48, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 48, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 		if templ_7745c5c3_Err != nil {
@@ -316,7 +316,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var21 string
 		templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewGMMode(loc, view.GMMode))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 49, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 49, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 		if templ_7745c5c3_Err != nil {
@@ -329,7 +329,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var22 string
 		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewGMMode(loc, view.GMMode))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 49, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 49, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
 		if templ_7745c5c3_Err != nil {
@@ -342,7 +342,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var23 string
 		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 52, Col: 71}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 52, Col: 71}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
 		if templ_7745c5c3_Err != nil {
@@ -355,7 +355,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var24 string
 		templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewAIBindingStatus(loc, view.AIBindingStatus))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 53, Col: 111}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 53, Col: 111}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 		if templ_7745c5c3_Err != nil {
@@ -368,7 +368,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var25 string
 		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewAIBindingStatus(loc, view.AIBindingStatus))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 53, Col: 174}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 53, Col: 174}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
 		if templ_7745c5c3_Err != nil {
@@ -381,7 +381,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_status"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 56, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 56, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -394,7 +394,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewStatus(loc, view.Status))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 57, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 57, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -407,7 +407,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var28 string
 		templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewStatus(loc, view.Status))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 57, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 57, Col: 127}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 		if templ_7745c5c3_Err != nil {
@@ -420,7 +420,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_locale"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 60, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 60, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -433,7 +433,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var30 string
 		templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewLocale(loc, view.Locale))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 61, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 61, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 		if templ_7745c5c3_Err != nil {
@@ -446,7 +446,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewLocale(loc, view.Locale))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 61, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 61, Col: 127}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {
@@ -459,7 +459,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var32 string
 		templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_intent"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 64, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 64, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 		if templ_7745c5c3_Err != nil {
@@ -472,7 +472,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var33 string
 		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewIntent(loc, view.Intent))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 65, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 65, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 		if templ_7745c5c3_Err != nil {
@@ -485,7 +485,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var34 string
 		templ_7745c5c3_Var34, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewIntent(loc, view.Intent))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 65, Col: 127}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 65, Col: 127}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var34))
 		if templ_7745c5c3_Err != nil {
@@ -498,7 +498,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var35 string
 		templ_7745c5c3_Var35, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_access_policy"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 68, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 68, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var35))
 		if templ_7745c5c3_Err != nil {
@@ -511,7 +511,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var36 string
 		templ_7745c5c3_Var36, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewAccessPolicy(loc, view.AccessPolicy))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 69, Col: 101}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 69, Col: 101}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var36))
 		if templ_7745c5c3_Err != nil {
@@ -524,7 +524,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var37 string
 		templ_7745c5c3_Var37, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewAccessPolicy(loc, view.AccessPolicy))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 69, Col: 158}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 69, Col: 158}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var37))
 		if templ_7745c5c3_Err != nil {
@@ -537,7 +537,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var38 string
 		templ_7745c5c3_Var38, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_theme_prompt"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 72, Col: 82}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 72, Col: 82}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var38))
 		if templ_7745c5c3_Err != nil {
@@ -550,7 +550,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var39 string
 		templ_7745c5c3_Var39, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewTheme(loc, view.Theme))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 73, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 73, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var39))
 		if templ_7745c5c3_Err != nil {
@@ -563,7 +563,7 @@ func overviewFragment(view OverviewPageView, loc Localizer) templ.Component {
 		var templ_7745c5c3_Var40 string
 		templ_7745c5c3_Var40, templ_7745c5c3_Err = templ.JoinStringErrs(campaignOverviewTheme(loc, view.Theme))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 73, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 73, Col: 122}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var40))
 		if templ_7745c5c3_Err != nil {
@@ -605,7 +605,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var42 string
 		templ_7745c5c3_Var42, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.action_edit"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 85, Col: 64}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 85, Col: 64}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var42))
 		if templ_7745c5c3_Err != nil {
@@ -618,7 +618,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var43 templ.SafeURL
 		templ_7745c5c3_Var43, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignEdit(view.CampaignID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 86, Col: 75}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 86, Col: 75}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var43))
 		if templ_7745c5c3_Err != nil {
@@ -631,7 +631,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var44 string
 		templ_7745c5c3_Var44, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_campaign_name"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 89, Col: 86}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 89, Col: 86}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var44))
 		if templ_7745c5c3_Err != nil {
@@ -644,7 +644,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var45 string
 		templ_7745c5c3_Var45, templ_7745c5c3_Err = templ.JoinStringErrs(view.Name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 91, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 91, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var45))
 		if templ_7745c5c3_Err != nil {
@@ -657,7 +657,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var46 string
 		templ_7745c5c3_Var46, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_theme_prompt"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 95, Col: 85}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 95, Col: 85}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var46))
 		if templ_7745c5c3_Err != nil {
@@ -670,7 +670,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var47 string
 		templ_7745c5c3_Var47, templ_7745c5c3_Err = templ.JoinStringErrs(view.Theme)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 97, Col: 99}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 97, Col: 99}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var47))
 		if templ_7745c5c3_Err != nil {
@@ -683,7 +683,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var48 string
 		templ_7745c5c3_Var48, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.label_locale"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 101, Col: 79}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 101, Col: 79}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var48))
 		if templ_7745c5c3_Err != nil {
@@ -706,7 +706,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var49 string
 		templ_7745c5c3_Var49, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.value_locale_en_us"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 104, Col: 124}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 104, Col: 124}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var49))
 		if templ_7745c5c3_Err != nil {
@@ -729,7 +729,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var50 string
 		templ_7745c5c3_Var50, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.overview.value_locale_pt_br"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 105, Col: 124}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 105, Col: 124}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var50))
 		if templ_7745c5c3_Err != nil {
@@ -742,7 +742,7 @@ func campaignEditFragment(view CampaignEditPageView, loc Localizer) templ.Compon
 		var templ_7745c5c3_Var51 string
 		templ_7745c5c3_Var51, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.edit.submit_save"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 109, Col: 94}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 109, Col: 94}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var51))
 		if templ_7745c5c3_Err != nil {
@@ -784,7 +784,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 		var templ_7745c5c3_Var53 string
 		templ_7745c5c3_Var53, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.title"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 121, Col: 69}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 121, Col: 69}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var53))
 		if templ_7745c5c3_Err != nil {
@@ -797,7 +797,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 		var templ_7745c5c3_Var54 templ.SafeURL
 		templ_7745c5c3_Var54, templ_7745c5c3_Err = templ.JoinURLErrs(routepath.AppCampaignAIBinding(view.CampaignID))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 122, Col: 80}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 122, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var54))
 		if templ_7745c5c3_Err != nil {
@@ -810,7 +810,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 		var templ_7745c5c3_Var55 string
 		templ_7745c5c3_Var55, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.field_agent"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 125, Col: 80}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 125, Col: 80}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var55))
 		if templ_7745c5c3_Err != nil {
@@ -843,7 +843,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 		var templ_7745c5c3_Var56 string
 		templ_7745c5c3_Var56, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.placeholder_unbound"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 128, Col: 150}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 128, Col: 150}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var56))
 		if templ_7745c5c3_Err != nil {
@@ -861,7 +861,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 			var templ_7745c5c3_Var57 string
 			templ_7745c5c3_Var57, templ_7745c5c3_Err = templ.JoinStringErrs(option.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 130, Col: 33}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 130, Col: 33}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var57))
 			if templ_7745c5c3_Err != nil {
@@ -890,7 +890,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 			var templ_7745c5c3_Var58 string
 			templ_7745c5c3_Var58, templ_7745c5c3_Err = templ.JoinStringErrs(option.Name)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 130, Col: 109}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 130, Col: 109}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var58))
 			if templ_7745c5c3_Err != nil {
@@ -913,7 +913,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 			var templ_7745c5c3_Var59 string
 			templ_7745c5c3_Var59, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.unavailable"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 135, Col: 128}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 135, Col: 128}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var59))
 			if templ_7745c5c3_Err != nil {
@@ -941,7 +941,7 @@ func campaignAIBindingFragment(view CampaignAIBindingPageView, loc Localizer) te
 		var templ_7745c5c3_Var60 string
 		templ_7745c5c3_Var60, templ_7745c5c3_Err = templ.JoinStringErrs(T(loc, "game.campaign.ai_binding.submit_save"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `render/detail_overview.templ`, Line: 138, Col: 149}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_overview.templ`, Line: 138, Col: 149}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var60))
 		if templ_7745c5c3_Err != nil {

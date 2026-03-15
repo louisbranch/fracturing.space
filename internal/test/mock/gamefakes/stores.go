@@ -471,6 +471,16 @@ func (s *SessionStore) GetActiveSession(_ context.Context, _ string) (storage.Se
 	return storage.SessionRecord{}, storage.ErrNotFound
 }
 
+func (s *SessionStore) CountSessions(_ context.Context, campaignID string) (int, error) {
+	count := 0
+	for key := range s.Sessions {
+		if strings.HasPrefix(key, campaignID+":") {
+			count++
+		}
+	}
+	return count, nil
+}
+
 func (s *SessionStore) ListSessions(_ context.Context, _ string, _ int, _ string) (storage.SessionPage, error) {
 	return storage.SessionPage{}, nil
 }

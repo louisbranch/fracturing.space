@@ -133,7 +133,7 @@ func (f *campaignGatewayStub) CampaignGameSurface(_ context.Context, campaignID 
 		surface.SessionID = "sess-1"
 	}
 	if strings.TrimSpace(surface.SessionName) == "" {
-		surface.SessionName = surface.SessionID
+		surface.SessionName = "Session One"
 	}
 	if strings.TrimSpace(surface.Participant.ID) == "" {
 		surface.Participant.ID = "p1"

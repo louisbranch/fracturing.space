@@ -81,6 +81,26 @@ func TestDecideSessionStart_MissingSessionIDRejected(t *testing.T) {
 	}
 }
 
+func TestDecideSessionStart_MissingSessionNameRejected(t *testing.T) {
+	cmd := command.Command{
+		CampaignID:  "camp-1",
+		Type:        command.Type("session.start"),
+		ActorType:   command.ActorTypeSystem,
+		PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"  "}`),
+	}
+
+	decision := Decide(State{}, cmd, nil)
+	if len(decision.Events) != 0 {
+		t.Fatalf("expected no events, got %d", len(decision.Events))
+	}
+	if len(decision.Rejections) != 1 {
+		t.Fatalf("expected 1 rejection, got %d", len(decision.Rejections))
+	}
+	if decision.Rejections[0].Code != rejectionCodeSessionNameRequired {
+		t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, rejectionCodeSessionNameRequired)
+	}
+}
+
 func TestDecideSessionStart_WhenAlreadyStarted_ReturnsRejection(t *testing.T) {
 	cmd := command.Command{
 		CampaignID:  "camp-1",

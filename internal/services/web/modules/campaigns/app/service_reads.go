@@ -95,9 +95,6 @@ func (s gameService) campaignGameSurface(ctx context.Context, campaignID string)
 	}
 	surface.SessionID = strings.TrimSpace(surface.SessionID)
 	surface.SessionName = strings.TrimSpace(surface.SessionName)
-	if surface.SessionName == "" {
-		surface.SessionName = surface.SessionID
-	}
 	if surface.ActiveScene != nil {
 		surface.ActiveScene.ID = strings.TrimSpace(surface.ActiveScene.ID)
 		surface.ActiveScene.SessionID = strings.TrimSpace(surface.ActiveScene.SessionID)

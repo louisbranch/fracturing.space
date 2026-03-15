@@ -541,6 +541,7 @@ type StartSessionRequest struct {
 	// The campaign ID to start a session for.
 	CampaignId string `protobuf:"bytes,1,opt,name=campaign_id,json=campaignId,proto3" json:"campaign_id,omitempty"`
 	// Optional free-form name for the session.
+	// Blank values default to a localized "Session {count}" server-side.
 	Name          string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

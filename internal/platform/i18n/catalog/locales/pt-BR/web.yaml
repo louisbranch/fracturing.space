@@ -497,7 +497,7 @@ messages:
   "game.sessions.menu.in_progress": "Em andamento"
   "game.sessions.menu.start": "Início"
   "game.sessions.menu.unnamed": "Sessão sem nome"
-  "game.sessions.placeholder_name": "Ex.: Velhos Amigos se Encontram"
+  "game.sessions.placeholder_name": "Opcional"
   "game.sessions.readiness_heading": "A campanha ainda não está pronta para iniciar sessão"
   "game.sessions.start": "Iniciar sessão"
   "game.sessions.title": "Sessões"

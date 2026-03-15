@@ -28,7 +28,7 @@ func campaignSessionStartReady(readiness SessionReadinessView) bool {
 }
 
 // campaignSessionByID resolves the selected session without forcing handlers to pre-split the view.
-func campaignSessionByID(loc Localizer, sessionID string, sessions []SessionView) SessionView {
+func campaignSessionByID(_ Localizer, sessionID string, sessions []SessionView) SessionView {
 	sessionID = strings.TrimSpace(sessionID)
 	if sessionID == "" {
 		return SessionView{}
@@ -38,12 +38,5 @@ func campaignSessionByID(loc Localizer, sessionID string, sessions []SessionView
 			return session
 		}
 	}
-	return SessionView{
-		ID:        sessionID,
-		Name:      sessionID,
-		Status:    campaignSessionStatusLabel(loc, "Unspecified"),
-		StartedAt: "",
-		UpdatedAt: "",
-		EndedAt:   "",
-	}
+	return SessionView{}
 }

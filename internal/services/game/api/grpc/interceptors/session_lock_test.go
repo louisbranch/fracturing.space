@@ -52,6 +52,10 @@ func (s *fakeSessionStore) GetActiveSession(_ context.Context, campaignID string
 	return sess, nil
 }
 
+func (s *fakeSessionStore) CountSessions(_ context.Context, _ string) (int, error) {
+	return 0, nil
+}
+
 func (s *fakeSessionStore) ListSessions(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.SessionPage, error) {
 	return storage.SessionPage{}, nil
 }

@@ -37,13 +37,6 @@ func (s sessionReadService) campaignSessions(ctx context.Context, campaignID str
 	for _, session := range sessions {
 		sessionID := strings.TrimSpace(session.ID)
 		sessionName := strings.TrimSpace(session.Name)
-		if sessionName == "" {
-			if sessionID != "" {
-				sessionName = sessionID
-			} else {
-				sessionName = "Unnamed session"
-			}
-		}
 		status := strings.TrimSpace(session.Status)
 		if status == "" {
 			status = "Unspecified"

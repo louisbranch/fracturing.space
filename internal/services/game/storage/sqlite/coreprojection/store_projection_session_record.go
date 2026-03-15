@@ -216,6 +216,27 @@ func (s *Store) GetActiveSession(ctx context.Context, campaignID string) (storag
 	return dbSessionToDomain(row)
 }
 
+// CountSessions returns the number of sessions for a campaign.
+func (s *Store) CountSessions(ctx context.Context, campaignID string) (int, error) {
+	if err := ctx.Err(); err != nil {
+		return 0, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return 0, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return 0, fmt.Errorf("campaign id is required")
+	}
+	var count int64
+	err := s.projectionQueryable().QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM sessions WHERE campaign_id = ?", campaignID,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("count sessions: %w", err)
+	}
+	return int(count), nil
+}
+
 // ListSessions returns a page of session records.
 func (s *Store) ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.SessionPage, error) {
 	if err := ctx.Err(); err != nil {

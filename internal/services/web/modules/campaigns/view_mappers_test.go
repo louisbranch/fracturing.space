@@ -86,7 +86,7 @@ func TestCampaignWorkspaceMenuShowsOnlyActiveSessionSubItems(t *testing.T) {
 		},
 		{
 			ID:        "s1",
-			Name:      "",
+			Name:      "Session 1",
 			Status:    "Active",
 			StartedAt: "2026-02-01 20:00 UTC",
 			EndedAt:   "",
@@ -147,8 +147,8 @@ func TestCampaignWorkspaceMenuShowsOnlyActiveSessionSubItems(t *testing.T) {
 	if active.URL != routepath.AppCampaignSession("c1", "s1") {
 		t.Fatalf("active subitem URL = %q, want %q", active.URL, routepath.AppCampaignSession("c1", "s1"))
 	}
-	if active.Label != "Unnamed session" {
-		t.Fatalf("active session label = %q, want %q", active.Label, "Unnamed session")
+	if active.Label != "Session 1" {
+		t.Fatalf("active session label = %q, want %q", active.Label, "Session 1")
 	}
 	if !active.ActiveSession {
 		t.Fatalf("active.ActiveSession = %v, want true", active.ActiveSession)

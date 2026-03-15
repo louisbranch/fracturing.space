@@ -79,7 +79,7 @@ func TestGameServiceCampaignGameSurfaceNormalizesInteractionState(t *testing.T) 
 	if got.Participant.Name != "p1" || got.Participant.Role != "Unspecified" {
 		t.Fatalf("participant = %#v", got.Participant)
 	}
-	if got.SessionName != "sess-1" {
+	if got.SessionName != "" {
 		t.Fatalf("session = %#v", got)
 	}
 	if got.ActiveScene == nil || got.ActiveScene.Name != "scene-1" || got.ActiveScene.Characters[0].Name != "char-2" {

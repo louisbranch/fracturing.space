@@ -113,11 +113,7 @@ func dashboardSessionName(entry DashboardActiveSessionEntry, loc Localizer) stri
 	if name != "" {
 		name = strings.TrimSpace(name)
 	}
-	sessionID := strings.TrimSpace(entry.SessionID)
-	if name != "" && (sessionID == "" || !strings.EqualFold(name, sessionID)) {
-		return name
-	}
-	return T(loc, "game.sessions.menu.unnamed")
+	return name
 }
 
 func dashboardServiceHealthVisible(view DashboardPageView) bool {

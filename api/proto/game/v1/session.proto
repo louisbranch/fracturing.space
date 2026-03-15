@@ -123,6 +123,7 @@ message StartSessionRequest {
   string campaign_id = 1;
 
   // Optional free-form name for the session.
+  // Blank values default to a localized "Session {count}" server-side.
   string name = 2;
 }
 

@@ -3,6 +3,7 @@ namespace: "game"
 messages:
   "game.participant.default_ai_name": "Oráculo"
   "game.participant.default_unknown_name": "Pessoa Misteriosa"
+  "game.session.default_name": "Sessão %d"
   "game.session_readiness.active_session_exists": "A prontidão da campanha exige que não haja sessão ativa"
   "game.session_readiness.ai_agent_required": "A prontidão da campanha exige vínculo de agente de IA para modo de mestre de IA"
   "game.session_readiness.ai_gm_participant_required": "A prontidão da campanha exige ao menos um participante mestre controlado por IA para modo de mestre de IA"

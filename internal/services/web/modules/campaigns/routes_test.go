@@ -70,6 +70,7 @@ func TestRegisterRoutesCampaignsPathAndMethodContracts(t *testing.T) {
 			items:        []campaignapp.CampaignSummary{{ID: "c1", Name: "Campaign"}},
 			participants: []campaignapp.CampaignParticipant{{ID: "p-manager", UserID: "user-123", CampaignAccess: "Manager"}},
 			characters:   []campaignapp.CampaignCharacter{{ID: "char-1", Name: "Hero", Kind: "PC", Controller: "user-123"}},
+			sessions:     []campaignapp.CampaignSession{{ID: "start", Name: "Session Start", Status: "Active"}},
 		}, modulehandler.NewBase(func(*http.Request) string { return "user-123" }, nil, nil)),
 	)
 

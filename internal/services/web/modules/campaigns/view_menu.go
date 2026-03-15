@@ -131,14 +131,9 @@ func campaignSessionMenuCount(sessions []campaignapp.CampaignSession) int {
 	return count
 }
 
-// campaignSessionMenuItemName returns a session menu label with safe fallback copy.
-func campaignSessionMenuItemName(session campaignapp.CampaignSession, loc webtemplates.Localizer) string {
-	name := strings.TrimSpace(session.Name)
-	sessionID := strings.TrimSpace(session.ID)
-	if name != "" && (sessionID == "" || !strings.EqualFold(name, sessionID)) {
-		return name
-	}
-	return webtemplates.T(loc, "game.sessions.menu.unnamed")
+// campaignSessionMenuItemName returns the stored session name for menu labels.
+func campaignSessionMenuItemName(session campaignapp.CampaignSession, _ webtemplates.Localizer) string {
+	return strings.TrimSpace(session.Name)
 }
 
 // campaignSessionMenuStartTime parses session start timestamps used for deterministic ordering.

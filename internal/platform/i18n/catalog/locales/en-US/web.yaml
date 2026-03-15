@@ -497,7 +497,7 @@ messages:
   "game.sessions.menu.in_progress": "In progress"
   "game.sessions.menu.start": "Start"
   "game.sessions.menu.unnamed": "Unnamed session"
-  "game.sessions.placeholder_name": "E.g.: Old Friends Meet"
+  "game.sessions.placeholder_name": "Optional"
   "game.sessions.readiness_heading": "Campaign is not ready to start a session"
   "game.sessions.start": "Start Session"
   "game.sessions.title": "Sessions"

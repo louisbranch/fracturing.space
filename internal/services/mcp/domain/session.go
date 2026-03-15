@@ -14,7 +14,7 @@ import (
 // SessionStartInput represents the MCP tool input for starting a session.
 type SessionStartInput struct {
 	CampaignID string `json:"campaign_id" jsonschema:"campaign identifier"`
-	Name       string `json:"name,omitempty" jsonschema:"optional free-form name for the session"`
+	Name       string `json:"name,omitempty" jsonschema:"optional free-form name for the session; blank defaults to a localized Session {count}"`
 }
 
 // SessionStartResult represents the MCP tool output for starting a session.
@@ -32,7 +32,7 @@ type SessionStartResult struct {
 func SessionStartTool() *mcp.Tool {
 	return &mcp.Tool{
 		Name:        "session_start",
-		Description: "Starts a new session for a campaign. Enforces at most one ACTIVE session per campaign.",
+		Description: "Starts a new session for a campaign. Blank names default to a localized Session {count}. Enforces at most one ACTIVE session per campaign.",
 	}
 }
 

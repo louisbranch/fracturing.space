@@ -6,7 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/authz"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/handler"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
@@ -39,7 +41,10 @@ func (a sessionApplication) StartSession(ctx context.Context, campaignID string,
 	if err != nil {
 		return storage.SessionRecord{}, grpcerror.Internal("generate session id", err)
 	}
-	sessionName := strings.TrimSpace(in.GetName())
+	sessionName, err := a.resolveSessionStartName(ctx, c, campaignID, in.GetName())
+	if err != nil {
+		return storage.SessionRecord{}, err
+	}
 
 	payload := session.StartPayload{
 		SessionID:   ids.SessionID(sessionID),
@@ -151,4 +156,22 @@ func (a sessionApplication) EndSession(ctx context.Context, campaignID string, i
 	}
 
 	return updated, nil
+}
+
+// resolveSessionStartName ensures session.start commands always persist a usable name.
+func (a sessionApplication) resolveSessionStartName(ctx context.Context, campaignRecord storage.CampaignRecord, campaignID, rawName string) (string, error) {
+	name := strings.TrimSpace(rawName)
+	if name != "" {
+		return name, nil
+	}
+	count, err := a.stores.Session.CountSessions(ctx, campaignID)
+	if err != nil {
+		return "", grpcerror.Internal("count sessions", err)
+	}
+	return handler.DefaultSessionName(sessionStartLocale(campaignRecord.Locale), count+1), nil
+}
+
+func sessionStartLocale(value string) commonv1.Locale {
+	locale, _ := platformi18n.ParseLocale(value)
+	return platformi18n.NormalizeLocale(locale)
 }

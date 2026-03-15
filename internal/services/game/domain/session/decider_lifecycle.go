@@ -29,6 +29,12 @@ func decideStart(state State, cmd command.Command, now func() time.Time) command
 		})
 	}
 	sessionName := strings.TrimSpace(payload.SessionName)
+	if sessionName == "" {
+		return command.Reject(command.Rejection{
+			Code:    rejectionCodeSessionNameRequired,
+			Message: "session name is required",
+		})
+	}
 
 	normalizedPayload := StartPayload{SessionID: ids.SessionID(sessionID), SessionName: sessionName}
 	payloadJSON, _ := json.Marshal(normalizedPayload)
