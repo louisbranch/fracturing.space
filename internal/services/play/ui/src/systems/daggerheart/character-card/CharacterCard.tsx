@@ -1,7 +1,5 @@
 import type {
   CharacterCardProps,
-  CharacterCardVariant,
-  DaggerheartCharacterEquipment,
   DaggerheartCharacterSummary,
   DaggerheartCharacterTraits,
 } from "./contract";
@@ -20,19 +18,13 @@ type StatValue = LabeledValue & {
 // CharacterCard is the stable Daggerheart card contract that future runtime
 // adapters can target without depending on one permanent implementation.
 export function CharacterCard({ character, variant }: CharacterCardProps) {
-  const identityRows = buildIdentityRows(character, variant);
   const summary = character.daggerheart?.summary;
-  const creationSummary = character.daggerheart?.creationSummary;
   const classSummary = summarizeClass(summary);
   const heritageSummary = summarizeHeritage(summary);
   const pronouns = character.identity?.pronouns?.trim();
   const statRows = buildStatRows(summary);
   const hopeValue = asStatValue("Hope", formatTrackValue(summary?.hope), "hope");
-  const featureValue = summary?.feature?.trim();
-  const traitBadges = buildTraitBadges(creationSummary?.traits);
-  const equipmentBadges = buildEquipmentBadges(creationSummary?.equipment);
-  const experiences = creationSummary?.experiences ?? [];
-  const domainCards = creationSummary?.domainCards ?? [];
+  const traitBadges = buildTraitBadges(character.daggerheart?.traits);
 
   if (variant === "portrait") {
     return (
@@ -48,7 +40,7 @@ export function CharacterCard({ character, variant }: CharacterCardProps) {
   return (
     <article className="character-card card" data-variant={variant}>
       <div className="grid gap-0 sm:grid-cols-[14rem_minmax(0,1fr)]">
-        <figure className={`character-card-media ${variant === "full" ? "character-card-media-fixed" : ""}`}>
+        <figure className="character-card-media">
           <Portrait characterName={character.name} portrait={character.portrait} />
         </figure>
 
@@ -67,17 +59,6 @@ export function CharacterCard({ character, variant }: CharacterCardProps) {
                 <span className="badge badge-outline badge-sm">Level {summary.level}</span>
               ) : null}
             </div>
-
-            {identityRows.length > 0 ? (
-              <dl className="space-y-2 text-sm" aria-label="Character identity">
-                {identityRows.map((row) => (
-                  <div key={`${row.label}-${row.value}`} className="flex flex-wrap gap-2">
-                    <dt className="text-base-content/55">{row.label}:</dt>
-                    <dd>{row.value}</dd>
-                  </div>
-                ))}
-              </dl>
-            ) : null}
 
             {statRows.length > 0 || hopeValue ? (
               <div className="space-y-2">
@@ -114,7 +95,7 @@ export function CharacterCard({ character, variant }: CharacterCardProps) {
             ) : null}
           </header>
 
-          {variant === "basic" && traitBadges.length > 0 ? (
+          {traitBadges.length > 0 ? (
             <section className="border-t border-base-300/80 pt-4" aria-label="Character traits">
               <div className="flex flex-nowrap gap-1 overflow-hidden">
                 {traitBadges.map((item) => (
@@ -125,43 +106,9 @@ export function CharacterCard({ character, variant }: CharacterCardProps) {
               </div>
             </section>
           ) : null}
-
-          {variant === "full" && hasFullContent(traitBadges, equipmentBadges, experiences, domainCards) ? (
-            <section className="border-t border-base-300/80 pt-4" aria-label="Daggerheart full info">
-              <div className="space-y-4">
-                <SummaryBadgeGroup label="Traits" items={traitBadges} />
-                <SummaryBadgeGroup label="Hope Feature" items={featureValue ? [featureValue] : []} />
-                <SummaryBadgeGroup label="Equipment" items={equipmentBadges} />
-                <SummaryBadgeGroup
-                  label="Experiences"
-                  items={experiences.map((experience) => formatExperience(experience.name, experience.modifier))}
-                />
-                <SummaryBadgeGroup label="Domain Cards" items={domainCards} />
-              </div>
-            </section>
-          ) : null}
         </div>
       </div>
     </article>
-  );
-}
-
-function SummaryBadgeGroup(input: { label: string; items: string[] }) {
-  if (input.items.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-2">
-      <p className="character-card-section-label">{input.label}</p>
-      <div className="flex flex-wrap gap-2">
-        {input.items.map((item) => (
-          <span key={`${input.label}-${item}`} className="badge badge-outline badge-sm">
-            {item}
-          </span>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -197,49 +144,6 @@ function Portrait(input: {
   );
 }
 
-// characterCardVariants documents the supported display densities for stories,
-// tests, and future runtime callers without duplicating labels in multiple files.
-export const characterCardVariants: Array<{
-  id: CharacterCardVariant;
-  title: string;
-  purpose: string;
-}> = [
-  {
-    id: "portrait",
-    title: "Portrait Only",
-    purpose: "Spotlight or modal reveal with no supporting metadata on screen.",
-  },
-  {
-    id: "basic",
-    title: "Portrait + Basic Info",
-    purpose: "Single-character card using the web campaign-card information hierarchy.",
-  },
-  {
-    id: "full",
-    title: "Portrait + Full Info",
-    purpose: "Same card header plus the Daggerheart detail summary from the web character page.",
-  },
-];
-
-function buildIdentityRows(character: CharacterCardProps["character"], variant: CharacterCardVariant): LabeledValue[] {
-  const identity = character.identity;
-  if (!identity) {
-    return [];
-  }
-
-  const rows = [
-    asLabeledValue("Kind", identity.kind),
-    asLabeledValue("Controller", identity.controller),
-    asLabeledValue("Aliases", joinValues(identity.aliases)),
-  ].filter(isPresent);
-
-  if (variant === "basic") {
-    return [];
-  }
-
-  return rows;
-}
-
 function buildStatRows(summary: DaggerheartCharacterSummary | undefined): StatValue[] {
   return [
     asStatValue("HP", formatTrackValue(summary?.hp), "hp"),
@@ -262,14 +166,6 @@ function buildTraitBadges(traits: DaggerheartCharacterTraits | undefined): strin
     formatBadge("PRE", traits.presence),
     formatBadge("KNO", traits.knowledge),
   ].filter(isPresent);
-}
-
-function buildEquipmentBadges(equipment: DaggerheartCharacterEquipment | undefined): string[] {
-  if (!equipment) {
-    return [];
-  }
-
-  return [equipment.primaryWeapon, equipment.secondaryWeapon, equipment.armor, equipment.potion].filter(isPresent);
 }
 
 function summarizeClass(summary: DaggerheartCharacterSummary | undefined): string {
@@ -299,32 +195,11 @@ function formatBadge(label: string, value: string | undefined): string | undefin
   return `${label} ${value}`;
 }
 
-function formatExperience(name: string, modifier: string | undefined): string {
-  const trimmedModifier = modifier?.trim();
-  if (!trimmedModifier) {
-    return name;
-  }
-  return `${name} ${trimmedModifier.startsWith("+") || trimmedModifier.startsWith("-") ? trimmedModifier : `+${trimmedModifier}`}`;
-}
-
 function formatTrackValue(value: DaggerheartCharacterSummary["hp"] | undefined): string | undefined {
   if (!value) {
     return undefined;
   }
   return `${value.current}/${value.max}`;
-}
-
-function joinValues(values: Array<string | undefined> | undefined, separator = ", "): string {
-  return values?.map((value) => value?.trim()).filter(isPresent).join(separator) ?? "";
-}
-
-function hasFullContent(
-  traitBadges: string[],
-  equipmentBadges: string[],
-  experiences: Array<{ name: string; modifier?: string }>,
-  domainCards: string[],
-): boolean {
-  return traitBadges.length > 0 || equipmentBadges.length > 0 || experiences.length > 0 || domainCards.length > 0;
 }
 
 function asLabeledValue(label: string, value: string | undefined): LabeledValue | undefined {
@@ -347,7 +222,7 @@ function isPresent<T>(value: T | null | undefined | ""): value is T {
   return value !== null && value !== undefined && value !== "";
 }
 
-function StatIcon(input: { name: StatIconName }) {
+export function StatIcon(input: { name: StatIconName }) {
   const commonProps = {
     "aria-hidden": true,
     "data-icon": input.name,

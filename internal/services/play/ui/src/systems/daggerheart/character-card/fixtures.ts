@@ -59,23 +59,13 @@ export const characterCardFixtures: CharacterCardFixtures = {
         hope: { current: 2, max: 6 },
         feature: "Rogue's Dodge",
       },
-      creationSummary: {
-        traits: {
-          agility: "2",
-          strength: "1",
-          finesse: "0",
-          instinct: "1",
-          presence: "2",
-          knowledge: "-1",
-        },
-        equipment: {
-          primaryWeapon: "Sword",
-          secondaryWeapon: "Dagger",
-          armor: "Leather",
-          potion: "Minor Potion",
-        },
-        experiences: [{ name: "Wanderer", modifier: "2" }],
-        domainCards: ["Arcane Bolt"],
+      traits: {
+        agility: "2",
+        strength: "1",
+        finesse: "0",
+        instinct: "1",
+        presence: "2",
+        knowledge: "-1",
       },
     },
   },
@@ -123,7 +113,7 @@ export const characterCardFixtures: CharacterCardFixtures = {
 
 export type CharacterCardFixtureID = keyof typeof characterCardFixtures;
 
-function cropCloudinaryAvatarURL(
+export function cropCloudinaryAvatarURL(
   sheetURL: string,
   input: {
     x: number;

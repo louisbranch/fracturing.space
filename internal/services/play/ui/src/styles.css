@@ -89,11 +89,6 @@
     aspect-ratio: 2 / 3;
   }
 
-  .character-card-media-fixed {
-    @apply self-start;
-    aspect-ratio: 2 / 3;
-  }
-
   .character-card-portrait {
     @apply h-full w-full object-cover;
   }
@@ -109,6 +104,19 @@
     @apply text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/55;
   }
 
+  .character-sheet {
+    @apply relative overflow-hidden border border-base-300 bg-base-100 shadow-lg shadow-black/15;
+  }
+
+  .character-sheet::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 rounded-box border border-white/4;
+  }
+
+  .sheet-field-label {
+    @apply text-[0.6rem] font-semibold uppercase tracking-[0.12em] text-base-content/40;
+  }
+
   .story-stage-card {
     @apply mx-auto w-full;
   }
@@ -121,7 +129,7 @@
     @apply max-w-xl;
   }
 
-  .story-stage-card-full {
-    @apply max-w-4xl;
+  .story-stage-card-sheet {
+    @apply max-w-6xl;
   }
 }

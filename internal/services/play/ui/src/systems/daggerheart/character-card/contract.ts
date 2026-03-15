@@ -1,6 +1,6 @@
 // CharacterCardVariant encodes the supported MVP density levels so preview,
 // tests, and future callers share one small state surface.
-export type CharacterCardVariant = "portrait" | "basic" | "full";
+export type CharacterCardVariant = "portrait" | "basic";
 
 // CharacterCardPortrait keeps accessibility explicit even when preview fixtures
 // intentionally omit the actual portrait source.
@@ -53,31 +53,6 @@ export type DaggerheartCharacterTraits = {
   knowledge?: string;
 };
 
-// DaggerheartCharacterEquipment keeps full-card equipment copy grouped under
-// the Daggerheart detail summary instead of flattening it into ad hoc strings.
-export type DaggerheartCharacterEquipment = {
-  primaryWeapon?: string;
-  secondaryWeapon?: string;
-  armor?: string;
-  potion?: string;
-};
-
-// DaggerheartExperience keeps freeform experience rows explicit for stories and
-// tests without coupling the component to a broader rules schema.
-export type DaggerheartExperience = {
-  name: string;
-  modifier?: string;
-};
-
-// DaggerheartCreationSummary matches the information hierarchy used in the web
-// character detail creation-summary body.
-export type DaggerheartCreationSummary = {
-  traits?: DaggerheartCharacterTraits;
-  equipment?: DaggerheartCharacterEquipment;
-  experiences?: DaggerheartExperience[];
-  domainCards?: string[];
-};
-
 // DaggerheartCharacterCardData is the stable external input contract that
 // future runtime adapters or alternate card implementations must preserve.
 export type DaggerheartCharacterCardData = {
@@ -87,7 +62,7 @@ export type DaggerheartCharacterCardData = {
   identity?: CharacterCardIdentity;
   daggerheart?: {
     summary?: DaggerheartCharacterSummary;
-    creationSummary?: DaggerheartCreationSummary;
+    traits?: DaggerheartCharacterTraits;
   };
 };
 

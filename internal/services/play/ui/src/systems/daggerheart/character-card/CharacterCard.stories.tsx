@@ -4,7 +4,7 @@ import { CharacterCardStoryStage } from "./StoryStage";
 import { characterCardFixtures } from "./fixtures";
 
 const meta = {
-  title: "Systems/Daggerheart/Character Card/Variants",
+  title: "Systems/Daggerheart/Character Card",
   component: CharacterCard,
   tags: ["autodocs"],
   args: {
@@ -14,7 +14,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Variant stories hold the fixture steady and change only the documented display density. The canvas now shows only the component in a lightweight screen frame.",
+          "Compact character card with two display densities: portrait-only for spotlights, and a basic info card following the web campaign-card hierarchy.",
       },
     },
   },
@@ -24,7 +24,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const PortraitOnly: Story = {
+export const Portrait: Story = {
   args: {
     variant: "portrait",
   },
@@ -35,23 +35,12 @@ export const PortraitOnly: Story = {
   ),
 };
 
-export const BasicInfo: Story = {
+export const FullCard: Story = {
   args: {
     variant: "basic",
   },
   render: (args) => (
     <CharacterCardStoryStage variant="basic">
-      <CharacterCard {...args} />
-    </CharacterCardStoryStage>
-  ),
-};
-
-export const FullInfo: Story = {
-  args: {
-    variant: "full",
-  },
-  render: (args) => (
-    <CharacterCardStoryStage variant="full">
       <CharacterCard {...args} />
     </CharacterCardStoryStage>
   ),
