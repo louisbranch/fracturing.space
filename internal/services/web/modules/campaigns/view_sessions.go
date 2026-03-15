@@ -46,13 +46,17 @@ func mapSessionReadinessView(readiness campaignapp.CampaignSessionReadiness) cam
 func mapInvitesView(items []campaignapp.CampaignInvite, r *http.Request) []campaignrender.InviteView {
 	result := make([]campaignrender.InviteView, 0, len(items))
 	for _, invite := range items {
+		publicURL := ""
+		if campaignInviteIsPending(invite.Status) {
+			publicURL = absolutePublicInviteURL(r, invite.ID)
+		}
 		result = append(result, campaignrender.InviteView{
 			ID:                invite.ID,
 			ParticipantID:     invite.ParticipantID,
 			ParticipantName:   invite.ParticipantName,
 			RecipientUsername: invite.RecipientUsername,
 			HasRecipient:      invite.HasRecipient,
-			PublicURL:         absolutePublicInviteURL(r, invite.ID),
+			PublicURL:         publicURL,
 			Status:            invite.Status,
 		})
 	}

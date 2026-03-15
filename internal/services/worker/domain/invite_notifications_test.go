@@ -9,6 +9,7 @@ import (
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -41,12 +42,27 @@ func TestInviteCreatedNotificationHandler_HandleCreatesRecipientIntent(t *testin
 	if req.GetMessageType() != gameintegration.InviteNotificationCreatedMessageType {
 		t.Fatalf("message type = %q, want %q", req.GetMessageType(), gameintegration.InviteNotificationCreatedMessageType)
 	}
-	var payload gameintegration.InviteNotificationPayload
+	var payload notificationpayload.InAppPayload
 	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
 		t.Fatalf("unmarshal payload json: %v", err)
 	}
-	if payload.InviterUsername != "owner" {
-		t.Fatalf("inviter username = %q, want %q", payload.InviterUsername, "owner")
+	if payload.Title != "Campaign invitation" {
+		t.Fatalf("title = %q, want %q", payload.Title, "Campaign invitation")
+	}
+	if payload.Body != "@owner invited you to join Campaign Name." {
+		t.Fatalf("body = %q, want inviter campaign summary", payload.Body)
+	}
+	if len(payload.Facts) != 3 {
+		t.Fatalf("facts = %+v, want campaign, seat, inviter", payload.Facts)
+	}
+	if len(payload.Actions) != 1 {
+		t.Fatalf("actions = %+v, want single view action", payload.Actions)
+	}
+	if payload.Actions[0].Label != "View invitation" {
+		t.Fatalf("action label = %q, want %q", payload.Actions[0].Label, "View invitation")
+	}
+	if payload.Actions[0].Kind != notificationpayload.ActionKindPublicInviteView || payload.Actions[0].TargetID != "invite-1" {
+		t.Fatalf("action = %+v, want invite view action", payload.Actions[0])
 	}
 }
 
@@ -77,6 +93,16 @@ func TestInviteAcceptedNotificationHandler_HandleCreatesInviterIntent(t *testing
 	if req.GetMessageType() != gameintegration.InviteNotificationAcceptedMessageType {
 		t.Fatalf("message type = %q, want %q", req.GetMessageType(), gameintegration.InviteNotificationAcceptedMessageType)
 	}
+	var payload notificationpayload.InAppPayload
+	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
+		t.Fatalf("unmarshal payload json: %v", err)
+	}
+	if payload.Title != "Invitation accepted" {
+		t.Fatalf("title = %q, want %q", payload.Title, "Invitation accepted")
+	}
+	if len(payload.Actions) != 1 || payload.Actions[0].Kind != notificationpayload.ActionKindAppCampaignOpen || payload.Actions[0].TargetID != "campaign-1" {
+		t.Fatalf("actions = %+v, want open campaign action", payload.Actions)
+	}
 }
 
 func TestInviteDeclinedNotificationHandler_HandleCreatesInviterIntent(t *testing.T) {
@@ -105,6 +131,19 @@ func TestInviteDeclinedNotificationHandler_HandleCreatesInviterIntent(t *testing
 	}
 	if req.GetMessageType() != gameintegration.InviteNotificationDeclinedMessageType {
 		t.Fatalf("message type = %q, want %q", req.GetMessageType(), gameintegration.InviteNotificationDeclinedMessageType)
+	}
+	var payload notificationpayload.InAppPayload
+	if err := json.Unmarshal([]byte(req.GetPayloadJson()), &payload); err != nil {
+		t.Fatalf("unmarshal payload json: %v", err)
+	}
+	if payload.Title != "Invitation declined" {
+		t.Fatalf("title = %q, want %q", payload.Title, "Invitation declined")
+	}
+	if payload.Body != "@recipient declined to participate as Seat Name in Campaign Name." {
+		t.Fatalf("body = %q, want updated declined copy", payload.Body)
+	}
+	if len(payload.Actions) != 1 || payload.Actions[0].Kind != notificationpayload.ActionKindAppCampaignOpen || payload.Actions[0].TargetID != "campaign-1" {
+		t.Fatalf("actions = %+v, want open campaign action", payload.Actions)
 	}
 }
 

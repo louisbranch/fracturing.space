@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	gameintegration "github.com/louisbranch/fracturing.space/internal/services/game/integration"
 	"github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
+	"github.com/louisbranch/fracturing.space/internal/services/shared/notificationpayload"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -83,14 +84,18 @@ func (h *InviteCreatedNotificationHandler) Handle(ctx context.Context, event Out
 		return err
 	}
 	inviterUsername, _ := h.lookupParticipantUsername(ctx, invitation.GetCampaignId(), invitation.GetCreatedByParticipantId())
-	return h.createNotification(ctx, recipientUserID, gameintegration.InviteNotificationCreatedMessageType, gameintegration.InviteNotificationPayload{
-		InviteID:        invitation.GetId(),
-		CampaignID:      invitation.GetCampaignId(),
-		CampaignName:    campaignRecord.GetName(),
-		ParticipantID:   invitation.GetParticipantId(),
-		ParticipantName: participantRecord.GetName(),
-		InviterUsername: inviterUsername,
-	}, gameintegration.InviteCreatedNotificationDedupeKey(invitation.GetId()))
+	return h.createNotification(
+		ctx,
+		recipientUserID,
+		gameintegration.InviteNotificationCreatedMessageType,
+		inviteCreatedMessagePayload(
+			invitation.GetId(),
+			campaignRecord.GetName(),
+			participantRecord.GetName(),
+			inviterUsername,
+		),
+		gameintegration.InviteCreatedNotificationDedupeKey(invitation.GetId()),
+	)
 }
 
 type InviteOutcomeNotificationHandler struct {
@@ -179,14 +184,13 @@ func (h *InviteOutcomeNotificationHandler) Handle(ctx context.Context, event Out
 	if h.dedupeSuffix == "declined" {
 		dedupeKey = gameintegration.InviteDeclinedNotificationDedupeKey(invitation.GetId())
 	}
-	return h.createNotification(ctx, creatorUserID, h.messageType, gameintegration.InviteNotificationPayload{
-		InviteID:          invitation.GetId(),
-		CampaignID:        invitation.GetCampaignId(),
-		CampaignName:      campaignRecord.GetName(),
-		ParticipantID:     invitation.GetParticipantId(),
-		ParticipantName:   participantRecord.GetName(),
-		RecipientUsername: recipientUsername,
-	}, dedupeKey)
+	return h.createNotification(
+		ctx,
+		creatorUserID,
+		h.messageType,
+		inviteOutcomeMessagePayload(h.messageType, invitation.GetCampaignId(), campaignRecord.GetName(), participantRecord.GetName(), recipientUsername),
+		dedupeKey,
+	)
 }
 
 func (h *InviteCreatedNotificationHandler) loadInviteContext(ctx context.Context, inviteID string) (*gamev1.Invite, *gamev1.Campaign, *gamev1.Participant, error) {
@@ -293,15 +297,15 @@ func lookupUsername(ctx context.Context, auth workerAuthClient, userID string) (
 	return username, true
 }
 
-func (h *InviteCreatedNotificationHandler) createNotification(ctx context.Context, recipientUserID, messageType string, payload gameintegration.InviteNotificationPayload, dedupeKey string) error {
+func (h *InviteCreatedNotificationHandler) createNotification(ctx context.Context, recipientUserID, messageType string, payload notificationpayload.InAppPayload, dedupeKey string) error {
 	return createNotification(ctx, h.notifications, recipientUserID, messageType, payload, dedupeKey)
 }
 
-func (h *InviteOutcomeNotificationHandler) createNotification(ctx context.Context, recipientUserID, messageType string, payload gameintegration.InviteNotificationPayload, dedupeKey string) error {
+func (h *InviteOutcomeNotificationHandler) createNotification(ctx context.Context, recipientUserID, messageType string, payload notificationpayload.InAppPayload, dedupeKey string) error {
 	return createNotification(ctx, h.notifications, recipientUserID, messageType, payload, dedupeKey)
 }
 
-func createNotification(ctx context.Context, notifications workerNotificationClient, recipientUserID, messageType string, payload gameintegration.InviteNotificationPayload, dedupeKey string) error {
+func createNotification(ctx context.Context, notifications workerNotificationClient, recipientUserID, messageType string, payload notificationpayload.InAppPayload, dedupeKey string) error {
 	recipientUserID = strings.TrimSpace(recipientUserID)
 	messageType = strings.TrimSpace(messageType)
 	dedupeKey = strings.TrimSpace(dedupeKey)
@@ -329,6 +333,61 @@ func createNotification(ctx context.Context, notifications workerNotificationCli
 		return Permanent(err)
 	}
 	return err
+}
+
+func inviteCreatedMessagePayload(inviteID, campaignName, participantName, inviterUsername string) notificationpayload.InAppPayload {
+	body := "Review this invitation to respond."
+	if inviterUsername = strings.TrimSpace(inviterUsername); inviterUsername != "" && strings.TrimSpace(campaignName) != "" {
+		body = "@" + inviterUsername + " invited you to join " + strings.TrimSpace(campaignName) + "."
+	}
+	return notificationpayload.InAppPayload{
+		Title:   "Campaign invitation",
+		Body:    body,
+		Facts:   inviteFacts(campaignName, participantName, inviterUsername),
+		Actions: []notificationpayload.PayloadAction{notificationpayload.ViewInvitationAction(inviteID)},
+	}
+}
+
+func inviteOutcomeMessagePayload(messageType, campaignID, campaignName, participantName, recipientUsername string) notificationpayload.InAppPayload {
+	recipient := strings.TrimSpace(recipientUsername)
+	body := "An invitation was updated."
+	title := "Invitation update"
+	switch strings.TrimSpace(messageType) {
+	case gameintegration.InviteNotificationAcceptedMessageType:
+		title = "Invitation accepted"
+		if recipient != "" && participantName != "" && campaignName != "" {
+			body = "@" + recipient + " accepted " + participantName + " in " + campaignName + "."
+		} else {
+			body = "A campaign invitation was accepted."
+		}
+	case gameintegration.InviteNotificationDeclinedMessageType:
+		title = "Invitation declined"
+		if recipient != "" && participantName != "" && campaignName != "" {
+			body = "@" + recipient + " declined to participate as " + participantName + " in " + campaignName + "."
+		} else {
+			body = "A campaign invitation was declined."
+		}
+	}
+	return notificationpayload.InAppPayload{
+		Title:   title,
+		Body:    body,
+		Facts:   inviteFacts(campaignName, participantName, ""),
+		Actions: []notificationpayload.PayloadAction{notificationpayload.OpenCampaignAction(campaignID)},
+	}
+}
+
+func inviteFacts(campaignName, participantName, inviterUsername string) []notificationpayload.PayloadFact {
+	facts := make([]notificationpayload.PayloadFact, 0, 3)
+	if campaignName = strings.TrimSpace(campaignName); campaignName != "" {
+		facts = append(facts, notificationpayload.PayloadFact{Label: "Campaign", Value: campaignName})
+	}
+	if participantName = strings.TrimSpace(participantName); participantName != "" {
+		facts = append(facts, notificationpayload.PayloadFact{Label: "Seat", Value: participantName})
+	}
+	if inviterUsername = strings.TrimSpace(inviterUsername); inviterUsername != "" {
+		facts = append(facts, notificationpayload.PayloadFact{Label: "Invited by", Value: "@" + inviterUsername})
+	}
+	return facts
 }
 
 func decodeInviteCreatedPayload(event OutboxEvent) (gameintegration.InviteNotificationOutboxPayload, error) {

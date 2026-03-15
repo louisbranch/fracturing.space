@@ -455,6 +455,48 @@ func TestMountCampaignInvitesRouteHidesManageControlsWithoutInvitePermission(t *
 	}
 }
 
+func TestMountCampaignInvitesRouteHidesPublicURLForNonPendingStatuses(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		invites: []campaignapp.CampaignInvite{
+			{ID: "inv-pending", ParticipantID: "p1", ParticipantName: "Pending Seat", Status: "Pending"},
+			{ID: "inv-claimed", ParticipantID: "p2", ParticipantName: "Accepted Seat", Status: "Claimed"},
+			{ID: "inv-declined", ParticipantID: "p3", ParticipantName: "Rejected Seat", Status: "Declined"},
+			{ID: "inv-revoked", ParticipantID: "p4", ParticipantName: "Revoked Seat", Status: "Revoked"},
+		},
+	}, modulehandler.NewTestBase(), nil))
+
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignInvites("c1"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	if strings.Count(body, `data-campaign-invite-public-url="true"`) != 1 {
+		t.Fatalf("public url inputs = %d, want 1 in body %q", strings.Count(body, `data-campaign-invite-public-url="true"`), body)
+	}
+	if !strings.Contains(body, `value="http://example.com/invite/inv-pending"`) {
+		t.Fatalf("body missing pending invite public url: %q", body)
+	}
+	for _, marker := range []string{
+		`value="http://example.com/invite/inv-claimed"`,
+		`value="http://example.com/invite/inv-declined"`,
+		`value="http://example.com/invite/inv-revoked"`,
+	} {
+		if strings.Contains(body, marker) {
+			t.Fatalf("body should not include non-pending public url %q: %q", marker, body)
+		}
+	}
+}
+
 func TestMountCampaignInvitesRouteDisablesManageControlsWhileActionsLocked(t *testing.T) {
 	t.Parallel()
 

@@ -25,7 +25,7 @@ func (f fakeGateway) ListNotifications(context.Context, string) ([]notifications
 		return nil, f.listErr
 	}
 	if f.listItems == nil {
-		return []notificationsapp.NotificationSummary{{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}}, nil
+		return []notificationsapp.NotificationSummary{testNotificationSummary("n1", false)}, nil
 	}
 	return f.listItems, nil
 }
@@ -40,7 +40,7 @@ func (f fakeGateway) GetNotification(context.Context, string, string) (notificat
 	if len(f.listItems) > 0 {
 		return f.listItems[0], nil
 	}
-	return notificationsapp.NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: false}, nil
+	return testNotificationSummary("n1", false), nil
 }
 
 func (f fakeGateway) OpenNotification(context.Context, string, string) (notificationsapp.NotificationSummary, error) {
@@ -50,5 +50,14 @@ func (f fakeGateway) OpenNotification(context.Context, string, string) (notifica
 	if f.openItem != (notificationsapp.NotificationSummary{}) {
 		return f.openItem, nil
 	}
-	return notificationsapp.NotificationSummary{ID: "n1", MessageType: "auth.onboarding.welcome", Read: true}, nil
+	return testNotificationSummary("n1", true), nil
+}
+
+func testNotificationSummary(id string, read bool) notificationsapp.NotificationSummary {
+	return notificationsapp.NotificationSummary{
+		ID:          id,
+		MessageType: "system.message.v1",
+		PayloadJSON: `{"title":"Welcome to Fracturing Space","body":"Your account is ready. Sign-in method: passkey."}`,
+		Read:        read,
+	}
 }

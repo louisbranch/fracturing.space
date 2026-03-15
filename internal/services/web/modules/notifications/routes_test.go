@@ -74,8 +74,8 @@ var staticGatewayFixedTime = time.Date(2026, 1, 15, 12, 0, 0, 0, time.UTC)
 func (staticGateway) ListNotifications(context.Context, string) ([]notificationsapp.NotificationSummary, error) {
 	return []notificationsapp.NotificationSummary{{
 		ID:          "notification-1",
-		MessageType: "auth.onboarding.welcome",
-		PayloadJSON: `{"signup_method":"passkey"}`,
+		MessageType: "system.message.v1",
+		PayloadJSON: `{"title":"Welcome to Fracturing Space","body":"Your account is ready. Sign-in method: passkey."}`,
 		Source:      "system",
 		Read:        false,
 		CreatedAt:   staticGatewayFixedTime,

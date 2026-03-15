@@ -53,7 +53,17 @@ func TestNotificationDetailViewUsesRendererAndReturnsNilForBlankID(t *testing.T)
 
 	h := handlers{
 		renderer: stubNotificationCopyRenderer{
-			copy: notificationCopy{Title: "Rendered title", Body: "Rendered body"},
+			copy: notificationCopy{
+				Title: "Rendered title",
+				Body:  "Rendered body",
+				Facts: []NotificationFactView{{Label: "Campaign", Value: "Skyfall"}},
+				Actions: []NotificationActionView{{
+					Label:   "Accept invitation",
+					URL:     "/invite/inv-1/accept",
+					Method:  "POST",
+					Primary: true,
+				}},
+			},
 		},
 		nowFunc: func() time.Time { return time.Date(2026, 2, 27, 12, 0, 0, 0, time.UTC) },
 	}
@@ -72,6 +82,12 @@ func TestNotificationDetailViewUsesRendererAndReturnsNilForBlankID(t *testing.T)
 	}
 	if view.Body != "Rendered body" {
 		t.Fatalf("Body = %q, want %q", view.Body, "Rendered body")
+	}
+	if len(view.Facts) != 1 || view.Facts[0].Value != "Skyfall" {
+		t.Fatalf("Facts = %+v, want rendered fact", view.Facts)
+	}
+	if len(view.Actions) != 1 || view.Actions[0].Label != "Accept invitation" {
+		t.Fatalf("Actions = %+v, want rendered action", view.Actions)
 	}
 }
 

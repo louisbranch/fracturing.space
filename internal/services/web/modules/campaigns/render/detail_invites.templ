@@ -87,12 +87,14 @@ templ invitesFragment(view InvitesPageView, loc Localizer) {
 							} else if invite.HasRecipient {
 								<p data-campaign-invite-recipient="specific-user">{ T(loc, "game.campaign_invites.recipient_specific_user") }</p>
 							}
-							<label class="form-control">
-								<span class="label">
-									<span class="label-text">{ T(loc, "game.campaign_invites.field_public_url") }</span>
-								</span>
-								<input class="input input-bordered input-sm w-full" type="text" readonly value={ invite.PublicURL } data-campaign-invite-public-url="true"/>
-							</label>
+							if invite.PublicURL != "" {
+								<label class="form-control">
+									<span class="label">
+										<span class="label-text">{ T(loc, "game.campaign_invites.field_public_url") }</span>
+									</span>
+									<input class="input input-bordered input-sm w-full" type="text" readonly value={ invite.PublicURL } data-campaign-invite-public-url="true"/>
+								</label>
+							}
 							if view.CanManageInvites && campaignInviteCanRevoke(invite.Status) {
 								<div class="card-actions justify-end">
 									if campaignActionsLocked(view.ActionsLocked) {

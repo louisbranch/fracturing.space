@@ -60,8 +60,9 @@ Canonical implementation path: `internal/services/web/`.
 - `internal/services/web/modules/<area>/workflow`: transport-owned
   system-specific workflow contracts and implementations when one area has
   multiple workflow adapters.
-- `internal/services/web/modules/notifications/render`: notifications-module-owned
-  copy/rendering seam; keep inbox copy local to the notifications area.
+- `internal/services/web/modules/notifications`: inbox transport/view mapping
+  stays area-owned, but the canonical notification message payload contract
+  lives in `internal/services/shared/notificationpayload`.
 - `internal/services/web/platform/*`: shared transport helpers only; feature-specific behavior should not accumulate here.
 - `internal/services/web/templates`: shared layout and templ primitives. If one
   area's page set becomes a contributor hotspot, move that set under the
