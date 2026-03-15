@@ -8,9 +8,6 @@ const stageCopy: Record<CharacterCardVariant, { cardClass: string }> = {
   basic: {
     cardClass: "story-stage-card story-stage-card-basic",
   },
-  full: {
-    cardClass: "story-stage-card story-stage-card-full",
-  },
 };
 
 // CharacterCardStoryStage keeps Storybook canvases focused on realistic screen
