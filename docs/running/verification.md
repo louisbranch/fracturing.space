@@ -80,6 +80,10 @@ stage is active, and which package/test is currently hot.
 For `make smoke` and `make check`, the top-level `status.json` reports aggregate
 stage progress while nested files report lane-specific test activity.
 
+Local verification commands also isolate command-owned temp work under
+`.tmp/test-tmp/` and remove those per-run temp roots on exit. New local test
+artifacts should not accumulate in system `/tmp` during normal runs.
+
 ## Internal-only commands
 
 The repository still contains internal CI/plumbing targets for shard fanout and

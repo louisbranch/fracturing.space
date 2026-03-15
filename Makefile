@@ -8,6 +8,7 @@ SCENARIO_SMOKE_MANIFEST := internal/test/game/scenarios/manifests/smoke.txt
 SCENARIO_DEFAULT_PARALLELISM ?= 4
 GO_TEST_CACHE_DIR ?= $(CURDIR)/.tmp/go-cache
 GO_TEST_TMP_DIR ?= $(CURDIR)/.tmp/go-build
+TEST_TMP_ROOT ?= $(CURDIR)/.tmp/test-tmp
 TEST_PROGRESS_DIR ?= $(CURDIR)/.tmp/test-status
 TEST_PROGRESS_HEARTBEAT ?= 10s
 INTEGRATION_COVERAGE_SHARDS ?= 4
@@ -81,7 +82,12 @@ down: ## Stop watcher-based local services and devcontainer
 	@bash .devcontainer/scripts/stop-devcontainer.sh
 
 cover:
-	@COVERAGE_LOCK_LABEL='make cover' bash ./scripts/with-coverage-lock.sh $(MAKE) cover-core
+	@COVERAGE_LOCK_LABEL='make cover' \
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
+	bash ./scripts/with-coverage-lock.sh \
+		bash ./scripts/with-test-temp.sh cover -- \
+		$(MAKE) cover-core
 
 cover-core:
 	COVER_EXCLUDE_REGEX='$(COVER_EXCLUDE_REGEX)' \
@@ -93,7 +99,12 @@ cover-core:
 	bash ./scripts/cover-full.sh
 
 cover-critical-domain:
-	@COVERAGE_LOCK_LABEL='make cover-critical-domain' bash ./scripts/with-coverage-lock.sh $(MAKE) cover-critical-domain-core
+	@COVERAGE_LOCK_LABEL='make cover-critical-domain' \
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
+	bash ./scripts/with-coverage-lock.sh \
+		bash ./scripts/with-test-temp.sh cover-critical-domain -- \
+		$(MAKE) cover-critical-domain-core
 
 cover-critical-domain-core:
 	mkdir -p "$(GO_TEST_CACHE_DIR)" "$(GO_TEST_TMP_DIR)"
@@ -103,7 +114,12 @@ cover-critical-domain-core:
 	@awk '/^total:/{print}' coverage-critical-domain.func
 
 check-coverage:
-	@COVERAGE_LOCK_LABEL='make check-coverage' bash ./scripts/with-coverage-lock.sh bash ./scripts/check-coverage.sh
+	@COVERAGE_LOCK_LABEL='make check-coverage' \
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
+	bash ./scripts/with-coverage-lock.sh \
+		bash ./scripts/with-test-temp.sh check-coverage -- \
+		bash ./scripts/check-coverage.sh
 
 cover-package-floors:
 	@test -f coverage.out || (echo "coverage.out not found; run 'make cover' first" && exit 1)
@@ -117,39 +133,59 @@ cover-treemap: cover
 	go run github.com/nikolaydubina/go-cover-treemap -coverprofile=coverage.out -percent > coverage-treemap.svg
 
 test:
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
 	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
-	bash ./scripts/go-test-progress.sh \
-		--label test \
-		--status-dir "$(TEST_PROGRESS_DIR)/test" \
-		-- \
-		go test -json ./...
+	bash ./scripts/with-test-temp.sh test -- \
+		bash ./scripts/go-test-progress.sh \
+			--label test \
+			--status-dir "$(TEST_PROGRESS_DIR)/test" \
+			-- \
+			go test -json ./...
 
 test-changed:
-	@bash ./scripts/test-changed.sh
+	@GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
+	bash ./scripts/with-test-temp.sh test-changed -- \
+		bash ./scripts/test-changed.sh
 
 smoke:
-	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" MAKE="$(MAKE)" bash ./scripts/smoke.sh
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" MAKE="$(MAKE)" \
+	bash ./scripts/with-test-temp.sh smoke -- \
+		bash ./scripts/smoke.sh
 
 smoke-integration:
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
 	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
-	bash ./scripts/go-test-progress.sh \
-		--label smoke-integration \
-		--status-dir "$(TEST_PROGRESS_DIR)/smoke/integration" \
-		-- \
-		env INTEGRATION_SHARED_FIXTURE="$${INTEGRATION_SHARED_FIXTURE:-true}" \
-		go test -json -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_PR_PATTERN)'
+	bash ./scripts/with-test-temp.sh smoke-integration -- \
+		bash ./scripts/go-test-progress.sh \
+			--label smoke-integration \
+			--status-dir "$(TEST_PROGRESS_DIR)/smoke/integration" \
+			-- \
+			env INTEGRATION_SHARED_FIXTURE="$${INTEGRATION_SHARED_FIXTURE:-true}" \
+			go test -json -tags=integration ./internal/test/integration -run '$(INTEGRATION_SMOKE_PR_PATTERN)'
 
 smoke-scenario:
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
 	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
-	bash ./scripts/go-test-progress.sh \
-		--label smoke-scenario \
-		--status-dir "$(TEST_PROGRESS_DIR)/smoke/scenario" \
-		-- \
-		env SCENARIO_MANIFEST="$(SCENARIO_SMOKE_MANIFEST)" \
-		go test -json -parallel="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}" -tags=scenario ./internal/test/game
+	bash ./scripts/with-test-temp.sh smoke-scenario -- \
+		bash ./scripts/go-test-progress.sh \
+			--label smoke-scenario \
+			--status-dir "$(TEST_PROGRESS_DIR)/smoke/scenario" \
+			-- \
+			env SCENARIO_MANIFEST="$(SCENARIO_SMOKE_MANIFEST)" \
+			go test -json -parallel="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}" -tags=scenario ./internal/test/game
 
 check:
-	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" MAKE="$(MAKE)" bash ./scripts/check.sh
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
+	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" MAKE="$(MAKE)" \
+	bash ./scripts/with-test-temp.sh check -- \
+		bash ./scripts/check.sh
 
 check-core:
 	$(MAKE) docs-check
@@ -167,12 +203,15 @@ check-runtime:
 	@echo "[check-runtime] stage 2/3: topology-check"
 	$(MAKE) topology-check
 	@echo "[check-runtime] stage 3/3: scenario"
+	GO_TEST_CACHE_DIR="$(GO_TEST_CACHE_DIR)" \
+	TEST_TMP_ROOT="$(TEST_TMP_ROOT)" \
 	TEST_PROGRESS_DIR="$(TEST_PROGRESS_DIR)" TEST_PROGRESS_HEARTBEAT="$(TEST_PROGRESS_HEARTBEAT)" \
-	bash ./scripts/go-test-progress.sh \
-		--label check-runtime-scenario \
-		--status-dir "$(TEST_PROGRESS_DIR)/check-runtime/scenario" \
-		-- \
-		go test -json -parallel="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}" -tags=scenario ./internal/test/game
+	bash ./scripts/with-test-temp.sh check-runtime -- \
+		bash ./scripts/go-test-progress.sh \
+			--label check-runtime-scenario \
+			--status-dir "$(TEST_PROGRESS_DIR)/check-runtime/scenario" \
+			-- \
+			go test -json -parallel="$${SCENARIO_PARALLELISM:-$(SCENARIO_DEFAULT_PARALLELISM)}" -tags=scenario ./internal/test/game
 
 ci-integration-shard:
 	INTEGRATION_SHARED_FIXTURE=$${INTEGRATION_SHARED_FIXTURE:-true} INTEGRATION_SHARD_TOTAL=$${INTEGRATION_SHARD_TOTAL:?set INTEGRATION_SHARD_TOTAL} INTEGRATION_SHARD_INDEX=$${INTEGRATION_SHARD_INDEX:?set INTEGRATION_SHARD_INDEX} bash ./scripts/integration-shard.sh

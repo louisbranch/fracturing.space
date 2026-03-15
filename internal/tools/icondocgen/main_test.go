@@ -8,6 +8,16 @@ import (
 	"testing"
 )
 
+func useSystemTempDir(t *testing.T) {
+	t.Helper()
+
+	// Keep this temp root outside the repo so module-root discovery cannot
+	// resolve the workspace go.mod through the wrapped local test TMPDIR.
+	t.Setenv("TMPDIR", "")
+	t.Setenv("TMP", "")
+	t.Setenv("TEMP", "")
+}
+
 func TestRunWritesCatalog(t *testing.T) {
 	root := t.TempDir()
 	if err := os.WriteFile(filepath.Join(root, "go.mod"), []byte("module example.com/project\n"), 0o644); err != nil {
@@ -66,6 +76,8 @@ func TestRunResolvesRootFromWorkingDirectory(t *testing.T) {
 }
 
 func TestRunReturnsErrorWhenRootMissing(t *testing.T) {
+	useSystemTempDir(t)
+
 	root, err := os.MkdirTemp("", "icondocgen-root-missing-*")
 	if err != nil {
 		t.Fatalf("mkdir temp: %v", err)
