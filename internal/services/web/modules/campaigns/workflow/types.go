@@ -86,6 +86,7 @@ type Weapon struct {
 	Name         string
 	Category     string
 	Tier         int32
+	Burden       int32
 	Trait        string
 	Range        string
 	Damage       string

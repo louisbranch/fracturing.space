@@ -275,9 +275,61 @@ func creationStepTraitsReady(view CampaignCharacterCreationView) bool {
 }
 
 func creationStepEquipmentReady(view CampaignCharacterCreationView) bool {
-	return strings.TrimSpace(view.PrimaryWeaponID) != "" &&
-		strings.TrimSpace(view.ArmorID) != "" &&
-		strings.TrimSpace(view.PotionItemID) != ""
+	if strings.TrimSpace(view.PrimaryWeaponID) == "" ||
+		strings.TrimSpace(view.ArmorID) == "" ||
+		strings.TrimSpace(view.PotionItemID) == "" {
+		return false
+	}
+	switch creationSelectedPrimaryWeaponBurden(view) {
+	case 1:
+		return strings.TrimSpace(view.SecondaryWeaponID) != ""
+	case 2:
+		return strings.TrimSpace(view.SecondaryWeaponID) == ""
+	default:
+		return false
+	}
+}
+
+// creationSelectedPrimaryWeaponBurden resolves the burden of the selected
+// primary weapon so server-rendered step state can mirror the SRD loadout rule.
+func creationSelectedPrimaryWeaponBurden(view CampaignCharacterCreationView) int32 {
+	selectedID := strings.TrimSpace(view.PrimaryWeaponID)
+	if selectedID == "" {
+		return 0
+	}
+	for _, weapon := range view.PrimaryWeapons {
+		if strings.TrimSpace(weapon.ID) == selectedID {
+			return weapon.Burden
+		}
+	}
+	return 0
+}
+
+// creationTwoHandedPrimarySelected reports whether the selected primary weapon
+// occupies both hands.
+func creationTwoHandedPrimarySelected(view CampaignCharacterCreationView) bool {
+	return creationSelectedPrimaryWeaponBurden(view) == 2
+}
+
+// creationConditionalHidden returns "hidden" when a UI element should stay out
+// of layout until its governing condition becomes true.
+func creationConditionalHidden(show bool) string {
+	if show {
+		return ""
+	}
+	return "hidden"
+}
+
+// creationWeaponHandednessLabel resolves the display label for weapon hand use.
+func creationWeaponHandednessLabel(loc Localizer, burden int32) string {
+	switch burden {
+	case 1:
+		return T(loc, "game.character_creation.weapon_handedness.one_handed")
+	case 2:
+		return T(loc, "game.character_creation.weapon_handedness.two_handed")
+	default:
+		return ""
+	}
 }
 
 func creationStepExperiencesReady(view CampaignCharacterCreationView) bool {
@@ -473,15 +525,18 @@ templ CharacterCreationPage(view CharacterCreationPageView, loc Localizer) {
 }
 
 templ creationResetForm(view CharacterCreationPageView, loc Localizer) {
-	<form
-		method="post"
-		action={ routepath.AppCampaignCharacterCreationReset(view.CampaignID, view.CharacterID) }
+	<button
+		class="btn btn-outline btn-error btn-sm"
+		type="submit"
+		formmethod="post"
+		formaction={ routepath.AppCampaignCharacterCreationReset(view.CampaignID, view.CharacterID) }
+		formnovalidate
 		data-character-creation-reset="true"
-		onsubmit="return confirm(this.dataset.confirmText);"
+		onclick="return confirm(this.dataset.confirmText);"
 		data-confirm-text={ T(loc, "game.character_creation.confirm_start_again") }
 	>
-		<button class="btn btn-outline btn-error btn-sm" type="submit">{ T(loc, "game.character_creation.action_start_again") }</button>
-	</form>
+		{ T(loc, "game.character_creation.action_start_again") }
+	</button>
 }
 
 templ creationFooter(view CharacterCreationPageView, loc Localizer) {
@@ -1046,7 +1101,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 					<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.primary_weapon") }</span></label>
 					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
 						for _, weapon := range view.Creation.PrimaryWeapons {
-							<div data-equip-card data-equip-card-name={ weapon.Name }>
+							<div data-equip-card data-equip-card-name={ weapon.Name } data-weapon-burden={ fmt.Sprintf("%d", weapon.Burden) }>
 								@creationSelectableOptionCard(
 									weapon.ID,
 									weapon.Name,
@@ -1061,6 +1116,9 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 									nil,
 								) {
 									<div class="flex flex-wrap gap-2 text-xs">
+										if creationWeaponHandednessLabel(loc, weapon.Burden) != "" {
+											<span class="badge badge-secondary badge-sm">{ creationWeaponHandednessLabel(loc, weapon.Burden) }</span>
+										}
 										if weapon.Damage != "" {
 											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
 										}
@@ -1096,16 +1154,18 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 							@creationSelectableOptionCard(
 								"",
 								T(loc, "game.character_creation.value.none"),
-								"",
+								view.Creation.SecondaryWeaponNoneImageURL,
 								"weapon_secondary_id",
 								"radio",
 								strings.TrimSpace(view.Creation.SecondaryWeaponID) == "",
 								false,
 								false,
-								false,
+								strings.TrimSpace(view.Creation.SecondaryWeaponNoneImageURL) != "",
 								"equipment-secondary-weapon",
 								nil,
-							) {}
+							) {
+								<p class={ "text-xs opacity-60 mt-1 " + creationConditionalHidden(creationTwoHandedPrimarySelected(view.Creation)) } data-secondary-none-locked-copy>{ T(loc, "game.character_creation.secondary_weapon_disabled_two_handed") }</p>
+							}
 						</div>
 						for _, weapon := range view.Creation.SecondaryWeapons {
 							<div data-equip-card data-equip-card-name={ weapon.Name }>
@@ -1123,6 +1183,9 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 									nil,
 								) {
 									<div class="flex flex-wrap gap-2 text-xs">
+										if creationWeaponHandednessLabel(loc, weapon.Burden) != "" {
+											<span class="badge badge-secondary badge-sm">{ creationWeaponHandednessLabel(loc, weapon.Burden) }</span>
+										}
 										if weapon.Damage != "" {
 											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
 										}
@@ -1231,12 +1294,79 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 			if (!form) return;
 			var sections = form.querySelectorAll('[data-equip-section]');
 			var nextButton = form.querySelector('[data-character-creation-next]');
+			var secondarySection = form.querySelector('[data-equip-section="weapon_secondary_id"]');
+			var secondarySummary = secondarySection ? secondarySection.querySelector('[data-equip-selected]') : null;
+			var secondaryGrid = secondarySection ? secondarySection.querySelector('[data-equip-grid]') : null;
+			var secondaryNoneLockedCopy = form.querySelector('[data-secondary-none-locked-copy]');
+
+			function selectedPrimaryBurden() {
+				var checked = form.querySelector('input[name="weapon_primary_id"]:checked');
+				if (!checked) return 0;
+				var card = checked.closest('[data-equip-card]');
+				if (!card) return 0;
+				var burden = parseInt(card.dataset.weaponBurden || '0', 10);
+				return Number.isNaN(burden) ? 0 : burden;
+			}
+
+			function setSecondaryOptionDisabled(input, disabled) {
+				if (!input || input.value === '') return;
+				input.disabled = disabled;
+				var card = input.closest('label');
+				if (!card) return;
+				card.classList.toggle('opacity-60', disabled);
+				card.classList.toggle('cursor-not-allowed', disabled);
+				card.classList.toggle('pointer-events-none', disabled);
+			}
+
+			function syncSectionSelectedState(section) {
+				if (!section) return;
+				var inputName = section.dataset.equipSection;
+				if (!inputName) return;
+				section.querySelectorAll('input[name="' + inputName + '"]').forEach(function(input) {
+					var card = input.closest('label');
+					if (!card) return;
+					card.classList.toggle('border-primary', input.checked);
+					card.classList.toggle('ring-2', input.checked);
+					card.classList.toggle('ring-primary\\/20', input.checked);
+				});
+			}
+
+			function syncSecondaryAvailability() {
+				var burden = selectedPrimaryBurden();
+				var twoHanded = burden === 2;
+				var noneOption = form.querySelector('input[name="weapon_secondary_id"][value=""]');
+				var checkedSecondary = form.querySelector('input[name="weapon_secondary_id"]:checked');
+
+				if (twoHanded && checkedSecondary && checkedSecondary.value !== '' && noneOption) {
+					noneOption.checked = true;
+					checkedSecondary = noneOption;
+				}
+
+				form.querySelectorAll('input[name="weapon_secondary_id"]').forEach(function(input) {
+					setSecondaryOptionDisabled(input, twoHanded);
+				});
+
+				if (secondaryNoneLockedCopy) {
+					secondaryNoneLockedCopy.classList.toggle('hidden', !twoHanded);
+				}
+				syncSectionSelectedState(secondarySection);
+				if (twoHanded && secondarySummary && secondaryGrid) {
+					secondarySummary.classList.add('hidden');
+					secondaryGrid.classList.remove('hidden');
+				}
+			}
 
 			function updateNextButton() {
 				if (!nextButton) return;
-				var ready = !!form.querySelector('input[name="weapon_primary_id"]:checked') &&
+				var burden = selectedPrimaryBurden();
+				var secondaryChecked = form.querySelector('input[name="weapon_secondary_id"]:checked');
+				var secondaryReady = burden === 2
+					? (!secondaryChecked || secondaryChecked.value === '')
+					: burden === 1 && !!secondaryChecked && secondaryChecked.value !== '';
+				var ready = burden > 0 &&
 					!!form.querySelector('input[name="armor_id"]:checked') &&
-					!!form.querySelector('input[name="potion_item_id"]:checked');
+					!!form.querySelector('input[name="potion_item_id"]:checked') &&
+					secondaryReady;
 				nextButton.disabled = !ready;
 			}
 
@@ -1252,12 +1382,14 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 					if (!checked) return;
 					var card = checked.closest('[data-equip-card]');
 					if (card) nameEl.textContent = card.dataset.equipCardName;
+					syncSectionSelectedState(section);
 					grid.classList.add('hidden');
 					summary.classList.remove('hidden');
 					updateNextButton();
 				}
 
 				function expand() {
+					syncSectionSelectedState(section);
 					grid.classList.remove('hidden');
 					summary.classList.add('hidden');
 					updateNextButton();
@@ -1272,8 +1404,16 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 
 				// Collapse on load if already selected
 				var checked = section.querySelector('input[name="' + inputName + '"]:checked');
+				syncSectionSelectedState(section);
 				if (checked && checked.value !== '') collapse();
 			});
+			form.querySelectorAll('input[name="weapon_primary_id"], input[name="weapon_secondary_id"]').forEach(function(input) {
+				input.addEventListener('change', function() {
+					syncSecondaryAvailability();
+					updateNextButton();
+				});
+			});
+			syncSecondaryAvailability();
 			updateNextButton();
 		})();
 	</script>

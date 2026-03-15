@@ -228,6 +228,7 @@ func mapWeapons(weapons []campaignapp.CatalogWeapon) []Weapon {
 			Name:         weapon.Name,
 			Category:     weapon.Category,
 			Tier:         weapon.Tier,
+			Burden:       weapon.Burden,
 			Trait:        weapon.Trait,
 			Range:        weapon.Range,
 			Damage:       weapon.Damage,

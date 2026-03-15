@@ -1801,6 +1801,7 @@
             "longbow",
             "longsword",
             "mace",
+            "no_secondary_weapon",
             "quarterstaff",
             "rapier",
             "returning",
@@ -6746,6 +6747,31 @@
         "entity_id": "weapon.mace",
         "source_file": "weapons.json"
       },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_weapon_illustration.no_secondary_weapon",
+      "request_slug": "no_secondary_weapon",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "batch_id": "dh_ui_placeholder_r1",
+      "fs_asset_id": "no_secondary_weapon",
+      "output_id": "img_b0718b2a505e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "b0718b2a505ea1a2a6b06c7a3c70f0e4dad87eda13c236e55d95238bfc773f5e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-13T15:10:38+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_weapon_illustration/v1/no_secondary_weapon",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773414660/high_fantasy/daggerheart_weapon_illustration/v1/no_secondary_weapon.png",
+        "version": 1773414660,
+        "uploaded_at": "2026-03-13T15:11:01+00:00"
+      },
+      "catalog_ref": {},
       "review_flags": []
     },
     {

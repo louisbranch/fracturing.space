@@ -10,6 +10,8 @@ import (
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
 
+const daggerheartSecondaryNoneWeaponAssetEntityID = "weapon.no-secondary"
+
 // CreationView maps the domain creation model to the template view type.
 func (w Workflow) CreationView(creation catalogCreation) campaignrender.CampaignCharacterCreationView {
 	view := newCreationView(creation)
@@ -24,6 +26,7 @@ func (w Workflow) CreationView(creation catalogCreation) campaignrender.Campaign
 	view.Communities = mapCreationHeritages(creation.Communities, catalog.DaggerheartEntityTypeCommunity, catalog.DaggerheartAssetTypeCommunityIllustration, cdn)
 	view.PrimaryWeapons = mapCreationWeapons(creation.PrimaryWeapons, cdn)
 	view.SecondaryWeapons = mapCreationWeapons(creation.SecondaryWeapons, cdn)
+	view.SecondaryWeaponNoneImageURL = creationSecondaryNoneImageURL(cdn)
 	view.Armor = mapCreationArmor(creation.Armor, cdn)
 	view.PotionItems = mapCreationItems(creation.PotionItems, cdn)
 	view.DomainCards = mapCreationDomainCards(creation.DomainCards, cdn)
@@ -61,39 +64,40 @@ func domainLookupByID(domains []campaignworkflow.Domain) map[string]domainView {
 // newCreationView initializes template view state from normalized creation data.
 func newCreationView(creation catalogCreation) campaignrender.CampaignCharacterCreationView {
 	return campaignrender.CampaignCharacterCreationView{
-		Ready:                creation.Progress.Ready,
-		NextStep:             creation.Progress.NextStep,
-		UnmetReasons:         append([]string(nil), creation.Progress.UnmetReasons...),
-		ClassID:              creation.Profile.ClassID,
-		SubclassID:           creation.Profile.SubclassID,
-		AncestryID:           creation.Profile.AncestryID,
-		CommunityID:          creation.Profile.CommunityID,
-		Agility:              creation.Profile.Agility,
-		Strength:             creation.Profile.Strength,
-		Finesse:              creation.Profile.Finesse,
-		Instinct:             creation.Profile.Instinct,
-		Presence:             creation.Profile.Presence,
-		Knowledge:            creation.Profile.Knowledge,
-		PrimaryWeaponID:      creation.Profile.PrimaryWeaponID,
-		SecondaryWeaponID:    creation.Profile.SecondaryWeaponID,
-		ArmorID:              creation.Profile.ArmorID,
-		PotionItemID:         creation.Profile.PotionItemID,
-		Description:          creation.Profile.Description,
-		Background:           creation.Profile.Background,
-		Experiences:          mapCreationExperiences(creation.Profile.Experiences),
-		DomainCardIDs:        append([]string(nil), creation.Profile.DomainCardIDs...),
-		Connections:          creation.Profile.Connections,
-		Steps:                nil,
-		Classes:              nil,
-		Subclasses:           nil,
-		Ancestries:           nil,
-		Communities:          nil,
-		PrimaryWeapons:       nil,
-		SecondaryWeapons:     nil,
-		Armor:                nil,
-		PotionItems:          nil,
-		DomainCards:          nil,
-		NextStepPrefetchURLs: nil,
+		Ready:                       creation.Progress.Ready,
+		NextStep:                    creation.Progress.NextStep,
+		UnmetReasons:                append([]string(nil), creation.Progress.UnmetReasons...),
+		ClassID:                     creation.Profile.ClassID,
+		SubclassID:                  creation.Profile.SubclassID,
+		AncestryID:                  creation.Profile.AncestryID,
+		CommunityID:                 creation.Profile.CommunityID,
+		Agility:                     creation.Profile.Agility,
+		Strength:                    creation.Profile.Strength,
+		Finesse:                     creation.Profile.Finesse,
+		Instinct:                    creation.Profile.Instinct,
+		Presence:                    creation.Profile.Presence,
+		Knowledge:                   creation.Profile.Knowledge,
+		PrimaryWeaponID:             creation.Profile.PrimaryWeaponID,
+		SecondaryWeaponID:           creation.Profile.SecondaryWeaponID,
+		ArmorID:                     creation.Profile.ArmorID,
+		PotionItemID:                creation.Profile.PotionItemID,
+		Description:                 creation.Profile.Description,
+		Background:                  creation.Profile.Background,
+		Experiences:                 mapCreationExperiences(creation.Profile.Experiences),
+		DomainCardIDs:               append([]string(nil), creation.Profile.DomainCardIDs...),
+		Connections:                 creation.Profile.Connections,
+		Steps:                       nil,
+		Classes:                     nil,
+		Subclasses:                  nil,
+		Ancestries:                  nil,
+		Communities:                 nil,
+		PrimaryWeapons:              nil,
+		SecondaryWeapons:            nil,
+		SecondaryWeaponNoneImageURL: "",
+		Armor:                       nil,
+		PotionItems:                 nil,
+		DomainCards:                 nil,
+		NextStepPrefetchURLs:        nil,
 	}
 }
 
@@ -131,6 +135,16 @@ func creationWeaponImageURLs(items []campaignrender.CampaignCreationWeaponView) 
 		urls = append(urls, strings.TrimSpace(item.ImageURL))
 	}
 	return urls
+}
+
+// creationSecondaryNoneImageURL resolves the synthetic secondary-none card art.
+func creationSecondaryNoneImageURL(cdn imagecdn.ImageCDN) string {
+	return resolveEntityImageURL(
+		cdn,
+		catalog.DaggerheartEntityTypeWeapon,
+		daggerheartSecondaryNoneWeaponAssetEntityID,
+		catalog.DaggerheartAssetTypeWeaponIllustration,
+	)
 }
 
 // creationArmorImageURLs extracts armor illustrations for the next-step prefetch list.
@@ -320,6 +334,7 @@ func mapCreationWeapons(weapons []campaignworkflow.Weapon, cdn imagecdn.ImageCDN
 			ID:       weapon.ID,
 			Name:     weapon.Name,
 			ImageURL: imageURL,
+			Burden:   weapon.Burden,
 			Trait:    weapon.Trait,
 			Range:    weapon.Range,
 			Damage:   weapon.Damage,

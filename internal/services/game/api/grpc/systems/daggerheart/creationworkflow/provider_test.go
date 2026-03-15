@@ -254,4 +254,88 @@ func TestCreationProfileFromStorage_PreservesDescription(t *testing.T) {
 	}
 }
 
+func TestNormalizeStartingWeaponIDs(t *testing.T) {
+	tests := []struct {
+		name     string
+		weapons  []startingWeaponSelection
+		want     []string
+		wantCode codes.Code
+	}{
+		{
+			name: "two-handed primary only",
+			weapons: []startingWeaponSelection{
+				{ID: "weapon.greatsword", Category: "primary", Tier: 1, Burden: 2},
+			},
+			want:     []string{"weapon.greatsword"},
+			wantCode: codes.OK,
+		},
+		{
+			name: "one-handed primary and secondary normalize to primary first",
+			weapons: []startingWeaponSelection{
+				{ID: "weapon.dagger", Category: "secondary", Tier: 1, Burden: 1},
+				{ID: "weapon.longsword", Category: "primary", Tier: 1, Burden: 1},
+			},
+			want:     []string{"weapon.longsword", "weapon.dagger"},
+			wantCode: codes.OK,
+		},
+		{
+			name: "one-handed primary without secondary",
+			weapons: []startingWeaponSelection{
+				{ID: "weapon.longsword", Category: "primary", Tier: 1, Burden: 1},
+			},
+			wantCode: codes.InvalidArgument,
+		},
+		{
+			name: "two-handed primary with secondary",
+			weapons: []startingWeaponSelection{
+				{ID: "weapon.greatsword", Category: "primary", Tier: 1, Burden: 2},
+				{ID: "weapon.dagger", Category: "secondary", Tier: 1, Burden: 1},
+			},
+			wantCode: codes.InvalidArgument,
+		},
+		{
+			name: "secondary must be one-handed",
+			weapons: []startingWeaponSelection{
+				{ID: "weapon.longsword", Category: "primary", Tier: 1, Burden: 1},
+				{ID: "weapon.tower-shield", Category: "secondary", Tier: 1, Burden: 2},
+			},
+			wantCode: codes.InvalidArgument,
+		},
+		{
+			name: "primary burden must be one or two",
+			weapons: []startingWeaponSelection{
+				{ID: "weapon.oddity", Category: "primary", Tier: 1, Burden: 3},
+				{ID: "weapon.dagger", Category: "secondary", Tier: 1, Burden: 1},
+			},
+			wantCode: codes.InvalidArgument,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := normalizeStartingWeaponIDs(tt.weapons)
+			if tt.wantCode != codes.OK {
+				if err == nil {
+					t.Fatalf("expected error code %v, got nil", tt.wantCode)
+				}
+				if status.Code(err) != tt.wantCode {
+					t.Fatalf("error code = %v, want %v", status.Code(err), tt.wantCode)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("normalizeStartingWeaponIDs() error = %v", err)
+			}
+			if len(got) != len(tt.want) {
+				t.Fatalf("weapon ids = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Fatalf("weapon ids = %v, want %v", got, tt.want)
+				}
+			}
+		})
+	}
+}
+
 var _ characterworkflow.Provider = (*CreationWorkflowProvider)(nil)
