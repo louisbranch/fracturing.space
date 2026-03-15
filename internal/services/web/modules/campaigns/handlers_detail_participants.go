@@ -13,12 +13,12 @@ func (h handlers) handleParticipants(w http.ResponseWriter, r *http.Request, cam
 	if !ok {
 		return
 	}
-	items, err := h.participantReads.CampaignParticipants(ctx, campaignID)
+	items, err := h.participants.reads.CampaignParticipants(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	view := page.participantsView(campaignID, items, viewerUserID, h.authorization.RequireManageParticipants(ctx, campaignID) == nil)
+	view := page.participantsView(campaignID, items, viewerUserID, h.pages.authorization.RequireManageParticipants(ctx, campaignID) == nil)
 	h.writeCampaignDetailPage(w, r, page, campaignID, campaignrender.ParticipantsFragment(view, page.loc), page.participantsBreadcrumbs()...)
 }
 
@@ -28,7 +28,7 @@ func (h handlers) handleParticipantCreatePage(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	creator, err := h.participantReads.CampaignParticipantCreator(ctx, campaignID)
+	creator, err := h.participants.reads.CampaignParticipantCreator(ctx, campaignID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -50,7 +50,7 @@ func (h handlers) handleParticipantEdit(w http.ResponseWriter, r *http.Request, 
 	if !ok {
 		return
 	}
-	editor, err := h.participantReads.CampaignParticipantEditor(ctx, campaignID, participantID)
+	editor, err := h.participants.reads.CampaignParticipantEditor(ctx, campaignID, participantID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

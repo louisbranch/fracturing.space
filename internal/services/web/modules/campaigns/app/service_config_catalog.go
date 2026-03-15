@@ -15,8 +15,3 @@ type StarterServiceConfig struct {
 type WorkspaceServiceConfig struct {
 	Read CampaignWorkspaceReadGateway
 }
-
-// GameServiceConfig keeps game-surface dependencies explicit.
-type GameServiceConfig struct {
-	Read CampaignGameReadGateway
-}

@@ -16,15 +16,9 @@ func TestDependencyGraphKeepsClientBindingOutOfCommandLayer(t *testing.T) {
 	source := string(content)
 
 	for _, expected := range []string{
-		"web.BindAuthDependency",
-		"web.BindSocialDependency",
-		"web.BindGameDependency",
-		"web.BindAIDependency",
-		"web.BindDiscoveryDependency",
-		"web.BindUserHubDependency",
-		"web.BindNotificationsDependency",
-		"web.BindStatusDependency",
-		"web.NewDependencyBundle",
+		"web.LookupStartupDependencyDescriptor",
+		"web.DependencyNameAuth",
+		"web.DependencyNameStatus",
 	} {
 		if !strings.Contains(source, expected) {
 			t.Fatalf("dependency_graph.go missing %q", expected)

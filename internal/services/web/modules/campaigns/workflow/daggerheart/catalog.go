@@ -4,16 +4,16 @@ import (
 	"sort"
 	"strings"
 
-	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
 )
 
-// BuildView maps explicit workflow inputs directly to the render view contract.
+// BuildView maps explicit workflow inputs directly to the workflow-owned page
+// model.
 func (w Workflow) BuildView(
 	progress campaignworkflow.Progress,
 	catalog campaignworkflow.Catalog,
 	profile campaignworkflow.Profile,
-) campaignrender.CampaignCharacterCreationView {
+) campaignworkflow.CharacterCreationView {
 	return w.CreationView(w.assembleCatalog(progress, catalog, profile))
 }
 

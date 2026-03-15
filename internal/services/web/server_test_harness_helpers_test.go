@@ -47,7 +47,6 @@ func attachSessionCookie(t *testing.T, req *http.Request, auth *fakeWebAuthClien
 }
 
 func newDependencyBundle(principalDeps principal.Dependencies, moduleDeps modules.Dependencies) *DependencyBundle {
-	moduleDeps = completeTestModuleDependencies(moduleDeps)
 	return &DependencyBundle{
 		Principal: principalDeps,
 		Modules:   moduleDeps,
@@ -58,9 +57,18 @@ func newDefaultDependencyBundle(moduleDeps modules.Dependencies) *DependencyBund
 	return newDependencyBundle(principal.Dependencies{}, moduleDeps)
 }
 
+// newCompletedDependencyBundle opt-in completes partial module dependency sets
+// for tests that intentionally exercise a mounted surface without restating its
+// full dependency graph inline.
+func newCompletedDependencyBundle(principalDeps principal.Dependencies, moduleDeps modules.Dependencies) *DependencyBundle {
+	return &DependencyBundle{
+		Principal: principalDeps,
+		Modules:   completeTestModuleDependencies(moduleDeps),
+	}
+}
+
 func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dependencies {
 	hasCampaignDependency := moduleDeps.Campaigns.CampaignClient != nil ||
-		moduleDeps.Campaigns.InteractionClient != nil ||
 		moduleDeps.Campaigns.DiscoveryClient != nil ||
 		moduleDeps.Campaigns.ParticipantClient != nil ||
 		moduleDeps.Campaigns.CharacterClient != nil ||
@@ -75,9 +83,6 @@ func completeTestModuleDependencies(moduleDeps modules.Dependencies) modules.Dep
 	if hasCampaignDependency {
 		if moduleDeps.Campaigns.CampaignClient == nil {
 			moduleDeps.Campaigns.CampaignClient = defaultCampaignClient()
-		}
-		if moduleDeps.Campaigns.InteractionClient == nil {
-			moduleDeps.Campaigns.InteractionClient = defaultInteractionClient()
 		}
 		if moduleDeps.Campaigns.DiscoveryClient == nil {
 			moduleDeps.Campaigns.DiscoveryClient = defaultDiscoveryClient()

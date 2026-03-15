@@ -57,15 +57,15 @@ type campaignPageContext struct {
 func (h handlers) loadCampaignPage(w http.ResponseWriter, r *http.Request, campaignID string) (context.Context, *campaignPageContext, error) {
 	loc, lang := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
-	workspace, err := h.workspace.CampaignWorkspace(ctx, campaignID)
+	workspace, err := h.pages.workspace.CampaignWorkspace(ctx, campaignID)
 	if err != nil {
 		return nil, nil, err
 	}
-	sessions, err := h.sessionReads.CampaignSessions(ctx, campaignID)
+	sessions, err := h.pages.sessionReads.CampaignSessions(ctx, campaignID)
 	if err != nil {
 		return nil, nil, err
 	}
-	canManageInvites := h.authorization.RequireManageInvites(ctx, campaignID) == nil
+	canManageInvites := h.pages.authorization.RequireManageInvites(ctx, campaignID) == nil
 	return ctx, &campaignPageContext{
 		workspace:        workspace,
 		sessions:         sessions,

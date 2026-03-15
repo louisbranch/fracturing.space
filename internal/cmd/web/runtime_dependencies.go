@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
 	"github.com/louisbranch/fracturing.space/internal/services/web"
 )
@@ -31,8 +32,20 @@ func bootstrapRuntimeDependencies(
 	cfg Config,
 	reporter *platformstatus.Reporter,
 ) (runtimeDependencies, error) {
+	return bootstrapRuntimeDependenciesWithConnFactory(ctx, cfg, reporter, platformgrpc.NewManagedConn)
+}
+
+// bootstrapRuntimeDependenciesWithConnFactory assembles the runtime
+// dependency graph while keeping the managed-connection factory injectable for
+// tests.
+func bootstrapRuntimeDependenciesWithConnFactory(
+	ctx context.Context,
+	cfg Config,
+	reporter *platformstatus.Reporter,
+	newConn managedConnFactory,
+) (runtimeDependencies, error) {
 	requirements := dependencyRequirements(cfg, reporter)
-	bundle, conns, err := bootstrapDependencies(ctx, requirements, cfg.AssetBaseURL, reporter, slog.Default())
+	bundle, conns, err := bootstrapDependencies(ctx, requirements, cfg.AssetBaseURL, reporter, slog.Default(), newConn)
 	if err != nil {
 		return runtimeDependencies{}, fmt.Errorf("init web dependency graph: %w", err)
 	}

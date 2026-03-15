@@ -52,6 +52,9 @@ func TestNewBaseFromPrincipalUsesGroupedPrincipalResolver(t *testing.T) {
 	if got := base.ResolveRequestLanguage(req); got != "en-CA" {
 		t.Fatalf("ResolveRequestLanguage() = %q, want %q", got, "en-CA")
 	}
+	if got := base.RequestUserID(req); got != "user-1" {
+		t.Fatalf("RequestUserID() = %q, want %q", got, "user-1")
+	}
 }
 
 func TestResolveRequestViewerReturnsZeroWithoutResolver(t *testing.T) {
@@ -107,6 +110,48 @@ func TestWritePublicPageRendersAuthShell(t *testing.T) {
 	}
 	if body := rr.Body.String(); !strings.Contains(body, `id="auth-shell"`) {
 		t.Fatalf("body missing auth-shell marker: %q", body)
+	}
+}
+
+func TestPageLocalizerResolvesLanguageThroughEmbeddedResolver(t *testing.T) {
+	t.Parallel()
+
+	base := NewBase(
+		WithResolveViewer(func(*http.Request) module.Viewer { return module.Viewer{} }),
+		WithResolveUserID(func(*http.Request) string { return "user-1" }),
+	)
+	base.Base = base.Base.WithLanguage(func(*http.Request) string { return "pt-BR" })
+	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
+
+	loc, lang := base.PageLocalizer(httptest.NewRecorder(), req)
+	if loc == nil {
+		t.Fatal("PageLocalizer() localizer = nil, want non-nil")
+	}
+	if lang != "pt-BR" {
+		t.Fatalf("PageLocalizer() language = %q, want %q", lang, "pt-BR")
+	}
+	if got := base.RequestUserID(req); got != "user-1" {
+		t.Fatalf("RequestUserID() = %q, want %q", got, "user-1")
+	}
+}
+
+func TestRequestUserIDFailsClosedForNilInputs(t *testing.T) {
+	t.Parallel()
+
+	base := NewBase()
+	if got := base.RequestUserID(nil); got != "" {
+		t.Fatalf("RequestUserID(nil) = %q, want empty", got)
+	}
+
+	base = NewBase(WithResolveUserID(func(*http.Request) string { return " user-1 " }))
+	if got := base.RequestUserID(nil); got != "" {
+		t.Fatalf("RequestUserID(nil request with resolver) = %q, want empty", got)
+	}
+
+	base = NewBase()
+	req := httptest.NewRequest(http.MethodGet, "/discover", nil)
+	if got := base.RequestUserID(req); got != "" {
+		t.Fatalf("RequestUserID(no resolver) = %q, want empty", got)
 	}
 }
 

@@ -14,7 +14,6 @@ type testGatewayBundle interface {
 	campaignapp.CampaignCatalogReadGateway
 	campaignapp.CampaignStarterGateway
 	campaignapp.CampaignWorkspaceReadGateway
-	campaignapp.CampaignGameReadGateway
 	campaignapp.CampaignParticipantReadGateway
 	campaignapp.CampaignCharacterReadGateway
 	campaignapp.CampaignSessionReadGateway
@@ -34,80 +33,100 @@ type testGatewayBundle interface {
 	campaignapp.CharacterCreationMutationGateway
 }
 
-func serviceConfigWithGateway(gateway testGatewayBundle) campaignapp.ServiceConfig {
-	return campaignapp.ServiceConfig{
-		Catalog: campaignapp.CatalogServiceConfig{
-			Read:     gateway,
-			Mutation: gateway,
+func serviceConfigsWithGateway(gateway testGatewayBundle) serviceConfigs {
+	participantRead := campaignapp.ParticipantReadServiceConfig{
+		Read:               gateway,
+		Workspace:          gateway,
+		BatchAuthorization: gateway,
+	}
+	authorization := campaignapp.AuthorizationGateway(gateway)
+	return serviceConfigs{
+		Page: pageServiceConfig{
+			Workspace: campaignapp.WorkspaceServiceConfig{
+				Read: gateway,
+			},
+			SessionRead: campaignapp.SessionReadServiceConfig{
+				Read: gateway,
+			},
+			Authorization: authorization,
 		},
-		Starter: campaignapp.StarterServiceConfig{
-			Gateway: gateway,
+		Catalog: catalogServiceConfig{
+			Catalog: campaignapp.CatalogServiceConfig{
+				Read:     gateway,
+				Mutation: gateway,
+			},
 		},
-		Workspace: campaignapp.WorkspaceServiceConfig{
-			Read: gateway,
+		Starter: starterServiceConfig{
+			Starter: campaignapp.StarterServiceConfig{
+				Gateway: gateway,
+			},
 		},
-		Game: campaignapp.GameServiceConfig{
-			Read: gateway,
+		Overview: overviewServiceConfig{
+			AutomationRead: campaignapp.AutomationReadServiceConfig{
+				Participants: gateway,
+				Read:         gateway,
+			},
+			AutomationMutation: campaignapp.AutomationMutationServiceConfig{
+				Participants: gateway,
+				Mutation:     gateway,
+			},
+			Configuration: campaignapp.ConfigurationServiceConfig{
+				Workspace: gateway,
+				Mutation:  gateway,
+			},
+			Authorization: authorization,
 		},
-		ParticipantRead: campaignapp.ParticipantReadServiceConfig{
-			Read:               gateway,
-			Workspace:          gateway,
-			BatchAuthorization: gateway,
+		Participants: participantServiceConfig{
+			Read: participantRead,
+			Mutation: campaignapp.ParticipantMutationServiceConfig{
+				Read:      gateway,
+				Mutation:  gateway,
+				Workspace: gateway,
+			},
+			Authorization: authorization,
 		},
-		ParticipantMutation: campaignapp.ParticipantMutationServiceConfig{
-			Read:      gateway,
-			Mutation:  gateway,
-			Workspace: gateway,
+		Characters: characterServiceConfig{
+			Read: campaignapp.CharacterReadServiceConfig{
+				Read:               gateway,
+				BatchAuthorization: gateway,
+			},
+			Control: campaignapp.CharacterControlServiceConfig{
+				Read:         gateway,
+				Mutation:     gateway,
+				Participants: gateway,
+				Sessions:     gateway,
+			},
+			Mutation: campaignapp.CharacterMutationServiceConfig{
+				Mutation: gateway,
+				Sessions: gateway,
+			},
+			Creation: campaignapp.CharacterCreationServiceConfig{
+				Read:     gateway,
+				Mutation: gateway,
+			},
+			Authorization: authorization,
 		},
-		CharacterRead: campaignapp.CharacterReadServiceConfig{
-			Read:               gateway,
-			BatchAuthorization: gateway,
+		Sessions: sessionServiceConfig{
+			Mutation: campaignapp.SessionMutationServiceConfig{
+				Mutation: gateway,
+			},
 		},
-		CharacterControl: campaignapp.CharacterControlServiceConfig{
-			Read:         gateway,
-			Mutation:     gateway,
-			Participants: gateway,
-			Sessions:     gateway,
+		Invites: inviteServiceConfig{
+			Read: campaignapp.InviteReadServiceConfig{
+				Read: gateway,
+			},
+			Mutation: campaignapp.InviteMutationServiceConfig{
+				Mutation: gateway,
+			},
+			ParticipantRead: participantRead,
+			Authorization:   authorization,
 		},
-		CharacterMutation: campaignapp.CharacterMutationServiceConfig{
-			Mutation: gateway,
-			Sessions: gateway,
-		},
-		SessionRead: campaignapp.SessionReadServiceConfig{
-			Read: gateway,
-		},
-		SessionMutation: campaignapp.SessionMutationServiceConfig{
-			Mutation: gateway,
-		},
-		InviteRead: campaignapp.InviteReadServiceConfig{
-			Read: gateway,
-		},
-		InviteMutation: campaignapp.InviteMutationServiceConfig{
-			Mutation: gateway,
-		},
-		Configuration: campaignapp.ConfigurationServiceConfig{
-			Workspace: gateway,
-			Mutation:  gateway,
-		},
-		AutomationRead: campaignapp.AutomationReadServiceConfig{
-			Participants: gateway,
-			Read:         gateway,
-		},
-		AutomationMutation: campaignapp.AutomationMutationServiceConfig{
-			Participants: gateway,
-			Mutation:     gateway,
-		},
-		Creation: campaignapp.CharacterCreationServiceConfig{
-			Read:     gateway,
-			Mutation: gateway,
-		},
-		Authorization: gateway,
 	}
 }
 
 func configWithGateway(gateway testGatewayBundle, base modulehandler.Base, workflows campaignworkflow.Registry) Config {
 	return Config{
-		Services:         newHandlerServices(serviceConfigWithGateway(gateway)),
+		Services:         newHandlerServices(serviceConfigsWithGateway(gateway)),
 		Base:             base,
 		PlayFallbackPort: "",
 		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),
@@ -115,13 +134,13 @@ func configWithGateway(gateway testGatewayBundle, base modulehandler.Base, workf
 	}
 }
 
-func serviceConfigWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseURL string) campaignapp.ServiceConfig {
-	return newServiceConfigFromGRPCDeps(deps, assetBaseURL)
+func serviceConfigsWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, assetBaseURL string) serviceConfigs {
+	return newServiceConfigsFromGRPCDeps(deps, assetBaseURL)
 }
 
 func configWithGRPCDeps(deps campaigngateway.GRPCGatewayDeps, base modulehandler.Base, workflows campaignworkflow.Registry) Config {
 	return Config{
-		Services:         newHandlerServices(serviceConfigWithGRPCDeps(deps, "")),
+		Services:         newHandlerServices(serviceConfigsWithGRPCDeps(deps, "")),
 		Base:             base,
 		PlayFallbackPort: "",
 		PlayLaunchGrant:  fakePlayLaunchGrantConfig(),

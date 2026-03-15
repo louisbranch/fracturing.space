@@ -5,8 +5,14 @@ import (
 	"encoding/json"
 )
 
-// Gateway abstracts authentication operations behind domain types.
-type Gateway interface {
+// SessionGateway owns web-session revocation.
+type SessionGateway interface {
+	// RevokeWebSession invalidates a web session.
+	RevokeWebSession(ctx context.Context, sessionID string) error
+}
+
+// PasskeyGateway owns signup, login, and web-session creation ceremonies.
+type PasskeyGateway interface {
 	// BeginAccountRegistration starts account creation and first-passkey enrollment.
 	BeginAccountRegistration(ctx context.Context, username string) (PasskeyChallenge, error)
 	// CheckUsernameAvailability validates and checks username availability.
@@ -19,16 +25,18 @@ type Gateway interface {
 	BeginPasskeyLogin(ctx context.Context, username string) (PasskeyChallenge, error)
 	// FinishPasskeyLogin completes login and returns the user ID.
 	FinishPasskeyLogin(ctx context.Context, sessionID string, credential json.RawMessage, pendingID string) (string, error)
+	// CreateWebSession creates a session for the given user, returning the session ID.
+	CreateWebSession(ctx context.Context, userID string) (string, error)
+}
+
+// RecoveryGateway owns account-recovery ceremonies.
+type RecoveryGateway interface {
 	// BeginAccountRecovery verifies the recovery code and returns a recovery session.
 	BeginAccountRecovery(ctx context.Context, username string, recoveryCode string) (string, error)
 	// BeginRecoveryPasskeyRegistration starts replacement passkey enrollment for recovery.
 	BeginRecoveryPasskeyRegistration(ctx context.Context, recoverySessionID string) (PasskeyChallenge, error)
 	// FinishRecoveryPasskeyRegistration completes recovery and returns the signed-in session.
 	FinishRecoveryPasskeyRegistration(ctx context.Context, recoverySessionID string, sessionID string, credential json.RawMessage, pendingID string) (PasskeyFinish, error)
-	// CreateWebSession creates a session for the given user, returning the session ID.
-	CreateWebSession(ctx context.Context, userID string) (string, error)
-	// RevokeWebSession invalidates a web session.
-	RevokeWebSession(ctx context.Context, sessionID string) error
 }
 
 // PageService exposes shell and redirect behavior used by page handlers.

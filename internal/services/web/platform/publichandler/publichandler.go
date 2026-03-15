@@ -1,16 +1,15 @@
-// Package publichandler provides a shared base for unauthenticated web module handlers.
-// It centralizes error handling, localization, and page rendering that would
-// otherwise be duplicated across public modules.
 package publichandler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/a-h/templ"
 	module "github.com/louisbranch/fracturing.space/internal/services/web/module"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/pagerender"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/requestresolver"
 	"github.com/louisbranch/fracturing.space/internal/services/web/platform/weberror"
+	webtemplates "github.com/louisbranch/fracturing.space/internal/services/web/templates"
 )
 
 // Base provides shared error handling and page rendering for public (unauthenticated)
@@ -19,6 +18,7 @@ import (
 type Base struct {
 	requestresolver.Base
 	resolveViewerSignedIn module.ResolveSignedIn
+	resolveUserID         module.ResolveUserID
 }
 
 // Option configures a Base.
@@ -35,6 +35,12 @@ func WithResolveViewerSignedIn(resolver module.ResolveSignedIn) Option {
 	return func(b *Base) { b.resolveViewerSignedIn = resolver }
 }
 
+// WithResolveUserID attaches a direct user-id resolver for shared public
+// transport flows that need to branch on the signed-in viewer.
+func WithResolveUserID(resolver module.ResolveUserID) Option {
+	return func(b *Base) { b.resolveUserID = resolver }
+}
+
 // NewBase builds a public handler base with the given options.
 func NewBase(opts ...Option) Base {
 	b := Base{Base: requestresolver.New(nil, nil)}
@@ -48,12 +54,15 @@ func NewBase(opts ...Option) Base {
 // resolver seam used by root composition.
 func NewBaseFromPrincipal(resolver requestresolver.PrincipalResolver) Base {
 	var resolveSignedIn module.ResolveSignedIn
+	var resolveUserID module.ResolveUserID
 	if resolver != nil {
 		resolveSignedIn = resolver.ResolveSignedIn
+		resolveUserID = resolver.ResolveUserID
 	}
 	return Base{
 		Base:                  requestresolver.NewFromPageResolver(resolver),
 		resolveViewerSignedIn: resolveSignedIn,
+		resolveUserID:         resolveUserID,
 	}
 }
 
@@ -63,6 +72,21 @@ func (b Base) IsViewerSignedIn(r *http.Request) bool {
 		return b.resolveViewerSignedIn(r)
 	}
 	return false
+}
+
+// RequestUserID resolves the signed-in viewer id for public transport flows.
+func (b Base) RequestUserID(r *http.Request) string {
+	if r == nil || b.resolveUserID == nil {
+		return ""
+	}
+	return strings.TrimSpace(b.resolveUserID(r))
+}
+
+// PageLocalizer resolves the shared localized page state used by public pages
+// and JSON error responses.
+func (b Base) PageLocalizer(w http.ResponseWriter, r *http.Request) (webtemplates.Localizer, string) {
+	page := requestresolver.ResolveLocalizedPage(w, r, &b)
+	return page.Localizer, page.Language
 }
 
 // WritePublicPage renders a full public page using the auth layout.

@@ -19,11 +19,11 @@ func TestPrivateSettingsUsesAuthenticatedUserLocaleForShellAndContent(t *testing
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(
+		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
-				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
+				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
 				Settings: modules.SettingsDependencies{
 					SocialClient:     defaultSocialClient(),
@@ -68,11 +68,11 @@ func TestPrivateSettingsValidationErrorUsesAuthenticatedUserLocale(t *testing.T)
 	account := &fakeAccountClient{getProfileResp: &authv1.GetProfileResponse{Profile: &authv1.AccountProfile{Locale: commonv1.Locale_LOCALE_PT_BR}}}
 	auth := newFakeWebAuthClient()
 	h, err := NewHandler(Config{
-		Dependencies: newDependencyBundle(
+		Dependencies: newCompletedDependencyBundle(
 			principal.Dependencies{SessionClient: auth, AccountClient: account},
 			modules.Dependencies{
 				PublicAuth: modules.PublicAuthDependencies{AuthClient: auth},
-				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient(), InteractionClient: defaultInteractionClient()},
+				Campaigns:  modules.CampaignDependencies{CampaignClient: defaultCampaignClient()},
 				Profile:    modules.ProfileDependencies{SocialClient: defaultSocialClient()},
 				Settings: modules.SettingsDependencies{
 					SocialClient:     defaultSocialClient(),

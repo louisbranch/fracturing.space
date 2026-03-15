@@ -24,11 +24,6 @@ type CampaignWorkspaceReadGateway interface {
 	CampaignWorkspace(context.Context, string) (CampaignWorkspace, error)
 }
 
-// CampaignGameReadGateway loads game-surface reads for the web service.
-type CampaignGameReadGateway interface {
-	CampaignGameSurface(context.Context, string) (CampaignGameSurface, error)
-}
-
 // CampaignParticipantReadGateway loads participant reads for the web service.
 type CampaignParticipantReadGateway interface {
 	CampaignParticipants(context.Context, string) ([]CampaignParticipant, error)

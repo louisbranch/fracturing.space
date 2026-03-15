@@ -13,7 +13,6 @@ import (
 type testGatewayBundle interface {
 	campaignapp.CampaignCatalogReadGateway
 	campaignapp.CampaignWorkspaceReadGateway
-	campaignapp.CampaignGameReadGateway
 	campaignapp.CampaignParticipantReadGateway
 	campaignapp.CampaignCharacterReadGateway
 	campaignapp.CampaignSessionReadGateway
@@ -37,7 +36,6 @@ type testGatewayBundle interface {
 // broad read fixtures without reintroducing that dependency bag to production.
 type GRPCGatewayReadDeps struct {
 	Campaign           CampaignReadClient
-	Interaction        InteractionClient
 	Agent              AgentClient
 	Participant        ParticipantReadClient
 	Character          CharacterReadClient
@@ -91,7 +89,7 @@ type GRPCGateway struct {
 }
 
 func NewGRPCGateway(deps GRPCGatewayDeps) testGatewayBundle {
-	if deps.CatalogRead.Campaign == nil || deps.GameRead.Interaction == nil || deps.ParticipantRead.Participant == nil ||
+	if deps.CatalogRead.Campaign == nil || deps.ParticipantRead.Participant == nil ||
 		deps.CharacterRead.Character == nil || deps.CharacterRead.DaggerheartContent == nil ||
 		deps.SessionRead.Session == nil || deps.SessionRead.Campaign == nil ||
 		deps.InviteRead.Invite == nil || deps.InviteRead.Participant == nil || deps.InviteRead.Social == nil || deps.InviteRead.Auth == nil ||
@@ -108,7 +106,6 @@ func NewGRPCGateway(deps GRPCGatewayDeps) testGatewayBundle {
 	return GRPCGateway{
 		Read: GRPCGatewayReadDeps{
 			Campaign:           deps.CatalogRead.Campaign,
-			Interaction:        deps.GameRead.Interaction,
 			Agent:              deps.AutomationRead.Agent,
 			Participant:        deps.ParticipantRead.Participant,
 			Character:          deps.CharacterRead.Character,
@@ -162,10 +159,6 @@ func (g GRPCGateway) workspaceRead() campaignapp.CampaignWorkspaceReadGateway {
 		read:         WorkspaceReadDeps{Campaign: g.Read.Campaign},
 		assetBaseURL: g.AssetBaseURL,
 	}
-}
-
-func (g GRPCGateway) gameRead() campaignapp.CampaignGameReadGateway {
-	return gameReadGateway{read: GameReadDeps{Interaction: g.Read.Interaction}}
 }
 
 func (g GRPCGateway) participantRead() campaignapp.CampaignParticipantReadGateway {
@@ -270,13 +263,6 @@ func (g GRPCGateway) CampaignWorkspace(ctx context.Context, campaignID string) (
 		return gateway.CampaignWorkspace(ctx, campaignID)
 	}
 	return g.unavailable().CampaignWorkspace(ctx, campaignID)
-}
-
-func (g GRPCGateway) CampaignGameSurface(ctx context.Context, campaignID string) (campaignapp.CampaignGameSurface, error) {
-	if gateway := g.gameRead(); gateway != nil {
-		return gateway.CampaignGameSurface(ctx, campaignID)
-	}
-	return g.unavailable().CampaignGameSurface(ctx, campaignID)
 }
 
 func (g GRPCGateway) CampaignParticipants(ctx context.Context, campaignID string) ([]campaignapp.CampaignParticipant, error) {

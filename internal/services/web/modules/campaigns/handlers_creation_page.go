@@ -18,12 +18,12 @@ func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	if !h.creationPages.Enabled(page.workspace.System) {
+	if !h.creation.pages.Enabled(page.workspace.System) {
 		h.WriteNotFound(w, r)
 		return
 	}
 
-	creationPage, err := h.creationPages.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
+	creationPage, err := h.creation.pages.LoadPage(ctx, campaignID, characterID, page.locale, page.workspace.System)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -53,12 +53,6 @@ func (h handlers) handleCharacterCreationPage(w http.ResponseWriter, r *http.Req
 		},
 	}
 
-	view := campaignrender.CharacterCreationPageView{
-		CampaignID:  campaignID,
-		CharacterID: characterID,
-		Creation:    creationPage.Creation,
-	}
-
 	h.WritePage(w, r, webtemplates.T(page.loc, "game.character_creation.title"), http.StatusOK,
-		header, layout, campaignrender.CharacterCreationPage(view, page.loc))
+		header, layout, campaignrender.CharacterCreationPage(campaignrender.NewCharacterCreationPageView(campaignID, characterID, creationPage), page.loc))
 }

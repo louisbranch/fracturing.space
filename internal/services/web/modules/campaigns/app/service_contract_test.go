@@ -22,9 +22,6 @@ func TestPackageServiceAndWorkflowResolverContracts(t *testing.T) {
 	if NewWorkspaceService(WorkspaceServiceConfig{}) != nil {
 		t.Fatalf("NewWorkspaceService() returned non-nil service for missing deps")
 	}
-	if NewGameService(GameServiceConfig{}) != nil {
-		t.Fatalf("NewGameService() returned non-nil service for missing deps")
-	}
 	if NewParticipantReadService(ParticipantReadServiceConfig{}, nil) != nil {
 		t.Fatalf("NewParticipantReadService() returned non-nil service for missing deps")
 	}

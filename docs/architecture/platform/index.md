@@ -20,6 +20,7 @@ Service-boundary and transport-boundary architecture documentation.
 - [Web passkey recovery and device enrollment](web-passkey-recovery-and-device-enrollment.md)
 - [Web architecture](web-architecture.md)
 - [Web contributor map](web-contributor-map.md)
+- [Web testing map](web-testing-map.md)
 - [Admin architecture](admin-architecture.md)
 - [I18n and l10n architecture](i18n-l10n-architecture.md)
 - [Asset catalog ownership](asset-catalog-ownership.md)

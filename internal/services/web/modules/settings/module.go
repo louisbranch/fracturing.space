@@ -12,27 +12,42 @@ import (
 
 // Module provides authenticated settings routes.
 type Module struct {
-	gateway   settingsapp.Gateway
-	base      modulehandler.Base
-	flashMeta requestmeta.SchemePolicy
-	sync      DashboardSync
+	accountGateway settingsapp.AccountGateway
+	aiGateway      settingsapp.AIGateway
+	base           modulehandler.Base
+	flashMeta      requestmeta.SchemePolicy
+	sync           DashboardSync
 }
 
 // Config defines constructor dependencies for a settings module.
 type Config struct {
-	Gateway       settingsapp.Gateway
-	Base          modulehandler.Base
-	FlashMeta     requestmeta.SchemePolicy
-	DashboardSync DashboardSync
+	AccountGateway settingsapp.AccountGateway
+	AIGateway      settingsapp.AIGateway
+	Base           modulehandler.Base
+	FlashMeta      requestmeta.SchemePolicy
+	DashboardSync  DashboardSync
 }
 
 // New returns a settings module with explicit dependencies.
 func New(config Config) Module {
+	accountGateway := config.AccountGateway
+	aiGateway := config.AIGateway
+	if accountGateway == nil {
+		if shared, ok := aiGateway.(settingsapp.AccountGateway); ok {
+			accountGateway = shared
+		}
+	}
+	if aiGateway == nil {
+		if shared, ok := accountGateway.(settingsapp.AIGateway); ok {
+			aiGateway = shared
+		}
+	}
 	return Module{
-		gateway:   config.Gateway,
-		base:      config.Base,
-		flashMeta: config.FlashMeta,
-		sync:      config.DashboardSync,
+		accountGateway: accountGateway,
+		aiGateway:      aiGateway,
+		base:           config.Base,
+		flashMeta:      config.FlashMeta,
+		sync:           config.DashboardSync,
 	}
 }
 
@@ -41,27 +56,27 @@ func (Module) ID() string { return "settings" }
 
 // Healthy reports whether the settings module has an operational gateway.
 func (m Module) Healthy() bool {
-	return settingsapp.IsGatewayHealthy(m.gateway)
+	return settingsapp.IsAccountGatewayHealthy(m.accountGateway) || settingsapp.IsAIGatewayHealthy(m.aiGateway)
 }
 
 // Mount wires settings route handlers.
 func (m Module) Mount() (module.Mount, error) {
 	mux := http.NewServeMux()
 	account := settingsapp.NewAccountService(settingsapp.AccountServiceConfig{
-		ProfileGateway:  m.gateway,
-		LocaleGateway:   m.gateway,
-		SecurityGateway: m.gateway,
+		ProfileGateway:  m.accountGateway,
+		LocaleGateway:   m.accountGateway,
+		SecurityGateway: m.accountGateway,
 	})
 	ai := settingsapp.NewAIService(settingsapp.AIServiceConfig{
-		AIKeyGateway:   m.gateway,
-		AIAgentGateway: m.gateway,
+		AIKeyGateway:   m.aiGateway,
+		AIAgentGateway: m.aiGateway,
 	})
 	availability := settingsSurfaceAvailability{
-		profile:  settingsapp.IsProfileGatewayHealthy(m.gateway),
-		locale:   settingsapp.IsLocaleGatewayHealthy(m.gateway),
-		security: settingsapp.IsSecurityGatewayHealthy(m.gateway),
-		aiKeys:   settingsapp.IsAIKeyGatewayHealthy(m.gateway),
-		aiAgents: settingsapp.IsAIAgentGatewayHealthy(m.gateway),
+		profile:  settingsapp.IsProfileGatewayHealthy(m.accountGateway),
+		locale:   settingsapp.IsLocaleGatewayHealthy(m.accountGateway),
+		security: settingsapp.IsSecurityGatewayHealthy(m.accountGateway),
+		aiKeys:   settingsapp.IsAIKeyGatewayHealthy(m.aiGateway),
+		aiAgents: settingsapp.IsAIAgentGatewayHealthy(m.aiGateway),
 	}
 	h := newHandlers(handlersConfig{
 		Services: handlerServices{

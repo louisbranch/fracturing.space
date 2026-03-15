@@ -2,7 +2,12 @@ package app
 
 // newService keeps a combined-gateway fixture seam available only to package
 // tests. Production settings app wiring should stay explicit by owned surface.
-func newService(gateway Gateway) service {
+type testGateway interface {
+	AccountGateway
+	AIGateway
+}
+
+func newService(gateway testGateway) service {
 	if gateway == nil {
 		return newServiceFromConfig(serviceConfig{})
 	}

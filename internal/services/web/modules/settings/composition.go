@@ -25,16 +25,18 @@ type CompositionConfig struct {
 // Compose builds the production settings module from area-owned startup
 // dependencies.
 func Compose(config CompositionConfig) module.Module {
+	gateway := settingsgateway.NewGRPCGateway(
+		config.SocialClient,
+		config.AccountClient,
+		config.PasskeyClient,
+		config.CredentialClient,
+		config.AgentClient,
+	)
 	return New(Config{
-		Gateway: settingsgateway.NewGRPCGateway(
-			config.SocialClient,
-			config.AccountClient,
-			config.PasskeyClient,
-			config.CredentialClient,
-			config.AgentClient,
-		),
-		Base:          config.Base,
-		FlashMeta:     config.FlashMeta,
-		DashboardSync: config.DashboardSync,
+		AccountGateway: gateway,
+		AIGateway:      gateway,
+		Base:           config.Base,
+		FlashMeta:      config.FlashMeta,
+		DashboardSync:  config.DashboardSync,
 	})
 }

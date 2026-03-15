@@ -16,11 +16,6 @@ type workspaceService struct {
 	read CampaignWorkspaceReadGateway
 }
 
-// gameService keeps game-surface reads isolated from generic workspace data.
-type gameService struct {
-	read CampaignGameReadGateway
-}
-
 // authorizationSupport centralizes unary authorization checks shared by mutation services.
 type authorizationSupport struct {
 	gateway AuthorizationGateway
@@ -55,15 +50,6 @@ func NewWorkspaceService(config WorkspaceServiceConfig) CampaignWorkspaceService
 		return nil
 	}
 	return workspaceService{read: config.Read}
-}
-
-// NewGameService constructs the game-surface service surface from explicit
-// gateway seams.
-func NewGameService(config GameServiceConfig) CampaignGameService {
-	if config.Read == nil {
-		return nil
-	}
-	return gameService{read: config.Read}
 }
 
 // NewAuthorizationService constructs the authorization service surface from

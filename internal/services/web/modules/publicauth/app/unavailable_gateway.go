@@ -13,7 +13,7 @@ const authServiceUnavailableMessage = "Auth service is not configured."
 type unavailableGateway struct{}
 
 // NewUnavailableGateway provides a gateway fallback for startup and tests.
-func NewUnavailableGateway() Gateway {
+func NewUnavailableGateway() unavailableGateway {
 	return unavailableGateway{}
 }
 

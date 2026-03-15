@@ -26,11 +26,6 @@ type WorkspaceReadDeps struct {
 	Campaign CampaignReadClient
 }
 
-// GameReadDeps keeps game-surface query dependencies explicit.
-type GameReadDeps struct {
-	Interaction InteractionClient
-}
-
 // ParticipantReadDeps keeps participant query dependencies explicit.
 type ParticipantReadDeps struct {
 	Participant ParticipantReadClient
@@ -123,7 +118,6 @@ type GRPCGatewayDeps struct {
 	Starter           StarterDeps
 	CatalogMutation   CatalogMutationDeps
 	WorkspaceRead     WorkspaceReadDeps
-	GameRead          GameReadDeps
 	ParticipantRead   ParticipantReadDeps
 	ParticipantMutate ParticipantMutationDeps
 	CharacterRead     CharacterReadDeps
@@ -162,11 +156,6 @@ type catalogMutationGateway struct {
 type workspaceReadGateway struct {
 	read         WorkspaceReadDeps
 	assetBaseURL string
-}
-
-// gameReadGateway maps game-surface reads from interaction state.
-type gameReadGateway struct {
-	read GameReadDeps
 }
 
 // participantReadGateway maps participant reads and view formatting inputs.
@@ -283,15 +272,6 @@ func NewWorkspaceReadGateway(readDeps WorkspaceReadDeps, assetBaseURL string) ca
 		read:         readDeps,
 		assetBaseURL: assetBaseURL,
 	}
-}
-
-// NewGameReadGateway builds the game-surface read adapter from explicit
-// dependencies.
-func NewGameReadGateway(readDeps GameReadDeps) campaignapp.CampaignGameReadGateway {
-	if readDeps.Interaction == nil {
-		return nil
-	}
-	return gameReadGateway{read: readDeps}
 }
 
 // NewParticipantReadGateway builds the participant read adapter from explicit

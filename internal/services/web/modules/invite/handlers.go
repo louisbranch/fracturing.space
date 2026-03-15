@@ -21,7 +21,6 @@ type handlers struct {
 	publichandler.Base
 	service     inviteapp.Service
 	requestMeta requestmeta.SchemePolicy
-	principal   requestresolver.PrincipalResolver
 	sync        DashboardSync
 }
 
@@ -36,7 +35,6 @@ func newHandlers(
 		Base:        publichandler.NewBaseFromPrincipal(principal),
 		service:     s,
 		requestMeta: policy,
-		principal:   principal,
 		sync:        sync,
 	}
 }
@@ -108,24 +106,21 @@ func (h handlers) handleNotFound(w http.ResponseWriter, r *http.Request) {
 
 // renderInvitePage applies the public shell layout around the invite landing view.
 func (h handlers) renderInvitePage(w http.ResponseWriter, r *http.Request, page inviteapp.InvitePage) {
-	requestPage := requestresolver.ResolveLocalizedPage(w, r, nil)
+	loc, lang := h.PageLocalizer(w, r)
 	h.WritePublicPage(
 		w,
 		r,
 		page.Invite.CampaignName,
-		webtemplates.T(requestPage.Localizer, "layout.meta_description"),
-		requestPage.Language,
+		webtemplates.T(loc, "layout.meta_description"),
+		lang,
 		http.StatusOK,
-		PublicInvitePage(mapPublicInviteView(page, requestPage.Localizer), requestPage.Localizer),
+		PublicInvitePage(mapPublicInviteView(page, loc), loc),
 	)
 }
 
 // userID resolves the signed-in viewer when the invite transport is mounted in web.
 func (h handlers) userID(r *http.Request) string {
-	if h.principal == nil {
-		return ""
-	}
-	return strings.TrimSpace(h.principal.ResolveUserID(r))
+	return h.RequestUserID(r)
 }
 
 // allowMutation applies the standard cookie-backed same-origin rule to the

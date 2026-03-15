@@ -2,12 +2,10 @@ package principal
 
 import (
 	"context"
-	"net/http"
 
 	authv1 "github.com/louisbranch/fracturing.space/api/gen/go/auth/v1"
 	notificationsv1 "github.com/louisbranch/fracturing.space/api/gen/go/notifications/v1"
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/web/platform/authctx"
 	"google.golang.org/grpc"
 )
 
@@ -74,7 +72,6 @@ type Resolver struct {
 	auth     authResolver
 	viewer   viewerResolver
 	language languageResolver
-	authGate func(*http.Request) bool
 }
 
 const viewerAvatarDeliveryWidthPX = 40
@@ -96,17 +93,5 @@ func New(deps Dependencies) Resolver {
 		language: languageResolver{
 			accountProfile: accountProfiles,
 		},
-		authGate: authctx.ValidatedSessionAuth(func(ctx context.Context, sessionID string) bool {
-			userID, ok := auth.resolveSessionUserID(ctx, sessionID)
-			if !ok {
-				return false
-			}
-			if snapshot := snapshotFromContext(ctx); snapshot != nil {
-				snapshot.userIDOnce.Do(func() {
-					snapshot.userID = userID
-				})
-			}
-			return true
-		}),
 	}
 }

@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"strings"
 
-	campaignrender "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/render"
 	apperrors "github.com/louisbranch/fracturing.space/internal/services/web/platform/errors"
 	"golang.org/x/text/language"
 )
@@ -36,7 +35,7 @@ type workflowResolver struct {
 // page or detail fragment.
 type PageData struct {
 	CharacterName string
-	Creation      campaignrender.CampaignCharacterCreationView
+	Creation      CharacterCreationView
 }
 
 // PageService coordinates one character-creation page surface across app reads

@@ -12,12 +12,12 @@ func (h handlers) handleOverview(w http.ResponseWriter, r *http.Request, campaig
 	if !ok {
 		return
 	}
-	summary, err := h.automationReads.CampaignAIBindingSummary(ctx, campaignID, page.workspace.AIAgentID, page.workspace.GMMode)
+	summary, err := h.overview.automationReads.CampaignAIBindingSummary(ctx, campaignID, page.workspace.AIAgentID, page.workspace.GMMode)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
-	view := page.overviewView(campaignID, h.authorization.RequireManageCampaign(ctx, campaignID) == nil, summary)
+	view := page.overviewView(campaignID, h.pages.authorization.RequireManageCampaign(ctx, campaignID) == nil, summary)
 	h.writeCampaignDetailPage(w, r, page, campaignID, campaignrender.OverviewFragment(view, page.loc))
 }
 
@@ -27,7 +27,7 @@ func (h handlers) handleCampaignEdit(w http.ResponseWriter, r *http.Request, cam
 	if !ok {
 		return
 	}
-	if err := h.authorization.RequireManageCampaign(ctx, campaignID); err != nil {
+	if err := h.pages.authorization.RequireManageCampaign(ctx, campaignID); err != nil {
 		h.WriteError(w, r, err)
 		return
 	}
@@ -48,7 +48,7 @@ func (h handlers) handleCampaignAIBindingPage(w http.ResponseWriter, r *http.Req
 	if !ok {
 		return
 	}
-	settings, err := h.automationReads.CampaignAIBindingSettings(ctx, campaignID, page.workspace.AIAgentID)
+	settings, err := h.overview.automationReads.CampaignAIBindingSettings(ctx, campaignID, page.workspace.AIAgentID)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return

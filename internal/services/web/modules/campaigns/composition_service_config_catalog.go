@@ -28,11 +28,3 @@ func newWorkspaceServiceConfig(deps campaigngateway.GRPCGatewayDeps, assetBaseUR
 		Read: campaigngateway.NewWorkspaceReadGateway(deps.WorkspaceRead, assetBaseURL),
 	}
 }
-
-// newGameServiceConfig keeps game-surface composition isolated from generic
-// workspace wiring.
-func newGameServiceConfig(deps campaigngateway.GRPCGatewayDeps) campaignapp.GameServiceConfig {
-	return campaignapp.GameServiceConfig{
-		Read: campaigngateway.NewGameReadGateway(deps.GameRead),
-	}
-}

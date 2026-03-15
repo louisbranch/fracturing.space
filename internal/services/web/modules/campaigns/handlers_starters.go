@@ -35,7 +35,7 @@ func (h handlers) handleStarterPreview(w http.ResponseWriter, r *http.Request) {
 	}
 	loc, _ := h.PageLocalizer(w, r)
 	ctx, _ := h.RequestContextAndUserID(r)
-	preview, err := h.starters.StarterPreview(ctx, starterKey)
+	preview, err := h.starters.starters.StarterPreview(ctx, starterKey)
 	if err != nil {
 		h.WriteError(w, r, err)
 		return
@@ -64,7 +64,7 @@ func (h handlers) handleStarterLaunch(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx, _ := h.RequestContextAndUserID(r)
-	result, err := h.starters.LaunchStarter(ctx, starterKey, campaignapp.LaunchStarterInput{
+	result, err := h.starters.starters.LaunchStarter(ctx, starterKey, campaignapp.LaunchStarterInput{
 		AIAgentID: strings.TrimSpace(r.FormValue("ai_agent_id")),
 	})
 	if err != nil {

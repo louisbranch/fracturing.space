@@ -11,8 +11,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/web/routepath"
 )
 
-func newRouteTestServiceConfig(gw fakeGateway) campaignapp.ServiceConfig {
-	return serviceConfigWithGateway(gw)
+func newRouteTestServiceConfig(gw fakeGateway) serviceConfigs {
+	return serviceConfigsWithGateway(gw)
 }
 
 func newRouteHandlers(gw fakeGateway, base modulehandler.Base) handlers {
