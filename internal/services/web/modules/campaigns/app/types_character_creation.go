@@ -75,6 +75,7 @@ type CatalogWeapon struct {
 	Name         string                `json:"name"`
 	Category     string                `json:"category"`
 	Tier         int32                 `json:"tier"`
+	Burden       int32                 `json:"burden"`
 	Trait        string                `json:"trait"`
 	Range        string                `json:"range"`
 	Damage       string                `json:"damage"`

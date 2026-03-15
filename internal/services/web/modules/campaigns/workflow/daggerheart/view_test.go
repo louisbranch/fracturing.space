@@ -1,6 +1,7 @@
 package daggerheart
 
 import (
+	"strings"
 	"testing"
 
 	campaignworkflow "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/workflow"
@@ -88,8 +89,8 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 				{Name: "Bookworm", Description: "You gain advantage on knowledge recall."},
 			},
 		}},
-		PrimaryWeapons:   []campaignworkflow.Weapon{{ID: "weapon-1", Name: "Sword"}},
-		SecondaryWeapons: []campaignworkflow.Weapon{{ID: "weapon-2", Name: "Dagger"}},
+		PrimaryWeapons:   []campaignworkflow.Weapon{{ID: "weapon-1", Name: "Sword", Burden: 2}},
+		SecondaryWeapons: []campaignworkflow.Weapon{{ID: "weapon-2", Name: "Dagger", Burden: 1}},
 		Armor:            []campaignworkflow.Armor{{ID: "armor-1", Name: "Leather"}},
 		PotionItems:      []campaignworkflow.Item{{ID: "item-1", Name: "Minor Potion"}},
 		DomainCards:      []campaignworkflow.DomainCard{{ID: "card-1", Name: "Arcane Bolt", DomainID: "arcana", Level: 1}},
@@ -151,6 +152,9 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 	}
 	if len(view.PrimaryWeapons) != 1 || len(view.SecondaryWeapons) != 1 || len(view.Armor) != 1 || len(view.PotionItems) != 1 {
 		t.Fatalf("equipment mapping mismatch: primary=%+v secondary=%+v armor=%+v potions=%+v", view.PrimaryWeapons, view.SecondaryWeapons, view.Armor, view.PotionItems)
+	}
+	if view.PrimaryWeapons[0].Burden != 2 || view.SecondaryWeapons[0].Burden != 1 {
+		t.Fatalf("weapon burden mapping mismatch: primary=%+v secondary=%+v", view.PrimaryWeapons, view.SecondaryWeapons)
 	}
 	if len(view.DomainCards) != 1 || view.DomainCards[0].DomainID != "arcana" || view.DomainCards[0].Level != 1 {
 		t.Fatalf("domain card mapping mismatch: %+v", view.DomainCards)
@@ -376,6 +380,23 @@ func TestCreationViewResolvesEquipmentImageURLFallback(t *testing.T) {
 	}
 	if len(viewWithURL.PotionItems) != 1 || viewWithURL.PotionItems[0].ImageURL == "" {
 		t.Fatalf("expected non-empty item image url with AssetBaseURL, got %q", viewWithURL.PotionItems[0].ImageURL)
+	}
+}
+
+func TestCreationViewResolvesSecondaryWeaponNoneImageURL(t *testing.T) {
+	t.Parallel()
+
+	viewNoURL := New("").CreationView(catalogCreation{})
+	if viewNoURL.SecondaryWeaponNoneImageURL != "" {
+		t.Fatalf("expected empty secondary none image url without AssetBaseURL, got %q", viewNoURL.SecondaryWeaponNoneImageURL)
+	}
+
+	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(catalogCreation{})
+	if viewWithURL.SecondaryWeaponNoneImageURL == "" {
+		t.Fatal("expected non-empty secondary none image url with AssetBaseURL")
+	}
+	if !strings.Contains(viewWithURL.SecondaryWeaponNoneImageURL, "no_secondary_weapon") {
+		t.Fatalf("secondary none image url = %q, want substring %q", viewWithURL.SecondaryWeaponNoneImageURL, "no_secondary_weapon")
 	}
 }
 

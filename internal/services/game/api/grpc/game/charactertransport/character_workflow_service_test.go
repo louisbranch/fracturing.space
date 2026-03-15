@@ -368,7 +368,7 @@ func newWorkflowCharacterService(t *testing.T, profile projectionstore.Daggerhea
 				"heritage.community.farmer": {ID: "heritage.community.farmer", Kind: "community", Name: "Farmer"},
 			},
 			weapons: map[string]contentstore.DaggerheartWeapon{
-				"weapon.longsword": {ID: "weapon.longsword", Tier: 1, Category: "primary"},
+				"weapon.longsword": {ID: "weapon.longsword", Tier: 1, Category: "primary", Burden: 2},
 			},
 			armors: map[string]contentstore.DaggerheartArmor{
 				"armor.gambeson-armor": {ID: "armor.gambeson-armor", Tier: 1, ArmorScore: 1, BaseMajorThreshold: 8, BaseSevereThreshold: 14},

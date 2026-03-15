@@ -202,6 +202,7 @@
         "longbow",
         "longsword",
         "mace",
+        "no_secondary_weapon",
         "quarterstaff",
         "rapier",
         "returning",
@@ -1080,6 +1081,13 @@
       "entity_id": "weapon.mace",
       "entity_type": "weapon",
       "asset_id": "mace"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.no-secondary",
+      "entity_type": "weapon",
+      "asset_id": "no_secondary_weapon"
     },
     {
       "asset_type": "daggerheart_weapon_illustration",

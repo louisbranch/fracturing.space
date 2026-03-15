@@ -2,6 +2,29 @@ package catalog
 
 import "testing"
 
+func TestDaggerheartAssetsManifest_ResolvesSecondaryNoneWeaponCard(t *testing.T) {
+	manifest := DaggerheartAssetsManifest()
+
+	resolved := manifest.ResolveEntityAsset(
+		DaggerheartEntityTypeWeapon,
+		"weapon.no-secondary",
+		DaggerheartAssetTypeWeaponIllustration,
+	)
+
+	if resolved.Status != DaggerheartAssetResolutionStatusMapped {
+		t.Fatalf("status = %q, want %q", resolved.Status, DaggerheartAssetResolutionStatusMapped)
+	}
+	if resolved.SetID != "daggerheart_weapon_set_v1" {
+		t.Fatalf("set id = %q, want %q", resolved.SetID, "daggerheart_weapon_set_v1")
+	}
+	if resolved.AssetID != "no_secondary_weapon" {
+		t.Fatalf("asset id = %q, want %q", resolved.AssetID, "no_secondary_weapon")
+	}
+	if resolved.CDNAssetID == "" {
+		t.Fatal("expected non-empty cdn asset id")
+	}
+}
+
 func TestResolveEntityAsset_UsesMappedAssetWhenDeliverable(t *testing.T) {
 	manifest := mustDecodeDaggerheartAssetManifest(t, `{
 		"id": "daggerheart-assets-v1",

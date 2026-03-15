@@ -302,6 +302,75 @@ func resetCreationWorkflowFields(profile projectionstore.DaggerheartCharacterPro
 	return profile
 }
 
+// startingWeaponSelection captures the weapon metadata needed to enforce the
+// SRD loadout invariant after content lookup has resolved each selected ID.
+type startingWeaponSelection struct {
+	ID       string
+	Category string
+	Tier     int
+	Burden   int
+}
+
+// normalizeStartingWeaponIDs validates the selected starting weapons and
+// returns them in canonical primary-then-secondary order for storage.
+func normalizeStartingWeaponIDs(weapons []startingWeaponSelection) ([]string, error) {
+	if len(weapons) == 0 {
+		return nil, status.Error(codes.InvalidArgument, "at least one weapon_id is required")
+	}
+	if len(weapons) > 2 {
+		return nil, status.Error(codes.InvalidArgument, "at most two weapon_ids are allowed")
+	}
+
+	var primary startingWeaponSelection
+	var secondary startingWeaponSelection
+	hasPrimary := false
+	hasSecondary := false
+	for idx := range weapons {
+		weapon := weapons[idx]
+		if weapon.Tier != 1 {
+			return nil, status.Errorf(codes.InvalidArgument, "weapon_id %q must be tier 1", weapon.ID)
+		}
+		switch strings.ToLower(strings.TrimSpace(weapon.Category)) {
+		case "primary":
+			if hasPrimary {
+				return nil, status.Error(codes.InvalidArgument, "starting equipment can include at most one primary weapon")
+			}
+			primary = weapon
+			hasPrimary = true
+		case "secondary":
+			if hasSecondary {
+				return nil, status.Error(codes.InvalidArgument, "starting equipment can include at most one secondary weapon")
+			}
+			secondary = weapon
+			hasSecondary = true
+		default:
+			return nil, status.Errorf(codes.InvalidArgument, "weapon_id %q has unsupported category %q", weapon.ID, weapon.Category)
+		}
+	}
+
+	if !hasPrimary {
+		return nil, status.Error(codes.InvalidArgument, "starting equipment must include exactly one primary weapon")
+	}
+	switch primary.Burden {
+	case 1:
+		if !hasSecondary {
+			return nil, status.Error(codes.InvalidArgument, "one-handed primary weapons must include exactly one one-handed secondary weapon")
+		}
+	case 2:
+		if hasSecondary {
+			return nil, status.Error(codes.InvalidArgument, "two-handed primary weapons cannot also equip a secondary weapon")
+		}
+		return []string{primary.ID}, nil
+	default:
+		return nil, status.Errorf(codes.InvalidArgument, "primary weapon_id %q must have burden 1 or 2", primary.ID)
+	}
+
+	if secondary.Burden != 1 {
+		return nil, status.Errorf(codes.InvalidArgument, "secondary weapon_id %q must have burden 1", secondary.ID)
+	}
+	return []string{primary.ID, secondary.ID}, nil
+}
+
 func applyCreationStepInput(ctx context.Context, content contentstore.DaggerheartContentReadStore, profile *projectionstore.DaggerheartCharacterProfile, input *daggerheartv1.DaggerheartCreationStepInput) error {
 	if content == nil {
 		return status.Error(codes.Internal, "daggerheart content store is not configured")
@@ -449,16 +518,8 @@ func applyCreationStepInput(ctx context.Context, content contentstore.Daggerhear
 
 	case *daggerheartv1.DaggerheartCreationStepInput_EquipmentInput:
 		weaponIDs := step.EquipmentInput.GetWeaponIds()
-		if len(weaponIDs) == 0 {
-			return status.Error(codes.InvalidArgument, "at least one weapon_id is required")
-		}
-		if len(weaponIDs) > 2 {
-			return status.Error(codes.InvalidArgument, "at most two weapon_ids are allowed")
-		}
 		seenWeaponIDs := make(map[string]struct{}, len(weaponIDs))
-		normalizedWeaponIDs := make([]string, 0, len(weaponIDs))
-		primaryCount := 0
-		secondaryCount := 0
+		selectedWeapons := make([]startingWeaponSelection, 0, len(weaponIDs))
 		for _, weaponID := range weaponIDs {
 			trimmedWeaponID := strings.TrimSpace(weaponID)
 			if trimmedWeaponID == "" {
@@ -475,27 +536,16 @@ func applyCreationStepInput(ctx context.Context, content contentstore.Daggerhear
 				}
 				return grpcerror.Internal("get weapon", err)
 			}
-			if weapon.Tier != 1 {
-				return status.Errorf(codes.InvalidArgument, "weapon_id %q must be tier 1", trimmedWeaponID)
-			}
-			switch strings.ToLower(strings.TrimSpace(weapon.Category)) {
-			case "primary":
-				primaryCount++
-			case "secondary":
-				secondaryCount++
-			default:
-				return status.Errorf(codes.InvalidArgument, "weapon_id %q has unsupported category %q", trimmedWeaponID, weapon.Category)
-			}
-			normalizedWeaponIDs = append(normalizedWeaponIDs, trimmedWeaponID)
+			selectedWeapons = append(selectedWeapons, startingWeaponSelection{
+				ID:       trimmedWeaponID,
+				Category: weapon.Category,
+				Tier:     weapon.Tier,
+				Burden:   weapon.Burden,
+			})
 		}
-		if primaryCount != 1 {
-			return status.Error(codes.InvalidArgument, "starting equipment must include exactly one primary weapon")
-		}
-		if len(normalizedWeaponIDs) == 2 && secondaryCount != 1 {
-			return status.Error(codes.InvalidArgument, "two-weapon loadouts must include exactly one secondary weapon")
-		}
-		if len(normalizedWeaponIDs) == 1 && secondaryCount != 0 {
-			return status.Error(codes.InvalidArgument, "single-weapon loadouts cannot use a secondary weapon")
+		normalizedWeaponIDs, err := normalizeStartingWeaponIDs(selectedWeapons)
+		if err != nil {
+			return err
 		}
 
 		armorID, err := validate.RequiredID(step.EquipmentInput.GetArmorId(), "armor_id")

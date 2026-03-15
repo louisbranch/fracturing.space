@@ -56,6 +56,7 @@ type CampaignCreationWeaponView struct {
 	ID       string
 	Name     string
 	ImageURL string
+	Burden   int32
 	Trait    string
 	Range    string
 	Damage   string
@@ -101,37 +102,38 @@ type CampaignCreationDomainCardView struct {
 
 // CampaignCharacterCreationView carries the full transport/render contract for one character-creation workflow state.
 type CampaignCharacterCreationView struct {
-	Ready                bool
-	NextStep             int32
-	UnmetReasons         []string
-	ClassID              string
-	SubclassID           string
-	AncestryID           string
-	CommunityID          string
-	Agility              string
-	Strength             string
-	Finesse              string
-	Instinct             string
-	Presence             string
-	Knowledge            string
-	PrimaryWeaponID      string
-	SecondaryWeaponID    string
-	ArmorID              string
-	PotionItemID         string
-	Background           string
-	Description          string
-	Experiences          []CampaignCreationExperienceView
-	DomainCardIDs        []string
-	Connections          string
-	NextStepPrefetchURLs []string
-	Steps                []CampaignCharacterCreationStepView
-	Classes              []CampaignCreationClassView
-	Subclasses           []CampaignCreationSubclassView
-	Ancestries           []CampaignCreationHeritageView
-	Communities          []CampaignCreationHeritageView
-	PrimaryWeapons       []CampaignCreationWeaponView
-	SecondaryWeapons     []CampaignCreationWeaponView
-	Armor                []CampaignCreationArmorView
-	PotionItems          []CampaignCreationItemView
-	DomainCards          []CampaignCreationDomainCardView
+	Ready                       bool
+	NextStep                    int32
+	UnmetReasons                []string
+	ClassID                     string
+	SubclassID                  string
+	AncestryID                  string
+	CommunityID                 string
+	Agility                     string
+	Strength                    string
+	Finesse                     string
+	Instinct                    string
+	Presence                    string
+	Knowledge                   string
+	PrimaryWeaponID             string
+	SecondaryWeaponID           string
+	ArmorID                     string
+	PotionItemID                string
+	Background                  string
+	Description                 string
+	Experiences                 []CampaignCreationExperienceView
+	DomainCardIDs               []string
+	Connections                 string
+	NextStepPrefetchURLs        []string
+	Steps                       []CampaignCharacterCreationStepView
+	Classes                     []CampaignCreationClassView
+	Subclasses                  []CampaignCreationSubclassView
+	Ancestries                  []CampaignCreationHeritageView
+	Communities                 []CampaignCreationHeritageView
+	PrimaryWeapons              []CampaignCreationWeaponView
+	SecondaryWeapons            []CampaignCreationWeaponView
+	SecondaryWeaponNoneImageURL string
+	Armor                       []CampaignCreationArmorView
+	PotionItems                 []CampaignCreationItemView
+	DomainCards                 []CampaignCreationDomainCardView
 }

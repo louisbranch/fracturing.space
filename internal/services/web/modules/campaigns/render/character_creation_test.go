@@ -212,7 +212,10 @@ func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing
 	}
 
 	var buf bytes.Buffer
-	err := creationStepEquipment(view, testLocalizer{}).Render(context.Background(), &buf)
+	err := creationStepEquipment(view, testLocalizer{
+		"game.character_creation.weapon_handedness.one_handed": "One-Handed",
+		"game.character_creation.weapon_handedness.two_handed": "Two-Handed",
+	}).Render(context.Background(), &buf)
 	if err != nil {
 		t.Fatalf("render creationStepEquipment: %v", err)
 	}
@@ -227,6 +230,111 @@ func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing
 	} {
 		if !strings.Contains(markup, marker) {
 			t.Fatalf("equipment output missing marker %q: %q", marker, markup)
+		}
+	}
+}
+
+func TestCreationStepEquipmentReadyRequiresSecondaryForOneHandedPrimary(t *testing.T) {
+	t.Parallel()
+
+	view := CampaignCharacterCreationView{
+		PrimaryWeaponID: "weapon-1",
+		ArmorID:         "armor-1",
+		PotionItemID:    "item-1",
+		PrimaryWeapons: []CampaignCreationWeaponView{
+			{ID: "weapon-1", Burden: 1},
+		},
+	}
+
+	if creationStepEquipmentReady(view) {
+		t.Fatal("creationStepEquipmentReady() = true, want false when one-handed primary has no secondary")
+	}
+}
+
+func TestCreationStepEquipmentReadyAllowsTwoHandedPrimaryWithoutSecondary(t *testing.T) {
+	t.Parallel()
+
+	view := CampaignCharacterCreationView{
+		PrimaryWeaponID: "weapon-1",
+		ArmorID:         "armor-1",
+		PotionItemID:    "item-1",
+		PrimaryWeapons: []CampaignCreationWeaponView{
+			{ID: "weapon-1", Burden: 2},
+		},
+	}
+
+	if !creationStepEquipmentReady(view) {
+		t.Fatal("creationStepEquipmentReady() = false, want true for two-handed primary without secondary")
+	}
+}
+
+func TestCreationStepEquipmentRendersBurdenMarkersAndInlineSecondaryNoneHelper(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			PrimaryWeaponID:             "weapon-1",
+			SecondaryWeaponNoneImageURL: "https://cdn.example.com/weapons/no-secondary.png",
+			PrimaryWeapons: []CampaignCreationWeaponView{
+				{ID: "weapon-1", Name: "Greatsword", Burden: 2},
+			},
+			SecondaryWeapons: []CampaignCreationWeaponView{
+				{ID: "weapon-2", Name: "Dagger", Burden: 1},
+			},
+			Armor: []CampaignCreationArmorView{
+				{ID: "armor-1", Name: "Chainmail"},
+			},
+			PotionItems: []CampaignCreationItemView{
+				{ID: "item-1", Name: "Minor Health Potion"},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	err := creationStepEquipment(view, testLocalizer{
+		"game.character_creation.weapon_handedness.one_handed": "One-Handed",
+		"game.character_creation.weapon_handedness.two_handed": "Two-Handed",
+	}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render creationStepEquipment: %v", err)
+	}
+
+	got := buf.String()
+	markup := strings.SplitN(got, "<script>", 2)[0]
+	for _, marker := range []string{
+		`data-weapon-burden="2"`,
+		`https://cdn.example.com/weapons/no-secondary.png`,
+		`data-secondary-none-locked-copy`,
+		`game.character_creation.secondary_weapon_disabled_two_handed`,
+		`Two-Handed`,
+		`One-Handed`,
+		`data-character-creation-reset="true"`,
+		`formaction="/app/campaigns/campaign-1/characters/character-1/creation/reset"`,
+		`formnovalidate`,
+	} {
+		if !strings.Contains(markup, marker) {
+			t.Fatalf("equipment output missing marker %q: %q", marker, markup)
+		}
+	}
+	if strings.Count(markup, "<form") != 1 {
+		t.Fatalf("equipment output should contain one form only, got %d: %q", strings.Count(markup, "<form"), markup)
+	}
+	if strings.Contains(markup, `data-secondary-locked-message`) {
+		t.Fatalf("equipment output should not render removed external secondary lock message: %q", markup)
+	}
+	for _, marker := range []string{
+		`function selectedPrimaryBurden()`,
+		`function syncSectionSelectedState(section)`,
+		`function syncSecondaryAvailability()`,
+		`input[name="weapon_secondary_id"][value=""]`,
+		`card.classList.toggle('border-primary', input.checked);`,
+		`setSecondaryOptionDisabled(input, twoHanded);`,
+		`secondaryNoneLockedCopy.classList.toggle('hidden', !twoHanded);`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("equipment script missing marker %q: %q", marker, got)
 		}
 	}
 }
