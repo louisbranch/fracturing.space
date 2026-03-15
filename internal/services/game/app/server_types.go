@@ -8,9 +8,10 @@ import (
 
 	platformgrpc "github.com/louisbranch/fracturing.space/internal/platform/grpc"
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 )
@@ -45,6 +46,34 @@ type projectionApplyStore interface {
 	storage.ProjectionApplyExactlyOnceStore
 }
 
+type eventBackend interface {
+	storage.EventStore
+	storage.AuditEventStore
+	storage.EventIntegrityVerifier
+	Close() error
+	ProjectionApplyOutboxStore() storage.ProjectionApplyOutboxStore
+	IntegrationOutboxStore() storage.IntegrationOutboxStore
+}
+
+type projectionBackend interface {
+	storage.ProjectionStore
+	storage.SessionGateStore
+	storage.SessionSpotlightStore
+	storage.SceneStore
+	storage.SceneCharacterStore
+	storage.SceneGateStore
+	storage.SceneSpotlightStore
+	storage.ProjectionApplyExactlyOnceStore
+	Close() error
+	DaggerheartProjectionStore() projectionstore.Store
+}
+
+type contentBackend interface {
+	contentstore.DaggerheartContentReadStore
+	contentstore.DaggerheartCatalogReadinessStore
+	Close() error
+}
+
 // Projection worker defaults balance recovery speed versus DB churn.
 const (
 	projectionApplyOutboxWorkerInterval       = 2 * time.Second
@@ -58,9 +87,9 @@ const (
 // Events are the source of truth, projections feed APIs, and content stores
 // enrich projection reads for system-specific metadata.
 type storageBundle struct {
-	events      *storagesqlite.Store
-	projections *storagesqlite.Store
-	content     *storagesqlite.Store
+	events      eventBackend
+	projections projectionBackend
+	content     contentBackend
 }
 
 // Close closes all stores in the bundle, logging any errors.

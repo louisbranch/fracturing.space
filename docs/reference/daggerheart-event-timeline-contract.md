@@ -170,7 +170,7 @@ func decideMultiTargetDamage(cmd command.Command, state *SnapshotState, now func
 Use these tests as baseline architecture guardrails:
 
 - `internal/services/game/api/grpc/systems/daggerheart/write_path_arch_test.go`
-- `internal/services/game/api/grpc/systems/daggerheart/domain_write_helper_test.go`
+- `internal/services/game/api/grpc/systems/daggerheart/workflowwrite/write_test.go`
 - `internal/services/game/api/grpc/game/domain_write_helper_test.go`
 
 When adding a new mutating mechanic, update/add tests so bypass patterns fail fast.

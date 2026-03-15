@@ -4,13 +4,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 func TestFallbackArmorMaxFromState(t *testing.T) {
-	state := storage.DaggerheartCharacterState{
+	state := projectionstore.DaggerheartCharacterState{
 		Armor: 5,
-		TemporaryArmor: []storage.DaggerheartTemporaryArmor{
+		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{
 			{Amount: 2},
 			{Amount: 1},
 		},
@@ -21,7 +21,7 @@ func TestFallbackArmorMaxFromState(t *testing.T) {
 }
 
 func TestCharacterStateFromStorage_RoundTrip(t *testing.T) {
-	state := storage.DaggerheartCharacterState{
+	state := projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          6,
@@ -30,7 +30,7 @@ func TestCharacterStateFromStorage_RoundTrip(t *testing.T) {
 		Stress:      1,
 		Armor:       2,
 		Conditions:  []string{"hidden"},
-		TemporaryArmor: []storage.DaggerheartTemporaryArmor{
+		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{
 			{Source: " ritual ", Duration: " short_rest ", SourceID: " src-1 ", Amount: 2},
 		},
 		LifeState: "",
@@ -52,7 +52,7 @@ func TestCharacterStateFromStorage_RoundTrip(t *testing.T) {
 }
 
 func TestApplyStatePatch_ValidatesRanges(t *testing.T) {
-	state := storage.DaggerheartCharacterState{
+	state := projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          6,
@@ -78,7 +78,7 @@ func TestApplyStatePatch_ValidatesRanges(t *testing.T) {
 }
 
 func TestApplyConditionPatch_ReplacesConditions(t *testing.T) {
-	state := storage.DaggerheartCharacterState{
+	state := projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Conditions:  []string{"old"},
@@ -90,7 +90,7 @@ func TestApplyConditionPatch_ReplacesConditions(t *testing.T) {
 }
 
 func TestApplyTemporaryArmor_AndClearRestTemporaryArmor(t *testing.T) {
-	state := storage.DaggerheartCharacterState{
+	state := projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          6,
@@ -116,7 +116,7 @@ func TestApplyTemporaryArmor_AndClearRestTemporaryArmor(t *testing.T) {
 }
 
 func TestApplyDowntimeMove_RepairArmorPath(t *testing.T) {
-	state := storage.DaggerheartCharacterState{
+	state := projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          6,
@@ -124,7 +124,7 @@ func TestApplyDowntimeMove_RepairArmorPath(t *testing.T) {
 		HopeMax:     6,
 		Stress:      2,
 		Armor:       1,
-		TemporaryArmor: []storage.DaggerheartTemporaryArmor{
+		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{
 			{Source: "ritual", Duration: "short_rest", Amount: 1},
 		},
 	}
@@ -150,7 +150,7 @@ func TestValidateAdversaryStats(t *testing.T) {
 }
 
 func TestApplyAdversaryDamagePatch(t *testing.T) {
-	adversary := storage.DaggerheartAdversary{
+	adversary := projectionstore.DaggerheartAdversary{
 		CampaignID:  "camp-1",
 		AdversaryID: "adv-1",
 		HP:          6,
@@ -173,7 +173,7 @@ func TestApplyAdversaryDamagePatch(t *testing.T) {
 }
 
 func TestApplyCountdownUpdate(t *testing.T) {
-	countdown := storage.DaggerheartCountdown{
+	countdown := projectionstore.DaggerheartCountdown{
 		CampaignID:  "camp-1",
 		CountdownID: "cd-1",
 		Current:     1,

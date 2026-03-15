@@ -119,6 +119,7 @@ Reference layout for a system implementation:
 - `.../decider.go` (command decisions)
 - `.../folder.go` (replay fold)
 - `.../adapter.go` (projection apply)
+- `.../{projectionstore,contentstore}/` (system-owned store contracts; keep system vocabulary out of shared `internal/services/game/storage`)
 - `.../event_types.go` and typed payload/profile contract files (contracts)
 
 Keep handlers thin and avoid transport logic in domain packages.
@@ -128,9 +129,7 @@ Keep handlers thin and avoid transport logic in domain packages.
 - Deciders and folders must be deterministic.
 - Adapter `Apply` behavior must be idempotent under replay.
 - Event payloads should capture resulting state (absolute values), not deltas.
-- System-specific character profiles belong to the system module. Prefer typed
-  system-owned commands/events such as `sys.<system>.character_profile.replace`
-  over core `map[string]any` envelopes.
+- System-specific character profiles belong to the system module. Prefer typed system-owned commands/events such as `sys.<system>.character_profile.replace` over core `map[string]any` envelopes.
 - Rejection codes should be stable, machine-readable constants.
 - Multi-consequence mechanics should prefer single-command atomic emission patterns.
 
@@ -146,4 +145,5 @@ Keep handlers thin and avoid transport logic in domain packages.
 
 - [Event-driven system](../foundations/event-driven-system.md)
 - [Adding a command/event/system](../../guides/adding-command-event-system.md)
+- [Game service contributor map](../../reference/game-service-contributor-map.md)
 - [Events index](../../events/index.md)

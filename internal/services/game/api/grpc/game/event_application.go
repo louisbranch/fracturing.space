@@ -42,18 +42,29 @@ type eventApplicationStores struct {
 }
 
 func newEventApplication(service *EventService) eventApplication {
-	return eventApplication{
-		auth: newPolicyDependencies(service.stores),
-		stores: eventApplicationStores{
-			Event:       service.stores.Event,
-			Campaign:    service.stores.Campaign,
-			Participant: service.stores.Participant,
-			Character:   service.stores.Character,
-			Session:     service.stores.Session,
-		},
-		write: service.stores.Write,
-		clock: time.Now,
+	if service == nil {
+		return eventApplication{}
 	}
+	return service.app
+}
+
+func newEventApplicationWithDependencies(stores Stores, clock func() time.Time) eventApplication {
+	app := eventApplication{
+		auth: newPolicyDependencies(stores),
+		stores: eventApplicationStores{
+			Event:       stores.Event,
+			Campaign:    stores.Campaign,
+			Participant: stores.Participant,
+			Character:   stores.Character,
+			Session:     stores.Session,
+		},
+		write: stores.Write,
+		clock: clock,
+	}
+	if app.clock == nil {
+		app.clock = time.Now
+	}
+	return app
 }
 
 func (a eventApplication) AppendEvent(ctx context.Context, in *campaignv1.AppendEventRequest) (event.Event, error) {

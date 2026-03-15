@@ -1,0 +1,136 @@
+package coreprojection
+
+import (
+	"database/sql"
+
+	platformi18n "github.com/louisbranch/fracturing.space/internal/platform/i18n"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
+)
+
+// campaignRowData holds the common fields from campaign row types.
+type campaignRowData struct {
+	ID               string
+	Name             string
+	Locale           string
+	GameSystem       string
+	Status           string
+	GmMode           string
+	Intent           string
+	AccessPolicy     string
+	ParticipantCount int64
+	CharacterCount   int64
+	ThemePrompt      string
+	CoverAssetID     string
+	CoverSetID       string
+	AIAgentID        string
+	AIAuthEpoch      int64
+	CreatedAt        int64
+	UpdatedAt        int64
+	CompletedAt      sql.NullInt64
+	ArchivedAt       sql.NullInt64
+}
+
+func campaignRowDataToDomain(row campaignRowData) (storage.CampaignRecord, error) {
+	locale := platformi18n.DefaultLocale()
+	if parsed, ok := platformi18n.ParseLocale(row.Locale); ok {
+		locale = parsed
+	}
+	c := storage.CampaignRecord{
+		ID:               row.ID,
+		Name:             row.Name,
+		Locale:           locale,
+		System:           enumFromStorage(row.GameSystem, bridge.NormalizeSystemID),
+		Status:           enumFromStorage(row.Status, campaign.NormalizeStatus),
+		GmMode:           enumFromStorage(row.GmMode, campaign.NormalizeGmMode),
+		Intent:           campaign.NormalizeIntent(row.Intent),
+		AccessPolicy:     campaign.NormalizeAccessPolicy(row.AccessPolicy),
+		ParticipantCount: int(row.ParticipantCount),
+		CharacterCount:   int(row.CharacterCount),
+		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AIAgentID,
+		AIAuthEpoch:      uint64(row.AIAuthEpoch),
+		CreatedAt:        fromMillis(row.CreatedAt),
+		UpdatedAt:        fromMillis(row.UpdatedAt),
+	}
+	c.CompletedAt = fromNullMillis(row.CompletedAt)
+	c.ArchivedAt = fromNullMillis(row.ArchivedAt)
+
+	return c, nil
+}
+
+func dbGetCampaignRowToDomain(row db.GetCampaignRow) (storage.CampaignRecord, error) {
+	return campaignRowDataToDomain(campaignRowData{
+		ID:               row.ID,
+		Name:             row.Name,
+		Locale:           row.Locale,
+		GameSystem:       row.GameSystem,
+		Status:           row.Status,
+		GmMode:           row.GmMode,
+		Intent:           row.Intent,
+		AccessPolicy:     row.AccessPolicy,
+		ParticipantCount: row.ParticipantCount,
+		CharacterCount:   row.CharacterCount,
+		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AiAgentID,
+		AIAuthEpoch:      row.AiAuthEpoch,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		CompletedAt:      row.CompletedAt,
+		ArchivedAt:       row.ArchivedAt,
+	})
+}
+
+func dbListCampaignsRowToDomain(row db.ListCampaignsRow) (storage.CampaignRecord, error) {
+	return campaignRowDataToDomain(campaignRowData{
+		ID:               row.ID,
+		Name:             row.Name,
+		Locale:           row.Locale,
+		GameSystem:       row.GameSystem,
+		Status:           row.Status,
+		GmMode:           row.GmMode,
+		Intent:           row.Intent,
+		AccessPolicy:     row.AccessPolicy,
+		ParticipantCount: row.ParticipantCount,
+		CharacterCount:   row.CharacterCount,
+		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AiAgentID,
+		AIAuthEpoch:      row.AiAuthEpoch,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		CompletedAt:      row.CompletedAt,
+		ArchivedAt:       row.ArchivedAt,
+	})
+}
+
+func dbListAllCampaignsRowToDomain(row db.ListAllCampaignsRow) (storage.CampaignRecord, error) {
+	return campaignRowDataToDomain(campaignRowData{
+		ID:               row.ID,
+		Name:             row.Name,
+		Locale:           row.Locale,
+		GameSystem:       row.GameSystem,
+		Status:           row.Status,
+		GmMode:           row.GmMode,
+		Intent:           row.Intent,
+		AccessPolicy:     row.AccessPolicy,
+		ParticipantCount: row.ParticipantCount,
+		CharacterCount:   row.CharacterCount,
+		ThemePrompt:      row.ThemePrompt,
+		CoverAssetID:     row.CoverAssetID,
+		CoverSetID:       row.CoverSetID,
+		AIAgentID:        row.AiAgentID,
+		AIAuthEpoch:      row.AiAuthEpoch,
+		CreatedAt:        row.CreatedAt,
+		UpdatedAt:        row.UpdatedAt,
+		CompletedAt:      row.CompletedAt,
+		ArchivedAt:       row.ArchivedAt,
+	})
+}

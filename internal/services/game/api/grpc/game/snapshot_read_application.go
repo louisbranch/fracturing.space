@@ -5,13 +5,14 @@ import (
 	"errors"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 type snapshotReadState struct {
-	systemState     storage.DaggerheartSnapshot
-	characterStates []storage.DaggerheartCharacterState
+	systemState     projectionstore.DaggerheartSnapshot
+	characterStates []projectionstore.DaggerheartCharacterState
 }
 
 func (a snapshotApplication) GetSnapshot(ctx context.Context, campaignID string) (snapshotReadState, error) {
@@ -31,7 +32,7 @@ func (a snapshotApplication) GetSnapshot(ctx context.Context, campaignID string)
 		if !errors.Is(err, storage.ErrNotFound) {
 			return snapshotReadState{}, grpcerror.Internal("get daggerheart snapshot", err)
 		}
-		systemState = storage.DaggerheartSnapshot{CampaignID: campaignID}
+		systemState = projectionstore.DaggerheartSnapshot{CampaignID: campaignID}
 	}
 
 	charPage, err := a.stores.Character.ListCharacters(ctx, campaignID, 100, "")
@@ -39,7 +40,7 @@ func (a snapshotApplication) GetSnapshot(ctx context.Context, campaignID string)
 		return snapshotReadState{}, grpcerror.Internal("list characters", err)
 	}
 
-	characterStates := make([]storage.DaggerheartCharacterState, 0, len(charPage.Characters))
+	characterStates := make([]projectionstore.DaggerheartCharacterState, 0, len(charPage.Characters))
 	for _, record := range charPage.Characters {
 		state, err := a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, record.ID)
 		if err != nil {

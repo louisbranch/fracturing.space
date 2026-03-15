@@ -41,10 +41,7 @@ func campaignAIGrantConfig(now time.Time) aisessiongrant.Config {
 }
 
 func newCampaignAIServiceForTest(stores Stores, now time.Time) *CampaignAIService {
-	svc := NewCampaignAIService(stores, campaignAIGrantConfig(now))
-	svc.clock = fixedClock(now)
-	svc.idGenerator = fixedIDGenerator("grant-1")
-	return svc
+	return newCampaignAIServiceWithDependencies(stores, fixedClock(now), fixedIDGenerator("grant-1"), campaignAIGrantConfig(now))
 }
 
 func TestIssueCampaignAISessionGrantRequiresRequestAndStores(t *testing.T) {

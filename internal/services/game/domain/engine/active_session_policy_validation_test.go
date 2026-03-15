@@ -10,14 +10,16 @@ import (
 func TestValidateActiveSessionPolicyCoverage_AcceptsKnownCoreFamilies(t *testing.T) {
 	registry := command.NewRegistry()
 	if err := registry.Register(command.Definition{
-		Type:  command.Type("campaign.update"),
-		Owner: command.OwnerCore,
+		Type:          command.Type("campaign.update"),
+		Owner:         command.OwnerCore,
+		ActiveSession: command.BlockedDuringActiveSession(),
 	}); err != nil {
 		t.Fatalf("register campaign.update: %v", err)
 	}
 	if err := registry.Register(command.Definition{
-		Type:  command.Type("session.end"),
-		Owner: command.OwnerCore,
+		Type:          command.Type("session.end"),
+		Owner:         command.OwnerCore,
+		ActiveSession: command.AllowedDuringActiveSession(),
 	}); err != nil {
 		t.Fatalf("register session.end: %v", err)
 	}

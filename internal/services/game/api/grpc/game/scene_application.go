@@ -12,7 +12,7 @@ import (
 // (lifecycle, character membership, gates, and spotlight operations) while
 // keeping scene-owned reads and write execution explicit.
 type sceneApplication struct {
-	auth        Stores
+	auth        policyDependencies
 	stores      sceneApplicationStores
 	write       domainwriteexec.WritePath
 	applier     projection.Applier
@@ -26,16 +26,23 @@ type sceneApplicationStores struct {
 }
 
 func newSceneApplication(service *SceneService) sceneApplication {
+	if service == nil {
+		return sceneApplication{}
+	}
+	return service.app
+}
+
+func newSceneApplicationWithDependencies(stores Stores, clock func() time.Time, idGenerator func() (string, error)) sceneApplication {
 	app := sceneApplication{
-		auth: service.stores,
+		auth: newPolicyDependencies(stores),
 		stores: sceneApplicationStores{
-			Campaign: service.stores.Campaign,
-			Scene:    service.stores.Scene,
+			Campaign: stores.Campaign,
+			Scene:    stores.Scene,
 		},
-		write:       service.stores.Write,
-		applier:     service.stores.Applier(),
-		clock:       service.clock,
-		idGenerator: service.idGenerator,
+		write:       stores.Write,
+		applier:     stores.Applier(),
+		clock:       clock,
+		idGenerator: idGenerator,
 	}
 	if app.clock == nil {
 		app.clock = time.Now

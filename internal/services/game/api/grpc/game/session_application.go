@@ -27,7 +27,10 @@ type sessionApplicationStores struct {
 }
 
 func newSessionApplication(service *SessionService) sessionApplication {
-	return newSessionApplicationWithDependencies(service.stores, service.clock, service.idGenerator)
+	if service == nil {
+		return sessionApplication{}
+	}
+	return service.app
 }
 
 func newSessionApplicationWithDependencies(stores Stores, clock func() time.Time, idGenerator func() (string, error)) sessionApplication {

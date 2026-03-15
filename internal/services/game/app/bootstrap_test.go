@@ -40,29 +40,17 @@ func TestNormalizeServerBootstrapConfigDefaults(t *testing.T) {
 	if cfg.configureDomain == nil {
 		t.Fatal("expected default configureDomain")
 	}
-	if cfg.buildSystemRegistry == nil {
-		t.Fatal("expected default buildSystemRegistry")
+	if cfg.systemsBootstrapper == nil {
+		t.Fatal("expected default systemsBootstrapper")
 	}
-	if cfg.validateSystemRegistration == nil {
-		t.Fatal("expected default validateSystemRegistration")
+	if cfg.dependencyDialer == nil {
+		t.Fatal("expected default dependencyDialer")
 	}
-	if cfg.newManagedConn == nil {
-		t.Fatal("expected default newManagedConn")
+	if cfg.transportBootstrapper == nil {
+		t.Fatal("expected default transportBootstrapper")
 	}
-	if cfg.newGRPCServer == nil {
-		t.Fatal("expected default newGRPCServer")
-	}
-	if cfg.newHealthServer == nil {
-		t.Fatal("expected default newHealthServer")
-	}
-	if cfg.resolveProjectionApplyModes == nil {
-		t.Fatal("expected default resolveProjectionApplyModes")
-	}
-	if cfg.buildProjectionRegistries == nil {
-		t.Fatal("expected default buildProjectionRegistries")
-	}
-	if cfg.buildProjectionApplyOutboxApply == nil {
-		t.Fatal("expected default buildProjectionApplyOutboxApply")
+	if cfg.projectionRuntimeConfigurer == nil {
+		t.Fatal("expected default projectionRuntimeConfigurer")
 	}
 }
 

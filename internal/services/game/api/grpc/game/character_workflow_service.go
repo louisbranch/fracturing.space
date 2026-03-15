@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/workflow"
-	daggerheartgrpc "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/characterworkflow"
+	daggerheartcreation "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/creationworkflow"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -26,9 +26,9 @@ func (s *CharacterService) GetCharacterCreationProgress(ctx context.Context, in 
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	progress, err := newCharacterApplication(s).GetCharacterCreationProgress(ctx, campaignID, characterID)
+	progress, err := s.app.GetCharacterCreationProgress(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, daggerheartgrpc.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.GetCharacterCreationProgressResponse{
@@ -51,9 +51,9 @@ func (s *CharacterService) ApplyCharacterCreationStep(ctx context.Context, in *c
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	profile, progress, err := newCharacterApplication(s).ApplyCharacterCreationStep(ctx, campaignID, in)
+	profile, progress, err := s.app.ApplyCharacterCreationStep(ctx, campaignID, in)
 	if err != nil {
-		return nil, daggerheartgrpc.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.ApplyCharacterCreationStepResponse{
@@ -77,9 +77,9 @@ func (s *CharacterService) ApplyCharacterCreationWorkflow(ctx context.Context, i
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	profile, progress, err := newCharacterApplication(s).ApplyCharacterCreationWorkflow(ctx, campaignID, in)
+	profile, progress, err := s.app.ApplyCharacterCreationWorkflow(ctx, campaignID, in)
 	if err != nil {
-		return nil, daggerheartgrpc.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.ApplyCharacterCreationWorkflowResponse{
@@ -103,9 +103,9 @@ func (s *CharacterService) ResetCharacterCreationWorkflow(ctx context.Context, i
 		return nil, status.Error(codes.InvalidArgument, "character id is required")
 	}
 
-	progress, err := newCharacterApplication(s).ResetCharacterCreationWorkflow(ctx, campaignID, characterID)
+	progress, err := s.app.ResetCharacterCreationWorkflow(ctx, campaignID, characterID)
 	if err != nil {
-		return nil, daggerheartgrpc.HandleWorkflowError(err)
+		return nil, daggerheartcreation.HandleWorkflowError(err)
 	}
 
 	return &campaignv1.ResetCharacterCreationWorkflowResponse{
@@ -113,7 +113,7 @@ func (s *CharacterService) ResetCharacterCreationWorkflow(ctx context.Context, i
 	}, nil
 }
 
-func creationProgressToProto(campaignID, characterID string, progress workflow.Progress) *campaignv1.CharacterCreationProgress {
+func creationProgressToProto(campaignID, characterID string, progress characterworkflow.Progress) *campaignv1.CharacterCreationProgress {
 	steps := make([]*campaignv1.CharacterCreationStepProgress, 0, len(progress.Steps))
 	for _, step := range progress.Steps {
 		steps = append(steps, &campaignv1.CharacterCreationStepProgress{

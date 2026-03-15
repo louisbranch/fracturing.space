@@ -17,21 +17,25 @@ const (
 // InviteService implements the game.v1.InviteService gRPC API.
 type InviteService struct {
 	campaignv1.UnimplementedInviteServiceServer
-	stores            Stores
-	clock             func() time.Time
-	idGenerator       func() (string, error)
-	authClient        authv1.AuthServiceClient
-	joinGrantVerifier joingrant.Verifier
+	app   inviteApplication
+	reads inviteReadDependencies
 }
 
 // NewInviteService creates an InviteService. The authClient is optional —
 // pass nil when the dependency is not needed (e.g. in tests).
 func NewInviteService(stores Stores, authClient authv1.AuthServiceClient) *InviteService {
+	return newInviteServiceWithDependencies(stores, time.Now, id.NewID, authClient, nil)
+}
+
+func newInviteServiceWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+	joinGrantVerifier joingrant.Verifier,
+) *InviteService {
 	return &InviteService{
-		stores:            stores,
-		clock:             time.Now,
-		idGenerator:       id.NewID,
-		joinGrantVerifier: joingrant.EnvVerifier{Now: time.Now},
-		authClient:        authClient,
+		app:   newInviteApplicationWithDependencies(stores, clock, idGenerator, authClient, joinGrantVerifier),
+		reads: newInviteReadDependencies(stores, authClient),
 	}
 }

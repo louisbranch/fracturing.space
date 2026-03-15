@@ -7,11 +7,12 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
-	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
+	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
+	sqliteprojectionapplyoutbox "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/projectionapplyoutbox"
 )
 
 func testKeyring(t *testing.T) *integrity.Keyring {
@@ -26,19 +27,67 @@ func testKeyring(t *testing.T) *integrity.Keyring {
 	return keyring
 }
 
-func openTestEventsStore(t *testing.T) *Store {
+func openTestEventsStore(t *testing.T) *sqliteeventjournal.Store {
 	t.Helper()
-	return openTestEventsStoreWithOutbox(t, false)
+	return openTestRawEventsStore(t, false)
 }
 
-func openTestEventsStoreWithOutbox(t *testing.T, outboxEnabled bool) *Store {
+type testEventStoreWithOutbox struct {
+	*sqliteeventjournal.Store
+	outbox *sqliteprojectionapplyoutbox.Store
+}
+
+func (s *testEventStoreWithOutbox) ProcessProjectionApplyOutbox(ctx context.Context, now time.Time, limit int, apply func(context.Context, event.Event) error) (int, error) {
+	return s.outbox.ProcessProjectionApplyOutbox(ctx, now, limit, apply)
+}
+
+func (s *testEventStoreWithOutbox) ProcessProjectionApplyOutboxShadow(ctx context.Context, now time.Time, limit int) (int, error) {
+	return s.outbox.ProcessProjectionApplyOutboxShadow(ctx, now, limit)
+}
+
+func (s *testEventStoreWithOutbox) GetProjectionApplyOutboxSummary(ctx context.Context) (storage.ProjectionApplyOutboxSummary, error) {
+	return s.outbox.GetProjectionApplyOutboxSummary(ctx)
+}
+
+func (s *testEventStoreWithOutbox) ListProjectionApplyOutboxRows(ctx context.Context, status string, limit int) ([]storage.ProjectionApplyOutboxEntry, error) {
+	return s.outbox.ListProjectionApplyOutboxRows(ctx, status, limit)
+}
+
+func (s *testEventStoreWithOutbox) RequeueProjectionApplyOutboxRow(ctx context.Context, campaignID string, seq uint64, now time.Time) (bool, error) {
+	return s.outbox.RequeueProjectionApplyOutboxRow(ctx, campaignID, seq, now)
+}
+
+func (s *testEventStoreWithOutbox) RequeueProjectionApplyOutboxDeadRows(ctx context.Context, limit int, now time.Time) (int, error) {
+	return s.outbox.RequeueProjectionApplyOutboxDeadRows(ctx, limit, now)
+}
+
+func openTestEventsStoreWithOutbox(t *testing.T, outboxEnabled bool) *testEventStoreWithOutbox {
+	t.Helper()
+	store := openTestRawEventsStore(t, outboxEnabled)
+	outbox := store.ProjectionApplyOutboxStore()
+	bound, ok := outbox.(*sqliteprojectionapplyoutbox.Store)
+	if !ok || bound == nil {
+		t.Fatal("expected projection apply outbox store")
+	}
+	return &testEventStoreWithOutbox{
+		Store:  store,
+		outbox: bound,
+	}
+}
+
+func openTestRawEventsStore(t *testing.T, outboxEnabled bool) *sqliteeventjournal.Store {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "events.sqlite")
 	registries, err := engine.BuildRegistries(daggerheart.NewModule())
 	if err != nil {
 		t.Fatalf("build registries: %v", err)
 	}
-	store, err := OpenEvents(path, testKeyring(t), registries.Events, WithProjectionApplyOutboxEnabled(outboxEnabled))
+	store, err := sqliteeventjournal.Open(
+		path,
+		testKeyring(t),
+		registries.Events,
+		sqliteeventjournal.WithProjectionApplyOutboxEnabled(outboxEnabled),
+	)
 	if err != nil {
 		t.Fatalf("open events store: %v", err)
 	}
@@ -48,51 +97,4 @@ func openTestEventsStoreWithOutbox(t *testing.T, outboxEnabled bool) *Store {
 		}
 	})
 	return store
-}
-
-func openTestContentStore(t *testing.T) *Store {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "content.sqlite")
-	store, err := OpenContent(path)
-	if err != nil {
-		t.Fatalf("open content store: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := store.Close(); err != nil {
-			t.Fatalf("close content store: %v", err)
-		}
-	})
-	return store
-}
-
-func seedCharacter(t *testing.T, store *Store, campaignID, charID, name string, kind character.Kind, now time.Time) storage.CharacterRecord {
-	t.Helper()
-	c := storage.CharacterRecord{
-		ID:         charID,
-		CampaignID: campaignID,
-		Name:       name,
-		Kind:       kind,
-		CreatedAt:  now,
-		UpdatedAt:  now,
-	}
-	if err := store.PutCharacter(context.Background(), c); err != nil {
-		t.Fatalf("seed character: %v", err)
-	}
-	return c
-}
-
-func seedSession(t *testing.T, store *Store, campaignID, sessID string, now time.Time) storage.SessionRecord {
-	t.Helper()
-	s := storage.SessionRecord{
-		ID:         sessID,
-		CampaignID: campaignID,
-		Name:       "Session " + sessID,
-		Status:     session.StatusActive,
-		StartedAt:  now,
-		UpdatedAt:  now,
-	}
-	if err := store.PutSession(context.Background(), s); err != nil {
-		t.Fatalf("seed session: %v", err)
-	}
-	return s
 }

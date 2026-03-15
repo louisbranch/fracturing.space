@@ -24,6 +24,8 @@ var inviteCommandContracts = []commandContract{
 			Type:            CommandTypeCreate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateCreatePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("invite", "invite_id"),
 		},
 	},
 	{
@@ -31,6 +33,8 @@ var inviteCommandContracts = []commandContract{
 			Type:            CommandTypeClaim,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateClaimPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("invite", "invite_id"),
 		},
 	},
 	{
@@ -38,6 +42,8 @@ var inviteCommandContracts = []commandContract{
 			Type:            CommandTypeDecline,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateDeclinePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("invite", "invite_id"),
 		},
 	},
 	{
@@ -45,6 +51,8 @@ var inviteCommandContracts = []commandContract{
 			Type:            CommandTypeRevoke,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateRevokePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("invite", "invite_id"),
 		},
 	},
 	{
@@ -52,6 +60,8 @@ var inviteCommandContracts = []commandContract{
 			Type:            CommandTypeUpdate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUpdatePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("invite", "invite_id"),
 		},
 	},
 }

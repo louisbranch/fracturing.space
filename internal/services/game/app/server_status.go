@@ -8,7 +8,7 @@ import (
 	"time"
 
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 )
 
 const (
@@ -27,8 +27,8 @@ type catalogCapabilityState struct {
 
 // evaluateCatalogCapabilityState resolves whether catalog-backed capabilities are
 // ready and, when degraded, includes a stable operator-facing reason.
-func evaluateCatalogCapabilityState(ctx context.Context, store storage.DaggerheartCatalogReadinessStore) catalogCapabilityState {
-	readiness, err := storage.EvaluateDaggerheartCatalogReadiness(ctx, store)
+func evaluateCatalogCapabilityState(ctx context.Context, store contentstore.DaggerheartCatalogReadinessStore) catalogCapabilityState {
+	readiness, err := contentstore.EvaluateDaggerheartCatalogReadiness(ctx, store)
 	if err != nil {
 		return catalogCapabilityState{
 			Ready:  false,
@@ -97,7 +97,7 @@ func (s *Server) startCatalogAvailabilityMonitor(ctx context.Context) func() {
 func runCatalogAvailabilityMonitor(
 	ctx context.Context,
 	reporter *platformstatus.Reporter,
-	store storage.DaggerheartCatalogReadinessStore,
+	store contentstore.DaggerheartCatalogReadinessStore,
 	interval time.Duration,
 	logf func(string, ...any),
 ) {

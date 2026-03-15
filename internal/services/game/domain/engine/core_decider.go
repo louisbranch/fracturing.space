@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -9,12 +8,14 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/aggregate"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaignbootstrap"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/scene"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
@@ -24,9 +25,10 @@ import (
 // It keeps command routing explicit: each command type maps to exactly one
 // aggregate route, while system commands are dispatched by system id/version.
 type CoreDecider struct {
-	Systems          *module.Registry
-	SessionLifecycle SessionLifecycle
-	routes           map[command.Type]coreCommandRoute
+	Systems              *module.Registry
+	SessionStartWorkflow readiness.SessionStartWorkflow
+	definitions          map[command.Type]command.Definition
+	routes               map[command.Type]coreCommandRoute
 }
 
 // coreCommandRoute maps a normalized aggregate state + command into one decision path.
@@ -40,9 +42,10 @@ func NewCoreDecider(systems *module.Registry, definitions []command.Definition) 
 		return CoreDecider{}, err
 	}
 	return CoreDecider{
-		Systems:          systems,
-		SessionLifecycle: NewSessionLifecycle(systems),
-		routes:           routes,
+		Systems:              systems,
+		SessionStartWorkflow: readiness.NewSessionStartWorkflow(systems),
+		definitions:          indexCommandDefinitions(definitions),
+		routes:               routes,
 	}, nil
 }
 
@@ -57,7 +60,7 @@ func (d CoreDecider) Decide(state any, cmd command.Command, now func() time.Time
 		}
 		return decision
 	}
-	if decision, blocked := RejectActiveSessionBlockedCommand(current.Session, cmd); blocked {
+	if decision, blocked := RejectActiveSessionBlockedCommand(current.Session, cmd, d.definitionFor(cmd.Type)); blocked {
 		return decision
 	}
 	routes := d.routes
@@ -72,6 +75,24 @@ func (d CoreDecider) Decide(state any, cmd command.Command, now func() time.Time
 		})
 	}
 	return route(d, current, cmd, now)
+}
+
+func (d CoreDecider) definitionFor(cmdType command.Type) command.Definition {
+	if definition, ok := d.definitions[cmdType]; ok {
+		return definition
+	}
+	return command.Definition{}
+}
+
+func indexCommandDefinitions(definitions []command.Definition) map[command.Type]command.Definition {
+	if len(definitions) == 0 {
+		return nil
+	}
+	indexed := make(map[command.Type]command.Definition, len(definitions))
+	for _, definition := range definitions {
+		indexed[definition.Type] = definition
+	}
+	return indexed
 }
 
 // aggregateState converts whatever aggregate representation reached this decider
@@ -94,6 +115,12 @@ func aggregateState(state any) aggregate.State {
 // campaignRoute routes campaign-level commands to campaign deciders.
 func campaignRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
 	return campaign.Decide(current.Campaign, cmd, now)
+}
+
+// campaignBootstrapRoute handles the one intentional campaign bootstrap
+// workflow that emits campaign and participant events atomically.
+func campaignBootstrapRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
+	return campaignbootstrap.Decide(current.Campaign, cmd, now)
 }
 
 // actionRoute routes gameplay action commands to the action decider.
@@ -123,11 +150,11 @@ func sceneRoute(_ CoreDecider, current aggregate.State, cmd command.Command, now
 // acceptable because campaign activation is a one-time lifecycle transition
 // that is tightly coupled to the first session start.
 func sessionStartRoute(d CoreDecider, current aggregate.State, cmd command.Command, now func() time.Time) command.Decision {
-	lifecycle := d.SessionLifecycle
-	if lifecycle == nil {
-		lifecycle = NewSessionLifecycle(d.Systems)
+	workflow := d.SessionStartWorkflow
+	if workflow == nil {
+		workflow = readiness.NewSessionStartWorkflow(d.Systems)
 	}
-	return lifecycle.Start(current, cmd, now)
+	return workflow.Start(current, cmd, now)
 }
 
 // participantRoute resolves the target participant snapshot and routes accordingly.
@@ -151,7 +178,7 @@ func characterRoute(_ CoreDecider, current aggregate.State, cmd command.Command,
 func staticCoreCommandRoutes() map[command.Type]coreCommandRoute {
 	return map[command.Type]coreCommandRoute{
 		campaign.CommandTypeCreate:                 campaignRoute,
-		campaign.CommandTypeCreateWithParticipants: campaignRoute,
+		campaign.CommandTypeCreateWithParticipants: campaignBootstrapRoute,
 		campaign.CommandTypeUpdate:                 campaignRoute,
 		campaign.CommandTypeAIBind:                 campaignRoute,
 		campaign.CommandTypeAIUnbind:               campaignRoute,
@@ -235,54 +262,12 @@ func buildCoreRouteTable(definitions []command.Definition) (map[command.Type]cor
 	return routes, nil
 }
 
-// Entity ID Resolution
-//
-// Commands reference their target entity in one of two places:
-//
-//  1. Command.EntityID — the primary channel, set by the transport layer when
-//     the entity is explicit in the API request (e.g. URL path parameter).
-//
-//  2. Command.PayloadJSON — the fallback channel, used when the entity ID is
-//     embedded in the command body rather than the request envelope.
-//
-// resolveEntityID tries EntityID first, then unmarshals PayloadJSON using the
-// given JSON field name as a last resort. If neither source provides a valid
-// ID, it returns "". The downstream decider is responsible for rejecting
-// commands that require a target entity but received none.
-//
-// This dual-source pattern keeps transport layers flexible (some APIs carry
-// the entity in the path, others in the body) while the domain layer remains
-// transport-agnostic.
-
-// resolveEntityID returns the entity ID from either cmd.EntityID or the named
-// JSON field in cmd.PayloadJSON. Unmarshal failures are safe — an empty string
-// causes the downstream decider to reject when the entity is required.
-func resolveEntityID(cmd command.Command, jsonField string) string {
-	id := strings.TrimSpace(cmd.EntityID)
-	if id != "" {
-		return id
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(cmd.PayloadJSON, &raw); err != nil {
-		return ""
-	}
-	fieldJSON, ok := raw[jsonField]
-	if !ok {
-		return ""
-	}
-	var val string
-	if err := json.Unmarshal(fieldJSON, &val); err != nil {
-		return ""
-	}
-	return strings.TrimSpace(val)
-}
-
 // participantStateFor loads the target participant from command metadata.
 func participantStateFor(cmd command.Command, current aggregate.State) participant.State {
 	if current.Participants == nil {
 		return participant.State{}
 	}
-	id := resolveEntityID(cmd, "participant_id")
+	id := strings.TrimSpace(cmd.EntityID)
 	if id == "" {
 		return participant.State{}
 	}
@@ -294,7 +279,7 @@ func characterStateFor(cmd command.Command, current aggregate.State) character.S
 	if current.Characters == nil {
 		return character.State{}
 	}
-	id := resolveEntityID(cmd, "character_id")
+	id := strings.TrimSpace(cmd.EntityID)
 	if id == "" {
 		return character.State{}
 	}
@@ -306,7 +291,7 @@ func inviteStateFor(cmd command.Command, current aggregate.State) invite.State {
 	if current.Invites == nil {
 		return invite.State{}
 	}
-	id := resolveEntityID(cmd, "invite_id")
+	id := strings.TrimSpace(cmd.EntityID)
 	if id == "" {
 		return invite.State{}
 	}

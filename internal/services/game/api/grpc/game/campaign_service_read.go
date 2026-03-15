@@ -23,7 +23,7 @@ func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCam
 		return nil, err
 	}
 
-	c, err := newCampaignApplication(s).GetCampaign(ctx, campaignID)
+	c, err := s.app.GetCampaign(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}

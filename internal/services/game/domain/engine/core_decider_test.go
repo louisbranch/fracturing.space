@@ -15,6 +15,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/invite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/participant"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/readiness"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
 )
 
@@ -27,6 +28,30 @@ func TestNewCoreDecider_BuildsRoutesForRegisteredCoreDefinitions(t *testing.T) {
 	}
 	if len(decider.routes) != len(definitions) {
 		t.Fatalf("routes = %d, want %d", len(decider.routes), len(definitions))
+	}
+	if decider.SessionStartWorkflow == nil {
+		t.Fatal("expected session-start workflow to be initialized")
+	}
+}
+
+func TestIndexCommandDefinitions_HandlesEmptyAndIndexesByType(t *testing.T) {
+	if got := indexCommandDefinitions(nil); got != nil {
+		t.Fatalf("indexCommandDefinitions(nil) = %#v, want nil", got)
+	}
+
+	definitions := []command.Definition{
+		{Type: campaign.CommandTypeCreate},
+		{Type: session.CommandTypeStart},
+	}
+	got := indexCommandDefinitions(definitions)
+	if len(got) != len(definitions) {
+		t.Fatalf("indexed definitions = %d, want %d", len(got), len(definitions))
+	}
+	if got[campaign.CommandTypeCreate].Type != campaign.CommandTypeCreate {
+		t.Fatalf("campaign definition missing from index: %#v", got[campaign.CommandTypeCreate])
+	}
+	if got[session.CommandTypeStart].Type != session.CommandTypeStart {
+		t.Fatalf("session definition missing from index: %#v", got[session.CommandTypeStart])
 	}
 }
 
@@ -112,30 +137,32 @@ func TestCoreDeciderDecide_UsesInjectedRouteTable(t *testing.T) {
 	}
 }
 
-type stubSessionLifecycle struct {
+type stubSessionStartWorkflow struct {
 	decision command.Decision
 	called   bool
 }
 
-func (s *stubSessionLifecycle) Start(_ aggregate.State, _ command.Command, _ func() time.Time) command.Decision {
+func (s *stubSessionStartWorkflow) Start(_ aggregate.State, _ command.Command, _ func() time.Time) command.Decision {
 	s.called = true
 	return s.decision
 }
 
-func TestSessionStartRoute_UsesInjectedSessionLifecycle(t *testing.T) {
-	lifecycle := &stubSessionLifecycle{
+var _ readiness.SessionStartWorkflow = (*stubSessionStartWorkflow)(nil)
+
+func TestSessionStartRoute_UsesInjectedSessionStartWorkflow(t *testing.T) {
+	workflow := &stubSessionStartWorkflow{
 		decision: command.Accept(event.Event{Type: event.Type("session.started")}),
 	}
 
 	decision := sessionStartRoute(
-		CoreDecider{SessionLifecycle: lifecycle},
+		CoreDecider{SessionStartWorkflow: workflow},
 		aggregate.State{},
 		command.Command{Type: session.CommandTypeStart},
 		nil,
 	)
 
-	if !lifecycle.called {
-		t.Fatal("expected injected session lifecycle to be used")
+	if !workflow.called {
+		t.Fatal("expected injected session-start workflow to be used")
 	}
 	if len(decision.Events) != 1 || decision.Events[0].Type != session.EventTypeStarted {
 		t.Fatalf("events = %v, want one %s event", decision.Events, session.EventTypeStarted)
@@ -243,40 +270,7 @@ func TestCoreRouteWrappers_DelegateToDomainDeciders(t *testing.T) {
 	}
 }
 
-func TestResolveEntityID(t *testing.T) {
-	tests := []struct {
-		name      string
-		entityID  string
-		payload   string
-		jsonField string
-		want      string
-	}{
-		{name: "from EntityID", entityID: "ent-1", payload: `{}`, jsonField: "id", want: "ent-1"},
-		{name: "from EntityID trims spaces", entityID: "  ent-1  ", payload: `{}`, jsonField: "id", want: "ent-1"},
-		{name: "from payload fallback", entityID: "", payload: `{"id":"ent-2"}`, jsonField: "id", want: "ent-2"},
-		{name: "from payload trims spaces", entityID: "", payload: `{"id":" ent-2 "}`, jsonField: "id", want: "ent-2"},
-		{name: "EntityID takes precedence over payload", entityID: "ent-1", payload: `{"id":"ent-2"}`, jsonField: "id", want: "ent-1"},
-		{name: "malformed payload returns empty", entityID: "", payload: `{broken`, jsonField: "id", want: ""},
-		{name: "missing field returns empty", entityID: "", payload: `{"other":"val"}`, jsonField: "id", want: ""},
-		{name: "non-string field returns empty", entityID: "", payload: `{"id":42}`, jsonField: "id", want: ""},
-		{name: "empty EntityID and empty payload value", entityID: "", payload: `{"id":""}`, jsonField: "id", want: ""},
-		{name: "whitespace-only EntityID falls through to payload", entityID: "   ", payload: `{"id":"ent-3"}`, jsonField: "id", want: "ent-3"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cmd := command.Command{
-				EntityID:    tc.entityID,
-				PayloadJSON: []byte(tc.payload),
-			}
-			got := resolveEntityID(cmd, tc.jsonField)
-			if got != tc.want {
-				t.Fatalf("resolveEntityID() = %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
-func TestParticipantStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
+func TestParticipantStateFor_UsesNormalizedEntityID(t *testing.T) {
 	current := aggregate.State{
 		Participants: map[ids.ParticipantID]participant.State{
 			"part-1": {ParticipantID: "part-1", Joined: true},
@@ -286,17 +280,9 @@ func TestParticipantStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 	if got := participantStateFor(command.Command{EntityID: " part-1 "}, current); got.ParticipantID != "part-1" {
 		t.Fatalf("participantStateFor(entity id) = %+v, want participant_id part-1", got)
 	}
-
-	if got := participantStateFor(command.Command{PayloadJSON: []byte(`{"participant_id":" part-1 "}`)}, current); got.ParticipantID != "part-1" {
-		t.Fatalf("participantStateFor(payload) = %+v, want participant_id part-1", got)
-	}
-
-	if got := participantStateFor(command.Command{PayloadJSON: []byte(`{"participant_id":`)}, current); !reflect.DeepEqual(got, participant.State{}) {
-		t.Fatalf("participantStateFor(invalid payload) = %+v, want zero state", got)
-	}
 }
 
-func TestCharacterStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
+func TestCharacterStateFor_UsesNormalizedEntityID(t *testing.T) {
 	current := aggregate.State{
 		Characters: map[ids.CharacterID]character.State{
 			"char-1": {CharacterID: "char-1", Created: true},
@@ -306,17 +292,9 @@ func TestCharacterStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 	if got := characterStateFor(command.Command{EntityID: " char-1 "}, current); got.CharacterID != "char-1" {
 		t.Fatalf("characterStateFor(entity id) = %+v, want character_id char-1", got)
 	}
-
-	if got := characterStateFor(command.Command{PayloadJSON: []byte(`{"character_id":" char-1 "}`)}, current); got.CharacterID != "char-1" {
-		t.Fatalf("characterStateFor(payload) = %+v, want character_id char-1", got)
-	}
-
-	if got := characterStateFor(command.Command{PayloadJSON: []byte(`{"character_id":`)}, current); !reflect.DeepEqual(got, character.State{}) {
-		t.Fatalf("characterStateFor(invalid payload) = %+v, want zero state", got)
-	}
 }
 
-func TestInviteStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
+func TestInviteStateFor_UsesNormalizedEntityID(t *testing.T) {
 	current := aggregate.State{
 		Invites: map[ids.InviteID]invite.State{
 			"inv-1": {InviteID: "inv-1", Created: true},
@@ -325,14 +303,6 @@ func TestInviteStateFor_ResolvesFromEntityIDAndPayload(t *testing.T) {
 
 	if got := inviteStateFor(command.Command{EntityID: " inv-1 "}, current); got.InviteID != "inv-1" {
 		t.Fatalf("inviteStateFor(entity id) = %+v, want invite_id inv-1", got)
-	}
-
-	if got := inviteStateFor(command.Command{PayloadJSON: []byte(`{"invite_id":" inv-1 "}`)}, current); got.InviteID != "inv-1" {
-		t.Fatalf("inviteStateFor(payload) = %+v, want invite_id inv-1", got)
-	}
-
-	if got := inviteStateFor(command.Command{PayloadJSON: []byte(`{"invite_id":`)}, current); !reflect.DeepEqual(got, invite.State{}) {
-		t.Fatalf("inviteStateFor(invalid payload) = %+v, want zero state", got)
 	}
 }
 

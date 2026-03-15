@@ -32,7 +32,7 @@ func (a inviteApplication) RevokeInvite(ctx context.Context, in *campaignv1.Revo
 	if err != nil {
 		return storage.InviteRecord{}, err
 	}
-	if err := requirePolicy(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageInvites, campaignRecord); err != nil {
 		return storage.InviteRecord{}, err
 	}
 	if inv.Status == invite.StatusRevoked {

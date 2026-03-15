@@ -24,6 +24,8 @@ var participantCommandRegistrations = []commandRegistration{
 			Type:            CommandTypeJoin,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateJoinPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("participant", "participant_id"),
 		},
 	},
 	{
@@ -31,6 +33,8 @@ var participantCommandRegistrations = []commandRegistration{
 			Type:            CommandTypeUpdate,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUpdatePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("participant", "participant_id"),
 		},
 	},
 	{
@@ -38,6 +42,8 @@ var participantCommandRegistrations = []commandRegistration{
 			Type:            CommandTypeLeave,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateLeavePayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("participant", "participant_id"),
 		},
 	},
 	{
@@ -45,6 +51,8 @@ var participantCommandRegistrations = []commandRegistration{
 			Type:            CommandTypeBind,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateBindPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("participant", "participant_id"),
 		},
 	},
 	{
@@ -52,6 +60,8 @@ var participantCommandRegistrations = []commandRegistration{
 			Type:            CommandTypeUnbind,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateUnbindPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("participant", "participant_id"),
 		},
 	},
 	{
@@ -59,6 +69,8 @@ var participantCommandRegistrations = []commandRegistration{
 			Type:            CommandTypeSeatReassign,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateSeatReassignPayload,
+			ActiveSession:   command.BlockedDuringActiveSession(),
+			Target:          command.TargetEntity("participant", "participant_id"),
 		},
 	},
 }

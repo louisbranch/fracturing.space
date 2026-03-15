@@ -20,7 +20,7 @@ func (s *ForkService) GetLineage(ctx context.Context, in *campaignv1.GetLineageR
 		return nil, err
 	}
 
-	lineage, err := newForkApplication(s).GetLineage(ctx, campaignID)
+	lineage, err := s.app.GetLineage(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}

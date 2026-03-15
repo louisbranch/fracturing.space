@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestHandleRestTaken_ReturnsSnapshotWriteError(t *testing.T) {
@@ -64,11 +64,11 @@ func TestHandleRestTaken_PropagatesPatchWriteError(t *testing.T) {
 func TestClearRestTemporaryArmor_PutErrorWhenChanged(t *testing.T) {
 	store := newFaultDaggerheartStore()
 	adapter := NewAdapter(store)
-	if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+	if err := store.PutDaggerheartCharacterState(context.Background(), projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Armor:       3,
-		TemporaryArmor: []storage.DaggerheartTemporaryArmor{
+		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{
 			{Source: "ritual", Duration: "short_rest", Amount: 2},
 		},
 	}); err != nil {
@@ -85,7 +85,7 @@ func TestClearRestTemporaryArmor_PutErrorWhenChanged(t *testing.T) {
 func TestClearRestTemporaryArmor_NoChange(t *testing.T) {
 	store := newFaultDaggerheartStore()
 	adapter := NewAdapter(store)
-	if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+	if err := store.PutDaggerheartCharacterState(context.Background(), projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Armor:       2,
@@ -101,7 +101,7 @@ func TestClearRestTemporaryArmor_NoChange(t *testing.T) {
 func TestHandleGMFearChanged_UsesExistingShortRests(t *testing.T) {
 	store := newFaultDaggerheartStore()
 	adapter := NewAdapter(store)
-	if err := store.PutDaggerheartSnapshot(context.Background(), storage.DaggerheartSnapshot{
+	if err := store.PutDaggerheartSnapshot(context.Background(), projectionstore.DaggerheartSnapshot{
 		CampaignID:            "camp-1",
 		GMFear:                1,
 		ConsecutiveShortRests: 7,
@@ -174,7 +174,7 @@ func TestHandleCountdownUpdated_Branches(t *testing.T) {
 	t.Run("out of range", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
-		if err := store.PutDaggerheartCountdown(context.Background(), storage.DaggerheartCountdown{
+		if err := store.PutDaggerheartCountdown(context.Background(), projectionstore.DaggerheartCountdown{
 			CampaignID:  "camp-1",
 			CountdownID: "cd-1",
 			Name:        "Doom",
@@ -211,7 +211,7 @@ func TestApplyAdversaryConditionPatch_WrapsStoreErrors(t *testing.T) {
 	t.Run("put error", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
-		if err := store.PutDaggerheartAdversary(context.Background(), storage.DaggerheartAdversary{
+		if err := store.PutDaggerheartAdversary(context.Background(), projectionstore.DaggerheartAdversary{
 			CampaignID:  "camp-1",
 			AdversaryID: "adv-1",
 			Name:        "Adversary",
@@ -252,7 +252,7 @@ func TestApplyStatePatch_Branches(t *testing.T) {
 	t.Run("profile read error", func(t *testing.T) {
 		store := newFaultDaggerheartStore()
 		adapter := NewAdapter(store)
-		if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+		if err := store.PutDaggerheartCharacterState(context.Background(), projectionstore.DaggerheartCharacterState{
 			CampaignID:  "camp-1",
 			CharacterID: "char-1",
 			Armor:       2,
@@ -301,23 +301,23 @@ func newFaultDaggerheartStore() *faultDaggerheartStore {
 	}
 }
 
-func (s *faultDaggerheartStore) GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error) {
+func (s *faultDaggerheartStore) GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
 	if s.getCharacterStateErr != nil {
-		return storage.DaggerheartCharacterState{}, s.getCharacterStateErr
+		return projectionstore.DaggerheartCharacterState{}, s.getCharacterStateErr
 	}
 	return s.parityDaggerheartStore.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 }
 
-func (s *faultDaggerheartStore) PutDaggerheartCharacterState(ctx context.Context, state storage.DaggerheartCharacterState) error {
+func (s *faultDaggerheartStore) PutDaggerheartCharacterState(ctx context.Context, state projectionstore.DaggerheartCharacterState) error {
 	if s.putCharacterStateErr != nil {
 		return s.putCharacterStateErr
 	}
 	return s.parityDaggerheartStore.PutDaggerheartCharacterState(ctx, state)
 }
 
-func (s *faultDaggerheartStore) GetDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
+func (s *faultDaggerheartStore) GetDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error) {
 	if s.getCharacterProfileErr != nil {
-		return storage.DaggerheartCharacterProfile{}, s.getCharacterProfileErr
+		return projectionstore.DaggerheartCharacterProfile{}, s.getCharacterProfileErr
 	}
 	return s.parityDaggerheartStore.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 }
@@ -329,42 +329,42 @@ func (s *faultDaggerheartStore) DeleteDaggerheartCharacterProfile(ctx context.Co
 	return s.parityDaggerheartStore.DeleteDaggerheartCharacterProfile(ctx, campaignID, characterID)
 }
 
-func (s *faultDaggerheartStore) GetDaggerheartSnapshot(ctx context.Context, campaignID string) (storage.DaggerheartSnapshot, error) {
+func (s *faultDaggerheartStore) GetDaggerheartSnapshot(ctx context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error) {
 	if s.getSnapshotErr != nil {
-		return storage.DaggerheartSnapshot{}, s.getSnapshotErr
+		return projectionstore.DaggerheartSnapshot{}, s.getSnapshotErr
 	}
 	return s.parityDaggerheartStore.GetDaggerheartSnapshot(ctx, campaignID)
 }
 
-func (s *faultDaggerheartStore) PutDaggerheartSnapshot(ctx context.Context, snap storage.DaggerheartSnapshot) error {
+func (s *faultDaggerheartStore) PutDaggerheartSnapshot(ctx context.Context, snap projectionstore.DaggerheartSnapshot) error {
 	if s.putSnapshotErr != nil {
 		return s.putSnapshotErr
 	}
 	return s.parityDaggerheartStore.PutDaggerheartSnapshot(ctx, snap)
 }
 
-func (s *faultDaggerheartStore) GetDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
+func (s *faultDaggerheartStore) GetDaggerheartCountdown(ctx context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error) {
 	if s.getCountdownErr != nil {
-		return storage.DaggerheartCountdown{}, s.getCountdownErr
+		return projectionstore.DaggerheartCountdown{}, s.getCountdownErr
 	}
 	return s.parityDaggerheartStore.GetDaggerheartCountdown(ctx, campaignID, countdownID)
 }
 
-func (s *faultDaggerheartStore) PutDaggerheartCountdown(ctx context.Context, countdown storage.DaggerheartCountdown) error {
+func (s *faultDaggerheartStore) PutDaggerheartCountdown(ctx context.Context, countdown projectionstore.DaggerheartCountdown) error {
 	if s.putCountdownErr != nil {
 		return s.putCountdownErr
 	}
 	return s.parityDaggerheartStore.PutDaggerheartCountdown(ctx, countdown)
 }
 
-func (s *faultDaggerheartStore) GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (storage.DaggerheartAdversary, error) {
+func (s *faultDaggerheartStore) GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
 	if s.getAdversaryErr != nil {
-		return storage.DaggerheartAdversary{}, s.getAdversaryErr
+		return projectionstore.DaggerheartAdversary{}, s.getAdversaryErr
 	}
 	return s.parityDaggerheartStore.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 }
 
-func (s *faultDaggerheartStore) PutDaggerheartAdversary(ctx context.Context, adversary storage.DaggerheartAdversary) error {
+func (s *faultDaggerheartStore) PutDaggerheartAdversary(ctx context.Context, adversary projectionstore.DaggerheartAdversary) error {
 	if s.putAdversaryErr != nil {
 		return s.putAdversaryErr
 	}

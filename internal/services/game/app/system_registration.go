@@ -16,19 +16,19 @@ var (
 	errSystemModuleRegistryMismatch   = errors.New("system module registry mismatch")
 )
 
-// registeredSystemModules returns the concrete system implementations wired into runtime.
+// registeredSystemModules returns the concrete system modules wired into runtime.
 //
-// These modules provide command/event registration plus adapters used by domain and
-// projection code paths; keeping this in one place ensures startup can validate
-// consistency before accepting traffic.
+// The manifest package is the built-in source of truth for system registration.
+// Keeping startup on that path prevents app-local lists from drifting away from
+// metadata or adapter registration.
 func registeredSystemModules() []domainsystem.Module {
 	return systemmanifest.Modules()
 }
 
 // registeredMetadataSystems returns system metadata surfaced in API contracts and registry.
 //
-// The metadata side is the contract-level source of truth for system names and
-// versions before runtime adapters are loaded.
+// The metadata side stays manifest-derived as well so startup parity validation
+// compares three views of the same built-in descriptor list.
 func registeredMetadataSystems() []domainbridge.GameSystem {
 	return systemmanifest.MetadataSystems()
 }

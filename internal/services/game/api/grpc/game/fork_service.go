@@ -17,16 +17,20 @@ const (
 // ForkService implements the game.v1.ForkService gRPC API.
 type ForkService struct {
 	campaignv1.UnimplementedForkServiceServer
-	stores      Stores
-	clock       func() time.Time
-	idGenerator func() (string, error)
+	app forkApplication
 }
 
 // NewForkService creates a ForkService with default dependencies.
 func NewForkService(stores Stores) *ForkService {
+	return newForkServiceWithDependencies(stores, time.Now, id.NewID)
+}
+
+func newForkServiceWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+) *ForkService {
 	return &ForkService{
-		stores:      stores,
-		clock:       time.Now,
-		idGenerator: id.NewID,
+		app: newForkApplicationWithDependencies(stores, clock, idGenerator),
 	}
 }

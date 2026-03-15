@@ -21,7 +21,7 @@ func ValidateActiveSessionPolicyCoverage(registry *command.Registry) error {
 		if definition.Owner != command.OwnerCore {
 			continue
 		}
-		if _, ok := ActiveSessionPolicyForCommandType(definition.Type); ok {
+		if definition.ActiveSession.Classification != "" {
 			continue
 		}
 		missing = append(missing, string(definition.Type))

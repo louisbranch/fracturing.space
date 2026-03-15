@@ -19,17 +19,20 @@ type communicationApplicationStores struct {
 	Scene       storage.SceneStore
 }
 
-func newCommunicationApplication(service *CommunicationService) communicationApplication {
+func newCommunicationApplicationWithDependencies(
+	stores Stores,
+	idGenerator func() (string, error),
+) communicationApplication {
 	return communicationApplication{
-		auth: newPolicyDependencies(service.stores),
+		auth: newPolicyDependencies(stores),
 		stores: communicationApplicationStores{
-			Campaign:    service.stores.Campaign,
-			Participant: service.stores.Participant,
-			Character:   service.stores.Character,
-			Scene:       service.stores.Scene,
+			Campaign:    stores.Campaign,
+			Participant: stores.Participant,
+			Character:   stores.Character,
+			Scene:       stores.Scene,
 		},
-		sessions:     newSessionApplicationWithDependencies(service.stores, nil, service.idGenerator),
-		gateCommands: newSessionGateCommandExecutor(service.stores.Write, service.stores.Applier()),
-		idGenerator:  service.idGenerator,
+		sessions:     newSessionApplicationWithDependencies(stores, nil, idGenerator),
+		gateCommands: newSessionGateCommandExecutor(stores.Write, stores.Applier()),
+		idGenerator:  idGenerator,
 	}
 }

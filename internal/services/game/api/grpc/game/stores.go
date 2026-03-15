@@ -4,10 +4,19 @@ import (
 	socialv1 "github.com/louisbranch/fracturing.space/api/gen/go/social/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
+
+// SystemStores groups system-specific projection stores consumed by the core
+// game transport. This package keeps its explicit Daggerheart dependency
+// because snapshot and profile reads are part of the product surface, not the
+// manifest extension platform.
+type SystemStores struct {
+	Daggerheart projectionstore.Store
+}
 
 // Stores groups all campaign-related storage interfaces for service injection.
 type Stores struct {
@@ -26,10 +35,9 @@ type Stores struct {
 	SceneSpotlight   storage.SceneSpotlightStore
 	CampaignFork     storage.CampaignForkStore
 
-	// SystemStores groups system-specific projection stores used by
-	// AdapterRegistry. When adding a new game system, add its store here
-	// and in manifest.ProjectionStores — no other Stores fields need changing.
-	SystemStores systemmanifest.ProjectionStores
+	// SystemStores groups system-specific projection stores used by the core
+	// game transport and projection applier.
+	SystemStores SystemStores
 
 	// Infrastructure stores — event journal, snapshots, audit.
 	Event      storage.EventStore
@@ -39,7 +47,7 @@ type Stores struct {
 	Snapshot   storage.SnapshotStore
 
 	// System content stores — read-only content used by gRPC handlers.
-	DaggerheartContent storage.DaggerheartContentReadStore
+	DaggerheartContent contentstore.DaggerheartContentReadStore
 	Social             socialv1.SocialServiceClient
 
 	// Write groups the domain executor, runtime controls, and audit store
@@ -71,10 +79,10 @@ type ProjectionStoreBundle interface {
 // StoresFromProjectionConfig configures NewStoresFromProjection.
 type StoresFromProjectionConfig struct {
 	ProjectionStore ProjectionStoreBundle
-	SystemStores    systemmanifest.ProjectionStores
+	SystemStores    SystemStores
 	EventStore      storage.EventStore
 	AuditStore      storage.AuditEventStore
-	ContentStore    storage.DaggerheartContentReadStore
+	ContentStore    contentstore.DaggerheartContentReadStore
 	SocialClient    socialv1.SocialServiceClient
 	Domain          Domain
 	WriteRuntime    *domainwrite.Runtime

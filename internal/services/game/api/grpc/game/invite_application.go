@@ -14,7 +14,7 @@ import (
 // inviteApplication coordinates invite transport use-cases across focused
 // create, claim, and revoke files.
 type inviteApplication struct {
-	auth              Stores
+	auth              policyDependencies
 	stores            inviteApplicationStores
 	write             domainwriteexec.WritePath
 	applier           projection.Applier
@@ -34,27 +34,40 @@ type inviteApplicationStores struct {
 }
 
 func newInviteApplication(service *InviteService) inviteApplication {
+	if service == nil {
+		return inviteApplication{}
+	}
+	return service.app
+}
+
+func newInviteApplicationWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+	joinGrantVerifier joingrant.Verifier,
+) inviteApplication {
 	app := inviteApplication{
-		auth: service.stores,
+		auth: newPolicyDependencies(stores),
 		stores: inviteApplicationStores{
-			Campaign:    service.stores.Campaign,
-			Participant: service.stores.Participant,
-			Invite:      service.stores.Invite,
-			ClaimIndex:  service.stores.ClaimIndex,
-			Event:       service.stores.Event,
-			Social:      service.stores.Social,
+			Campaign:    stores.Campaign,
+			Participant: stores.Participant,
+			Invite:      stores.Invite,
+			ClaimIndex:  stores.ClaimIndex,
+			Event:       stores.Event,
+			Social:      stores.Social,
 		},
-		write:       service.stores.Write,
-		applier:     service.stores.Applier(),
-		clock:       service.clock,
-		idGenerator: service.idGenerator,
-		authClient:  service.authClient,
+		write:       stores.Write,
+		applier:     stores.Applier(),
+		clock:       clock,
+		idGenerator: idGenerator,
+		authClient:  authClient,
 	}
 	if app.clock == nil {
 		app.clock = time.Now
 	}
-	if service.joinGrantVerifier != nil {
-		app.joinGrantVerifier = service.joinGrantVerifier
+	if joinGrantVerifier != nil {
+		app.joinGrantVerifier = joinGrantVerifier
 	} else {
 		app.joinGrantVerifier = joingrant.EnvVerifier{Now: app.clock}
 	}

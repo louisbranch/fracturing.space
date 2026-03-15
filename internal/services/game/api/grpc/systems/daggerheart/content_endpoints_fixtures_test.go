@@ -3,29 +3,30 @@ package daggerheart
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-// fakeContentStore implements storage.DaggerheartContentStore for testing content
+// fakeContentStore implements contentstore.DaggerheartContentStore for testing content
 // service endpoints. Only the methods needed for tests are implemented with
 // real behavior; others return nil/empty to satisfy the interface.
 type fakeContentStore struct {
-	classes              map[string]storage.DaggerheartClass
-	subclasses           map[string]storage.DaggerheartSubclass
-	heritages            map[string]storage.DaggerheartHeritage
-	experiences          map[string]storage.DaggerheartExperienceEntry
-	adversaryEntries     map[string]storage.DaggerheartAdversaryEntry
-	beastforms           map[string]storage.DaggerheartBeastformEntry
-	companionExperiences map[string]storage.DaggerheartCompanionExperienceEntry
-	lootEntries          map[string]storage.DaggerheartLootEntry
-	damageTypes          map[string]storage.DaggerheartDamageTypeEntry
-	domains              map[string]storage.DaggerheartDomain
-	domainCards          map[string]storage.DaggerheartDomainCard
-	weapons              map[string]storage.DaggerheartWeapon
-	armor                map[string]storage.DaggerheartArmor
-	items                map[string]storage.DaggerheartItem
-	environments         map[string]storage.DaggerheartEnvironment
-	contentStrings       map[fakeContentStringKey]storage.DaggerheartContentString
+	classes              map[string]contentstore.DaggerheartClass
+	subclasses           map[string]contentstore.DaggerheartSubclass
+	heritages            map[string]contentstore.DaggerheartHeritage
+	experiences          map[string]contentstore.DaggerheartExperienceEntry
+	adversaryEntries     map[string]contentstore.DaggerheartAdversaryEntry
+	beastforms           map[string]contentstore.DaggerheartBeastformEntry
+	companionExperiences map[string]contentstore.DaggerheartCompanionExperienceEntry
+	lootEntries          map[string]contentstore.DaggerheartLootEntry
+	damageTypes          map[string]contentstore.DaggerheartDamageTypeEntry
+	domains              map[string]contentstore.DaggerheartDomain
+	domainCards          map[string]contentstore.DaggerheartDomainCard
+	weapons              map[string]contentstore.DaggerheartWeapon
+	armor                map[string]contentstore.DaggerheartArmor
+	items                map[string]contentstore.DaggerheartItem
+	environments         map[string]contentstore.DaggerheartEnvironment
+	contentStrings       map[fakeContentStringKey]contentstore.DaggerheartContentString
 }
 
 type fakeContentStringKey struct {
@@ -36,38 +37,38 @@ type fakeContentStringKey struct {
 
 func newFakeContentStore() *fakeContentStore {
 	return &fakeContentStore{
-		classes:              make(map[string]storage.DaggerheartClass),
-		subclasses:           make(map[string]storage.DaggerheartSubclass),
-		heritages:            make(map[string]storage.DaggerheartHeritage),
-		experiences:          make(map[string]storage.DaggerheartExperienceEntry),
-		adversaryEntries:     make(map[string]storage.DaggerheartAdversaryEntry),
-		beastforms:           make(map[string]storage.DaggerheartBeastformEntry),
-		companionExperiences: make(map[string]storage.DaggerheartCompanionExperienceEntry),
-		lootEntries:          make(map[string]storage.DaggerheartLootEntry),
-		damageTypes:          make(map[string]storage.DaggerheartDamageTypeEntry),
-		domains:              make(map[string]storage.DaggerheartDomain),
-		domainCards:          make(map[string]storage.DaggerheartDomainCard),
-		weapons:              make(map[string]storage.DaggerheartWeapon),
-		armor:                make(map[string]storage.DaggerheartArmor),
-		items:                make(map[string]storage.DaggerheartItem),
-		environments:         make(map[string]storage.DaggerheartEnvironment),
-		contentStrings:       make(map[fakeContentStringKey]storage.DaggerheartContentString),
+		classes:              make(map[string]contentstore.DaggerheartClass),
+		subclasses:           make(map[string]contentstore.DaggerheartSubclass),
+		heritages:            make(map[string]contentstore.DaggerheartHeritage),
+		experiences:          make(map[string]contentstore.DaggerheartExperienceEntry),
+		adversaryEntries:     make(map[string]contentstore.DaggerheartAdversaryEntry),
+		beastforms:           make(map[string]contentstore.DaggerheartBeastformEntry),
+		companionExperiences: make(map[string]contentstore.DaggerheartCompanionExperienceEntry),
+		lootEntries:          make(map[string]contentstore.DaggerheartLootEntry),
+		damageTypes:          make(map[string]contentstore.DaggerheartDamageTypeEntry),
+		domains:              make(map[string]contentstore.DaggerheartDomain),
+		domainCards:          make(map[string]contentstore.DaggerheartDomainCard),
+		weapons:              make(map[string]contentstore.DaggerheartWeapon),
+		armor:                make(map[string]contentstore.DaggerheartArmor),
+		items:                make(map[string]contentstore.DaggerheartItem),
+		environments:         make(map[string]contentstore.DaggerheartEnvironment),
+		contentStrings:       make(map[fakeContentStringKey]contentstore.DaggerheartContentString),
 	}
 }
 
-func (s *fakeContentStore) PutDaggerheartClass(_ context.Context, c storage.DaggerheartClass) error {
+func (s *fakeContentStore) PutDaggerheartClass(_ context.Context, c contentstore.DaggerheartClass) error {
 	s.classes[c.ID] = c
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartClass(_ context.Context, id string) (storage.DaggerheartClass, error) {
+func (s *fakeContentStore) GetDaggerheartClass(_ context.Context, id string) (contentstore.DaggerheartClass, error) {
 	c, ok := s.classes[id]
 	if !ok {
-		return storage.DaggerheartClass{}, storage.ErrNotFound
+		return contentstore.DaggerheartClass{}, storage.ErrNotFound
 	}
 	return c, nil
 }
-func (s *fakeContentStore) ListDaggerheartClasses(_ context.Context) ([]storage.DaggerheartClass, error) {
-	result := make([]storage.DaggerheartClass, 0, len(s.classes))
+func (s *fakeContentStore) ListDaggerheartClasses(_ context.Context) ([]contentstore.DaggerheartClass, error) {
+	result := make([]contentstore.DaggerheartClass, 0, len(s.classes))
 	for _, c := range s.classes {
 		result = append(result, c)
 	}
@@ -78,19 +79,19 @@ func (s *fakeContentStore) DeleteDaggerheartClass(_ context.Context, id string) 
 	return nil
 }
 
-func (s *fakeContentStore) PutDaggerheartSubclass(_ context.Context, c storage.DaggerheartSubclass) error {
+func (s *fakeContentStore) PutDaggerheartSubclass(_ context.Context, c contentstore.DaggerheartSubclass) error {
 	s.subclasses[c.ID] = c
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartSubclass(_ context.Context, id string) (storage.DaggerheartSubclass, error) {
+func (s *fakeContentStore) GetDaggerheartSubclass(_ context.Context, id string) (contentstore.DaggerheartSubclass, error) {
 	c, ok := s.subclasses[id]
 	if !ok {
-		return storage.DaggerheartSubclass{}, storage.ErrNotFound
+		return contentstore.DaggerheartSubclass{}, storage.ErrNotFound
 	}
 	return c, nil
 }
-func (s *fakeContentStore) ListDaggerheartSubclasses(_ context.Context) ([]storage.DaggerheartSubclass, error) {
-	result := make([]storage.DaggerheartSubclass, 0, len(s.subclasses))
+func (s *fakeContentStore) ListDaggerheartSubclasses(_ context.Context) ([]contentstore.DaggerheartSubclass, error) {
+	result := make([]contentstore.DaggerheartSubclass, 0, len(s.subclasses))
 	for _, c := range s.subclasses {
 		result = append(result, c)
 	}
@@ -98,19 +99,19 @@ func (s *fakeContentStore) ListDaggerheartSubclasses(_ context.Context) ([]stora
 }
 func (s *fakeContentStore) DeleteDaggerheartSubclass(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartHeritage(_ context.Context, h storage.DaggerheartHeritage) error {
+func (s *fakeContentStore) PutDaggerheartHeritage(_ context.Context, h contentstore.DaggerheartHeritage) error {
 	s.heritages[h.ID] = h
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartHeritage(_ context.Context, id string) (storage.DaggerheartHeritage, error) {
+func (s *fakeContentStore) GetDaggerheartHeritage(_ context.Context, id string) (contentstore.DaggerheartHeritage, error) {
 	h, ok := s.heritages[id]
 	if !ok {
-		return storage.DaggerheartHeritage{}, storage.ErrNotFound
+		return contentstore.DaggerheartHeritage{}, storage.ErrNotFound
 	}
 	return h, nil
 }
-func (s *fakeContentStore) ListDaggerheartHeritages(_ context.Context) ([]storage.DaggerheartHeritage, error) {
-	result := make([]storage.DaggerheartHeritage, 0, len(s.heritages))
+func (s *fakeContentStore) ListDaggerheartHeritages(_ context.Context) ([]contentstore.DaggerheartHeritage, error) {
+	result := make([]contentstore.DaggerheartHeritage, 0, len(s.heritages))
 	for _, h := range s.heritages {
 		result = append(result, h)
 	}
@@ -118,19 +119,19 @@ func (s *fakeContentStore) ListDaggerheartHeritages(_ context.Context) ([]storag
 }
 func (s *fakeContentStore) DeleteDaggerheartHeritage(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartExperience(_ context.Context, e storage.DaggerheartExperienceEntry) error {
+func (s *fakeContentStore) PutDaggerheartExperience(_ context.Context, e contentstore.DaggerheartExperienceEntry) error {
 	s.experiences[e.ID] = e
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartExperience(_ context.Context, id string) (storage.DaggerheartExperienceEntry, error) {
+func (s *fakeContentStore) GetDaggerheartExperience(_ context.Context, id string) (contentstore.DaggerheartExperienceEntry, error) {
 	e, ok := s.experiences[id]
 	if !ok {
-		return storage.DaggerheartExperienceEntry{}, storage.ErrNotFound
+		return contentstore.DaggerheartExperienceEntry{}, storage.ErrNotFound
 	}
 	return e, nil
 }
-func (s *fakeContentStore) ListDaggerheartExperiences(_ context.Context) ([]storage.DaggerheartExperienceEntry, error) {
-	result := make([]storage.DaggerheartExperienceEntry, 0, len(s.experiences))
+func (s *fakeContentStore) ListDaggerheartExperiences(_ context.Context) ([]contentstore.DaggerheartExperienceEntry, error) {
+	result := make([]contentstore.DaggerheartExperienceEntry, 0, len(s.experiences))
 	for _, e := range s.experiences {
 		result = append(result, e)
 	}
@@ -140,19 +141,19 @@ func (s *fakeContentStore) DeleteDaggerheartExperience(_ context.Context, _ stri
 	return nil
 }
 
-func (s *fakeContentStore) PutDaggerheartAdversaryEntry(_ context.Context, a storage.DaggerheartAdversaryEntry) error {
+func (s *fakeContentStore) PutDaggerheartAdversaryEntry(_ context.Context, a contentstore.DaggerheartAdversaryEntry) error {
 	s.adversaryEntries[a.ID] = a
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartAdversaryEntry(_ context.Context, id string) (storage.DaggerheartAdversaryEntry, error) {
+func (s *fakeContentStore) GetDaggerheartAdversaryEntry(_ context.Context, id string) (contentstore.DaggerheartAdversaryEntry, error) {
 	a, ok := s.adversaryEntries[id]
 	if !ok {
-		return storage.DaggerheartAdversaryEntry{}, storage.ErrNotFound
+		return contentstore.DaggerheartAdversaryEntry{}, storage.ErrNotFound
 	}
 	return a, nil
 }
-func (s *fakeContentStore) ListDaggerheartAdversaryEntries(_ context.Context) ([]storage.DaggerheartAdversaryEntry, error) {
-	result := make([]storage.DaggerheartAdversaryEntry, 0, len(s.adversaryEntries))
+func (s *fakeContentStore) ListDaggerheartAdversaryEntries(_ context.Context) ([]contentstore.DaggerheartAdversaryEntry, error) {
+	result := make([]contentstore.DaggerheartAdversaryEntry, 0, len(s.adversaryEntries))
 	for _, a := range s.adversaryEntries {
 		result = append(result, a)
 	}
@@ -162,19 +163,19 @@ func (s *fakeContentStore) DeleteDaggerheartAdversaryEntry(_ context.Context, _ 
 	return nil
 }
 
-func (s *fakeContentStore) PutDaggerheartBeastform(_ context.Context, b storage.DaggerheartBeastformEntry) error {
+func (s *fakeContentStore) PutDaggerheartBeastform(_ context.Context, b contentstore.DaggerheartBeastformEntry) error {
 	s.beastforms[b.ID] = b
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartBeastform(_ context.Context, id string) (storage.DaggerheartBeastformEntry, error) {
+func (s *fakeContentStore) GetDaggerheartBeastform(_ context.Context, id string) (contentstore.DaggerheartBeastformEntry, error) {
 	b, ok := s.beastforms[id]
 	if !ok {
-		return storage.DaggerheartBeastformEntry{}, storage.ErrNotFound
+		return contentstore.DaggerheartBeastformEntry{}, storage.ErrNotFound
 	}
 	return b, nil
 }
-func (s *fakeContentStore) ListDaggerheartBeastforms(_ context.Context) ([]storage.DaggerheartBeastformEntry, error) {
-	result := make([]storage.DaggerheartBeastformEntry, 0, len(s.beastforms))
+func (s *fakeContentStore) ListDaggerheartBeastforms(_ context.Context) ([]contentstore.DaggerheartBeastformEntry, error) {
+	result := make([]contentstore.DaggerheartBeastformEntry, 0, len(s.beastforms))
 	for _, b := range s.beastforms {
 		result = append(result, b)
 	}
@@ -182,19 +183,19 @@ func (s *fakeContentStore) ListDaggerheartBeastforms(_ context.Context) ([]stora
 }
 func (s *fakeContentStore) DeleteDaggerheartBeastform(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartCompanionExperience(_ context.Context, e storage.DaggerheartCompanionExperienceEntry) error {
+func (s *fakeContentStore) PutDaggerheartCompanionExperience(_ context.Context, e contentstore.DaggerheartCompanionExperienceEntry) error {
 	s.companionExperiences[e.ID] = e
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartCompanionExperience(_ context.Context, id string) (storage.DaggerheartCompanionExperienceEntry, error) {
+func (s *fakeContentStore) GetDaggerheartCompanionExperience(_ context.Context, id string) (contentstore.DaggerheartCompanionExperienceEntry, error) {
 	e, ok := s.companionExperiences[id]
 	if !ok {
-		return storage.DaggerheartCompanionExperienceEntry{}, storage.ErrNotFound
+		return contentstore.DaggerheartCompanionExperienceEntry{}, storage.ErrNotFound
 	}
 	return e, nil
 }
-func (s *fakeContentStore) ListDaggerheartCompanionExperiences(_ context.Context) ([]storage.DaggerheartCompanionExperienceEntry, error) {
-	result := make([]storage.DaggerheartCompanionExperienceEntry, 0, len(s.companionExperiences))
+func (s *fakeContentStore) ListDaggerheartCompanionExperiences(_ context.Context) ([]contentstore.DaggerheartCompanionExperienceEntry, error) {
+	result := make([]contentstore.DaggerheartCompanionExperienceEntry, 0, len(s.companionExperiences))
 	for _, e := range s.companionExperiences {
 		result = append(result, e)
 	}
@@ -204,19 +205,19 @@ func (s *fakeContentStore) DeleteDaggerheartCompanionExperience(_ context.Contex
 	return nil
 }
 
-func (s *fakeContentStore) PutDaggerheartLootEntry(_ context.Context, l storage.DaggerheartLootEntry) error {
+func (s *fakeContentStore) PutDaggerheartLootEntry(_ context.Context, l contentstore.DaggerheartLootEntry) error {
 	s.lootEntries[l.ID] = l
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartLootEntry(_ context.Context, id string) (storage.DaggerheartLootEntry, error) {
+func (s *fakeContentStore) GetDaggerheartLootEntry(_ context.Context, id string) (contentstore.DaggerheartLootEntry, error) {
 	l, ok := s.lootEntries[id]
 	if !ok {
-		return storage.DaggerheartLootEntry{}, storage.ErrNotFound
+		return contentstore.DaggerheartLootEntry{}, storage.ErrNotFound
 	}
 	return l, nil
 }
-func (s *fakeContentStore) ListDaggerheartLootEntries(_ context.Context) ([]storage.DaggerheartLootEntry, error) {
-	result := make([]storage.DaggerheartLootEntry, 0, len(s.lootEntries))
+func (s *fakeContentStore) ListDaggerheartLootEntries(_ context.Context) ([]contentstore.DaggerheartLootEntry, error) {
+	result := make([]contentstore.DaggerheartLootEntry, 0, len(s.lootEntries))
 	for _, l := range s.lootEntries {
 		result = append(result, l)
 	}
@@ -224,19 +225,19 @@ func (s *fakeContentStore) ListDaggerheartLootEntries(_ context.Context) ([]stor
 }
 func (s *fakeContentStore) DeleteDaggerheartLootEntry(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartDamageType(_ context.Context, d storage.DaggerheartDamageTypeEntry) error {
+func (s *fakeContentStore) PutDaggerheartDamageType(_ context.Context, d contentstore.DaggerheartDamageTypeEntry) error {
 	s.damageTypes[d.ID] = d
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartDamageType(_ context.Context, id string) (storage.DaggerheartDamageTypeEntry, error) {
+func (s *fakeContentStore) GetDaggerheartDamageType(_ context.Context, id string) (contentstore.DaggerheartDamageTypeEntry, error) {
 	d, ok := s.damageTypes[id]
 	if !ok {
-		return storage.DaggerheartDamageTypeEntry{}, storage.ErrNotFound
+		return contentstore.DaggerheartDamageTypeEntry{}, storage.ErrNotFound
 	}
 	return d, nil
 }
-func (s *fakeContentStore) ListDaggerheartDamageTypes(_ context.Context) ([]storage.DaggerheartDamageTypeEntry, error) {
-	result := make([]storage.DaggerheartDamageTypeEntry, 0, len(s.damageTypes))
+func (s *fakeContentStore) ListDaggerheartDamageTypes(_ context.Context) ([]contentstore.DaggerheartDamageTypeEntry, error) {
+	result := make([]contentstore.DaggerheartDamageTypeEntry, 0, len(s.damageTypes))
 	for _, d := range s.damageTypes {
 		result = append(result, d)
 	}
@@ -246,19 +247,19 @@ func (s *fakeContentStore) DeleteDaggerheartDamageType(_ context.Context, _ stri
 	return nil
 }
 
-func (s *fakeContentStore) PutDaggerheartDomain(_ context.Context, d storage.DaggerheartDomain) error {
+func (s *fakeContentStore) PutDaggerheartDomain(_ context.Context, d contentstore.DaggerheartDomain) error {
 	s.domains[d.ID] = d
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartDomain(_ context.Context, id string) (storage.DaggerheartDomain, error) {
+func (s *fakeContentStore) GetDaggerheartDomain(_ context.Context, id string) (contentstore.DaggerheartDomain, error) {
 	d, ok := s.domains[id]
 	if !ok {
-		return storage.DaggerheartDomain{}, storage.ErrNotFound
+		return contentstore.DaggerheartDomain{}, storage.ErrNotFound
 	}
 	return d, nil
 }
-func (s *fakeContentStore) ListDaggerheartDomains(_ context.Context) ([]storage.DaggerheartDomain, error) {
-	result := make([]storage.DaggerheartDomain, 0, len(s.domains))
+func (s *fakeContentStore) ListDaggerheartDomains(_ context.Context) ([]contentstore.DaggerheartDomain, error) {
+	result := make([]contentstore.DaggerheartDomain, 0, len(s.domains))
 	for _, d := range s.domains {
 		result = append(result, d)
 	}
@@ -266,26 +267,26 @@ func (s *fakeContentStore) ListDaggerheartDomains(_ context.Context) ([]storage.
 }
 func (s *fakeContentStore) DeleteDaggerheartDomain(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartDomainCard(_ context.Context, c storage.DaggerheartDomainCard) error {
+func (s *fakeContentStore) PutDaggerheartDomainCard(_ context.Context, c contentstore.DaggerheartDomainCard) error {
 	s.domainCards[c.ID] = c
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartDomainCard(_ context.Context, id string) (storage.DaggerheartDomainCard, error) {
+func (s *fakeContentStore) GetDaggerheartDomainCard(_ context.Context, id string) (contentstore.DaggerheartDomainCard, error) {
 	c, ok := s.domainCards[id]
 	if !ok {
-		return storage.DaggerheartDomainCard{}, storage.ErrNotFound
+		return contentstore.DaggerheartDomainCard{}, storage.ErrNotFound
 	}
 	return c, nil
 }
-func (s *fakeContentStore) ListDaggerheartDomainCards(_ context.Context) ([]storage.DaggerheartDomainCard, error) {
-	result := make([]storage.DaggerheartDomainCard, 0, len(s.domainCards))
+func (s *fakeContentStore) ListDaggerheartDomainCards(_ context.Context) ([]contentstore.DaggerheartDomainCard, error) {
+	result := make([]contentstore.DaggerheartDomainCard, 0, len(s.domainCards))
 	for _, c := range s.domainCards {
 		result = append(result, c)
 	}
 	return result, nil
 }
-func (s *fakeContentStore) ListDaggerheartDomainCardsByDomain(_ context.Context, domainID string) ([]storage.DaggerheartDomainCard, error) {
-	var result []storage.DaggerheartDomainCard
+func (s *fakeContentStore) ListDaggerheartDomainCardsByDomain(_ context.Context, domainID string) ([]contentstore.DaggerheartDomainCard, error) {
+	var result []contentstore.DaggerheartDomainCard
 	for _, c := range s.domainCards {
 		if c.DomainID == domainID {
 			result = append(result, c)
@@ -297,19 +298,19 @@ func (s *fakeContentStore) DeleteDaggerheartDomainCard(_ context.Context, _ stri
 	return nil
 }
 
-func (s *fakeContentStore) PutDaggerheartWeapon(_ context.Context, w storage.DaggerheartWeapon) error {
+func (s *fakeContentStore) PutDaggerheartWeapon(_ context.Context, w contentstore.DaggerheartWeapon) error {
 	s.weapons[w.ID] = w
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartWeapon(_ context.Context, id string) (storage.DaggerheartWeapon, error) {
+func (s *fakeContentStore) GetDaggerheartWeapon(_ context.Context, id string) (contentstore.DaggerheartWeapon, error) {
 	w, ok := s.weapons[id]
 	if !ok {
-		return storage.DaggerheartWeapon{}, storage.ErrNotFound
+		return contentstore.DaggerheartWeapon{}, storage.ErrNotFound
 	}
 	return w, nil
 }
-func (s *fakeContentStore) ListDaggerheartWeapons(_ context.Context) ([]storage.DaggerheartWeapon, error) {
-	result := make([]storage.DaggerheartWeapon, 0, len(s.weapons))
+func (s *fakeContentStore) ListDaggerheartWeapons(_ context.Context) ([]contentstore.DaggerheartWeapon, error) {
+	result := make([]contentstore.DaggerheartWeapon, 0, len(s.weapons))
 	for _, w := range s.weapons {
 		result = append(result, w)
 	}
@@ -317,19 +318,19 @@ func (s *fakeContentStore) ListDaggerheartWeapons(_ context.Context) ([]storage.
 }
 func (s *fakeContentStore) DeleteDaggerheartWeapon(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartArmor(_ context.Context, a storage.DaggerheartArmor) error {
+func (s *fakeContentStore) PutDaggerheartArmor(_ context.Context, a contentstore.DaggerheartArmor) error {
 	s.armor[a.ID] = a
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartArmor(_ context.Context, id string) (storage.DaggerheartArmor, error) {
+func (s *fakeContentStore) GetDaggerheartArmor(_ context.Context, id string) (contentstore.DaggerheartArmor, error) {
 	a, ok := s.armor[id]
 	if !ok {
-		return storage.DaggerheartArmor{}, storage.ErrNotFound
+		return contentstore.DaggerheartArmor{}, storage.ErrNotFound
 	}
 	return a, nil
 }
-func (s *fakeContentStore) ListDaggerheartArmor(_ context.Context) ([]storage.DaggerheartArmor, error) {
-	result := make([]storage.DaggerheartArmor, 0, len(s.armor))
+func (s *fakeContentStore) ListDaggerheartArmor(_ context.Context) ([]contentstore.DaggerheartArmor, error) {
+	result := make([]contentstore.DaggerheartArmor, 0, len(s.armor))
 	for _, a := range s.armor {
 		result = append(result, a)
 	}
@@ -337,19 +338,19 @@ func (s *fakeContentStore) ListDaggerheartArmor(_ context.Context) ([]storage.Da
 }
 func (s *fakeContentStore) DeleteDaggerheartArmor(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartItem(_ context.Context, i storage.DaggerheartItem) error {
+func (s *fakeContentStore) PutDaggerheartItem(_ context.Context, i contentstore.DaggerheartItem) error {
 	s.items[i.ID] = i
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartItem(_ context.Context, id string) (storage.DaggerheartItem, error) {
+func (s *fakeContentStore) GetDaggerheartItem(_ context.Context, id string) (contentstore.DaggerheartItem, error) {
 	i, ok := s.items[id]
 	if !ok {
-		return storage.DaggerheartItem{}, storage.ErrNotFound
+		return contentstore.DaggerheartItem{}, storage.ErrNotFound
 	}
 	return i, nil
 }
-func (s *fakeContentStore) ListDaggerheartItems(_ context.Context) ([]storage.DaggerheartItem, error) {
-	result := make([]storage.DaggerheartItem, 0, len(s.items))
+func (s *fakeContentStore) ListDaggerheartItems(_ context.Context) ([]contentstore.DaggerheartItem, error) {
+	result := make([]contentstore.DaggerheartItem, 0, len(s.items))
 	for _, i := range s.items {
 		result = append(result, i)
 	}
@@ -357,19 +358,19 @@ func (s *fakeContentStore) ListDaggerheartItems(_ context.Context) ([]storage.Da
 }
 func (s *fakeContentStore) DeleteDaggerheartItem(_ context.Context, _ string) error { return nil }
 
-func (s *fakeContentStore) PutDaggerheartEnvironment(_ context.Context, e storage.DaggerheartEnvironment) error {
+func (s *fakeContentStore) PutDaggerheartEnvironment(_ context.Context, e contentstore.DaggerheartEnvironment) error {
 	s.environments[e.ID] = e
 	return nil
 }
-func (s *fakeContentStore) GetDaggerheartEnvironment(_ context.Context, id string) (storage.DaggerheartEnvironment, error) {
+func (s *fakeContentStore) GetDaggerheartEnvironment(_ context.Context, id string) (contentstore.DaggerheartEnvironment, error) {
 	e, ok := s.environments[id]
 	if !ok {
-		return storage.DaggerheartEnvironment{}, storage.ErrNotFound
+		return contentstore.DaggerheartEnvironment{}, storage.ErrNotFound
 	}
 	return e, nil
 }
-func (s *fakeContentStore) ListDaggerheartEnvironments(_ context.Context) ([]storage.DaggerheartEnvironment, error) {
-	result := make([]storage.DaggerheartEnvironment, 0, len(s.environments))
+func (s *fakeContentStore) ListDaggerheartEnvironments(_ context.Context) ([]contentstore.DaggerheartEnvironment, error) {
+	result := make([]contentstore.DaggerheartEnvironment, 0, len(s.environments))
 	for _, e := range s.environments {
 		result = append(result, e)
 	}
@@ -379,7 +380,7 @@ func (s *fakeContentStore) DeleteDaggerheartEnvironment(_ context.Context, _ str
 	return nil
 }
 
-func (s *fakeContentStore) ListDaggerheartContentStrings(_ context.Context, contentType string, contentIDs []string, locale string) ([]storage.DaggerheartContentString, error) {
+func (s *fakeContentStore) ListDaggerheartContentStrings(_ context.Context, contentType string, contentIDs []string, locale string) ([]contentstore.DaggerheartContentString, error) {
 	if s == nil {
 		return nil, nil
 	}
@@ -390,7 +391,7 @@ func (s *fakeContentStore) ListDaggerheartContentStrings(_ context.Context, cont
 	for _, id := range contentIDs {
 		idSet[id] = struct{}{}
 	}
-	results := make([]storage.DaggerheartContentString, 0, len(contentIDs))
+	results := make([]contentstore.DaggerheartContentString, 0, len(contentIDs))
 	for _, entry := range s.contentStrings {
 		if entry.ContentType != contentType || entry.Locale != locale {
 			continue
@@ -403,7 +404,7 @@ func (s *fakeContentStore) ListDaggerheartContentStrings(_ context.Context, cont
 	return results, nil
 }
 
-func (s *fakeContentStore) PutDaggerheartContentString(_ context.Context, entry storage.DaggerheartContentString) error {
+func (s *fakeContentStore) PutDaggerheartContentString(_ context.Context, entry contentstore.DaggerheartContentString) error {
 	if s == nil {
 		return nil
 	}
@@ -414,24 +415,24 @@ func (s *fakeContentStore) PutDaggerheartContentString(_ context.Context, entry 
 
 func newContentTestService() *DaggerheartContentService {
 	cs := newFakeContentStore()
-	cs.classes["class-1"] = storage.DaggerheartClass{ID: "class-1", Name: "Guardian"}
-	cs.classes["class-2"] = storage.DaggerheartClass{ID: "class-2", Name: "Sorcerer"}
-	cs.subclasses["sub-1"] = storage.DaggerheartSubclass{ID: "sub-1", Name: "Bladeweaver"}
-	cs.heritages["her-1"] = storage.DaggerheartHeritage{ID: "her-1", Name: "Elf", Kind: "ancestry"}
-	cs.experiences["exp-1"] = storage.DaggerheartExperienceEntry{ID: "exp-1", Name: "Wanderer"}
-	cs.adversaryEntries["adv-1"] = storage.DaggerheartAdversaryEntry{ID: "adv-1", Name: "Goblin"}
-	cs.beastforms["beast-1"] = storage.DaggerheartBeastformEntry{ID: "beast-1", Name: "Wolf"}
-	cs.companionExperiences["cexp-1"] = storage.DaggerheartCompanionExperienceEntry{ID: "cexp-1", Name: "Guard"}
-	cs.lootEntries["loot-1"] = storage.DaggerheartLootEntry{ID: "loot-1", Name: "Gold"}
-	cs.damageTypes["dt-1"] = storage.DaggerheartDamageTypeEntry{ID: "dt-1", Name: "Fire"}
-	cs.domains["dom-1"] = storage.DaggerheartDomain{ID: "dom-1", Name: "Valor"}
-	cs.domainCards["card-1"] = storage.DaggerheartDomainCard{ID: "card-1", Name: "Fireball", DomainID: "dom-1"}
-	cs.weapons["weap-1"] = storage.DaggerheartWeapon{ID: "weap-1", Name: "Blade"}
-	cs.armor["armor-1"] = storage.DaggerheartArmor{ID: "armor-1", Name: "Chain Mail"}
-	cs.items["item-1"] = storage.DaggerheartItem{ID: "item-1", Name: "Potion"}
-	cs.environments["env-1"] = storage.DaggerheartEnvironment{ID: "env-1", Name: "Forest"}
+	cs.classes["class-1"] = contentstore.DaggerheartClass{ID: "class-1", Name: "Guardian"}
+	cs.classes["class-2"] = contentstore.DaggerheartClass{ID: "class-2", Name: "Sorcerer"}
+	cs.subclasses["sub-1"] = contentstore.DaggerheartSubclass{ID: "sub-1", Name: "Bladeweaver"}
+	cs.heritages["her-1"] = contentstore.DaggerheartHeritage{ID: "her-1", Name: "Elf", Kind: "ancestry"}
+	cs.experiences["exp-1"] = contentstore.DaggerheartExperienceEntry{ID: "exp-1", Name: "Wanderer"}
+	cs.adversaryEntries["adv-1"] = contentstore.DaggerheartAdversaryEntry{ID: "adv-1", Name: "Goblin"}
+	cs.beastforms["beast-1"] = contentstore.DaggerheartBeastformEntry{ID: "beast-1", Name: "Wolf"}
+	cs.companionExperiences["cexp-1"] = contentstore.DaggerheartCompanionExperienceEntry{ID: "cexp-1", Name: "Guard"}
+	cs.lootEntries["loot-1"] = contentstore.DaggerheartLootEntry{ID: "loot-1", Name: "Gold"}
+	cs.damageTypes["dt-1"] = contentstore.DaggerheartDamageTypeEntry{ID: "dt-1", Name: "Fire"}
+	cs.domains["dom-1"] = contentstore.DaggerheartDomain{ID: "dom-1", Name: "Valor"}
+	cs.domainCards["card-1"] = contentstore.DaggerheartDomainCard{ID: "card-1", Name: "Fireball", DomainID: "dom-1"}
+	cs.weapons["weap-1"] = contentstore.DaggerheartWeapon{ID: "weap-1", Name: "Blade"}
+	cs.armor["armor-1"] = contentstore.DaggerheartArmor{ID: "armor-1", Name: "Chain Mail"}
+	cs.items["item-1"] = contentstore.DaggerheartItem{ID: "item-1", Name: "Potion"}
+	cs.environments["env-1"] = contentstore.DaggerheartEnvironment{ID: "env-1", Name: "Forest"}
 
-	svc, err := NewDaggerheartContentService(Stores{DaggerheartContent: cs})
+	svc, err := NewDaggerheartContentService(cs)
 	if err != nil {
 		panic(err)
 	}

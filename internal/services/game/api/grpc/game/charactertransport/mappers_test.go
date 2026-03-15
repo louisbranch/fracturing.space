@@ -7,6 +7,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
@@ -105,7 +106,7 @@ func TestCharacterEnumAndDaggerheartConversions(t *testing.T) {
 }
 
 func TestDaggerheartProfileAndStateToProto(t *testing.T) {
-	profile := DaggerheartProfileToProto("camp-1", "char-1", storage.DaggerheartCharacterProfile{
+	profile := DaggerheartProfileToProto("camp-1", "char-1", projectionstore.DaggerheartCharacterProfile{
 		Level:                2,
 		HpMax:                14,
 		StressMax:            6,
@@ -121,7 +122,7 @@ func TestDaggerheartProfileAndStateToProto(t *testing.T) {
 		Instinct:             4,
 		Presence:             5,
 		Knowledge:            6,
-		Experiences:          []storage.DaggerheartExperience{{Name: "Scout", Modifier: 2}},
+		Experiences:          []projectionstore.DaggerheartExperience{{Name: "Scout", Modifier: 2}},
 		ClassID:              "class-1",
 		SubclassID:           "sub-1",
 		AncestryID:           "anc-1",
@@ -140,7 +141,7 @@ func TestDaggerheartProfileAndStateToProto(t *testing.T) {
 		t.Fatalf("profile = %+v", profile.GetDaggerheart())
 	}
 
-	state := DaggerheartStateToProto("camp-1", "char-1", storage.DaggerheartCharacterState{
+	state := DaggerheartStateToProto("camp-1", "char-1", projectionstore.DaggerheartCharacterState{
 		Hp:         10,
 		Hope:       2,
 		HopeMax:    6,

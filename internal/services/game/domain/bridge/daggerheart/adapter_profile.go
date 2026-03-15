@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func (a *Adapter) handleCharacterProfileReplaced(ctx context.Context, evt event.Event, payload CharacterProfileReplacedPayload) error {
@@ -48,7 +48,7 @@ func (a *Adapter) putCharacterProfile(ctx context.Context, campaignID, character
 		return nil
 	}
 
-	return a.putCharacterState(ctx, storage.DaggerheartCharacterState{
+	return a.putCharacterState(ctx, projectionstore.DaggerheartCharacterState{
 		CampaignID:  campaignID,
 		CharacterID: characterID,
 		Hp:          profile.HpMax,

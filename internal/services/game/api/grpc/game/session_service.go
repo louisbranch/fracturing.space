@@ -15,16 +15,20 @@ const (
 // SessionService implements the game.v1.SessionService gRPC API.
 type SessionService struct {
 	campaignv1.UnimplementedSessionServiceServer
-	stores      Stores
-	clock       func() time.Time
-	idGenerator func() (string, error)
+	app sessionApplication
 }
 
 // NewSessionService creates a SessionService with default dependencies.
 func NewSessionService(stores Stores) *SessionService {
+	return newSessionServiceWithDependencies(stores, time.Now, id.NewID)
+}
+
+func newSessionServiceWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+) *SessionService {
 	return &SessionService{
-		stores:      stores,
-		clock:       time.Now,
-		idGenerator: id.NewID,
+		app: newSessionApplicationWithDependencies(stores, clock, idGenerator),
 	}
 }

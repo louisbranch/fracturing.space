@@ -9,6 +9,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -199,14 +200,14 @@ func newActionTestService() *DaggerheartService {
 	}
 
 	dhStore := newFakeDaggerheartStore()
-	dhStore.Profiles["camp-1:char-1"] = storage.DaggerheartCharacterProfile{
+	dhStore.Profiles["camp-1:char-1"] = projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		HpMax:       6,
 		StressMax:   6,
 		ArmorMax:    2,
 	}
-	dhStore.States["camp-1:char-1"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          6,
@@ -216,14 +217,14 @@ func newActionTestService() *DaggerheartService {
 		Armor:       0,
 		LifeState:   daggerheart.LifeStateAlive,
 	}
-	dhStore.Profiles["camp-1:char-2"] = storage.DaggerheartCharacterProfile{
+	dhStore.Profiles["camp-1:char-2"] = projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "camp-1",
 		CharacterID: "char-2",
 		HpMax:       8,
 		StressMax:   6,
 		ArmorMax:    1,
 	}
-	dhStore.States["camp-1:char-2"] = storage.DaggerheartCharacterState{
+	dhStore.States["camp-1:char-2"] = projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-2",
 		Hp:          8,

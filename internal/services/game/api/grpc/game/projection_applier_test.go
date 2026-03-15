@@ -9,7 +9,6 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -1130,7 +1129,7 @@ func TestStoresApplier_ApplyCharacterLifecycle(t *testing.T) {
 func TestStoresApplier_ApplyDaggerheartCharacterProfileReplaced(t *testing.T) {
 	ctx := context.Background()
 	stores := Stores{
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 	}
 	applier := stores.Applier()
 

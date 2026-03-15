@@ -96,6 +96,15 @@ func ownerParticipantStore(campaignID string) *fakeParticipantStore {
 	return store
 }
 
+func newCampaignServiceForTest(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+) *CampaignService {
+	return newCampaignServiceWithDependencies(stores, clock, idGenerator, authClient, nil)
+}
+
 func TestCreateCampaign_NilRequest(t *testing.T) {
 	svc := NewCampaignService(Stores{}, nil, nil)
 	_, err := svc.CreateCampaign(context.Background(), nil)
@@ -171,12 +180,12 @@ func TestCreateCampaign_MissingGmModeDefaultsToAI(t *testing.T) {
 		},
 	}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
-		authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
-	}
+	svc := newCampaignServiceForTest(
+		ts.withDomain(domain).build(),
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		&fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
+	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 	resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
@@ -221,11 +230,12 @@ func TestCreateCampaign_MissingCreatorUserID(t *testing.T) {
 }
 
 func TestCreateCampaign_RequiresDomainEngine(t *testing.T) {
-	svc := &CampaignService{
-		stores:      newTestStores().build(),
-		clock:       fixedClock(time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
-	}
+	svc := newCampaignServiceForTest(
+		newTestStores().build(),
+		fixedClock(time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)),
+		fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		nil,
+	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 	_, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
@@ -266,12 +276,12 @@ func TestCreateCampaign_Success(t *testing.T) {
 			},
 		},
 	}
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
-		authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
-	}
+	svc := newCampaignServiceForTest(
+		ts.withDomain(domain).build(),
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		&fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
+	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 	resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
@@ -363,12 +373,12 @@ func TestCreateCampaign_UsesDomainEngine(t *testing.T) {
 		},
 	}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
-		authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
-	}
+	svc := newCampaignServiceForTest(
+		ts.withDomain(domain).build(),
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		&fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
+	)
 
 	ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 	resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
@@ -475,12 +485,12 @@ func TestCreateCampaign_ModeSpecificParticipantBootstrap(t *testing.T) {
 					},
 				},
 			}
-			svc := &CampaignService{
-				stores:      ts.withDomain(domain).build(),
-				clock:       fixedClock(now),
-				idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
-				authClient:  &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
-			}
+			svc := newCampaignServiceForTest(
+				ts.withDomain(domain).build(),
+				fixedClock(now),
+				fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+				&fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner"}},
+			)
 
 			ctx := metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123"))
 			resp, err := svc.CreateCampaign(ctx, &statev1.CreateCampaignRequest{
@@ -598,11 +608,12 @@ func TestCreateCampaign_OwnerParticipantHydratesFromSocialProfile(t *testing.T) 
 
 	stores := ts.withDomain(domain).build()
 	stores.Social = socialClient
-	svc := &CampaignService{
-		stores:      stores,
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
-	}
+	svc := newCampaignServiceForTest(
+		stores,
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		nil,
+	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
 		Name:        "Test Campaign",
@@ -679,11 +690,12 @@ func TestCreateCampaign_OwnerParticipantFallsBackToDefaultPronounsWhenSocialPron
 
 	stores := ts.withDomain(domain).build()
 	stores.Social = socialClient
-	svc := &CampaignService{
-		stores:      stores,
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
-	}
+	svc := newCampaignServiceForTest(
+		stores,
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		nil,
+	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
@@ -736,12 +748,12 @@ func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameWithoutSocialProf
 	}}
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "owner-handle"}}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
-		authClient:  authClient,
-	}
+	svc := newCampaignServiceForTest(
+		ts.withDomain(domain).build(),
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		authClient,
+	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
@@ -810,12 +822,12 @@ func TestCreateCampaign_OwnerParticipantFallsBackToAuthUsernameForLocale(t *test
 	}}
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "apelido"}}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-123"),
-		authClient:  authClient,
-	}
+	svc := newCampaignServiceForTest(
+		ts.withDomain(domain).build(),
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-123"),
+		authClient,
+	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
@@ -884,12 +896,12 @@ func TestCreateCampaign_AIUsesLocalizedNameAndOwnerFallsBackToAuthUsernameForLoc
 	}}
 	authClient := &fakeAuthClient{user: &authv1.User{Id: "user-123", Username: "apelido"}}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
-		authClient:  authClient,
-	}
+	svc := newCampaignServiceForTest(
+		ts.withDomain(domain).build(),
+		fixedClock(now),
+		fixedSequenceIDGenerator("campaign-123", "participant-owner", "participant-ai"),
+		authClient,
+	)
 
 	_, err := svc.CreateCampaign(metadata.NewIncomingContext(context.Background(), metadata.Pairs(grpcmeta.UserIDHeader, "user-123")), &statev1.CreateCampaignRequest{
 		Name:   "Test Campaign",
@@ -1378,10 +1390,7 @@ func TestEndCampaign_AllowsManagerAccess(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil, nil)
 
 	resp, err := svc.EndCampaign(contextWithParticipantID("manager-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1420,11 +1429,7 @@ func TestEndCampaign_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("campaign-123"),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("campaign-123"), nil)
 
 	resp, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1469,10 +1474,7 @@ func TestEndCampaign_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil, nil)
 
 	_, err := svc.EndCampaign(contextWithParticipantID("owner-1"), &statev1.EndCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1548,11 +1550,7 @@ func TestArchiveCampaign_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("campaign-123"),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("campaign-123"), nil)
 
 	resp, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1591,10 +1589,7 @@ func TestArchiveCampaign_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil, nil)
 
 	_, err := svc.ArchiveCampaign(contextWithParticipantID("owner-1"), &statev1.ArchiveCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1665,11 +1660,7 @@ func TestRestoreCampaign_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("campaign-123"),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("campaign-123"), nil)
 
 	resp, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1709,10 +1700,7 @@ func TestRestoreCampaign_UsesDomainEngine(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil, nil)
 
 	_, err := svc.RestoreCampaign(contextWithParticipantID("owner-1"), &statev1.RestoreCampaignRequest{CampaignId: "c1"})
 	if err != nil {
@@ -1769,10 +1757,7 @@ func TestUpdateCampaign_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil, nil)
 
 	resp, err := svc.UpdateCampaign(contextWithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
 		CampaignId:  "c1",
@@ -1825,10 +1810,7 @@ func TestUpdateCampaign_NoOpSkipsDomainCommand(t *testing.T) {
 	ts.Campaign.campaigns["c1"] = storedCampaign
 
 	domain := &fakeDomainEngine{store: ts.Event}
-	svc := &CampaignService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil, nil)
 
 	resp, err := svc.UpdateCampaign(contextWithParticipantID("owner-1"), &statev1.UpdateCampaignRequest{
 		CampaignId:  "c1",
@@ -1873,10 +1855,7 @@ func TestSetCampaignCover_Success(t *testing.T) {
 		}),
 	}}
 
-	svc := &CampaignService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCampaignServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil, nil)
 
 	resp, err := svc.SetCampaignCover(contextWithParticipantID("owner-1"), &statev1.SetCampaignCoverRequest{
 		CampaignId:   "c1",

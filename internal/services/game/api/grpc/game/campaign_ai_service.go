@@ -11,18 +11,21 @@ import (
 // CampaignAIService implements internal Game<=>AI/Game<=>Chat contracts.
 type CampaignAIService struct {
 	campaignv1.UnimplementedCampaignAIServiceServer
-	stores             Stores
-	clock              func() time.Time
-	idGenerator        func() (string, error)
-	sessionGrantConfig aisessiongrant.Config
+	app campaignAIApplication
 }
 
 // NewCampaignAIService creates a CampaignAIService with configured grant signing.
 func NewCampaignAIService(stores Stores, sessionGrantConfig aisessiongrant.Config) *CampaignAIService {
+	return newCampaignAIServiceWithDependencies(stores, time.Now, id.NewID, sessionGrantConfig)
+}
+
+func newCampaignAIServiceWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	sessionGrantConfig aisessiongrant.Config,
+) *CampaignAIService {
 	return &CampaignAIService{
-		stores:             stores,
-		clock:              time.Now,
-		idGenerator:        id.NewID,
-		sessionGrantConfig: sessionGrantConfig,
+		app: newCampaignAIApplicationWithDependencies(stores, clock, idGenerator, sessionGrantConfig),
 	}
 }

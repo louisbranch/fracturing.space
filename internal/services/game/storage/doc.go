@@ -6,9 +6,10 @@
 // - It separates domain intent from concrete backends (sqlite, tests, mocks).
 // - It keeps command-safety checks and read-model shaping in one boundary.
 //
-// Covered domains include campaigns, participants, characters, invites, sessions,
-// events, snapshots, forks, audit, statistics, roll outcomes, and
-// Daggerheart extensions.
+// Covered domains include campaigns, participants, characters, invites,
+// sessions, events, snapshots, forks, audit, statistics, and roll outcomes.
+// System-owned Daggerheart contracts live with the Daggerheart module instead
+// of this shared package.
 //
 // Concrete implementations are in subpackages (for example: internal/services/game/storage/sqlite).
 //

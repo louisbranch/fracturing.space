@@ -14,16 +14,21 @@ import (
 // layers so chat/web do not infer gameplay routing rules on their own.
 type CommunicationService struct {
 	campaignv1.UnimplementedCommunicationServiceServer
-	stores      Stores
-	idGenerator func() (string, error)
+	app communicationApplication
 }
 
 // NewCommunicationService creates a CommunicationService with projection-backed
 // read dependencies.
 func NewCommunicationService(stores Stores) *CommunicationService {
+	return newCommunicationServiceWithDependencies(stores, id.NewID)
+}
+
+func newCommunicationServiceWithDependencies(
+	stores Stores,
+	idGenerator func() (string, error),
+) *CommunicationService {
 	return &CommunicationService{
-		stores:      stores,
-		idGenerator: id.NewID,
+		app: newCommunicationApplicationWithDependencies(stores, idGenerator),
 	}
 }
 
@@ -38,7 +43,7 @@ func (s *CommunicationService) GetCommunicationContext(ctx context.Context, in *
 		return nil, err
 	}
 
-	contextState, err := newCommunicationApplication(s).GetCommunicationContext(ctx, campaignID)
+	contextState, err := s.app.GetCommunicationContext(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}

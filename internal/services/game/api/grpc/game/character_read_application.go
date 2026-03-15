@@ -8,6 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/grpc/pagination"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -18,14 +19,14 @@ type characterListPage struct {
 }
 
 type characterProfileListPage struct {
-	profiles      []storage.DaggerheartCharacterProfile
+	profiles      []projectionstore.DaggerheartCharacterProfile
 	nextPageToken string
 }
 
 type characterSheetState struct {
 	character storage.CharacterRecord
-	profile   storage.DaggerheartCharacterProfile
-	state     storage.DaggerheartCharacterState
+	profile   projectionstore.DaggerheartCharacterProfile
+	state     projectionstore.DaggerheartCharacterState
 }
 
 func (c characterApplication) ListCharacters(ctx context.Context, campaignID, pageToken string, pageSize int32) (characterListPage, error) {

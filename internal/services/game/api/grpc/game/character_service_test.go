@@ -11,6 +11,7 @@ import (
 	assetcatalog "github.com/louisbranch/fracturing.space/internal/platform/assets/catalog"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -21,6 +22,14 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
+
+func newCharacterServiceForTest(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+) *CharacterService {
+	return newCharacterServiceWithDependencies(stores, clock, idGenerator)
+}
 
 func characterManagerParticipantStore(campaignID string) *fakeParticipantStore {
 	store := newFakeParticipantStore()
@@ -151,11 +160,7 @@ func TestCreateCharacter_Success_PC(t *testing.T) {
 		},
 	)}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-123"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-123"))
 
 	resp, err := svc.CreateCharacter(contextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -213,11 +218,7 @@ func TestCreateCharacter_Success_NPC(t *testing.T) {
 		},
 	)}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("npc-456"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("npc-456"))
 
 	resp, err := svc.CreateCharacter(contextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -257,11 +258,7 @@ func TestCreateCharacter_UsesDomainEngine(t *testing.T) {
 		},
 	)}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-123"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-123"))
 
 	resp, err := svc.CreateCharacter(contextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -316,11 +313,7 @@ func TestCreateCharacter_AssignsOwnerParticipantInCommandPayload(t *testing.T) {
 		},
 	)}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-123"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-123"))
 
 	_, err := svc.CreateCharacter(contextWithParticipantID("manager-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -366,11 +359,7 @@ func TestCreateCharacter_PlayerAssignsControllerInCommandPayload(t *testing.T) {
 		},
 	)}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-123"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-123"))
 
 	resp, err := svc.CreateCharacter(contextWithParticipantID("player-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -427,11 +416,7 @@ func TestCreateCharacter_GMAssignsControllerForNPCInCommandPayload(t *testing.T)
 		},
 	)}
 
-	svc := &CharacterService{
-		stores:      ts.withDomain(domain).build(),
-		clock:       fixedClock(now),
-		idGenerator: fixedIDGenerator("char-123"),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), fixedIDGenerator("char-123"))
 
 	resp, err := svc.CreateCharacter(contextWithParticipantID("gm-1"), &statev1.CreateCharacterRequest{
 		CampaignId: "c1",
@@ -912,10 +897,7 @@ func TestUpdateCharacter_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := &CharacterService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil)
 
 	resp, err := svc.UpdateCharacter(contextWithParticipantID("manager-1"), &statev1.UpdateCharacterRequest{
 		CampaignId:  "c1",
@@ -1101,10 +1083,7 @@ func TestDeleteCharacter_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := &CharacterService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil)
 
 	resp, err := svc.DeleteCharacter(contextWithParticipantID("manager-1"), &statev1.DeleteCharacterRequest{
 		CampaignId:  "c1",
@@ -1244,7 +1223,7 @@ func TestListCharacterProfiles_EmptyForNonDaggerheartCampaigns(t *testing.T) {
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Level: 2, ClassID: "warrior"},
 	}
 
@@ -1264,7 +1243,7 @@ func TestListCharacterProfiles_WithProfiles(t *testing.T) {
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
 		"p1": namedRoleMemberParticipantRecord("c1", "p1", "GM", participant.RoleGM),
 	}
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch-b": {
 			CampaignID:  "c1",
 			CharacterID: "ch-b",
@@ -1622,10 +1601,7 @@ func TestSetDefaultControl_UsesDomainEngine(t *testing.T) {
 		},
 	}}
 
-	svc := &CharacterService{
-		stores: ts.withDomain(domain).build(),
-		clock:  fixedClock(now),
-	}
+	svc := newCharacterServiceForTest(ts.withDomain(domain).build(), fixedClock(now), nil)
 
 	resp, err := svc.SetDefaultControl(contextWithParticipantID("manager-1"), &statev1.SetDefaultControlRequest{
 		CampaignId:    "c1",
@@ -1909,10 +1885,10 @@ func TestGetCharacterSheet_Success(t *testing.T) {
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", Name: "Hero", Kind: character.KindPC, CreatedAt: now},
 	}
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10, Agility: 2, Strength: 1},
 	}
-	ts.Daggerheart.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	ts.Daggerheart.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
 	ts.Participant.participants["c1"] = map[string]storage.ParticipantRecord{
@@ -1993,7 +1969,7 @@ func TestPatchCharacterProfile_ProfileNotFound(t *testing.T) {
 func TestPatchCharacterProfile_CompletedCampaignDisallowed(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign.campaigns["c1"] = completedCampaignRecord("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	ts.Participant = characterManagerParticipantStore("c1")
@@ -2012,7 +1988,7 @@ func TestPatchCharacterProfile_DeniesMissingIdentity(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -2054,7 +2030,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 	ts.Character.characters["c1"] = map[string]storage.CharacterRecord{
 		"ch1": {ID: "ch1", CampaignID: "c1", OwnerParticipantID: "member-owner", Name: "Hero", Kind: character.KindPC},
 	}
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 6, StressMax: 6},
 	}
 	ts.Event.events["c1"] = []event.Event{
@@ -2105,7 +2081,7 @@ func TestPatchCharacterProfile_DeniesMemberWhenNotOwner(t *testing.T) {
 func TestPatchCharacterProfile_NegativeHpMax(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12},
 	}
 
@@ -2124,7 +2100,7 @@ func TestPatchCharacterProfile_ZeroHpMaxNoChange(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -2170,7 +2146,7 @@ func TestPatchCharacterProfile_Success(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -2273,7 +2249,7 @@ func TestPatchCharacterProfile_UsesDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6, Evasion: 10, MajorThreshold: 5, SevereThreshold: 10},
 	}
 	now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
@@ -2331,7 +2307,7 @@ func TestPatchCharacterProfile_RejectsCreationWorkflowFields(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {
 			CampaignID:  "c1",
 			CharacterID: "ch1",
@@ -2359,13 +2335,13 @@ func TestDaggerheartExperiencesToProto(t *testing.T) {
 	if result != nil {
 		t.Fatalf("expected nil for nil input, got %v", result)
 	}
-	result = charactertransport.DaggerheartExperiencesToProto([]storage.DaggerheartExperience{})
+	result = charactertransport.DaggerheartExperiencesToProto([]projectionstore.DaggerheartExperience{})
 	if result != nil {
 		t.Fatalf("expected nil for empty input, got %v", result)
 	}
 
 	// Normal conversion
-	result = charactertransport.DaggerheartExperiencesToProto([]storage.DaggerheartExperience{
+	result = charactertransport.DaggerheartExperiencesToProto([]projectionstore.DaggerheartExperience{
 		{Name: "Stealth", Modifier: 3},
 		{Name: "Insight", Modifier: -1},
 	})
@@ -2427,7 +2403,7 @@ func TestDeleteCharacter_CharacterNotFound(t *testing.T) {
 func TestPatchCharacterProfile_HpMaxTooHigh(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2442,7 +2418,7 @@ func TestPatchCharacterProfile_HpMaxTooHigh(t *testing.T) {
 func TestPatchCharacterProfile_StressMaxTooHigh(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2457,7 +2433,7 @@ func TestPatchCharacterProfile_StressMaxTooHigh(t *testing.T) {
 func TestPatchCharacterProfile_NegativeEvasion(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2472,7 +2448,7 @@ func TestPatchCharacterProfile_NegativeEvasion(t *testing.T) {
 func TestPatchCharacterProfile_NegativeMajorThreshold(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2487,7 +2463,7 @@ func TestPatchCharacterProfile_NegativeMajorThreshold(t *testing.T) {
 func TestPatchCharacterProfile_NegativeSevereThreshold(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2502,7 +2478,7 @@ func TestPatchCharacterProfile_NegativeSevereThreshold(t *testing.T) {
 func TestPatchCharacterProfile_NegativeProficiency(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2518,7 +2494,7 @@ func TestPatchCharacterProfile_RequiresDomainEngine(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
 	ts.Participant = characterManagerParticipantStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12},
 	}
 
@@ -2534,7 +2510,7 @@ func TestPatchCharacterProfile_RequiresDomainEngine(t *testing.T) {
 func TestPatchCharacterProfile_NegativeArmorScore(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2549,7 +2525,7 @@ func TestPatchCharacterProfile_NegativeArmorScore(t *testing.T) {
 func TestPatchCharacterProfile_ArmorMaxTooHigh(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2564,7 +2540,7 @@ func TestPatchCharacterProfile_ArmorMaxTooHigh(t *testing.T) {
 func TestPatchCharacterProfile_NegativeArmorMax(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2579,7 +2555,7 @@ func TestPatchCharacterProfile_NegativeArmorMax(t *testing.T) {
 func TestPatchCharacterProfile_EmptyExperienceName(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 	svc := NewCharacterService(ts.build())
@@ -2596,7 +2572,7 @@ func TestPatchCharacterProfile_EmptyExperienceName(t *testing.T) {
 func TestPatchCharacterProfile_NegativeStressMax(t *testing.T) {
 	ts := newTestStores().withCharacter()
 	ts.Campaign = activeCampaignStore("c1")
-	ts.Daggerheart.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	ts.Daggerheart.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 12, StressMax: 6},
 	}
 

@@ -1147,8 +1147,50 @@ func buildLocalConstLookup(file *ast.File, seed map[string]string) map[string]st
 	return lookup
 }
 
+func buildPackageConstLookup(dir, root string, global map[string]string) (map[string]string, error) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, dir, func(info os.FileInfo) bool {
+		return !strings.HasSuffix(info.Name(), "_test.go")
+	}, parser.AllErrors)
+	if err != nil {
+		return nil, fmt.Errorf("parse %s: %w", dir, err)
+	}
+
+	seed := make(map[string]string, len(global))
+	for key, value := range global {
+		seed[key] = value
+	}
+
+	files := make([]*ast.File, 0)
+	for _, pkg := range pkgs {
+		for _, file := range pkg.Files {
+			files = append(files, file)
+			for key, value := range buildEventLocalConstLookup(file, parseImportAliases(file), root) {
+				seed[key] = value
+			}
+		}
+	}
+
+	changed := true
+	for changed {
+		changed = false
+		for _, file := range files {
+			for key, value := range buildLocalConstLookup(file, seed) {
+				if existing, ok := seed[key]; ok && existing == value {
+					continue
+				}
+				seed[key] = value
+				changed = true
+			}
+		}
+	}
+
+	return seed, nil
+}
+
 func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map[string][]string, error) {
 	emitters := make(map[string][]string)
+	packageLookups := make(map[string]map[string]string)
 	if err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -1164,7 +1206,16 @@ func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map
 		if err != nil {
 			return fmt.Errorf("parse %s: %w", path, err)
 		}
-		fileLookup := buildLocalConstLookup(file, valueByConstant)
+		dirPath := filepath.Dir(path)
+		packageLookup, ok := packageLookups[dirPath]
+		if !ok {
+			packageLookup, err = buildPackageConstLookup(dirPath, root, valueByConstant)
+			if err != nil {
+				return err
+			}
+			packageLookups[dirPath] = packageLookup
+		}
+		fileLookup := buildLocalConstLookup(file, packageLookup)
 		importAliases := parseImportAliases(file)
 		relPath, _ := filepath.Rel(root, path)
 		relPath = filepath.ToSlash(relPath)
@@ -1230,6 +1281,7 @@ func scanEmitterValues(dir, root string, valueByConstant map[string]string) (map
 
 func scanAppliers(dir, root string, valueByConstant map[string]string) (map[string][]string, error) {
 	appliers := make(map[string][]string)
+	packageLookups := make(map[string]map[string]string)
 	if err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -1245,7 +1297,16 @@ func scanAppliers(dir, root string, valueByConstant map[string]string) (map[stri
 		if err != nil {
 			return fmt.Errorf("parse %s: %w", path, err)
 		}
-		fileLookup := buildLocalConstLookup(file, valueByConstant)
+		dirPath := filepath.Dir(path)
+		packageLookup, ok := packageLookups[dirPath]
+		if !ok {
+			packageLookup, err = buildPackageConstLookup(dirPath, root, valueByConstant)
+			if err != nil {
+				return err
+			}
+			packageLookups[dirPath] = packageLookup
+		}
+		fileLookup := buildLocalConstLookup(file, packageLookup)
 		importAliases := parseImportAliases(file)
 		relPath, _ := filepath.Rel(root, path)
 		relPath = filepath.ToSlash(relPath)

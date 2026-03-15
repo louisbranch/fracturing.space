@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	daggerheartprofile "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/profile"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // CharacterProfileExperience captures one named Daggerheart experience entry.
@@ -122,18 +122,18 @@ func (p CharacterProfile) Validate() error {
 }
 
 // ToStorage converts the typed profile contract into the projected storage form.
-func (p CharacterProfile) ToStorage(campaignID, characterID string) storage.DaggerheartCharacterProfile {
+func (p CharacterProfile) ToStorage(campaignID, characterID string) projectionstore.DaggerheartCharacterProfile {
 	normalized := p.Normalized()
 
-	experiences := make([]storage.DaggerheartExperience, 0, len(normalized.Experiences))
+	experiences := make([]projectionstore.DaggerheartExperience, 0, len(normalized.Experiences))
 	for _, exp := range normalized.Experiences {
-		experiences = append(experiences, storage.DaggerheartExperience{
+		experiences = append(experiences, projectionstore.DaggerheartExperience{
 			Name:     exp.Name,
 			Modifier: exp.Modifier,
 		})
 	}
 
-	return storage.DaggerheartCharacterProfile{
+	return projectionstore.DaggerheartCharacterProfile{
 		CampaignID:           strings.TrimSpace(campaignID),
 		CharacterID:          strings.TrimSpace(characterID),
 		Level:                normalized.Level,
@@ -173,7 +173,7 @@ func (p CharacterProfile) ToStorage(campaignID, characterID string) storage.Dagg
 
 // CharacterProfileFromStorage converts projected storage state into the typed
 // Daggerheart profile contract.
-func CharacterProfileFromStorage(profile storage.DaggerheartCharacterProfile) CharacterProfile {
+func CharacterProfileFromStorage(profile projectionstore.DaggerheartCharacterProfile) CharacterProfile {
 	experiences := make([]CharacterProfileExperience, 0, len(profile.Experiences))
 	for _, exp := range profile.Experiences {
 		experiences = append(experiences, CharacterProfileExperience{

@@ -25,6 +25,7 @@ Canonical onboarding path for developers adding features, fixing bugs, or improv
 ## Good to know
 
 - File/package routing: [Contributor map](../reference/contributor-map.md)
+- Game service routing and test placement: [Game service contributor map](../reference/game-service-contributor-map.md)
 - Extension workflow: [Adding a command/event/system](../guides/adding-command-event-system.md)
 - Web architecture boundaries: [Web architecture](../architecture/platform/web-architecture.md)
 - Web routing and ownership map: [Web contributor map](../architecture/platform/web-contributor-map.md)

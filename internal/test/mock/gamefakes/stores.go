@@ -6,6 +6,7 @@ import (
 	"time"
 
 	corefilter "github.com/louisbranch/fracturing.space/internal/services/game/core/filter"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
@@ -39,38 +40,38 @@ func (s *CampaignStore) List(_ context.Context, _ int, _ string) (storage.Campai
 
 // DaggerheartStore is an in-memory DaggerheartStore fake for tests.
 type DaggerheartStore struct {
-	Profiles   map[string]storage.DaggerheartCharacterProfile
-	States     map[string]storage.DaggerheartCharacterState
-	Snapshots  map[string]storage.DaggerheartSnapshot
-	Countdowns map[string]storage.DaggerheartCountdown
+	Profiles   map[string]projectionstore.DaggerheartCharacterProfile
+	States     map[string]projectionstore.DaggerheartCharacterState
+	Snapshots  map[string]projectionstore.DaggerheartSnapshot
+	Countdowns map[string]projectionstore.DaggerheartCountdown
 }
 
 // NewDaggerheartStore constructs a DaggerheartStore fake with initialized state maps.
 func NewDaggerheartStore() *DaggerheartStore {
 	return &DaggerheartStore{
-		Profiles:   make(map[string]storage.DaggerheartCharacterProfile),
-		States:     make(map[string]storage.DaggerheartCharacterState),
-		Snapshots:  make(map[string]storage.DaggerheartSnapshot),
-		Countdowns: make(map[string]storage.DaggerheartCountdown),
+		Profiles:   make(map[string]projectionstore.DaggerheartCharacterProfile),
+		States:     make(map[string]projectionstore.DaggerheartCharacterState),
+		Snapshots:  make(map[string]projectionstore.DaggerheartSnapshot),
+		Countdowns: make(map[string]projectionstore.DaggerheartCountdown),
 	}
 }
 
-func (s *DaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, p storage.DaggerheartCharacterProfile) error {
+func (s *DaggerheartStore) PutDaggerheartCharacterProfile(_ context.Context, p projectionstore.DaggerheartCharacterProfile) error {
 	s.Profiles[p.CampaignID+":"+p.CharacterID] = p
 	return nil
 }
 
-func (s *DaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterProfile, error) {
+func (s *DaggerheartStore) GetDaggerheartCharacterProfile(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error) {
 	p, ok := s.Profiles[campaignID+":"+characterID]
 	if !ok {
-		return storage.DaggerheartCharacterProfile{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterProfile{}, storage.ErrNotFound
 	}
 	return p, nil
 }
 
-func (s *DaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (storage.DaggerheartCharacterProfilePage, error) {
-	page := storage.DaggerheartCharacterProfilePage{
-		Profiles: make([]storage.DaggerheartCharacterProfile, 0),
+func (s *DaggerheartStore) ListDaggerheartCharacterProfiles(_ context.Context, campaignID string, _ int, _ string) (projectionstore.DaggerheartCharacterProfilePage, error) {
+	page := projectionstore.DaggerheartCharacterProfilePage{
+		Profiles: make([]projectionstore.DaggerheartCharacterProfile, 0),
 	}
 	for key, profile := range s.Profiles {
 		if len(key) > len(campaignID) && strings.HasPrefix(key, campaignID+":") {
@@ -85,47 +86,47 @@ func (s *DaggerheartStore) DeleteDaggerheartCharacterProfile(_ context.Context, 
 	return nil
 }
 
-func (s *DaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st storage.DaggerheartCharacterState) error {
+func (s *DaggerheartStore) PutDaggerheartCharacterState(_ context.Context, st projectionstore.DaggerheartCharacterState) error {
 	s.States[st.CampaignID+":"+st.CharacterID] = st
 	return nil
 }
 
-func (s *DaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (storage.DaggerheartCharacterState, error) {
+func (s *DaggerheartStore) GetDaggerheartCharacterState(_ context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
 	st, ok := s.States[campaignID+":"+characterID]
 	if !ok {
-		return storage.DaggerheartCharacterState{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCharacterState{}, storage.ErrNotFound
 	}
 	return st, nil
 }
 
-func (s *DaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap storage.DaggerheartSnapshot) error {
+func (s *DaggerheartStore) PutDaggerheartSnapshot(_ context.Context, snap projectionstore.DaggerheartSnapshot) error {
 	s.Snapshots[snap.CampaignID] = snap
 	return nil
 }
 
-func (s *DaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (storage.DaggerheartSnapshot, error) {
+func (s *DaggerheartStore) GetDaggerheartSnapshot(_ context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error) {
 	snap, ok := s.Snapshots[campaignID]
 	if !ok {
-		return storage.DaggerheartSnapshot{}, storage.ErrNotFound
+		return projectionstore.DaggerheartSnapshot{}, storage.ErrNotFound
 	}
 	return snap, nil
 }
 
-func (s *DaggerheartStore) PutDaggerheartCountdown(_ context.Context, cd storage.DaggerheartCountdown) error {
+func (s *DaggerheartStore) PutDaggerheartCountdown(_ context.Context, cd projectionstore.DaggerheartCountdown) error {
 	s.Countdowns[cd.CampaignID+":"+cd.CountdownID] = cd
 	return nil
 }
 
-func (s *DaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (storage.DaggerheartCountdown, error) {
+func (s *DaggerheartStore) GetDaggerheartCountdown(_ context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error) {
 	cd, ok := s.Countdowns[campaignID+":"+countdownID]
 	if !ok {
-		return storage.DaggerheartCountdown{}, storage.ErrNotFound
+		return projectionstore.DaggerheartCountdown{}, storage.ErrNotFound
 	}
 	return cd, nil
 }
 
-func (s *DaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]storage.DaggerheartCountdown, error) {
-	result := make([]storage.DaggerheartCountdown, 0)
+func (s *DaggerheartStore) ListDaggerheartCountdowns(_ context.Context, campaignID string) ([]projectionstore.DaggerheartCountdown, error) {
+	result := make([]projectionstore.DaggerheartCountdown, 0)
 	for key, cd := range s.Countdowns {
 		if len(key) > len(campaignID) && strings.HasPrefix(key, campaignID) {
 			result = append(result, cd)
@@ -139,15 +140,15 @@ func (s *DaggerheartStore) DeleteDaggerheartCountdown(_ context.Context, campaig
 	return nil
 }
 
-func (s *DaggerheartStore) PutDaggerheartAdversary(_ context.Context, _ storage.DaggerheartAdversary) error {
+func (s *DaggerheartStore) PutDaggerheartAdversary(_ context.Context, _ projectionstore.DaggerheartAdversary) error {
 	return nil
 }
 
-func (s *DaggerheartStore) GetDaggerheartAdversary(_ context.Context, _, _ string) (storage.DaggerheartAdversary, error) {
-	return storage.DaggerheartAdversary{}, storage.ErrNotFound
+func (s *DaggerheartStore) GetDaggerheartAdversary(_ context.Context, _, _ string) (projectionstore.DaggerheartAdversary, error) {
+	return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
 }
 
-func (s *DaggerheartStore) ListDaggerheartAdversaries(_ context.Context, _, _ string) ([]storage.DaggerheartAdversary, error) {
+func (s *DaggerheartStore) ListDaggerheartAdversaries(_ context.Context, _, _ string) ([]projectionstore.DaggerheartAdversary, error) {
 	return nil, nil
 }
 

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
-	storagesqlite "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	sqlitedaggerheartcontent "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/daggerheartcontent"
 )
 
 // ContentSeedProfile selects the minimal Daggerheart catalog variant a suite needs.
@@ -64,7 +64,7 @@ func ensureContentSeedTemplate(t *testing.T, profile ContentSeedProfile) string 
 		}
 
 		template.path = filepath.Join(tmpDir, "game-content-template.db")
-		store, err := storagesqlite.OpenContent(template.path)
+		store, err := sqlitedaggerheartcontent.Open(template.path)
 		if err != nil {
 			template.err = fmt.Errorf("open content seed template store: %w", err)
 			return
@@ -103,7 +103,7 @@ func contentSeedTemplateFor(t *testing.T, profile ContentSeedProfile) *contentSe
 }
 
 // writeDaggerheartSeedData stores the minimal catalog rows needed by readiness helpers.
-func writeDaggerheartSeedData(store *storagesqlite.Store, now time.Time, profile ContentSeedProfile) error {
+func writeDaggerheartSeedData(store contentstore.DaggerheartContentWriteStore, now time.Time, profile ContentSeedProfile) error {
 	if store == nil {
 		return fmt.Errorf("content store is required")
 	}
@@ -124,8 +124,8 @@ func writeDaggerheartSeedData(store *storagesqlite.Store, now time.Time, profile
 }
 
 // writeCommonDaggerheartSeedData stores rows shared across integration and scenario readiness.
-func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.Store, now time.Time, profile ContentSeedProfile) error {
-	if err := store.PutDaggerheartClass(ctx, storage.DaggerheartClass{
+func writeCommonDaggerheartSeedData(ctx context.Context, store contentstore.DaggerheartContentWriteStore, now time.Time, profile ContentSeedProfile) error {
+	if err := store.PutDaggerheartClass(ctx, contentstore.DaggerheartClass{
 		ID:              "class.guardian",
 		Name:            "Guardian",
 		StartingEvasion: 9,
@@ -137,7 +137,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed class: %w", err)
 	}
 
-	if err := store.PutDaggerheartSubclass(ctx, storage.DaggerheartSubclass{
+	if err := store.PutDaggerheartSubclass(ctx, contentstore.DaggerheartSubclass{
 		ID:        "subclass.stalwart",
 		Name:      "Stalwart",
 		ClassID:   "class.guardian",
@@ -147,7 +147,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed subclass: %w", err)
 	}
 
-	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
+	if err := store.PutDaggerheartHeritage(ctx, contentstore.DaggerheartHeritage{
 		ID:        "heritage.human",
 		Name:      "Human",
 		Kind:      "ancestry",
@@ -157,7 +157,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed ancestry heritage: %w", err)
 	}
 
-	if err := store.PutDaggerheartHeritage(ctx, storage.DaggerheartHeritage{
+	if err := store.PutDaggerheartHeritage(ctx, contentstore.DaggerheartHeritage{
 		ID:        "heritage.highborne",
 		Name:      "Highborne",
 		Kind:      "community",
@@ -167,7 +167,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed community heritage: %w", err)
 	}
 
-	if err := store.PutDaggerheartDomain(ctx, storage.DaggerheartDomain{
+	if err := store.PutDaggerheartDomain(ctx, contentstore.DaggerheartDomain{
 		ID:          "domain.valor",
 		Name:        "Valor",
 		Description: profileSeedText(profile, "domain"),
@@ -177,7 +177,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed domain: %w", err)
 	}
 
-	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
+	if err := store.PutDaggerheartDomainCard(ctx, contentstore.DaggerheartDomainCard{
 		ID:          "domain_card.valor-bare-bones",
 		Name:        "Bare Bones",
 		DomainID:    "domain.valor",
@@ -191,14 +191,14 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed domain card: %w", err)
 	}
 
-	if err := store.PutDaggerheartWeapon(ctx, storage.DaggerheartWeapon{
+	if err := store.PutDaggerheartWeapon(ctx, contentstore.DaggerheartWeapon{
 		ID:         "weapon.longsword",
 		Name:       "Longsword",
 		Category:   "primary",
 		Tier:       1,
 		Trait:      "Agility",
 		Range:      "melee",
-		DamageDice: []storage.DaggerheartDamageDie{{Sides: 10, Count: 1}},
+		DamageDice: []contentstore.DaggerheartDamageDie{{Sides: 10, Count: 1}},
 		DamageType: "physical",
 		Burden:     2,
 		Feature:    profileSeedText(profile, "weapon"),
@@ -208,7 +208,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed weapon: %w", err)
 	}
 
-	if err := store.PutDaggerheartArmor(ctx, storage.DaggerheartArmor{
+	if err := store.PutDaggerheartArmor(ctx, contentstore.DaggerheartArmor{
 		ID:                  "armor.gambeson-armor",
 		Name:                "Gambeson Armor",
 		Tier:                1,
@@ -222,7 +222,7 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 		return fmt.Errorf("seed armor: %w", err)
 	}
 
-	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
+	if err := store.PutDaggerheartItem(ctx, contentstore.DaggerheartItem{
 		ID:        "item.minor-health-potion",
 		Name:      "Minor Health Potion",
 		Rarity:    "common",
@@ -238,8 +238,8 @@ func writeCommonDaggerheartSeedData(ctx context.Context, store *storagesqlite.St
 }
 
 // writeIntegrationSeedData extends the shared seed with integration-specific IDs.
-func writeIntegrationSeedData(ctx context.Context, store *storagesqlite.Store, now time.Time) error {
-	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
+func writeIntegrationSeedData(ctx context.Context, store contentstore.DaggerheartContentWriteStore, now time.Time) error {
+	if err := store.PutDaggerheartDomainCard(ctx, contentstore.DaggerheartDomainCard{
 		ID:          "domain_card.valor-shield-wall",
 		Name:        "Shield Wall",
 		DomainID:    "domain.valor",
@@ -253,7 +253,7 @@ func writeIntegrationSeedData(ctx context.Context, store *storagesqlite.Store, n
 		return fmt.Errorf("seed domain card 2: %w", err)
 	}
 
-	if err := store.PutDaggerheartItem(ctx, storage.DaggerheartItem{
+	if err := store.PutDaggerheartItem(ctx, contentstore.DaggerheartItem{
 		ID:        "item.minor-stamina-potion",
 		Name:      "Minor Stamina Potion",
 		Rarity:    "common",
@@ -269,8 +269,8 @@ func writeIntegrationSeedData(ctx context.Context, store *storagesqlite.Store, n
 }
 
 // writeScenarioSeedData extends the shared seed with scenario-specific IDs.
-func writeScenarioSeedData(ctx context.Context, store *storagesqlite.Store, now time.Time) error {
-	if err := store.PutDaggerheartDomainCard(ctx, storage.DaggerheartDomainCard{
+func writeScenarioSeedData(ctx context.Context, store contentstore.DaggerheartContentWriteStore, now time.Time) error {
+	if err := store.PutDaggerheartDomainCard(ctx, contentstore.DaggerheartDomainCard{
 		ID:          "domain_card.valor-forceful-push",
 		Name:        "Forceful Push",
 		DomainID:    "domain.valor",

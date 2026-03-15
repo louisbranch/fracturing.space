@@ -5,31 +5,32 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 )
 
 func TestDecodeRollSystemMetadata(t *testing.T) {
 	data := map[string]any{
-		sdKeyCharacterID: " ch-1 ",
-		sdKeyAdversaryID: " adv-1 ",
-		"trait":          " agility ",
-		sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
-		sdKeyOutcome:     pb.Outcome_SUCCESS_WITH_HOPE.String(),
-		sdKeyHopeFear:    true,
-		sdKeyCrit:        false,
-		sdKeyCritNegates: true,
-		"gm_move":        false,
-		sdKeyRoll:        float64(18),
-		sdKeyModifier:    "2",
-		sdKeyTotal:       int64(20),
+		workflowtransport.KeyCharacterID: " ch-1 ",
+		workflowtransport.KeyAdversaryID: " adv-1 ",
+		"trait":                          " agility ",
+		workflowtransport.KeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+		workflowtransport.KeyOutcome:     pb.Outcome_SUCCESS_WITH_HOPE.String(),
+		workflowtransport.KeyHopeFear:    true,
+		workflowtransport.KeyCrit:        false,
+		workflowtransport.KeyCritNegates: true,
+		"gm_move":                        false,
+		workflowtransport.KeyRoll:        float64(18),
+		workflowtransport.KeyModifier:    "2",
+		workflowtransport.KeyTotal:       int64(20),
 		"modifiers": []any{
 			map[string]any{"value": float64(2), "source": " experience "},
 			map[string]any{"value": int64(-1), "source": " penalty "},
 		},
 	}
 
-	metadata, err := decodeRollSystemMetadata(data)
+	metadata, err := workflowtransport.DecodeRollSystemMetadata(data)
 	if err != nil {
-		t.Fatalf("decodeRollSystemMetadata() error = %v", err)
+		t.Fatalf("workflowtransport.DecodeRollSystemMetadata() error = %v", err)
 	}
 
 	if metadata.CharacterID != "ch-1" {
@@ -41,20 +42,20 @@ func TestDecodeRollSystemMetadata(t *testing.T) {
 	if metadata.Trait != "agility" {
 		t.Fatalf("Trait = %q, want agility", metadata.Trait)
 	}
-	if metadata.rollKindOrDefault() != pb.RollKind_ROLL_KIND_ACTION {
-		t.Fatalf("rollKindOrDefault() = %v, want action", metadata.rollKindOrDefault())
+	if metadata.RollKindOrDefault() != pb.RollKind_ROLL_KIND_ACTION {
+		t.Fatalf("RollKindOrDefault() = %v, want action", metadata.RollKindOrDefault())
 	}
-	if metadata.outcomeOrFallback("fallback") != pb.Outcome_SUCCESS_WITH_HOPE.String() {
-		t.Fatalf("outcomeOrFallback() = %q", metadata.outcomeOrFallback("fallback"))
+	if metadata.OutcomeOrFallback("fallback") != pb.Outcome_SUCCESS_WITH_HOPE.String() {
+		t.Fatalf("OutcomeOrFallback() = %q", metadata.OutcomeOrFallback("fallback"))
 	}
 
-	if got, ok := intPointerValue(metadata.Roll); !ok || got != 18 {
+	if got, ok := workflowtransport.IntValue(metadata.Roll); !ok || got != 18 {
 		t.Fatalf("roll = (%d,%v), want (18,true)", got, ok)
 	}
-	if got, ok := intPointerValue(metadata.Modifier); !ok || got != 2 {
+	if got, ok := workflowtransport.IntValue(metadata.Modifier); !ok || got != 2 {
 		t.Fatalf("modifier = (%d,%v), want (2,true)", got, ok)
 	}
-	if got, ok := intPointerValue(metadata.Total); !ok || got != 20 {
+	if got, ok := workflowtransport.IntValue(metadata.Total); !ok || got != 20 {
 		t.Fatalf("total = (%d,%v), want (20,true)", got, ok)
 	}
 
@@ -77,17 +78,17 @@ func TestDecodeRollSystemMetadataInvalid(t *testing.T) {
 	}{
 		{
 			name:    "character id wrong type",
-			data:    map[string]any{sdKeyCharacterID: 42},
+			data:    map[string]any{workflowtransport.KeyCharacterID: 42},
 			wantErr: "system_data.character_id must be string",
 		},
 		{
 			name:    "roll wrong type",
-			data:    map[string]any{sdKeyRoll: "nope"},
+			data:    map[string]any{workflowtransport.KeyRoll: "nope"},
 			wantErr: "system_data.roll must be integer",
 		},
 		{
 			name:    "roll non-integer float",
-			data:    map[string]any{sdKeyRoll: 4.5},
+			data:    map[string]any{workflowtransport.KeyRoll: 4.5},
 			wantErr: "system_data.roll must be integer",
 		},
 		{
@@ -104,33 +105,33 @@ func TestDecodeRollSystemMetadataInvalid(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := decodeRollSystemMetadata(tc.data)
+			_, err := workflowtransport.DecodeRollSystemMetadata(tc.data)
 			if err == nil {
-				t.Fatalf("decodeRollSystemMetadata() error = nil, want contains %q", tc.wantErr)
+				t.Fatalf("workflowtransport.DecodeRollSystemMetadata() error = nil, want contains %q", tc.wantErr)
 			}
 			if !strings.Contains(err.Error(), tc.wantErr) {
-				t.Fatalf("decodeRollSystemMetadata() error = %q, want contains %q", err.Error(), tc.wantErr)
+				t.Fatalf("workflowtransport.DecodeRollSystemMetadata() error = %q, want contains %q", err.Error(), tc.wantErr)
 			}
 		})
 	}
 }
 
 func TestRollSystemDataHelpers(t *testing.T) {
-	metadata := rollSystemMetadata{RollKind: "adversary_roll", Outcome: " ", HopeFear: boolPtr(false), Crit: nil}
+	metadata := workflowtransport.RollSystemMetadata{RollKind: "adversary_roll", Outcome: " ", HopeFear: workflowtransport.BoolPtr(false), Crit: nil}
 
-	if metadata.rollKindCode() != "adversary_roll" {
-		t.Fatalf("rollKindCode() = %q", metadata.rollKindCode())
+	if metadata.RollKindCode() != "adversary_roll" {
+		t.Fatalf("RollKindCode() = %q", metadata.RollKindCode())
 	}
-	if metadata.rollKindOrDefault() != pb.RollKind_ROLL_KIND_ACTION {
-		t.Fatalf("rollKindOrDefault() = %v, want action", metadata.rollKindOrDefault())
+	if metadata.RollKindOrDefault() != pb.RollKind_ROLL_KIND_ACTION {
+		t.Fatalf("RollKindOrDefault() = %v, want action", metadata.RollKindOrDefault())
 	}
-	if metadata.outcomeOrFallback("fallback") != "fallback" {
-		t.Fatalf("outcomeOrFallback() = %q, want fallback", metadata.outcomeOrFallback("fallback"))
+	if metadata.OutcomeOrFallback("fallback") != "fallback" {
+		t.Fatalf("OutcomeOrFallback() = %q, want fallback", metadata.OutcomeOrFallback("fallback"))
 	}
-	if got := boolPointerValue(metadata.HopeFear, true); got {
-		t.Fatalf("boolPointerValue() = %v, want false", got)
+	if got := workflowtransport.BoolValue(metadata.HopeFear, true); got {
+		t.Fatalf("workflowtransport.BoolValue() = %v, want false", got)
 	}
-	if got := boolPointerValue(metadata.Crit, true); !got {
-		t.Fatalf("boolPointerValue() = %v, want true", got)
+	if got := workflowtransport.BoolValue(metadata.Crit, true); !got {
+		t.Fatalf("workflowtransport.BoolValue() = %v, want true", got)
 	}
 }

@@ -4,9 +4,7 @@ import (
 	"context"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -20,20 +18,5 @@ func (s *CampaignAIService) GetCampaignAIBindingUsage(ctx context.Context, in *c
 	if err != nil {
 		return nil, err
 	}
-	if s.stores.Campaign == nil {
-		return nil, status.Error(codes.Internal, "campaign store is not configured")
-	}
-	bindingReader, ok := s.stores.Campaign.(storage.CampaignAIBindingReader)
-	if !ok {
-		return nil, status.Error(codes.Internal, "campaign ai binding reader is not configured")
-	}
-
-	campaignIDs, err := bindingReader.ListCampaignIDsByAIAgent(ctx, aiAgentID)
-	if err != nil {
-		return nil, grpcerror.Internal("list campaign ids by ai agent", err)
-	}
-	return &campaignv1.GetCampaignAIBindingUsageResponse{
-		ActiveCampaignCount: int32(len(campaignIDs)),
-		CampaignIds:         campaignIDs,
-	}, nil
+	return s.app.GetCampaignAIBindingUsage(ctx, aiAgentID)
 }

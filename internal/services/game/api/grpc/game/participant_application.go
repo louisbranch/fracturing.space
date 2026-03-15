@@ -29,20 +29,25 @@ type participantApplicationStores struct {
 	Social      socialv1.SocialServiceClient
 }
 
-func newParticipantApplication(service *ParticipantService) participantApplication {
+func newParticipantApplicationWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+) participantApplication {
 	app := participantApplication{
-		auth: newPolicyDependencies(service.stores),
+		auth: newPolicyDependencies(stores),
 		stores: participantApplicationStores{
-			Campaign:    service.stores.Campaign,
-			Participant: service.stores.Participant,
-			Character:   service.stores.Character,
-			Social:      service.stores.Social,
+			Campaign:    stores.Campaign,
+			Participant: stores.Participant,
+			Character:   stores.Character,
+			Social:      stores.Social,
 		},
-		write:       service.stores.Write,
-		applier:     service.stores.Applier(),
-		clock:       service.clock,
-		idGenerator: service.idGenerator,
-		authClient:  service.authClient,
+		write:       stores.Write,
+		applier:     stores.Applier(),
+		clock:       clock,
+		idGenerator: idGenerator,
+		authClient:  authClient,
 	}
 	if app.clock == nil {
 		app.clock = time.Now

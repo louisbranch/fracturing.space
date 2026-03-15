@@ -6,11 +6,12 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
 )
 
 func TestEventsNilStoreErrors(t *testing.T) {
 	ctx := context.Background()
-	var s *Store
+	var s *sqliteeventjournal.Store
 
 	if _, err := s.AppendEvent(ctx, event.Event{}); err == nil {
 		t.Fatal("expected error from nil store AppendEvent")

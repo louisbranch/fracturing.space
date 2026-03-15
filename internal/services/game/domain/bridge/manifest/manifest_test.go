@@ -8,34 +8,42 @@ import (
 
 	domainbridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	domainsystem "github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 type fakeDaggerheartStore struct {
-	storage.DaggerheartStore
+	projectionstore.Store
 }
 
-func (fakeDaggerheartStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (storage.DaggerheartCharacterProfilePage, error) {
-	return storage.DaggerheartCharacterProfilePage{}, nil
+func (fakeDaggerheartStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (projectionstore.DaggerheartCharacterProfilePage, error) {
+	return projectionstore.DaggerheartCharacterProfilePage{}, nil
 }
 
 type anotherFakeDaggerheartStore struct {
-	storage.DaggerheartStore
+	projectionstore.Store
 }
 
-func (anotherFakeDaggerheartStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (storage.DaggerheartCharacterProfilePage, error) {
-	return storage.DaggerheartCharacterProfilePage{}, nil
+func (anotherFakeDaggerheartStore) ListDaggerheartCharacterProfiles(context.Context, string, int, string) (projectionstore.DaggerheartCharacterProfilePage, error) {
+	return projectionstore.DaggerheartCharacterProfilePage{}, nil
+}
+
+type daggerheartProjectionStoreProviderStub struct {
+	store projectionstore.Store
+}
+
+func (p daggerheartProjectionStoreProviderStub) DaggerheartProjectionStore() projectionstore.Store {
+	return p.store
 }
 
 func TestRebindAdapterRegistrySwapsStores(t *testing.T) {
-	base, err := AdapterRegistry(ProjectionStores{Daggerheart: fakeDaggerheartStore{}})
+	base, err := AdapterRegistry(fakeDaggerheartStore{})
 	if err != nil {
 		t.Fatalf("build base registry: %v", err)
 	}
 
-	rebound, err := RebindAdapterRegistry(base, ProjectionStores{Daggerheart: anotherFakeDaggerheartStore{}})
+	rebound, err := RebindAdapterRegistry(base, anotherFakeDaggerheartStore{})
 	if err != nil {
 		t.Fatalf("rebind adapter registry: %v", err)
 	}
@@ -90,9 +98,7 @@ func TestModulesAndMetadataShareSystemVersionKeys(t *testing.T) {
 }
 
 func TestAdapterRegistryRegistersDaggerheart(t *testing.T) {
-	registry, err := AdapterRegistry(ProjectionStores{
-		Daggerheart: fakeDaggerheartStore{},
-	})
+	registry, err := AdapterRegistry(fakeDaggerheartStore{})
 	if err != nil {
 		t.Fatalf("build adapter registry: %v", err)
 	}
@@ -109,8 +115,7 @@ func TestAdapterRegistryReturnsErrorOnRegistrationFailure(t *testing.T) {
 	// we test via a nil store (which skips registration) — but the real
 	// error path is a duplicate. Instead, verify that a nil-store registry
 	// works cleanly and a pre-registered duplicate fails.
-	stores := ProjectionStores{Daggerheart: fakeDaggerheartStore{}}
-	registry, err := AdapterRegistry(stores)
+	registry, err := AdapterRegistry(fakeDaggerheartStore{})
 	if err != nil {
 		t.Fatalf("first registration should succeed: %v", err)
 	}
@@ -128,9 +133,7 @@ func TestModulesHaveCorrespondingAdapters(t *testing.T) {
 	}
 
 	// Build adapter registry with all stores populated so adapters register.
-	registry, err := AdapterRegistry(ProjectionStores{
-		Daggerheart: fakeDaggerheartStore{},
-	})
+	registry, err := AdapterRegistry(fakeDaggerheartStore{})
 	if err != nil {
 		t.Fatalf("build adapter registry: %v", err)
 	}
@@ -145,9 +148,10 @@ func TestModulesHaveCorrespondingAdapters(t *testing.T) {
 }
 
 func TestAdapterRegistrySkipsNilStoreViaClosureGuard(t *testing.T) {
-	// When ProjectionStores.Daggerheart is nil, BuildAdapter should return nil
-	// and the registry should skip registration without error.
-	registry, err := AdapterRegistry(ProjectionStores{Daggerheart: nil})
+	// When the concrete store source does not expose a Daggerheart projection
+	// store, BuildAdapter should return nil and the registry should skip
+	// registration without error.
+	registry, err := AdapterRegistry(nil)
 	if err != nil {
 		t.Fatalf("expected no error with nil store, got: %v", err)
 	}
@@ -169,7 +173,7 @@ func TestValidateSystemDescriptors_RejectsNilBuildModule(t *testing.T) {
 		Version:             "v1",
 		BuildModule:         nil,
 		BuildMetadataSystem: func() domainbridge.GameSystem { return nil },
-		BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+		BuildAdapter:        func(any) domainbridge.Adapter { return nil },
 	}}
 	defer func() { builtInSystems = orig }()
 
@@ -189,7 +193,7 @@ func TestValidateSystemDescriptors_RejectsNilBuildMetadataSystem(t *testing.T) {
 		Version:             "v1",
 		BuildModule:         func() domainsystem.Module { return nil },
 		BuildMetadataSystem: nil,
-		BuildAdapter:        func(ProjectionStores) domainbridge.Adapter { return nil },
+		BuildAdapter:        func(any) domainbridge.Adapter { return nil },
 	}}
 	defer func() { builtInSystems = orig }()
 
@@ -234,24 +238,31 @@ func (a noProfileAdapter) Apply(_ context.Context, _ event.Event) error      { r
 func (a noProfileAdapter) Snapshot(_ context.Context, _ string) (any, error) { return nil, nil }
 func (a noProfileAdapter) HandledTypes() []event.Type                        { return nil }
 
-func TestExtractProjectionStores_PopulatesDaggerheart(t *testing.T) {
+func TestDaggerheartProjectionStoreFromSource_PopulatesDaggerheart(t *testing.T) {
 	store := fakeDaggerheartStore{}
-	ps := ExtractProjectionStores(store)
-	if ps.Daggerheart == nil {
+	if got := daggerheartProjectionStoreFromSource(store); got == nil {
 		t.Fatal("expected Daggerheart store to be populated")
 	}
 }
 
-func TestExtractProjectionStores_NilForNonImplementor(t *testing.T) {
-	ps := ExtractProjectionStores("not a store")
-	if ps.Daggerheart != nil {
+func TestDaggerheartProjectionStoreFromSource_PrefersProvider(t *testing.T) {
+	provided := anotherFakeDaggerheartStore{}
+	got := daggerheartProjectionStoreFromSource(daggerheartProjectionStoreProviderStub{store: provided})
+	if got != provided {
+		t.Fatal("expected explicit provider store to be used")
+	}
+}
+
+func TestDaggerheartProjectionStoreFromSource_NilForNonImplementor(t *testing.T) {
+	got := daggerheartProjectionStoreFromSource("not a store")
+	if got != nil {
 		t.Fatal("expected Daggerheart store to be nil for non-implementor")
 	}
 }
 
-func TestExtractProjectionStores_NilInput(t *testing.T) {
-	ps := ExtractProjectionStores(nil)
-	if ps.Daggerheart != nil {
+func TestDaggerheartProjectionStoreFromSource_NilInput(t *testing.T) {
+	got := daggerheartProjectionStoreFromSource(nil)
+	if got != nil {
 		t.Fatal("expected Daggerheart store to be nil for nil input")
 	}
 }

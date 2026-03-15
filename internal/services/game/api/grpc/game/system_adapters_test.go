@@ -4,11 +4,10 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 )
 
-func TestAdapterRegistryForProjectionStoresEmpty(t *testing.T) {
-	registry, err := TryAdapterRegistryForProjectionStores(systemmanifest.ProjectionStores{})
+func TestAdapterRegistryForSystemStoresEmpty(t *testing.T) {
+	registry, err := TryAdapterRegistryForSystemStores(SystemStores{})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -17,8 +16,8 @@ func TestAdapterRegistryForProjectionStoresEmpty(t *testing.T) {
 	}
 }
 
-func TestAdapterRegistryForProjectionStoresRegistersDaggerheart(t *testing.T) {
-	registry, err := TryAdapterRegistryForProjectionStores(systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()})
+func TestAdapterRegistryForSystemStoresRegistersDaggerheart(t *testing.T) {
+	registry, err := TryAdapterRegistryForSystemStores(SystemStores{Daggerheart: newFakeDaggerheartStore()})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

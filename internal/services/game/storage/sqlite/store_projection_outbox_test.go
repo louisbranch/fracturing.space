@@ -14,33 +14,6 @@ import (
 	sqlite3 "modernc.org/sqlite/lib"
 )
 
-func TestProcessProjectionApplyOutboxRows_StopsAtFirstError(t *testing.T) {
-	rows := []projectionApplyOutboxRow{
-		{CampaignID: "camp-a", Seq: 1},
-		{CampaignID: "camp-b", Seq: 2},
-		{CampaignID: "camp-c", Seq: 3},
-	}
-	fail := errors.New("handler failed")
-	calls := 0
-
-	processed, err := processProjectionApplyOutboxRows(rows, func(row projectionApplyOutboxRow) error {
-		calls++
-		if row.CampaignID == "camp-b" {
-			return fail
-		}
-		return nil
-	})
-	if !errors.Is(err, fail) {
-		t.Fatalf("processProjectionApplyOutboxRows() error = %v, want %v", err, fail)
-	}
-	if processed != 1 {
-		t.Fatalf("processed rows = %d, want 1", processed)
-	}
-	if calls != 2 {
-		t.Fatalf("handler calls = %d, want 2", calls)
-	}
-}
-
 func TestProcessProjectionApplyOutboxShadowMarksDueRowsFailed(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
@@ -72,7 +45,7 @@ func TestProcessProjectionApplyOutboxShadowMarksDueRowsFailed(t *testing.T) {
 		nextAttempt int64
 		lastError   string
 	)
-	if err := store.sqlDB.QueryRowContext(
+	if err := store.DB().QueryRowContext(
 		context.Background(),
 		`SELECT status, attempt_count, next_attempt_at, last_error
 		 FROM projection_apply_outbox
@@ -114,7 +87,7 @@ func TestProcessProjectionApplyOutboxShadowSkipsNotDueRows(t *testing.T) {
 
 	now := time.Date(2026, 2, 16, 3, 1, 0, 0, time.UTC)
 	nextAttempt := now.Add(30 * time.Minute)
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox SET next_attempt_at = ? WHERE campaign_id = ? AND seq = ?`,
 		nextAttempt.UnixMilli(),
@@ -142,52 +115,6 @@ func TestProcessProjectionApplyOutboxShadowZeroLimitNoop(t *testing.T) {
 	}
 	if processed != 0 {
 		t.Fatalf("expected zero processed outbox rows, got %d", processed)
-	}
-}
-
-func TestMarkProjectionApplyOutboxShadowRetryRequiresProcessingStatus(t *testing.T) {
-	store := openTestEventsStoreWithOutbox(t, true)
-
-	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  ids.CampaignID("camp-outbox-shadow-mark"),
-		Timestamp:   time.Date(2026, 2, 16, 4, 0, 0, 0, time.UTC),
-		Type:        event.Type("campaign.created"),
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "campaign",
-		EntityID:    "camp-outbox-shadow-mark",
-		PayloadJSON: []byte(`{}`),
-	})
-	if err != nil {
-		t.Fatalf("append event: %v", err)
-	}
-
-	err = store.markProjectionApplyOutboxShadowRetry(
-		context.Background(),
-		projectionApplyOutboxRow{CampaignID: string(stored.CampaignID), Seq: stored.Seq},
-		time.Now().UTC(),
-		1,
-		time.Now().UTC().Add(time.Second),
-	)
-	if err == nil {
-		t.Fatal("expected mark retry to fail when row is not in processing status")
-	}
-	if !strings.Contains(err.Error(), "expected 1 row updated") {
-		t.Fatalf("expected rows-updated error, got %v", err)
-	}
-}
-
-func TestOutboxRetryBackoffBounds(t *testing.T) {
-	if got := outboxRetryBackoff(0); got != time.Second {
-		t.Fatalf("expected attempt zero backoff of 1s, got %s", got)
-	}
-	if got := outboxRetryBackoff(1); got != time.Second {
-		t.Fatalf("expected attempt one backoff of 1s, got %s", got)
-	}
-	if got := outboxRetryBackoff(2); got != 2*time.Second {
-		t.Fatalf("expected attempt two backoff of 2s, got %s", got)
-	}
-	if got := outboxRetryBackoff(20); got != 5*time.Minute {
-		t.Fatalf("expected capped backoff of 5m, got %s", got)
 	}
 }
 
@@ -232,7 +159,7 @@ func TestProcessProjectionApplyOutboxAppliesAndDeletesOnSuccess(t *testing.T) {
 	}
 
 	var count int
-	if err := store.sqlDB.QueryRowContext(
+	if err := store.DB().QueryRowContext(
 		context.Background(),
 		`SELECT COUNT(*) FROM projection_apply_outbox WHERE campaign_id = ? AND seq = ?`,
 		stored.CampaignID,
@@ -282,7 +209,7 @@ func TestProcessProjectionApplyOutboxSkipsAuditOnlyEvents(t *testing.T) {
 	}
 
 	var count int
-	if err := store.sqlDB.QueryRowContext(
+	if err := store.DB().QueryRowContext(
 		context.Background(),
 		`SELECT COUNT(*) FROM projection_apply_outbox WHERE campaign_id = ? AND seq = ?`,
 		stored.CampaignID,
@@ -312,7 +239,7 @@ func TestProcessProjectionApplyOutboxReclaimsStaleProcessingRows(t *testing.T) {
 	}
 
 	now := time.Date(2026, 2, 16, 7, 0, 0, 0, time.UTC)
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'processing', attempt_count = 1, next_attempt_at = ?, updated_at = ?
@@ -349,7 +276,7 @@ func TestProcessProjectionApplyOutboxReclaimsStaleProcessingRows(t *testing.T) {
 	}
 
 	var count int
-	if err := store.sqlDB.QueryRowContext(
+	if err := store.DB().QueryRowContext(
 		context.Background(),
 		`SELECT COUNT(*) FROM projection_apply_outbox WHERE campaign_id = ? AND seq = ?`,
 		stored.CampaignID,
@@ -400,7 +327,7 @@ func TestProcessProjectionApplyOutboxApplyFailureMarksRetry(t *testing.T) {
 		nextAttempt int64
 		lastError   string
 	)
-	if err := store.sqlDB.QueryRowContext(
+	if err := store.DB().QueryRowContext(
 		context.Background(),
 		`SELECT status, attempt_count, next_attempt_at, last_error
 		 FROM projection_apply_outbox
@@ -477,7 +404,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 	}
 
 	now := time.Date(2026, 2, 16, 8, 1, 0, 0, time.UTC)
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'failed', attempt_count = 2, next_attempt_at = ?, updated_at = ?
@@ -489,7 +416,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 	); err != nil {
 		t.Fatalf("prepare failed row: %v", err)
 	}
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'processing', next_attempt_at = ?, updated_at = ?
@@ -501,7 +428,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 	); err != nil {
 		t.Fatalf("prepare processing row: %v", err)
 	}
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'dead', attempt_count = 8, next_attempt_at = ?, updated_at = ?
@@ -513,7 +440,7 @@ func TestGetProjectionApplyOutboxSummaryCountsAndOldestPending(t *testing.T) {
 	); err != nil {
 		t.Fatalf("prepare dead row: %v", err)
 	}
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET next_attempt_at = ?, updated_at = ?
@@ -582,7 +509,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 	}
 
 	now := time.Date(2026, 2, 16, 9, 1, 0, 0, time.UTC)
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'failed', attempt_count = 1, next_attempt_at = ?, updated_at = ?
@@ -594,7 +521,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 	); err != nil {
 		t.Fatalf("prepare failed first row: %v", err)
 	}
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'failed', attempt_count = 2, next_attempt_at = ?, updated_at = ?
@@ -606,7 +533,7 @@ func TestListProjectionApplyOutboxRowsFiltersOrdersAndLimits(t *testing.T) {
 	); err != nil {
 		t.Fatalf("prepare failed second row: %v", err)
 	}
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET next_attempt_at = ?, updated_at = ?
@@ -695,7 +622,7 @@ func TestListProjectionApplyOutboxRowsAllStatusesAndZeroLimit(t *testing.T) {
 		t.Fatalf("append second event: %v", err)
 	}
 
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox SET status = 'dead', attempt_count = 8 WHERE campaign_id = ? AND seq = ?`,
 		second.CampaignID,
@@ -744,7 +671,7 @@ func TestProcessProjectionApplyOutboxMarksDeadAfterThreshold(t *testing.T) {
 	}
 
 	now := time.Date(2026, 2, 16, 9, 46, 0, 0, time.UTC)
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'failed', attempt_count = 7, next_attempt_at = ?, updated_at = ?
@@ -776,7 +703,7 @@ func TestProcessProjectionApplyOutboxMarksDeadAfterThreshold(t *testing.T) {
 		status   string
 		attempts int
 	)
-	if err := store.sqlDB.QueryRowContext(
+	if err := store.DB().QueryRowContext(
 		context.Background(),
 		`SELECT status, attempt_count
 		 FROM projection_apply_outbox
@@ -798,7 +725,7 @@ func TestProjectionApplyOutboxInsertRequiresExistingEvent(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 
 	now := time.Date(2026, 2, 16, 10, 0, 0, 0, time.UTC)
-	_, err := store.sqlDB.ExecContext(
+	_, err := store.DB().ExecContext(
 		context.Background(),
 		`INSERT INTO projection_apply_outbox (
 			campaign_id, seq, event_type, status, attempt_count, next_attempt_at, updated_at
@@ -835,34 +762,6 @@ func TestProcessProjectionApplyOutboxRequiresApplyCallback(t *testing.T) {
 	}
 }
 
-func TestCompleteProjectionApplyOutboxRowRequiresProcessingStatus(t *testing.T) {
-	store := openTestEventsStoreWithOutbox(t, true)
-
-	stored, err := store.AppendEvent(context.Background(), event.Event{
-		CampaignID:  ids.CampaignID("camp-outbox-complete-status"),
-		Timestamp:   time.Date(2026, 2, 16, 10, 15, 0, 0, time.UTC),
-		Type:        event.Type("campaign.created"),
-		ActorType:   event.ActorTypeSystem,
-		EntityType:  "campaign",
-		EntityID:    "camp-outbox-complete-status",
-		PayloadJSON: []byte(`{}`),
-	})
-	if err != nil {
-		t.Fatalf("append event: %v", err)
-	}
-
-	err = store.completeProjectionApplyOutboxRow(
-		context.Background(),
-		projectionApplyOutboxRow{
-			CampaignID: string(stored.CampaignID),
-			Seq:        stored.Seq,
-		},
-	)
-	if err == nil {
-		t.Fatal("expected processing-status guard error")
-	}
-}
-
 func TestProjectionApplyOutboxSummaryAndListRespectCanceledContext(t *testing.T) {
 	store := openTestEventsStoreWithOutbox(t, true)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -893,7 +792,7 @@ func TestRequeueProjectionApplyOutboxRowTransitionsDeadToPending(t *testing.T) {
 	}
 
 	now := time.Date(2026, 2, 16, 10, 31, 0, 0, time.UTC)
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'dead', attempt_count = 8, next_attempt_at = ?, last_error = 'failed permanently', updated_at = ?
@@ -920,7 +819,7 @@ func TestRequeueProjectionApplyOutboxRowTransitionsDeadToPending(t *testing.T) {
 		nextAttempt int64
 		lastError   string
 	)
-	if err := store.sqlDB.QueryRowContext(
+	if err := store.DB().QueryRowContext(
 		context.Background(),
 		`SELECT status, attempt_count, next_attempt_at, last_error
 		 FROM projection_apply_outbox
@@ -1047,7 +946,7 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 	}
 
 	now := time.Date(2026, 2, 16, 11, 5, 0, 0, time.UTC)
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'dead', attempt_count = 8, next_attempt_at = ?, last_error = 'dead-A', updated_at = ?
@@ -1059,7 +958,7 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 	); err != nil {
 		t.Fatalf("prepare dead row A: %v", err)
 	}
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'dead', attempt_count = 8, next_attempt_at = ?, last_error = 'dead-B', updated_at = ?
@@ -1071,7 +970,7 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 	); err != nil {
 		t.Fatalf("prepare dead row B: %v", err)
 	}
-	if _, err := store.sqlDB.ExecContext(
+	if _, err := store.DB().ExecContext(
 		context.Background(),
 		`UPDATE projection_apply_outbox
 		 SET status = 'dead', attempt_count = 8, next_attempt_at = ?, last_error = 'dead-C', updated_at = ?
@@ -1101,7 +1000,7 @@ func TestRequeueProjectionApplyOutboxDeadRowsRequeuesByLimitAndOrder(t *testing.
 	fetch := func(campaignID string, seq uint64) rowState {
 		t.Helper()
 		var state rowState
-		if err := store.sqlDB.QueryRowContext(
+		if err := store.DB().QueryRowContext(
 			context.Background(),
 			`SELECT status, attempt_count, next_attempt_at, last_error
 			 FROM projection_apply_outbox

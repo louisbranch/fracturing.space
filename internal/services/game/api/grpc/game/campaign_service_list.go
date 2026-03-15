@@ -17,7 +17,7 @@ func (s *CampaignService) ListCampaigns(ctx context.Context, in *campaignv1.List
 		return nil, status.Error(codes.InvalidArgument, "list campaigns request is required")
 	}
 
-	page, err := newCampaignApplication(s).ListCampaigns(ctx, in)
+	page, err := s.app.ListCampaigns(ctx, in)
 	if err != nil {
 		return nil, err
 	}

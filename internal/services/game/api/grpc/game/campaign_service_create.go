@@ -16,7 +16,7 @@ func (s *CampaignService) CreateCampaign(ctx context.Context, in *campaignv1.Cre
 		return nil, status.Error(codes.InvalidArgument, "create campaign request is required")
 	}
 
-	created, owner, err := newCampaignApplication(s).CreateCampaign(ctx, in)
+	created, owner, err := s.app.CreateCampaign(ctx, in)
 	if err != nil {
 		return nil, err
 	}

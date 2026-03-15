@@ -7,6 +7,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -458,21 +459,21 @@ func TestSessionDamageRoll_Success(t *testing.T) {
 		RequestID: "req-damage-roll-success",
 		RollSeq:   1,
 		Results: map[string]any{
-			"rolls":          []int{3, 4},
-			"base_total":     7,
-			sdKeyModifier:    0,
-			"critical_bonus": 0,
-			sdKeyTotal:       7,
+			"rolls":                       []int{3, 4},
+			"base_total":                  7,
+			workflowtransport.KeyModifier: 0,
+			"critical_bonus":              0,
+			workflowtransport.KeyTotal:    7,
 		},
 		SystemData: map[string]any{
-			sdKeyCharacterID: "char-1",
-			sdKeyRollKind:    "damage_roll",
-			sdKeyRoll:        7,
-			"base_total":     7,
-			sdKeyModifier:    0,
-			"critical":       false,
-			"critical_bonus": 0,
-			sdKeyTotal:       7,
+			workflowtransport.KeyCharacterID: "char-1",
+			workflowtransport.KeyRollKind:    "damage_roll",
+			workflowtransport.KeyRoll:        7,
+			"base_total":                     7,
+			workflowtransport.KeyModifier:    0,
+			"critical":                       false,
+			"critical_bonus":                 0,
+			workflowtransport.KeyTotal:       7,
 		},
 	}
 	rollPayloadJSON, err := json.Marshal(rollPayload)
@@ -521,21 +522,21 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 		RequestID: "req-damage-roll-legacy",
 		RollSeq:   1,
 		Results: map[string]any{
-			"rolls":          []int{3, 4},
-			"base_total":     7,
-			sdKeyModifier:    0,
-			"critical_bonus": 0,
-			sdKeyTotal:       7,
+			"rolls":                       []int{3, 4},
+			"base_total":                  7,
+			workflowtransport.KeyModifier: 0,
+			"critical_bonus":              0,
+			workflowtransport.KeyTotal:    7,
 		},
 		SystemData: map[string]any{
-			sdKeyCharacterID: "char-1",
-			sdKeyRollKind:    "damage_roll",
-			sdKeyRoll:        7,
-			"base_total":     7,
-			sdKeyModifier:    0,
-			"critical":       false,
-			"critical_bonus": 0,
-			sdKeyTotal:       7,
+			workflowtransport.KeyCharacterID: "char-1",
+			workflowtransport.KeyRollKind:    "damage_roll",
+			workflowtransport.KeyRoll:        7,
+			"base_total":                     7,
+			workflowtransport.KeyModifier:    0,
+			"critical":                       false,
+			"critical_bonus":                 0,
+			workflowtransport.KeyTotal:       7,
 		},
 	}
 	payloadJSON, err := json.Marshal(payload)
@@ -585,9 +586,9 @@ func TestSessionDamageRoll_UsesDomainEngine(t *testing.T) {
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode damage roll command payload: %v", err)
 	}
-	characterID, ok := got.SystemData[sdKeyCharacterID].(string)
+	characterID, ok := got.SystemData[workflowtransport.KeyCharacterID].(string)
 	if !ok || characterID != "char-1" {
-		t.Fatalf("command character id = %v, want %s", got.SystemData[sdKeyCharacterID], "char-1")
+		t.Fatalf("command character id = %v, want %s", got.SystemData[workflowtransport.KeyCharacterID], "char-1")
 	}
 	if gotRollSeq, ok := got.SystemData["roll_seq"]; ok {
 		if gotRollSeq != nil {

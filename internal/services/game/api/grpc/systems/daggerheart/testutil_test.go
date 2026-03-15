@@ -8,6 +8,7 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -42,9 +43,9 @@ func newRollEvent(t *testing.T, requestID string) *rollEventBuilder {
 		results:    map[string]any{"d20": 20},
 		outcome:    pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		systemData: map[string]any{
-			sdKeyCharacterID: "char-1",
-			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
-			sdKeyHopeFear:    true,
+			workflowtransport.KeyCharacterID: "char-1",
+			workflowtransport.KeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			workflowtransport.KeyHopeFear:    true,
 		},
 	}
 }
@@ -60,33 +61,33 @@ func (b *rollEventBuilder) withSession(id string) *rollEventBuilder {
 }
 
 func (b *rollEventBuilder) withCharacter(id string) *rollEventBuilder {
-	b.systemData[sdKeyCharacterID] = id
+	b.systemData[workflowtransport.KeyCharacterID] = id
 	return b
 }
 
 func (b *rollEventBuilder) withRollKind(kind pb.RollKind) *rollEventBuilder {
-	b.systemData[sdKeyRollKind] = kind.String()
+	b.systemData[workflowtransport.KeyRollKind] = kind.String()
 	return b
 }
 
 func (b *rollEventBuilder) withOutcome(outcome string) *rollEventBuilder {
 	b.outcome = outcome
-	b.systemData[sdKeyOutcome] = outcome
+	b.systemData[workflowtransport.KeyOutcome] = outcome
 	return b
 }
 
 func (b *rollEventBuilder) withHopeFear(v bool) *rollEventBuilder {
-	b.systemData[sdKeyHopeFear] = v
+	b.systemData[workflowtransport.KeyHopeFear] = v
 	return b
 }
 
 func (b *rollEventBuilder) withCrit(v bool) *rollEventBuilder {
-	b.systemData[sdKeyCrit] = v
+	b.systemData[workflowtransport.KeyCrit] = v
 	return b
 }
 
 func (b *rollEventBuilder) withCritNegates(v bool) *rollEventBuilder {
-	b.systemData[sdKeyCritNegates] = v
+	b.systemData[workflowtransport.KeyCritNegates] = v
 	return b
 }
 
@@ -135,6 +136,6 @@ func (b *rollEventBuilder) appendTo(store *fakeEventStore) event.Event {
 // testSessionCtx creates a context with campaign and session metadata plus a
 // request ID — the common setup for session outcome tests.
 func testSessionCtx(campaignID, sessionID, requestID string) context.Context {
-	ctx := withCampaignSessionMetadata(context.Background(), campaignID, sessionID)
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), campaignID, sessionID)
 	return grpcmeta.WithRequestID(ctx, requestID)
 }

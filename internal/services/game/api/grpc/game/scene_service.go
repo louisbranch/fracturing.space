@@ -10,16 +10,22 @@ import (
 // SceneService implements the game.v1.SceneService gRPC API.
 type SceneService struct {
 	campaignv1.UnimplementedSceneServiceServer
-	stores      Stores
-	clock       func() time.Time
-	idGenerator func() (string, error)
+	app   sceneApplication
+	reads sceneReadDependencies
 }
 
 // NewSceneService creates a SceneService with default dependencies.
 func NewSceneService(stores Stores) *SceneService {
+	return newSceneServiceWithDependencies(stores, time.Now, id.NewID)
+}
+
+func newSceneServiceWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+) *SceneService {
 	return &SceneService{
-		stores:      stores,
-		clock:       time.Now,
-		idGenerator: id.NewID,
+		app:   newSceneApplicationWithDependencies(stores, clock, idGenerator),
+		reads: newSceneReadDependencies(stores),
 	}
 }

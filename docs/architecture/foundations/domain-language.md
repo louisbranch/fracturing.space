@@ -79,7 +79,14 @@ Examples: note additions, canonized facts, scene start/end, reveals.
 Readiness is true when core participant/controller invariants and
 system-specific readiness invariants are both satisfied. Reports may include
 boundary blockers (campaign status, active session) in addition to core
-participant/character blockers.
+participant/character blockers. The one intentional cross-aggregate
+`session.start` workflow is owned by the `domain/readiness` package so those
+rules and the first-session activation transition stay in one place.
+
+The one intentional campaign bootstrap workflow,
+`campaign.create_with_participants`, is owned by the sibling
+`domain/campaignbootstrap` package so the campaign aggregate decider remains
+campaign-local even though bootstrap emits participant join events atomically.
 
 ## Communication terms
 

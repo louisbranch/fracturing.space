@@ -11,6 +11,18 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 )
 
+type projectionRuntimeConfigurerFunc func(serverEnv, *gamegrpc.Stores, projectionApplyStore, engine.Registries, *bridge.AdapterRegistry) (projectionRuntimeState, error)
+
+func (f projectionRuntimeConfigurerFunc) Configure(
+	srvEnv serverEnv,
+	stores *gamegrpc.Stores,
+	projectionStore projectionApplyStore,
+	registries engine.Registries,
+	adapters *bridge.AdapterRegistry,
+) (projectionRuntimeState, error) {
+	return f(srvEnv, stores, projectionStore, registries, adapters)
+}
+
 func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing.T) {
 	projectionRegistries := event.NewRegistry()
 	if err := projectionRegistries.Register(event.Definition{
@@ -30,22 +42,23 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 	}
 
 	bootstrap := newServerBootstrapWithConfig(serverBootstrapConfig{
-		resolveProjectionApplyModes: func(serverEnv) (bool, bool, string, error) {
-			return true, false, projectionApplyModeOutboxApplyOnly, nil
-		},
-		buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
-			return projectionRegistries, nil
-		},
-		buildProjectionApplyOutboxApply: func(store projectionApplyStore, registries *event.Registry) (func(context.Context, event.Event) error, error) {
+		projectionRuntimeConfigurer: projectionRuntimeConfigurerFunc(func(_ serverEnv, stores *gamegrpc.Stores, store projectionApplyStore, _ engine.Registries, _ *bridge.AdapterRegistry) (projectionRuntimeState, error) {
+			if stores != nil && stores.Write.Runtime != nil {
+				stores.Write.Runtime.SetInlineApplyEnabled(false)
+				stores.Write.Runtime.SetIntentFilter(projectionRegistries)
+			}
 			capturedStore = store
-			capturedRegistry = registries
-			return applyFn, nil
-		},
+			capturedRegistry = projectionRegistries
+			return projectionRuntimeState{
+				enableApplyWorker: true,
+				applyOutbox:       applyFn,
+			}, nil
+		}),
 	})
 
 	var stores gamegrpc.Stores
 	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
-	state, err := bootstrap.configureProjectionRuntime(serverEnv{}, &stores, nil, engine.Registries{}, nil)
+	state, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, &stores, nil, engine.Registries{}, nil)
 	if err != nil {
 		t.Fatalf("configure projection runtime: %v", err)
 	}
@@ -86,33 +99,27 @@ func TestConfigureProjectionRuntime_ConfiguresRuntimeAndOutboxBuilder(t *testing
 
 func TestConfigureProjectionRuntime_ReturnsResolveModeError(t *testing.T) {
 	wantErr := errors.New("invalid projection mode")
-	calledBuildRegistries := false
-	calledBuildApply := false
 	bootstrap := newServerBootstrapWithConfig(serverBootstrapConfig{
-		resolveProjectionApplyModes: func(serverEnv) (bool, bool, string, error) {
-			return false, false, "", wantErr
-		},
-		buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
-			calledBuildRegistries = true
-			return nil, nil
-		},
-		buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
-			calledBuildApply = true
-			return nil, nil
+		projectionRuntimeConfigurer: defaultProjectionRuntimeConfigurer{
+			resolveProjectionApplyModes: func(serverEnv) (bool, bool, string, error) {
+				return false, false, "", wantErr
+			},
+			buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
+				t.Fatal("expected projection registry builder not to run after mode-resolution failure")
+				return nil, nil
+			},
+			buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
+				t.Fatal("expected outbox apply builder not to run after mode-resolution failure")
+				return nil, nil
+			},
 		},
 	})
 
 	var stores gamegrpc.Stores
 	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
-	_, err := bootstrap.configureProjectionRuntime(serverEnv{}, &stores, nil, engine.Registries{}, nil)
+	_, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, &stores, nil, engine.Registries{}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected resolve-mode error %v, got %v", wantErr, err)
-	}
-	if calledBuildRegistries {
-		t.Fatal("expected projection registry builder not to run after mode-resolution failure")
-	}
-	if calledBuildApply {
-		t.Fatal("expected outbox apply builder not to run after mode-resolution failure")
 	}
 }
 
@@ -120,15 +127,17 @@ func TestConfigureProjectionRuntime_ReturnsBuildProjectionRegistriesError(t *tes
 	wantErr := errors.New("projection registry build failed")
 	calledBuildApply := false
 	bootstrap := newServerBootstrapWithConfig(serverBootstrapConfig{
-		resolveProjectionApplyModes: func(serverEnv) (bool, bool, string, error) {
-			return false, false, projectionApplyModeInlineApplyOnly, nil
-		},
-		buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
-			return nil, wantErr
-		},
-		buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
-			calledBuildApply = true
-			return nil, nil
+		projectionRuntimeConfigurer: defaultProjectionRuntimeConfigurer{
+			resolveProjectionApplyModes: func(serverEnv) (bool, bool, string, error) {
+				return false, false, projectionApplyModeInlineApplyOnly, nil
+			},
+			buildProjectionRegistries: func(engine.Registries, *bridge.AdapterRegistry) (*event.Registry, error) {
+				return nil, wantErr
+			},
+			buildProjectionApplyOutboxApply: func(projectionApplyStore, *event.Registry) (func(context.Context, event.Event) error, error) {
+				calledBuildApply = true
+				return nil, nil
+			},
 		},
 	})
 
@@ -136,7 +145,7 @@ func TestConfigureProjectionRuntime_ReturnsBuildProjectionRegistriesError(t *tes
 	stores.Write.Runtime = gamegrpc.NewWriteRuntime()
 	stores.Write.Runtime.SetInlineApplyEnabled(false)
 
-	_, err := bootstrap.configureProjectionRuntime(serverEnv{}, &stores, nil, engine.Registries{}, nil)
+	_, err := bootstrap.config.projectionRuntimeConfigurer.Configure(serverEnv{}, &stores, nil, engine.Registries{}, nil)
 	if !errors.Is(err, wantErr) {
 		t.Fatalf("expected registry-build error %v, got %v", wantErr, err)
 	}

@@ -24,6 +24,7 @@ var sessionCommandContracts = []commandContract{
 			Type:            CommandTypeStart,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateStartPayload,
+			ActiveSession:   command.AllowedDuringActiveSession(),
 		},
 	},
 	{
@@ -31,6 +32,7 @@ var sessionCommandContracts = []commandContract{
 			Type:            CommandTypeEnd,
 			Owner:           command.OwnerCore,
 			ValidatePayload: validateEndPayload,
+			ActiveSession:   command.AllowedDuringActiveSession(),
 		},
 	},
 	{
@@ -41,6 +43,7 @@ var sessionCommandContracts = []commandContract{
 			Gate: command.GatePolicy{
 				Scope: command.GateScopeSession,
 			},
+			ActiveSession: command.AllowedDuringActiveSession(),
 		},
 	},
 	{
@@ -52,6 +55,7 @@ var sessionCommandContracts = []commandContract{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
 			},
+			ActiveSession: command.AllowedDuringActiveSession(),
 		},
 	},
 	{
@@ -63,6 +67,7 @@ var sessionCommandContracts = []commandContract{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
 			},
+			ActiveSession: command.AllowedDuringActiveSession(),
 		},
 	},
 	{
@@ -74,6 +79,7 @@ var sessionCommandContracts = []commandContract{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
 			},
+			ActiveSession: command.AllowedDuringActiveSession(),
 		},
 	},
 	{
@@ -85,6 +91,7 @@ var sessionCommandContracts = []commandContract{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
 			},
+			ActiveSession: command.AllowedDuringActiveSession(),
 		},
 	},
 	{
@@ -96,6 +103,7 @@ var sessionCommandContracts = []commandContract{
 				Scope:         command.GateScopeSession,
 				AllowWhenOpen: true,
 			},
+			ActiveSession: command.AllowedDuringActiveSession(),
 		},
 	},
 }

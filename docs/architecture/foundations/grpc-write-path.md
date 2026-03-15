@@ -102,7 +102,7 @@ type Options struct {
 This ensures projection appliers only process events they are responsible for.
 
 ## Startup store wiring contracts
-Startup wires projection bundles with `game.NewStoresFromProjection(...)` (`internal/services/game/api/grpc/game/stores.go`) and `daggerheart.NewStoresFromProjection(...)` (`internal/services/game/api/grpc/systems/daggerheart/stores.go`) instead of manually assigning every store field in `app/bootstrap.go`, reducing wiring drift while keeping explicit override fields available.
+Startup wires projection bundles with `game.NewStoresFromProjection(...)` (`internal/services/game/api/grpc/game/stores.go`) and `gameplaystores.NewFromProjection(...)` (`internal/services/game/api/grpc/systems/daggerheart/gameplaystores/stores.go`) instead of manually assigning every store field in `app/bootstrap.go`, reducing wiring drift while keeping explicit override fields available.
 Shared transport error/default behavior is centralized under `internal/services/game/api/grpc/internal/grpcerror` so game and system handlers do not drift in domain-error mapping or write-path option defaults.
 
 ## Typical handler pattern

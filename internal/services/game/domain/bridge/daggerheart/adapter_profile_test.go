@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	event "github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestApplyCharacterProfileEvents_GuardsAndDelete(t *testing.T) {
@@ -165,7 +165,7 @@ func TestApplyCharacterProfileReplaced_DoesNotOverwriteExistingState(t *testing.
 	store := newParityDaggerheartStore()
 	adapter := NewAdapter(store)
 
-	if err := store.PutDaggerheartCharacterState(context.Background(), storage.DaggerheartCharacterState{
+	if err := store.PutDaggerheartCharacterState(context.Background(), projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
 		Hp:          2,

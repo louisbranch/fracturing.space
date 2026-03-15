@@ -9,7 +9,7 @@ import (
 	"time"
 
 	platformstatus "github.com/louisbranch/fracturing.space/internal/platform/status"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 )
 
 type catalogReadinessStoreStub struct {
@@ -30,65 +30,65 @@ func listFromCount[T any](count int, err error) ([]T, error) {
 	return make([]T, count), nil
 }
 
-func (s *catalogReadinessStoreStub) ListDaggerheartClasses(context.Context) ([]storage.DaggerheartClass, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartClasses(context.Context) ([]contentstore.DaggerheartClass, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartClass](count, err)
+	return listFromCount[contentstore.DaggerheartClass](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartSubclasses(context.Context) ([]storage.DaggerheartSubclass, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartSubclasses(context.Context) ([]contentstore.DaggerheartSubclass, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartSubclass](count, err)
+	return listFromCount[contentstore.DaggerheartSubclass](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartHeritages(context.Context) ([]storage.DaggerheartHeritage, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartHeritages(context.Context) ([]contentstore.DaggerheartHeritage, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartHeritage](count, err)
+	return listFromCount[contentstore.DaggerheartHeritage](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartExperiences(context.Context) ([]storage.DaggerheartExperienceEntry, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartExperiences(context.Context) ([]contentstore.DaggerheartExperienceEntry, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartExperienceEntry](count, err)
+	return listFromCount[contentstore.DaggerheartExperienceEntry](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartAdversaryEntries(context.Context) ([]storage.DaggerheartAdversaryEntry, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartAdversaryEntries(context.Context) ([]contentstore.DaggerheartAdversaryEntry, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartAdversaryEntry](count, err)
+	return listFromCount[contentstore.DaggerheartAdversaryEntry](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartBeastforms(context.Context) ([]storage.DaggerheartBeastformEntry, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartBeastforms(context.Context) ([]contentstore.DaggerheartBeastformEntry, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartBeastformEntry](count, err)
+	return listFromCount[contentstore.DaggerheartBeastformEntry](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartCompanionExperiences(context.Context) ([]storage.DaggerheartCompanionExperienceEntry, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartCompanionExperiences(context.Context) ([]contentstore.DaggerheartCompanionExperienceEntry, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartCompanionExperienceEntry](count, err)
+	return listFromCount[contentstore.DaggerheartCompanionExperienceEntry](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartLootEntries(context.Context) ([]storage.DaggerheartLootEntry, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartLootEntries(context.Context) ([]contentstore.DaggerheartLootEntry, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartLootEntry](count, err)
+	return listFromCount[contentstore.DaggerheartLootEntry](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartDamageTypes(context.Context) ([]storage.DaggerheartDamageTypeEntry, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartDamageTypes(context.Context) ([]contentstore.DaggerheartDamageTypeEntry, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartDamageTypeEntry](count, err)
+	return listFromCount[contentstore.DaggerheartDamageTypeEntry](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartDomains(context.Context) ([]storage.DaggerheartDomain, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartDomains(context.Context) ([]contentstore.DaggerheartDomain, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartDomain](count, err)
+	return listFromCount[contentstore.DaggerheartDomain](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartDomainCards(context.Context) ([]storage.DaggerheartDomainCard, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartDomainCards(context.Context) ([]contentstore.DaggerheartDomainCard, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartDomainCard](count, err)
+	return listFromCount[contentstore.DaggerheartDomainCard](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartWeapons(context.Context) ([]storage.DaggerheartWeapon, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartWeapons(context.Context) ([]contentstore.DaggerheartWeapon, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartWeapon](count, err)
+	return listFromCount[contentstore.DaggerheartWeapon](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartArmor(context.Context) ([]storage.DaggerheartArmor, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartArmor(context.Context) ([]contentstore.DaggerheartArmor, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartArmor](count, err)
+	return listFromCount[contentstore.DaggerheartArmor](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartItems(context.Context) ([]storage.DaggerheartItem, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartItems(context.Context) ([]contentstore.DaggerheartItem, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartItem](count, err)
+	return listFromCount[contentstore.DaggerheartItem](count, err)
 }
-func (s *catalogReadinessStoreStub) ListDaggerheartEnvironments(context.Context) ([]storage.DaggerheartEnvironment, error) {
+func (s *catalogReadinessStoreStub) ListDaggerheartEnvironments(context.Context) ([]contentstore.DaggerheartEnvironment, error) {
 	count, err := s.count()
-	return listFromCount[storage.DaggerheartEnvironment](count, err)
+	return listFromCount[contentstore.DaggerheartEnvironment](count, err)
 }
 
 func TestEvaluateCatalogCapabilityStateReady(t *testing.T) {

@@ -11,6 +11,7 @@ import (
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
@@ -170,7 +171,7 @@ func TestReplaySnapshot_AppliesDamageApplied(t *testing.T) {
 	daggerheartStore := newProjectionDaggerheartStore()
 	applier := newProjectionApplier(campaignStore, daggerheartStore)
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
-	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 2, Stress: 1, Armor: 2}
+	daggerheartStore.states["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 2, Stress: 1, Armor: 2}
 	eventStore := &projectionEventStore{
 		events: []event.Event{
 			newCampaignCreatedEvent("camp-1", 1),
@@ -194,8 +195,8 @@ func TestReplaySnapshot_AppliesRestTaken(t *testing.T) {
 	daggerheartStore := newProjectionDaggerheartStore()
 	applier := newProjectionApplier(campaignStore, daggerheartStore)
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
-	daggerheartStore.snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 0}
-	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
+	daggerheartStore.snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 0}
+	daggerheartStore.states["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
 	eventStore := &projectionEventStore{
 		events: []event.Event{
 			newCampaignCreatedEvent("camp-1", 1),
@@ -222,7 +223,7 @@ func TestReplaySnapshot_AppliesDowntimeMove(t *testing.T) {
 	daggerheartStore := newProjectionDaggerheartStore()
 	applier := newProjectionApplier(campaignStore, daggerheartStore)
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
-	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
+	daggerheartStore.states["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
 	eventStore := &projectionEventStore{
 		events: []event.Event{
 			newCampaignCreatedEvent("camp-1", 1),
@@ -246,7 +247,7 @@ func TestReplaySnapshot_AppliesLoadoutSwap(t *testing.T) {
 	daggerheartStore := newProjectionDaggerheartStore()
 	applier := newProjectionApplier(campaignStore, daggerheartStore)
 	campaignStore.campaigns["camp-1"] = storage.CampaignRecord{ID: "camp-1"}
-	daggerheartStore.states["camp-1:char-1"] = storage.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
+	daggerheartStore.states["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{CampaignID: "camp-1", CharacterID: "char-1", Hp: 6, Hope: 1, Stress: 3, Armor: 0}
 	eventStore := &projectionEventStore{
 		events: []event.Event{
 			newCampaignCreatedEvent("camp-1", 1),

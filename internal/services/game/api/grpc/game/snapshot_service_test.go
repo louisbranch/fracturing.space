@@ -10,7 +10,7 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -28,7 +28,7 @@ func TestGetSnapshot_NilRequest(t *testing.T) {
 func TestGetSnapshot_MissingCampaignId(t *testing.T) {
 	svc := NewSnapshotService(Stores{
 		Campaign:     newFakeCampaignStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Character:    newFakeCharacterStore(),
 	})
 	_, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{})
@@ -38,7 +38,7 @@ func TestGetSnapshot_MissingCampaignId(t *testing.T) {
 func TestGetSnapshot_CampaignNotFound(t *testing.T) {
 	svc := NewSnapshotService(Stores{
 		Campaign:     newFakeCampaignStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Character:    newFakeCharacterStore(),
 	})
 	_, err := svc.GetSnapshot(context.Background(), &statev1.GetSnapshotRequest{CampaignId: "nonexistent"})
@@ -51,7 +51,7 @@ func TestGetSnapshot_RequiresCampaignReadPolicy(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Character:    newFakeCharacterStore(),
 		Participant:  newFakeParticipantStore(),
 	})
@@ -68,11 +68,11 @@ func TestGetSnapshot_CampaignArchivedAllowed(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 
 	campaignStore.campaigns["c1"] = archivedCampaignRecord("c1")
-	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
+	dhStore.snapshots["c1"] = projectionstore.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Character:    characterStore,
 	})
 
@@ -94,11 +94,11 @@ func TestGetSnapshot_Success_NoCharacters(t *testing.T) {
 	characterStore := newFakeCharacterStore()
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
+	dhStore.snapshots["c1"] = projectionstore.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Character:    characterStore,
 	})
 
@@ -127,8 +127,8 @@ func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 	now := time.Now().UTC()
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 3}
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.snapshots["c1"] = projectionstore.DaggerheartSnapshot{CampaignID: "c1", GMFear: 3}
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 		"ch2": {CampaignID: "c1", CharacterID: "ch2", Hp: 12, Hope: 2, Stress: 0},
 	}
@@ -139,7 +139,7 @@ func TestGetSnapshot_Success_WithCharacters(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Character:    characterStore,
 	})
 
@@ -165,7 +165,7 @@ func TestGetSnapshot_Success_DefaultGmFear(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Character:    characterStore,
 	})
 
@@ -187,7 +187,7 @@ func TestPatchCharacterState_NilRequest(t *testing.T) {
 func TestPatchCharacterState_MissingCampaignId(t *testing.T) {
 	svc := NewSnapshotService(Stores{
 		Campaign:     newFakeCampaignStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 	})
 	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
@@ -202,7 +202,7 @@ func TestPatchCharacterState_MissingCharacterId(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 		Participant:  newFakeParticipantStore(),
 	})
@@ -215,7 +215,7 @@ func TestPatchCharacterState_MissingCharacterId(t *testing.T) {
 func TestPatchCharacterState_CampaignNotFound(t *testing.T) {
 	svc := NewSnapshotService(Stores{
 		Campaign:     newFakeCampaignStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 	})
 	_, err := svc.PatchCharacterState(context.Background(), &statev1.PatchCharacterStateRequest{
@@ -231,7 +231,7 @@ func TestPatchCharacterState_RequiresCharacterMutationPolicy(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 		Participant:  newFakeParticipantStore(),
 	})
@@ -252,7 +252,7 @@ func TestPatchCharacterState_CampaignArchivedDisallowed(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 		Participant:  newFakeParticipantStore(),
 	})
@@ -269,7 +269,7 @@ func TestPatchCharacterState_StateNotFound(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 		Participant:  newFakeParticipantStore(),
 	})
@@ -286,13 +286,13 @@ func TestPatchCharacterState_InvalidHope(t *testing.T) {
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
 	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
@@ -309,16 +309,16 @@ func TestPatchCharacterState_InvalidStress(t *testing.T) {
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	dhStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
 	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
@@ -335,16 +335,16 @@ func TestPatchCharacterState_InvalidHp(t *testing.T) {
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	dhStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
 	_, err := svc.PatchCharacterState(contextWithAdminOverride("snapshot-test"), &statev1.PatchCharacterStateRequest{
@@ -361,16 +361,16 @@ func TestPatchCharacterState_RequiresDomainEngine(t *testing.T) {
 	eventStore := newFakeEventStore()
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	dhStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
 
@@ -391,10 +391,10 @@ func TestPatchCharacterState_Success(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	dhStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
@@ -430,7 +430,7 @@ func TestPatchCharacterState_Success(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
@@ -480,10 +480,10 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 5, Stress: 3},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	dhStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
@@ -519,7 +519,7 @@ func TestPatchCharacterState_SetToZero(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
@@ -558,7 +558,7 @@ func TestUpdateSnapshotState_NilRequest(t *testing.T) {
 func TestUpdateSnapshotState_MissingCampaignId(t *testing.T) {
 	svc := NewSnapshotService(Stores{
 		Campaign:     newFakeCampaignStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 	})
 	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
@@ -572,7 +572,7 @@ func TestUpdateSnapshotState_MissingCampaignId(t *testing.T) {
 func TestUpdateSnapshotState_CampaignNotFound(t *testing.T) {
 	svc := NewSnapshotService(Stores{
 		Campaign:     newFakeCampaignStore(),
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 	})
 	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
@@ -590,7 +590,7 @@ func TestUpdateSnapshotState_RequiresManageSessionsPolicy(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 		Participant:  newFakeParticipantStore(),
 	})
@@ -610,7 +610,7 @@ func TestUpdateSnapshotState_CampaignArchivedDisallowed(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 	})
 	_, err := svc.UpdateSnapshotState(context.Background(), &statev1.UpdateSnapshotStateRequest{
@@ -628,7 +628,7 @@ func TestUpdateSnapshotState_NegativeGmFear(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: newFakeDaggerheartStore()},
+		SystemStores: SystemStores{Daggerheart: newFakeDaggerheartStore()},
 		Event:        newFakeEventStore(),
 	})
 	_, err := svc.UpdateSnapshotState(contextWithAdminOverride("snapshot-test"), &statev1.UpdateSnapshotStateRequest{
@@ -649,7 +649,7 @@ func TestUpdateSnapshotState_RequiresDomainEngine(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 	})
 
@@ -693,7 +693,7 @@ func TestUpdateSnapshotState_Success(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
@@ -735,7 +735,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 3}
+	dhStore.snapshots["c1"] = projectionstore.DaggerheartSnapshot{CampaignID: "c1", GMFear: 3}
 
 	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 10})
 	if err != nil {
@@ -760,7 +760,7 @@ func TestUpdateSnapshotState_UpdateExisting(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
@@ -792,7 +792,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.snapshots["c1"] = storage.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
+	dhStore.snapshots["c1"] = projectionstore.DaggerheartSnapshot{CampaignID: "c1", GMFear: 5}
 
 	payloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 0})
 	if err != nil {
@@ -817,7 +817,7 @@ func TestUpdateSnapshotState_SetToZero(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
@@ -867,7 +867,7 @@ func TestUpdateSnapshotState_UsesDomainEngine(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
@@ -899,10 +899,10 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 
 	campaignStore.campaigns["c1"] = activeCampaignRecord("c1")
-	dhStore.states["c1"] = map[string]storage.DaggerheartCharacterState{
+	dhStore.states["c1"] = map[string]projectionstore.DaggerheartCharacterState{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", Hp: 15, Hope: 3, Stress: 1},
 	}
-	dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+	dhStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 		"ch1": {CampaignID: "c1", CharacterID: "ch1", HpMax: 18, StressMax: 6},
 	}
 
@@ -938,7 +938,7 @@ func TestPatchCharacterState_UsesDomainEngine(t *testing.T) {
 
 	svc := NewSnapshotService(Stores{
 		Campaign:     campaignStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Event:        eventStore,
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})

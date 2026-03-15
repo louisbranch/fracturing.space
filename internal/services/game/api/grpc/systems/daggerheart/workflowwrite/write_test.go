@@ -1,0 +1,279 @@
+package workflowwrite
+
+import (
+	"context"
+	"errors"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/test/mock/gamefakes"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+)
+
+type fakeEventApplier struct {
+	calls int
+	err   error
+}
+
+func (f *fakeEventApplier) Apply(context.Context, event.Event) error {
+	f.calls++
+	return f.err
+}
+
+func testSystemEvent() event.Event {
+	return event.Event{
+		CampaignID:  "camp-1",
+		Type:        event.Type("sys.daggerheart.gm_fear_changed"),
+		Timestamp:   time.Now().UTC(),
+		ActorType:   event.ActorTypeSystem,
+		EntityType:  "campaign",
+		EntityID:    "camp-1",
+		PayloadJSON: []byte(`{"before":0,"after":1}`),
+	}
+}
+
+type fakeDomainExecutor struct {
+	result engine.Result
+	err    error
+}
+
+func (f fakeDomainExecutor) Execute(context.Context, command.Command) (engine.Result, error) {
+	return f.result, f.err
+}
+
+type nonRetryableTestError struct {
+	err error
+}
+
+func (e nonRetryableTestError) Error() string      { return e.err.Error() }
+func (e nonRetryableTestError) Unwrap() error      { return e.err }
+func (e nonRetryableTestError) NonRetryable() bool { return true }
+
+func testWriteRuntime(t *testing.T) *domainwrite.Runtime {
+	t.Helper()
+	runtime := domainwrite.NewRuntime()
+	registry := event.NewRegistry()
+	for _, def := range []event.Definition{
+		{Type: event.Type("sys.daggerheart.gm_fear_changed"), Owner: event.OwnerSystem, Intent: event.IntentProjectionAndReplay},
+		{Type: event.Type("story.note_added"), Owner: event.OwnerCore, Intent: event.IntentAuditOnly},
+	} {
+		if err := registry.Register(def); err != nil {
+			t.Fatalf("register event: %v", err)
+		}
+	}
+	runtime.SetIntentFilter(registry)
+	return runtime
+}
+
+func TestExecuteAndApplyRequiresEvents(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
+
+	deps := domainwriteexec.WritePath{
+		Executor: fakeDomainExecutor{result: engine.Result{Decision: command.Decision{}}},
+		Runtime:  runtime,
+	}
+
+	_, err := ExecuteAndApply(
+		context.Background(),
+		deps,
+		&fakeEventApplier{},
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
+	)
+	if err == nil {
+		t.Fatal("expected missing-event error")
+	}
+	if !strings.Contains(err.Error(), "missing events") {
+		t.Fatalf("error = %v, want missing events message", err)
+	}
+}
+
+func TestExecuteAndApplySkipsApplyWhenInlineDisabled(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(false)
+
+	applier := &fakeEventApplier{err: errors.New("should not apply")}
+	deps := domainwriteexec.WritePath{
+		Executor: fakeDomainExecutor{
+			result: engine.Result{
+				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+			},
+		},
+		Runtime: runtime,
+	}
+
+	_, err := ExecuteAndApply(
+		context.Background(),
+		deps,
+		applier,
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
+	)
+	if err != nil {
+		t.Fatalf("execute and apply with inline disabled: %v", err)
+	}
+	if applier.calls != 0 {
+		t.Fatalf("apply calls = %d, want 0", applier.calls)
+	}
+}
+
+func TestExecuteAndApplyAppliesWhenInlineEnabled(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
+
+	applier := &fakeEventApplier{}
+	deps := domainwriteexec.WritePath{
+		Executor: fakeDomainExecutor{
+			result: engine.Result{
+				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+			},
+		},
+		Runtime: runtime,
+	}
+
+	_, err := ExecuteAndApply(
+		context.Background(),
+		deps,
+		applier,
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
+	)
+	if err != nil {
+		t.Fatalf("execute and apply with inline enabled: %v", err)
+	}
+	if applier.calls != 1 {
+		t.Fatalf("apply calls = %d, want 1", applier.calls)
+	}
+}
+
+func TestExecuteAndApplyReturnsApplyErrorWhenInlineEnabled(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
+
+	applier := &fakeEventApplier{err: errors.New("boom")}
+	deps := domainwriteexec.WritePath{
+		Executor: fakeDomainExecutor{
+			result: engine.Result{
+				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+			},
+		},
+		Runtime: runtime,
+	}
+
+	_, err := ExecuteAndApply(
+		context.Background(),
+		deps,
+		applier,
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
+	)
+	if err == nil {
+		t.Fatal("expected apply error")
+	}
+	if status.Code(err) != codes.Internal {
+		t.Fatalf("status code = %s, want %s", status.Code(err), codes.Internal)
+	}
+	if !strings.Contains(err.Error(), "apply event") {
+		t.Fatalf("error = %v, want apply event prefix", err)
+	}
+}
+
+func TestExecuteAndApplySkipsJournalOnlyInlineApply(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
+
+	applier := &fakeEventApplier{err: errors.New("should not apply")}
+	deps := domainwriteexec.WritePath{
+		Executor: fakeDomainExecutor{
+			result: engine.Result{
+				Decision: command.Decision{Events: []event.Event{
+					{
+						CampaignID:  "camp-1",
+						Type:        event.Type("story.note_added"),
+						Timestamp:   time.Now().UTC(),
+						ActorType:   event.ActorTypeSystem,
+						EntityType:  "note",
+						EntityID:    "note-1",
+						PayloadJSON: []byte(`{"content":"note"}`),
+					},
+				}},
+			},
+		},
+		Runtime: runtime,
+	}
+
+	_, err := ExecuteAndApply(
+		context.Background(),
+		deps,
+		applier,
+		command.Command{CampaignID: "camp-1", Type: command.Type("story.note.add")},
+		domainwrite.Options{RequireEvents: true, MissingEventMsg: "missing events"},
+	)
+	if err != nil {
+		t.Fatalf("execute and apply with journal-only event: %v", err)
+	}
+	if applier.calls != 0 {
+		t.Fatalf("apply calls = %d, want 0", applier.calls)
+	}
+}
+
+func TestExecuteAndApplyMapsNonRetryableExecutionError(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	runtime.SetInlineApplyEnabled(true)
+
+	deps := domainwriteexec.WritePath{
+		Executor: fakeDomainExecutor{err: nonRetryableTestError{err: errors.New("checkpoint save failed")}},
+		Runtime:  runtime,
+	}
+
+	_, err := ExecuteAndApply(
+		context.Background(),
+		deps,
+		&fakeEventApplier{},
+		command.Command{CampaignID: "camp-1", Type: command.Type("sys.daggerheart.gm_fear.set")},
+		domainwrite.Options{},
+	)
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if status.Code(err) != codes.FailedPrecondition {
+		t.Fatalf("status code = %s, want %s", status.Code(err), codes.FailedPrecondition)
+	}
+}
+
+func TestNewRuntimeUsesExecuteAndApplyPolicy(t *testing.T) {
+	runtime := testWriteRuntime(t)
+	eventStore := gamefakes.NewEventStore()
+	daggerheartStore := gamefakes.NewDaggerheartStore()
+	deps := domainwriteexec.WritePath{
+		Executor: fakeDomainExecutor{
+			result: engine.Result{
+				Decision: command.Decision{Events: []event.Event{testSystemEvent()}},
+			},
+		},
+		Runtime: runtime,
+	}
+
+	sharedRuntime := NewRuntime(deps, eventStore, daggerheartStore)
+	err := sharedRuntime.ExecuteSystemCommand(context.Background(), workflowruntime.SystemCommandInput{
+		CampaignID:      "camp-1",
+		CommandType:     command.Type("sys.daggerheart.gm_fear.set"),
+		EntityType:      "campaign",
+		EntityID:        "camp-1",
+		PayloadJSON:     []byte(`{"before":0,"after":1}`),
+		MissingEventMsg: "missing events",
+		ApplyErrMessage: "apply event",
+	})
+	if err != nil {
+		t.Fatalf("execute system command through runtime: %v", err)
+	}
+}

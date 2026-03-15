@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 func TestHandleDowntimeMoveApplied_CreatesMissingCharacterState(t *testing.T) {
@@ -117,7 +117,7 @@ func TestApplyConditionPatch_CreatesStateWhenMissing(t *testing.T) {
 }
 
 func TestApplyProfileTraitIncrease_KnownTraitsAndUnknownNoOp(t *testing.T) {
-	profile := storage.DaggerheartCharacterProfile{}
+	profile := projectionstore.DaggerheartCharacterProfile{}
 	traits := []string{"agility", "strength", "finesse", "instinct", "presence", "knowledge"}
 	for _, trait := range traits {
 		applyProfileTraitIncrease(&profile, trait)
@@ -152,8 +152,8 @@ func TestAppendUnique_AppendsMissingOnly(t *testing.T) {
 	}
 }
 
-func profileForArmorMax(campaignID, characterID string, armorMax int) storage.DaggerheartCharacterProfile {
-	return storage.DaggerheartCharacterProfile{
+func profileForArmorMax(campaignID, characterID string, armorMax int) projectionstore.DaggerheartCharacterProfile {
+	return projectionstore.DaggerheartCharacterProfile{
 		CampaignID:      campaignID,
 		CharacterID:     characterID,
 		Level:           1,
@@ -168,8 +168,8 @@ func profileForArmorMax(campaignID, characterID string, armorMax int) storage.Da
 	}
 }
 
-func characterStateForArmorMax(campaignID, characterID string, armor int) storage.DaggerheartCharacterState {
-	return storage.DaggerheartCharacterState{
+func characterStateForArmorMax(campaignID, characterID string, armor int) projectionstore.DaggerheartCharacterState {
+	return projectionstore.DaggerheartCharacterState{
 		CampaignID:  campaignID,
 		CharacterID: characterID,
 		Hp:          6,

@@ -7,8 +7,10 @@ import (
 	"time"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -49,7 +51,7 @@ func TestApplyRollOutcome_MissingCampaignId(t *testing.T) {
 func TestApplyRollOutcome_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
-	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "")
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), "camp-1", "")
 	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		RollSeq: 1,
 	})
@@ -59,7 +61,7 @@ func TestApplyRollOutcome_MissingSessionId(t *testing.T) {
 func TestApplyRollOutcome_MissingRollSeq(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
-	ctx := withCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
+	ctx := workflowtransport.WithCampaignSessionMetadata(context.Background(), "camp-1", "sess-1")
 	_, err := svc.ApplyRollOutcome(ctx, &pb.ApplyRollOutcomeRequest{
 		SessionId: "sess-1",
 	})
@@ -87,7 +89,7 @@ func TestApplyRollOutcome_IdempotentWhenAlreadyAppliedEvenWithOpenGate(t *testin
 	now := testTimestamp
 
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     3,
 	}
@@ -158,7 +160,7 @@ func TestApplyRollOutcome_AlreadyAppliedStillEnsuresComplicationGate(t *testing.
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := testTimestamp
 
-	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     2,
 	}
@@ -265,7 +267,7 @@ func TestApplyRollOutcome_PartialRetrySkipsRepeatedGMFearSet(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := testTimestamp
 
-	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     1,
 	}
@@ -441,7 +443,7 @@ func TestApplyRollOutcome_AlreadyAppliedWithOpenGateRepairsSpotlight(t *testing.
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	now := testTimestamp
 
-	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{
+	dhStore.Snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{
 		CampaignID: "camp-1",
 		GMFear:     2,
 	}

@@ -7,5 +7,6 @@
 //
 // This keeps the core write path uniform while allowing systems (like Daggerheart)
 // to evolve result semantics independently without changing campaign/session
-// aggregate structure.
+// aggregate structure. Workflow-local decider files keep roll, outcome, and
+// note behavior navigable without changing that aggregate boundary.
 package action

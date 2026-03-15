@@ -7,11 +7,13 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/damagetransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
 
@@ -20,7 +22,7 @@ import (
 func newAdversaryDamageTestService() *DaggerheartService {
 	svc := newAdversaryTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
-	dhStore.adversaries["camp-1:adv-1"] = storage.DaggerheartAdversary{
+	dhStore.adversaries["camp-1:adv-1"] = projectionstore.DaggerheartAdversary{
 		AdversaryID: "adv-1",
 		CampaignID:  "camp-1",
 		SessionID:   "sess-1",
@@ -116,21 +118,21 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 		Amount:     5,
 		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 	}
-	result, mitigated, err := applyDaggerheartAdversaryDamage(damage, adversary)
+	result, mitigated, err := damagetransport.ResolveAdversaryDamage(damage, adversary)
 	if err != nil {
 		t.Fatalf("apply adversary damage: %v", err)
 	}
 	hpAfter := result.HPAfter
 	armorAfter := result.ArmorAfter
-	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	sourceCharacterIDs := workflowtransport.NormalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
 		Hp:                 &hpAfter,
 		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
-		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Severity:           damagetransport.DamageSeverityString(result.Result.Severity),
 		Marks:              result.Result.Marks,
-		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		DamageType:         damagetransport.DamageTypeString(damage.DamageType),
 		RollSeq:            nil,
 		ResistPhysical:     damage.ResistPhysical,
 		ResistMagic:        damage.ResistMagic,
@@ -140,7 +142,7 @@ func TestApplyAdversaryDamage_Success(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
+		SourceCharacterIDs: testStringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -195,21 +197,21 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 		Amount:     5,
 		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 	}
-	result, mitigated, err := applyDaggerheartAdversaryDamage(damage, adversary)
+	result, mitigated, err := damagetransport.ResolveAdversaryDamage(damage, adversary)
 	if err != nil {
 		t.Fatalf("apply adversary damage: %v", err)
 	}
 	hpAfter := result.HPAfter
 	armorAfter := result.ArmorAfter
-	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	sourceCharacterIDs := workflowtransport.NormalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
 		Hp:                 &hpAfter,
 		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
-		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Severity:           damagetransport.DamageSeverityString(result.Result.Severity),
 		Marks:              result.Result.Marks,
-		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		DamageType:         damagetransport.DamageTypeString(damage.DamageType),
 		RollSeq:            nil,
 		ResistPhysical:     damage.ResistPhysical,
 		ResistMagic:        damage.ResistMagic,
@@ -219,7 +221,7 @@ func TestApplyAdversaryDamage_UsesDomainEngine(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
+		SourceCharacterIDs: testStringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -300,21 +302,21 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 		DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 		Direct:     true,
 	}
-	result, mitigated, err := applyDaggerheartAdversaryDamage(damage, adversary)
+	result, mitigated, err := damagetransport.ResolveAdversaryDamage(damage, adversary)
 	if err != nil {
 		t.Fatalf("apply adversary damage: %v", err)
 	}
 	hpAfter := result.HPAfter
 	armorAfter := result.ArmorAfter
-	sourceCharacterIDs := normalizeTargets(damage.GetSourceCharacterIds())
+	sourceCharacterIDs := workflowtransport.NormalizeTargets(damage.GetSourceCharacterIds())
 	payload := daggerheart.AdversaryDamageAppliedPayload{
 		AdversaryID:        "adv-1",
 		Hp:                 &hpAfter,
 		Armor:              &armorAfter,
 		ArmorSpent:         result.ArmorSpent,
-		Severity:           daggerheartSeverityToString(result.Result.Severity),
+		Severity:           damagetransport.DamageSeverityString(result.Result.Severity),
 		Marks:              result.Result.Marks,
-		DamageType:         daggerheartDamageTypeToString(damage.DamageType),
+		DamageType:         damagetransport.DamageTypeString(damage.DamageType),
 		RollSeq:            nil,
 		ResistPhysical:     damage.ResistPhysical,
 		ResistMagic:        damage.ResistMagic,
@@ -324,7 +326,7 @@ func TestApplyAdversaryDamage_DirectDamage(t *testing.T) {
 		MassiveDamage:      damage.MassiveDamage,
 		Mitigated:          mitigated,
 		Source:             damage.Source,
-		SourceCharacterIDs: stringsToCharacterIDs(sourceCharacterIDs),
+		SourceCharacterIDs: testStringsToCharacterIDs(sourceCharacterIDs),
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {

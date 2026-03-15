@@ -19,6 +19,30 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type inviteReadDependencies struct {
+	auth       policyDependencies
+	stores     inviteReadStores
+	authClient authv1.AuthServiceClient
+}
+
+type inviteReadStores struct {
+	Campaign    storage.CampaignStore
+	Participant storage.ParticipantStore
+	Invite      storage.InviteStore
+}
+
+func newInviteReadDependencies(stores Stores, authClient authv1.AuthServiceClient) inviteReadDependencies {
+	return inviteReadDependencies{
+		auth: newPolicyDependencies(stores),
+		stores: inviteReadStores{
+			Campaign:    stores.Campaign,
+			Participant: stores.Participant,
+			Invite:      stores.Invite,
+		},
+		authClient: authClient,
+	}
+}
+
 // GetInvite returns an invite by ID.
 func (s *InviteService) GetInvite(ctx context.Context, in *campaignv1.GetInviteRequest) (*campaignv1.GetInviteResponse, error) {
 	if in == nil {
@@ -29,18 +53,18 @@ func (s *InviteService) GetInvite(ctx context.Context, in *campaignv1.GetInviteR
 		return nil, err
 	}
 
-	inv, err := s.stores.Invite.GetInvite(ctx, inviteID)
+	inv, err := s.reads.stores.Invite.GetInvite(ctx, inviteID)
 	if err != nil {
 		return nil, err
 	}
-	campaignRecord, err := s.stores.Campaign.Get(ctx, inv.CampaignID)
+	campaignRecord, err := s.reads.stores.Campaign.Get(ctx, inv.CampaignID)
 	if err != nil {
 		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpCampaignMutate); err != nil {
 		return nil, err
 	}
-	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -57,15 +81,15 @@ func (s *InviteService) GetPublicInvite(ctx context.Context, in *campaignv1.GetP
 		return nil, err
 	}
 
-	inv, err := s.stores.Invite.GetInvite(ctx, inviteID)
+	inv, err := s.reads.stores.Invite.GetInvite(ctx, inviteID)
 	if err != nil {
 		return nil, err
 	}
-	campaignRecord, err := s.stores.Campaign.Get(ctx, inv.CampaignID)
+	campaignRecord, err := s.reads.stores.Campaign.Get(ctx, inv.CampaignID)
 	if err != nil {
 		return nil, err
 	}
-	seat, err := s.stores.Participant.GetParticipant(ctx, inv.CampaignID, inv.ParticipantID)
+	seat, err := s.reads.stores.Participant.GetParticipant(ctx, inv.CampaignID, inv.ParticipantID)
 	if err != nil {
 		return nil, err
 	}
@@ -96,14 +120,14 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 	if err != nil {
 		return nil, err
 	}
-	campaignRecord, err := s.stores.Campaign.Get(ctx, campaignID)
+	campaignRecord, err := s.reads.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
 	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpRead); err != nil {
 		return nil, err
 	}
-	if err := requirePolicy(ctx, s.stores, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
+	if err := requirePolicyWithDependencies(ctx, s.reads.auth, domainauthz.CapabilityReadInvites, campaignRecord); err != nil {
 		return nil, err
 	}
 
@@ -117,7 +141,7 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 		statusFilter = inviteStatusFromProto(in.GetStatus())
 	}
 
-	page, err := s.stores.Invite.ListInvites(ctx, campaignID, strings.TrimSpace(in.GetRecipientUserId()), statusFilter, pageSize, in.GetPageToken())
+	page, err := s.reads.stores.Invite.ListInvites(ctx, campaignID, strings.TrimSpace(in.GetRecipientUserId()), statusFilter, pageSize, in.GetPageToken())
 	if err != nil {
 		return nil, grpcerror.Internal("list invites", err)
 	}
@@ -136,14 +160,14 @@ func (s *InviteService) ListInvites(ctx context.Context, in *campaignv1.ListInvi
 }
 
 func (s *InviteService) publicInviteCreatorUser(ctx context.Context, inv storage.InviteRecord) (*authv1.User, bool) {
-	if s.authClient == nil {
+	if s.reads.authClient == nil {
 		return nil, false
 	}
 	creatorParticipantID := strings.TrimSpace(inv.CreatedByParticipantID)
 	if creatorParticipantID == "" {
 		return nil, false
 	}
-	creatorParticipant, err := s.stores.Participant.GetParticipant(ctx, inv.CampaignID, creatorParticipantID)
+	creatorParticipant, err := s.reads.stores.Participant.GetParticipant(ctx, inv.CampaignID, creatorParticipantID)
 	if err != nil {
 		return nil, false
 	}
@@ -151,7 +175,7 @@ func (s *InviteService) publicInviteCreatorUser(ctx context.Context, inv storage
 	if creatorUserID == "" {
 		return nil, false
 	}
-	userResponse, err := s.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: creatorUserID})
+	userResponse, err := s.reads.authClient.GetUser(ctx, &authv1.GetUserRequest{UserId: creatorUserID})
 	if err != nil || userResponse == nil || userResponse.GetUser() == nil {
 		return nil, false
 	}

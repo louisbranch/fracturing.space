@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -950,6 +951,36 @@ func TestValidateStateFactoryDeterminism_RejectsNonDeterministicCharacterState(t
 	}
 }
 
+func TestValidateStateFactoryDeterminism_RejectsNilRegistry(t *testing.T) {
+	err := ValidateStateFactoryDeterminism(nil)
+	if err == nil {
+		t.Fatal("expected error for nil registry")
+	}
+	if !strings.Contains(err.Error(), "module registry is required") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestValidateStateFactoryDeterminism_RejectsSnapshotFactoryError(t *testing.T) {
+	registry := module.NewRegistry()
+	mod := &fakeModuleWithStateFactory{
+		id:      "system-1",
+		version: "v1",
+		factory: &errorSnapshotFactory{},
+	}
+	if err := registry.Register(mod); err != nil {
+		t.Fatalf("register: %v", err)
+	}
+
+	err := ValidateStateFactoryDeterminism(registry)
+	if err == nil {
+		t.Fatal("expected error for snapshot factory failure")
+	}
+	if !strings.Contains(err.Error(), "NewSnapshotState error") {
+		t.Fatalf("expected NewSnapshotState error, got: %v", err)
+	}
+}
+
 type fakeModuleWithStateFactory struct {
 	id      string
 	version string
@@ -999,6 +1030,16 @@ func (f *nonDeterministicCharacterFactory) NewSnapshotState(_ ids.CampaignID) (a
 func (f *nonDeterministicCharacterFactory) NewCharacterState(_ ids.CampaignID, _ ids.CharacterID, _ string) (any, error) {
 	f.calls++
 	return map[string]int{"hp": f.calls}, nil
+}
+
+type errorSnapshotFactory struct{}
+
+func (f *errorSnapshotFactory) NewSnapshotState(_ ids.CampaignID) (any, error) {
+	return nil, errors.New("boom")
+}
+
+func (f *errorSnapshotFactory) NewCharacterState(_ ids.CampaignID, _ ids.CharacterID, _ string) (any, error) {
+	return map[string]int{"hp": 10}, nil
 }
 
 func TestValidateProjectionRegistries_PassesWithCurrentDomains(t *testing.T) {

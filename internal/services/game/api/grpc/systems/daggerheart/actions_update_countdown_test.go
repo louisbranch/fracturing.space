@@ -7,10 +7,10 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 )
 
@@ -161,7 +161,7 @@ func TestUpdateCountdown_UsesDomainEngine(t *testing.T) {
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 
-	dhStore.Countdowns["camp-1:cd-1"] = storage.DaggerheartCountdown{
+	dhStore.Countdowns["camp-1:cd-1"] = projectionstore.DaggerheartCountdown{
 		CampaignID:  "camp-1",
 		CountdownID: "cd-1",
 		Name:        "Update",

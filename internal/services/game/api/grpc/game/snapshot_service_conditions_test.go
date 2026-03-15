@@ -8,7 +8,6 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -46,7 +45,7 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 	}}
 	stores := Stores{
 		Event:        eventStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 
@@ -115,7 +114,7 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 	}}
 	stores := Stores{
 		Event:        eventStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Write:        domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	}
 
@@ -156,7 +155,7 @@ func TestApplyStressVulnerableCondition_NoOpWhenUnchanged(t *testing.T) {
 	noopDomain := &fakeDomainEngine{}
 	stores := Stores{
 		Event:        eventStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Write:        domainwriteexec.WritePath{Executor: noopDomain},
 	}
 
@@ -190,7 +189,7 @@ func TestApplyStressVulnerableCondition_NoOpWhenAlreadyVulnerable(t *testing.T) 
 	noopDomain := &fakeDomainEngine{}
 	stores := Stores{
 		Event:        eventStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		Write:        domainwriteexec.WritePath{Executor: noopDomain},
 	}
 

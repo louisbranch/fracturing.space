@@ -21,7 +21,7 @@ func (s *ParticipantService) ListParticipants(ctx context.Context, in *campaignv
 		return nil, err
 	}
 
-	page, err := newParticipantApplication(s).ListParticipants(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
+	page, err := s.app.ListParticipants(ctx, campaignID, in.GetPageToken(), in.GetPageSize())
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (s *ParticipantService) GetParticipant(ctx context.Context, in *campaignv1.
 		return nil, err
 	}
 
-	p, err := newParticipantApplication(s).GetParticipant(ctx, campaignID, participantID)
+	p, err := s.app.GetParticipant(ctx, campaignID, participantID)
 	if err != nil {
 		return nil, err
 	}

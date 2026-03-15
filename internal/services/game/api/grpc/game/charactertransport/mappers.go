@@ -7,6 +7,7 @@ import (
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	sharedpronouns "github.com/louisbranch/fracturing.space/internal/services/shared/pronouns"
@@ -62,7 +63,7 @@ func KindToProto(kind character.Kind) campaignv1.CharacterKind {
 
 // DaggerheartProfileToProto converts a Daggerheart profile projection into the
 // game protobuf read model.
-func DaggerheartProfileToProto(campaignID, characterID string, profile storage.DaggerheartCharacterProfile) *campaignv1.CharacterProfile {
+func DaggerheartProfileToProto(campaignID, characterID string, profile projectionstore.DaggerheartCharacterProfile) *campaignv1.CharacterProfile {
 	return &campaignv1.CharacterProfile{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
@@ -104,7 +105,7 @@ func DaggerheartProfileToProto(campaignID, characterID string, profile storage.D
 
 // DaggerheartStateToProto converts a Daggerheart state projection into the game
 // protobuf read model.
-func DaggerheartStateToProto(campaignID, characterID string, state storage.DaggerheartCharacterState) *campaignv1.CharacterState {
+func DaggerheartStateToProto(campaignID, characterID string, state projectionstore.DaggerheartCharacterState) *campaignv1.CharacterState {
 	return &campaignv1.CharacterState{
 		CampaignId:  campaignID,
 		CharacterId: characterID,
@@ -124,7 +125,7 @@ func DaggerheartStateToProto(campaignID, characterID string, state storage.Dagge
 
 // DaggerheartExperiencesToProto converts Daggerheart experiences to the system
 // protobuf read model.
-func DaggerheartExperiencesToProto(experiences []storage.DaggerheartExperience) []*daggerheartv1.DaggerheartExperience {
+func DaggerheartExperiencesToProto(experiences []projectionstore.DaggerheartExperience) []*daggerheartv1.DaggerheartExperience {
 	if len(experiences) == 0 {
 		return nil
 	}

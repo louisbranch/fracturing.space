@@ -6,6 +6,7 @@
 //
 // This package is responsible for:
 //   - command validation for join/leave/profile updates/seating changes,
+//   - keeping join/update/lifecycle/identity-binding rules in workflow-local decider files,
 //   - replaying participant events into compact membership state,
 //   - and keeping access/identity fields aligned with campaign authorization.
 //

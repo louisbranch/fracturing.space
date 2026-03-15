@@ -5,12 +5,12 @@ import (
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 func TestBuildDaggerheartCharacterStatePatch_DefaultsAndConditionNormalization(t *testing.T) {
-	current := storage.DaggerheartCharacterState{HopeMax: 0}
-	profile := storage.DaggerheartCharacterProfile{ArmorMax: -1}
+	current := projectionstore.DaggerheartCharacterState{HopeMax: 0}
+	profile := projectionstore.DaggerheartCharacterProfile{ArmorMax: -1}
 
 	patch, err := buildDaggerheartCharacterStatePatch(current, profile, &daggerheartv1.DaggerheartCharacterState{
 		Hp:         6,
@@ -40,7 +40,7 @@ func TestBuildDaggerheartCharacterStatePatch_DefaultsAndConditionNormalization(t
 }
 
 func TestDaggerheartCharacterStatePatchStateUnchanged_DefaultsEmptyLifeStateToAlive(t *testing.T) {
-	current := storage.DaggerheartCharacterState{
+	current := projectionstore.DaggerheartCharacterState{
 		Hp:      10,
 		Hope:    4,
 		HopeMax: 6,

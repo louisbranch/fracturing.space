@@ -9,7 +9,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
-	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -19,7 +20,7 @@ import (
 )
 
 func TestGetCharacterCreationProgress_Success(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "c1",
 		CharacterID: "ch1",
 		Level:       1,
@@ -46,7 +47,7 @@ func TestGetCharacterCreationProgress_Success(t *testing.T) {
 }
 
 func TestApplyCharacterCreationStep_RequiresNextStep(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "c1",
 		CharacterID: "ch1",
 		Level:       1,
@@ -70,7 +71,7 @@ func TestApplyCharacterCreationStep_RequiresNextStep(t *testing.T) {
 }
 
 func TestApplyCharacterCreationStep_ClassStepSuccess(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "c1",
 		CharacterID: "ch1",
 		Level:       1,
@@ -105,7 +106,7 @@ func TestApplyCharacterCreationStep_ClassStepSuccess(t *testing.T) {
 }
 
 func TestApplyCharacterCreationStep_TraitsRejectsInvalidDistribution(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "c1",
 		CharacterID: "ch1",
 		Level:       1,
@@ -133,7 +134,7 @@ func TestApplyCharacterCreationStep_TraitsRejectsInvalidDistribution(t *testing.
 }
 
 func TestApplyCharacterCreationStep_EquipmentRejectsInvalidPotion(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:      "c1",
 		CharacterID:     "ch1",
 		Level:           1,
@@ -175,7 +176,7 @@ func TestApplyCharacterCreationStep_EquipmentRejectsInvalidPotion(t *testing.T) 
 }
 
 func TestApplyCharacterCreationStep_DomainCardsRejectsClassDomainMismatch(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:           "c1",
 		CharacterID:          "ch1",
 		Level:                1,
@@ -203,7 +204,7 @@ func TestApplyCharacterCreationStep_DomainCardsRejectsClassDomainMismatch(t *tes
 		Presence:             0,
 		Knowledge:            -1,
 		Background:           "Watch captain",
-		Experiences:          []storage.DaggerheartExperience{{Name: "Shield wall", Modifier: 2}, {Name: "Patrol routes", Modifier: 2}},
+		Experiences:          []projectionstore.DaggerheartExperience{{Name: "Shield wall", Modifier: 2}, {Name: "Patrol routes", Modifier: 2}},
 	})
 
 	_, err := svc.ApplyCharacterCreationStep(contextWithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
@@ -221,7 +222,7 @@ func TestApplyCharacterCreationStep_DomainCardsRejectsClassDomainMismatch(t *tes
 }
 
 func TestResetCharacterCreationWorkflow_Success(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:           "c1",
 		CharacterID:          "ch1",
 		Level:                1,
@@ -246,7 +247,7 @@ func TestResetCharacterCreationWorkflow_Success(t *testing.T) {
 		Background:           "Watch captain",
 		Connections:          "Trusted by the quartermaster",
 		DomainCardIDs:        []string{"domain-card.ward"},
-		Experiences:          []storage.DaggerheartExperience{{Name: "Tactics", Modifier: 2}},
+		Experiences:          []projectionstore.DaggerheartExperience{{Name: "Tactics", Modifier: 2}},
 		MajorThreshold:       8,
 		SevereThreshold:      12,
 	})
@@ -267,7 +268,7 @@ func TestResetCharacterCreationWorkflow_Success(t *testing.T) {
 }
 
 func TestApplyCharacterCreationWorkflow_Success(t *testing.T) {
-	svc := newWorkflowCharacterService(t, storage.DaggerheartCharacterProfile{
+	svc := newWorkflowCharacterService(t, projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "c1",
 		CharacterID: "ch1",
 		Level:       1,
@@ -310,7 +311,7 @@ func TestApplyCharacterCreationWorkflow_Success(t *testing.T) {
 	}
 }
 
-func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharacterProfile) *CharacterService {
+func newWorkflowCharacterService(t *testing.T, profile projectionstore.DaggerheartCharacterProfile) *CharacterService {
 	t.Helper()
 
 	participantStore := characterManagerParticipantStore("c1")
@@ -327,7 +328,7 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 
 	dhStore := newFakeDaggerheartStore()
 	if profile.CharacterID != "" {
-		dhStore.profiles["c1"] = map[string]storage.DaggerheartCharacterProfile{
+		dhStore.profiles["c1"] = map[string]projectionstore.DaggerheartCharacterProfile{
 			"ch1": profile,
 		}
 	}
@@ -344,9 +345,9 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 		Campaign:     campaignStore,
 		Participant:  participantStore,
 		Character:    characterStore,
-		SystemStores: systemmanifest.ProjectionStores{Daggerheart: dhStore},
+		SystemStores: SystemStores{Daggerheart: dhStore},
 		DaggerheartContent: workflowContentStore{
-			classes: map[string]storage.DaggerheartClass{
+			classes: map[string]contentstore.DaggerheartClass{
 				"class.guardian": {
 					ID:              "class.guardian",
 					Name:            "Guardian",
@@ -355,24 +356,24 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 					DomainIDs:       []string{"domain.valor", "domain.blade"},
 				},
 			},
-			subclasses: map[string]storage.DaggerheartSubclass{
+			subclasses: map[string]contentstore.DaggerheartSubclass{
 				"subclass.stalwart": {ID: "subclass.stalwart", ClassID: "class.guardian", Name: "Stalwart"},
 			},
-			heritages: map[string]storage.DaggerheartHeritage{
+			heritages: map[string]contentstore.DaggerheartHeritage{
 				"heritage.ancestry.clank":   {ID: "heritage.ancestry.clank", Kind: "ancestry", Name: "Clank"},
 				"heritage.community.farmer": {ID: "heritage.community.farmer", Kind: "community", Name: "Farmer"},
 			},
-			weapons: map[string]storage.DaggerheartWeapon{
+			weapons: map[string]contentstore.DaggerheartWeapon{
 				"weapon.longsword": {ID: "weapon.longsword", Tier: 1, Category: "primary"},
 			},
-			armors: map[string]storage.DaggerheartArmor{
+			armors: map[string]contentstore.DaggerheartArmor{
 				"armor.gambeson-armor": {ID: "armor.gambeson-armor", Tier: 1, ArmorScore: 1, BaseMajorThreshold: 8, BaseSevereThreshold: 14},
 			},
-			items: map[string]storage.DaggerheartItem{
+			items: map[string]contentstore.DaggerheartItem{
 				"item.minor-health-potion":  {ID: "item.minor-health-potion"},
 				"item.minor-stamina-potion": {ID: "item.minor-stamina-potion"},
 			},
-			domainCards: map[string]storage.DaggerheartDomainCard{
+			domainCards: map[string]contentstore.DaggerheartDomainCard{
 				"domain-card.ward":         {ID: "domain-card.ward", DomainID: "domain.valor", Name: "Ward", Level: 1},
 				"domain-card.arcana-bolt":  {ID: "domain-card.arcana-bolt", DomainID: "domain.arcana", Name: "Arcana Bolt", Level: 1},
 				"domain-card.blade-strike": {ID: "domain-card.blade-strike", DomainID: "domain.blade", Name: "Blade Strike", Level: 1},
@@ -384,68 +385,68 @@ func newWorkflowCharacterService(t *testing.T, profile storage.DaggerheartCharac
 }
 
 type workflowContentStore struct {
-	storage.DaggerheartContentReadStore
-	classes     map[string]storage.DaggerheartClass
-	subclasses  map[string]storage.DaggerheartSubclass
-	heritages   map[string]storage.DaggerheartHeritage
-	weapons     map[string]storage.DaggerheartWeapon
-	armors      map[string]storage.DaggerheartArmor
-	items       map[string]storage.DaggerheartItem
-	domainCards map[string]storage.DaggerheartDomainCard
+	contentstore.DaggerheartContentReadStore
+	classes     map[string]contentstore.DaggerheartClass
+	subclasses  map[string]contentstore.DaggerheartSubclass
+	heritages   map[string]contentstore.DaggerheartHeritage
+	weapons     map[string]contentstore.DaggerheartWeapon
+	armors      map[string]contentstore.DaggerheartArmor
+	items       map[string]contentstore.DaggerheartItem
+	domainCards map[string]contentstore.DaggerheartDomainCard
 }
 
-func (s workflowContentStore) GetDaggerheartClass(_ context.Context, id string) (storage.DaggerheartClass, error) {
+func (s workflowContentStore) GetDaggerheartClass(_ context.Context, id string) (contentstore.DaggerheartClass, error) {
 	class, ok := s.classes[id]
 	if !ok {
-		return storage.DaggerheartClass{}, storage.ErrNotFound
+		return contentstore.DaggerheartClass{}, storage.ErrNotFound
 	}
 	return class, nil
 }
 
-func (s workflowContentStore) GetDaggerheartSubclass(_ context.Context, id string) (storage.DaggerheartSubclass, error) {
+func (s workflowContentStore) GetDaggerheartSubclass(_ context.Context, id string) (contentstore.DaggerheartSubclass, error) {
 	subclass, ok := s.subclasses[id]
 	if !ok {
-		return storage.DaggerheartSubclass{}, storage.ErrNotFound
+		return contentstore.DaggerheartSubclass{}, storage.ErrNotFound
 	}
 	return subclass, nil
 }
 
-func (s workflowContentStore) GetDaggerheartHeritage(_ context.Context, id string) (storage.DaggerheartHeritage, error) {
+func (s workflowContentStore) GetDaggerheartHeritage(_ context.Context, id string) (contentstore.DaggerheartHeritage, error) {
 	heritage, ok := s.heritages[id]
 	if !ok {
-		return storage.DaggerheartHeritage{}, storage.ErrNotFound
+		return contentstore.DaggerheartHeritage{}, storage.ErrNotFound
 	}
 	return heritage, nil
 }
 
-func (s workflowContentStore) GetDaggerheartDomainCard(_ context.Context, id string) (storage.DaggerheartDomainCard, error) {
+func (s workflowContentStore) GetDaggerheartDomainCard(_ context.Context, id string) (contentstore.DaggerheartDomainCard, error) {
 	card, ok := s.domainCards[id]
 	if !ok {
-		return storage.DaggerheartDomainCard{}, storage.ErrNotFound
+		return contentstore.DaggerheartDomainCard{}, storage.ErrNotFound
 	}
 	return card, nil
 }
 
-func (s workflowContentStore) GetDaggerheartWeapon(_ context.Context, id string) (storage.DaggerheartWeapon, error) {
+func (s workflowContentStore) GetDaggerheartWeapon(_ context.Context, id string) (contentstore.DaggerheartWeapon, error) {
 	weapon, ok := s.weapons[id]
 	if !ok {
-		return storage.DaggerheartWeapon{}, storage.ErrNotFound
+		return contentstore.DaggerheartWeapon{}, storage.ErrNotFound
 	}
 	return weapon, nil
 }
 
-func (s workflowContentStore) GetDaggerheartArmor(_ context.Context, id string) (storage.DaggerheartArmor, error) {
+func (s workflowContentStore) GetDaggerheartArmor(_ context.Context, id string) (contentstore.DaggerheartArmor, error) {
 	armor, ok := s.armors[id]
 	if !ok {
-		return storage.DaggerheartArmor{}, storage.ErrNotFound
+		return contentstore.DaggerheartArmor{}, storage.ErrNotFound
 	}
 	return armor, nil
 }
 
-func (s workflowContentStore) GetDaggerheartItem(_ context.Context, id string) (storage.DaggerheartItem, error) {
+func (s workflowContentStore) GetDaggerheartItem(_ context.Context, id string) (contentstore.DaggerheartItem, error) {
 	item, ok := s.items[id]
 	if !ok {
-		return storage.DaggerheartItem{}, storage.ErrNotFound
+		return contentstore.DaggerheartItem{}, storage.ErrNotFound
 	}
 	return item, nil
 }

@@ -71,11 +71,15 @@ func (s *Server) startProjectionApplyOutboxShadowWorker(ctx context.Context) fun
 	if s == nil || !s.projectionApplyOutboxShadowWorkerEnabled || s.stores == nil || s.stores.events == nil {
 		return func() {}
 	}
+	processor := s.stores.events.ProjectionApplyOutboxStore()
+	if processor == nil {
+		return func() {}
+	}
 
 	return startCancelableLoop(ctx, func(workerCtx context.Context) {
 		runProjectionApplyOutboxShadowWorker(
 			workerCtx,
-			s.stores.events,
+			processor,
 			projectionApplyOutboxShadowWorkerInterval,
 			projectionApplyOutboxShadowWorkerBatch,
 			time.Now,
@@ -91,11 +95,15 @@ func (s *Server) startProjectionApplyOutboxWorker(ctx context.Context) func() {
 	if s == nil || !s.projectionApplyOutboxWorkerEnabled || s.stores == nil || s.stores.events == nil || s.projectionApplyOutboxApply == nil {
 		return func() {}
 	}
+	processor := s.stores.events.ProjectionApplyOutboxStore()
+	if processor == nil {
+		return func() {}
+	}
 
 	return startCancelableLoop(ctx, func(workerCtx context.Context) {
 		runProjectionApplyOutboxWorker(
 			workerCtx,
-			s.stores.events,
+			processor,
 			s.projectionApplyOutboxApply,
 			projectionApplyOutboxWorkerInterval,
 			projectionApplyOutboxWorkerBatch,

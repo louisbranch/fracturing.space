@@ -19,13 +19,15 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/projection"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/integrity"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite"
+	sqlitecoreprojection "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/coreprojection"
+	sqliteeventjournal "github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/eventjournal"
 )
 
 const (
@@ -71,6 +73,10 @@ type envConfig struct {
 	EventsDBPath      string        `env:"FRACTURING_SPACE_GAME_EVENTS_DB_PATH"`
 	ProjectionsDBPath string        `env:"FRACTURING_SPACE_GAME_PROJECTIONS_DB_PATH"`
 	Timeout           time.Duration `env:"FRACTURING_SPACE_MAINTENANCE_TIMEOUT" envDefault:"10m"`
+}
+
+type daggerheartProjectionStoreProvider interface {
+	DaggerheartProjectionStore() projectionstore.Store
 }
 
 // ParseConfig parses flags into a Config.
@@ -134,6 +140,14 @@ func ParseConfig(fs *flag.FlagSet, args []string) (Config, error) {
 	}
 	cfg.Command = command
 	return cfg, nil
+}
+
+func daggerheartProjectionStoreFromSource(storeSource any) projectionstore.Store {
+	if provider, ok := storeSource.(daggerheartProjectionStoreProvider); ok {
+		return provider.DaggerheartProjectionStore()
+	}
+	store, _ := storeSource.(projectionstore.Store)
+	return store
 }
 
 func defaultConfig() (Config, error) {
@@ -378,7 +392,7 @@ func runOutboxReportCommand(ctx context.Context, cfg Config, out io.Writer, errO
 		return err
 	}
 	defer closeStore(errOut, "event store", eventStore)
-	return runOutboxReport(ctx, eventStore, cfg.OutboxStatus, cfg.OutboxLimit, cfg.JSONOutput, out, errOut)
+	return runOutboxReport(ctx, eventStore.ProjectionApplyOutboxStore(), cfg.OutboxStatus, cfg.OutboxLimit, cfg.JSONOutput, out, errOut)
 }
 
 func runOutboxRequeueCommand(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error {
@@ -389,7 +403,7 @@ func runOutboxRequeueCommand(ctx context.Context, cfg Config, out io.Writer, err
 	defer closeStore(errOut, "event store", eventStore)
 	return runOutboxRequeue(
 		ctx,
-		eventStore,
+		eventStore.ProjectionApplyOutboxStore(),
 		cfg.OutboxRequeueCampaignID,
 		cfg.OutboxRequeueSeq,
 		time.Now().UTC(),
@@ -407,7 +421,7 @@ func runOutboxRequeueDeadCommand(ctx context.Context, cfg Config, out io.Writer,
 	defer closeStore(errOut, "event store", eventStore)
 	return runOutboxRequeueDeadRows(
 		ctx,
-		eventStore,
+		eventStore.ProjectionApplyOutboxStore(),
 		cfg.OutboxRequeueDeadLimit,
 		time.Now().UTC(),
 		cfg.JSONOutput,
@@ -588,7 +602,7 @@ func runCampaign(ctx context.Context, eventStore storage.EventStore, projStore s
 		result.ExitCode = 1
 		return result
 	}
-	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(projStore))
+	systemAdapters, err := systemmanifest.AdapterRegistry(projStore)
 	if err != nil {
 		result.Error = fmt.Sprintf("build projection adapters: %v", err)
 		result.ExitCode = 1
@@ -717,7 +731,7 @@ func printResult(out io.Writer, errOut io.Writer, result runResult, prefix strin
 	fmt.Fprintf(out, "%sReplayed snapshot-related events for campaign %s through seq %d\n", prefix, result.CampaignID, report.LastSeq)
 }
 
-func openStores(ctx context.Context, eventsPath, projectionsPath string) (*sqlite.Store, *sqlite.Store, error) {
+func openStores(ctx context.Context, eventsPath, projectionsPath string) (*sqliteeventjournal.Store, *sqlitecoreprojection.Store, error) {
 	eventStore, err := openEventStore(ctx, eventsPath)
 	if err != nil {
 		return nil, nil, err
@@ -731,8 +745,8 @@ func openStores(ctx context.Context, eventsPath, projectionsPath string) (*sqlit
 }
 
 type outboxInspector interface {
-	GetProjectionApplyOutboxSummary(context.Context) (sqlite.ProjectionApplyOutboxSummary, error)
-	ListProjectionApplyOutboxRows(context.Context, string, int) ([]sqlite.ProjectionApplyOutboxEntry, error)
+	GetProjectionApplyOutboxSummary(context.Context) (storage.ProjectionApplyOutboxSummary, error)
+	ListProjectionApplyOutboxRows(context.Context, string, int) ([]storage.ProjectionApplyOutboxEntry, error)
 }
 
 type outboxRequeuer interface {
@@ -741,11 +755,11 @@ type outboxRequeuer interface {
 }
 
 type outboxReport struct {
-	Mode    string                              `json:"mode"`
-	Status  string                              `json:"status,omitempty"`
-	Limit   int                                 `json:"limit"`
-	Summary sqlite.ProjectionApplyOutboxSummary `json:"summary"`
-	Rows    []sqlite.ProjectionApplyOutboxEntry `json:"rows"`
+	Mode    string                               `json:"mode"`
+	Status  string                               `json:"status,omitempty"`
+	Limit   int                                  `json:"limit"`
+	Summary storage.ProjectionApplyOutboxSummary `json:"summary"`
+	Rows    []storage.ProjectionApplyOutboxEntry `json:"rows"`
 }
 
 type outboxRequeueResult struct {
@@ -963,7 +977,7 @@ func buildEventRegistry() (*event.Registry, error) {
 	return registries.Events, nil
 }
 
-func openEventStore(ctx context.Context, path string) (*sqlite.Store, error) {
+func openEventStore(ctx context.Context, path string) (*sqliteeventjournal.Store, error) {
 	cleanPath := filepath.Clean(path)
 	if cleanPath == "." || cleanPath == "" {
 		return nil, fmt.Errorf("events db path is required")
@@ -981,7 +995,7 @@ func openEventStore(ctx context.Context, path string) (*sqlite.Store, error) {
 	if err != nil {
 		return nil, fmt.Errorf("build registries: %w", err)
 	}
-	store, err := sqlite.OpenEvents(cleanPath, keyring, registry)
+	store, err := sqliteeventjournal.Open(cleanPath, keyring, registry)
 	if err != nil {
 		return nil, fmt.Errorf("open events store: %w", err)
 	}
@@ -995,7 +1009,7 @@ func openEventStore(ctx context.Context, path string) (*sqlite.Store, error) {
 	return store, nil
 }
 
-func openProjectionStore(path string) (*sqlite.Store, error) {
+func openProjectionStore(path string) (*sqlitecoreprojection.Store, error) {
 	cleanPath := filepath.Clean(path)
 	if cleanPath == "." || cleanPath == "" {
 		return nil, fmt.Errorf("projections db path is required")
@@ -1005,7 +1019,7 @@ func openProjectionStore(path string) (*sqlite.Store, error) {
 			return nil, fmt.Errorf("create storage dir: %w", err)
 		}
 	}
-	store, err := sqlite.OpenProjections(cleanPath)
+	store, err := sqlitecoreprojection.Open(cleanPath)
 	if err != nil {
 		return nil, fmt.Errorf("open projections store: %w", err)
 	}
@@ -1112,7 +1126,7 @@ func checkSnapshotIntegrity(ctx context.Context, eventStore storage.EventStore, 
 	}
 	defer os.Remove(tmpFile.Name())
 
-	scratch, err := sqlite.OpenProjections(tmpFile.Name())
+	scratch, err := sqlitecoreprojection.Open(tmpFile.Name())
 	if err != nil {
 		return report, warnings, fmt.Errorf("open scratch store: %w", err)
 	}
@@ -1142,7 +1156,7 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 		return report, warnings, fmt.Errorf("seed campaign: %w", err)
 	}
 
-	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(scratch))
+	systemAdapters, err := systemmanifest.AdapterRegistry(scratch)
 	if err != nil {
 		return report, warnings, fmt.Errorf("build projection adapters: %w", err)
 	}
@@ -1156,8 +1170,8 @@ func checkIntegrityWithStores(ctx context.Context, eventStore storage.EventStore
 	}
 	report.LastSeq = lastSeq
 
-	sourceDH := systemmanifest.ExtractProjectionStores(source).Daggerheart
-	scratchDH := systemmanifest.ExtractProjectionStores(scratch).Daggerheart
+	sourceDH := daggerheartProjectionStoreFromSource(source)
+	scratchDH := daggerheartProjectionStoreFromSource(scratch)
 	if sourceDH == nil || scratchDH == nil {
 		return report, warnings, nil
 	}
@@ -1271,7 +1285,7 @@ func runGapRepair(ctx context.Context, eventStore storage.EventStore, projStore 
 		errOut = io.Discard
 	}
 
-	systemAdapters, err := systemmanifest.AdapterRegistry(systemmanifest.ExtractProjectionStores(projStore))
+	systemAdapters, err := systemmanifest.AdapterRegistry(projStore)
 	if err != nil {
 		return fmt.Errorf("build projection adapters: %w", err)
 	}

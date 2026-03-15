@@ -14,13 +14,13 @@ import (
 // SnapshotService implements the game.v1.SnapshotService gRPC API.
 type SnapshotService struct {
 	campaignv1.UnimplementedSnapshotServiceServer
-	stores Stores
+	app snapshotApplication
 }
 
 // NewSnapshotService creates a SnapshotService with default dependencies.
 func NewSnapshotService(stores Stores) *SnapshotService {
 	return &SnapshotService{
-		stores: stores,
+		app: newSnapshotApplicationWithDependencies(stores),
 	}
 }
 
@@ -35,7 +35,7 @@ func (s *SnapshotService) GetSnapshot(ctx context.Context, in *campaignv1.GetSna
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	readState, err := newSnapshotApplication(s).GetSnapshot(ctx, campaignID)
+	readState, err := s.app.GetSnapshot(ctx, campaignID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func (s *SnapshotService) PatchCharacterState(ctx context.Context, in *campaignv
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	characterID, dhState, err := newSnapshotApplication(s).PatchCharacterState(ctx, campaignID, in)
+	characterID, dhState, err := s.app.PatchCharacterState(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (s *SnapshotService) UpdateSnapshotState(ctx context.Context, in *campaignv
 		return nil, status.Error(codes.InvalidArgument, "campaign id is required")
 	}
 
-	dhSnapshot, err := newSnapshotApplication(s).UpdateSnapshotState(ctx, campaignID, in)
+	dhSnapshot, err := s.app.UpdateSnapshotState(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}

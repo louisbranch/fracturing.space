@@ -6,13 +6,14 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
-	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
 // --- ApplyRollOutcome tests ---
@@ -27,9 +28,9 @@ func TestApplyRollOutcome_Success(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			sdKeyCharacterID: "char-1",
-			sdKeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
-			sdKeyHopeFear:    true,
+			workflowtransport.KeyCharacterID: "char-1",
+			workflowtransport.KeyRollKind:    pb.RollKind_ROLL_KIND_ACTION.String(),
+			workflowtransport.KeyHopeFear:    true,
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -131,7 +132,7 @@ func TestApplyRollOutcome_UsesDomainEngine(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			sdKeyCharacterID: "char-1",
+			workflowtransport.KeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -258,7 +259,7 @@ func TestApplyRollOutcome_UsesSystemAndCoreCommandBoundary(t *testing.T) {
 		Results:   map[string]any{"d20": 20},
 		Outcome:   pb.Outcome_SUCCESS_WITH_HOPE.String(),
 		SystemData: map[string]any{
-			sdKeyCharacterID: "char-1",
+			workflowtransport.KeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)
@@ -349,7 +350,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 	svc := newActionTestService()
 	eventStore := svc.stores.Event.(*fakeEventStore)
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
-	dhStore.Snapshots["camp-1"] = storage.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 1}
+	dhStore.Snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 1}
 	now := testTimestamp
 
 	rollPayload := action.RollResolvePayload{
@@ -358,7 +359,7 @@ func TestApplyRollOutcome_UsesDomainEngineForGmFear(t *testing.T) {
 		Results:   map[string]any{"d20": 1},
 		Outcome:   pb.Outcome_FAILURE_WITH_FEAR.String(),
 		SystemData: map[string]any{
-			sdKeyCharacterID: "char-1",
+			workflowtransport.KeyCharacterID: "char-1",
 		},
 	}
 	rollJSON, err := json.Marshal(rollPayload)

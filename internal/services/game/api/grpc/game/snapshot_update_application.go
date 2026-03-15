@@ -13,6 +13,7 @@ import (
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	domainauthz "github.com/louisbranch/fracturing.space/internal/services/game/domain/authz"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -20,30 +21,30 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID string, in *campaignv1.UpdateSnapshotStateRequest) (storage.DaggerheartSnapshot, error) {
+func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID string, in *campaignv1.UpdateSnapshotStateRequest) (projectionstore.DaggerheartSnapshot, error) {
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return storage.DaggerheartSnapshot{}, err
+		return projectionstore.DaggerheartSnapshot{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return storage.DaggerheartSnapshot{}, err
+		return projectionstore.DaggerheartSnapshot{}, err
 	}
 	if err := requirePolicyWithDependencies(ctx, a.auth, domainauthz.CapabilityManageSessions, c); err != nil {
-		return storage.DaggerheartSnapshot{}, err
+		return projectionstore.DaggerheartSnapshot{}, err
 	}
 
 	// Handle Daggerheart snapshot update
 	if dhUpdate := in.GetDaggerheart(); dhUpdate != nil {
 		gmFear := int(dhUpdate.GetGmFear())
 		if gmFear < daggerheart.GMFearMin || gmFear > daggerheart.GMFearMax {
-			return storage.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheart.GMFearMin, daggerheart.GMFearMax)
+			return projectionstore.DaggerheartSnapshot{}, status.Errorf(codes.InvalidArgument, "gm_fear %d exceeds range %d..%d", gmFear, daggerheart.GMFearMin, daggerheart.GMFearMax)
 		}
 		existingSnap, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil && !errors.Is(err, storage.ErrNotFound) {
-			return storage.DaggerheartSnapshot{}, grpcerror.Internal("load existing daggerheart snapshot", err)
+			return projectionstore.DaggerheartSnapshot{}, grpcerror.Internal("load existing daggerheart snapshot", err)
 		}
 		if errors.Is(err, storage.ErrNotFound) {
-			existingSnap = storage.DaggerheartSnapshot{
+			existingSnap = projectionstore.DaggerheartSnapshot{
 				CampaignID: campaignID,
 				GMFear:     daggerheart.GMFearDefault,
 			}
@@ -60,7 +61,7 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 		payload := daggerheart.GMFearSetPayload{After: &after}
 		payloadJSON, err := json.Marshal(payload)
 		if err != nil {
-			return storage.DaggerheartSnapshot{}, grpcerror.Internal("encode payload", err)
+			return projectionstore.DaggerheartSnapshot{}, grpcerror.Internal("encode payload", err)
 		}
 		actorTypeForCommand := command.ActorTypeSystem
 		if actorID != "" {
@@ -93,16 +94,16 @@ func (a snapshotApplication) UpdateSnapshotState(ctx context.Context, campaignID
 			},
 		)
 		if err != nil {
-			return storage.DaggerheartSnapshot{}, err
+			return projectionstore.DaggerheartSnapshot{}, err
 		}
 
 		dhSnapshot, err := a.stores.Daggerheart.GetDaggerheartSnapshot(ctx, campaignID)
 		if err != nil {
-			return storage.DaggerheartSnapshot{}, grpcerror.Internal("load daggerheart snapshot", err)
+			return projectionstore.DaggerheartSnapshot{}, grpcerror.Internal("load daggerheart snapshot", err)
 		}
 
 		return dhSnapshot, nil
 	}
 
-	return storage.DaggerheartSnapshot{}, status.Error(codes.InvalidArgument, "no system snapshot update provided")
+	return projectionstore.DaggerheartSnapshot{}, status.Error(codes.InvalidArgument, "no system snapshot update provided")
 }

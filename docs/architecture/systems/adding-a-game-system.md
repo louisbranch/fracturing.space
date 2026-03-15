@@ -4,17 +4,18 @@ parent: "Game systems"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-11"
 ---
 
 # Adding a Game System
 
-Step-by-step guide for registering a new game system in the game service. Use Daggerheart as the reference implementation for manifest/module/adapter
-shape (`internal/services/game/domain/bridge/daggerheart/`), but do not copy
-its intentionally-nil metadata hooks unless your system truly lacks those
-surfaces too.
+Step-by-step guide for registering a new game system in the game service. Use
+Daggerheart as the reference implementation for manifest/module/adapter shape
+(`internal/services/game/domain/bridge/daggerheart/`), but do not copy its
+surface area blindly. New systems should follow the manifest-driven path
+described here rather than wiring startup through ad hoc app or engine edits.
 
-## Overview
+## Required parts
 
 A game system requires three required implementations plus optional metadata
 hooks registered through a single
@@ -28,81 +29,47 @@ any mismatches between the registered pieces automatically.
 | Adapter | `bridge.Adapter` | Projection event handlers, snapshot, profile adapter |
 | Manifest Entry | `manifest.SystemDescriptor` | Unifying builder that wires the three above |
 
+## Authoring path
+
+Built-in system registration should read as one sequence:
+
+1. Implement the system package under `internal/services/game/domain/bridge/<system>/`.
+2. Add one `manifest.SystemDescriptor` entry in `internal/services/game/domain/bridge/manifest/manifest.go`.
+3. If needed, add the system-owned projection store contract and backend wiring.
+4. Run module conformance, startup parity, generated event docs, and scenario checks.
+
 ## Step 1: Create the system package
 
-```
-internal/services/game/domain/bridge/<system-name>/
-  module.go          # Module implementation
-  decider.go         # Command decision logic
-  folder.go          # Event fold logic
-  state.go           # State types and factory
-  adapter.go         # Projection adapter
-  registry_system.go # Metadata system
-  payload.go         # Event payload types
-  commands.go        # Command type constants
-  events.go          # Event type constants
-```
+Recommended layout:
+
+- `module.go`: module implementation and registration
+- `decider.go`: command decisions
+- `folder.go`: replay fold
+- `state.go`: state types and factory
+- `adapter.go`: projection apply
+- `registry_system.go`: metadata system
+- typed payload / command / event files as needed
 
 ## Step 2: Implement the Module
 
-The module registers commands and events with the domain engine:
-
-```go
-type Module struct {
-    decider module.Decider
-    folder  module.Folder
-    factory module.StateFactory
-}
-
-func (m *Module) ID() string      { return SystemID }
-func (m *Module) Version() string { return SystemVersion }
-
-func (m *Module) RegisterCommands(r *command.Registry) error { ... }
-func (m *Module) RegisterEvents(r *event.Registry) error     { ... }
-func (m *Module) Decider() module.Decider                    { return m.decider }
-func (m *Module) Folder() module.Folder                      { return m.folder }
-func (m *Module) StateFactory() module.StateFactory          { return m.factory }
-func (m *Module) EmittableEventTypes() []event.Type          { ... }
-```
-
-Run the conformance test suite in `domain/module/testkit/` against your
-module to validate coverage.
+Implement `module.Module` with explicit command registration, event
+registration, decider, folder, state factory, and emittable event types. Run
+`internal/services/game/domain/module/testkit/` against the module to validate
+coverage and durable write-path behavior.
 
 ## Step 3: Implement the Metadata System
 
-```go
-type RegistrySystem struct{}
-
-func (r *RegistrySystem) ID() bridge.SystemID { return bridge.SystemID<Name> }
-func (r *RegistrySystem) Version() string     { return SystemVersion }
-func (r *RegistrySystem) Name() string        { return "<Display Name>" }
-func (r *RegistrySystem) RegistryMetadata() bridge.RegistryMetadata { ... }
-func (r *RegistrySystem) StateHandlerFactory() bridge.StateHandlerFactory { ... }
-func (r *RegistrySystem) OutcomeApplier() bridge.OutcomeApplier           { ... }
-```
-`StateHandlerFactory` and `OutcomeApplier` are optional. Return `nil` only when
-the system does not expose those surfaces yet, and document that decision in
-the package comment and registry-system comments.
+Implement `bridge.GameSystem` for system name/version metadata and any optional
+state-handler or outcome-application hooks. `StateHandlerFactory` and
+`OutcomeApplier` may be `nil`, but only when the system truly does not expose
+those surfaces yet; document that choice in package comments.
 
 ## Step 4: Implement the Adapter
 
-The adapter handles event projection for your system:
-
-```go
-type Adapter struct {
-    store  storage.<System>Store
-    router *module.AdapterRouter
-}
-
-func (a *Adapter) ID() string      { return SystemID }
-func (a *Adapter) Version() string { return SystemVersion }
-func (a *Adapter) Apply(ctx context.Context, evt event.Event) error { ... }
-func (a *Adapter) HandledTypes() []event.Type { ... }
-```
-
-If your system supports character profiles, model them as typed system-owned
-commands/events and handle them in your normal module adapter/folder. Do not
-route profile writes through a core `map[string]any` envelope.
+Implement `bridge.Adapter` with explicit handled event types and idempotent
+projection apply behavior. If the system supports character profiles, model
+them as typed system-owned commands/events; do not route profile writes through
+core `map[string]any` envelopes.
 
 ## Step 5: Add the Manifest Entry
 
@@ -115,36 +82,53 @@ In `internal/services/game/domain/bridge/manifest/manifest.go`, add a
     Version:             <system>.SystemVersion,
     BuildModule:         func() domainsystem.Module { return <system>.NewModule() },
     BuildMetadataSystem: func() domainbridge.GameSystem { return <system>.NewRegistrySystem() },
-    BuildAdapter: func(stores ProjectionStores) domainbridge.Adapter {
-        if stores.<System> == nil { return nil }
-        return <system>.NewAdapter(stores.<System>)
+    BuildAdapter: func(storeSource any) domainbridge.Adapter {
+        store := <system>.ProjectionStoreFromSource(storeSource)
+        if store == nil { return nil }
+        return <system>.NewAdapter(store)
     },
 },
 ```
 
-Add your system's projection store to `manifest.ProjectionStores`.
+That descriptor is the built-in source of truth used by `manifest.Modules()`,
+`manifest.MetadataSystems()`, and `manifest.AdapterRegistry(...)`. Do not add
+separate system registration lists in app or engine startup code.
 
 ## Step 6: Add Storage
 
 If your system requires projection storage:
 
-1. Define store interface in your system package (not in core `storage/`)
-2. Add implementation in `storage/sqlite/`
-3. Add the store field to `manifest.ProjectionStores`
+1. Define the store interface in your system package, not in core `internal/services/game/storage/`.
+2. Add the backend implementation in the owning backend package.
+3. Expose any needed provider method on the concrete projection backend.
+4. Keep store extraction inside the owning system descriptor's `BuildAdapter`.
+
+Do not add a manifest-wide store bundle for new systems. Adapter registration
+should accept the concrete store source directly and let each system own the
+small amount of extraction logic it needs.
 
 ## Verification
 
 After all steps:
 ```bash
-make test                       # Unit tests pass
-make smoke                      # Quick runtime confidence
-make check                      # Final local guard
-make game-architecture-check    # Parity validation passes
+make test                    # Unit tests pass
+make smoke                   # Quick runtime confidence
+make check                   # Final local guard
+make game-architecture-check # Parity validation passes
+make docs-check              # Authoring docs stay aligned
 ```
 
-Startup parity validation will fail if:
-- Module is registered but metadata system is missing (or vice versa)
-- Module version doesn't match metadata or adapter version
-- Adapter handles event types not declared as emittable
-- System-owned profile events are registered but missing folder or adapter coverage
-- Events lack payload validation
+Common parity failures:
+
+- module registered without metadata or adapter
+- version mismatch across module, metadata, and adapter
+- adapter handles types not declared emittable
+- profile events missing folder or adapter coverage
+- payload validation missing for registered events
+
+Key files:
+
+- `internal/services/game/domain/bridge/manifest/manifest.go`
+- `internal/services/game/domain/module/testkit/`
+- `internal/services/game/app/system_registration.go`
+- `internal/services/game/app/bootstrap_systems.go`

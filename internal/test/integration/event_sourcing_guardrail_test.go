@@ -33,6 +33,17 @@ func TestProjectionStoreWritesAreEventDriven(t *testing.T) {
 		t.Fatal("storage package not found")
 	}
 	storagePkg := storagePkgs[0]
+	projectionStorePkgs, err := packages.Load(config, "./internal/services/game/domain/bridge/daggerheart/projectionstore")
+	if err != nil {
+		t.Fatalf("load daggerheart projectionstore package: %v", err)
+	}
+	if packages.PrintErrors(projectionStorePkgs) > 0 {
+		t.Fatalf("daggerheart projectionstore package load errors")
+	}
+	if len(projectionStorePkgs) == 0 {
+		t.Fatal("daggerheart projectionstore package not found")
+	}
+	projectionStorePkg := projectionStorePkgs[0]
 
 	targetPkgs, err := packages.Load(config, projectionWriteGuardrailPatterns()...)
 	if err != nil {
@@ -49,7 +60,7 @@ func TestProjectionStoreWritesAreEventDriven(t *testing.T) {
 		lookupInterface(t, storagePkg, "CharacterStore"),
 		lookupInterface(t, storagePkg, "SessionStore"),
 		lookupInterface(t, storagePkg, "InviteStore"),
-		lookupInterface(t, storagePkg, "DaggerheartStore"),
+		lookupInterface(t, projectionStorePkg, "Store"),
 		lookupInterface(t, storagePkg, "SnapshotStore"),
 		lookupInterface(t, storagePkg, "CampaignForkStore"),
 	}
@@ -184,11 +195,11 @@ func receiverTypeName(expr ast.Expr) string {
 func lookupInterface(t *testing.T, pkg *packages.Package, name string) *types.Interface {
 	obj := pkg.Types.Scope().Lookup(name)
 	if obj == nil {
-		t.Fatalf("storage interface %s not found", name)
+		t.Fatalf("interface %s not found in %s", name, pkg.PkgPath)
 	}
 	iface, ok := obj.Type().Underlying().(*types.Interface)
 	if !ok {
-		t.Fatalf("storage type %s is not an interface", name)
+		t.Fatalf("type %s in %s is not an interface", name, pkg.PkgPath)
 	}
 	return iface
 }

@@ -21,7 +21,7 @@ func (s *ParticipantService) CreateParticipant(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	created, err := newParticipantApplication(s).CreateParticipant(ctx, campaignID, in)
+	created, err := s.app.CreateParticipant(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func (s *ParticipantService) UpdateParticipant(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	updated, err := newParticipantApplication(s).UpdateParticipant(ctx, campaignID, in)
+	updated, err := s.app.UpdateParticipant(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (s *ParticipantService) DeleteParticipant(ctx context.Context, in *campaign
 		return nil, err
 	}
 
-	current, err := newParticipantApplication(s).DeleteParticipant(ctx, campaignID, in)
+	current, err := s.app.DeleteParticipant(ctx, campaignID, in)
 	if err != nil {
 		return nil, err
 	}

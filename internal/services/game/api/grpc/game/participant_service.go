@@ -16,10 +16,7 @@ const (
 // ParticipantService implements the game.v1.ParticipantService gRPC API.
 type ParticipantService struct {
 	campaignv1.UnimplementedParticipantServiceServer
-	stores      Stores
-	clock       func() time.Time
-	idGenerator func() (string, error)
-	authClient  authv1.AuthServiceClient
+	app participantApplication
 }
 
 // NewParticipantService creates a ParticipantService with default dependencies.
@@ -28,10 +25,16 @@ func NewParticipantService(stores Stores, authClients ...authv1.AuthServiceClien
 	if len(authClients) > 0 {
 		authClient = authClients[0]
 	}
+	return newParticipantServiceWithDependencies(stores, time.Now, id.NewID, authClient)
+}
+
+func newParticipantServiceWithDependencies(
+	stores Stores,
+	clock func() time.Time,
+	idGenerator func() (string, error),
+	authClient authv1.AuthServiceClient,
+) *ParticipantService {
 	return &ParticipantService{
-		stores:      stores,
-		clock:       time.Now,
-		idGenerator: id.NewID,
-		authClient:  authClient,
+		app: newParticipantApplicationWithDependencies(stores, clock, idGenerator, authClient),
 	}
 }

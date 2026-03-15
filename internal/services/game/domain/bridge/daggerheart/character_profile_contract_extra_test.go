@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -15,7 +16,7 @@ import (
 )
 
 func TestCharacterProfileFromStorage_CopiesAllFields(t *testing.T) {
-	stored := storage.DaggerheartCharacterProfile{
+	stored := projectionstore.DaggerheartCharacterProfile{
 		CampaignID:           "camp-1",
 		CharacterID:          "char-1",
 		Level:                2,
@@ -27,7 +28,7 @@ func TestCharacterProfileFromStorage_CopiesAllFields(t *testing.T) {
 		Proficiency:          2,
 		ArmorScore:           1,
 		ArmorMax:             2,
-		Experiences:          []storage.DaggerheartExperience{{Name: "Scout", Modifier: 2}},
+		Experiences:          []projectionstore.DaggerheartExperience{{Name: "Scout", Modifier: 2}},
 		Agility:              2,
 		Strength:             1,
 		Finesse:              0,

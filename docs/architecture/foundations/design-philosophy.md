@@ -4,7 +4,7 @@ parent: "Foundations"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-11"
 ---
 
 # Design Philosophy
@@ -127,7 +127,9 @@ easier to generalize later than to disentangle.
 - `domain/` imports `core/` and `platform/` but never `bridge/` or
   `storage/`.
 - `domain/bridge/` imports `domain/` and `core/` but never `storage/`
-  directly — system stores are injected via `manifest.ProjectionStores`.
+  directly — descriptor-owned adapter builders may extract system stores from
+  concrete backend sources, but that extraction logic stays inside the system
+  descriptor rather than a shared manifest bundle.
 - `storage/` implements domain contracts; it never defines domain behavior.
 - `projection/` applies events to stores; it imports domain types and
   storage contracts but never transport types.

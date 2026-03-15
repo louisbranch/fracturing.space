@@ -10,46 +10,47 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID string, in *campaignv1.PatchCharacterStateRequest) (string, storage.DaggerheartCharacterState, error) {
+func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID string, in *campaignv1.PatchCharacterStateRequest) (string, projectionstore.DaggerheartCharacterState, error) {
 	c, err := a.stores.Campaign.Get(ctx, campaignID)
 	if err != nil {
-		return "", storage.DaggerheartCharacterState{}, err
+		return "", projectionstore.DaggerheartCharacterState{}, err
 	}
 	if err := campaign.ValidateCampaignOperation(c.Status, campaign.CampaignOpCampaignMutate); err != nil {
-		return "", storage.DaggerheartCharacterState{}, err
+		return "", projectionstore.DaggerheartCharacterState{}, err
 	}
 
 	characterID, err := validate.RequiredID(in.GetCharacterId(), "character id")
 	if err != nil {
-		return "", storage.DaggerheartCharacterState{}, err
+		return "", projectionstore.DaggerheartCharacterState{}, err
 	}
 	if _, err := requireCharacterMutationPolicyWithDependencies(ctx, a.auth, c, characterID); err != nil {
-		return "", storage.DaggerheartCharacterState{}, err
+		return "", projectionstore.DaggerheartCharacterState{}, err
 	}
 
 	// Get existing Daggerheart state
 	dhState, err := a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return "", storage.DaggerheartCharacterState{}, err
+		return "", projectionstore.DaggerheartCharacterState{}, err
 	}
 
 	// Get Daggerheart profile for validation
 	dhProfile, err := a.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
 	if err != nil && !errors.Is(err, storage.ErrNotFound) {
-		return "", storage.DaggerheartCharacterState{}, grpcerror.Internal("get daggerheart profile", err)
+		return "", projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("get daggerheart profile", err)
 	}
 
 	// Apply Daggerheart-specific patches (including HP)
 	if dhPatch := in.GetDaggerheart(); dhPatch != nil {
 		patch, err := buildDaggerheartCharacterStatePatch(dhState, dhProfile, dhPatch)
 		if err != nil {
-			return "", storage.DaggerheartCharacterState{}, err
+			return "", projectionstore.DaggerheartCharacterState{}, err
 		}
 
 		actorID := strings.TrimSpace(grpcmeta.ParticipantIDFromContext(ctx))
@@ -72,7 +73,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 			actorID,
 			patch.payload(characterID, dhState),
 		); err != nil {
-			return "", storage.DaggerheartCharacterState{}, err
+			return "", projectionstore.DaggerheartCharacterState{}, err
 		}
 		if !patch.conditionPatch {
 			if err := applyStressVulnerableCondition(
@@ -90,13 +91,13 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 				actorType,
 				actorID,
 			); err != nil {
-				return "", storage.DaggerheartCharacterState{}, err
+				return "", projectionstore.DaggerheartCharacterState{}, err
 			}
 		}
 
 		dhState, err = a.loadDaggerheartCharacterState(ctx, campaignID, characterID)
 		if err != nil {
-			return "", storage.DaggerheartCharacterState{}, err
+			return "", projectionstore.DaggerheartCharacterState{}, err
 		}
 
 		if patch.conditionPatch {
@@ -110,7 +111,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 				actorID,
 			)
 			if err != nil {
-				return "", storage.DaggerheartCharacterState{}, err
+				return "", projectionstore.DaggerheartCharacterState{}, err
 			}
 		}
 	}
@@ -122,14 +123,14 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 	ctx context.Context,
 	campaignID string,
 	characterID string,
-	current storage.DaggerheartCharacterState,
+	current projectionstore.DaggerheartCharacterState,
 	normalizedAfter []string,
 	actorType event.ActorType,
 	actorID string,
-) (storage.DaggerheartCharacterState, error) {
+) (projectionstore.DaggerheartCharacterState, error) {
 	normalizedBefore, err := daggerheart.NormalizeConditions(current.Conditions)
 	if err != nil {
-		return storage.DaggerheartCharacterState{}, grpcerror.Internal("invalid stored conditions", err)
+		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid stored conditions", err)
 	}
 	if daggerheart.ConditionsEqual(normalizedBefore, normalizedAfter) {
 		return current, nil
@@ -155,16 +156,16 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 		conditionPayload,
 		"apply event",
 	); err != nil {
-		return storage.DaggerheartCharacterState{}, err
+		return projectionstore.DaggerheartCharacterState{}, err
 	}
 
 	return a.loadDaggerheartCharacterState(ctx, campaignID, characterID)
 }
 
-func (a snapshotApplication) loadDaggerheartCharacterState(ctx context.Context, campaignID string, characterID string) (storage.DaggerheartCharacterState, error) {
+func (a snapshotApplication) loadDaggerheartCharacterState(ctx context.Context, campaignID string, characterID string) (projectionstore.DaggerheartCharacterState, error) {
 	dhState, err := a.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
 	if err != nil {
-		return storage.DaggerheartCharacterState{}, grpcerror.Internal("load daggerheart character state", err)
+		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("load daggerheart character state", err)
 	}
 	return dhState, nil
 }
