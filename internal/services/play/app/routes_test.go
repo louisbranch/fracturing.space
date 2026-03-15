@@ -1,6 +1,10 @@
 package app
 
-import "testing"
+import (
+	"net/http"
+	"net/http/httptest"
+	"testing"
+)
 
 func TestPlayRoutesExposeExpectedSurface(t *testing.T) {
 	t.Parallel()
@@ -27,6 +31,7 @@ func TestPlayRoutesExposeExpectedSurface(t *testing.T) {
 
 	want := []string{
 		"GET /up",
+		"GET /{$}",
 		"GET /campaigns/{campaignID}",
 		"GET /api/campaigns/{campaignID}/bootstrap",
 		"GET /api/campaigns/{campaignID}/chat/history",
@@ -56,5 +61,26 @@ func TestPlayRoutesExposeExpectedSurface(t *testing.T) {
 		if got[index] != want[index] {
 			t.Fatalf("playRoutes()[%d] = %q, want %q", index, got[index], want[index])
 		}
+	}
+}
+
+func TestPlayRoutesDoNotServeRetiredPreviewPath(t *testing.T) {
+	t.Parallel()
+
+	server := &Server{interaction: fakePlayInteractionClient{}}
+	server.realtime = newRealtimeHub(server)
+
+	mux := http.NewServeMux()
+	server.registerRoutes(mux, testPlayLaunchGrantConfig(t))
+
+	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/preview/character-card", nil)
+	rr := httptest.NewRecorder()
+
+	mux.ServeHTTP(rr, req)
+
+	// Invariant: the isolated component catalog now lives only in Storybook, so
+	// the play service must fail fast for the retired preview path.
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
 	}
 }

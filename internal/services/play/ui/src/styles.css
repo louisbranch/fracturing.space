@@ -20,9 +20,9 @@
     min-width: 320px;
     font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
     background:
-      radial-gradient(circle at top left, rgb(120 119 198 / 0.16), transparent 22rem),
-      radial-gradient(circle at bottom right, rgb(21 128 61 / 0.16), transparent 26rem),
-      linear-gradient(180deg, #05080f 0%, #0b1220 48%, #081018 100%);
+      radial-gradient(circle at top left, rgb(251 191 36 / 0.14), transparent 20rem),
+      radial-gradient(circle at bottom right, rgb(191 36 36 / 0.18), transparent 26rem),
+      linear-gradient(180deg, #06070d 0%, #10131f 52%, #16111b 100%);
     color: oklch(var(--bc));
   }
 
@@ -32,7 +32,7 @@
   h4,
   .font-display {
     font-family: "Cinzel", "Iowan Old Style", "Palatino Linotype", serif;
-    letter-spacing: -0.025em;
+    letter-spacing: -0.03em;
   }
 
   button,
@@ -44,55 +44,84 @@
 }
 
 @layer components {
-  .play-shell {
-    @apply mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-6 px-4 py-4 sm:px-6 sm:py-6 lg:px-8;
+  .preview-shell {
+    @apply mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-5 sm:px-6 sm:py-6 lg:px-8;
   }
 
-  .play-hero {
-    @apply hero overflow-hidden rounded-box border border-base-300/70 bg-base-200/85 shadow-2xl shadow-black/20 backdrop-blur;
+  .preview-panel {
+    @apply card overflow-hidden border border-base-300/70 bg-base-200/90 shadow-xl shadow-black/20 backdrop-blur;
   }
 
-  .play-hero-body {
-    @apply hero-content w-full max-w-none flex-col items-start gap-6 px-6 py-8 lg:flex-row lg:items-start lg:justify-between;
+  .preview-panel-body {
+    @apply card-body;
   }
 
-  .play-badge-row {
-    @apply flex flex-wrap items-center gap-2;
+  .preview-grid {
+    @apply grid gap-6 xl:grid-cols-3;
   }
 
-  .play-workspace {
-    @apply grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_24rem];
-  }
-
-  .play-column {
-    @apply flex min-w-0 flex-col gap-6;
-  }
-
-  .play-panel {
-    @apply card border border-base-300/70 bg-base-200/85 shadow-xl shadow-black/10 backdrop-blur;
-  }
-
-  .play-panel-body {
-    @apply card-body gap-5;
-  }
-
-  .play-panel-head {
-    @apply flex flex-col gap-3 md:flex-row md:items-start md:justify-between;
-  }
-
-  .play-eyebrow {
+  .preview-kicker {
     @apply text-xs font-semibold uppercase tracking-[0.28em] text-base-content/55;
   }
 
-  .play-prose {
+  .preview-prose {
     @apply text-sm leading-6 text-base-content/72;
   }
 
-  .play-sticky {
-    @apply xl:sticky xl:top-4;
+  .preview-badges {
+    @apply flex flex-wrap items-center gap-2;
   }
 
-  .play-scroll-list {
-    @apply max-h-[30rem] space-y-3 overflow-auto pr-1;
+  .character-card {
+    @apply relative overflow-hidden border border-base-300 bg-base-100 shadow-lg shadow-black/15;
+  }
+
+  .character-card::before {
+    content: "";
+    @apply pointer-events-none absolute inset-0 rounded-box border border-white/4;
+  }
+
+  .character-card-media {
+    @apply min-h-60 bg-base-300;
+  }
+
+  .character-card-portrait-only .character-card-media {
+    aspect-ratio: 2 / 3;
+  }
+
+  .character-card-media-fixed {
+    @apply self-start;
+    aspect-ratio: 2 / 3;
+  }
+
+  .character-card-portrait {
+    @apply h-full w-full object-cover;
+  }
+
+  .character-card-portrait-placeholder {
+    @apply flex h-full min-h-60 items-center justify-center;
+    background:
+      radial-gradient(circle at top, rgb(196 181 253 / 0.24), transparent 34%),
+      linear-gradient(180deg, rgb(38 48 68 / 0.98), rgb(18 25 39 / 0.98));
+  }
+
+  .character-card-section-label {
+    @apply text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-base-content/55;
+  }
+
+  .story-stage-card {
+    @apply mx-auto w-full;
+  }
+
+  .story-stage-card-portrait {
+    @apply max-w-56;
+  }
+
+  .story-stage-card-basic {
+    @apply max-w-xl;
+  }
+
+  .story-stage-card-full {
+    @apply max-w-4xl;
   }
 }

@@ -74,6 +74,7 @@ Watcher logs:
 - `.tmp/dev/notifications.log`
 - `.tmp/dev/worker.log`
 - `.tmp/dev/web.log`
+- `.tmp/dev/storybook.log`
 - `.tmp/dev/catalog-importer.log`
 - `.tmp/dev/watch-services.log`
 
@@ -131,15 +132,15 @@ In devcontainer watcher mode, the game handoff uses the direct play port
 (`localhost:8094`) rather than `play.localhost:8080` because Caddy is not in
 front of the watcher processes.
 
-## Play SPA dev server
+## Play frontend dev servers
 
-`play` serves embedded assets by default. For frontend-only iteration, run the
-SPA workspace directly and point `play` at the browser-reachable dev server
-origin:
+`play` serves embedded assets by default. For bundled SPA-shell iteration, run
+the frontend workspace directly and point `play` at the browser-reachable Vite
+dev server origin:
 
 ```sh
 cd internal/services/play/ui
-npm install
+npm ci
 npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
@@ -157,6 +158,27 @@ In devcontainer mode, port `5173` is forwarded to the host so the browser can
 reach the Vite server directly. After changing `.env` for
 `FRACTURING_SPACE_PLAY_UI_DEV_SERVER_URL`, restart the watchers with
 `make down && make up`.
+
+For isolated component work, run Storybook separately:
+
+```sh
+cd internal/services/play/ui
+npm ci
+npm run storybook
+```
+
+Open:
+
+```text
+http://localhost:6006
+```
+
+`/` on the play service now shows a placeholder shell that points contributors
+to Storybook, and `/preview/character-card` is retired.
+
+In devcontainer watcher mode, `make up` now starts Storybook automatically and
+forwards port `6006` to the host. `make down` stops it with the rest of the
+watcher stack.
 
 ## Demo data
 

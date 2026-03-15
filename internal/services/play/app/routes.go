@@ -27,6 +27,12 @@ func (s *Server) playRoutes(launchGrantCfg playlaunchgrant.Config) []interaction
 			}),
 		},
 		{
+			pattern: "GET /{$}",
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				s.handleRootShell(w, r)
+			}),
+		},
+		{
 			pattern: "GET /campaigns/{campaignID}",
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				s.handleCampaignShell(w, r, launchGrantCfg)

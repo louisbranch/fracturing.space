@@ -1,102 +1,97 @@
-import { ChatPanel } from "./features/chat/ChatPanel";
-import { DraftPanel } from "./features/draft/DraftPanel";
-import { usePlayRuntime } from "./runtime";
-import { resolveSystemRenderer } from "./systems/registry";
-import { createPlayShellViewModel, createSystemRenderViewModel } from "./view_models";
+import type { AppMode } from "./app_mode";
 
-export function App() {
-  const runtime = usePlayRuntime();
-  const { state } = runtime;
+const storybookURL = "http://localhost:6006";
+const storybookCommand = "npm run storybook";
+const storybookWorkspace = "internal/services/play/ui";
 
-  if (state.loading) {
-    return (
-      <main className="play-shell items-center justify-center">
-        <section className="play-panel w-full max-w-2xl">
-          <div className="play-panel-body items-center text-center">
-            <span className="play-eyebrow">Connecting</span>
-            <h1 className="font-display text-4xl">Opening the table...</h1>
-            <p className="play-prose max-w-xl">
-              Fetching the current scene, transcript, and live session state.
-            </p>
-            <span className="loading loading-bars loading-lg text-primary" aria-hidden="true" />
-          </div>
-        </section>
-      </main>
-    );
+// App renders only runtime-oriented placeholder shells now that isolated
+// component work has moved into the separate Storybook workflow.
+export function App(props: { mode: AppMode }) {
+  switch (props.mode.kind) {
+    case "root-placeholder":
+      return (
+        <PlaceholderScreen
+          kicker="Play UI shell"
+          title="Play runtime UI deferred"
+          body="The bundled play SPA no longer hosts isolated component previews. Run Storybook locally for Character Card design and review work."
+        />
+      );
+    case "runtime-placeholder":
+      return (
+        <PlaceholderScreen
+          kicker="Runtime placeholder"
+          title="Play runtime UI deferred"
+          body="Campaign routes remain reserved for the future runtime shell. Isolated component work now happens in the separate Storybook workflow."
+          detailLabel="Campaign path"
+          detailValue={`/campaigns/${props.mode.campaignId}`}
+        />
+      );
+    case "unsupported":
+      return (
+        <main className="preview-shell">
+          <section className="preview-panel max-w-3xl self-center">
+            <div className="preview-panel-body items-start gap-4">
+              <span className="preview-kicker">Unsupported route</span>
+              <h1 className="font-display text-4xl">No UI mapped to this path</h1>
+              <p className="preview-prose text-base">
+                Use the separate Storybook workflow for component work or a campaign path for the runtime
+                placeholder surface.
+              </p>
+              <div className="rounded-box border border-base-300/70 bg-base-100/85 px-4 py-3 text-sm text-base-content/80">
+                Requested path: <code>{props.mode.path}</code>
+              </div>
+              <div className="flex flex-wrap gap-3">
+                <a className="btn btn-primary" href={storybookURL} rel="noreferrer" target="_blank">
+                  Open Storybook
+                </a>
+                <a className="btn btn-ghost" href="/campaigns/example-campaign">
+                  View runtime placeholder
+                </a>
+              </div>
+            </div>
+          </section>
+        </main>
+      );
   }
+}
 
-  if (!state.bootstrap || !state.snapshot) {
-    return (
-      <main className="play-shell items-center justify-center">
-        <section className="play-panel w-full max-w-2xl">
-          <div className="play-panel-body items-center text-center">
-            <span className="play-eyebrow">Unavailable</span>
-            <h1 className="font-display text-4xl">Play surface unavailable</h1>
-            <p className="play-prose max-w-xl">
-              {state.error || "The play surface could not load the active campaign."}
-            </p>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  const renderer = resolveSystemRenderer(state.bootstrap.system);
-  const shellView = createPlayShellViewModel(state.bootstrap, state.snapshot, state.connected);
-  const systemView = createSystemRenderViewModel(state.snapshot);
-
+function PlaceholderScreen(input: {
+  kicker: string;
+  title: string;
+  body: string;
+  detailLabel?: string;
+  detailValue?: string;
+}) {
   return (
-    <main className="play-shell">
-      <header className="play-hero">
-        <div className="play-hero-body">
-          <div className="max-w-3xl space-y-4">
-            <span className="play-eyebrow">Active play</span>
-            <h1 className="font-display text-4xl sm:text-5xl">{shellView.campaignName}</h1>
-            <p className="play-prose text-base sm:text-lg">
-              Live interaction state for {shellView.viewerName}.
+    <main className="preview-shell">
+      <section className="preview-panel max-w-3xl self-center">
+        <div className="preview-panel-body items-start gap-4">
+          <span className="preview-kicker">{input.kicker}</span>
+          <h1 className="font-display text-4xl">{input.title}</h1>
+          <p className="preview-prose text-base">{input.body}</p>
+          {input.detailLabel && input.detailValue ? (
+            <div className="rounded-box border border-base-300/70 bg-base-100/85 px-4 py-3 text-sm text-base-content/80">
+              {input.detailLabel}: <code>{input.detailValue}</code>
+            </div>
+          ) : null}
+          <div className="w-full rounded-box border border-base-300/70 bg-base-100/85 px-4 py-4 text-sm text-base-content/80">
+            <p>
+              Run <code>{storybookCommand}</code> from <code>{storybookWorkspace}</code>.
+            </p>
+            <p className="mt-2">
+              Storybook URL: <code>{storybookURL}</code>
             </p>
           </div>
-          <div className="play-badge-row">
-            <span className="badge badge-primary badge-outline badge-lg">{shellView.systemLabel}</span>
-            <span className="badge badge-accent badge-outline badge-lg">{shellView.sessionLabel}</span>
-            <span
-              className={`badge badge-lg ${state.connected ? "badge-success" : "badge-error"} badge-outline`}
-              data-testid="live-status"
-            >
-              {shellView.connectedLabel}
-            </span>
+          <div className="flex flex-wrap gap-3">
+            <a className="btn btn-primary" href={storybookURL} rel="noreferrer" target="_blank">
+              Open Storybook
+            </a>
+            <a className="btn btn-ghost" href="/campaigns/example-campaign">
+              View runtime placeholder
+            </a>
           </div>
         </div>
-      </header>
-
-      {state.error ? (
-        <div className="alert alert-error shadow-lg" role="alert">
-          <span>{state.error}</span>
-        </div>
-      ) : null}
-
-      <div className="play-workspace">
-        <section className="play-column">
-          {renderer.render({ bootstrap: state.bootstrap, snapshot: state.snapshot, view: systemView })}
-        </section>
-        <aside className="play-column">
-          <div className="play-sticky">
-            <ChatPanel
-              connected={state.connected}
-              loadingHistory={state.loadingHistory}
-              messages={state.messages}
-              typing={Object.values(state.chatTyping)}
-              onLoadOlder={runtime.loadOlderMessages}
-              onSend={runtime.sendChat}
-              onTypingChange={runtime.setChatTyping}
-            />
-          </div>
-          <DraftPanel
-            typing={Object.values(state.draftTyping)}
-            onTypingChange={runtime.setDraftTyping}
-          />
-        </aside>
-      </div>
+      </section>
     </main>
   );
 }

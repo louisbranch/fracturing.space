@@ -21,7 +21,7 @@ Use this map to find the best first edit point for common contribution types.
 | Add/update auth identity/OAuth/passkey behavior | `internal/services/auth/api/grpc/auth/`, `internal/services/auth/oauth/`, `internal/services/auth/storage/sqlite/` |
 | Add/update AI orchestration/agent invocation | `internal/services/ai/api/grpc/ai/`, `internal/services/ai/storage/sqlite/`, `internal/services/ai/app/` |
 | Add/update play realtime transport, transcript flow, or play-session/auth handoff | `internal/services/play/app/`, `internal/services/play/storage/sqlite/`, `internal/services/shared/playlaunchgrant/`, `internal/services/shared/playorigin/` |
-| Add/update play SPA UI, system-specific game views, or websocket/bootstrap client behavior | `internal/services/play/ui/src/`, `internal/services/play/ui/src/features/`, `internal/services/play/ui/src/systems/` |
+| Add/update play SPA UI, system-specific game views, or websocket/bootstrap client behavior | `internal/services/play/ui/src/`, `internal/services/play/ui/src/app_mode.ts`, `internal/services/play/ui/src/systems/` |
 | Add/update social profiles/contacts | `internal/services/social/api/grpc/social/`, `internal/services/social/storage/sqlite/` |
 | Add/update notifications inbox/delivery behavior | `internal/services/notifications/domain/`, `internal/services/notifications/api/grpc/notifications/`, `internal/services/notifications/storage/sqlite/` |
 | Add/update user dashboard aggregation | `internal/services/userhub/domain/`, `internal/services/userhub/api/grpc/userhub/`, `internal/services/userhub/app/` |

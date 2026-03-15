@@ -36,6 +36,7 @@ services:
       - "8091:8091"
       - "8094:8094"
       - "5173:5173"
+      - "6006:6006"
     networks:
       - default
       - internal
