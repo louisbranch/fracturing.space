@@ -20,7 +20,14 @@ should_build_ui() {
 }
 
 if should_build_ui; then
-  npm --prefix "$ui_root" run build
+  if command -v npm >/dev/null 2>&1; then
+    npm --prefix "$ui_root" run build
+  elif [ -f "$ui_manifest" ]; then
+    echo "[build-play-service] npm not found; using checked-in play UI bundle at $ui_manifest" >&2
+  else
+    echo "[build-play-service] npm not found and $ui_manifest is missing; cannot build embedded play UI" >&2
+    exit 1
+  fi
 fi
 
 go build -o .tmp/dev/bin/play ./cmd/play

@@ -1,10 +1,17 @@
 ARG GO_VERSION=1.26.0
+FROM node:22-bookworm AS node-toolchain
+
 FROM golang:${GO_VERSION} AS base
 
 ARG DEVCONTAINER_UID=1000
 ARG DEVCONTAINER_GID=1000
 RUN groupadd --gid "${DEVCONTAINER_GID}" vscode \
   && useradd --uid "${DEVCONTAINER_UID}" --gid "${DEVCONTAINER_GID}" --create-home --shell /bin/bash vscode
+
+COPY --from=node-toolchain /usr/local/bin/ /usr/local/bin/
+COPY --from=node-toolchain /usr/local/lib/ /usr/local/lib/
+COPY --from=node-toolchain /usr/local/include/ /usr/local/include/
+COPY --from=node-toolchain /usr/local/share/ /usr/local/share/
 
 WORKDIR /src
 
@@ -14,7 +21,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 go install github.com/air-verse/air@v1.62.0
 
-FROM node:22-bookworm AS build-play-ui
+FROM node-toolchain AS build-play-ui
 
 WORKDIR /src/internal/services/play/ui
 

@@ -132,20 +132,20 @@ wait_for_devcontainer_ready() {
   return 1
 }
 
-ensure_go_toolchain() {
-  if docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ])"; then
+ensure_dev_toolchain() {
+  if docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ]) && command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1"; then
     return 0
   fi
 
-  echo "devcontainer image missing required dev tooling (go/air); rebuilding devcontainer service" >&2
+  echo "devcontainer image missing required dev tooling (go/air/node/npm); rebuilding devcontainer service" >&2
   docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d --build devcontainer
   wait_for_devcontainer_ready
 
-  if docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ])"; then
+  if docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml exec -T devcontainer bash -lc "(command -v go >/dev/null 2>&1 || [ -x /usr/local/go/bin/go ]) && (command -v air >/dev/null 2>&1 || [ -x /go/bin/air ] || [ -x /root/go/bin/air ]) && command -v node >/dev/null 2>&1 && command -v npm >/dev/null 2>&1"; then
     return 0
   fi
 
-  echo "rebuilt devcontainer is still missing required tooling (go/air)" >&2
+  echo "rebuilt devcontainer is still missing required tooling (go/air/node/npm)" >&2
   return 1
 }
 
@@ -160,6 +160,6 @@ BOOTSTRAP_SKIP_UP=1 ./scripts/bootstrap.sh
 
 docker compose --env-file .env -f .devcontainer/docker-compose.devcontainer.yml -f docker-compose.yml up -d devcontainer
 wait_for_devcontainer_ready
-ensure_go_toolchain
+ensure_dev_toolchain
 run_post_start_in_container
 wait_for_services_ready

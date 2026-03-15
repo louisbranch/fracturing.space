@@ -152,6 +152,36 @@ func TestHandleCampaignShellRendersSPAShellForExistingPlaySession(t *testing.T) 
 	}
 }
 
+func TestHandleRootShellRendersSPAShellWithoutSession(t *testing.T) {
+	t.Parallel()
+
+	server := &Server{
+		shellAssets: shellAssets{devServerURL: "http://localhost:5173"},
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "http://play.example.com/", nil)
+	rr := httptest.NewRecorder()
+
+	server.handleRootShell(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusOK)
+	}
+	body := rr.Body.String()
+	for _, want := range []string{
+		`<div id="root"></div>`,
+		`/src/main.tsx`,
+		`type="application/json"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("body missing %q: %q", want, body)
+		}
+	}
+	if strings.Contains(body, `/api/campaigns/`) {
+		t.Fatalf("root shell should not include campaign bootstrap wiring: %q", body)
+	}
+}
+
 func TestHandleBootstrapReturnsPlayContract(t *testing.T) {
 	t.Parallel()
 

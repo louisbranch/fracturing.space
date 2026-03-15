@@ -119,6 +119,16 @@ start_service() {
   printf 'started %s watcher (pid %s)\n' "$name" "$!"
 }
 
+start_background_command() {
+  local name="$1"
+  shift
+  : > ".tmp/dev/${name}.log"
+  "$@" >> ".tmp/dev/${name}.log" 2>&1 &
+  pids+=("$!")
+  cleanup_pids+=("$!")
+  printf 'started %s process (pid %s)\n' "$name" "$!"
+}
+
 wait_for_service_log_marker() {
   local name="$1"
   local marker="$2"
@@ -152,6 +162,61 @@ wait_for_service_log_marker() {
 
   printf 'timed out waiting for %s readiness marker: %s\n' "$name" "$marker" >&2
   return 1
+}
+
+wait_for_http_ready() {
+  local name="$1"
+  local url="$2"
+  local max_attempts="${DEVCONTAINER_DEPENDENCY_READY_MAX_ATTEMPTS:-120}"
+  local sleep_seconds="${DEVCONTAINER_DEPENDENCY_READY_SLEEP_SECONDS:-1}"
+  local attempt=1
+
+  if [[ ! "$max_attempts" =~ ^[0-9]+$ ]] || (( max_attempts < 1 )); then
+    echo "DEVCONTAINER_DEPENDENCY_READY_MAX_ATTEMPTS must be a positive integer" >&2
+    return 1
+  fi
+  if [[ ! "$sleep_seconds" =~ ^[0-9]+$ ]] || (( sleep_seconds < 1 )); then
+    echo "DEVCONTAINER_DEPENDENCY_READY_SLEEP_SECONDS must be a positive integer" >&2
+    return 1
+  fi
+
+  while (( attempt <= max_attempts )); do
+    if command -v curl >/dev/null 2>&1 && curl --silent --fail --max-time 2 "$url" >/dev/null 2>&1; then
+      printf '%s readiness check passed.\n' "$name"
+      return 0
+    fi
+
+    if (( attempt == 1 || attempt == max_attempts || attempt % 10 == 0 )); then
+      printf 'waiting for %s at %s (%d/%d)\n' "$name" "$url" "$attempt" "$max_attempts"
+    fi
+
+    attempt=$((attempt + 1))
+    sleep "$sleep_seconds"
+  done
+
+  printf 'timed out waiting for %s readiness at %s\n' "$name" "$url" >&2
+  return 1
+}
+
+ensure_play_ui_node_modules() {
+  local ui_root="internal/services/play/ui"
+  local lockfile="$ui_root/package-lock.json"
+  local modules_dir="$ui_root/node_modules"
+  local stamp_file="$modules_dir/.package-lock.json"
+
+  if [[ ! -f "$lockfile" ]]; then
+    echo "missing $lockfile for play UI workspace" >&2
+    exit 1
+  fi
+
+  if [[ ! -d "$modules_dir" || ! -f "$stamp_file" || "$lockfile" -nt "$stamp_file" ]]; then
+    if ! command -v npm >/dev/null 2>&1; then
+      echo "npm is required to install play UI workspace dependencies" >&2
+      exit 1
+    fi
+    echo "installing play UI workspace dependencies"
+    npm --prefix "$ui_root" ci
+  fi
 }
 
 run_catalog_importer_async() {
@@ -209,6 +274,9 @@ start_service admin
 start_service play
 start_service worker
 start_service web
+ensure_play_ui_node_modules
+start_background_command storybook npm --prefix internal/services/play/ui run storybook -- --host 0.0.0.0 --port 6006
+wait_for_http_ready "storybook" "http://127.0.0.1:6006"
 
 wait -n "${pids[@]}"
 exit $?
