@@ -49,6 +49,7 @@ const (
 	EventTypeAITurnCleared        event.Type   = "session.ai_turn_cleared"
 
 	rejectionCodeSessionIDRequired              = "SESSION_ID_REQUIRED"
+	rejectionCodeSessionNameRequired            = "SESSION_NAME_REQUIRED"
 	rejectionCodeSessionAlreadyStarted          = "SESSION_ALREADY_STARTED"
 	rejectionCodeSessionNotStarted              = "SESSION_NOT_STARTED"
 	rejectionCodeSessionGateIDRequired          = "SESSION_GATE_ID_REQUIRED"

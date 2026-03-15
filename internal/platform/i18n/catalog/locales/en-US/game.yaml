@@ -3,6 +3,7 @@ namespace: "game"
 messages:
   "game.participant.default_ai_name": "Oracle"
   "game.participant.default_unknown_name": "Mysterious Person"
+  "game.session.default_name": "Session %d"
   "game.session_readiness.active_session_exists": "Campaign readiness requires no active session"
   "game.session_readiness.ai_agent_required": "Campaign readiness requires an AI agent binding for AI GM mode"
   "game.session_readiness.ai_gm_participant_required": "Campaign readiness requires at least one AI-controlled GM participant for AI GM mode"

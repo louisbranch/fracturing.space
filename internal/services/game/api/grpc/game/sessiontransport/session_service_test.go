@@ -2,9 +2,11 @@ package sessiontransport
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
+	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/gametest"
 
 	statev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -261,7 +263,7 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 				SessionID:   "session-123",
 				EntityType:  "session",
 				EntityID:    "session-123",
-				PayloadJSON: []byte(`{"session_id":"session-123"}`),
+				PayloadJSON: []byte(`{"session_id":"session-123","session_name":"Session 1"}`),
 			}),
 		},
 		"session.gm_authority.set": {
@@ -305,6 +307,140 @@ func TestStartSession_Success_AlreadyActive(t *testing.T) {
 	}
 	if eventStore.Events["c1"][1].Type != event.Type("session.gm_authority_set") {
 		t.Fatalf("event type = %s, want %s", eventStore.Events["c1"][1].Type, event.Type("session.gm_authority_set"))
+	}
+}
+
+func TestStartSession_BlankNameDefaultsToCampaignLocaleSequence(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name           string
+		campaignLocale string
+		existingCount  int
+		wantLocale     commonv1.Locale
+		wantName       string
+	}{
+		{
+			name:           "english first session",
+			campaignLocale: "en-US",
+			existingCount:  0,
+			wantLocale:     commonv1.Locale_LOCALE_EN_US,
+			wantName:       "Session 1",
+		},
+		{
+			name:           "portuguese second session",
+			campaignLocale: "pt-BR",
+			existingCount:  1,
+			wantLocale:     commonv1.Locale_LOCALE_PT_BR,
+			wantName:       "Sessão 2",
+		},
+		{
+			name:           "invalid locale falls back to default",
+			campaignLocale: "fr-FR",
+			existingCount:  0,
+			wantLocale:     commonv1.Locale_LOCALE_EN_US,
+			wantName:       "Session 1",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			campaignStore := gametest.NewFakeCampaignStore()
+			sessionStore := gametest.NewFakeSessionStore()
+			participantStore := sessionManagerParticipantStore("c1")
+			eventStore := gametest.NewFakeEventStore()
+			now := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+			campaignStore.Campaigns["c1"] = storage.CampaignRecord{
+				ID:     "c1",
+				Name:   "Test Campaign",
+				Locale: tc.campaignLocale,
+				Status: campaign.StatusActive,
+				System: bridge.SystemIDDaggerheart,
+				GmMode: campaign.GmModeHuman,
+			}
+			sessionStore.Sessions["c1"] = make(map[string]storage.SessionRecord, tc.existingCount)
+			for i := 0; i < tc.existingCount; i++ {
+				id := "existing-" + string(rune('1'+i))
+				sessionStore.Sessions["c1"][id] = storage.SessionRecord{
+					ID:         id,
+					CampaignID: "c1",
+					Name:       "Existing",
+					Status:     session.StatusEnded,
+					StartedAt:  now,
+					UpdatedAt:  now,
+					EndedAt:    ptrTime(now),
+				}
+			}
+
+			domain := &fakeDomainEngine{store: eventStore, result: engine.Result{
+				Decision: command.Accept(),
+			}, resultsByType: map[command.Type]engine.Result{
+				"session.start": {
+					Decision: command.Accept(event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("session.started"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						SessionID:   "session-123",
+						EntityType:  "session",
+						EntityID:    "session-123",
+						PayloadJSON: mustJSON(t, session.StartPayload{SessionID: "session-123", SessionName: tc.wantName}),
+					}),
+				},
+				"session.gm_authority.set": {
+					Decision: command.Accept(event.Event{
+						CampaignID:  "c1",
+						Type:        event.Type("session.gm_authority_set"),
+						Timestamp:   now,
+						ActorType:   event.ActorTypeSystem,
+						SessionID:   "session-123",
+						EntityType:  "session",
+						EntityID:    "session-123",
+						PayloadJSON: []byte(`{"session_id":"session-123","participant_id":"manager-1"}`),
+					}),
+				},
+			}}
+
+			svc := newTestSessionService(
+				Deps{
+					Campaign:           campaignStore,
+					Session:            sessionStore,
+					Participant:        participantStore,
+					SessionInteraction: &fakeSessionInteractionStore{},
+					Write:              domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
+				},
+				gametest.FixedClock(now),
+				gametest.FixedIDGenerator("session-123"),
+			)
+
+			resp, err := svc.StartSession(gametest.ContextWithParticipantID("manager-1"), &statev1.StartSessionRequest{
+				CampaignId: "c1",
+				Name:       "   ",
+			})
+			if err != nil {
+				t.Fatalf("StartSession returned error: %v", err)
+			}
+			if got := resp.GetSession().GetName(); got != tc.wantName {
+				t.Fatalf("response session name = %q, want %q", got, tc.wantName)
+			}
+			if len(domain.commands) == 0 {
+				t.Fatal("expected captured commands")
+			}
+
+			var payload session.StartPayload
+			if err := json.Unmarshal(domain.commands[0].PayloadJSON, &payload); err != nil {
+				t.Fatalf("unmarshal payload: %v", err)
+			}
+			if payload.SessionName != tc.wantName {
+				t.Fatalf("payload session name = %q, want %q", payload.SessionName, tc.wantName)
+			}
+			if got := sessionStartLocale(tc.campaignLocale); got != tc.wantLocale {
+				t.Fatalf("sessionStartLocale(%q) = %v, want %v", tc.campaignLocale, got, tc.wantLocale)
+			}
+		})
 	}
 }
 
@@ -371,6 +507,10 @@ func TestStartSession_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) == 0 || domain.commands[0].Type != command.Type("session.start") {
 		t.Fatalf("first command type = %v, want %s", domain.commands, "session.start")
 	}
+}
+
+func ptrTime(value time.Time) *time.Time {
+	return &value
 }
 
 func TestListSessions_NilRequest(t *testing.T) {

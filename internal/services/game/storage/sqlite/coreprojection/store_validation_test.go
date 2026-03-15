@@ -88,6 +88,9 @@ func TestNilStoreErrors(t *testing.T) {
 	if _, err := s.GetActiveSession(ctx, "c"); err == nil {
 		t.Fatal("expected error from nil store GetActiveSession")
 	}
+	if _, err := s.CountSessions(ctx, "c"); err == nil {
+		t.Fatal("expected error from nil store CountSessions")
+	}
 	if _, err := s.ListSessions(ctx, "c", 10, ""); err == nil {
 		t.Fatal("expected error from nil store ListSessions")
 	}
@@ -211,6 +214,9 @@ func TestCancelledContextErrors(t *testing.T) {
 	}
 	if _, err := store.GetActiveSession(ctx, "c"); err == nil {
 		t.Fatal("expected context error from GetActiveSession")
+	}
+	if _, err := store.CountSessions(ctx, "c"); err == nil {
+		t.Fatal("expected context error from CountSessions")
 	}
 	if _, err := store.ListSessions(ctx, "c", 10, ""); err == nil {
 		t.Fatal("expected context error from ListSessions")
@@ -420,6 +426,9 @@ func TestEmptyIDValidation(t *testing.T) {
 	}
 	if _, err := store.GetActiveSession(ctx, ""); err == nil {
 		t.Fatal("expected error for empty campaign ID in GetActiveSession")
+	}
+	if _, err := store.CountSessions(ctx, ""); err == nil {
+		t.Fatal("expected error for empty campaign ID in CountSessions")
 	}
 	if _, err := store.ListSessions(ctx, "", 10, ""); err == nil {
 		t.Fatal("expected error for empty campaign ID in ListSessions")

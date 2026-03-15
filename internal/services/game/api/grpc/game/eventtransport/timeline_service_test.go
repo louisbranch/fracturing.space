@@ -236,7 +236,7 @@ func TestListTimelineEntries_ProjectionDisplayByDomain(t *testing.T) {
 			EntityType:  "session",
 			EntityID:    "s1",
 			Timestamp:   now,
-			PayloadJSON: seedPayload(session.StartPayload{SessionID: "s1"}),
+			PayloadJSON: seedPayload(session.StartPayload{SessionID: "s1", SessionName: "Session 1"}),
 		},
 	}
 

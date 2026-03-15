@@ -80,11 +80,10 @@ func TestCampaignSessionMenuSubItemsIncludesOnlyActiveSessions(t *testing.T) {
 	loc := menuTestLocalizer{
 		"game.sessions.menu.start":       "Start",
 		"game.sessions.action_join_game": "Join",
-		"game.sessions.menu.unnamed":     "Unnamed",
 	}
 	items := campaignSessionMenuSubItems("camp-1", []campaignapp.CampaignSession{
 		{ID: "sess-active", Name: "Table Night", Status: "active", StartedAt: "2026-03-12 18:00 UTC"},
-		{ID: "sess-unnamed", Name: "sess-unnamed", Status: "active"},
+		{ID: "sess-2", Name: "Session 2", Status: "active"},
 		{ID: "sess-ended", Name: "Finished", Status: "ended", StartedAt: "2026-03-11 18:00 UTC"},
 	}, loc)
 
@@ -97,8 +96,8 @@ func TestCampaignSessionMenuSubItemsIncludesOnlyActiveSessions(t *testing.T) {
 	if items[0].StartDetail != "Start: 2026-03-12 18:00 UTC" {
 		t.Fatalf("items[0].StartDetail = %q", items[0].StartDetail)
 	}
-	if items[1].Label != "Unnamed" {
-		t.Fatalf("items[1].Label = %q, want Unnamed", items[1].Label)
+	if items[1].Label != "Session 2" {
+		t.Fatalf("items[1].Label = %q, want Session 2", items[1].Label)
 	}
 	if items[1].JoinURL == "" || items[1].JoinLabel != "Join" {
 		t.Fatalf("items[1] join data = %+v", items[1])

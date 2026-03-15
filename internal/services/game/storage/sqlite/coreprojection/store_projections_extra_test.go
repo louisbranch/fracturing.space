@@ -156,6 +156,14 @@ func TestSessionGetAndListSessions(t *testing.T) {
 	if len(second.Sessions) != 1 {
 		t.Fatalf("expected 1 session on page 2, got %d", len(second.Sessions))
 	}
+
+	count, err := store.CountSessions(context.Background(), "camp-sess")
+	if err != nil {
+		t.Fatalf("count sessions: %v", err)
+	}
+	if count != 3 {
+		t.Fatalf("count sessions = %d, want 3", count)
+	}
 }
 
 func TestSessionGetNotFound(t *testing.T) {

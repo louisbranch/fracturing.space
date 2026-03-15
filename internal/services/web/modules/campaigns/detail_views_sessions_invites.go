@@ -58,7 +58,7 @@ func campaignSessionBreadcrumbLabel(loc webtemplates.Localizer, view campaignren
 		}
 		break
 	}
-	return webtemplates.T(loc, "game.sessions.menu.unnamed")
+	return webtemplates.T(loc, "game.sessions.title")
 }
 
 // invitesView builds the invites detail view for one campaign.

@@ -333,6 +333,10 @@ func (f *fakeProjectionStore) GetActiveSession(context.Context, string) (storage
 	return storage.SessionRecord{}, fmt.Errorf("not implemented")
 }
 
+func (f *fakeProjectionStore) CountSessions(context.Context, string) (int, error) {
+	return 0, fmt.Errorf("not implemented")
+}
+
 func (f *fakeProjectionStore) ListSessions(context.Context, string, int, string) (storage.SessionPage, error) {
 	return storage.SessionPage{}, fmt.Errorf("not implemented")
 }

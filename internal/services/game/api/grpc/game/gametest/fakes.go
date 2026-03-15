@@ -787,6 +787,7 @@ type FakeSessionStore struct {
 	GetErr        error
 	EndErr        error
 	ActiveErr     error
+	CountErr      error
 	ListErr       error
 }
 
@@ -924,6 +925,13 @@ func (s *FakeSessionStore) GetActiveSession(_ context.Context, campaignID string
 		return storage.SessionRecord{}, storage.ErrNotFound
 	}
 	return sess, nil
+}
+
+func (s *FakeSessionStore) CountSessions(_ context.Context, campaignID string) (int, error) {
+	if s.CountErr != nil {
+		return 0, s.CountErr
+	}
+	return len(s.Sessions[campaignID]), nil
 }
 
 func (s *FakeSessionStore) ListSessions(_ context.Context, campaignID string, pageSize int, pageToken string) (storage.SessionPage, error) {

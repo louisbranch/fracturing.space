@@ -9,9 +9,13 @@ const (
 	ParticipantDefaultUnknownNameKey = "game.participant.default_unknown_name"
 	// ParticipantDefaultAINameKey is the translated fallback for AI participants.
 	ParticipantDefaultAINameKey = "game.participant.default_ai_name"
+	// SessionDefaultNameKey is the translated fallback for auto-named sessions.
+	SessionDefaultNameKey = "game.session.default_name"
 
 	// ParticipantDefaultUnknownNameFallback is the English fallback when i18n is unavailable.
 	ParticipantDefaultUnknownNameFallback = "Mysterious Person"
 	// ParticipantDefaultAINameFallback is the English fallback when i18n is unavailable.
 	ParticipantDefaultAINameFallback = "Oracle"
+	// SessionDefaultNameFallback is the English fallback when i18n is unavailable.
+	SessionDefaultNameFallback = "Session %d"
 )

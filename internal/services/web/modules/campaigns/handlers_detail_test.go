@@ -49,7 +49,10 @@ func TestMountServesCampaignDetailRoutes(t *testing.T) {
 func TestMountStableCampaignMutationDetailRoutes(t *testing.T) {
 	t.Parallel()
 
-	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}}}, modulehandler.NewTestBase(), nil))
+	m := New(configWithGateway(fakeGateway{
+		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: "First"}},
+		sessions: []campaignapp.CampaignSession{{ID: "s1", Name: "Session 1", Status: "Active"}},
+	}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -189,7 +192,7 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 			},
 			{
 				ID:        "s1",
-				Name:      "",
+				Name:      "Session 1",
 				Status:    "Active",
 				StartedAt: "2026-02-01 20:00 UTC",
 			},
@@ -240,7 +243,7 @@ func TestMountCampaignWorkspaceSessionsMenuHighlightsEntireActiveRow(t *testing.
 	}
 	for _, marker := range []string{
 		`data-app-side-menu-subitem-start="Start: 2026-02-01 20:00 UTC"`,
-		`>Unnamed session</a>`,
+		`>Session 1</a>`,
 		`Join Game</a>`,
 	} {
 		if !strings.Contains(activeRowBody, marker) {
@@ -2430,7 +2433,11 @@ func TestMountCampaignSessionDetailTruncatesLongBreadcrumbLabels(t *testing.T) {
 
 	longCampaignName := "Campaign-" + strings.Repeat("x", 64)
 	longSessionID := "session-" + strings.Repeat("y", 64)
-	m := New(configWithGateway(fakeGateway{items: []campaignapp.CampaignSummary{{ID: "c1", Name: longCampaignName}}}, modulehandler.NewTestBase(), nil))
+	longSessionName := "Session-" + strings.Repeat("z", 64)
+	m := New(configWithGateway(fakeGateway{
+		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: longCampaignName}},
+		sessions: []campaignapp.CampaignSession{{ID: longSessionID, Name: longSessionName, Status: "Active"}},
+	}, modulehandler.NewTestBase(), nil))
 	mount, err := m.Mount()
 	if err != nil {
 		t.Fatalf("Mount() error = %v", err)
@@ -2450,7 +2457,27 @@ func TestMountCampaignSessionDetailTruncatesLongBreadcrumbLabels(t *testing.T) {
 		t.Fatalf("campaign breadcrumb should be truncated, got %q", body)
 	}
 	// Invariant: breadcrumb labels must truncate long values to keep layout stable.
-	if strings.Contains(body, `<li>`+longSessionID+`</li>`) {
+	if strings.Contains(body, `<li>`+longSessionName+`</li>`) {
 		t.Fatalf("session breadcrumb should be truncated, got %q", body)
+	}
+}
+
+func TestMountCampaignSessionDetailReturnsNotFoundForUnknownSession(t *testing.T) {
+	t.Parallel()
+
+	m := New(configWithGateway(fakeGateway{
+		items:    []campaignapp.CampaignSummary{{ID: "c1", Name: "The Guildhouse"}},
+		sessions: []campaignapp.CampaignSession{{ID: "s1", Name: "First Light", Status: "Active"}},
+	}, modulehandler.NewTestBase(), nil))
+	mount, err := m.Mount()
+	if err != nil {
+		t.Fatalf("Mount() error = %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, routepath.AppCampaignSession("c1", "missing-session"), nil)
+	rr := httptest.NewRecorder()
+	mount.Handler.ServeHTTP(rr, req)
+	if rr.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want %d", rr.Code, http.StatusNotFound)
 	}
 }

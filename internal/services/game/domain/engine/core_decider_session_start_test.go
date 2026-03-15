@@ -102,7 +102,7 @@ func TestCoreDeciderSessionStart_ReadinessFailureRejected(t *testing.T) {
 			Type:        session.CommandTypeStart,
 			ActorType:   command.ActorTypeParticipant,
 			ActorID:     "gm-1",
-			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
 		nil,
 	)
@@ -152,7 +152,7 @@ func TestCoreDeciderSessionStart_ActiveSessionBoundaryRejected(t *testing.T) {
 			Type:        session.CommandTypeStart,
 			ActorType:   command.ActorTypeParticipant,
 			ActorID:     "gm-1",
-			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
 		nil,
 	)
@@ -209,7 +209,7 @@ func TestCoreDeciderSessionStart_UsesSystemCharacterReadinessChecker(t *testing.
 			Type:        session.CommandTypeStart,
 			ActorType:   command.ActorTypeParticipant,
 			ActorID:     "gm-1",
-			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
 		nil,
 	)

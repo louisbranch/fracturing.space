@@ -99,7 +99,7 @@ func TestSessionStartRoute_BlankCampaignStatusFailsClosed(t *testing.T) {
 			Type:        session.CommandTypeStart,
 			ActorType:   command.ActorTypeParticipant,
 			ActorID:     "gm-1",
-			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
 		func() time.Time { return time.Date(2026, 3, 1, 13, 5, 0, 0, time.UTC) },
 	)
@@ -130,7 +130,7 @@ func TestSessionStartRoute_ActiveSessionRejectedByReadiness(t *testing.T) {
 			Type:        session.CommandTypeStart,
 			ActorType:   command.ActorTypeParticipant,
 			ActorID:     "gm-1",
-			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
 		func() time.Time { return time.Date(2026, 3, 1, 13, 7, 0, 0, time.UTC) },
 	)
@@ -159,7 +159,7 @@ func TestSessionStartRoute_NonDraftCampaignReturnsSessionStartOnly(t *testing.T)
 			Type:        session.CommandTypeStart,
 			ActorType:   command.ActorTypeParticipant,
 			ActorID:     "gm-1",
-			PayloadJSON: []byte(`{"session_id":"sess-1"}`),
+			PayloadJSON: []byte(`{"session_id":"sess-1","session_name":"First Session"}`),
 		},
 		func() time.Time { return time.Date(2026, 3, 1, 13, 10, 0, 0, time.UTC) },
 	)

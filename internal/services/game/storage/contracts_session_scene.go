@@ -33,6 +33,8 @@ type SessionReader interface {
 	// GetActiveSession retrieves the active session for a campaign, if one exists.
 	// Returns ErrNotFound if no active session exists.
 	GetActiveSession(ctx context.Context, campaignID string) (SessionRecord, error)
+	// CountSessions returns the number of sessions stored for a campaign.
+	CountSessions(ctx context.Context, campaignID string) (int, error)
 	// ListSessions returns a page of session records for a campaign starting after the page token.
 	ListSessions(ctx context.Context, campaignID string, pageSize int, pageToken string) (SessionPage, error)
 }

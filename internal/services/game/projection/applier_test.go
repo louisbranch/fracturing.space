@@ -88,6 +88,10 @@ func (s *fakeSessionStore) GetActiveSession(context.Context, string) (storage.Se
 	return storage.SessionRecord{}, storage.ErrNotFound
 }
 
+func (s *fakeSessionStore) CountSessions(context.Context, string) (int, error) {
+	return 0, nil
+}
+
 func (s *fakeSessionStore) ListSessions(context.Context, string, int, string) (storage.SessionPage, error) {
 	return storage.SessionPage{}, nil
 }

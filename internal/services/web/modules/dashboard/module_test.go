@@ -307,7 +307,7 @@ func TestMountRendersActiveSessionsBlockWithMultipleJoinLinks(t *testing.T) {
 			Available: true,
 			Sessions: []*userhubv1.ActiveSessionPreview{
 				{CampaignId: "camp-1", CampaignName: "Sunfall", SessionId: "session-1", SessionName: "The Crossing"},
-				{CampaignId: "camp-2", CampaignName: "Gloam Tide", SessionId: "session-2"},
+				{CampaignId: "camp-2", CampaignName: "Gloam Tide", SessionId: "session-2", SessionName: "Session 2"},
 			},
 		},
 	}}
@@ -341,8 +341,8 @@ func TestMountRendersActiveSessionsBlockWithMultipleJoinLinks(t *testing.T) {
 	if !strings.Contains(body, routepath.AppCampaignGame("camp-1")) || !strings.Contains(body, routepath.AppCampaignGame("camp-2")) {
 		t.Fatalf("body = %q, want join links for both campaigns", body)
 	}
-	if !strings.Contains(body, "Unnamed session") {
-		t.Fatalf("body = %q, want unnamed-session fallback", body)
+	if !strings.Contains(body, "Session 2") {
+		t.Fatalf("body = %q, want named second session", body)
 	}
 }
 
