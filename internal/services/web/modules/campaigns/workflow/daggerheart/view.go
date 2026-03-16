@@ -233,7 +233,7 @@ func mapCreationClasses(classes []campaignworkflow.Class, domainByID map[string]
 		mapped = append(mapped, campaignworkflow.CreationClassView{
 			ID:               class.ID,
 			Name:             class.Name,
-			ImageURL:         resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeClass, class.ID, catalog.DaggerheartAssetTypeClassIllustration),
+			ImageURL:         mappedAssetURL(class.Illustration),
 			StartingHP:       class.StartingHP,
 			StartingEvasion:  class.StartingEvasion,
 			HopeFeature:      mapFeature(class.HopeFeature),
@@ -277,7 +277,7 @@ func mapCreationSubclasses(subclasses []campaignworkflow.Subclass, cdn imagecdn.
 		mapped = append(mapped, campaignworkflow.CreationSubclassView{
 			ID:             subclass.ID,
 			Name:           subclass.Name,
-			ImageURL:       resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeSubclass, subclass.ID, catalog.DaggerheartAssetTypeSubclassIllustration),
+			ImageURL:       mappedAssetURL(subclass.Illustration),
 			ClassID:        subclass.ClassID,
 			SpellcastTrait: subclass.SpellcastTrait,
 			Foundation:     mapFeatures(subclass.Foundation),
@@ -298,7 +298,7 @@ func mapCreationHeritages(
 		mapped = append(mapped, campaignworkflow.CreationHeritageView{
 			ID:       heritage.ID,
 			Name:     heritage.Name,
-			ImageURL: resolveEntityImageURL(cdn, entityType, heritage.ID, assetType),
+			ImageURL: mappedAssetURL(heritage.Illustration),
 			Features: mapFeatures(heritage.Features),
 		})
 	}
@@ -326,14 +326,10 @@ func mapFeature(feature campaignworkflow.Feature) campaignworkflow.CreationClass
 func mapCreationWeapons(weapons []campaignworkflow.Weapon, cdn imagecdn.ImageCDN) []campaignworkflow.CreationWeaponView {
 	mapped := make([]campaignworkflow.CreationWeaponView, 0, len(weapons))
 	for _, weapon := range weapons {
-		imageURL := strings.TrimSpace(weapon.Illustration.URL)
-		if imageURL == "" {
-			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeWeapon, weapon.ID, catalog.DaggerheartAssetTypeWeaponIllustration)
-		}
 		mapped = append(mapped, campaignworkflow.CreationWeaponView{
 			ID:       weapon.ID,
 			Name:     weapon.Name,
-			ImageURL: imageURL,
+			ImageURL: mappedAssetURL(weapon.Illustration),
 			Burden:   weapon.Burden,
 			Trait:    weapon.Trait,
 			Range:    weapon.Range,
@@ -348,14 +344,10 @@ func mapCreationWeapons(weapons []campaignworkflow.Weapon, cdn imagecdn.ImageCDN
 func mapCreationArmor(items []campaignworkflow.Armor, cdn imagecdn.ImageCDN) []campaignworkflow.CreationArmorView {
 	mapped := make([]campaignworkflow.CreationArmorView, 0, len(items))
 	for _, item := range items {
-		imageURL := strings.TrimSpace(item.Illustration.URL)
-		if imageURL == "" {
-			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeArmor, item.ID, catalog.DaggerheartAssetTypeArmorIllustration)
-		}
 		mapped = append(mapped, campaignworkflow.CreationArmorView{
 			ID:             item.ID,
 			Name:           item.Name,
-			ImageURL:       imageURL,
+			ImageURL:       mappedAssetURL(item.Illustration),
 			ArmorScore:     item.ArmorScore,
 			BaseThresholds: item.BaseThresholds,
 			Feature:        item.Feature,
@@ -368,14 +360,10 @@ func mapCreationArmor(items []campaignworkflow.Armor, cdn imagecdn.ImageCDN) []c
 func mapCreationItems(items []campaignworkflow.Item, cdn imagecdn.ImageCDN) []campaignworkflow.CreationItemView {
 	mapped := make([]campaignworkflow.CreationItemView, 0, len(items))
 	for _, item := range items {
-		imageURL := strings.TrimSpace(item.Illustration.URL)
-		if imageURL == "" {
-			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeItem, item.ID, catalog.DaggerheartAssetTypeItemIllustration)
-		}
 		mapped = append(mapped, campaignworkflow.CreationItemView{
 			ID:          item.ID,
 			Name:        item.Name,
-			ImageURL:    imageURL,
+			ImageURL:    mappedAssetURL(item.Illustration),
 			Description: item.Description,
 		})
 	}
@@ -386,14 +374,10 @@ func mapCreationItems(items []campaignworkflow.Item, cdn imagecdn.ImageCDN) []ca
 func mapCreationDomainCards(cards []campaignworkflow.DomainCard, cdn imagecdn.ImageCDN) []campaignworkflow.CreationDomainCardView {
 	mapped := make([]campaignworkflow.CreationDomainCardView, 0, len(cards))
 	for _, card := range cards {
-		imageURL := strings.TrimSpace(card.Illustration.URL)
-		if imageURL == "" {
-			imageURL = resolveEntityImageURL(cdn, catalog.DaggerheartEntityTypeDomainCard, card.ID, catalog.DaggerheartAssetTypeDomainCardIllustration)
-		}
 		mapped = append(mapped, campaignworkflow.CreationDomainCardView{
 			ID:          card.ID,
 			Name:        card.Name,
-			ImageURL:    imageURL,
+			ImageURL:    mappedAssetURL(card.Illustration),
 			DomainID:    card.DomainID,
 			DomainName:  card.DomainName,
 			Level:       card.Level,
@@ -403,6 +387,14 @@ func mapCreationDomainCards(cards []campaignworkflow.DomainCard, cdn imagecdn.Im
 		})
 	}
 	return mapped
+}
+
+// mappedAssetURL keeps player-facing creation art limited to explicit entity mappings.
+func mappedAssetURL(asset campaignworkflow.AssetReference) string {
+	if strings.TrimSpace(asset.Status) != "mapped" {
+		return ""
+	}
+	return strings.TrimSpace(asset.URL)
 }
 
 // resolveEntityImageURL resolves a CDN image URL for a daggerheart entity.

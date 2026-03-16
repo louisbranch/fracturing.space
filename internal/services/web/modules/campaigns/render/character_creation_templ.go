@@ -546,15 +546,15 @@ func creationSelectableOptionCard(
 			}
 		}
 		if showImageFrame {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<figure class=\"h-48 md:h-auto md:w-48 bg-base-300 shrink-0\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "<figure class=\"h-48 md:h-[16.5rem] md:w-44 md:self-start bg-base-300 shrink-0\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			templ_7745c5c3_Err = AppImage(AppImageView{
 				Src:        imageURL,
 				Alt:        name,
-				WidthPX:    3,
-				HeightPX:   4,
+				WidthPX:    2,
+				HeightPX:   3,
 				FrameClass: "h-full w-full",
 				ImageClass: "h-full w-full object-cover",
 			}).Render(ctx, templ_7745c5c3_Buffer)
@@ -705,7 +705,7 @@ func creationOptionCard(id string, name string, imageURL string, radioName strin
 			campaignCreationOptionSelected(id, selectedID),
 			true,
 			false,
-			strings.TrimSpace(imageURL) != "",
+			true,
 			"",
 			domainWatermarks,
 		).Render(templ.WithChildren(ctx, templ_7745c5c3_Var15), templ_7745c5c3_Buffer)
@@ -3236,7 +3236,7 @@ func creationStepEquipment(view CharacterCreationPageView, loc Localizer) templ.
 				campaignCreationOptionSelected(weapon.ID, view.Creation.PrimaryWeaponID),
 				true,
 				false,
-				strings.TrimSpace(weapon.ImageURL) != "",
+				true,
 				"equipment-primary-weapon",
 				nil,
 			).Render(templ.WithChildren(ctx, templ_7745c5c3_Var153), templ_7745c5c3_Buffer)
@@ -3384,7 +3384,7 @@ func creationStepEquipment(view CharacterCreationPageView, loc Localizer) templ.
 			strings.TrimSpace(view.Creation.SecondaryWeaponID) == "",
 			false,
 			false,
-			strings.TrimSpace(view.Creation.SecondaryWeaponNoneImageURL) != "",
+			true,
 			"equipment-secondary-weapon",
 			nil,
 		).Render(templ.WithChildren(ctx, templ_7745c5c3_Var165), templ_7745c5c3_Buffer)
@@ -3539,7 +3539,7 @@ func creationStepEquipment(view CharacterCreationPageView, loc Localizer) templ.
 				campaignCreationOptionSelected(weapon.ID, view.Creation.SecondaryWeaponID),
 				false,
 				false,
-				strings.TrimSpace(weapon.ImageURL) != "",
+				true,
 				"equipment-secondary-weapon",
 				nil,
 			).Render(templ.WithChildren(ctx, templ_7745c5c3_Var170), templ_7745c5c3_Buffer)
@@ -3716,7 +3716,7 @@ func creationStepEquipment(view CharacterCreationPageView, loc Localizer) templ.
 				campaignCreationOptionSelected(armor.ID, view.Creation.ArmorID),
 				true,
 				false,
-				strings.TrimSpace(armor.ImageURL) != "",
+				true,
 				"equipment-armor",
 				nil,
 			).Render(templ.WithChildren(ctx, templ_7745c5c3_Var182), templ_7745c5c3_Buffer)
@@ -3853,7 +3853,7 @@ func creationStepEquipment(view CharacterCreationPageView, loc Localizer) templ.
 				campaignCreationOptionSelected(item.ID, view.Creation.PotionItemID),
 				true,
 				false,
-				strings.TrimSpace(item.ImageURL) != "",
+				true,
 				"equipment-potion",
 				nil,
 			).Render(templ.WithChildren(ctx, templ_7745c5c3_Var192), templ_7745c5c3_Buffer)
