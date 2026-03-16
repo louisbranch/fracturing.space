@@ -176,7 +176,7 @@ func TestCreationStepDomainCardsUsesSharedSelectableCardShell(t *testing.T) {
 		Creation: CampaignCharacterCreationView{
 			DomainCardIDs: []string{"dc1"},
 			DomainCards: []CampaignCreationDomainCardView{
-				{ID: "dc1", Name: "Runeward", ImageURL: "https://cdn.example.com/domain-cards/runeward.png", DomainName: "Arcana", Level: 1},
+				{ID: "dc1", Name: "Runeward", ImageURL: "https://cdn.example.com/domain-cards/runeward.png", DomainName: "Arcana", Level: 1, FeatureText: `Spend **Hope** to become _warded_.`},
 				{ID: "dc2", Name: "Wallwalk", DomainName: "Arcana", Level: 1},
 			},
 		},
@@ -201,6 +201,8 @@ func TestCreationStepDomainCardsUsesSharedSelectableCardShell(t *testing.T) {
 		`width="2"`,
 		`height="3"`,
 		`border-primary ring-2 ring-primary/20`,
+		`<strong class="font-semibold">Hope</strong>`,
+		`<em class="italic">warded</em>`,
 	} {
 		if !strings.Contains(markup, marker) {
 			t.Fatalf("domain-cards output missing marker %q: %q", marker, markup)
@@ -244,13 +246,13 @@ func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing
 		CharacterID: "character-1",
 		Creation: CampaignCharacterCreationView{
 			PrimaryWeapons: []CampaignCreationWeaponView{
-				{ID: "weapon-1", Name: "Longsword"},
+				{ID: "weapon-1", Name: "Longsword", Feature: `Spend **Hope** to strike _true_.`},
 			},
 			Armor: []CampaignCreationArmorView{
-				{ID: "armor-1", Name: "Chainmail"},
+				{ID: "armor-1", Name: "Chainmail", Feature: `Gain __cover__ while braced.`},
 			},
 			PotionItems: []CampaignCreationItemView{
-				{ID: "item-1", Name: "Minor Health Potion"},
+				{ID: "item-1", Name: "Minor Health Potion", Description: `Recover *steadily* after **rest**.`},
 			},
 		},
 	}
@@ -273,6 +275,11 @@ func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing
 		`data-image-frame="true"`,
 		`data-image-skeleton="true"`,
 		`style="aspect-ratio: 2 / 3;"`,
+		`<strong class="font-semibold">Hope</strong>`,
+		`<em class="italic">true</em>`,
+		`<strong class="font-semibold">cover</strong>`,
+		`<em class="italic">steadily</em>`,
+		`<strong class="font-semibold">rest</strong>`,
 	} {
 		if !strings.Contains(markup, marker) {
 			t.Fatalf("equipment output missing marker %q: %q", marker, markup)
@@ -280,6 +287,63 @@ func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing
 	}
 	if strings.Contains(markup, `<img`) {
 		t.Fatalf("equipment output unexpectedly rendered image tag for empty url: %q", markup)
+	}
+}
+
+func TestCreationStepClassSubclassRendersCatalogInlineMarkdown(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Classes: []CampaignCreationClassView{
+				{
+					ID:              "class-1",
+					Name:            "Guardian",
+					StartingHP:      6,
+					StartingEvasion: 10,
+					HopeFeature: CampaignCreationClassFeatureView{
+						Name:        "Stand Firm",
+						Description: `Spend **Hope** to stay _steadfast_.`,
+					},
+					Features: []CampaignCreationClassFeatureView{
+						{
+							Name:        "Shield Wall",
+							Description: `Gain __cover__ for nearby allies.`,
+						},
+					},
+				},
+			},
+			Subclasses: []CampaignCreationSubclassView{
+				{
+					ID:      "subclass-1",
+					Name:    "Bulwark",
+					ClassID: "class-1",
+					Foundation: []CampaignCreationClassFeatureView{{
+						Name:        "Anchor",
+						Description: `Become *unyielding* on defense.`,
+					}},
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := creationStepClassSubclass(view, testLocalizer{}).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render creationStepClassSubclass: %v", err)
+	}
+
+	got := strings.SplitN(buf.String(), "<script>", 2)[0]
+	for _, marker := range []string{
+		`<strong class="font-semibold">Hope</strong>`,
+		`<em class="italic">steadfast</em>`,
+		`<strong class="font-semibold">cover</strong>`,
+		`<em class="italic">unyielding</em>`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("class-subclass output missing marker %q: %q", marker, got)
+		}
 	}
 }
 

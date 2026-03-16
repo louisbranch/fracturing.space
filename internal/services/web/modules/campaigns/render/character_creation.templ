@@ -354,7 +354,7 @@ templ creationFeatureList(features []CampaignCreationClassFeatureView) {
 				<li>
 					<span class="text-sm font-semibold">{ feature.Name }</span>
 					if feature.Description != "" {
-						<p class="text-sm opacity-60 ml-5">{ feature.Description }</p>
+						<p class="text-sm opacity-60 ml-5">@creationCatalogInlineMarkdown(feature.Description)</p>
 					}
 				</li>
 			}
@@ -705,7 +705,7 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 										<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.label.hope") }:</span>
 										<span class="text-sm font-semibold">{ " " + class.HopeFeature.Name }</span>
 										if class.HopeFeature.Description != "" {
-											<p class="text-sm opacity-60 mt-0.5">{ class.HopeFeature.Description }</p>
+											<p class="text-sm opacity-60 mt-0.5">@creationCatalogInlineMarkdown(class.HopeFeature.Description)</p>
 										}
 									</div>
 								}
@@ -1130,7 +1130,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 										}
 									</div>
 									if weapon.Feature != "" {
-										<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
+										<p class="text-xs opacity-60 mt-1">@creationCatalogInlineMarkdown(weapon.Feature)</p>
 									}
 								}
 							</div>
@@ -1197,7 +1197,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 										}
 									</div>
 									if weapon.Feature != "" {
-										<p class="text-xs opacity-60 mt-1">{ weapon.Feature }</p>
+										<p class="text-xs opacity-60 mt-1">@creationCatalogInlineMarkdown(weapon.Feature)</p>
 									}
 								}
 							</div>
@@ -1239,7 +1239,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 										}
 									</div>
 									if armor.Feature != "" {
-										<p class="text-xs opacity-60 mt-1">{ armor.Feature }</p>
+										<p class="text-xs opacity-60 mt-1">@creationCatalogInlineMarkdown(armor.Feature)</p>
 									}
 								}
 							</div>
@@ -1275,7 +1275,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 									nil,
 								) {
 									if item.Description != "" {
-										<p class="text-xs opacity-70">{ item.Description }</p>
+										<p class="text-xs opacity-70">@creationCatalogInlineMarkdown(item.Description)</p>
 									}
 								}
 							</div>
@@ -1501,7 +1501,7 @@ templ creationStepDomainCards(view CharacterCreationPageView, loc Localizer) {
 						}
 					</div>
 					if card.FeatureText != "" {
-						<p class="text-xs opacity-70 mt-2">{ card.FeatureText }</p>
+						<p class="text-xs opacity-70 mt-2">@creationCatalogInlineMarkdown(card.FeatureText)</p>
 					}
 				}
 			}
