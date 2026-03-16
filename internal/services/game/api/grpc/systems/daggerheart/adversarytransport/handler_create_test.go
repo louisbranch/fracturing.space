@@ -7,7 +7,6 @@ import (
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestHandlerCreateAdversarySuccess(t *testing.T) {
@@ -32,9 +31,10 @@ func TestHandlerCreateAdversarySuccess(t *testing.T) {
 	})
 
 	resp, err := handler.CreateAdversary(testContext(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1",
-		Name:       "Rival",
-		HpMax:      wrapperspb.Int32(6),
+		CampaignId:       "camp-1",
+		SessionId:        "sess-1",
+		SceneId:          "scene-1",
+		AdversaryEntryId: "adversary.rival",
 	})
 	if err != nil {
 		t.Fatalf("CreateAdversary returned error: %v", err)

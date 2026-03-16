@@ -14,58 +14,226 @@ type GMFearChangedPayload struct {
 	Reason string `json:"reason,omitempty"`
 }
 
+// GMMoveTarget captures the typed Fear-spend target stored on GM move
+// commands and audit events.
+type GMMoveTarget struct {
+	Type                GMMoveTargetType        `json:"type"`
+	Kind                GMMoveKind              `json:"kind,omitempty"`
+	Shape               GMMoveShape             `json:"shape,omitempty"`
+	Description         string                  `json:"description,omitempty"`
+	AdversaryID         ids.AdversaryID         `json:"adversary_id,omitempty"`
+	EnvironmentEntityID ids.EnvironmentEntityID `json:"environment_entity_id,omitempty"`
+	EnvironmentID       string                  `json:"environment_id,omitempty"`
+	FeatureID           string                  `json:"feature_id,omitempty"`
+	ExperienceName      string                  `json:"experience_name,omitempty"`
+}
+
+// GMMoveApplyPayload captures the payload for sys.daggerheart.gm_move.apply
+// commands.
+type GMMoveApplyPayload struct {
+	Target    GMMoveTarget `json:"target"`
+	FearSpent int          `json:"fear_spent"`
+}
+
+// GMMoveAppliedPayload captures the payload for sys.daggerheart.gm_move_applied
+// events.
+type GMMoveAppliedPayload struct {
+	Target    GMMoveTarget `json:"target"`
+	FearSpent int          `json:"fear_spent"`
+}
+
 // CharacterStatePatchPayload captures the payload for sys.daggerheart.character_state.patch commands.
 // Source is an optional discriminator indicating what triggered the patch
 // (e.g. "hope.spend", "stress.spend"), enabling journal queries to distinguish
 // spend events from generic GM adjustments without introducing separate event types.
 type CharacterStatePatchPayload struct {
-	CharacterID     ids.CharacterID `json:"character_id"`
-	Source          string          `json:"source,omitempty"`
-	HPBefore        *int            `json:"hp_before,omitempty"`
-	HPAfter         *int            `json:"hp_after,omitempty"`
-	HopeBefore      *int            `json:"hope_before,omitempty"`
-	HopeAfter       *int            `json:"hope_after,omitempty"`
-	HopeMaxBefore   *int            `json:"hope_max_before,omitempty"`
-	HopeMaxAfter    *int            `json:"hope_max_after,omitempty"`
-	StressBefore    *int            `json:"stress_before,omitempty"`
-	StressAfter     *int            `json:"stress_after,omitempty"`
-	ArmorBefore     *int            `json:"armor_before,omitempty"`
-	ArmorAfter      *int            `json:"armor_after,omitempty"`
-	LifeStateBefore *string         `json:"life_state_before,omitempty"`
-	LifeStateAfter  *string         `json:"life_state_after,omitempty"`
+	CharacterID                         ids.CharacterID         `json:"character_id"`
+	Source                              string                  `json:"source,omitempty"`
+	HPBefore                            *int                    `json:"hp_before,omitempty"`
+	HPAfter                             *int                    `json:"hp_after,omitempty"`
+	HopeBefore                          *int                    `json:"hope_before,omitempty"`
+	HopeAfter                           *int                    `json:"hope_after,omitempty"`
+	HopeMaxBefore                       *int                    `json:"hope_max_before,omitempty"`
+	HopeMaxAfter                        *int                    `json:"hope_max_after,omitempty"`
+	StressBefore                        *int                    `json:"stress_before,omitempty"`
+	StressAfter                         *int                    `json:"stress_after,omitempty"`
+	ArmorBefore                         *int                    `json:"armor_before,omitempty"`
+	ArmorAfter                          *int                    `json:"armor_after,omitempty"`
+	LifeStateBefore                     *string                 `json:"life_state_before,omitempty"`
+	LifeStateAfter                      *string                 `json:"life_state_after,omitempty"`
+	ClassStateBefore                    *CharacterClassState    `json:"class_state_before,omitempty"`
+	ClassStateAfter                     *CharacterClassState    `json:"class_state_after,omitempty"`
+	SubclassStateBefore                 *CharacterSubclassState `json:"subclass_state_before,omitempty"`
+	SubclassStateAfter                  *CharacterSubclassState `json:"subclass_state_after,omitempty"`
+	ImpenetrableUsedThisShortRestBefore *bool                   `json:"impenetrable_used_this_short_rest_before,omitempty"`
+	ImpenetrableUsedThisShortRestAfter  *bool                   `json:"impenetrable_used_this_short_rest_after,omitempty"`
 }
 
 // CharacterStatePatchedPayload captures the payload for sys.daggerheart.character_state_patched events.
 type CharacterStatePatchedPayload struct {
+	CharacterID                   ids.CharacterID         `json:"character_id"`
+	Source                        string                  `json:"source,omitempty"`
+	HP                            *int                    `json:"hp_after,omitempty"`
+	Hope                          *int                    `json:"hope_after,omitempty"`
+	HopeMax                       *int                    `json:"hope_max_after,omitempty"`
+	Stress                        *int                    `json:"stress_after,omitempty"`
+	Armor                         *int                    `json:"armor_after,omitempty"`
+	LifeState                     *string                 `json:"life_state_after,omitempty"`
+	ClassState                    *CharacterClassState    `json:"class_state_after,omitempty"`
+	SubclassState                 *CharacterSubclassState `json:"subclass_state_after,omitempty"`
+	ImpenetrableUsedThisShortRest *bool                   `json:"impenetrable_used_this_short_rest_after,omitempty"`
+}
+
+// ClassFeatureApplyPayload captures one typed class feature activation that
+// resolves to a durable character state patch.
+type ClassFeatureTargetPatchPayload struct {
+	CharacterID      ids.CharacterID      `json:"character_id"`
+	HPBefore         *int                 `json:"hp_before,omitempty"`
+	HPAfter          *int                 `json:"hp_after,omitempty"`
+	HopeBefore       *int                 `json:"hope_before,omitempty"`
+	HopeAfter        *int                 `json:"hope_after,omitempty"`
+	ArmorBefore      *int                 `json:"armor_before,omitempty"`
+	ArmorAfter       *int                 `json:"armor_after,omitempty"`
+	ClassStateBefore *CharacterClassState `json:"class_state_before,omitempty"`
+	ClassStateAfter  *CharacterClassState `json:"class_state_after,omitempty"`
+}
+
+type ClassFeatureApplyPayload struct {
+	ActorCharacterID ids.CharacterID                  `json:"actor_character_id"`
+	Feature          string                           `json:"feature"`
+	Targets          []ClassFeatureTargetPatchPayload `json:"targets"`
+}
+
+type SubclassFeatureTargetPatchPayload struct {
+	CharacterID         ids.CharacterID         `json:"character_id"`
+	HPBefore            *int                    `json:"hp_before,omitempty"`
+	HPAfter             *int                    `json:"hp_after,omitempty"`
+	HopeBefore          *int                    `json:"hope_before,omitempty"`
+	HopeAfter           *int                    `json:"hope_after,omitempty"`
+	StressBefore        *int                    `json:"stress_before,omitempty"`
+	StressAfter         *int                    `json:"stress_after,omitempty"`
+	ArmorBefore         *int                    `json:"armor_before,omitempty"`
+	ArmorAfter          *int                    `json:"armor_after,omitempty"`
+	ClassStateBefore    *CharacterClassState    `json:"class_state_before,omitempty"`
+	ClassStateAfter     *CharacterClassState    `json:"class_state_after,omitempty"`
+	SubclassStateBefore *CharacterSubclassState `json:"subclass_state_before,omitempty"`
+	SubclassStateAfter  *CharacterSubclassState `json:"subclass_state_after,omitempty"`
+}
+
+type SubclassFeatureApplyPayload struct {
+	ActorCharacterID          ids.CharacterID                     `json:"actor_character_id"`
+	Feature                   string                              `json:"feature"`
+	Targets                   []SubclassFeatureTargetPatchPayload `json:"targets,omitempty"`
+	CharacterConditionTargets []ConditionChangePayload            `json:"character_condition_targets,omitempty"`
+	AdversaryConditionTargets []AdversaryConditionChangePayload   `json:"adversary_condition_targets,omitempty"`
+}
+
+// BeastformTransformPayload captures one beastform transform command and the
+// resulting state mutation.
+type BeastformTransformPayload struct {
+	ActorCharacterID ids.CharacterID      `json:"actor_character_id"`
+	CharacterID      ids.CharacterID      `json:"character_id"`
+	BeastformID      string               `json:"beastform_id"`
+	UseEvolution     bool                 `json:"use_evolution,omitempty"`
+	EvolutionTrait   string               `json:"evolution_trait,omitempty"`
+	HopeBefore       *int                 `json:"hope_before,omitempty"`
+	HopeAfter        *int                 `json:"hope_after,omitempty"`
+	StressBefore     *int                 `json:"stress_before,omitempty"`
+	StressAfter      *int                 `json:"stress_after,omitempty"`
+	ClassStateBefore *CharacterClassState `json:"class_state_before,omitempty"`
+	ClassStateAfter  *CharacterClassState `json:"class_state_after,omitempty"`
+}
+
+// BeastformDropPayload captures one beastform drop command and the resulting
+// class-state mutation.
+type BeastformDropPayload struct {
+	ActorCharacterID ids.CharacterID      `json:"actor_character_id"`
+	CharacterID      ids.CharacterID      `json:"character_id"`
+	BeastformID      string               `json:"beastform_id"`
+	Source           string               `json:"source,omitempty"`
+	ClassStateBefore *CharacterClassState `json:"class_state_before,omitempty"`
+	ClassStateAfter  *CharacterClassState `json:"class_state_after,omitempty"`
+}
+
+// BeastformTransformedPayload captures the event payload emitted when a
+// character enters beastform.
+type BeastformTransformedPayload struct {
+	CharacterID     ids.CharacterID                `json:"character_id"`
+	BeastformID     string                         `json:"beastform_id"`
+	Hope            *int                           `json:"hope_after,omitempty"`
+	Stress          *int                           `json:"stress_after,omitempty"`
+	ActiveBeastform *CharacterActiveBeastformState `json:"active_beastform,omitempty"`
+	Source          string                         `json:"source,omitempty"`
+}
+
+// BeastformDroppedPayload captures the event payload emitted when a character
+// leaves beastform.
+type BeastformDroppedPayload struct {
 	CharacterID ids.CharacterID `json:"character_id"`
+	BeastformID string          `json:"beastform_id"`
 	Source      string          `json:"source,omitempty"`
-	HP          *int            `json:"hp_after,omitempty"`
-	Hope        *int            `json:"hope_after,omitempty"`
-	HopeMax     *int            `json:"hope_max_after,omitempty"`
-	Stress      *int            `json:"stress_after,omitempty"`
-	Armor       *int            `json:"armor_after,omitempty"`
-	LifeState   *string         `json:"life_state_after,omitempty"`
+}
+
+// CompanionExperienceBeginPayload captures one companion dispatch command and
+// the resulting runtime-state mutation.
+type CompanionExperienceBeginPayload struct {
+	ActorCharacterID     ids.CharacterID          `json:"actor_character_id"`
+	CharacterID          ids.CharacterID          `json:"character_id"`
+	ExperienceID         string                   `json:"experience_id"`
+	CompanionStateBefore *CharacterCompanionState `json:"companion_state_before,omitempty"`
+	CompanionStateAfter  *CharacterCompanionState `json:"companion_state_after,omitempty"`
+}
+
+// CompanionReturnPayload captures one companion return command and the
+// resulting state mutation.
+type CompanionReturnPayload struct {
+	ActorCharacterID     ids.CharacterID          `json:"actor_character_id"`
+	CharacterID          ids.CharacterID          `json:"character_id"`
+	Resolution           string                   `json:"resolution,omitempty"`
+	StressBefore         *int                     `json:"stress_before,omitempty"`
+	StressAfter          *int                     `json:"stress_after,omitempty"`
+	CompanionStateBefore *CharacterCompanionState `json:"companion_state_before,omitempty"`
+	CompanionStateAfter  *CharacterCompanionState `json:"companion_state_after,omitempty"`
+}
+
+// CompanionExperienceBegunPayload captures the event payload emitted when a
+// companion leaves on an experience.
+type CompanionExperienceBegunPayload struct {
+	CharacterID    ids.CharacterID          `json:"character_id"`
+	ExperienceID   string                   `json:"experience_id"`
+	CompanionState *CharacterCompanionState `json:"companion_state,omitempty"`
+	Source         string                   `json:"source,omitempty"`
+}
+
+// CompanionReturnedPayload captures the event payload emitted when a companion
+// returns from an active experience.
+type CompanionReturnedPayload struct {
+	CharacterID    ids.CharacterID          `json:"character_id"`
+	Resolution     string                   `json:"resolution,omitempty"`
+	Stress         *int                     `json:"stress_after,omitempty"`
+	CompanionState *CharacterCompanionState `json:"companion_state,omitempty"`
+	Source         string                   `json:"source,omitempty"`
 }
 
 // ConditionChangePayload captures the payload for sys.daggerheart.condition.change commands.
 type ConditionChangePayload struct {
-	CharacterID      ids.CharacterID `json:"character_id"`
-	ConditionsBefore []string        `json:"conditions_before,omitempty"`
-	ConditionsAfter  []string        `json:"conditions_after"`
-	Added            []string        `json:"added,omitempty"`
-	Removed          []string        `json:"removed,omitempty"`
-	Source           string          `json:"source,omitempty"`
-	RollSeq          *uint64         `json:"roll_seq,omitempty"`
+	CharacterID      ids.CharacterID  `json:"character_id"`
+	ConditionsBefore []ConditionState `json:"conditions_before,omitempty"`
+	ConditionsAfter  []ConditionState `json:"conditions_after"`
+	Added            []ConditionState `json:"added,omitempty"`
+	Removed          []ConditionState `json:"removed,omitempty"`
+	Source           string           `json:"source,omitempty"`
+	RollSeq          *uint64          `json:"roll_seq,omitempty"`
 }
 
 // ConditionChangedPayload captures the payload for sys.daggerheart.condition_changed events.
 type ConditionChangedPayload struct {
-	CharacterID ids.CharacterID `json:"character_id"`
-	Conditions  []string        `json:"conditions_after"`
-	Added       []string        `json:"added,omitempty"`
-	Removed     []string        `json:"removed,omitempty"`
-	Source      string          `json:"source,omitempty"`
-	RollSeq     *uint64         `json:"roll_seq,omitempty"`
+	CharacterID ids.CharacterID  `json:"character_id"`
+	Conditions  []ConditionState `json:"conditions_after"`
+	Added       []ConditionState `json:"added,omitempty"`
+	Removed     []ConditionState `json:"removed,omitempty"`
+	Source      string           `json:"source,omitempty"`
+	RollSeq     *uint64          `json:"roll_seq,omitempty"`
 }
 
 // HopeSpendPayload captures the payload for sys.daggerheart.hope.spend commands.
@@ -109,48 +277,30 @@ type LoadoutSwappedPayload struct {
 	Stress      *int            `json:"stress_after,omitempty"`
 }
 
-// RestCharacterStatePatch describes per-character rest adjustments.
-type RestCharacterStatePatch struct {
-	CharacterID  ids.CharacterID `json:"character_id"`
-	HopeBefore   *int            `json:"hope_before,omitempty"`
-	HopeAfter    *int            `json:"hope_after,omitempty"`
-	StressBefore *int            `json:"stress_before,omitempty"`
-	StressAfter  *int            `json:"stress_after,omitempty"`
-	ArmorBefore  *int            `json:"armor_before,omitempty"`
-	ArmorAfter   *int            `json:"armor_after,omitempty"`
-}
-
 // RestTakePayload captures the payload for sys.daggerheart.rest.take commands.
 type RestTakePayload struct {
-	RestType          string                    `json:"rest_type"`
-	Interrupted       bool                      `json:"interrupted"`
-	GMFearBefore      int                       `json:"gm_fear_before"`
-	GMFearAfter       int                       `json:"gm_fear_after"`
-	ShortRestsBefore  int                       `json:"short_rests_before"`
-	ShortRestsAfter   int                       `json:"short_rests_after"`
-	RefreshRest       bool                      `json:"refresh_rest"`
-	RefreshLongRest   bool                      `json:"refresh_long_rest"`
-	LongTermCountdown *CountdownUpdatePayload   `json:"long_term_countdown,omitempty"`
-	CharacterStates   []RestCharacterStatePatch `json:"character_states,omitempty"`
-}
-
-// RestTakenCharacterPatch describes per-character rest adjustments in event payloads.
-type RestTakenCharacterPatch struct {
-	CharacterID ids.CharacterID `json:"character_id"`
-	Hope        *int            `json:"hope_after,omitempty"`
-	Stress      *int            `json:"stress_after,omitempty"`
-	Armor       *int            `json:"armor_after,omitempty"`
+	RestType         string                       `json:"rest_type"`
+	Interrupted      bool                         `json:"interrupted"`
+	GMFearBefore     int                          `json:"gm_fear_before"`
+	GMFearAfter      int                          `json:"gm_fear_after"`
+	ShortRestsBefore int                          `json:"short_rests_before"`
+	ShortRestsAfter  int                          `json:"short_rests_after"`
+	RefreshRest      bool                         `json:"refresh_rest"`
+	RefreshLongRest  bool                         `json:"refresh_long_rest"`
+	Participants     []ids.CharacterID            `json:"participants,omitempty"`
+	DowntimeMoves    []DowntimeMoveAppliedPayload `json:"downtime_moves,omitempty"`
+	CountdownUpdates []CountdownUpdatePayload     `json:"countdown_updates,omitempty"`
 }
 
 // RestTakenPayload captures the payload for sys.daggerheart.rest_taken events.
 type RestTakenPayload struct {
-	RestType        string                    `json:"rest_type"`
-	Interrupted     bool                      `json:"interrupted"`
-	GMFear          int                       `json:"gm_fear_after"`
-	ShortRests      int                       `json:"short_rests_after"`
-	RefreshRest     bool                      `json:"refresh_rest"`
-	RefreshLongRest bool                      `json:"refresh_long_rest"`
-	CharacterStates []RestTakenCharacterPatch `json:"character_states,omitempty"`
+	RestType        string            `json:"rest_type"`
+	Interrupted     bool              `json:"interrupted"`
+	GMFear          int               `json:"gm_fear_after"`
+	ShortRests      int               `json:"short_rests_after"`
+	RefreshRest     bool              `json:"refresh_rest"`
+	RefreshLongRest bool              `json:"refresh_long_rest"`
+	Participants    []ids.CharacterID `json:"participants,omitempty"`
 }
 
 // CharacterTemporaryArmorApplyPayload captures the payload for sys.daggerheart.character_temporary_armor.apply commands.
@@ -223,6 +373,7 @@ type DamageApplyPayload struct {
 	CharacterID        ids.CharacterID   `json:"character_id"`
 	HpBefore           *int              `json:"hp_before,omitempty"`
 	HpAfter            *int              `json:"hp_after,omitempty"`
+	StressAfter        *int              `json:"stress_after,omitempty"`
 	ArmorBefore        *int              `json:"armor_before,omitempty"`
 	ArmorAfter         *int              `json:"armor_after,omitempty"`
 	ArmorSpent         int               `json:"armor_spent,omitempty"`
@@ -245,6 +396,7 @@ type DamageApplyPayload struct {
 type DamageAppliedPayload struct {
 	CharacterID        ids.CharacterID   `json:"character_id"`
 	Hp                 *int              `json:"hp_after,omitempty"`
+	Stress             *int              `json:"stress_after,omitempty"`
 	Armor              *int              `json:"armor_after,omitempty"`
 	ArmorSpent         int               `json:"armor_spent,omitempty"`
 	Severity           string            `json:"severity,omitempty"`
@@ -313,63 +465,62 @@ type AdversaryDamageAppliedPayload struct {
 	SourceCharacterIDs []ids.CharacterID `json:"source_character_ids,omitempty"`
 }
 
-// DowntimeMoveApplyPayload captures the payload for sys.daggerheart.downtime_move.apply commands.
-type DowntimeMoveApplyPayload struct {
-	CharacterID  ids.CharacterID `json:"character_id"`
-	Move         string          `json:"move"`
-	HopeBefore   *int            `json:"hope_before,omitempty"`
-	HopeAfter    *int            `json:"hope_after,omitempty"`
-	StressBefore *int            `json:"stress_before,omitempty"`
-	StressAfter  *int            `json:"stress_after,omitempty"`
-	ArmorBefore  *int            `json:"armor_before,omitempty"`
-	ArmorAfter   *int            `json:"armor_after,omitempty"`
-}
-
 // DowntimeMoveAppliedPayload captures the payload for sys.daggerheart.downtime_move_applied events.
 type DowntimeMoveAppliedPayload struct {
-	CharacterID ids.CharacterID `json:"character_id"`
-	Move        string          `json:"move"`
-	Hope        *int            `json:"hope_after,omitempty"`
-	Stress      *int            `json:"stress_after,omitempty"`
-	Armor       *int            `json:"armor_after,omitempty"`
+	ActorCharacterID  ids.CharacterID `json:"actor_character_id"`
+	TargetCharacterID ids.CharacterID `json:"target_character_id,omitempty"`
+	Move              string          `json:"move"`
+	RestType          string          `json:"rest_type,omitempty"`
+	GroupID           string          `json:"group_id,omitempty"`
+	CountdownID       ids.CountdownID `json:"countdown_id,omitempty"`
+	HP                *int            `json:"hp_after,omitempty"`
+	Hope              *int            `json:"hope_after,omitempty"`
+	Stress            *int            `json:"stress_after,omitempty"`
+	Armor             *int            `json:"armor_after,omitempty"`
 }
 
 // AdversaryConditionChangePayload captures the payload for sys.daggerheart.adversary_condition.change commands.
 type AdversaryConditionChangePayload struct {
-	AdversaryID      ids.AdversaryID `json:"adversary_id"`
-	ConditionsBefore []string        `json:"conditions_before,omitempty"`
-	ConditionsAfter  []string        `json:"conditions_after"`
-	Added            []string        `json:"added,omitempty"`
-	Removed          []string        `json:"removed,omitempty"`
-	Source           string          `json:"source,omitempty"`
-	RollSeq          *uint64         `json:"roll_seq,omitempty"`
+	AdversaryID      ids.AdversaryID  `json:"adversary_id"`
+	ConditionsBefore []ConditionState `json:"conditions_before,omitempty"`
+	ConditionsAfter  []ConditionState `json:"conditions_after"`
+	Added            []ConditionState `json:"added,omitempty"`
+	Removed          []ConditionState `json:"removed,omitempty"`
+	Source           string           `json:"source,omitempty"`
+	RollSeq          *uint64          `json:"roll_seq,omitempty"`
 }
 
 // AdversaryConditionChangedPayload captures the payload for sys.daggerheart.adversary_condition_changed events.
 type AdversaryConditionChangedPayload struct {
-	AdversaryID ids.AdversaryID `json:"adversary_id"`
-	Conditions  []string        `json:"conditions_after"`
-	Added       []string        `json:"added,omitempty"`
-	Removed     []string        `json:"removed,omitempty"`
-	Source      string          `json:"source,omitempty"`
-	RollSeq     *uint64         `json:"roll_seq,omitempty"`
+	AdversaryID ids.AdversaryID  `json:"adversary_id"`
+	Conditions  []ConditionState `json:"conditions_after"`
+	Added       []ConditionState `json:"added,omitempty"`
+	Removed     []ConditionState `json:"removed,omitempty"`
+	Source      string           `json:"source,omitempty"`
+	RollSeq     *uint64          `json:"roll_seq,omitempty"`
 }
 
 // AdversaryCreatePayload captures the payload for sys.daggerheart.adversary.create commands.
 type AdversaryCreatePayload struct {
-	AdversaryID ids.AdversaryID `json:"adversary_id"`
-	Name        string          `json:"name"`
-	Kind        string          `json:"kind,omitempty"`
-	SessionID   ids.SessionID   `json:"session_id,omitempty"`
-	Notes       string          `json:"notes,omitempty"`
-	HP          int             `json:"hp"`
-	HPMax       int             `json:"hp_max"`
-	Stress      int             `json:"stress"`
-	StressMax   int             `json:"stress_max"`
-	Evasion     int             `json:"evasion"`
-	Major       int             `json:"major_threshold"`
-	Severe      int             `json:"severe_threshold"`
-	Armor       int             `json:"armor"`
+	AdversaryID       ids.AdversaryID             `json:"adversary_id"`
+	AdversaryEntryID  string                      `json:"adversary_entry_id"`
+	Name              string                      `json:"name"`
+	Kind              string                      `json:"kind,omitempty"`
+	SessionID         ids.SessionID               `json:"session_id"`
+	SceneID           ids.SceneID                 `json:"scene_id"`
+	Notes             string                      `json:"notes,omitempty"`
+	HP                int                         `json:"hp"`
+	HPMax             int                         `json:"hp_max"`
+	Stress            int                         `json:"stress"`
+	StressMax         int                         `json:"stress_max"`
+	Evasion           int                         `json:"evasion"`
+	Major             int                         `json:"major_threshold"`
+	Severe            int                         `json:"severe_threshold"`
+	Armor             int                         `json:"armor"`
+	FeatureStates     []AdversaryFeatureState     `json:"feature_states,omitempty"`
+	PendingExperience *AdversaryPendingExperience `json:"pending_experience,omitempty"`
+	SpotlightGateID   ids.GateID                  `json:"spotlight_gate_id,omitempty"`
+	SpotlightCount    int                         `json:"spotlight_count,omitempty"`
 }
 
 // AdversaryCreatedPayload captures the payload for sys.daggerheart.adversary_created events.
@@ -377,19 +528,41 @@ type AdversaryCreatedPayload = AdversaryCreatePayload
 
 // AdversaryUpdatePayload captures the payload for sys.daggerheart.adversary.update commands.
 type AdversaryUpdatePayload struct {
-	AdversaryID ids.AdversaryID `json:"adversary_id"`
-	Name        string          `json:"name"`
-	Kind        string          `json:"kind,omitempty"`
-	SessionID   ids.SessionID   `json:"session_id,omitempty"`
-	Notes       string          `json:"notes,omitempty"`
-	HP          int             `json:"hp"`
-	HPMax       int             `json:"hp_max"`
-	Stress      int             `json:"stress"`
-	StressMax   int             `json:"stress_max"`
-	Evasion     int             `json:"evasion"`
-	Major       int             `json:"major_threshold"`
-	Severe      int             `json:"severe_threshold"`
-	Armor       int             `json:"armor"`
+	AdversaryID       ids.AdversaryID             `json:"adversary_id"`
+	AdversaryEntryID  string                      `json:"adversary_entry_id"`
+	Name              string                      `json:"name"`
+	Kind              string                      `json:"kind,omitempty"`
+	SessionID         ids.SessionID               `json:"session_id"`
+	SceneID           ids.SceneID                 `json:"scene_id"`
+	Notes             string                      `json:"notes,omitempty"`
+	HP                int                         `json:"hp"`
+	HPMax             int                         `json:"hp_max"`
+	Stress            int                         `json:"stress"`
+	StressMax         int                         `json:"stress_max"`
+	Evasion           int                         `json:"evasion"`
+	Major             int                         `json:"major_threshold"`
+	Severe            int                         `json:"severe_threshold"`
+	Armor             int                         `json:"armor"`
+	FeatureStates     []AdversaryFeatureState     `json:"feature_states,omitempty"`
+	PendingExperience *AdversaryPendingExperience `json:"pending_experience,omitempty"`
+	SpotlightGateID   ids.GateID                  `json:"spotlight_gate_id,omitempty"`
+	SpotlightCount    int                         `json:"spotlight_count,omitempty"`
+}
+
+// AdversaryFeatureApplyPayload captures one supported adversary feature state
+// mutation and the resulting adversary projection update.
+type AdversaryFeatureApplyPayload struct {
+	ActorAdversaryID        ids.AdversaryID             `json:"actor_adversary_id"`
+	AdversaryID             ids.AdversaryID             `json:"adversary_id"`
+	FeatureID               string                      `json:"feature_id"`
+	TargetCharacterID       ids.CharacterID             `json:"target_character_id,omitempty"`
+	TargetAdversaryID       ids.AdversaryID             `json:"target_adversary_id,omitempty"`
+	StressBefore            *int                        `json:"stress_before,omitempty"`
+	StressAfter             *int                        `json:"stress_after,omitempty"`
+	FeatureStatesBefore     []AdversaryFeatureState     `json:"feature_states_before,omitempty"`
+	FeatureStatesAfter      []AdversaryFeatureState     `json:"feature_states_after,omitempty"`
+	PendingExperienceBefore *AdversaryPendingExperience `json:"pending_experience_before,omitempty"`
+	PendingExperienceAfter  *AdversaryPendingExperience `json:"pending_experience_after,omitempty"`
 }
 
 // AdversaryUpdatedPayload captures the payload for sys.daggerheart.adversary_updated events.
@@ -404,19 +577,74 @@ type AdversaryDeletePayload struct {
 // AdversaryDeletedPayload captures the payload for sys.daggerheart.adversary_deleted events.
 type AdversaryDeletedPayload = AdversaryDeletePayload
 
+// EnvironmentEntityCreatePayload captures the payload for
+// sys.daggerheart.environment_entity.create commands.
+type EnvironmentEntityCreatePayload struct {
+	EnvironmentEntityID ids.EnvironmentEntityID `json:"environment_entity_id"`
+	EnvironmentID       string                  `json:"environment_id"`
+	Name                string                  `json:"name"`
+	Type                string                  `json:"type"`
+	Tier                int                     `json:"tier"`
+	Difficulty          int                     `json:"difficulty"`
+	SessionID           ids.SessionID           `json:"session_id"`
+	SceneID             ids.SceneID             `json:"scene_id"`
+	Notes               string                  `json:"notes,omitempty"`
+}
+
+// EnvironmentEntityCreatedPayload captures the payload for
+// sys.daggerheart.environment_entity_created events.
+type EnvironmentEntityCreatedPayload = EnvironmentEntityCreatePayload
+
+// EnvironmentEntityUpdatePayload captures the payload for
+// sys.daggerheart.environment_entity.update commands.
+type EnvironmentEntityUpdatePayload struct {
+	EnvironmentEntityID ids.EnvironmentEntityID `json:"environment_entity_id"`
+	EnvironmentID       string                  `json:"environment_id"`
+	Name                string                  `json:"name"`
+	Type                string                  `json:"type"`
+	Tier                int                     `json:"tier"`
+	Difficulty          int                     `json:"difficulty"`
+	SessionID           ids.SessionID           `json:"session_id"`
+	SceneID             ids.SceneID             `json:"scene_id"`
+	Notes               string                  `json:"notes,omitempty"`
+}
+
+// EnvironmentEntityUpdatedPayload captures the payload for
+// sys.daggerheart.environment_entity_updated events.
+type EnvironmentEntityUpdatedPayload = EnvironmentEntityUpdatePayload
+
+// EnvironmentEntityDeletePayload captures the payload for
+// sys.daggerheart.environment_entity.delete commands.
+type EnvironmentEntityDeletePayload struct {
+	EnvironmentEntityID ids.EnvironmentEntityID `json:"environment_entity_id"`
+	Reason              string                  `json:"reason,omitempty"`
+}
+
+// EnvironmentEntityDeletedPayload captures the payload for
+// sys.daggerheart.environment_entity_deleted events.
+type EnvironmentEntityDeletedPayload = EnvironmentEntityDeletePayload
+
 // LevelUpApplyPayload captures the payload for sys.daggerheart.level_up.apply commands.
 type LevelUpApplyPayload struct {
 	CharacterID  ids.CharacterID             `json:"character_id"`
 	LevelBefore  int                         `json:"level_before"`
 	LevelAfter   int                         `json:"level_after"`
 	Advancements []LevelUpAdvancementPayload `json:"advancements"`
-
-	// NewDomainCardID is the domain card acquired at SRD Step 4.
-	NewDomainCardID    string `json:"new_domain_card_id,omitempty"`
-	NewDomainCardLevel int    `json:"new_domain_card_level,omitempty"`
+	Rewards      []LevelUpRewardPayload      `json:"rewards,omitempty"`
 
 	// MarkedTraits lists traits already marked from prior level-ups in this tier.
 	MarkedTraits []string `json:"marked_traits,omitempty"`
+
+	// SubclassTracksAfter stores the resulting track state after validated
+	// subclass progression or multiclass choices are resolved.
+	SubclassTracksAfter []CharacterSubclassTrack `json:"subclass_tracks_after,omitempty"`
+
+	// Permanent subclass bonus deltas derived from the newly unlocked stage.
+	SubclassHpMaxDelta           int `json:"subclass_hp_max_delta,omitempty"`
+	SubclassStressMaxDelta       int `json:"subclass_stress_max_delta,omitempty"`
+	SubclassEvasionDelta         int `json:"subclass_evasion_delta,omitempty"`
+	SubclassMajorThresholdDelta  int `json:"subclass_major_threshold_delta,omitempty"`
+	SubclassSevereThresholdDelta int `json:"subclass_severe_threshold_delta,omitempty"`
 
 	// Derived fields populated by the decider and included in the event.
 	Tier           int      `json:"tier"`
@@ -433,31 +661,42 @@ type LevelUpAdvancementPayload struct {
 	Trait           string                    `json:"trait,omitempty"`
 	DomainCardID    string                    `json:"domain_card_id,omitempty"`
 	DomainCardLevel int                       `json:"domain_card_level,omitempty"`
-	SubclassCardID  string                    `json:"subclass_card_id,omitempty"`
 	Multiclass      *LevelUpMulticlassPayload `json:"multiclass,omitempty"`
+}
+
+// LevelUpRewardPayload represents one non-budget reward granted during level-up.
+type LevelUpRewardPayload struct {
+	Type                  string `json:"type"`
+	DomainCardID          string `json:"domain_card_id,omitempty"`
+	DomainCardLevel       int    `json:"domain_card_level,omitempty"`
+	CompanionBonusChoices int    `json:"companion_bonus_choices,omitempty"`
 }
 
 // LevelUpMulticlassPayload captures multiclass advancement choices.
 type LevelUpMulticlassPayload struct {
 	SecondaryClassID    string `json:"secondary_class_id"`
 	SecondarySubclassID string `json:"secondary_subclass_id"`
-	FoundationCardID    string `json:"foundation_card_id"`
 	SpellcastTrait      string `json:"spellcast_trait"`
 	DomainID            string `json:"domain_id"`
 }
 
 // LevelUpAppliedPayload captures the payload for sys.daggerheart.level_up_applied events.
 type LevelUpAppliedPayload struct {
-	CharacterID        ids.CharacterID             `json:"character_id"`
-	Level              int                         `json:"level_after"`
-	Advancements       []LevelUpAdvancementPayload `json:"advancements"`
-	NewDomainCardID    string                      `json:"new_domain_card_id,omitempty"`
-	NewDomainCardLevel int                         `json:"new_domain_card_level,omitempty"`
-	Tier               int                         `json:"tier"`
-	IsTierEntry        bool                        `json:"is_tier_entry"`
-	ClearMarks         bool                        `json:"clear_marks"`
-	Marked             []string                    `json:"marked_after,omitempty"`
-	ThresholdDelta     int                         `json:"threshold_delta"`
+	CharacterID                  ids.CharacterID             `json:"character_id"`
+	Level                        int                         `json:"level_after"`
+	Advancements                 []LevelUpAdvancementPayload `json:"advancements"`
+	Rewards                      []LevelUpRewardPayload      `json:"rewards,omitempty"`
+	SubclassTracksAfter          []CharacterSubclassTrack    `json:"subclass_tracks_after,omitempty"`
+	SubclassHpMaxDelta           int                         `json:"subclass_hp_max_delta,omitempty"`
+	SubclassStressMaxDelta       int                         `json:"subclass_stress_max_delta,omitempty"`
+	SubclassEvasionDelta         int                         `json:"subclass_evasion_delta,omitempty"`
+	SubclassMajorThresholdDelta  int                         `json:"subclass_major_threshold_delta,omitempty"`
+	SubclassSevereThresholdDelta int                         `json:"subclass_severe_threshold_delta,omitempty"`
+	Tier                         int                         `json:"tier"`
+	IsTierEntry                  bool                        `json:"is_tier_entry"`
+	ClearMarks                   bool                        `json:"clear_marks"`
+	Marked                       []string                    `json:"marked_after,omitempty"`
+	ThresholdDelta               int                         `json:"threshold_delta"`
 }
 
 // GoldUpdatePayload captures the payload for sys.daggerheart.gold.update commands.
@@ -494,12 +733,26 @@ type DomainCardAcquiredPayload = DomainCardAcquirePayload
 
 // EquipmentSwapPayload captures the payload for sys.daggerheart.equipment.swap commands.
 type EquipmentSwapPayload struct {
-	CharacterID ids.CharacterID `json:"character_id"`
-	ItemID      string          `json:"item_id"`
-	ItemType    string          `json:"item_type"` // "weapon" or "armor"
-	From        string          `json:"from"`      // "active", "inventory", "none"
-	To          string          `json:"to"`        // "active", "inventory", "none"
-	StressCost  int             `json:"stress_cost,omitempty"`
+	CharacterID             ids.CharacterID `json:"character_id"`
+	ItemID                  string          `json:"item_id"`
+	ItemType                string          `json:"item_type"` // "weapon" or "armor"
+	From                    string          `json:"from"`      // "active", "inventory", "none"
+	To                      string          `json:"to"`        // "active", "inventory", "none"
+	StressCost              int             `json:"stress_cost,omitempty"`
+	EquippedArmorID         string          `json:"equipped_armor_id,omitempty"`
+	EvasionAfter            *int            `json:"evasion_after,omitempty"`
+	MajorThresholdAfter     *int            `json:"major_threshold_after,omitempty"`
+	SevereThresholdAfter    *int            `json:"severe_threshold_after,omitempty"`
+	ArmorScoreAfter         *int            `json:"armor_score_after,omitempty"`
+	ArmorMaxAfter           *int            `json:"armor_max_after,omitempty"`
+	SpellcastRollBonusAfter *int            `json:"spellcast_roll_bonus_after,omitempty"`
+	AgilityAfter            *int            `json:"agility_after,omitempty"`
+	StrengthAfter           *int            `json:"strength_after,omitempty"`
+	FinesseAfter            *int            `json:"finesse_after,omitempty"`
+	InstinctAfter           *int            `json:"instinct_after,omitempty"`
+	PresenceAfter           *int            `json:"presence_after,omitempty"`
+	KnowledgeAfter          *int            `json:"knowledge_after,omitempty"`
+	ArmorAfter              *int            `json:"armor_after,omitempty"`
 }
 
 // EquipmentSwappedPayload captures the payload for sys.daggerheart.equipment_swapped events.

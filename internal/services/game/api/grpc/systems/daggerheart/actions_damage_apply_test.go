@@ -225,7 +225,7 @@ func TestApplyDamage_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("command damage type = %s, want %s", got.DamageType, "physical")
 	}
 
-	result, _, err := damagetransport.ResolveCharacterDamage(damage, profile, state)
+	result, _, err := damagetransport.ResolveCharacterDamage(damage, profile, state, nil)
 	if err != nil {
 		t.Fatalf("apply daggerheart damage: %v", err)
 	}

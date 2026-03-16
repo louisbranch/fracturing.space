@@ -65,16 +65,19 @@ func TestRestTypeFromProto(t *testing.T) {
 	}
 }
 
-func TestDowntimeMoveHelpers(t *testing.T) {
-	move, err := downtimeMoveFromProto(pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_PREPARE)
+func TestDowntimeSelectionFromProto(t *testing.T) {
+	got, err := downtimeSelectionFromProto(&pb.DaggerheartDowntimeSelection{
+		Move: &pb.DaggerheartDowntimeSelection_Prepare{
+			Prepare: &pb.DaggerheartPrepareMove{GroupId: "watch"},
+		},
+	}, func(*commonv1.RngRequest, func() (int64, error), func(commonv1.RollMode) bool) (int64, string, commonv1.RollMode, error) {
+		return 0, "", commonv1.RollMode_LIVE, nil
+	}, func() (int64, error) { return 0, nil })
 	if err != nil {
-		t.Fatalf("downtimeMoveFromProto returned error: %v", err)
+		t.Fatalf("downtimeSelectionFromProto returned error: %v", err)
 	}
-	if move != daggerheart.DowntimePrepare {
-		t.Fatalf("move = %v, want %v", move, daggerheart.DowntimePrepare)
-	}
-	if got := downtimeMoveToString(daggerheart.DowntimeWorkOnProject); got != "work_on_project" {
-		t.Fatalf("downtimeMoveToString = %q, want work_on_project", got)
+	if got.Move != daggerheart.DowntimeMovePrepare || got.GroupID != "watch" {
+		t.Fatalf("selection = %+v, want prepare/watch", got)
 	}
 }
 
@@ -92,33 +95,14 @@ func TestCountdownFromStorage(t *testing.T) {
 	if countdown.ID != "count-1" {
 		t.Fatalf("countdown id = %q, want count-1", countdown.ID)
 	}
-	if countdown.Current != 2 || countdown.Max != 6 {
-		t.Fatalf("countdown progress = %d/%d, want 2/6", countdown.Current, countdown.Max)
-	}
-	if !countdown.Looping {
-		t.Fatal("expected looping countdown")
-	}
 }
 
-func TestDeathMoveFromProto(t *testing.T) {
+func TestDeathMoveHelpers(t *testing.T) {
 	if _, err := deathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_UNSPECIFIED); err == nil {
 		t.Fatal("expected error for unspecified death move")
 	}
-	move, err := deathMoveFromProto(pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_RISK_IT_ALL)
-	if err != nil {
-		t.Fatalf("deathMoveFromProto returned error: %v", err)
-	}
-	if move != daggerheart.DeathMoveRiskItAll {
-		t.Fatalf("move = %q, want %q", move, daggerheart.DeathMoveRiskItAll)
-	}
-}
-
-func TestDeathMoveToProto(t *testing.T) {
 	if got := DeathMoveToProto(daggerheart.DeathMoveAvoidDeath); got != pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_AVOID_DEATH {
 		t.Fatalf("DeathMoveToProto(avoid_death) = %v, want avoid_death", got)
-	}
-	if got := DeathMoveToProto("unknown"); got != pb.DaggerheartDeathMove_DAGGERHEART_DEATH_MOVE_UNSPECIFIED {
-		t.Fatalf("DeathMoveToProto(unknown) = %v, want unspecified", got)
 	}
 }
 

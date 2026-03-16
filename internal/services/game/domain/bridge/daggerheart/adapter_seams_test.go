@@ -9,6 +9,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
 func TestHandleRestTaken_ReturnsSnapshotWriteError(t *testing.T) {
@@ -31,33 +32,13 @@ func TestHandleRestTaken_StopsOnClearTemporaryArmorError(t *testing.T) {
 	adapter := NewAdapter(store)
 
 	err := adapter.handleRestTaken(context.Background(), event.Event{CampaignID: "camp-1"}, RestTakenPayload{
-		GMFear:      2,
-		ShortRests:  1,
-		RefreshRest: true,
-		CharacterStates: []RestTakenCharacterPatch{
-			{CharacterID: "char-1"},
-		},
+		GMFear:       2,
+		ShortRests:   1,
+		RefreshRest:  true,
+		Participants: []ids.CharacterID{"char-1"},
 	})
 	if err == nil || !strings.Contains(err.Error(), "get daggerheart character state: character read failed") {
 		t.Fatalf("handleRestTaken() error = %v, want wrapped character read error", err)
-	}
-}
-
-func TestHandleRestTaken_PropagatesPatchWriteError(t *testing.T) {
-	store := newFaultDaggerheartStore()
-	store.putCharacterStateErr = errors.New("character write failed")
-	adapter := NewAdapter(store)
-	hope := 3
-
-	err := adapter.handleRestTaken(context.Background(), event.Event{CampaignID: "camp-1"}, RestTakenPayload{
-		GMFear:     2,
-		ShortRests: 1,
-		CharacterStates: []RestTakenCharacterPatch{
-			{CharacterID: "char-1", Hope: &hope},
-		},
-	})
-	if err == nil || !strings.Contains(err.Error(), "put daggerheart character state: character write failed") {
-		t.Fatalf("handleRestTaken() error = %v, want wrapped character write error", err)
 	}
 }
 
@@ -202,7 +183,7 @@ func TestApplyAdversaryConditionPatch_WrapsStoreErrors(t *testing.T) {
 		store.getAdversaryErr = errors.New("adversary read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.applyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []string{"hidden"})
+		err := adapter.applyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart adversary: adversary read failed") {
 			t.Fatalf("applyAdversaryConditionPatch() error = %v, want wrapped read error", err)
 		}
@@ -229,7 +210,7 @@ func TestApplyAdversaryConditionPatch_WrapsStoreErrors(t *testing.T) {
 		}
 		store.putAdversaryErr = errors.New("adversary write failed")
 
-		err := adapter.applyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []string{"hidden"})
+		err := adapter.applyAdversaryConditionPatch(context.Background(), "camp-1", "adv-1", []ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "put daggerheart adversary: adversary write failed") {
 			t.Fatalf("applyAdversaryConditionPatch() error = %v, want wrapped write error", err)
 		}
@@ -243,7 +224,7 @@ func TestApplyStatePatch_Branches(t *testing.T) {
 		adapter := NewAdapter(store)
 		hope := 3
 
-		err := adapter.applyStatePatch(context.Background(), "camp-1", "char-1", nil, &hope, nil, nil, nil, nil)
+		err := adapter.applyStatePatch(context.Background(), "camp-1", "char-1", nil, &hope, nil, nil, nil, nil, nil, nil, nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character state: character read failed") {
 			t.Fatalf("applyStatePatch() error = %v, want wrapped read error", err)
 		}
@@ -262,7 +243,7 @@ func TestApplyStatePatch_Branches(t *testing.T) {
 		store.getCharacterProfileErr = errors.New("profile read failed")
 		hope := 3
 
-		err := adapter.applyStatePatch(context.Background(), "camp-1", "char-1", nil, &hope, nil, nil, nil, nil)
+		err := adapter.applyStatePatch(context.Background(), "camp-1", "char-1", nil, &hope, nil, nil, nil, nil, nil, nil, nil, nil)
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character profile: profile read failed") {
 			t.Fatalf("applyStatePatch() error = %v, want wrapped profile read error", err)
 		}
@@ -274,7 +255,7 @@ func TestApplyConditionPatch_WrapsPutError(t *testing.T) {
 	store.putCharacterStateErr = errors.New("character write failed")
 	adapter := NewAdapter(store)
 
-	err := adapter.applyConditionPatch(context.Background(), "camp-1", "char-1", []string{"hidden"})
+	err := adapter.applyConditionPatch(context.Background(), "camp-1", "char-1", []ConditionState{mustTestConditionState(t, "hidden")})
 	if err == nil || !strings.Contains(err.Error(), "put daggerheart character state: character write failed") {
 		t.Fatalf("applyConditionPatch() error = %v, want wrapped write error", err)
 	}

@@ -59,7 +59,10 @@ func TestSessionAdversaryAttackFlow_MissingTargetId(t *testing.T) {
 func TestSessionAdversaryAttackFlow_MissingDamage(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", AdversaryId: "adv-1", TargetId: "char-1",
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+		TargetId:    "char-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -67,8 +70,11 @@ func TestSessionAdversaryAttackFlow_MissingDamage(t *testing.T) {
 func TestSessionAdversaryAttackFlow_MissingDamageType(t *testing.T) {
 	svc := newAdversaryDamageTestService()
 	_, err := svc.SessionAdversaryAttackFlow(context.Background(), &pb.SessionAdversaryAttackFlowRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", AdversaryId: "adv-1", TargetId: "char-1",
-		Damage: &pb.DaggerheartAttackDamageSpec{},
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+		TargetId:    "char-1",
+		Damage:      &pb.DaggerheartAttackDamageSpec{},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -133,7 +139,6 @@ func TestSessionAdversaryAttackFlow_Success(t *testing.T) {
 		Damage: &pb.DaggerheartAttackDamageSpec{
 			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 		},
-		DamageDice: []*pb.DiceSpec{{Sides: 6, Count: 1}},
 	})
 	if err != nil {
 		t.Fatalf("SessionAdversaryAttackFlow returned error: %v", err)

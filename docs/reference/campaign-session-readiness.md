@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 12
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-03"
+last_reviewed: "2026-03-13"
 ---
 
 # Campaign Session Readiness
@@ -15,6 +15,7 @@ session.
 ## Source of truth
 
 - Domain evaluator: `internal/services/game/domain/readiness/session_start.go`
+- Session-start workflow/orchestration: `internal/services/game/domain/readiness/session_start_workflow.go`
 - Readiness report RPC: `game.v1.CampaignService.GetCampaignSessionReadiness`
 - Session start mutation guard: `internal/services/game/api/grpc/game/sessiontransport/session_application.go`
 
@@ -34,6 +35,16 @@ Core invariants:
 - every active player controls at least one active character
 - every active character has a controller participant
 - every active character passes game-system readiness checks (when configured)
+
+Post-readiness workflow invariants:
+
+- when readiness passes and a `draft` campaign starts its first session, the
+  active game-system module may append bootstrap events atomically alongside
+  `campaign.updated` and `session.started`
+- modules that do not implement session-start bootstrap contribute no extra
+  events
+- bootstrap logic runs only after readiness succeeds; it must not bypass or
+  weaken readiness blockers
 
 AI-mode invariants (`gm_mode` `ai` or `hybrid`):
 
@@ -70,6 +81,18 @@ Blocker ordering is deterministic:
 
 1. boundary blockers (`campaign_status_disallows_start`, `active_session_exists`)
 2. core/system blockers in canonical evaluation order
+
+## Bootstrap extension point
+
+`internal/services/game/domain/module/registry.go` exposes the optional
+`SessionStartBootstrapper` interface for system-owned first-session bootstrap
+events.
+
+Current use:
+
+- Daggerheart seeds GM Fear on the first `draft -> active` session start with
+  one `sys.daggerheart.gm_fear_changed` event whose value equals the created PC
+  count
 
 ## Web behavior
 

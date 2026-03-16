@@ -47,10 +47,9 @@ func TestHandlerApplyLevelUpSuccess(t *testing.T) {
 	})
 
 	resp, err := handler.ApplyLevelUp(testContext(), &pb.DaggerheartApplyLevelUpRequest{
-		CampaignId:      "camp-1",
-		CharacterId:     "char-1",
-		LevelAfter:      2,
-		NewDomainCardId: "card-2",
+		CampaignId:  "camp-1",
+		CharacterId: "char-1",
+		LevelAfter:  2,
 		Advancements: []*pb.DaggerheartLevelUpAdvancement{
 			{Type: "trait", Trait: "agility"},
 		},

@@ -15,7 +15,7 @@ import (
 func mustDamageAppliedPayloadJSON(t *testing.T, characterID string, damage *pb.DaggerheartDamageRequest, profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState) []byte {
 	t.Helper()
 
-	result, mitigated, err := damagetransport.ResolveCharacterDamage(damage, profile, state)
+	result, mitigated, err := damagetransport.ResolveCharacterDamage(damage, profile, state, nil)
 	if err != nil {
 		t.Fatalf("apply daggerheart damage: %v", err)
 	}
@@ -52,10 +52,27 @@ func mustDamageAppliedPayloadJSON(t *testing.T, characterID string, damage *pb.D
 func mustConditionChangedJSON(t *testing.T, characterID string, conditions []string, added []string) []byte {
 	t.Helper()
 
+	conditionStates := make([]daggerheart.ConditionState, 0, len(conditions))
+	for _, code := range conditions {
+		state, err := daggerheart.StandardConditionState(code)
+		if err != nil {
+			t.Fatalf("standard condition state %q: %v", code, err)
+		}
+		conditionStates = append(conditionStates, state)
+	}
+	addedStates := make([]daggerheart.ConditionState, 0, len(added))
+	for _, code := range added {
+		state, err := daggerheart.StandardConditionState(code)
+		if err != nil {
+			t.Fatalf("standard added condition state %q: %v", code, err)
+		}
+		addedStates = append(addedStates, state)
+	}
+
 	payload := daggerheart.ConditionChangedPayload{
 		CharacterID: ids.CharacterID(characterID),
-		Conditions:  conditions,
-		Added:       added,
+		Conditions:  conditionStates,
+		Added:       addedStates,
 	}
 	conditionJSON, err := json.Marshal(payload)
 	if err != nil {

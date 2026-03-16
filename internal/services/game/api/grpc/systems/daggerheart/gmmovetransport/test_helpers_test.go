@@ -4,7 +4,9 @@ import (
 	"context"
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/gmconsequence"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -47,6 +49,46 @@ func (s testDaggerheartStore) GetDaggerheartSnapshot(context.Context, string) (p
 	return s.snapshot, nil
 }
 
+func (s testDaggerheartStore) GetDaggerheartAdversary(context.Context, string, string) (projectionstore.DaggerheartAdversary, error) {
+	return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
+}
+
+func (s testDaggerheartStore) GetDaggerheartEnvironmentEntity(context.Context, string, string) (projectionstore.DaggerheartEnvironmentEntity, error) {
+	return projectionstore.DaggerheartEnvironmentEntity{}, storage.ErrNotFound
+}
+
+type testSpotlightStore struct {
+	spotlight storage.SessionSpotlight
+	err       error
+}
+
+func (s testSpotlightStore) GetSessionSpotlight(context.Context, string, string) (storage.SessionSpotlight, error) {
+	if s.err != nil {
+		return storage.SessionSpotlight{}, s.err
+	}
+	return s.spotlight, nil
+}
+
+type testContentStore struct {
+	adversaryEntry contentstore.DaggerheartAdversaryEntry
+	environment    contentstore.DaggerheartEnvironment
+	err            error
+}
+
+func (s testContentStore) GetDaggerheartAdversaryEntry(context.Context, string) (contentstore.DaggerheartAdversaryEntry, error) {
+	if s.err != nil {
+		return contentstore.DaggerheartAdversaryEntry{}, s.err
+	}
+	return s.adversaryEntry, nil
+}
+
+func (s testContentStore) GetDaggerheartEnvironment(context.Context, string) (contentstore.DaggerheartEnvironment, error) {
+	if s.err != nil {
+		return contentstore.DaggerheartEnvironment{}, s.err
+	}
+	return s.environment, nil
+}
+
 func newTestHandler(deps Dependencies) *Handler {
 	if deps.Campaign == nil {
 		deps.Campaign = testCampaignStore{record: storage.CampaignRecord{
@@ -65,6 +107,9 @@ func newTestHandler(deps Dependencies) *Handler {
 	if deps.SessionGate == nil {
 		deps.SessionGate = testGateStore{err: storage.ErrNotFound}
 	}
+	if deps.SessionSpotlight == nil {
+		deps.SessionSpotlight = testSpotlightStore{err: storage.ErrNotFound}
+	}
 	if deps.Daggerheart == nil {
 		deps.Daggerheart = testDaggerheartStore{
 			snapshot: projectionstore.DaggerheartSnapshot{
@@ -72,6 +117,12 @@ func newTestHandler(deps Dependencies) *Handler {
 				GMFear:     0,
 			},
 		}
+	}
+	if deps.Content == nil {
+		deps.Content = testContentStore{}
+	}
+	if deps.ExecuteCoreCommand == nil {
+		deps.ExecuteCoreCommand = func(context.Context, gmconsequence.CoreCommandInput) error { return nil }
 	}
 	return NewHandler(deps)
 }

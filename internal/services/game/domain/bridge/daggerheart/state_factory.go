@@ -42,13 +42,19 @@ func (f *StateFactory) NewCharacterState(campaignID ids.CampaignID, characterID 
 }
 
 // NewSnapshotState creates initial snapshot state for the given campaign.
+// GMFear starts neutral here; first-session bootstrap owns the actual initial
+// Fear seed once campaign readiness resolves the created-PC roster.
 func (f *StateFactory) NewSnapshotState(campaignID ids.CampaignID) (any, error) {
 	return SnapshotState{
-		CampaignID:        ids.CampaignID(strings.TrimSpace(string(campaignID))),
-		GMFear:            GMFearDefault,
-		CharacterProfiles: make(map[ids.CharacterID]CharacterProfile),
-		CharacterStates:   make(map[ids.CharacterID]CharacterState),
-		AdversaryStates:   make(map[ids.AdversaryID]AdversaryState),
-		CountdownStates:   make(map[ids.CountdownID]CountdownState),
+		CampaignID:              ids.CampaignID(strings.TrimSpace(string(campaignID))),
+		GMFear:                  GMFearDefault,
+		CharacterProfiles:       make(map[ids.CharacterID]CharacterProfile),
+		CharacterStates:         make(map[ids.CharacterID]CharacterState),
+		CharacterClassStates:    make(map[ids.CharacterID]CharacterClassState),
+		CharacterSubclassStates: make(map[ids.CharacterID]CharacterSubclassState),
+		CharacterCompanions:     make(map[ids.CharacterID]CharacterCompanionState),
+		AdversaryStates:         make(map[ids.AdversaryID]AdversaryState),
+		EnvironmentStates:       make(map[ids.EnvironmentEntityID]EnvironmentEntityState),
+		CountdownStates:         make(map[ids.CountdownID]CountdownState),
 	}, nil
 }

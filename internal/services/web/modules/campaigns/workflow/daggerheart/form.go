@@ -42,25 +42,63 @@ func parseClassSubclassStepInput(form url.Values) (*campaignapp.CampaignCharacte
 	if classID == "" || subclassID == "" {
 		return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_class_and_subclass_are_required", "class and subclass are required")
 	}
+	experienceIDs := make([]string, 0, 2)
+	for i := 0; i < 2; i++ {
+		if id := strings.TrimSpace(form.Get(fmt.Sprintf("companion_experience_%d_id", i))); id != "" {
+			experienceIDs = append(experienceIDs, id)
+		}
+	}
+	companion := &campaignapp.CampaignCharacterCreationCompanionInput{
+		AnimalKind:        strings.TrimSpace(form.Get("companion_animal_kind")),
+		Name:              strings.TrimSpace(form.Get("companion_name")),
+		ExperienceIDs:     experienceIDs,
+		AttackDescription: strings.TrimSpace(form.Get("companion_attack_description")),
+		DamageType:        strings.TrimSpace(form.Get("companion_damage_type")),
+	}
+	if companion.AnimalKind == "" &&
+		companion.Name == "" &&
+		len(companion.ExperienceIDs) == 0 &&
+		companion.AttackDescription == "" &&
+		companion.DamageType == "" {
+		companion = nil
+	}
 	return &campaignapp.CampaignCharacterCreationStepInput{
 		ClassSubclass: &campaignapp.CampaignCharacterCreationStepClassSubclass{
 			ClassID:    classID,
 			SubclassID: subclassID,
+			Companion:  companion,
 		},
 	}, nil
 }
 
-// parseHeritageStepInput parses and validates ancestry/community selections.
+// parseHeritageStepInput parses and validates structured heritage selections.
 func parseHeritageStepInput(form url.Values) (*campaignapp.CampaignCharacterCreationStepInput, error) {
-	ancestryID := strings.TrimSpace(form.Get("ancestry_id"))
+	firstFeatureAncestryID := strings.TrimSpace(form.Get("first_feature_ancestry_id"))
 	communityID := strings.TrimSpace(form.Get("community_id"))
-	if ancestryID == "" || communityID == "" {
+	if firstFeatureAncestryID == "" || communityID == "" {
 		return nil, apperrors.EK(apperrors.KindInvalidInput, "error.web.message.character_creation_ancestry_and_community_are_required", "ancestry and community are required")
+	}
+	mode := strings.ToLower(strings.TrimSpace(form.Get("heritage_mode")))
+	secondFeatureAncestryID := firstFeatureAncestryID
+	ancestryLabel := ""
+	if mode == "mixed" {
+		secondFeatureAncestryID = strings.TrimSpace(form.Get("second_feature_ancestry_id"))
+		ancestryLabel = strings.TrimSpace(form.Get("ancestry_label"))
+		if secondFeatureAncestryID == "" {
+			return nil, apperrors.E(apperrors.KindInvalidInput, "mixed heritage requires a second ancestry")
+		}
+		if firstFeatureAncestryID == secondFeatureAncestryID {
+			return nil, apperrors.E(apperrors.KindInvalidInput, "mixed heritage requires two different ancestries")
+		}
 	}
 	return &campaignapp.CampaignCharacterCreationStepInput{
 		Heritage: &campaignapp.CampaignCharacterCreationStepHeritage{
-			AncestryID:  ancestryID,
-			CommunityID: communityID,
+			Heritage: campaignapp.CampaignCharacterCreationHeritageSelection{
+				AncestryLabel:           ancestryLabel,
+				FirstFeatureAncestryID:  firstFeatureAncestryID,
+				SecondFeatureAncestryID: secondFeatureAncestryID,
+				CommunityID:             communityID,
+			},
 		},
 	}, nil
 }

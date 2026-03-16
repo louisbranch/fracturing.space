@@ -52,6 +52,10 @@ func registerFoldHandlers(r *module.FoldRouter[*SnapshotState]) {
 	module.HandleFold(r, EventTypeCharacterProfileReplaced, foldCharacterProfileReplaced)
 	module.HandleFold(r, EventTypeCharacterProfileDeleted, foldCharacterProfileDeleted)
 	module.HandleFold(r, EventTypeCharacterStatePatched, foldCharacterStatePatched)
+	module.HandleFold(r, EventTypeBeastformTransformed, foldBeastformTransformed)
+	module.HandleFold(r, EventTypeBeastformDropped, foldBeastformDropped)
+	module.HandleFold(r, EventTypeCompanionExperienceBegun, foldCompanionExperienceBegun)
+	module.HandleFold(r, EventTypeCompanionReturned, foldCompanionReturned)
 	module.HandleFold(r, EventTypeConditionChanged, foldConditionChanged)
 	module.HandleFold(r, EventTypeLoadoutSwapped, foldLoadoutSwapped)
 	module.HandleFold(r, EventTypeCharacterTemporaryArmorApplied, foldCharacterTemporaryArmorApplied)
@@ -66,6 +70,9 @@ func registerFoldHandlers(r *module.FoldRouter[*SnapshotState]) {
 	module.HandleFold(r, EventTypeAdversaryCreated, foldAdversaryCreated)
 	module.HandleFold(r, EventTypeAdversaryUpdated, foldAdversaryUpdated)
 	module.HandleFold(r, EventTypeAdversaryDeleted, foldAdversaryDeleted)
+	module.HandleFold(r, EventTypeEnvironmentEntityCreated, foldEnvironmentEntityCreated)
+	module.HandleFold(r, EventTypeEnvironmentEntityUpdated, foldEnvironmentEntityUpdated)
+	module.HandleFold(r, EventTypeEnvironmentEntityDeleted, foldEnvironmentEntityDeleted)
 	module.HandleFold(r, EventTypeLevelUpApplied, foldLevelUpApplied)
 	module.HandleFold(r, EventTypeGoldUpdated, foldGoldUpdated)
 	module.HandleFold(r, EventTypeDomainCardAcquired, foldDomainCardAcquired)
@@ -123,9 +130,14 @@ func foldCharacterProfileReplaced(state *SnapshotState, payload CharacterProfile
 			Hope:        HopeDefault,
 			HopeMax:     HopeMaxDefault,
 			Stress:      StressDefault,
-			Armor:       ArmorDefault,
+			Armor:       profile.ArmorMax,
 			LifeState:   LifeStateAlive,
 		}
+	}
+	if profile.CompanionSheet != nil {
+		state.CharacterCompanions[characterID] = CharacterCompanionState{Status: CompanionStatusPresent}
+	} else {
+		delete(state.CharacterCompanions, characterID)
 	}
 	return nil
 }
@@ -136,11 +148,50 @@ func foldCharacterProfileDeleted(state *SnapshotState, payload CharacterProfileD
 		return nil
 	}
 	delete(state.CharacterProfiles, characterID)
+	delete(state.CharacterCompanions, characterID)
 	return nil
 }
 
 func foldCharacterStatePatched(state *SnapshotState, payload CharacterStatePatchedPayload) error {
 	applyCharacterStatePatched(state, payload)
+	return nil
+}
+
+func foldBeastformTransformed(state *SnapshotState, payload BeastformTransformedPayload) error {
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
+	if characterID == "" {
+		return nil
+	}
+	nextClassState := CharacterClassState{}
+	if current, ok := state.CharacterClassStates[characterID]; ok {
+		nextClassState = current
+	}
+	nextClassState = WithActiveBeastform(nextClassState, payload.ActiveBeastform)
+	applyStatePatch(state, payload.CharacterID, nil, payload.Hope, nil, payload.Stress, nil, nil, &nextClassState, nil, nil)
+	return nil
+}
+
+func foldBeastformDropped(state *SnapshotState, payload BeastformDroppedPayload) error {
+	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
+	if characterID == "" {
+		return nil
+	}
+	nextClassState := CharacterClassState{}
+	if current, ok := state.CharacterClassStates[characterID]; ok {
+		nextClassState = current
+	}
+	nextClassState = WithActiveBeastform(nextClassState, nil)
+	applyStatePatch(state, payload.CharacterID, nil, nil, nil, nil, nil, nil, &nextClassState, nil, nil)
+	return nil
+}
+
+func foldCompanionExperienceBegun(state *SnapshotState, payload CompanionExperienceBegunPayload) error {
+	applyStatePatch(state, payload.CharacterID, nil, nil, nil, nil, nil, nil, nil, nil, payload.CompanionState)
+	return nil
+}
+
+func foldCompanionReturned(state *SnapshotState, payload CompanionReturnedPayload) error {
+	applyStatePatch(state, payload.CharacterID, nil, nil, nil, payload.Stress, nil, nil, nil, nil, payload.CompanionState)
 	return nil
 }
 
@@ -164,11 +215,9 @@ func foldRestTaken(state *SnapshotState, payload RestTakenPayload) error {
 	if state.GMFear < GMFearMin || state.GMFear > GMFearMax {
 		return fmt.Errorf("rest_taken gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
 	}
-	state.DowntimeMovesSinceRest = 0
-	for _, patch := range payload.CharacterStates {
-		applyRestTakenCharacterPatch(state, patch)
+	for _, participantID := range payload.Participants {
 		if payload.RefreshRest || payload.RefreshLongRest {
-			clearRestTemporaryArmor(state, patch.CharacterID.String(), payload.RefreshRest, payload.RefreshLongRest)
+			clearRestTemporaryArmor(state, participantID.String(), payload.RefreshRest, payload.RefreshLongRest)
 		}
 	}
 	return nil
@@ -205,7 +254,7 @@ func foldCountdownDeleted(state *SnapshotState, payload CountdownDeletedPayload)
 }
 
 func foldDamageApplied(state *SnapshotState, payload DamageAppliedPayload) error {
-	applyDamageApplied(state, payload.CharacterID, payload.Hp, payload.Armor)
+	applyDamageApplied(state, payload.CharacterID, payload.Hp, payload.Stress, payload.Armor)
 	return nil
 }
 
@@ -215,8 +264,14 @@ func foldAdversaryDamageApplied(state *SnapshotState, payload AdversaryDamageApp
 }
 
 func foldDowntimeMoveApplied(state *SnapshotState, payload DowntimeMoveAppliedPayload) error {
-	applyDowntimeMove(state, payload.CharacterID, payload.Move, payload.Hope, payload.Stress, payload.Armor)
-	state.DowntimeMovesSinceRest++
+	targetID := payload.TargetCharacterID
+	if strings.TrimSpace(targetID.String()) == "" {
+		targetID = payload.ActorCharacterID
+	}
+	if strings.TrimSpace(targetID.String()) == "" {
+		return nil
+	}
+	applyStatePatch(state, targetID, payload.HP, payload.Hope, nil, payload.Stress, payload.Armor, nil, nil, nil, nil)
 	return nil
 }
 
@@ -237,6 +292,35 @@ func foldAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatedPayload)
 
 func foldAdversaryDeleted(state *SnapshotState, payload AdversaryDeletedPayload) error {
 	delete(state.AdversaryStates, ids.AdversaryID(strings.TrimSpace(payload.AdversaryID.String())))
+	return nil
+}
+
+func foldEnvironmentEntityCreated(state *SnapshotState, payload EnvironmentEntityCreatedPayload) error {
+	environmentEntityID := ids.EnvironmentEntityID(strings.TrimSpace(payload.EnvironmentEntityID.String()))
+	if environmentEntityID == "" {
+		return nil
+	}
+	state.EnvironmentStates[environmentEntityID] = EnvironmentEntityState{
+		CampaignID:          state.CampaignID,
+		EnvironmentEntityID: environmentEntityID,
+		EnvironmentID:       strings.TrimSpace(payload.EnvironmentID),
+		Name:                strings.TrimSpace(payload.Name),
+		Type:                strings.TrimSpace(payload.Type),
+		Tier:                payload.Tier,
+		Difficulty:          payload.Difficulty,
+		SessionID:           ids.SessionID(strings.TrimSpace(payload.SessionID.String())),
+		SceneID:             ids.SceneID(strings.TrimSpace(payload.SceneID.String())),
+		Notes:               strings.TrimSpace(payload.Notes),
+	}
+	return nil
+}
+
+func foldEnvironmentEntityUpdated(state *SnapshotState, payload EnvironmentEntityUpdatedPayload) error {
+	return foldEnvironmentEntityCreated(state, EnvironmentEntityCreatedPayload(payload))
+}
+
+func foldEnvironmentEntityDeleted(state *SnapshotState, payload EnvironmentEntityDeletedPayload) error {
+	delete(state.EnvironmentStates, ids.EnvironmentEntityID(strings.TrimSpace(payload.EnvironmentEntityID.String())))
 	return nil
 }
 
@@ -271,6 +355,60 @@ func foldDomainCardAcquired(state *SnapshotState, payload DomainCardAcquiredPayl
 
 func foldEquipmentSwapped(state *SnapshotState, payload EquipmentSwappedPayload) error {
 	touchCharacter(state, payload.CharacterID)
+	if strings.TrimSpace(payload.ItemType) == "armor" {
+		characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
+		if profile, ok := state.CharacterProfiles[characterID]; ok {
+			profile.EquippedArmorID = strings.TrimSpace(payload.EquippedArmorID)
+			if payload.EvasionAfter != nil {
+				profile.Evasion = *payload.EvasionAfter
+			}
+			if payload.MajorThresholdAfter != nil {
+				profile.MajorThreshold = *payload.MajorThresholdAfter
+			}
+			if payload.SevereThresholdAfter != nil {
+				profile.SevereThreshold = *payload.SevereThresholdAfter
+			}
+			if payload.ArmorScoreAfter != nil {
+				profile.ArmorScore = *payload.ArmorScoreAfter
+			}
+			if payload.ArmorMaxAfter != nil {
+				profile.ArmorMax = *payload.ArmorMaxAfter
+			}
+			if payload.SpellcastRollBonusAfter != nil {
+				profile.SpellcastRollBonus = *payload.SpellcastRollBonusAfter
+			}
+			if payload.AgilityAfter != nil {
+				profile.Agility = *payload.AgilityAfter
+			}
+			if payload.StrengthAfter != nil {
+				profile.Strength = *payload.StrengthAfter
+			}
+			if payload.FinesseAfter != nil {
+				profile.Finesse = *payload.FinesseAfter
+			}
+			if payload.InstinctAfter != nil {
+				profile.Instinct = *payload.InstinctAfter
+			}
+			if payload.PresenceAfter != nil {
+				profile.Presence = *payload.PresenceAfter
+			}
+			if payload.KnowledgeAfter != nil {
+				profile.Knowledge = *payload.KnowledgeAfter
+			}
+			state.CharacterProfiles[characterID] = profile
+		}
+		if payload.ArmorAfter != nil {
+			applyStatePatch(state, payload.CharacterID, nil, nil, nil, nil, payload.ArmorAfter, nil, nil, nil, nil)
+		}
+	}
+	if payload.StressCost > 0 {
+		characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
+		characterState := state.CharacterStates[characterID]
+		characterState.CampaignID = state.CampaignID.String()
+		characterState.CharacterID = characterID.String()
+		characterState.Stress += payload.StressCost
+		state.CharacterStates[characterID] = characterState
+	}
 	return nil
 }
 
@@ -297,7 +435,11 @@ func touchCharacter(state *SnapshotState, rawID ids.CharacterID) {
 }
 
 func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatchedPayload) {
-	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
+	applyStatePatch(state, payload.CharacterID, payload.HP, payload.Hope, payload.HopeMax, payload.Stress, payload.Armor, payload.LifeState, payload.ClassState, payload.SubclassState, nil)
+}
+
+func applyStatePatch(state *SnapshotState, characterID ids.CharacterID, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *CharacterClassState, subclassStateAfter *CharacterSubclassState, companionStateAfter *CharacterCompanionState) {
+	characterID = ids.CharacterID(strings.TrimSpace(characterID.String()))
 	if characterID == "" {
 		return
 	}
@@ -305,14 +447,33 @@ func applyCharacterStatePatched(state *SnapshotState, payload CharacterStatePatc
 	characterState.CampaignID = state.CampaignID.String()
 	characterState.CharacterID = characterID.String()
 	reducer.ApplyCharacterStatePatch(&characterState, reducer.CharacterStatePatch{
-		HPAfter:        payload.HP,
-		HopeAfter:      payload.Hope,
-		HopeMaxAfter:   payload.HopeMax,
-		StressAfter:    payload.Stress,
-		ArmorAfter:     payload.Armor,
-		LifeStateAfter: payload.LifeState,
+		HPAfter:        hpAfter,
+		HopeAfter:      hopeAfter,
+		HopeMaxAfter:   hopeMaxAfter,
+		StressAfter:    stressAfter,
+		ArmorAfter:     armorAfter,
+		LifeStateAfter: lifeStateAfter,
 	})
 	state.CharacterStates[characterID] = characterState
+	if classStateAfter != nil {
+		state.CharacterClassStates[characterID] = classStateAfter.Normalized()
+	}
+	if subclassStateAfter != nil {
+		normalized := subclassStateAfter.Normalized()
+		if normalized.IsZero() {
+			delete(state.CharacterSubclassStates, characterID)
+		} else {
+			state.CharacterSubclassStates[characterID] = normalized
+		}
+	}
+	if companionStateAfter != nil {
+		normalized := companionStateAfter.Normalized()
+		if normalized.IsZero() {
+			delete(state.CharacterCompanions, characterID)
+		} else {
+			state.CharacterCompanions[characterID] = normalized
+		}
+	}
 }
 
 func applyCharacterConditionsChanged(state *SnapshotState, payload ConditionChangedPayload) {
@@ -323,7 +484,7 @@ func applyCharacterConditionsChanged(state *SnapshotState, payload ConditionChan
 	characterState := state.CharacterStates[characterID]
 	characterState.CampaignID = state.CampaignID.String()
 	characterState.CharacterID = characterID.String()
-	reducer.ApplyConditionPatch(&characterState, payload.Conditions)
+	reducer.ApplyConditionPatch(&characterState, ConditionCodes(payload.Conditions))
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -352,22 +513,6 @@ func applyCharacterTemporaryArmorApplied(state *SnapshotState, payload Character
 		Duration: strings.TrimSpace(payload.Duration),
 		SourceID: strings.TrimSpace(payload.SourceID),
 		Amount:   payload.Amount,
-	})
-	state.CharacterStates[characterID] = characterState
-}
-
-func applyRestTakenCharacterPatch(state *SnapshotState, payload RestTakenCharacterPatch) {
-	characterID := ids.CharacterID(strings.TrimSpace(payload.CharacterID.String()))
-	if characterID == "" {
-		return
-	}
-	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID.String()
-	characterState.CharacterID = characterID.String()
-	reducer.ApplyRestPatch(&characterState, reducer.RestCharacterPatch{
-		HopeAfter:   payload.Hope,
-		StressAfter: payload.Stress,
-		ArmorAfter:  payload.Armor,
 	})
 	state.CharacterStates[characterID] = characterState
 }
@@ -406,7 +551,7 @@ func deleteCountdownState(state *SnapshotState, countdownID ids.CountdownID) {
 	delete(state.CountdownStates, trimmed)
 }
 
-func applyDamageApplied(state *SnapshotState, rawID ids.CharacterID, hpAfter, armorAfter *int) {
+func applyDamageApplied(state *SnapshotState, rawID ids.CharacterID, hpAfter, stressAfter, armorAfter *int) {
 	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
 	if characterID == "" {
 		return
@@ -415,18 +560,9 @@ func applyDamageApplied(state *SnapshotState, rawID ids.CharacterID, hpAfter, ar
 	characterState.CampaignID = state.CampaignID.String()
 	characterState.CharacterID = characterID.String()
 	reducer.ApplyDamage(&characterState, hpAfter, armorAfter)
-	state.CharacterStates[characterID] = characterState
-}
-
-func applyDowntimeMove(state *SnapshotState, rawID ids.CharacterID, move string, hopeAfter, stressAfter, armorAfter *int) {
-	characterID := ids.CharacterID(strings.TrimSpace(rawID.String()))
-	if characterID == "" {
-		return
+	if stressAfter != nil {
+		characterState.Stress = *stressAfter
 	}
-	characterState := state.CharacterStates[characterID]
-	characterState.CampaignID = state.CampaignID.String()
-	characterState.CharacterID = characterID.String()
-	reducer.ApplyDowntimeMove(&characterState, move, hopeAfter, stressAfter, armorAfter)
 	state.CharacterStates[characterID] = characterState
 }
 
@@ -455,9 +591,11 @@ func applyAdversaryCreated(state *SnapshotState, payload AdversaryCreatePayload)
 	adversaryState := state.AdversaryStates[adversaryID]
 	adversaryState.CampaignID = state.CampaignID
 	adversaryState.AdversaryID = adversaryID
+	adversaryState.AdversaryEntryID = strings.TrimSpace(payload.AdversaryEntryID)
 	adversaryState.Name = payload.Name
 	adversaryState.Kind = strings.TrimSpace(payload.Kind)
 	adversaryState.SessionID = ids.SessionID(strings.TrimSpace(payload.SessionID.String()))
+	adversaryState.SceneID = ids.SceneID(strings.TrimSpace(payload.SceneID.String()))
 	adversaryState.Notes = payload.Notes
 	adversaryState.HP = payload.HP
 	adversaryState.HPMax = payload.HPMax
@@ -467,6 +605,10 @@ func applyAdversaryCreated(state *SnapshotState, payload AdversaryCreatePayload)
 	adversaryState.Major = payload.Major
 	adversaryState.Severe = payload.Severe
 	adversaryState.Armor = payload.Armor
+	adversaryState.FeatureStates = payload.FeatureStates
+	adversaryState.PendingExperience = payload.PendingExperience
+	adversaryState.SpotlightGateID = ids.GateID(strings.TrimSpace(payload.SpotlightGateID.String()))
+	adversaryState.SpotlightCount = payload.SpotlightCount
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
@@ -478,9 +620,11 @@ func applyAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatePayload)
 	adversaryState := state.AdversaryStates[adversaryID]
 	adversaryState.CampaignID = state.CampaignID
 	adversaryState.AdversaryID = adversaryID
+	adversaryState.AdversaryEntryID = strings.TrimSpace(payload.AdversaryEntryID)
 	adversaryState.Name = payload.Name
 	adversaryState.Kind = payload.Kind
 	adversaryState.SessionID = payload.SessionID
+	adversaryState.SceneID = payload.SceneID
 	adversaryState.Notes = payload.Notes
 	adversaryState.HP = payload.HP
 	adversaryState.HPMax = payload.HPMax
@@ -490,10 +634,14 @@ func applyAdversaryUpdated(state *SnapshotState, payload AdversaryUpdatePayload)
 	adversaryState.Major = payload.Major
 	adversaryState.Severe = payload.Severe
 	adversaryState.Armor = payload.Armor
+	adversaryState.FeatureStates = payload.FeatureStates
+	adversaryState.PendingExperience = payload.PendingExperience
+	adversaryState.SpotlightGateID = payload.SpotlightGateID
+	adversaryState.SpotlightCount = payload.SpotlightCount
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 
-func applyAdversaryConditionsChanged(state *SnapshotState, rawID ids.AdversaryID, after []string) {
+func applyAdversaryConditionsChanged(state *SnapshotState, rawID ids.AdversaryID, after []ConditionState) {
 	adversaryID := ids.AdversaryID(strings.TrimSpace(rawID.String()))
 	if adversaryID == "" {
 		return
@@ -501,7 +649,7 @@ func applyAdversaryConditionsChanged(state *SnapshotState, rawID ids.AdversaryID
 	adversaryState := state.AdversaryStates[adversaryID]
 	adversaryState.CampaignID = state.CampaignID
 	adversaryState.AdversaryID = adversaryID
-	adversaryState.Conditions = append([]string(nil), after...)
+	adversaryState.Conditions = ConditionCodes(after)
 	state.AdversaryStates[adversaryID] = adversaryState
 }
 

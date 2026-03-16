@@ -75,7 +75,7 @@ type CharacterDaggerheartSummaryView struct {
 	Level         int32
 	ClassName     string
 	SubclassName  string
-	AncestryName  string
+	HeritageName  string
 	CommunityName string
 }
 

@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 func TestHandlerSessionAttackFlowSuccess(t *testing.T) {
@@ -37,6 +39,18 @@ func TestHandlerSessionAttackFlowSuccess(t *testing.T) {
 			applyDamageReq = in
 			return &pb.DaggerheartApplyDamageResponse{CharacterId: in.GetCharacterId()}, nil
 		},
+		LoadCharacterProfile: func(context.Context, string, string) (projectionstore.DaggerheartCharacterProfile, error) {
+			return projectionstore.DaggerheartCharacterProfile{}, nil
+		},
+		LoadCharacterState: func(context.Context, string, string) (projectionstore.DaggerheartCharacterState, error) {
+			return projectionstore.DaggerheartCharacterState{}, nil
+		},
+		LoadSubclass: func(context.Context, string) (contentstore.DaggerheartSubclass, error) {
+			return contentstore.DaggerheartSubclass{}, nil
+		},
+		LoadArmor: func(context.Context, string) (contentstore.DaggerheartArmor, error) {
+			return contentstore.DaggerheartArmor{}, nil
+		},
 	})
 
 	resp, err := handler.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
@@ -44,13 +58,18 @@ func TestHandlerSessionAttackFlowSuccess(t *testing.T) {
 		SessionId:   "sess-1",
 		SceneId:     "scene-1",
 		CharacterId: "char-1",
-		Trait:       "agility",
 		TargetId:    "char-2",
+		AttackProfile: &pb.SessionAttackFlowRequest_StandardAttack{
+			StandardAttack: &pb.SessionStandardAttackProfile{
+				Trait:       "agility",
+				DamageDice:  []*pb.DiceSpec{{Sides: 6, Count: 1}},
+				AttackRange: pb.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_MELEE,
+			},
+		},
 		Damage: &pb.DaggerheartAttackDamageSpec{
 			DamageType:         pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 			SourceCharacterIds: []string{"char-1", "char-1"},
 		},
-		DamageDice: []*pb.DiceSpec{{Sides: 6, Count: 1}},
 	})
 	if err != nil {
 		t.Fatalf("SessionAttackFlow returned error: %v", err)

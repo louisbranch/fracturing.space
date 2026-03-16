@@ -13,7 +13,7 @@ import (
 
 type systemStepRunner func(r *Runner, ctx context.Context, state *scenarioState, step Step) error
 
-type systemCharacterReadinessRunner func(r *Runner, ctx context.Context, state *scenarioState, characterID string) error
+type systemCharacterReadinessRunner func(r *Runner, ctx context.Context, state *scenarioState, characterID string, args map[string]any) error
 
 type systemCharacterNeedsReadinessRunner func(r *Runner, ctx context.Context, state *scenarioState, characterID string) (bool, error)
 

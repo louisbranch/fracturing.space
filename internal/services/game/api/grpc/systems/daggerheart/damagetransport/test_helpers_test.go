@@ -5,6 +5,7 @@ import (
 
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -50,6 +51,31 @@ func (s testDaggerheartStore) GetDaggerheartAdversary(context.Context, string, s
 	return s.adversary, nil
 }
 
+func (s testDaggerheartStore) ListDaggerheartAdversaries(context.Context, string, string) ([]projectionstore.DaggerheartAdversary, error) {
+	return nil, nil
+}
+
+type testContentStore struct {
+	adversaryEntries map[string]contentstore.DaggerheartAdversaryEntry
+	armors           map[string]contentstore.DaggerheartArmor
+}
+
+func (s testContentStore) GetDaggerheartAdversaryEntry(_ context.Context, id string) (contentstore.DaggerheartAdversaryEntry, error) {
+	entry, ok := s.adversaryEntries[id]
+	if !ok {
+		return contentstore.DaggerheartAdversaryEntry{}, storage.ErrNotFound
+	}
+	return entry, nil
+}
+
+func (s testContentStore) GetDaggerheartArmor(_ context.Context, id string) (contentstore.DaggerheartArmor, error) {
+	a, ok := s.armors[id]
+	if !ok {
+		return contentstore.DaggerheartArmor{}, storage.ErrNotFound
+	}
+	return a, nil
+}
+
 type testEventStore struct {
 	event event.Event
 }
@@ -92,6 +118,14 @@ func newTestHandler(deps Dependencies) *Handler {
 				Major:       5,
 				Severe:      8,
 			},
+		}
+	}
+	if deps.Content == nil {
+		deps.Content = testContentStore{
+			adversaryEntries: map[string]contentstore.DaggerheartAdversaryEntry{
+				"entry-goblin": {ID: "entry-goblin", Name: "Goblin", Role: "bruiser", HP: 10, Armor: 1, MajorThreshold: 5, SevereThreshold: 8},
+			},
+			armors: make(map[string]contentstore.DaggerheartArmor),
 		}
 	}
 	if deps.Event == nil {

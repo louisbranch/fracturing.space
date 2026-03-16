@@ -32,6 +32,7 @@ func validDaggerheartStoresForConstructorTests() Stores {
 	return Stores{
 		Campaign:         &fakeCampaignStore{},
 		Character:        &fakeCharacterStore{},
+		Content:          newFakeContentStore(),
 		Session:          &fakeSessionStore{},
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},

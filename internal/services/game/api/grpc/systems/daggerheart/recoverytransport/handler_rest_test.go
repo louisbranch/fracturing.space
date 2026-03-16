@@ -28,10 +28,12 @@ func TestHandlerApplyRestSuccess(t *testing.T) {
 	})
 
 	result, err := handler.ApplyRest(testContext(), &pb.DaggerheartApplyRestRequest{
-		CampaignId:   "camp-1",
-		CharacterIds: []string{"char-1"},
+		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
 			RestType: pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
 		},
 	})
 	if err != nil {

@@ -15,6 +15,17 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// directMoveTarget builds a DirectMove SpendTarget for tests that need a
+// valid spend target but do not care about the specific move kind or shape.
+func directMoveTarget() *pb.DaggerheartApplyGmMoveRequest_DirectMove {
+	return &pb.DaggerheartApplyGmMoveRequest_DirectMove{
+		DirectMove: &pb.DaggerheartDirectGmMoveTarget{
+			Kind:  pb.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE,
+			Shape: pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT,
+		},
+	}
+}
+
 func TestHandlerApplyGmMoveRejectsNilRequest(t *testing.T) {
 	handler := newTestHandler(Dependencies{})
 
@@ -30,38 +41,28 @@ func TestHandlerApplyGmMoveRequiresExecutor(t *testing.T) {
 	_, err := handler.ApplyGmMove(testContext(), &pb.DaggerheartApplyGmMoveRequest{
 		CampaignId: "camp-1",
 		SessionId:  "sess-1",
-		Move:       "change_environment",
 	})
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.Internal)
 	}
 }
 
-func TestHandlerApplyGmMoveSuccessWithoutFearSpend(t *testing.T) {
-	var commandCalls int
+func TestHandlerApplyGmMoveRejectsZeroFearSpent(t *testing.T) {
 	handler := newTestHandler(Dependencies{
 		ExecuteDomainCommand: func(context.Context, DomainCommandInput) error {
-			commandCalls++
+			t.Fatal("unexpected command execution")
 			return nil
 		},
 	})
 
-	resp, err := handler.ApplyGmMove(testContext(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1",
-		SessionId:  "sess-1",
-		Move:       "change_environment",
+	_, err := handler.ApplyGmMove(testContext(), &pb.DaggerheartApplyGmMoveRequest{
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		SpendTarget: directMoveTarget(),
+		FearSpent:   0,
 	})
-	if err != nil {
-		t.Fatalf("ApplyGmMove returned error: %v", err)
-	}
-	if resp.CampaignID != "camp-1" {
-		t.Fatalf("campaign_id = %q, want camp-1", resp.CampaignID)
-	}
-	if resp.GMFearBefore != 0 || resp.GMFearAfter != 0 {
-		t.Fatalf("gm fear = (%d,%d), want (0,0)", resp.GMFearBefore, resp.GMFearAfter)
-	}
-	if commandCalls != 0 {
-		t.Fatalf("command calls = %d, want 0", commandCalls)
+	if status.Code(err) != codes.InvalidArgument {
+		t.Fatalf("status code = %v, want %v", status.Code(err), codes.InvalidArgument)
 	}
 }
 
@@ -84,8 +85,13 @@ func TestHandlerApplyGmMoveWithFearSpent(t *testing.T) {
 		CampaignId: "camp-1",
 		SessionId:  "sess-1",
 		SceneId:    "scene-1",
-		Move:       "change_environment",
-		FearSpent:  1,
+		SpendTarget: &pb.DaggerheartApplyGmMoveRequest_DirectMove{
+			DirectMove: &pb.DaggerheartDirectGmMoveTarget{
+				Kind:  pb.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE,
+				Shape: pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT,
+			},
+		},
+		FearSpent: 1,
 	})
 	if err != nil {
 		t.Fatalf("ApplyGmMove returned error: %v", err)
@@ -93,8 +99,8 @@ func TestHandlerApplyGmMoveWithFearSpent(t *testing.T) {
 	if resp.GMFearBefore != 3 || resp.GMFearAfter != 2 {
 		t.Fatalf("gm fear = (%d,%d), want (3,2)", resp.GMFearBefore, resp.GMFearAfter)
 	}
-	if commandInput.CommandType != commandids.DaggerheartGMFearSet {
-		t.Fatalf("command type = %q, want %q", commandInput.CommandType, commandids.DaggerheartGMFearSet)
+	if commandInput.CommandType != commandids.DaggerheartGMMoveApply {
+		t.Fatalf("command type = %q, want %q", commandInput.CommandType, commandids.DaggerheartGMMoveApply)
 	}
 	if commandInput.SceneID != "scene-1" {
 		t.Fatalf("scene_id = %q, want scene-1", commandInput.SceneID)
@@ -102,15 +108,15 @@ func TestHandlerApplyGmMoveWithFearSpent(t *testing.T) {
 	if commandInput.RequestID != "req-1" || commandInput.InvocationID != "inv-1" {
 		t.Fatalf("request metadata = (%q,%q), want (req-1,inv-1)", commandInput.RequestID, commandInput.InvocationID)
 	}
-	var payload daggerheart.GMFearSetPayload
+	var payload daggerheart.GMMoveApplyPayload
 	if err := json.Unmarshal(commandInput.PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode payload: %v", err)
 	}
-	if payload.After == nil || *payload.After != 2 {
-		t.Fatalf("payload after = %v, want 2", payload.After)
+	if payload.FearSpent != 1 {
+		t.Fatalf("payload fear_spent = %d, want 1", payload.FearSpent)
 	}
-	if payload.Reason != "gm_move" {
-		t.Fatalf("payload reason = %q, want gm_move", payload.Reason)
+	if payload.Target.Type != daggerheart.GMMoveTargetTypeDirectMove {
+		t.Fatalf("payload target type = %q, want %q", payload.Target.Type, daggerheart.GMMoveTargetTypeDirectMove)
 	}
 }
 
@@ -120,10 +126,10 @@ func TestHandlerApplyGmMoveRejectsNegativeFearSpent(t *testing.T) {
 	})
 
 	_, err := handler.ApplyGmMove(testContext(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1",
-		SessionId:  "sess-1",
-		Move:       "change_environment",
-		FearSpent:  -1,
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		SpendTarget: directMoveTarget(),
+		FearSpent:   -1,
 	})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.InvalidArgument)
@@ -144,9 +150,10 @@ func TestHandlerApplyGmMoveRejectsInactiveSession(t *testing.T) {
 	})
 
 	_, err := handler.ApplyGmMove(testContext(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1",
-		SessionId:  "sess-1",
-		Move:       "change_environment",
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		SpendTarget: directMoveTarget(),
+		FearSpent:   1,
 	})
 	if status.Code(err) != codes.FailedPrecondition {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.FailedPrecondition)
@@ -163,9 +170,10 @@ func TestHandlerApplyGmMoveCampaignNotFound(t *testing.T) {
 	})
 
 	_, err := handler.ApplyGmMove(testContext(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1",
-		SessionId:  "sess-1",
-		Move:       "change_environment",
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		SpendTarget: directMoveTarget(),
+		FearSpent:   1,
 	})
 	if status.Code(err) != codes.NotFound {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.NotFound)

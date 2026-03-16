@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS daggerheart_armor (
     base_severe_threshold INTEGER NOT NULL DEFAULT 0,
     armor_score INTEGER NOT NULL DEFAULT 0,
     feature TEXT NOT NULL DEFAULT '',
+    rules_json TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );
@@ -153,6 +154,9 @@ CREATE TABLE IF NOT EXISTS daggerheart_adversary_entries (
     standard_attack_json TEXT NOT NULL DEFAULT '{}',
     experiences_json TEXT NOT NULL DEFAULT '[]',
     features_json TEXT NOT NULL DEFAULT '[]',
+    minion_rule_json TEXT NOT NULL DEFAULT '',
+    horde_rule_json TEXT NOT NULL DEFAULT '',
+    relentless_rule_json TEXT NOT NULL DEFAULT '',
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL
 );

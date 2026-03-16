@@ -370,6 +370,32 @@ func TestCharacterProfileResultFromProto(t *testing.T) {
 					Instinct:        wrapperspb.Int32(0),
 					Presence:        wrapperspb.Int32(-1),
 					Knowledge:       wrapperspb.Int32(4),
+					ClassId:         "class.guardian",
+					SubclassId:      "subclass.beastbound",
+					SubclassCreationRequirements: []string{
+						"companion_sheet_required",
+					},
+					Heritage: &daggerheartv1.DaggerheartHeritageSelection{
+						AncestryLabel:           "Mixed Lineage",
+						FirstFeatureAncestryId:  "heritage.ancestry.clank",
+						FirstFeatureId:          "feature.armor",
+						SecondFeatureAncestryId: "heritage.ancestry.giant",
+						SecondFeatureId:         "feature.endurance",
+						CommunityId:             "heritage.community.farmer",
+					},
+					CompanionSheet: &daggerheartv1.DaggerheartCompanionSheet{
+						AnimalKind: "wolf",
+						Name:       "Ash",
+						Evasion:    10,
+						Experiences: []*daggerheartv1.DaggerheartCompanionExperience{
+							{ExperienceId: "companion-experience.scout", Name: "Tracking", Modifier: 2},
+							{ExperienceId: "companion-experience.vigilant", Name: "Guarding", Modifier: 2},
+						},
+						AttackDescription: "Savage bite",
+						AttackRange:       "melee",
+						DamageDieSides:    6,
+						DamageType:        "physical",
+					},
 				},
 			},
 		}
@@ -392,6 +418,30 @@ func TestCharacterProfileResultFromProto(t *testing.T) {
 		}
 		if result.Knowledge != 4 {
 			t.Errorf("expected knowledge 4, got %d", result.Knowledge)
+		}
+		if result.ClassID != "class.guardian" {
+			t.Errorf("expected class_id %q, got %q", "class.guardian", result.ClassID)
+		}
+		if result.SubclassID != "subclass.beastbound" {
+			t.Errorf("expected subclass_id %q, got %q", "subclass.beastbound", result.SubclassID)
+		}
+		if len(result.SubclassRequirements) != 1 || result.SubclassRequirements[0] != "companion_sheet_required" {
+			t.Errorf("subclass_requirements = %v, want [companion_sheet_required]", result.SubclassRequirements)
+		}
+		if result.Heritage.FirstFeatureAncestryID != "heritage.ancestry.clank" {
+			t.Errorf("expected first_feature_ancestry_id %q, got %q", "heritage.ancestry.clank", result.Heritage.FirstFeatureAncestryID)
+		}
+		if result.Heritage.SecondFeatureID != "feature.endurance" {
+			t.Errorf("expected second_feature_id %q, got %q", "feature.endurance", result.Heritage.SecondFeatureID)
+		}
+		if result.CompanionSheet == nil {
+			t.Fatal("expected companion sheet")
+		}
+		if result.CompanionSheet.Name != "Ash" {
+			t.Errorf("expected companion name %q, got %q", "Ash", result.CompanionSheet.Name)
+		}
+		if len(result.CompanionSheet.Experiences) != 2 {
+			t.Fatalf("expected 2 companion experiences, got %d", len(result.CompanionSheet.Experiences))
 		}
 	})
 }

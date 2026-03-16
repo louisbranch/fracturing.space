@@ -12,6 +12,7 @@ import (
 	"math"
 	"os"
 	"path"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -80,11 +81,21 @@ func runCheck(args []string) error {
 	fs.SetOutput(io.Discard)
 	profilePath := fs.String("profile", "", "coverage profile path")
 	floorsPath := fs.String("floors", "", "coverage floors JSON path")
+	excludePattern := fs.String("exclude", "", "regex to skip floor entries for excluded packages")
 	if err := fs.Parse(args); err != nil {
 		return fmt.Errorf("parse flags: %w", err)
 	}
 	if strings.TrimSpace(*profilePath) == "" || strings.TrimSpace(*floorsPath) == "" {
 		return errors.New("check requires -profile and -floors")
+	}
+
+	var excludeRe *regexp.Regexp
+	if p := strings.TrimSpace(*excludePattern); p != "" {
+		var err error
+		excludeRe, err = regexp.Compile(p)
+		if err != nil {
+			return fmt.Errorf("compile -exclude regex: %w", err)
+		}
 	}
 
 	floors, err := loadFloors(*floorsPath)
@@ -106,6 +117,10 @@ func runCheck(args []string) error {
 	for _, pkg := range floors.Packages {
 		stat, ok := stats[pkg.Package]
 		if !ok {
+			if excludeRe != nil && excludeRe.MatchString(pkg.Package) {
+				fmt.Printf("%s,excluded,%.1f,%.1f,SKIP\n", pkg.Package, pkg.Floor, pkg.Floor-floors.AllowDrop)
+				continue
+			}
 			failed = true
 			fmt.Printf("%s,missing,%.1f,%.1f,FAIL\n", pkg.Package, pkg.Floor, pkg.Floor-floors.AllowDrop)
 			continue

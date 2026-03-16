@@ -71,23 +71,29 @@ type Character struct {
 }
 
 type DaggerheartAdversary struct {
-	CampaignID      string         `json:"campaign_id"`
-	AdversaryID     string         `json:"adversary_id"`
-	Name            string         `json:"name"`
-	Kind            string         `json:"kind"`
-	SessionID       sql.NullString `json:"session_id"`
-	Notes           string         `json:"notes"`
-	Hp              int64          `json:"hp"`
-	HpMax           int64          `json:"hp_max"`
-	Stress          int64          `json:"stress"`
-	StressMax       int64          `json:"stress_max"`
-	Evasion         int64          `json:"evasion"`
-	MajorThreshold  int64          `json:"major_threshold"`
-	SevereThreshold int64          `json:"severe_threshold"`
-	Armor           int64          `json:"armor"`
-	CreatedAt       int64          `json:"created_at"`
-	UpdatedAt       int64          `json:"updated_at"`
-	ConditionsJson  string         `json:"conditions_json"`
+	CampaignID            string `json:"campaign_id"`
+	AdversaryID           string `json:"adversary_id"`
+	AdversaryEntryID      string `json:"adversary_entry_id"`
+	Name                  string `json:"name"`
+	Kind                  string `json:"kind"`
+	SessionID             string `json:"session_id"`
+	SceneID               string `json:"scene_id"`
+	Notes                 string `json:"notes"`
+	Hp                    int64  `json:"hp"`
+	HpMax                 int64  `json:"hp_max"`
+	Stress                int64  `json:"stress"`
+	StressMax             int64  `json:"stress_max"`
+	Evasion               int64  `json:"evasion"`
+	MajorThreshold        int64  `json:"major_threshold"`
+	SevereThreshold       int64  `json:"severe_threshold"`
+	Armor                 int64  `json:"armor"`
+	ConditionsJson        string `json:"conditions_json"`
+	FeatureStateJson      string `json:"feature_state_json"`
+	PendingExperienceJson string `json:"pending_experience_json"`
+	SpotlightGateID       string `json:"spotlight_gate_id"`
+	SpotlightCount        int64  `json:"spotlight_count"`
+	CreatedAt             int64  `json:"created_at"`
+	UpdatedAt             int64  `json:"updated_at"`
 }
 
 type DaggerheartAdversaryEntry struct {
@@ -107,6 +113,9 @@ type DaggerheartAdversaryEntry struct {
 	StandardAttackJson string `json:"standard_attack_json"`
 	ExperiencesJson    string `json:"experiences_json"`
 	FeaturesJson       string `json:"features_json"`
+	MinionRuleJson     string `json:"minion_rule_json"`
+	HordeRuleJson      string `json:"horde_rule_json"`
+	RelentlessRuleJson string `json:"relentless_rule_json"`
 	CreatedAt          int64  `json:"created_at"`
 	UpdatedAt          int64  `json:"updated_at"`
 }
@@ -119,6 +128,7 @@ type DaggerheartArmor struct {
 	BaseSevereThreshold int64  `json:"base_severe_threshold"`
 	ArmorScore          int64  `json:"armor_score"`
 	Feature             string `json:"feature"`
+	RulesJson           string `json:"rules_json"`
 	CreatedAt           int64  `json:"created_at"`
 	UpdatedAt           int64  `json:"updated_at"`
 }
@@ -139,50 +149,58 @@ type DaggerheartBeastform struct {
 }
 
 type DaggerheartCharacterProfile struct {
-	CampaignID            string `json:"campaign_id"`
-	CharacterID           string `json:"character_id"`
-	Level                 int64  `json:"level"`
-	HpMax                 int64  `json:"hp_max"`
-	StressMax             int64  `json:"stress_max"`
-	Evasion               int64  `json:"evasion"`
-	MajorThreshold        int64  `json:"major_threshold"`
-	SevereThreshold       int64  `json:"severe_threshold"`
-	Agility               int64  `json:"agility"`
-	Strength              int64  `json:"strength"`
-	Finesse               int64  `json:"finesse"`
-	Instinct              int64  `json:"instinct"`
-	Presence              int64  `json:"presence"`
-	Knowledge             int64  `json:"knowledge"`
-	Proficiency           int64  `json:"proficiency"`
-	ArmorScore            int64  `json:"armor_score"`
-	ArmorMax              int64  `json:"armor_max"`
-	ExperiencesJson       string `json:"experiences_json"`
-	ClassID               string `json:"class_id"`
-	SubclassID            string `json:"subclass_id"`
-	AncestryID            string `json:"ancestry_id"`
-	CommunityID           string `json:"community_id"`
-	TraitsAssigned        int64  `json:"traits_assigned"`
-	DetailsRecorded       int64  `json:"details_recorded"`
-	StartingWeaponIdsJson string `json:"starting_weapon_ids_json"`
-	StartingArmorID       string `json:"starting_armor_id"`
-	StartingPotionItemID  string `json:"starting_potion_item_id"`
-	Background            string `json:"background"`
-	DomainCardIdsJson     string `json:"domain_card_ids_json"`
-	Connections           string `json:"connections"`
-	Description           string `json:"description"`
+	CampaignID                       string `json:"campaign_id"`
+	CharacterID                      string `json:"character_id"`
+	Level                            int64  `json:"level"`
+	HpMax                            int64  `json:"hp_max"`
+	StressMax                        int64  `json:"stress_max"`
+	Evasion                          int64  `json:"evasion"`
+	MajorThreshold                   int64  `json:"major_threshold"`
+	SevereThreshold                  int64  `json:"severe_threshold"`
+	Agility                          int64  `json:"agility"`
+	Strength                         int64  `json:"strength"`
+	Finesse                          int64  `json:"finesse"`
+	Instinct                         int64  `json:"instinct"`
+	Presence                         int64  `json:"presence"`
+	Knowledge                        int64  `json:"knowledge"`
+	Proficiency                      int64  `json:"proficiency"`
+	ArmorScore                       int64  `json:"armor_score"`
+	ArmorMax                         int64  `json:"armor_max"`
+	ExperiencesJson                  string `json:"experiences_json"`
+	ClassID                          string `json:"class_id"`
+	SubclassID                       string `json:"subclass_id"`
+	SubclassTracksJson               string `json:"subclass_tracks_json"`
+	SubclassCreationRequirementsJson string `json:"subclass_creation_requirements_json"`
+	HeritageJson                     string `json:"heritage_json"`
+	CompanionSheetJson               string `json:"companion_sheet_json"`
+	EquippedArmorID                  string `json:"equipped_armor_id"`
+	SpellcastRollBonus               int64  `json:"spellcast_roll_bonus"`
+	TraitsAssigned                   int64  `json:"traits_assigned"`
+	DetailsRecorded                  int64  `json:"details_recorded"`
+	StartingWeaponIdsJson            string `json:"starting_weapon_ids_json"`
+	StartingArmorID                  string `json:"starting_armor_id"`
+	StartingPotionItemID             string `json:"starting_potion_item_id"`
+	Background                       string `json:"background"`
+	DomainCardIdsJson                string `json:"domain_card_ids_json"`
+	Connections                      string `json:"connections"`
+	Description                      string `json:"description"`
 }
 
 type DaggerheartCharacterState struct {
-	CampaignID         string `json:"campaign_id"`
-	CharacterID        string `json:"character_id"`
-	Hp                 int64  `json:"hp"`
-	Hope               int64  `json:"hope"`
-	HopeMax            int64  `json:"hope_max"`
-	Stress             int64  `json:"stress"`
-	Armor              int64  `json:"armor"`
-	ConditionsJson     string `json:"conditions_json"`
-	TemporaryArmorJson string `json:"temporary_armor_json"`
-	LifeState          string `json:"life_state"`
+	CampaignID                    string `json:"campaign_id"`
+	CharacterID                   string `json:"character_id"`
+	Hp                            int64  `json:"hp"`
+	Hope                          int64  `json:"hope"`
+	HopeMax                       int64  `json:"hope_max"`
+	Stress                        int64  `json:"stress"`
+	Armor                         int64  `json:"armor"`
+	ConditionsJson                string `json:"conditions_json"`
+	TemporaryArmorJson            string `json:"temporary_armor_json"`
+	LifeState                     string `json:"life_state"`
+	ClassStateJson                string `json:"class_state_json"`
+	SubclassStateJson             string `json:"subclass_state_json"`
+	CompanionStateJson            string `json:"companion_state_json"`
+	ImpenetrableUsedThisShortRest int64  `json:"impenetrable_used_this_short_rest"`
 }
 
 type DaggerheartClass struct {
@@ -270,6 +288,21 @@ type DaggerheartEnvironment struct {
 	UpdatedAt                 int64  `json:"updated_at"`
 }
 
+type DaggerheartEnvironmentEntity struct {
+	CampaignID          string `json:"campaign_id"`
+	EnvironmentEntityID string `json:"environment_entity_id"`
+	EnvironmentID       string `json:"environment_id"`
+	Name                string `json:"name"`
+	Type                string `json:"type"`
+	Tier                int64  `json:"tier"`
+	Difficulty          int64  `json:"difficulty"`
+	SessionID           string `json:"session_id"`
+	SceneID             string `json:"scene_id"`
+	Notes               string `json:"notes"`
+	CreatedAt           int64  `json:"created_at"`
+	UpdatedAt           int64  `json:"updated_at"`
+}
+
 type DaggerheartExperience struct {
 	ID          string `json:"id"`
 	Name        string `json:"name"`
@@ -324,6 +357,7 @@ type DaggerheartSubclass struct {
 	MasteryFeaturesJson        string `json:"mastery_features_json"`
 	CreatedAt                  int64  `json:"created_at"`
 	UpdatedAt                  int64  `json:"updated_at"`
+	CreationRequirementsJson   string `json:"creation_requirements_json"`
 }
 
 type DaggerheartWeapon struct {
@@ -487,6 +521,25 @@ type SceneGate struct {
 	ResolutionJson      []byte         `json:"resolution_json"`
 }
 
+type SceneInteraction struct {
+	CampaignID                string        `json:"campaign_id"`
+	SceneID                   string        `json:"scene_id"`
+	SessionID                 string        `json:"session_id"`
+	PhaseOpen                 int64         `json:"phase_open"`
+	PhaseID                   string        `json:"phase_id"`
+	FrameText                 string        `json:"frame_text"`
+	ActingCharacterIdsJson    []byte        `json:"acting_character_ids_json"`
+	ActingParticipantIdsJson  []byte        `json:"acting_participant_ids_json"`
+	PostsJson                 []byte        `json:"posts_json"`
+	YieldedParticipantIdsJson []byte        `json:"yielded_participant_ids_json"`
+	UpdatedAt                 int64         `json:"updated_at"`
+	PhaseStatus               string        `json:"phase_status"`
+	SlotsJson                 []byte        `json:"slots_json"`
+	GmOutputText              string        `json:"gm_output_text"`
+	GmOutputParticipantID     string        `json:"gm_output_participant_id"`
+	GmOutputUpdatedAt         sql.NullInt64 `json:"gm_output_updated_at"`
+}
+
 type SceneSpotlight struct {
 	CampaignID         string `json:"campaign_id"`
 	SceneID            string `json:"scene_id"`
@@ -552,6 +605,24 @@ type SessionGateResponse struct {
 	RecordedAt    sql.NullInt64 `json:"recorded_at"`
 	ActorType     string        `json:"actor_type"`
 	ActorID       string        `json:"actor_id"`
+}
+
+type SessionInteraction struct {
+	CampaignID               string `json:"campaign_id"`
+	SessionID                string `json:"session_id"`
+	ActiveSceneID            string `json:"active_scene_id"`
+	GmAuthorityParticipantID string `json:"gm_authority_participant_id"`
+	OocPaused                int64  `json:"ooc_paused"`
+	OocPostsJson             []byte `json:"ooc_posts_json"`
+	ReadyToResumeJson        []byte `json:"ready_to_resume_json"`
+	AiTurnStatus             string `json:"ai_turn_status"`
+	AiTurnToken              string `json:"ai_turn_token"`
+	AiTurnOwnerParticipantID string `json:"ai_turn_owner_participant_id"`
+	AiTurnSourceEventType    string `json:"ai_turn_source_event_type"`
+	AiTurnSourceSceneID      string `json:"ai_turn_source_scene_id"`
+	AiTurnSourcePhaseID      string `json:"ai_turn_source_phase_id"`
+	AiTurnLastError          string `json:"ai_turn_last_error"`
+	UpdatedAt                int64  `json:"updated_at"`
 }
 
 type SessionSpotlight struct {

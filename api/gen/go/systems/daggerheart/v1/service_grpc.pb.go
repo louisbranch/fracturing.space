@@ -29,13 +29,13 @@ const (
 	DaggerheartService_ApplyDamage_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyDamage"
 	DaggerheartService_ApplyAdversaryDamage_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryDamage"
 	DaggerheartService_ApplyRest_FullMethodName                   = "/systems.daggerheart.v1.DaggerheartService/ApplyRest"
-	DaggerheartService_ApplyDowntimeMove_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/ApplyDowntimeMove"
 	DaggerheartService_ApplyTemporaryArmor_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ApplyTemporaryArmor"
 	DaggerheartService_SwapLoadout_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/SwapLoadout"
 	DaggerheartService_ApplyDeathMove_FullMethodName              = "/systems.daggerheart.v1.DaggerheartService/ApplyDeathMove"
 	DaggerheartService_ApplyConditions_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ApplyConditions"
 	DaggerheartService_ApplyAdversaryConditions_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryConditions"
 	DaggerheartService_ApplyGmMove_FullMethodName                 = "/systems.daggerheart.v1.DaggerheartService/ApplyGmMove"
+	DaggerheartService_ApplyAdversaryFeature_FullMethodName       = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryFeature"
 	DaggerheartService_CreateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/CreateCountdown"
 	DaggerheartService_UpdateCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/UpdateCountdown"
 	DaggerheartService_DeleteCountdown_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/DeleteCountdown"
@@ -44,6 +44,11 @@ const (
 	DaggerheartService_DeleteAdversary_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/DeleteAdversary"
 	DaggerheartService_GetAdversary_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/GetAdversary"
 	DaggerheartService_ListAdversaries_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ListAdversaries"
+	DaggerheartService_CreateEnvironmentEntity_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/CreateEnvironmentEntity"
+	DaggerheartService_UpdateEnvironmentEntity_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/UpdateEnvironmentEntity"
+	DaggerheartService_DeleteEnvironmentEntity_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/DeleteEnvironmentEntity"
+	DaggerheartService_GetEnvironmentEntity_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/GetEnvironmentEntity"
+	DaggerheartService_ListEnvironmentEntities_FullMethodName     = "/systems.daggerheart.v1.DaggerheartService/ListEnvironmentEntities"
 	DaggerheartService_ResolveBlazeOfGlory_FullMethodName         = "/systems.daggerheart.v1.DaggerheartService/ResolveBlazeOfGlory"
 	DaggerheartService_SessionActionRoll_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionActionRoll"
 	DaggerheartService_SessionDamageRoll_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/SessionDamageRoll"
@@ -59,6 +64,12 @@ const (
 	DaggerheartService_ApplyAdversaryAttackOutcome_FullMethodName = "/systems.daggerheart.v1.DaggerheartService/ApplyAdversaryAttackOutcome"
 	DaggerheartService_ApplyReactionOutcome_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplyReactionOutcome"
 	DaggerheartService_ApplyLevelUp_FullMethodName                = "/systems.daggerheart.v1.DaggerheartService/ApplyLevelUp"
+	DaggerheartService_ApplyClassFeature_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/ApplyClassFeature"
+	DaggerheartService_ApplySubclassFeature_FullMethodName        = "/systems.daggerheart.v1.DaggerheartService/ApplySubclassFeature"
+	DaggerheartService_TransformBeastform_FullMethodName          = "/systems.daggerheart.v1.DaggerheartService/TransformBeastform"
+	DaggerheartService_DropBeastform_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/DropBeastform"
+	DaggerheartService_BeginCompanionExperience_FullMethodName    = "/systems.daggerheart.v1.DaggerheartService/BeginCompanionExperience"
+	DaggerheartService_ReturnCompanion_FullMethodName             = "/systems.daggerheart.v1.DaggerheartService/ReturnCompanion"
 	DaggerheartService_UpdateGold_FullMethodName                  = "/systems.daggerheart.v1.DaggerheartService/UpdateGold"
 	DaggerheartService_AcquireDomainCard_FullMethodName           = "/systems.daggerheart.v1.DaggerheartService/AcquireDomainCard"
 	DaggerheartService_SwapEquipment_FullMethodName               = "/systems.daggerheart.v1.DaggerheartService/SwapEquipment"
@@ -92,8 +103,6 @@ type DaggerheartServiceClient interface {
 	ApplyAdversaryDamage(ctx context.Context, in *DaggerheartApplyAdversaryDamageRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryDamageResponse, error)
 	// Apply a rest outcome (system-specific).
 	ApplyRest(ctx context.Context, in *DaggerheartApplyRestRequest, opts ...grpc.CallOption) (*DaggerheartApplyRestResponse, error)
-	// Apply a downtime move (system-specific).
-	ApplyDowntimeMove(ctx context.Context, in *DaggerheartApplyDowntimeMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDowntimeMoveResponse, error)
 	// Apply temporary armor to a character (system-specific).
 	ApplyTemporaryArmor(ctx context.Context, in *DaggerheartApplyTemporaryArmorRequest, opts ...grpc.CallOption) (*DaggerheartApplyTemporaryArmorResponse, error)
 	// Swap a loadout card (system-specific).
@@ -106,6 +115,7 @@ type DaggerheartServiceClient interface {
 	ApplyAdversaryConditions(ctx context.Context, in *DaggerheartApplyAdversaryConditionsRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryConditionsResponse, error)
 	// Apply a GM move (system-specific).
 	ApplyGmMove(ctx context.Context, in *DaggerheartApplyGmMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyGmMoveResponse, error)
+	ApplyAdversaryFeature(ctx context.Context, in *DaggerheartApplyAdversaryFeatureRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryFeatureResponse, error)
 	// Create a countdown (system-specific).
 	CreateCountdown(ctx context.Context, in *DaggerheartCreateCountdownRequest, opts ...grpc.CallOption) (*DaggerheartCreateCountdownResponse, error)
 	// Update a countdown (system-specific).
@@ -122,6 +132,16 @@ type DaggerheartServiceClient interface {
 	GetAdversary(ctx context.Context, in *DaggerheartGetAdversaryRequest, opts ...grpc.CallOption) (*DaggerheartGetAdversaryResponse, error)
 	// List adversaries (system-specific).
 	ListAdversaries(ctx context.Context, in *DaggerheartListAdversariesRequest, opts ...grpc.CallOption) (*DaggerheartListAdversariesResponse, error)
+	// Create an instantiated environment entity (system-specific).
+	CreateEnvironmentEntity(ctx context.Context, in *DaggerheartCreateEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartCreateEnvironmentEntityResponse, error)
+	// Update an instantiated environment entity (system-specific).
+	UpdateEnvironmentEntity(ctx context.Context, in *DaggerheartUpdateEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartUpdateEnvironmentEntityResponse, error)
+	// Delete an instantiated environment entity (system-specific).
+	DeleteEnvironmentEntity(ctx context.Context, in *DaggerheartDeleteEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartDeleteEnvironmentEntityResponse, error)
+	// Get an instantiated environment entity (system-specific).
+	GetEnvironmentEntity(ctx context.Context, in *DaggerheartGetEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartGetEnvironmentEntityResponse, error)
+	// List instantiated environment entities (system-specific).
+	ListEnvironmentEntities(ctx context.Context, in *DaggerheartListEnvironmentEntitiesRequest, opts ...grpc.CallOption) (*DaggerheartListEnvironmentEntitiesResponse, error)
 	// Resolve a Blaze of Glory finale (system-specific).
 	ResolveBlazeOfGlory(ctx context.Context, in *DaggerheartResolveBlazeOfGloryRequest, opts ...grpc.CallOption) (*DaggerheartResolveBlazeOfGloryResponse, error)
 	// Roll Duality dice for a session (combines roll + event recording).
@@ -152,6 +172,13 @@ type DaggerheartServiceClient interface {
 	ApplyReactionOutcome(ctx context.Context, in *DaggerheartApplyReactionOutcomeRequest, opts ...grpc.CallOption) (*DaggerheartApplyReactionOutcomeResponse, error)
 	// Apply a level-up to a character (progression).
 	ApplyLevelUp(ctx context.Context, in *DaggerheartApplyLevelUpRequest, opts ...grpc.CallOption) (*DaggerheartApplyLevelUpResponse, error)
+	// Apply a class feature activation or stateful class choice.
+	ApplyClassFeature(ctx context.Context, in *DaggerheartApplyClassFeatureRequest, opts ...grpc.CallOption) (*DaggerheartApplyClassFeatureResponse, error)
+	ApplySubclassFeature(ctx context.Context, in *DaggerheartApplySubclassFeatureRequest, opts ...grpc.CallOption) (*DaggerheartApplySubclassFeatureResponse, error)
+	TransformBeastform(ctx context.Context, in *DaggerheartTransformBeastformRequest, opts ...grpc.CallOption) (*DaggerheartTransformBeastformResponse, error)
+	DropBeastform(ctx context.Context, in *DaggerheartDropBeastformRequest, opts ...grpc.CallOption) (*DaggerheartDropBeastformResponse, error)
+	BeginCompanionExperience(ctx context.Context, in *DaggerheartBeginCompanionExperienceRequest, opts ...grpc.CallOption) (*DaggerheartBeginCompanionExperienceResponse, error)
+	ReturnCompanion(ctx context.Context, in *DaggerheartReturnCompanionRequest, opts ...grpc.CallOption) (*DaggerheartReturnCompanionResponse, error)
 	// Update a character's gold denominations (inventory).
 	UpdateGold(ctx context.Context, in *DaggerheartUpdateGoldRequest, opts ...grpc.CallOption) (*DaggerheartUpdateGoldResponse, error)
 	// Acquire a domain card into a character's vault or loadout (inventory).
@@ -262,16 +289,6 @@ func (c *daggerheartServiceClient) ApplyRest(ctx context.Context, in *Daggerhear
 	return out, nil
 }
 
-func (c *daggerheartServiceClient) ApplyDowntimeMove(ctx context.Context, in *DaggerheartApplyDowntimeMoveRequest, opts ...grpc.CallOption) (*DaggerheartApplyDowntimeMoveResponse, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(DaggerheartApplyDowntimeMoveResponse)
-	err := c.cc.Invoke(ctx, DaggerheartService_ApplyDowntimeMove_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *daggerheartServiceClient) ApplyTemporaryArmor(ctx context.Context, in *DaggerheartApplyTemporaryArmorRequest, opts ...grpc.CallOption) (*DaggerheartApplyTemporaryArmorResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DaggerheartApplyTemporaryArmorResponse)
@@ -326,6 +343,16 @@ func (c *daggerheartServiceClient) ApplyGmMove(ctx context.Context, in *Daggerhe
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DaggerheartApplyGmMoveResponse)
 	err := c.cc.Invoke(ctx, DaggerheartService_ApplyGmMove_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplyAdversaryFeature(ctx context.Context, in *DaggerheartApplyAdversaryFeatureRequest, opts ...grpc.CallOption) (*DaggerheartApplyAdversaryFeatureResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyAdversaryFeatureResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyAdversaryFeature_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -406,6 +433,56 @@ func (c *daggerheartServiceClient) ListAdversaries(ctx context.Context, in *Dagg
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DaggerheartListAdversariesResponse)
 	err := c.cc.Invoke(ctx, DaggerheartService_ListAdversaries_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) CreateEnvironmentEntity(ctx context.Context, in *DaggerheartCreateEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartCreateEnvironmentEntityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartCreateEnvironmentEntityResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_CreateEnvironmentEntity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) UpdateEnvironmentEntity(ctx context.Context, in *DaggerheartUpdateEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartUpdateEnvironmentEntityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartUpdateEnvironmentEntityResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_UpdateEnvironmentEntity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) DeleteEnvironmentEntity(ctx context.Context, in *DaggerheartDeleteEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartDeleteEnvironmentEntityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartDeleteEnvironmentEntityResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_DeleteEnvironmentEntity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) GetEnvironmentEntity(ctx context.Context, in *DaggerheartGetEnvironmentEntityRequest, opts ...grpc.CallOption) (*DaggerheartGetEnvironmentEntityResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartGetEnvironmentEntityResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_GetEnvironmentEntity_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ListEnvironmentEntities(ctx context.Context, in *DaggerheartListEnvironmentEntitiesRequest, opts ...grpc.CallOption) (*DaggerheartListEnvironmentEntitiesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartListEnvironmentEntitiesResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ListEnvironmentEntities_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -562,6 +639,66 @@ func (c *daggerheartServiceClient) ApplyLevelUp(ctx context.Context, in *Daggerh
 	return out, nil
 }
 
+func (c *daggerheartServiceClient) ApplyClassFeature(ctx context.Context, in *DaggerheartApplyClassFeatureRequest, opts ...grpc.CallOption) (*DaggerheartApplyClassFeatureResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplyClassFeatureResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplyClassFeature_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ApplySubclassFeature(ctx context.Context, in *DaggerheartApplySubclassFeatureRequest, opts ...grpc.CallOption) (*DaggerheartApplySubclassFeatureResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartApplySubclassFeatureResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ApplySubclassFeature_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) TransformBeastform(ctx context.Context, in *DaggerheartTransformBeastformRequest, opts ...grpc.CallOption) (*DaggerheartTransformBeastformResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartTransformBeastformResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_TransformBeastform_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) DropBeastform(ctx context.Context, in *DaggerheartDropBeastformRequest, opts ...grpc.CallOption) (*DaggerheartDropBeastformResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartDropBeastformResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_DropBeastform_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) BeginCompanionExperience(ctx context.Context, in *DaggerheartBeginCompanionExperienceRequest, opts ...grpc.CallOption) (*DaggerheartBeginCompanionExperienceResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartBeginCompanionExperienceResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_BeginCompanionExperience_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *daggerheartServiceClient) ReturnCompanion(ctx context.Context, in *DaggerheartReturnCompanionRequest, opts ...grpc.CallOption) (*DaggerheartReturnCompanionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DaggerheartReturnCompanionResponse)
+	err := c.cc.Invoke(ctx, DaggerheartService_ReturnCompanion_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *daggerheartServiceClient) UpdateGold(ctx context.Context, in *DaggerheartUpdateGoldRequest, opts ...grpc.CallOption) (*DaggerheartUpdateGoldResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(DaggerheartUpdateGoldResponse)
@@ -638,8 +775,6 @@ type DaggerheartServiceServer interface {
 	ApplyAdversaryDamage(context.Context, *DaggerheartApplyAdversaryDamageRequest) (*DaggerheartApplyAdversaryDamageResponse, error)
 	// Apply a rest outcome (system-specific).
 	ApplyRest(context.Context, *DaggerheartApplyRestRequest) (*DaggerheartApplyRestResponse, error)
-	// Apply a downtime move (system-specific).
-	ApplyDowntimeMove(context.Context, *DaggerheartApplyDowntimeMoveRequest) (*DaggerheartApplyDowntimeMoveResponse, error)
 	// Apply temporary armor to a character (system-specific).
 	ApplyTemporaryArmor(context.Context, *DaggerheartApplyTemporaryArmorRequest) (*DaggerheartApplyTemporaryArmorResponse, error)
 	// Swap a loadout card (system-specific).
@@ -652,6 +787,7 @@ type DaggerheartServiceServer interface {
 	ApplyAdversaryConditions(context.Context, *DaggerheartApplyAdversaryConditionsRequest) (*DaggerheartApplyAdversaryConditionsResponse, error)
 	// Apply a GM move (system-specific).
 	ApplyGmMove(context.Context, *DaggerheartApplyGmMoveRequest) (*DaggerheartApplyGmMoveResponse, error)
+	ApplyAdversaryFeature(context.Context, *DaggerheartApplyAdversaryFeatureRequest) (*DaggerheartApplyAdversaryFeatureResponse, error)
 	// Create a countdown (system-specific).
 	CreateCountdown(context.Context, *DaggerheartCreateCountdownRequest) (*DaggerheartCreateCountdownResponse, error)
 	// Update a countdown (system-specific).
@@ -668,6 +804,16 @@ type DaggerheartServiceServer interface {
 	GetAdversary(context.Context, *DaggerheartGetAdversaryRequest) (*DaggerheartGetAdversaryResponse, error)
 	// List adversaries (system-specific).
 	ListAdversaries(context.Context, *DaggerheartListAdversariesRequest) (*DaggerheartListAdversariesResponse, error)
+	// Create an instantiated environment entity (system-specific).
+	CreateEnvironmentEntity(context.Context, *DaggerheartCreateEnvironmentEntityRequest) (*DaggerheartCreateEnvironmentEntityResponse, error)
+	// Update an instantiated environment entity (system-specific).
+	UpdateEnvironmentEntity(context.Context, *DaggerheartUpdateEnvironmentEntityRequest) (*DaggerheartUpdateEnvironmentEntityResponse, error)
+	// Delete an instantiated environment entity (system-specific).
+	DeleteEnvironmentEntity(context.Context, *DaggerheartDeleteEnvironmentEntityRequest) (*DaggerheartDeleteEnvironmentEntityResponse, error)
+	// Get an instantiated environment entity (system-specific).
+	GetEnvironmentEntity(context.Context, *DaggerheartGetEnvironmentEntityRequest) (*DaggerheartGetEnvironmentEntityResponse, error)
+	// List instantiated environment entities (system-specific).
+	ListEnvironmentEntities(context.Context, *DaggerheartListEnvironmentEntitiesRequest) (*DaggerheartListEnvironmentEntitiesResponse, error)
 	// Resolve a Blaze of Glory finale (system-specific).
 	ResolveBlazeOfGlory(context.Context, *DaggerheartResolveBlazeOfGloryRequest) (*DaggerheartResolveBlazeOfGloryResponse, error)
 	// Roll Duality dice for a session (combines roll + event recording).
@@ -698,6 +844,13 @@ type DaggerheartServiceServer interface {
 	ApplyReactionOutcome(context.Context, *DaggerheartApplyReactionOutcomeRequest) (*DaggerheartApplyReactionOutcomeResponse, error)
 	// Apply a level-up to a character (progression).
 	ApplyLevelUp(context.Context, *DaggerheartApplyLevelUpRequest) (*DaggerheartApplyLevelUpResponse, error)
+	// Apply a class feature activation or stateful class choice.
+	ApplyClassFeature(context.Context, *DaggerheartApplyClassFeatureRequest) (*DaggerheartApplyClassFeatureResponse, error)
+	ApplySubclassFeature(context.Context, *DaggerheartApplySubclassFeatureRequest) (*DaggerheartApplySubclassFeatureResponse, error)
+	TransformBeastform(context.Context, *DaggerheartTransformBeastformRequest) (*DaggerheartTransformBeastformResponse, error)
+	DropBeastform(context.Context, *DaggerheartDropBeastformRequest) (*DaggerheartDropBeastformResponse, error)
+	BeginCompanionExperience(context.Context, *DaggerheartBeginCompanionExperienceRequest) (*DaggerheartBeginCompanionExperienceResponse, error)
+	ReturnCompanion(context.Context, *DaggerheartReturnCompanionRequest) (*DaggerheartReturnCompanionResponse, error)
 	// Update a character's gold denominations (inventory).
 	UpdateGold(context.Context, *DaggerheartUpdateGoldRequest) (*DaggerheartUpdateGoldResponse, error)
 	// Acquire a domain card into a character's vault or loadout (inventory).
@@ -745,9 +898,6 @@ func (UnimplementedDaggerheartServiceServer) ApplyAdversaryDamage(context.Contex
 func (UnimplementedDaggerheartServiceServer) ApplyRest(context.Context, *DaggerheartApplyRestRequest) (*DaggerheartApplyRestResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyRest not implemented")
 }
-func (UnimplementedDaggerheartServiceServer) ApplyDowntimeMove(context.Context, *DaggerheartApplyDowntimeMoveRequest) (*DaggerheartApplyDowntimeMoveResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ApplyDowntimeMove not implemented")
-}
 func (UnimplementedDaggerheartServiceServer) ApplyTemporaryArmor(context.Context, *DaggerheartApplyTemporaryArmorRequest) (*DaggerheartApplyTemporaryArmorResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyTemporaryArmor not implemented")
 }
@@ -765,6 +915,9 @@ func (UnimplementedDaggerheartServiceServer) ApplyAdversaryConditions(context.Co
 }
 func (UnimplementedDaggerheartServiceServer) ApplyGmMove(context.Context, *DaggerheartApplyGmMoveRequest) (*DaggerheartApplyGmMoveResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyGmMove not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyAdversaryFeature(context.Context, *DaggerheartApplyAdversaryFeatureRequest) (*DaggerheartApplyAdversaryFeatureResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyAdversaryFeature not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) CreateCountdown(context.Context, *DaggerheartCreateCountdownRequest) (*DaggerheartCreateCountdownResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateCountdown not implemented")
@@ -789,6 +942,21 @@ func (UnimplementedDaggerheartServiceServer) GetAdversary(context.Context, *Dagg
 }
 func (UnimplementedDaggerheartServiceServer) ListAdversaries(context.Context, *DaggerheartListAdversariesRequest) (*DaggerheartListAdversariesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ListAdversaries not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) CreateEnvironmentEntity(context.Context, *DaggerheartCreateEnvironmentEntityRequest) (*DaggerheartCreateEnvironmentEntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateEnvironmentEntity not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) UpdateEnvironmentEntity(context.Context, *DaggerheartUpdateEnvironmentEntityRequest) (*DaggerheartUpdateEnvironmentEntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UpdateEnvironmentEntity not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) DeleteEnvironmentEntity(context.Context, *DaggerheartDeleteEnvironmentEntityRequest) (*DaggerheartDeleteEnvironmentEntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteEnvironmentEntity not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) GetEnvironmentEntity(context.Context, *DaggerheartGetEnvironmentEntityRequest) (*DaggerheartGetEnvironmentEntityResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEnvironmentEntity not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ListEnvironmentEntities(context.Context, *DaggerheartListEnvironmentEntitiesRequest) (*DaggerheartListEnvironmentEntitiesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListEnvironmentEntities not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) ResolveBlazeOfGlory(context.Context, *DaggerheartResolveBlazeOfGloryRequest) (*DaggerheartResolveBlazeOfGloryResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ResolveBlazeOfGlory not implemented")
@@ -834,6 +1002,24 @@ func (UnimplementedDaggerheartServiceServer) ApplyReactionOutcome(context.Contex
 }
 func (UnimplementedDaggerheartServiceServer) ApplyLevelUp(context.Context, *DaggerheartApplyLevelUpRequest) (*DaggerheartApplyLevelUpResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ApplyLevelUp not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplyClassFeature(context.Context, *DaggerheartApplyClassFeatureRequest) (*DaggerheartApplyClassFeatureResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplyClassFeature not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ApplySubclassFeature(context.Context, *DaggerheartApplySubclassFeatureRequest) (*DaggerheartApplySubclassFeatureResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ApplySubclassFeature not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) TransformBeastform(context.Context, *DaggerheartTransformBeastformRequest) (*DaggerheartTransformBeastformResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method TransformBeastform not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) DropBeastform(context.Context, *DaggerheartDropBeastformRequest) (*DaggerheartDropBeastformResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DropBeastform not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) BeginCompanionExperience(context.Context, *DaggerheartBeginCompanionExperienceRequest) (*DaggerheartBeginCompanionExperienceResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method BeginCompanionExperience not implemented")
+}
+func (UnimplementedDaggerheartServiceServer) ReturnCompanion(context.Context, *DaggerheartReturnCompanionRequest) (*DaggerheartReturnCompanionResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReturnCompanion not implemented")
 }
 func (UnimplementedDaggerheartServiceServer) UpdateGold(context.Context, *DaggerheartUpdateGoldRequest) (*DaggerheartUpdateGoldResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateGold not implemented")
@@ -1033,24 +1219,6 @@ func _DaggerheartService_ApplyRest_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
-func _DaggerheartService_ApplyDowntimeMove_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DaggerheartApplyDowntimeMoveRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(DaggerheartServiceServer).ApplyDowntimeMove(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: DaggerheartService_ApplyDowntimeMove_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(DaggerheartServiceServer).ApplyDowntimeMove(ctx, req.(*DaggerheartApplyDowntimeMoveRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _DaggerheartService_ApplyTemporaryArmor_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DaggerheartApplyTemporaryArmorRequest)
 	if err := dec(in); err != nil {
@@ -1155,6 +1323,24 @@ func _DaggerheartService_ApplyGmMove_Handler(srv interface{}, ctx context.Contex
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaggerheartServiceServer).ApplyGmMove(ctx, req.(*DaggerheartApplyGmMoveRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplyAdversaryFeature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyAdversaryFeatureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryFeature(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyAdversaryFeature_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyAdversaryFeature(ctx, req.(*DaggerheartApplyAdversaryFeatureRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1299,6 +1485,96 @@ func _DaggerheartService_ListAdversaries_Handler(srv interface{}, ctx context.Co
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(DaggerheartServiceServer).ListAdversaries(ctx, req.(*DaggerheartListAdversariesRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_CreateEnvironmentEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartCreateEnvironmentEntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).CreateEnvironmentEntity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_CreateEnvironmentEntity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).CreateEnvironmentEntity(ctx, req.(*DaggerheartCreateEnvironmentEntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_UpdateEnvironmentEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartUpdateEnvironmentEntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).UpdateEnvironmentEntity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_UpdateEnvironmentEntity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).UpdateEnvironmentEntity(ctx, req.(*DaggerheartUpdateEnvironmentEntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_DeleteEnvironmentEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartDeleteEnvironmentEntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).DeleteEnvironmentEntity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_DeleteEnvironmentEntity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).DeleteEnvironmentEntity(ctx, req.(*DaggerheartDeleteEnvironmentEntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_GetEnvironmentEntity_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartGetEnvironmentEntityRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).GetEnvironmentEntity(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_GetEnvironmentEntity_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).GetEnvironmentEntity(ctx, req.(*DaggerheartGetEnvironmentEntityRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ListEnvironmentEntities_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartListEnvironmentEntitiesRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ListEnvironmentEntities(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ListEnvironmentEntities_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ListEnvironmentEntities(ctx, req.(*DaggerheartListEnvironmentEntitiesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -1573,6 +1849,114 @@ func _DaggerheartService_ApplyLevelUp_Handler(srv interface{}, ctx context.Conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _DaggerheartService_ApplyClassFeature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplyClassFeatureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplyClassFeature(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplyClassFeature_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplyClassFeature(ctx, req.(*DaggerheartApplyClassFeatureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ApplySubclassFeature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartApplySubclassFeatureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ApplySubclassFeature(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ApplySubclassFeature_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ApplySubclassFeature(ctx, req.(*DaggerheartApplySubclassFeatureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_TransformBeastform_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartTransformBeastformRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).TransformBeastform(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_TransformBeastform_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).TransformBeastform(ctx, req.(*DaggerheartTransformBeastformRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_DropBeastform_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartDropBeastformRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).DropBeastform(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_DropBeastform_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).DropBeastform(ctx, req.(*DaggerheartDropBeastformRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_BeginCompanionExperience_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartBeginCompanionExperienceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).BeginCompanionExperience(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_BeginCompanionExperience_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).BeginCompanionExperience(ctx, req.(*DaggerheartBeginCompanionExperienceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _DaggerheartService_ReturnCompanion_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DaggerheartReturnCompanionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DaggerheartServiceServer).ReturnCompanion(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: DaggerheartService_ReturnCompanion_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DaggerheartServiceServer).ReturnCompanion(ctx, req.(*DaggerheartReturnCompanionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _DaggerheartService_UpdateGold_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(DaggerheartUpdateGoldRequest)
 	if err := dec(in); err != nil {
@@ -1707,10 +2091,6 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _DaggerheartService_ApplyRest_Handler,
 		},
 		{
-			MethodName: "ApplyDowntimeMove",
-			Handler:    _DaggerheartService_ApplyDowntimeMove_Handler,
-		},
-		{
 			MethodName: "ApplyTemporaryArmor",
 			Handler:    _DaggerheartService_ApplyTemporaryArmor_Handler,
 		},
@@ -1733,6 +2113,10 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyGmMove",
 			Handler:    _DaggerheartService_ApplyGmMove_Handler,
+		},
+		{
+			MethodName: "ApplyAdversaryFeature",
+			Handler:    _DaggerheartService_ApplyAdversaryFeature_Handler,
 		},
 		{
 			MethodName: "CreateCountdown",
@@ -1765,6 +2149,26 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListAdversaries",
 			Handler:    _DaggerheartService_ListAdversaries_Handler,
+		},
+		{
+			MethodName: "CreateEnvironmentEntity",
+			Handler:    _DaggerheartService_CreateEnvironmentEntity_Handler,
+		},
+		{
+			MethodName: "UpdateEnvironmentEntity",
+			Handler:    _DaggerheartService_UpdateEnvironmentEntity_Handler,
+		},
+		{
+			MethodName: "DeleteEnvironmentEntity",
+			Handler:    _DaggerheartService_DeleteEnvironmentEntity_Handler,
+		},
+		{
+			MethodName: "GetEnvironmentEntity",
+			Handler:    _DaggerheartService_GetEnvironmentEntity_Handler,
+		},
+		{
+			MethodName: "ListEnvironmentEntities",
+			Handler:    _DaggerheartService_ListEnvironmentEntities_Handler,
 		},
 		{
 			MethodName: "ResolveBlazeOfGlory",
@@ -1825,6 +2229,30 @@ var DaggerheartService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ApplyLevelUp",
 			Handler:    _DaggerheartService_ApplyLevelUp_Handler,
+		},
+		{
+			MethodName: "ApplyClassFeature",
+			Handler:    _DaggerheartService_ApplyClassFeature_Handler,
+		},
+		{
+			MethodName: "ApplySubclassFeature",
+			Handler:    _DaggerheartService_ApplySubclassFeature_Handler,
+		},
+		{
+			MethodName: "TransformBeastform",
+			Handler:    _DaggerheartService_TransformBeastform_Handler,
+		},
+		{
+			MethodName: "DropBeastform",
+			Handler:    _DaggerheartService_DropBeastform_Handler,
+		},
+		{
+			MethodName: "BeginCompanionExperience",
+			Handler:    _DaggerheartService_BeginCompanionExperience_Handler,
+		},
+		{
+			MethodName: "ReturnCompanion",
+			Handler:    _DaggerheartService_ReturnCompanion_Handler,
 		},
 		{
 			MethodName: "UpdateGold",

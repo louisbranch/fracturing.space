@@ -56,7 +56,19 @@ func TestSessionAttackFlow_MissingTrait(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1",
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		TargetId:    "adv-1",
+		Damage: &pb.DaggerheartAttackDamageSpec{
+			DamageType: pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
+		},
+		AttackProfile: &pb.SessionAttackFlowRequest_StandardAttack{
+			StandardAttack: &pb.SessionStandardAttackProfile{
+				AttackRange: pb.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_MELEE,
+				DamageDice:  []*pb.DiceSpec{{Sides: 6, Count: 1}},
+			},
+		},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -65,7 +77,9 @@ func TestSessionAttackFlow_MissingTargetId(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility",
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -74,7 +88,17 @@ func TestSessionAttackFlow_MissingDamage(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility", TargetId: "adv-1",
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		TargetId:    "adv-1",
+		AttackProfile: &pb.SessionAttackFlowRequest_StandardAttack{
+			StandardAttack: &pb.SessionStandardAttackProfile{
+				Trait:       "agility",
+				AttackRange: pb.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_MELEE,
+				DamageDice:  []*pb.DiceSpec{{Sides: 6, Count: 1}},
+			},
+		},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -83,8 +107,18 @@ func TestSessionAttackFlow_MissingDamageType(t *testing.T) {
 	svc := newActionTestService()
 	configureNoopDomain(svc)
 	_, err := svc.SessionAttackFlow(context.Background(), &pb.SessionAttackFlowRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", CharacterId: "char-1", Trait: "agility", TargetId: "adv-1",
-		Damage: &pb.DaggerheartAttackDamageSpec{},
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		CharacterId: "char-1",
+		TargetId:    "adv-1",
+		Damage:      &pb.DaggerheartAttackDamageSpec{},
+		AttackProfile: &pb.SessionAttackFlowRequest_StandardAttack{
+			StandardAttack: &pb.SessionStandardAttackProfile{
+				Trait:       "agility",
+				AttackRange: pb.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_MELEE,
+				DamageDice:  []*pb.DiceSpec{{Sides: 6, Count: 1}},
+			},
+		},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -154,14 +188,19 @@ func TestSessionAttackFlow_Success(t *testing.T) {
 		CampaignId:  "camp-1",
 		SessionId:   "sess-1",
 		CharacterId: "char-1",
-		Trait:       "agility",
 		Difficulty:  10,
 		TargetId:    "char-2",
 		Damage: &pb.DaggerheartAttackDamageSpec{
 			DamageType:         pb.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 			SourceCharacterIds: []string{"char-1"},
 		},
-		DamageDice: []*pb.DiceSpec{{Sides: 6, Count: 1}},
+		AttackProfile: &pb.SessionAttackFlowRequest_StandardAttack{
+			StandardAttack: &pb.SessionStandardAttackProfile{
+				Trait:       "agility",
+				AttackRange: pb.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_MELEE,
+				DamageDice:  []*pb.DiceSpec{{Sides: 6, Count: 1}},
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("SessionAttackFlow returned error: %v", err)

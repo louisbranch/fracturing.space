@@ -212,8 +212,8 @@ func TestReplaySnapshot_AppliesRestTaken(t *testing.T) {
 		t.Fatalf("gm_fear = %d, want 2", snap.GMFear)
 	}
 	state := daggerheartStore.states["camp-1:char-1"]
-	if state.Hope != 2 || state.Stress != 0 {
-		t.Fatalf("state = %+v, want hope=2 stress=0", state)
+	if state.Hope != 1 || state.Stress != 3 {
+		t.Fatalf("state = %+v, want hope=1 stress=3", state)
 	}
 }
 
@@ -384,19 +384,13 @@ func newDamageAppliedEvent(campaignID, characterID string, seq uint64, hp, armor
 }
 
 func newRestTakenEvent(campaignID, characterID string, seq uint64) event.Event {
-	hope := 2
-	stress := 0
 	payload := daggerheart.RestTakenPayload{
-		RestType:    "short",
-		Interrupted: false,
-		GMFear:      2,
-		ShortRests:  1,
-		RefreshRest: true,
-		CharacterStates: []daggerheart.RestTakenCharacterPatch{{
-			CharacterID: ids.CharacterID(characterID),
-			Hope:        &hope,
-			Stress:      &stress,
-		}},
+		RestType:     "short",
+		Interrupted:  false,
+		GMFear:       2,
+		ShortRests:   1,
+		RefreshRest:  true,
+		Participants: []ids.CharacterID{ids.CharacterID(characterID)},
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{
@@ -415,9 +409,11 @@ func newRestTakenEvent(campaignID, characterID string, seq uint64) event.Event {
 func newDowntimeMoveAppliedEvent(campaignID, characterID string, seq uint64) event.Event {
 	hope := 3
 	payload := daggerheart.DowntimeMoveAppliedPayload{
-		CharacterID: ids.CharacterID(characterID),
-		Move:        "prepare",
-		Hope:        &hope,
+		ActorCharacterID:  ids.CharacterID(characterID),
+		TargetCharacterID: ids.CharacterID(characterID),
+		Move:              "prepare",
+		RestType:          "short",
+		Hope:              &hope,
 	}
 	data, _ := json.Marshal(payload)
 	return event.Event{

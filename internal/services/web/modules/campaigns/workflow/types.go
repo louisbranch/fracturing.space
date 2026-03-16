@@ -49,12 +49,13 @@ type Class struct {
 
 // Subclass stores subclass catalog data used by workflow forms.
 type Subclass struct {
-	ID             string
-	Name           string
-	ClassID        string
-	SpellcastTrait string
-	Foundation     []Feature
-	Illustration   AssetReference
+	ID                   string
+	Name                 string
+	ClassID              string
+	SpellcastTrait       string
+	CreationRequirements []string
+	Foundation           []Feature
+	Illustration         AssetReference
 }
 
 // Heritage stores ancestry/community catalog data.
@@ -136,45 +137,77 @@ type Environment struct {
 
 // Catalog stores the workflow catalog subsets used by system-specific forms.
 type Catalog struct {
-	AssetTheme   string
-	Classes      []Class
-	Subclasses   []Subclass
-	Heritages    []Heritage
-	Domains      []Domain
-	Weapons      []Weapon
-	Armor        []Armor
-	Items        []Item
-	DomainCards  []DomainCard
-	Adversaries  []Adversary
-	Environments []Environment
+	AssetTheme           string
+	Classes              []Class
+	Subclasses           []Subclass
+	Heritages            []Heritage
+	CompanionExperiences []CompanionExperience
+	Domains              []Domain
+	Weapons              []Weapon
+	Armor                []Armor
+	Items                []Item
+	DomainCards          []DomainCard
+	Adversaries          []Adversary
+	Environments         []Environment
 }
 
 // Experience stores one experience name+modifier pair.
 type Experience struct {
+	ID       string
 	Name     string
 	Modifier string
 }
 
+// CompanionExperience stores one companion experience catalog option.
+type CompanionExperience struct {
+	ID          string
+	Name        string
+	Description string
+}
+
+// HeritageSelection stores the workflow-local structured heritage state.
+type HeritageSelection struct {
+	AncestryLabel           string
+	FirstFeatureAncestryID  string
+	FirstFeatureID          string
+	SecondFeatureAncestryID string
+	SecondFeatureID         string
+	CommunityID             string
+}
+
+// CompanionSheet stores the workflow-local companion sheet state.
+type CompanionSheet struct {
+	AnimalKind        string
+	Name              string
+	Evasion           int32
+	Experiences       []Experience
+	AttackDescription string
+	AttackRange       string
+	DamageDieSides    int32
+	DamageType        string
+}
+
 // Profile stores selected workflow fields used for filtering options.
 type Profile struct {
-	CharacterName     string
-	ClassID           string
-	SubclassID        string
-	AncestryID        string
-	CommunityID       string
-	Agility           string
-	Strength          string
-	Finesse           string
-	Instinct          string
-	Presence          string
-	Knowledge         string
-	PrimaryWeaponID   string
-	SecondaryWeaponID string
-	ArmorID           string
-	PotionItemID      string
-	Background        string
-	Description       string
-	Experiences       []Experience
-	DomainCardIDs     []string
-	Connections       string
+	CharacterName                string
+	ClassID                      string
+	SubclassID                   string
+	SubclassCreationRequirements []string
+	Heritage                     HeritageSelection
+	CompanionSheet               *CompanionSheet
+	Agility                      string
+	Strength                     string
+	Finesse                      string
+	Instinct                     string
+	Presence                     string
+	Knowledge                    string
+	PrimaryWeaponID              string
+	SecondaryWeaponID            string
+	ArmorID                      string
+	PotionItemID                 string
+	Background                   string
+	Description                  string
+	Experiences                  []Experience
+	DomainCardIDs                []string
+	Connections                  string
 }

@@ -39,6 +39,18 @@ func normalizeActionModifiers(modifiers []*pb.ActionRollModifier) (int, []workfl
 	return total, entries
 }
 
+func appendActionModifier(total int, entries []workflowtransport.RollModifierMetadata, source string, value int) (int, []workflowtransport.RollModifierMetadata) {
+	if value == 0 {
+		return total, entries
+	}
+	total += value
+	entry := workflowtransport.RollModifierMetadata{Value: value}
+	if trimmed := strings.TrimSpace(source); trimmed != "" {
+		entry.Source = trimmed
+	}
+	return total, append(entries, entry)
+}
+
 func normalizeRollKind(kind pb.RollKind) pb.RollKind {
 	if kind == pb.RollKind_ROLL_KIND_UNSPECIFIED {
 		return pb.RollKind_ROLL_KIND_ACTION
@@ -46,14 +58,26 @@ func normalizeRollKind(kind pb.RollKind) pb.RollKind {
 	return kind
 }
 
+func normalizeActionRollContext(context pb.ActionRollContext) pb.ActionRollContext {
+	if context == pb.ActionRollContext_ACTION_ROLL_CONTEXT_UNSPECIFIED {
+		return pb.ActionRollContext_ACTION_ROLL_CONTEXT_UNSPECIFIED
+	}
+	return context
+}
+
+func actionRollContextCode(context pb.ActionRollContext) string {
+	switch normalizeActionRollContext(context) {
+	case pb.ActionRollContext_ACTION_ROLL_CONTEXT_MOVE_SILENTLY:
+		return "move_silently"
+	default:
+		return ""
+	}
+}
+
 func resolveRoll(kind pb.RollKind, request daggerheartdomain.ActionRequest) (daggerheartdomain.ActionResult, bool, bool, bool, error) {
 	switch normalizeRollKind(kind) {
 	case pb.RollKind_ROLL_KIND_REACTION:
-		result, err := daggerheartdomain.RollReaction(daggerheartdomain.ReactionRequest{
-			Modifier:   request.Modifier,
-			Difficulty: request.Difficulty,
-			Seed:       request.Seed,
-		})
+		result, err := daggerheartdomain.RollReaction(daggerheartdomain.ReactionRequest{Modifier: request.Modifier, Difficulty: request.Difficulty, Seed: request.Seed})
 		if err != nil {
 			return daggerheartdomain.ActionResult{}, false, false, false, err
 		}

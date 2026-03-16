@@ -111,9 +111,6 @@ type Advancement struct {
 	DomainCardID    string `json:"domain_card_id,omitempty"`
 	DomainCardLevel int    `json:"domain_card_level,omitempty"`
 
-	// UpgradedSubclass fields (only when Type == AdvUpgradedSubclass).
-	SubclassCardID string `json:"subclass_card_id,omitempty"`
-
 	// Multiclass fields (only when Type == AdvMulticlass).
 	Multiclass *MulticlassChoice `json:"multiclass,omitempty"`
 }
@@ -122,7 +119,6 @@ type Advancement struct {
 type MulticlassChoice struct {
 	SecondaryClassID    string `json:"secondary_class_id"`
 	SecondarySubclassID string `json:"secondary_subclass_id"`
-	FoundationCardID    string `json:"foundation_card_id"`
 	SpellcastTrait      string `json:"spellcast_trait"`
 	DomainID            string `json:"domain_id"`
 }
@@ -267,9 +263,6 @@ func validateAdvancement(adv Advancement, index int, req LevelUpRequest, markedS
 		}
 		if mc.SecondarySubclassID == "" {
 			return fmt.Errorf("%s: secondary_subclass_id is required for multiclass", prefix)
-		}
-		if mc.FoundationCardID == "" {
-			return fmt.Errorf("%s: foundation_card_id is required for multiclass", prefix)
 		}
 		if mc.DomainID == "" {
 			return fmt.Errorf("%s: domain_id is required for multiclass", prefix)

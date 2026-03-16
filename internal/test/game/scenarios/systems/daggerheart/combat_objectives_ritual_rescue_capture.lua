@@ -12,8 +12,8 @@ scn:campaign{
 
 scn:pc("Frodo")
 scn:pc("Sam")
-dh:adversary("Saruman")
 scn:npc("Bilbo")
+dh:adversary("Saruman")
 
 -- The party tries to stop a ritual, save Bilbo, and capture Saruman.
 scn:start_session("Ritual Objectives")

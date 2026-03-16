@@ -299,11 +299,16 @@ func TestCampaignCharactersMapsDaggerheartSummaryWhenProfileAndCatalogResolve(t 
 			CampaignId:  "c1",
 			CharacterId: "char-1",
 			SystemProfile: &statev1.CharacterProfile_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
-				Level:       2,
-				ClassId:     "warrior",
-				SubclassId:  "guardian",
-				AncestryId:  "drakona",
-				CommunityId: "wanderborne",
+				Level:      2,
+				ClassId:    "warrior",
+				SubclassId: "guardian",
+				Heritage: &daggerheartv1.DaggerheartHeritageSelection{
+					FirstFeatureAncestryId:  "drakona",
+					FirstFeatureId:          "drakona.feature-1",
+					SecondFeatureAncestryId: "drakona",
+					SecondFeatureId:         "drakona.feature-2",
+					CommunityId:             "wanderborne",
+				},
 			}},
 		}}},
 	}
@@ -347,8 +352,8 @@ func TestCampaignCharactersMapsDaggerheartSummaryWhenProfileAndCatalogResolve(t 
 	if got := characters[0].Daggerheart.SubclassName; got != "Guardian" {
 		t.Fatalf("SubclassName = %q, want %q", got, "Guardian")
 	}
-	if got := characters[0].Daggerheart.AncestryName; got != "Drakona" {
-		t.Fatalf("AncestryName = %q, want %q", got, "Drakona")
+	if got := characters[0].Daggerheart.HeritageName; got != "Drakona" {
+		t.Fatalf("HeritageName = %q, want %q", got, "Drakona")
 	}
 	if got := characters[0].Daggerheart.CommunityName; got != "Wanderborne" {
 		t.Fatalf("CommunityName = %q, want %q", got, "Wanderborne")
@@ -373,11 +378,16 @@ func TestCampaignCharactersSkipsDaggerheartSummaryWhenCatalogNamesDoNotResolve(t
 			CampaignId:  "c1",
 			CharacterId: "char-1",
 			SystemProfile: &statev1.CharacterProfile_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
-				Level:       2,
-				ClassId:     "warrior",
-				SubclassId:  "guardian",
-				AncestryId:  "drakona",
-				CommunityId: "missing-community",
+				Level:      2,
+				ClassId:    "warrior",
+				SubclassId: "guardian",
+				Heritage: &daggerheartv1.DaggerheartHeritageSelection{
+					FirstFeatureAncestryId:  "drakona",
+					FirstFeatureId:          "drakona.feature-1",
+					SecondFeatureAncestryId: "drakona",
+					SecondFeatureId:         "drakona.feature-2",
+					CommunityId:             "missing-community",
+				},
 			}},
 		}}},
 	}

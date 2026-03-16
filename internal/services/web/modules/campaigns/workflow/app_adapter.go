@@ -96,43 +96,45 @@ func mapProgress(progress campaignapp.CampaignCharacterCreationProgress) Progres
 // mapCatalog copies app catalog data into the workflow-owned catalog contract.
 func mapCatalog(catalog campaignapp.CampaignCharacterCreationCatalog) Catalog {
 	return Catalog{
-		AssetTheme:   catalog.AssetTheme,
-		Classes:      mapClasses(catalog.Classes),
-		Subclasses:   mapSubclasses(catalog.Subclasses),
-		Heritages:    mapHeritages(catalog.Heritages),
-		Domains:      mapDomains(catalog.Domains),
-		Weapons:      mapWeapons(catalog.Weapons),
-		Armor:        mapArmor(catalog.Armor),
-		Items:        mapItems(catalog.Items),
-		DomainCards:  mapDomainCards(catalog.DomainCards),
-		Adversaries:  mapAdversaries(catalog.Adversaries),
-		Environments: mapEnvironments(catalog.Environments),
+		AssetTheme:           catalog.AssetTheme,
+		Classes:              mapClasses(catalog.Classes),
+		Subclasses:           mapSubclasses(catalog.Subclasses),
+		Heritages:            mapHeritages(catalog.Heritages),
+		CompanionExperiences: mapCompanionExperiences(catalog.CompanionExperiences),
+		Domains:              mapDomains(catalog.Domains),
+		Weapons:              mapWeapons(catalog.Weapons),
+		Armor:                mapArmor(catalog.Armor),
+		Items:                mapItems(catalog.Items),
+		DomainCards:          mapDomainCards(catalog.DomainCards),
+		Adversaries:          mapAdversaries(catalog.Adversaries),
+		Environments:         mapEnvironments(catalog.Environments),
 	}
 }
 
 // mapProfile copies app profile data into the workflow-owned profile contract.
 func mapProfile(profile campaignapp.CampaignCharacterCreationProfile) Profile {
 	return Profile{
-		CharacterName:     profile.CharacterName,
-		ClassID:           profile.ClassID,
-		SubclassID:        profile.SubclassID,
-		AncestryID:        profile.AncestryID,
-		CommunityID:       profile.CommunityID,
-		Agility:           profile.Agility,
-		Strength:          profile.Strength,
-		Finesse:           profile.Finesse,
-		Instinct:          profile.Instinct,
-		Presence:          profile.Presence,
-		Knowledge:         profile.Knowledge,
-		PrimaryWeaponID:   profile.PrimaryWeaponID,
-		SecondaryWeaponID: profile.SecondaryWeaponID,
-		ArmorID:           profile.ArmorID,
-		PotionItemID:      profile.PotionItemID,
-		Background:        profile.Background,
-		Description:       profile.Description,
-		Experiences:       mapExperiences(profile.Experiences),
-		DomainCardIDs:     append([]string(nil), profile.DomainCardIDs...),
-		Connections:       profile.Connections,
+		CharacterName:                profile.CharacterName,
+		ClassID:                      profile.ClassID,
+		SubclassID:                   profile.SubclassID,
+		SubclassCreationRequirements: append([]string(nil), profile.SubclassCreationRequirements...),
+		Heritage:                     mapHeritageSelection(profile.Heritage),
+		CompanionSheet:               mapCompanionSheet(profile.CompanionSheet),
+		Agility:                      profile.Agility,
+		Strength:                     profile.Strength,
+		Finesse:                      profile.Finesse,
+		Instinct:                     profile.Instinct,
+		Presence:                     profile.Presence,
+		Knowledge:                    profile.Knowledge,
+		PrimaryWeaponID:              profile.PrimaryWeaponID,
+		SecondaryWeaponID:            profile.SecondaryWeaponID,
+		ArmorID:                      profile.ArmorID,
+		PotionItemID:                 profile.PotionItemID,
+		Background:                   profile.Background,
+		Description:                  profile.Description,
+		Experiences:                  mapExperiences(profile.Experiences),
+		DomainCardIDs:                append([]string(nil), profile.DomainCardIDs...),
+		Connections:                  profile.Connections,
 	}
 }
 
@@ -141,6 +143,20 @@ func mapFeatures(features []campaignapp.CatalogFeature) []Feature {
 	mapped := make([]Feature, 0, len(features))
 	for _, feature := range features {
 		mapped = append(mapped, Feature{Name: feature.Name, Description: feature.Description})
+	}
+	return mapped
+}
+
+// mapCompanionExperiences preserves companion experience identity while
+// dropping the app-owned DTO wrapper at the workflow boundary.
+func mapCompanionExperiences(experiences []campaignapp.CatalogCompanionExperience) []CompanionExperience {
+	mapped := make([]CompanionExperience, 0, len(experiences))
+	for _, experience := range experiences {
+		mapped = append(mapped, CompanionExperience{
+			ID:          experience.ID,
+			Name:        experience.Name,
+			Description: experience.Description,
+		})
 	}
 	return mapped
 }
@@ -179,15 +195,45 @@ func mapSubclasses(subclasses []campaignapp.CatalogSubclass) []Subclass {
 	mapped := make([]Subclass, 0, len(subclasses))
 	for _, subclass := range subclasses {
 		mapped = append(mapped, Subclass{
-			ID:             subclass.ID,
-			Name:           subclass.Name,
-			ClassID:        subclass.ClassID,
-			SpellcastTrait: subclass.SpellcastTrait,
-			Foundation:     mapFeatures(subclass.Foundation),
-			Illustration:   mapAssetReference(subclass.Illustration),
+			ID:                   subclass.ID,
+			Name:                 subclass.Name,
+			ClassID:              subclass.ClassID,
+			SpellcastTrait:       subclass.SpellcastTrait,
+			CreationRequirements: append([]string(nil), subclass.CreationRequirements...),
+			Foundation:           mapFeatures(subclass.Foundation),
+			Illustration:         mapAssetReference(subclass.Illustration),
 		})
 	}
 	return mapped
+}
+
+// mapHeritageSelection copies app profile heritage into the workflow-owned contract.
+func mapHeritageSelection(selection campaignapp.CampaignCharacterCreationHeritageSelection) HeritageSelection {
+	return HeritageSelection{
+		AncestryLabel:           selection.AncestryLabel,
+		FirstFeatureAncestryID:  selection.FirstFeatureAncestryID,
+		FirstFeatureID:          selection.FirstFeatureID,
+		SecondFeatureAncestryID: selection.SecondFeatureAncestryID,
+		SecondFeatureID:         selection.SecondFeatureID,
+		CommunityID:             selection.CommunityID,
+	}
+}
+
+// mapCompanionSheet copies the app companion sheet into the workflow-owned contract.
+func mapCompanionSheet(sheet *campaignapp.CampaignCharacterCreationCompanionSheet) *CompanionSheet {
+	if sheet == nil {
+		return nil
+	}
+	return &CompanionSheet{
+		AnimalKind:        sheet.AnimalKind,
+		Name:              sheet.Name,
+		Evasion:           sheet.Evasion,
+		Experiences:       mapExperiences(sheet.Experiences),
+		AttackDescription: sheet.AttackDescription,
+		AttackRange:       sheet.AttackRange,
+		DamageDieSides:    sheet.DamageDieSides,
+		DamageType:        sheet.DamageType,
+	}
 }
 
 // mapHeritages copies workflow heritage options out of the app-owned catalog DTO.

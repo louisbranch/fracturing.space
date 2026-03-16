@@ -470,7 +470,6 @@ type fakeDaggerheartClient struct {
 	applyAdversaryDamage        func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryDamageRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryDamageResponse, error)
 	applyTemporaryArmor         func(context.Context, *daggerheartv1.DaggerheartApplyTemporaryArmorRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyTemporaryArmorResponse, error)
 	applyRest                   func(context.Context, *daggerheartv1.DaggerheartApplyRestRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error)
-	applyDowntimeMove           func(context.Context, *daggerheartv1.DaggerheartApplyDowntimeMoveRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDowntimeMoveResponse, error)
 	swapLoadout                 func(context.Context, *daggerheartv1.DaggerheartSwapLoadoutRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartSwapLoadoutResponse, error)
 	applyDeathMove              func(context.Context, *daggerheartv1.DaggerheartApplyDeathMoveRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDeathMoveResponse, error)
 	applyConditions             func(context.Context, *daggerheartv1.DaggerheartApplyConditionsRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyConditionsResponse, error)
@@ -497,6 +496,19 @@ type fakeDaggerheartClient struct {
 	applyAttackOutcome          func(context.Context, *daggerheartv1.DaggerheartApplyAttackOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAttackOutcomeResponse, error)
 	applyAdversaryAttackOutcome func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeResponse, error)
 	applyReactionOutcome        func(context.Context, *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error)
+	applyLevelUp                func(context.Context, *daggerheartv1.DaggerheartApplyLevelUpRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error)
+	applyClassFeature           func(context.Context, *daggerheartv1.DaggerheartApplyClassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyClassFeatureResponse, error)
+	applyAdversaryFeature       func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryFeatureResponse, error)
+	applySubclassFeature        func(context.Context, *daggerheartv1.DaggerheartApplySubclassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplySubclassFeatureResponse, error)
+	transformBeastform          func(context.Context, *daggerheartv1.DaggerheartTransformBeastformRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartTransformBeastformResponse, error)
+	dropBeastform               func(context.Context, *daggerheartv1.DaggerheartDropBeastformRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDropBeastformResponse, error)
+	beginCompanionExperience    func(context.Context, *daggerheartv1.DaggerheartBeginCompanionExperienceRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartBeginCompanionExperienceResponse, error)
+	returnCompanion             func(context.Context, *daggerheartv1.DaggerheartReturnCompanionRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartReturnCompanionResponse, error)
+	createEnvironmentEntity     func(context.Context, *daggerheartv1.DaggerheartCreateEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateEnvironmentEntityResponse, error)
+	updateEnvironmentEntity     func(context.Context, *daggerheartv1.DaggerheartUpdateEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateEnvironmentEntityResponse, error)
+	deleteEnvironmentEntity     func(context.Context, *daggerheartv1.DaggerheartDeleteEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteEnvironmentEntityResponse, error)
+	getEnvironmentEntity        func(context.Context, *daggerheartv1.DaggerheartGetEnvironmentEntityRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartGetEnvironmentEntityResponse, error)
+	listEnvironmentEntities     func(context.Context, *daggerheartv1.DaggerheartListEnvironmentEntitiesRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartListEnvironmentEntitiesResponse, error)
 }
 
 func (f *fakeDaggerheartClient) ActionRoll(ctx context.Context, in *daggerheartv1.ActionRollRequest, opts ...grpc.CallOption) (*daggerheartv1.ActionRollResponse, error) {
@@ -557,13 +569,6 @@ func (f *fakeDaggerheartClient) ApplyRest(ctx context.Context, in *daggerheartv1
 	return nil, unimplemented("ApplyRest")
 }
 
-func (f *fakeDaggerheartClient) ApplyDowntimeMove(ctx context.Context, in *daggerheartv1.DaggerheartApplyDowntimeMoveRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDowntimeMoveResponse, error) {
-	if f.applyDowntimeMove != nil {
-		return f.applyDowntimeMove(ctx, in, opts...)
-	}
-	return nil, unimplemented("ApplyDowntimeMove")
-}
-
 func (f *fakeDaggerheartClient) SwapLoadout(ctx context.Context, in *daggerheartv1.DaggerheartSwapLoadoutRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartSwapLoadoutResponse, error) {
 	if f.swapLoadout != nil {
 		return f.swapLoadout(ctx, in, opts...)
@@ -597,6 +602,83 @@ func (f *fakeDaggerheartClient) ApplyGmMove(ctx context.Context, in *daggerheart
 		return f.applyGmMove(ctx, in, opts...)
 	}
 	return nil, unimplemented("ApplyGmMove")
+}
+
+func (f *fakeDaggerheartClient) ApplyClassFeature(ctx context.Context, in *daggerheartv1.DaggerheartApplyClassFeatureRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyClassFeatureResponse, error) {
+	if f.applyClassFeature != nil {
+		return f.applyClassFeature(ctx, in, opts...)
+	}
+	return nil, unimplemented("ApplyClassFeature")
+}
+
+func (f *fakeDaggerheartClient) ApplySubclassFeature(ctx context.Context, in *daggerheartv1.DaggerheartApplySubclassFeatureRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplySubclassFeatureResponse, error) {
+	if f.applySubclassFeature != nil {
+		return f.applySubclassFeature(ctx, in, opts...)
+	}
+	return nil, unimplemented("ApplySubclassFeature")
+}
+
+func (f *fakeDaggerheartClient) TransformBeastform(ctx context.Context, in *daggerheartv1.DaggerheartTransformBeastformRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartTransformBeastformResponse, error) {
+	if f.transformBeastform != nil {
+		return f.transformBeastform(ctx, in, opts...)
+	}
+	return nil, unimplemented("TransformBeastform")
+}
+
+func (f *fakeDaggerheartClient) DropBeastform(ctx context.Context, in *daggerheartv1.DaggerheartDropBeastformRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartDropBeastformResponse, error) {
+	if f.dropBeastform != nil {
+		return f.dropBeastform(ctx, in, opts...)
+	}
+	return nil, unimplemented("DropBeastform")
+}
+
+func (f *fakeDaggerheartClient) BeginCompanionExperience(ctx context.Context, in *daggerheartv1.DaggerheartBeginCompanionExperienceRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartBeginCompanionExperienceResponse, error) {
+	if f.beginCompanionExperience != nil {
+		return f.beginCompanionExperience(ctx, in, opts...)
+	}
+	return nil, unimplemented("BeginCompanionExperience")
+}
+
+func (f *fakeDaggerheartClient) ReturnCompanion(ctx context.Context, in *daggerheartv1.DaggerheartReturnCompanionRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartReturnCompanionResponse, error) {
+	if f.returnCompanion != nil {
+		return f.returnCompanion(ctx, in, opts...)
+	}
+	return nil, unimplemented("ReturnCompanion")
+}
+
+func (f *fakeDaggerheartClient) CreateEnvironmentEntity(ctx context.Context, in *daggerheartv1.DaggerheartCreateEnvironmentEntityRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateEnvironmentEntityResponse, error) {
+	if f.createEnvironmentEntity != nil {
+		return f.createEnvironmentEntity(ctx, in, opts...)
+	}
+	return nil, unimplemented("CreateEnvironmentEntity")
+}
+
+func (f *fakeDaggerheartClient) UpdateEnvironmentEntity(ctx context.Context, in *daggerheartv1.DaggerheartUpdateEnvironmentEntityRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateEnvironmentEntityResponse, error) {
+	if f.updateEnvironmentEntity != nil {
+		return f.updateEnvironmentEntity(ctx, in, opts...)
+	}
+	return nil, unimplemented("UpdateEnvironmentEntity")
+}
+
+func (f *fakeDaggerheartClient) DeleteEnvironmentEntity(ctx context.Context, in *daggerheartv1.DaggerheartDeleteEnvironmentEntityRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteEnvironmentEntityResponse, error) {
+	if f.deleteEnvironmentEntity != nil {
+		return f.deleteEnvironmentEntity(ctx, in, opts...)
+	}
+	return nil, unimplemented("DeleteEnvironmentEntity")
+}
+
+func (f *fakeDaggerheartClient) GetEnvironmentEntity(ctx context.Context, in *daggerheartv1.DaggerheartGetEnvironmentEntityRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartGetEnvironmentEntityResponse, error) {
+	if f.getEnvironmentEntity != nil {
+		return f.getEnvironmentEntity(ctx, in, opts...)
+	}
+	return nil, unimplemented("GetEnvironmentEntity")
+}
+
+func (f *fakeDaggerheartClient) ListEnvironmentEntities(ctx context.Context, in *daggerheartv1.DaggerheartListEnvironmentEntitiesRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartListEnvironmentEntitiesResponse, error) {
+	if f.listEnvironmentEntities != nil {
+		return f.listEnvironmentEntities(ctx, in, opts...)
+	}
+	return nil, unimplemented("ListEnvironmentEntities")
 }
 
 func (f *fakeDaggerheartClient) CreateCountdown(ctx context.Context, in *daggerheartv1.DaggerheartCreateCountdownRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateCountdownResponse, error) {
@@ -736,6 +818,13 @@ func (f *fakeDaggerheartClient) ApplyAttackOutcome(ctx context.Context, in *dagg
 	return nil, unimplemented("ApplyAttackOutcome")
 }
 
+func (f *fakeDaggerheartClient) ApplyAdversaryFeature(ctx context.Context, in *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryFeatureResponse, error) {
+	if f.applyAdversaryFeature != nil {
+		return f.applyAdversaryFeature(ctx, in, opts...)
+	}
+	return nil, unimplemented("ApplyAdversaryFeature")
+}
+
 func (f *fakeDaggerheartClient) ApplyAdversaryAttackOutcome(ctx context.Context, in *daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeResponse, error) {
 	if f.applyAdversaryAttackOutcome != nil {
 		return f.applyAdversaryAttackOutcome(ctx, in, opts...)
@@ -750,7 +839,10 @@ func (f *fakeDaggerheartClient) ApplyReactionOutcome(ctx context.Context, in *da
 	return nil, unimplemented("ApplyReactionOutcome")
 }
 
-func (f *fakeDaggerheartClient) ApplyLevelUp(context.Context, *daggerheartv1.DaggerheartApplyLevelUpRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error) {
+func (f *fakeDaggerheartClient) ApplyLevelUp(ctx context.Context, in *daggerheartv1.DaggerheartApplyLevelUpRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error) {
+	if f.applyLevelUp != nil {
+		return f.applyLevelUp(ctx, in, opts...)
+	}
 	return nil, unimplemented("ApplyLevelUp")
 }
 

@@ -21,13 +21,14 @@ func TestHandlerApplyAdversaryDamageSuccess(t *testing.T) {
 		},
 		LoadAdversaryForSession: func(context.Context, string, string, string) (projectionstore.DaggerheartAdversary, error) {
 			return projectionstore.DaggerheartAdversary{
-				CampaignID:  "camp-1",
-				AdversaryID: "adv-1",
-				SessionID:   "sess-1",
-				HP:          10,
-				Armor:       1,
-				Major:       5,
-				Severe:      8,
+				CampaignID:       "camp-1",
+				AdversaryID:      "adv-1",
+				AdversaryEntryID: "entry-goblin",
+				SessionID:        "sess-1",
+				HP:               10,
+				Armor:            1,
+				Major:            5,
+				Severe:           8,
 			}, nil
 		},
 	})

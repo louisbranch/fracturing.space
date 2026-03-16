@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 7
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-14"
 ---
 
 # Daggerheart Event Timeline Contract
@@ -28,8 +28,10 @@ inventory. For exact payload fields and emitter references, use:
 | --- | --- | --- | --- | --- | --- |
 | Action roll resolution | `action.roll.resolve` | `action.roll_resolved` | Event journal (no direct Daggerheart projection mutation) | Request path records event; projection apply is skipped for this envelope | Campaign/session valid; roll payload valid; command must emit event |
 | Roll outcome finalization | `action.outcome.apply` | `action.outcome_applied` | Event journal (plus follow-on Daggerheart/system commands) | Request path records outcome event; projection apply is skipped for this envelope | Roll event exists and matches session; no duplicate/bypass apply |
+| First-session Daggerheart bootstrap | readiness-owned `session.start` workflow hook | `sys.daggerheart.gm_fear_changed` | Daggerheart snapshot (`gm_fear`) | Bootstrap events append atomically alongside `campaign.updated` and `session.started` when a draft campaign starts its first session | Fear seed equals created PC count only; no reseed on later session starts |
 | Roll outcome rejection | `action.outcome.reject` | `action.outcome_rejected` | Event journal only | Request path records rejection event; projection apply is skipped for this envelope | Rejection reason/code is explicit and correlated to the originating roll |
 | Outcome-driven GM Fear update | `sys.daggerheart.gm_fear.set` | `sys.daggerheart.gm_fear_changed` | Daggerheart snapshot (`gm_fear`) | Inline apply depends on runtime mode; outbox mode must not inline apply in request path | Fear bounds and spend/gain checks enforced |
+| Typed GM Fear spend | `sys.daggerheart.gm_move.apply` | `sys.daggerheart.gm_move_applied`, `sys.daggerheart.gm_fear_changed` | Event journal audit trail plus Daggerheart snapshot (`gm_fear`) | Daggerheart command appends both events atomically; transport may additionally open session gate + GM spotlight for interrupt-style direct moves | Spend target must be supported and valid; direct custom moves require description; Fear spend must be positive and available |
 | Outcome-driven character state patch | `sys.daggerheart.character_state.patch` | `sys.daggerheart.character_state_patched` | Daggerheart character state | Inline apply mode-controlled | Patch payload must include meaningful deltas |
 | Hope spend transform | `sys.daggerheart.hope.spend` | `sys.daggerheart.character_state_patched` | Daggerheart character state (`hope`) | Inline apply mode-controlled | Spend amount is positive, actor/target scope is valid, and resulting hope remains within bounds |
 | Outcome-driven condition change | `sys.daggerheart.condition.change` | `sys.daggerheart.condition_changed` | Daggerheart character conditions | Inline apply mode-controlled | Normalized set diff; no empty/invalid conditions |
@@ -37,8 +39,7 @@ inventory. For exact payload fields and emitter references, use:
 | Character damage apply | `sys.daggerheart.damage.apply` | `sys.daggerheart.damage_applied` | Daggerheart character HP/armor | Inline apply mode-controlled | Campaign system is Daggerheart; damage payload valid; emits event |
 | Multi-target damage apply | `sys.daggerheart.multi_target_damage.apply` | N × `sys.daggerheart.damage_applied` | Per-target Daggerheart character HP/armor | Inline apply mode-controlled | All targets validated atomically; emits N damage_applied events in single batch via DecideFuncMulti |
 | Adversary damage apply | `sys.daggerheart.adversary_damage.apply` | `sys.daggerheart.adversary_damage_applied` | Daggerheart adversary HP/armor | Inline apply mode-controlled | Adversary exists in session; payload valid; emits event |
-| Rest | `sys.daggerheart.rest.take` | `sys.daggerheart.rest_taken`, optional `sys.daggerheart.countdown_updated` (when `long_term_countdown` is present) | Daggerheart snapshot and targeted character state, plus long-term countdown state | Inline apply mode-controlled | Rest type valid; campaign/session mutate gates pass; rest + optional countdown update emit atomically from one command decision |
-| Downtime move | `sys.daggerheart.downtime_move.apply` | `sys.daggerheart.downtime_move_applied` | Daggerheart character state | Inline apply mode-controlled | Move is valid; resulting resource bounds valid |
+| Rest | `sys.daggerheart.rest.take` | `sys.daggerheart.rest_taken`, zero or more `sys.daggerheart.downtime_move_applied`, optional `sys.daggerheart.countdown_updated` | Daggerheart snapshot, participant state updates, and countdown state | Inline apply mode-controlled | Rest type valid; participant selections valid for effective rest type; rest, downtime, and countdown consequences emit atomically from one command decision |
 | Temporary armor apply | `sys.daggerheart.character_temporary_armor.apply` | `sys.daggerheart.character_temporary_armor_applied` | Daggerheart temporary armor buckets and armor totals | Inline apply mode-controlled | Source/duration/amount validation; emits event |
 | Loadout swap and associated resource mutation | `sys.daggerheart.loadout.swap`, `sys.daggerheart.stress.spend` | `sys.daggerheart.loadout_swapped`, `sys.daggerheart.character_state_patched` | Daggerheart character loadout-facing stress/state | Inline apply mode-controlled for Daggerheart events | Recall cost bounds; stress spend consistency |
 | Character conditions apply endpoint | `sys.daggerheart.condition.change`, `sys.daggerheart.character_state.patch` (life state updates) | `sys.daggerheart.condition_changed`, `sys.daggerheart.character_state_patched` | Character conditions/life state | Inline apply mode-controlled | No-op updates rejected; roll correlation checked when provided |
@@ -46,7 +47,13 @@ inventory. For exact payload fields and emitter references, use:
 | Story note append | `story.note.add` | `story.note_added` | Event journal narrative stream | Journal-only apply path | Note payload must be non-empty and campaign-scoped |
 | Countdown create/update/delete | `sys.daggerheart.countdown.create`, `sys.daggerheart.countdown.update`, `sys.daggerheart.countdown.delete` | `sys.daggerheart.countdown_created`, `sys.daggerheart.countdown_updated`, `sys.daggerheart.countdown_deleted` | Daggerheart countdown projections | Inline apply mode-controlled | Countdown bounds/rules validated before command |
 | Adversary create/update/delete | `sys.daggerheart.adversary.create`, `sys.daggerheart.adversary.update`, `sys.daggerheart.adversary.delete` | `sys.daggerheart.adversary_created`, `sys.daggerheart.adversary_updated`, `sys.daggerheart.adversary_deleted` | Daggerheart adversary projections | Inline apply mode-controlled | Session-scoped adversary integrity and payload validation |
+| Adversary feature staging/apply | `sys.daggerheart.adversary_feature.apply` | one or more of `sys.daggerheart.adversary_updated`, `sys.daggerheart.adversary_damage_applied`, `sys.daggerheart.adversary_condition_changed`, `sys.daggerheart.damage_applied`, `sys.daggerheart.character_state_patched` | Daggerheart adversary state plus any immediate owner/target consequences | Inline apply mode-controlled; GM Fear spends may chain `gm_move.apply` then `adversary_feature.apply` in the same request path | Typed feature payload must stage or consume real feature state; no-op feature applies are rejected; consequences must remain replay-safe |
+| Environment entity create/update/delete | `sys.daggerheart.environment_entity.create`, `sys.daggerheart.environment_entity.update`, `sys.daggerheart.environment_entity.delete` | `sys.daggerheart.environment_entity_created`, `sys.daggerheart.environment_entity_updated`, `sys.daggerheart.environment_entity_deleted` | Daggerheart environment entity projections | Inline apply mode-controlled | Entity must remain session-scoped; catalog environment identity copied at create; update/delete operate only on instantiated runtime entities |
 | Character profile replace/delete | `sys.daggerheart.character_profile.replace`, `sys.daggerheart.character_profile.delete` | `sys.daggerheart.character_profile_replaced`, `sys.daggerheart.character_profile_deleted` | Daggerheart character profile projection and snapshot readiness state | Inline apply mode-controlled | Profile payload must remain structurally valid; delete only used for explicit reset/remove flows |
+| Class feature activation/resolution | `sys.daggerheart.class_feature.apply` | `sys.daggerheart.character_state_patched` | Daggerheart character state (`class_state`, plus Hope/Armor when the feature spends or restores resources) | Inline apply mode-controlled | Feature must belong to the character's primary class; typed payload must satisfy feature-specific costs and bounds; command must emit a meaningful state patch |
+| Companion experience begin/return | `sys.daggerheart.companion.experience.begin`, `sys.daggerheart.companion.return` | `sys.daggerheart.companion_experience_begun`, `sys.daggerheart.companion_returned`, optional `sys.daggerheart.character_state_patched` | Daggerheart companion state and owner Stress on completed return | Inline apply mode-controlled | Character must own a companion sheet; begin requires a present companion and an owned experience ID; return requires an active assignment; completed return may clear owner Stress atomically |
+| Beastform transform/drop | `sys.daggerheart.beastform.transform`, `sys.daggerheart.beastform.drop` | `sys.daggerheart.beastform_transformed`, `sys.daggerheart.beastform_dropped` | Daggerheart character state (`class_state`, plus Hope/Stress on transform) | Inline apply mode-controlled; damage follow-up may issue drop after `damage_applied` in the same request path | Transform resolves a replay-safe active beastform snapshot; drop clears only beastform state; auto-drop occurs on last HP marked and beastform-specific HP-mark triggers such as `Fragile` |
+| Subclass feature activation/resolution | `sys.daggerheart.subclass_feature.apply` | zero or more `sys.daggerheart.character_state_patched`, `sys.daggerheart.condition_changed`, `sys.daggerheart.damage_applied`, `sys.daggerheart.gm_fear_changed` | Daggerheart subclass state plus any immediate owner/target consequences | Inline apply mode-controlled | Feature must belong to an unlocked subclass rank; typed payload must satisfy feature-specific costs, targets, and use limits; command must emit at least one meaningful consequence |
 | Level-up progression | `sys.daggerheart.level_up.apply` | `sys.daggerheart.level_up_applied` | Daggerheart character profile (level, tier, advancements) | Inline apply mode-controlled | Level bounds valid; tier achievement at correct thresholds; advancement budget within level allowance |
 | Gold/currency tracking | `sys.daggerheart.gold.update` | `sys.daggerheart.gold_updated` | Daggerheart character profile (gold denominations) | Inline apply mode-controlled | Denomination values non-negative; campaign/character valid |
 | Domain card acquisition | `sys.daggerheart.domain_card.acquire` | `sys.daggerheart.domain_card_acquired` | Daggerheart character domain card vault/loadout | Inline apply mode-controlled | Card ID valid; destination (vault/loadout) specified; level-gating validated |
@@ -72,6 +79,26 @@ Invariants:
 - Session-side follow-up effects (for example gate open + spotlight set) remain
   core-owned post-effects on `action.outcome.apply`.
 
+## Session-start bootstrap contract
+
+When `session.start` activates a Daggerheart campaign from `draft` to `active`,
+the readiness workflow asks the active system module for optional bootstrap
+events before append.
+
+For Daggerheart:
+
+1. readiness still blocks the start when any Daggerheart character fails
+   `CharacterReady`
+2. after readiness passes, first-session bootstrap emits exactly one
+   `sys.daggerheart.gm_fear_changed`
+3. the seeded value equals the number of created PCs in the campaign character
+   set
+4. NPCs do not contribute to the seed
+5. later session starts emit no bootstrap event; existing Fear carries forward
+
+This keeps initial Fear deterministic while avoiding snapshot-factory coupling
+to campaign character topology.
+
 ### Known Gap: Consequence Atomicity
 
 `ApplyRollOutcome` applies consequence commands sequentially. If command 3 of
@@ -87,6 +114,22 @@ Invariants:
 If true multi-command atomicity is needed in the future, follow the
 `rest.take` precedent: a single command whose decider emits multiple events
 from one decision, all batch-appended atomically.
+
+## Beastform damage follow-up ordering
+
+When character damage forces a beastform drop, preserve this order:
+
+1. `sys.daggerheart.damage.apply`
+2. `sys.daggerheart.damage_applied`
+3. optional `sys.daggerheart.character_state.patch` for armor-side follow-ups such as `impenetrable`
+4. optional `sys.daggerheart.beastform.drop`
+5. optional `sys.daggerheart.beastform_dropped`
+
+Invariants:
+
+- Beastform auto-drop is a write-path follow-up, never projection-side mutation.
+- `damage_applied` remains the authoritative HP mark event.
+- Beastform drop clears transformed attack/evasion state only; armor marks and ongoing spells remain untouched.
 
 ## Mechanic tracking
 
@@ -113,7 +156,7 @@ to the originating command's short name (the suffix after `sys.daggerheart.`).
 ## Design Principle: Prefer DecideFuncMulti for Multi-Consequence Atomicity
 
 When a single mechanic produces multiple consequences (N damage events, a
-rest plus a countdown update, etc.), prefer emitting all events from one
+rest plus downtime events and countdown updates, etc.), prefer emitting all events from one
 command decision via `DecideFuncMulti` rather than executing sequential
 commands.
 
@@ -121,8 +164,9 @@ commands.
 commands are individually valid but can partially fail — command 3 of 5
 succeeds while command 4 fails, leaving the journal in a state that
 requires retry logic. The `rest.take` precedent demonstrates the atomic
-pattern: one command whose decider emits `rest_taken` plus an optional
-`countdown_updated`, all batch-appended in a single call.
+pattern: one command whose decider emits `rest_taken` plus any downtime
+sub-events and optional `countdown_updated` events, all batch-appended in a
+single call.
 
 **When to use**:
 

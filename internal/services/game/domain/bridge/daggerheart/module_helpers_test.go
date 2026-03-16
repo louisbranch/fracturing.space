@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	testcontracts "github.com/louisbranch/fracturing.space/internal/services/game/domain/internaltest/contracts"
 )
 
@@ -44,21 +45,25 @@ func TestValidateMultiTargetDamageApplyPayload_Branches(t *testing.T) {
 	}
 }
 
-func TestHasRestCharacterStateMutationAndHasRestTakeMutation(t *testing.T) {
-	one := 1
-	two := 2
-	if !hasRestCharacterStateMutation(RestCharacterStatePatch{HopeBefore: &one, HopeAfter: &two}) {
-		t.Fatal("expected rest character mutation when hope changes")
+func TestHasConditionListMutation(t *testing.T) {
+	if hasConditionListMutation([]string{" hidden "}, []string{"hidden"}) {
+		t.Fatal("expected normalized equivalent lists to be no-op")
 	}
-	if hasRestCharacterStateMutation(RestCharacterStatePatch{HopeBefore: &one, HopeAfter: &one}) {
-		t.Fatal("expected no mutation when values are equal")
+	if !hasConditionListMutation([]string{"hidden"}, []string{"marked"}) {
+		t.Fatal("expected different condition lists to be mutation")
 	}
+	if !hasConditionListMutation([]string{""}, []string{"hidden"}) {
+		t.Fatal("expected invalid list to be treated as mutation")
+	}
+}
 
+func TestHasRestTakeMutation(t *testing.T) {
 	payload := RestTakePayload{
-		CharacterStates: []RestCharacterStatePatch{{HopeBefore: &one, HopeAfter: &two}},
+		Participants: []ids.CharacterID{"char-1"},
+		Interrupted:  true,
 	}
 	if !hasRestTakeMutation(payload) {
-		t.Fatal("expected rest payload with character mutation to mutate")
+		t.Fatal("expected interrupted rest payload with participants to mutate")
 	}
 }
 
@@ -71,22 +76,6 @@ func TestValidateRestLongTermCountdownPayload(t *testing.T) {
 	}
 	if err := validateRestLongTermCountdownPayload(CountdownUpdatePayload{CountdownID: "c1", Before: 1, After: 2}); err != nil {
 		t.Fatalf("expected valid countdown payload, got %v", err)
-	}
-}
-
-func TestApplyCharacterProfileTraitIncrease_AllTraits(t *testing.T) {
-	profile := CharacterProfile{}
-	for _, trait := range []string{"agility", "strength", "finesse", "instinct", "presence", "knowledge"} {
-		applyCharacterProfileTraitIncrease(&profile, trait)
-	}
-	if profile.Agility != 1 || profile.Strength != 1 || profile.Finesse != 1 ||
-		profile.Instinct != 1 || profile.Presence != 1 || profile.Knowledge != 1 {
-		t.Fatalf("trait values after increment = %+v, want each trait at 1", profile)
-	}
-	// Unknown trait is a no-op.
-	applyCharacterProfileTraitIncrease(&profile, "unknown")
-	if profile.Agility != 1 {
-		t.Fatal("unknown trait should not change profile")
 	}
 }
 

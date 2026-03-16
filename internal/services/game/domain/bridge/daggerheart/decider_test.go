@@ -325,7 +325,7 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "character",
 		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["vulnerable"],"conditions_after":["shaken"],"added":["shaken"],"removed":["vulnerable"]}`),
+		PayloadJSON:   []byte(`{"character_id":"char-1","conditions_before":["vulnerable"],"conditions_after":["hidden"],"added":["hidden"],"removed":["vulnerable"]}`),
 	}
 
 	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -350,25 +350,20 @@ func TestDecideConditionChange_EmitsConditionChanged(t *testing.T) {
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		CharacterID string   `json:"character_id"`
-		After       []string `json:"conditions_after"`
-		Added       []string `json:"added"`
-		Removed     []string `json:"removed"`
-	}
+	var payload ConditionChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 	if payload.CharacterID != "char-1" {
 		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
 	}
-	if len(payload.After) != 1 || payload.After[0] != "shaken" {
-		t.Fatalf("conditions after = %v, want [shaken]", payload.After)
+	if len(payload.Conditions) != 1 || payload.Conditions[0].Code != ConditionHidden {
+		t.Fatalf("conditions after = %v, want [hidden]", payload.Conditions)
 	}
-	if len(payload.Added) != 1 || payload.Added[0] != "shaken" {
-		t.Fatalf("added = %v, want [shaken]", payload.Added)
+	if len(payload.Added) != 1 || payload.Added[0].Code != ConditionHidden {
+		t.Fatalf("added = %v, want [hidden]", payload.Added)
 	}
-	if len(payload.Removed) != 1 || payload.Removed[0] != "vulnerable" {
+	if len(payload.Removed) != 1 || payload.Removed[0].Code != ConditionVulnerable {
 		t.Fatalf("removed = %v, want [vulnerable]", payload.Removed)
 	}
 }
@@ -746,7 +741,7 @@ func TestDecideRestTake_WithLongTermCountdown_EmitsCountdownUpdated(t *testing.T
 		SystemVersion: SystemVersion,
 		EntityType:    "session",
 		EntityID:      "camp-1",
-		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"long_term_countdown":{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}}`),
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
 	}
 
 	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
@@ -782,7 +777,7 @@ func TestDecideRestTake_WithLongTermCountdown_BeforeMismatchRejected(t *testing.
 		SystemVersion: SystemVersion,
 		EntityType:    "session",
 		EntityID:      "camp-1",
-		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"long_term_countdown":{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}}`),
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
 	}
 
 	state := SnapshotState{
@@ -813,7 +808,7 @@ func TestDecideRestTake_WithLongTermCountdown_UnchangedRejected(t *testing.T) {
 		SystemVersion: SystemVersion,
 		EntityType:    "session",
 		EntityID:      "camp-1",
-		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"long_term_countdown":{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false,"reason":"long_rest"}}`),
+		PayloadJSON:   []byte(`{"rest_type":"long","interrupted":false,"gm_fear_before":1,"gm_fear_after":2,"short_rests_before":1,"short_rests_after":0,"refresh_rest":true,"refresh_long_rest":true,"participants":["char-1"],"countdown_updates":[{"countdown_id":"cd-1","before":3,"after":3,"delta":1,"looped":false,"reason":"long_rest"}]}`),
 	}
 
 	state := SnapshotState{
@@ -1229,62 +1224,6 @@ func TestDecideCountdownDelete_EmitsCountdownDeleted(t *testing.T) {
 	}
 }
 
-func TestDecideDowntimeMoveApply_EmitsDowntimeMoveApplied(t *testing.T) {
-	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
-	cmd := command.Command{
-		CampaignID:    "camp-1",
-		Type:          command.Type("sys.daggerheart.downtime_move.apply"),
-		ActorType:     command.ActorTypeSystem,
-		SystemID:      SystemID,
-		SystemVersion: SystemVersion,
-		EntityType:    "character",
-		EntityID:      "char-1",
-		PayloadJSON:   []byte(`{"character_id":"char-1","move":"clear_all_stress","stress_before":3,"stress_after":0}`),
-	}
-
-	decision := Decider{}.Decide(nil, cmd, func() time.Time { return now })
-	if len(decision.Rejections) != 0 {
-		t.Fatalf("expected no rejections, got %d", len(decision.Rejections))
-	}
-	if len(decision.Events) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(decision.Events))
-	}
-
-	evt := decision.Events[0]
-	if evt.Type != event.Type("sys.daggerheart.downtime_move_applied") {
-		t.Fatalf("event type = %s, want %s", evt.Type, "sys.daggerheart.downtime_move_applied")
-	}
-	if evt.SystemID != SystemID {
-		t.Fatalf("system id = %s, want %s", evt.SystemID, SystemID)
-	}
-	if evt.SystemVersion != SystemVersion {
-		t.Fatalf("system version = %s, want %s", evt.SystemVersion, SystemVersion)
-	}
-	if evt.EntityType != "character" {
-		t.Fatalf("entity type = %s, want %s", evt.EntityType, "character")
-	}
-	if evt.EntityID != "char-1" {
-		t.Fatalf("entity id = %s, want %s", evt.EntityID, "char-1")
-	}
-	if !evt.Timestamp.Equal(now) {
-		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
-	}
-
-	var payload DowntimeMoveAppliedPayload
-	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
-		t.Fatalf("unmarshal payload: %v", err)
-	}
-	if payload.CharacterID != "char-1" {
-		t.Fatalf("character id = %s, want %s", payload.CharacterID, "char-1")
-	}
-	if payload.Move != "clear_all_stress" {
-		t.Fatalf("move = %s, want %s", payload.Move, "clear_all_stress")
-	}
-	if payload.Stress == nil || *payload.Stress != 0 {
-		t.Fatalf("stress = %v, want %d", payload.Stress, 0)
-	}
-}
-
 func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	cmd := command.Command{
@@ -1326,18 +1265,15 @@ func TestDecideAdversaryConditionChange_EmitsAdversaryConditionChanged(t *testin
 		t.Fatalf("timestamp = %s, want %s", evt.Timestamp, now)
 	}
 
-	var payload struct {
-		AdversaryID     string   `json:"adversary_id"`
-		ConditionsAfter []string `json:"conditions_after"`
-	}
+	var payload AdversaryConditionChangedPayload
 	if err := json.Unmarshal(evt.PayloadJSON, &payload); err != nil {
 		t.Fatalf("unmarshal payload: %v", err)
 	}
 	if payload.AdversaryID != "adv-1" {
 		t.Fatalf("adversary id = %s, want %s", payload.AdversaryID, "adv-1")
 	}
-	if len(payload.ConditionsAfter) != 1 || payload.ConditionsAfter[0] != "hidden" {
-		t.Fatalf("conditions_after = %v, want [hidden]", payload.ConditionsAfter)
+	if len(payload.Conditions) != 1 || payload.Conditions[0].Code != ConditionHidden {
+		t.Fatalf("conditions_after = %v, want [hidden]", payload.Conditions)
 	}
 }
 

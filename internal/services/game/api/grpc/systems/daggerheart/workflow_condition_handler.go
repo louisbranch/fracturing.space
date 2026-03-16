@@ -51,10 +51,10 @@ func (s *DaggerheartService) ApplyConditions(ctx context.Context, in *pb.Daggerh
 		return nil, err
 	}
 	return &pb.DaggerheartApplyConditionsResponse{
-		CharacterId: result.CharacterID,
-		State:       statetransport.CharacterStateToProto(result.State),
-		Added:       conditiontransport.ConditionsToProto(result.Added),
-		Removed:     conditiontransport.ConditionsToProto(result.Removed),
+		CharacterId:       result.CharacterID,
+		State:             statetransport.CharacterStateToProto(result.State),
+		AddedConditions:   conditiontransport.ConditionStateViewsToProto(result.Added),
+		RemovedConditions: conditiontransport.ConditionStateViewsToProto(result.Removed),
 	}, nil
 }
 
@@ -64,9 +64,9 @@ func (s *DaggerheartService) ApplyAdversaryConditions(ctx context.Context, in *p
 		return nil, err
 	}
 	return &pb.DaggerheartApplyAdversaryConditionsResponse{
-		AdversaryId: result.AdversaryID,
-		Adversary:   adversarytransport.AdversaryToProto(result.Adversary),
-		Added:       conditiontransport.ConditionsToProto(result.Added),
-		Removed:     conditiontransport.ConditionsToProto(result.Removed),
+		AdversaryId:       result.AdversaryID,
+		Adversary:         adversarytransport.AdversaryToProto(result.Adversary),
+		AddedConditions:   conditiontransport.ConditionStateViewsToProto(result.Added),
+		RemovedConditions: conditiontransport.ConditionStateViewsToProto(result.Removed),
 	}, nil
 }

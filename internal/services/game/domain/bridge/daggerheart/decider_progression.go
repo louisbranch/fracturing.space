@@ -16,13 +16,6 @@ func decideLevelUpApply(snapshotState SnapshotState, hasSnapshot bool, cmd comma
 		func(p *LevelUpApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
 		func(_ SnapshotState, _ bool, p *LevelUpApplyPayload, _ func() time.Time) *command.Rejection {
 			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.NewDomainCardID = strings.TrimSpace(p.NewDomainCardID)
-			if p.NewDomainCardID != "" && p.NewDomainCardLevel < 1 {
-				return &command.Rejection{Code: "LEVEL_UP_INVALID", Message: "new_domain_card_level must be at least 1 when new_domain_card_id is set"}
-			}
-			if p.NewDomainCardID == "" && p.NewDomainCardLevel > 0 {
-				return &command.Rejection{Code: "LEVEL_UP_INVALID", Message: "new_domain_card_id is required when new_domain_card_level is set"}
-			}
 
 			// Convert payload advancements to domain model.
 			domainAdvs := make([]mechanics.Advancement, 0, len(p.Advancements))
@@ -32,13 +25,11 @@ func decideLevelUpApply(snapshotState SnapshotState, hasSnapshot bool, cmd comma
 					Trait:           a.Trait,
 					DomainCardID:    a.DomainCardID,
 					DomainCardLevel: a.DomainCardLevel,
-					SubclassCardID:  a.SubclassCardID,
 				}
 				if a.Multiclass != nil {
 					da.Multiclass = &mechanics.MulticlassChoice{
 						SecondaryClassID:    a.Multiclass.SecondaryClassID,
 						SecondarySubclassID: a.Multiclass.SecondarySubclassID,
-						FoundationCardID:    a.Multiclass.FoundationCardID,
 						SpellcastTrait:      a.Multiclass.SpellcastTrait,
 						DomainID:            a.Multiclass.DomainID,
 					}
@@ -73,16 +64,21 @@ func decideLevelUpApply(snapshotState SnapshotState, hasSnapshot bool, cmd comma
 		},
 		func(_ SnapshotState, _ bool, p LevelUpApplyPayload) LevelUpAppliedPayload {
 			return LevelUpAppliedPayload{
-				CharacterID:        p.CharacterID,
-				Level:              p.LevelAfter,
-				Advancements:       p.Advancements,
-				NewDomainCardID:    p.NewDomainCardID,
-				NewDomainCardLevel: p.NewDomainCardLevel,
-				Tier:               p.Tier,
-				IsTierEntry:        p.IsTierEntry,
-				ClearMarks:         p.ClearMarks,
-				Marked:             p.MarkedAfter,
-				ThresholdDelta:     p.ThresholdDelta,
+				CharacterID:                  p.CharacterID,
+				Level:                        p.LevelAfter,
+				Advancements:                 p.Advancements,
+				Rewards:                      p.Rewards,
+				SubclassTracksAfter:          p.SubclassTracksAfter,
+				SubclassHpMaxDelta:           p.SubclassHpMaxDelta,
+				SubclassStressMaxDelta:       p.SubclassStressMaxDelta,
+				SubclassEvasionDelta:         p.SubclassEvasionDelta,
+				SubclassMajorThresholdDelta:  p.SubclassMajorThresholdDelta,
+				SubclassSevereThresholdDelta: p.SubclassSevereThresholdDelta,
+				Tier:                         p.Tier,
+				IsTierEntry:                  p.IsTierEntry,
+				ClearMarks:                   p.ClearMarks,
+				Marked:                       p.MarkedAfter,
+				ThresholdDelta:               p.ThresholdDelta,
 			}
 		},
 		now)

@@ -7,6 +7,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
@@ -23,6 +24,7 @@ func TestStoresValidate_MissingEvents(t *testing.T) {
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      gamefakes.NewDaggerheartStore(),
+		Content:          &fakeContentStore{},
 		Event:            gamefakes.NewEventStore(),
 		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 	}
@@ -44,6 +46,7 @@ func TestStoresApplier(t *testing.T) {
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      gamefakes.NewDaggerheartStore(),
+		Content:          &fakeContentStore{},
 		Event:            gamefakes.NewEventStore(),
 		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 		Events:           event.NewRegistry(),
@@ -90,6 +93,7 @@ func TestNewFromProjection(t *testing.T) {
 	stores := NewFromProjection(FromProjectionConfig{
 		ProjectionStore:  projectionStore,
 		DaggerheartStore: daggerheartStore,
+		ContentStore:     &fakeContentStore{},
 		EventStore:       gamefakes.NewEventStore(),
 		Domain:           &fakeDomainEngine{},
 		WriteRuntime:     domainwrite.NewRuntime(),
@@ -119,6 +123,7 @@ func TestStoresAdapterRegistryMatchesManifest(t *testing.T) {
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      daggerheartStore,
+		Content:          &fakeContentStore{},
 		Event:            gamefakes.NewEventStore(),
 		Write:            domainwriteexec.WritePath{Executor: &fakeDomainEngine{}, Runtime: domainwrite.NewRuntime()},
 		Events:           event.NewRegistry(),
@@ -172,6 +177,10 @@ type stubProjectionWatermarkStore struct {
 }
 
 type fakeDomainEngine struct{}
+
+type fakeContentStore struct {
+	contentstore.DaggerheartContentReadStore
+}
 
 func (f *fakeDomainEngine) Execute(context.Context, command.Command) (engine.Result, error) {
 	return engine.Result{}, nil

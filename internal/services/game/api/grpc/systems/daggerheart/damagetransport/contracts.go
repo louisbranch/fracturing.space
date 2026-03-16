@@ -3,6 +3,7 @@ package damagetransport
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -26,6 +27,14 @@ type DaggerheartStore interface {
 	GetDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error)
 	GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
 	GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error)
+	ListDaggerheartAdversaries(ctx context.Context, campaignID, sessionID string) ([]projectionstore.DaggerheartAdversary, error)
+}
+
+// ContentStore loads catalog-backed adversary entries for recurring-rule
+// automation during damage application.
+type ContentStore interface {
+	GetDaggerheartAdversaryEntry(ctx context.Context, id string) (contentstore.DaggerheartAdversaryEntry, error)
+	GetDaggerheartArmor(ctx context.Context, id string) (contentstore.DaggerheartArmor, error)
 }
 
 // EventStore is the event-read contract used to validate roll-seq references.
@@ -69,7 +78,10 @@ type Dependencies struct {
 	Campaign    CampaignStore
 	SessionGate SessionGateStore
 	Daggerheart DaggerheartStore
+	Content     ContentStore
 	Event       EventStore
+
+	SeedFunc func() (int64, error)
 
 	ExecuteSystemCommand    func(ctx context.Context, in SystemCommandInput) error
 	LoadAdversaryForSession func(ctx context.Context, campaignID, sessionID, adversaryID string) (projectionstore.DaggerheartAdversary, error)

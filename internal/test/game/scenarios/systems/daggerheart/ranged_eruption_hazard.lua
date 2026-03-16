@@ -17,7 +17,7 @@ scn:start_session("Eruption")
 dh:gm_fear(1)
 
 -- Example: targets roll Agility 14 or take 2d10 damage and are moved.
-dh:gm_spend_fear(1):spotlight("Saruman")
+dh:gm_spend_fear(1):move("change_environment", { description = "Saruman tears the ground open beneath the party." })
 dh:group_reaction{
   targets = {"Frodo"},
   trait = "agility",

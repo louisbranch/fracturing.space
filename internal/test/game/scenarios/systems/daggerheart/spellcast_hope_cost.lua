@@ -27,7 +27,7 @@ dh:action_roll{
   trait = "spellcast",
   difficulty = 13,
   outcome = "fear",
-  expect_hope_delta = -1,
+  expect_hope_delta = -3,
   modifiers = {
     Modifiers.hope("hope_feature")
   }

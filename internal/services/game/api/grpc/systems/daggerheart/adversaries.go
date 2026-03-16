@@ -18,6 +18,10 @@ func (s *DaggerheartService) DeleteAdversary(ctx context.Context, in *pb.Daggerh
 	return s.adversaryHandler().DeleteAdversary(ctx, in)
 }
 
+func (s *DaggerheartService) ApplyAdversaryFeature(ctx context.Context, in *pb.DaggerheartApplyAdversaryFeatureRequest) (*pb.DaggerheartApplyAdversaryFeatureResponse, error) {
+	return s.adversaryHandler().ApplyAdversaryFeature(ctx, in)
+}
+
 func (s *DaggerheartService) GetAdversary(ctx context.Context, in *pb.DaggerheartGetAdversaryRequest) (*pb.DaggerheartGetAdversaryResponse, error) {
 	return s.adversaryHandler().GetAdversary(ctx, in)
 }

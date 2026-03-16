@@ -13,8 +13,8 @@ scn:pc("Sam")
 scn:pc("Frodo")
 scn:pc("Gandalf")
 scn:pc("Aragorn")
-dh:adversary("Orc Archer One")
-dh:adversary("Orc Archer Two")
+dh:adversary("Orc Archer One", { adversary_entry_id = "adversary.orc-archer" })
+dh:adversary("Orc Archer Two", { adversary_entry_id = "adversary.orc-archer" })
 dh:adversary("Nazgul")
 dh:adversary("Orc Raiders")
 
@@ -23,10 +23,10 @@ scn:start_session("Spotlight Sequence")
 dh:gm_fear(4)
 
 -- Example: archers fire, dredges swarm, then the knight takes center stage.
-dh:gm_spend_fear(1):spotlight("Orc Archer One")
-dh:gm_spend_fear(1):spotlight("Orc Archer Two")
-dh:gm_spend_fear(1):spotlight("Orc Raiders")
-dh:gm_spend_fear(1):spotlight("Nazgul")
+dh:gm_spend_fear(1):adversary_spotlight("Orc Archer One")
+dh:gm_spend_fear(1):adversary_spotlight("Orc Archer Two")
+dh:gm_spend_fear(1):adversary_spotlight("Orc Raiders")
+dh:gm_spend_fear(1):adversary_spotlight("Nazgul")
 
 -- Close the session after the spotlight chain resolves.
 scn:end_session()

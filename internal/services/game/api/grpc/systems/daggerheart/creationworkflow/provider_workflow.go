@@ -55,8 +55,7 @@ func creationStepSequenceFromWorkflowInput(input *daggerheartv1.DaggerheartCreat
 func resetCreationWorkflowFields(profile projectionstore.DaggerheartCharacterProfile) projectionstore.DaggerheartCharacterProfile {
 	profile.ClassID = ""
 	profile.SubclassID = ""
-	profile.AncestryID = ""
-	profile.CommunityID = ""
+	profile.Heritage = projectionstore.DaggerheartHeritageSelection{}
 	profile.TraitsAssigned = false
 	profile.DetailsRecorded = false
 	profile.StartingWeaponIDs = nil

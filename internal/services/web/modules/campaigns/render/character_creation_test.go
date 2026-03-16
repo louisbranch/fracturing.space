@@ -53,6 +53,79 @@ func TestCreationStepClassSubclassRendersClassDomainWatermarks(t *testing.T) {
 	}
 }
 
+func TestCreationStepClassSubclassUsesChangeEventsForSelectionCards(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Classes: []CampaignCreationClassView{
+				{ID: "class.ranger", Name: "Ranger"},
+			},
+			Subclasses: []CampaignCreationSubclassView{
+				{
+					ID:                   "subclass.beastbound",
+					Name:                 "Beastbound",
+					ClassID:              "class.ranger",
+					CreationRequirements: []string{"companion_sheet_required"},
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := creationStepClassSubclass(view, testLocalizer{}).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render creationStepClassSubclass: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`data-subclass-requires-companion="true"`,
+		`addEventListener('change', function() { collapseClass(r.value); });`,
+		`addEventListener('change', function() { collapseSubclass(r.value); });`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("class-subclass output missing marker %q: %q", marker, got)
+		}
+	}
+}
+
+func TestCreationStepClassSubclassFallsBackToBeastboundCompanionRequirement(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			SubclassID: "subclass.beastbound",
+			Subclasses: []CampaignCreationSubclassView{
+				{
+					ID:      "subclass.beastbound",
+					Name:    "Beastbound",
+					ClassID: "class.ranger",
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := creationStepClassSubclass(view, testLocalizer{}).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render creationStepClassSubclass: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`data-subclass-card="subclass.beastbound" data-subclass-requires-companion="true"`,
+		`Companion required`,
+		`data-companion-section`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("class-subclass output missing marker %q: %q", marker, got)
+		}
+	}
+}
+
 func TestCreationStepClassSubclassSkipsWatermarkWithoutIconURL(t *testing.T) {
 	t.Parallel()
 
@@ -381,6 +454,149 @@ func TestCreationStepEquipmentReadyAllowsTwoHandedPrimaryWithoutSecondary(t *tes
 	}
 }
 
+func TestCreationStepHeritageReadyAllowsUnlabeledMixedAncestry(t *testing.T) {
+	t.Parallel()
+
+	view := CampaignCharacterCreationView{
+		Heritage: CampaignCreationHeritageSelectionView{
+			FirstFeatureAncestryID:  "ancestry-1",
+			SecondFeatureAncestryID: "ancestry-2",
+			CommunityID:             "community-1",
+		},
+	}
+	if !creationStepHeritageReady(view) {
+		t.Fatal("creationStepHeritageReady() = false, want true for unlabeled mixed ancestry selection")
+	}
+}
+
+func TestCreationStepHeritageRendersGuidanceAndMutedMixedFeatures(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Heritage: CampaignCreationHeritageSelectionView{
+				FirstFeatureAncestryID:  "ancestry-1",
+				SecondFeatureAncestryID: "ancestry-2",
+				CommunityID:             "community-1",
+			},
+			Ancestries: []CampaignCreationHeritageView{
+				{
+					ID:   "ancestry-1",
+					Name: "Elf",
+					Features: []CampaignCreationClassFeatureView{
+						{Name: "Graceful", Description: "Move lightly."},
+						{Name: "Darkvision", Description: "See in dim light."},
+					},
+				},
+				{
+					ID:   "ancestry-2",
+					Name: "Human",
+					Features: []CampaignCreationClassFeatureView{
+						{Name: "Adaptable", Description: "Shift quickly."},
+						{Name: "Tenacious", Description: "Hold on longer."},
+					},
+				},
+			},
+			Communities: []CampaignCreationHeritageView{
+				{
+					ID:   "community-1",
+					Name: "Loreborne",
+					Features: []CampaignCreationClassFeatureView{
+						{Name: "Archivist", Description: "Recall old lore."},
+					},
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := creationStepHeritage(view, nil).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render creationStepHeritage: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`Single heritage keeps both ancestry features from one ancestry.`,
+		`Mixed heritage takes the first feature from one ancestry and the second feature from another.`,
+		`placeholder="Optional."`,
+		`Heritage label`,
+		`data-mixed-heritage-label`,
+		`Primary ancestry features`,
+		`Secondary ancestry features`,
+		`data-heritage-grid-label="first"`,
+		`data-heritage-grid-label="mixed"`,
+		`data-heritage-selected-label-text="first"`,
+		`data-heritage-selected-label-text="mixed"`,
+		`data-heritage-card-single-features="Graceful, Darkvision"`,
+		`data-heritage-card-mixed-features="Graceful"`,
+		`data-heritage-card-summary-features="Tenacious"`,
+		`Graceful`,
+		`Darkvision`,
+		`Adaptable`,
+		`Tenacious`,
+		`data-creation-feature-muted="true"`,
+		`data-creation-feature-index="0"`,
+		`data-creation-feature-index="1"`,
+		`opacity-25`,
+		`data-heritage-selected="first"`,
+		`data-heritage-selected="mixed"`,
+		`data-heritage-selected="community"`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("heritage output missing marker %q: %q", marker, got)
+		}
+	}
+}
+
+func TestCreationStepHeritageSingleShowsBothAncestryFeaturesOnCards(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Heritage: CampaignCreationHeritageSelectionView{
+				FirstFeatureAncestryID:  "ancestry-1",
+				SecondFeatureAncestryID: "ancestry-1",
+				CommunityID:             "community-1",
+			},
+			Ancestries: []CampaignCreationHeritageView{
+				{
+					ID:   "ancestry-1",
+					Name: "Elf",
+					Features: []CampaignCreationClassFeatureView{
+						{Name: "Graceful"},
+						{Name: "Darkvision"},
+					},
+				},
+			},
+			Communities: []CampaignCreationHeritageView{
+				{ID: "community-1", Name: "Loreborne"},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	if err := creationStepHeritage(view, nil).Render(context.Background(), &buf); err != nil {
+		t.Fatalf("render creationStepHeritage: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`Ancestry features`,
+		`data-heritage-card-single-features="Graceful, Darkvision"`,
+		`data-heritage-card-mixed-features="Graceful"`,
+		`Graceful`,
+		`Darkvision`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("single-heritage output missing marker %q: %q", marker, got)
+		}
+	}
+}
+
 func TestCreationStepEquipmentRendersBurdenMarkersAndInlineSecondaryNoneHelper(t *testing.T) {
 	t.Parallel()
 
@@ -476,8 +692,7 @@ func TestCreationSummaryCardRendersDetailsAndBackToCampaignAction(t *testing.T) 
 			Ready:           true,
 			ClassID:         "class-1",
 			SubclassID:      "subclass-1",
-			AncestryID:      "ancestry-1",
-			CommunityID:     "community-1",
+			Heritage:        CampaignCreationHeritageSelectionView{FirstFeatureAncestryID: "ancestry-1", SecondFeatureAncestryID: "ancestry-1", CommunityID: "community-1"},
 			Agility:         "2",
 			Strength:        "1",
 			Finesse:         "1",
@@ -492,11 +707,24 @@ func TestCreationSummaryCardRendersDetailsAndBackToCampaignAction(t *testing.T) 
 			Connections:     "Owes the party a hard-won favor.",
 			Classes:         []CampaignCreationClassView{{ID: "class-1", Name: "Warrior"}},
 			Subclasses:      []CampaignCreationSubclassView{{ID: "subclass-1", Name: "Guardian"}},
-			Ancestries:      []CampaignCreationHeritageView{{ID: "ancestry-1", Name: "Human"}},
-			Communities:     []CampaignCreationHeritageView{{ID: "community-1", Name: "Loreborne"}},
-			PrimaryWeapons:  []CampaignCreationWeaponView{{ID: "weapon-1", Name: "Longsword"}},
-			Armor:           []CampaignCreationArmorView{{ID: "armor-1", Name: "Chainmail"}},
-			PotionItems:     []CampaignCreationItemView{{ID: "item-1", Name: "Minor Potion"}},
+			Ancestries: []CampaignCreationHeritageView{{
+				ID:   "ancestry-1",
+				Name: "Human",
+				Features: []CampaignCreationClassFeatureView{
+					{Name: "High Stamina", Description: "Keep going."},
+					{Name: "Adaptable", Description: "Adjust quickly."},
+				},
+			}},
+			Communities: []CampaignCreationHeritageView{{
+				ID:   "community-1",
+				Name: "Loreborne",
+				Features: []CampaignCreationClassFeatureView{
+					{Name: "Bookworm", Description: "Recall lore."},
+				},
+			}},
+			PrimaryWeapons: []CampaignCreationWeaponView{{ID: "weapon-1", Name: "Longsword"}},
+			Armor:          []CampaignCreationArmorView{{ID: "armor-1", Name: "Chainmail"}},
+			PotionItems:    []CampaignCreationItemView{{ID: "item-1", Name: "Minor Potion"}},
 		},
 	}
 
@@ -510,6 +738,10 @@ func TestCreationSummaryCardRendersDetailsAndBackToCampaignAction(t *testing.T) 
 		`data-character-creation-summary="true"`,
 		`game.character_creation.step.details`,
 		`Scarred, observant, and always impeccably dressed.`,
+		`Granted ancestry features:`,
+		`High Stamina`,
+		`Community features:`,
+		`Bookworm`,
 		`data-character-creation-back-to-campaign="true"`,
 		`href="/app/campaigns/campaign-1/characters"`,
 	} {
@@ -595,12 +827,11 @@ func TestCampaignCharacterCreationSummaryBodyRendersSharedSummary(t *testing.T) 
 	t.Parallel()
 
 	creation := CampaignCharacterCreationView{
-		Ready:       true,
-		NextStep:    9,
-		ClassID:     "class.rogue",
-		SubclassID:  "subclass.night",
-		AncestryID:  "ancestry.human",
-		CommunityID: "community.warden",
+		Ready:      true,
+		NextStep:   9,
+		ClassID:    "class.rogue",
+		SubclassID: "subclass.night",
+		Heritage:   CampaignCreationHeritageSelectionView{FirstFeatureAncestryID: "ancestry.human", SecondFeatureAncestryID: "ancestry.human", CommunityID: "community.warden"},
 		Classes: []CampaignCreationClassView{
 			{ID: "class.rogue", Name: "Rogue"},
 		},
@@ -608,10 +839,23 @@ func TestCampaignCharacterCreationSummaryBodyRendersSharedSummary(t *testing.T) 
 			{ID: "subclass.night", Name: "Night"},
 		},
 		Ancestries: []CampaignCreationHeritageView{
-			{ID: "ancestry.human", Name: "Human"},
+			{
+				ID:   "ancestry.human",
+				Name: "Human",
+				Features: []CampaignCreationClassFeatureView{
+					{Name: "High Stamina"},
+					{Name: "Adaptable"},
+				},
+			},
 		},
 		Communities: []CampaignCreationHeritageView{
-			{ID: "community.warden", Name: "Warden"},
+			{
+				ID:   "community.warden",
+				Name: "Warden",
+				Features: []CampaignCreationClassFeatureView{
+					{Name: "Watchful"},
+				},
+			},
 		},
 	}
 
@@ -627,6 +871,8 @@ func TestCampaignCharacterCreationSummaryBodyRendersSharedSummary(t *testing.T) 
 		`Night`,
 		`Human`,
 		`Warden`,
+		`High Stamina`,
+		`Watchful`,
 	} {
 		if !strings.Contains(got, marker) {
 			t.Fatalf("CampaignCharacterCreationSummaryBody output missing marker %q: %q", marker, got)

@@ -13,11 +13,14 @@ func TestBuildDaggerheartCharacterStatePatch_DefaultsAndConditionNormalization(t
 	profile := projectionstore.DaggerheartCharacterProfile{ArmorMax: -1}
 
 	patch, err := buildDaggerheartCharacterStatePatch(current, profile, &daggerheartv1.DaggerheartCharacterState{
-		Hp:         6,
-		Hope:       0,
-		Stress:     6,
-		Armor:      0,
-		Conditions: []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE, daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+		Hp:     6,
+		Hope:   0,
+		Stress: 6,
+		Armor:  0,
+		ConditionStates: []*daggerheartv1.DaggerheartConditionState{
+			{Code: "vulnerable"},
+			{Code: "hidden"},
+		},
 	})
 	if err != nil {
 		t.Fatalf("build patch: %v", err)

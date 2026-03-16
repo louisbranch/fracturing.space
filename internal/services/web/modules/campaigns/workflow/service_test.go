@@ -93,6 +93,55 @@ func TestServiceRejectsUnsupportedWorkflow(t *testing.T) {
 	}
 }
 
+func TestPageServiceLoadPageRequiresConfiguredApp(t *testing.T) {
+	t.Parallel()
+
+	svc := NewPageService(nil, testWorkflowRegistry())
+	_, err := svc.LoadPage(context.Background(), "c1", "char-1", language.AmericanEnglish, "daggerheart")
+	if err == nil {
+		t.Fatal("LoadPage() error = nil, want unavailable error")
+	}
+	if apperrors.HTTPStatus(err) != http.StatusServiceUnavailable {
+		t.Fatalf("LoadPage() status = %d, want %d", apperrors.HTTPStatus(err), http.StatusServiceUnavailable)
+	}
+}
+
+func TestMutationServiceApplyStepRequiresConfiguredApp(t *testing.T) {
+	t.Parallel()
+
+	svc := NewMutationService(nil, testWorkflowRegistry())
+	err := svc.ApplyStep(context.Background(), "c1", "char-1", "daggerheart", url.Values{})
+	if err == nil {
+		t.Fatal("ApplyStep() error = nil, want unavailable error")
+	}
+	if apperrors.HTTPStatus(err) != http.StatusServiceUnavailable {
+		t.Fatalf("ApplyStep() status = %d, want %d", apperrors.HTTPStatus(err), http.StatusServiceUnavailable)
+	}
+}
+
+func TestMutationServiceResetRequiresConfiguredApp(t *testing.T) {
+	t.Parallel()
+
+	svc := NewMutationService(nil, testWorkflowRegistry())
+	err := svc.Reset(context.Background(), "c1", "char-1")
+	if err == nil {
+		t.Fatal("Reset() error = nil, want unavailable error")
+	}
+	if apperrors.HTTPStatus(err) != http.StatusServiceUnavailable {
+		t.Fatalf("Reset() status = %d, want %d", apperrors.HTTPStatus(err), http.StatusServiceUnavailable)
+	}
+}
+
+func TestMutationServiceResetDelegatesToApp(t *testing.T) {
+	t.Parallel()
+
+	app := workflowAppStub{}
+	svc := NewMutationService(&app, testWorkflowRegistry())
+	if err := svc.Reset(context.Background(), "c1", "char-1"); err != nil {
+		t.Fatalf("Reset() error = %v", err)
+	}
+}
+
 type workflowAppStub struct {
 	progress   Progress
 	progErr    error

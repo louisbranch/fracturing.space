@@ -317,6 +317,7 @@ type fakeCharacterClient struct {
 	workflowResp *statev1.ApplyCharacterCreationWorkflowResponse
 	workflowErr  error
 	workflowCtx  context.Context
+	lastWorkflow *statev1.ApplyCharacterCreationWorkflowRequest
 }
 
 func (f *fakeCharacterClient) CreateCharacter(ctx context.Context, _ *statev1.CreateCharacterRequest, _ ...grpc.CallOption) (*statev1.CreateCharacterResponse, error) {
@@ -357,8 +358,9 @@ func (f *fakeCharacterClient) PatchCharacterProfile(ctx context.Context, _ *stat
 	return f.profileResp, f.profileErr
 }
 
-func (f *fakeCharacterClient) ApplyCharacterCreationWorkflow(ctx context.Context, _ *statev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*statev1.ApplyCharacterCreationWorkflowResponse, error) {
+func (f *fakeCharacterClient) ApplyCharacterCreationWorkflow(ctx context.Context, req *statev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*statev1.ApplyCharacterCreationWorkflowResponse, error) {
 	f.workflowCtx = ctx
+	f.lastWorkflow = req
 	return f.workflowResp, f.workflowErr
 }
 

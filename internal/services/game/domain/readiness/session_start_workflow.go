@@ -2,6 +2,7 @@ package readiness
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -66,6 +67,14 @@ func (w sessionStartWorkflow) Start(current aggregate.State, cmd command.Command
 	events := make([]event.Event, 0, len(startDecision.Events)+1)
 	events = append(events, campaignActivated)
 	events = append(events, startDecision.Events...)
+	bootstrapEvents, err := w.systemBootstrapEvents(current, cmd, decisionTime)
+	if err != nil {
+		return command.Reject(command.Rejection{
+			Code:    "SESSION_START_SYSTEM_BOOTSTRAP_FAILED",
+			Message: fmt.Sprintf("session start bootstrap failed: %v", err),
+		})
+	}
+	events = append(events, bootstrapEvents...)
 	return command.Accept(events...)
 }
 
@@ -93,4 +102,24 @@ func (w sessionStartWorkflow) systemReadiness(current aggregate.State) Character
 		}
 		return checker.CharacterReady(systemState, ch)
 	}
+}
+
+func (w sessionStartWorkflow) systemBootstrapEvents(current aggregate.State, cmd command.Command, now time.Time) ([]event.Event, error) {
+	if w.systems == nil {
+		return nil, nil
+	}
+	systemID := strings.TrimSpace(string(current.Campaign.GameSystem))
+	if systemID == "" {
+		return nil, nil
+	}
+	mod := w.systems.Get(systemID, "")
+	if mod == nil {
+		return nil, nil
+	}
+	bootstrapper, ok := mod.(module.SessionStartBootstrapper)
+	if !ok {
+		return nil, nil
+	}
+	systemState := current.Systems[module.Key{ID: mod.ID(), Version: mod.Version()}]
+	return bootstrapper.SessionStartBootstrap(systemState, current.Characters, cmd, now)
 }

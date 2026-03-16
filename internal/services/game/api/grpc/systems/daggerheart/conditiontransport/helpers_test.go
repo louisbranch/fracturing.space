@@ -14,18 +14,28 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func TestConditionsFromProto(t *testing.T) {
-	got, err := ConditionsFromProto([]pb.DaggerheartCondition{
-		pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN,
-		pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE,
+func TestConditionStatesFromProto(t *testing.T) {
+	got, err := ConditionStatesFromProto([]*pb.DaggerheartConditionState{
+		{
+			Id:       daggerheart.ConditionHidden,
+			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN,
+			Code:     daggerheart.ConditionHidden,
+		},
+		{
+			Id:       daggerheart.ConditionVulnerable,
+			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE,
+			Code:     daggerheart.ConditionVulnerable,
+		},
 	})
 	if err != nil {
-		t.Fatalf("ConditionsFromProto returned error: %v", err)
+		t.Fatalf("ConditionStatesFromProto returned error: %v", err)
 	}
-	if len(got) != 2 || got[0] != daggerheart.ConditionHidden || got[1] != daggerheart.ConditionVulnerable {
-		t.Fatalf("ConditionsFromProto = %v, want hidden/vulnerable", got)
+	if codes := ConditionStateViewsToCodes(got); len(codes) != 2 || codes[0] != daggerheart.ConditionHidden || codes[1] != daggerheart.ConditionVulnerable {
+		t.Fatalf("ConditionStateViewsToCodes = %v, want hidden/vulnerable", codes)
 	}
-	if _, err := ConditionsFromProto([]pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_UNSPECIFIED}); err == nil {
+	if _, err := ConditionStatesFromProto([]*pb.DaggerheartConditionState{{}}); err == nil {
 		t.Fatal("expected unspecified condition error")
 	}
 }
@@ -40,14 +50,17 @@ func TestConditionsToProto(t *testing.T) {
 		daggerheart.ConditionVulnerable,
 		"unknown",
 	})
-	if len(proto) != 2 {
-		t.Fatalf("expected 2 proto conditions, got %d", len(proto))
+	if len(proto) != 3 {
+		t.Fatalf("expected 3 proto conditions, got %d", len(proto))
 	}
-	if proto[0] != pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN {
+	if proto[0].GetStandard() != pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN {
 		t.Fatalf("unexpected first condition: %v", proto[0])
 	}
-	if proto[1] != pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE {
+	if proto[1].GetStandard() != pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE {
 		t.Fatalf("unexpected second condition: %v", proto[1])
+	}
+	if proto[2].GetCode() != "unknown" {
+		t.Fatalf("unexpected third condition: %v", proto[2])
 	}
 }
 

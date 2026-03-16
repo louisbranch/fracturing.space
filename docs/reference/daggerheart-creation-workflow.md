@@ -4,7 +4,7 @@ parent: "Reference"
 nav_order: 6
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-02"
+last_reviewed: "2026-03-13"
 ---
 
 # Daggerheart creation workflow and readiness contract
@@ -20,19 +20,22 @@ workflow progress, reset behavior, and session-start readiness.
 
 ## Canonical step model
 
-Daggerheart character creation is a strict SRD-aligned 9-step sequence:
+Daggerheart character creation is a strict 9-step sequence with an intentional
+UX ordering choice: the three free-form steps stay at the end so structured
+selection and validation happen first.
 
-1. `class_subclass` (`class_id` + `subclass_id`)
-2. `heritage` (`ancestry_id` + `community_id`)
+1. `class_subclass` (`class_id`, `subclass_id`, and any subclass-required setup such as `companion`)
+2. `heritage` (`heritage.first_feature_ancestry_id`, `heritage.second_feature_ancestry_id`, `heritage.community_id`, optional `heritage.ancestry_label`)
 3. `traits` (`traits_assigned` plus SRD distribution validation)
-4. `details` (`details_recorded` after recording starting details)
-5. `equipment` (`starting_weapon_ids[]`, `starting_armor_id`, `starting_potion_item_id`)
-6. `background` (`background`, free-form text)
-7. `experiences` (`experiences[]`)
-8. `domain_cards` (`domain_card_ids[]`)
+4. `equipment` (`starting_weapon_ids[]`, `starting_armor_id`, `starting_potion_item_id`)
+5. `experiences` (`experiences[]`)
+6. `domain_cards` (`domain_card_ids[]`)
+7. `details` (`details_recorded` after recording starting details)
+8. `background` (`background`, free-form text)
 9. `connections` (`connections`, free-form text)
 
-Step 6 and step 9 are intentionally free-form text fields.
+This ordering is accepted product behavior. It is not treated as a rules defect
+unless it changes validation or readiness semantics.
 
 ## Profile fields and storage shape
 
@@ -42,7 +45,10 @@ The canonical profile contract is carried by
 
 Required workflow-related fields:
 
-- `class_id`, `subclass_id`, `ancestry_id`, `community_id`
+- `class_id`, `subclass_id`
+- `subclass_creation_requirements[]`
+- `heritage_json`
+- `companion_sheet_json` when the selected subclass requires it
 - `traits_assigned`
 - `details_recorded`
 - `starting_weapon_ids_json`, `starting_armor_id`, `starting_potion_item_id`
@@ -96,11 +102,23 @@ Apply requests are strictly ordered.
 - The requested step must equal `next_step`.
 - Out-of-order writes are rejected with `FailedPrecondition`.
 - Content IDs are validated against Daggerheart content stores.
+- Heritage selection is resolved into stored feature ids.
+  - Single ancestry stores the same ancestry id in both feature slots.
+  - Mixed ancestry stores the first ancestry's first feature and the second
+    ancestry's second feature, plus a free-form ancestry label.
+- Subclass content may declare creation requirements.
+  - `subclass-beastbound` currently requires a companion sheet during step 1.
 - Trait values are validated via Daggerheart trait validation and SRD starting
   distribution (`+2,+1,+1,+0,+0,-1`).
 - Domain cards must belong to one of the selected class domains.
 - Starting equipment is validated against tier-1 weapon/armor catalog entries
   and allowed starting potion ids.
+- Companion sheets are validated as static creation-time data.
+  - `animal_kind`, `name`, `attack_description`, and exactly two experience
+    names are required.
+  - Experience modifiers normalize to `+2`.
+  - Evasion/range/damage die are derived and stored as fixed defaults.
+  - Damage type must be `physical` or `magic`.
 
 All successful applies write through system-owned command execution using
 `sys.daggerheart.character_profile.replace` (no direct projection mutation in

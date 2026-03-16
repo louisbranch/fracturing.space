@@ -26,11 +26,10 @@ dh:level_up{
   level_after = 6,
   advancements = {
     { type = "multiclass", multiclass = {
-      secondary_class_id = "bard",
-      secondary_subclass_id = "wordsmith",
-      foundation_card_id = "bard_foundation_01",
+      secondary_class_id = "class.bard",
+      secondary_subclass_id = "subclass.wordsmith",
       spellcast_trait = "presence",
-      domain_id = "codex",
+      domain_id = "domain.codex",
     }},
   },
 }

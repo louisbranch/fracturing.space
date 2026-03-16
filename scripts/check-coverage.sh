@@ -88,6 +88,10 @@ if git ls-remote --exit-code --heads origin badges >/dev/null 2>&1; then
 	fi
 fi
 
-run_step go run ./internal/tools/coveragefloors check -profile=coverage.out -floors="$FLOORS"
+EXCLUDE_FLAG=""
+if [ -n "${COVER_EXCLUDE_REGEX:-}" ]; then
+	EXCLUDE_FLAG="-exclude=${COVER_EXCLUDE_REGEX}"
+fi
+run_step go run ./internal/tools/coveragefloors check -profile=coverage.out -floors="$FLOORS" $EXCLUDE_FLAG
 
 echo "Coverage checks passed."

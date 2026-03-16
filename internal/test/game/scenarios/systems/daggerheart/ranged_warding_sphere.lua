@@ -15,8 +15,11 @@ dh:adversary("Saruman")
 -- The wizard reacts to close-range damage with a magical backlash.
 scn:start_session("Warding Sphere")
 
--- Example: when hit within Close range, the attacker takes 2d6 magic damage.
--- Missing DSL: apply reactive damage and cooldown on the reaction.
+dh:adversary_feature{
+  actor = "Saruman",
+  target = "Frodo",
+  feature_id = "feature.saruman-warding-sphere"
+}
 dh:attack{ actor = "Frodo", target = "Saruman", trait = "instinct", difficulty = 0, outcome = "hope", damage_type = "physical" }
 
 scn:end_session()

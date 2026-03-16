@@ -42,7 +42,7 @@ func mapCharacterDaggerheartSummaryView(summary *campaignapp.CampaignCharacterDa
 		Level:         summary.Level,
 		ClassName:     summary.ClassName,
 		SubclassName:  summary.SubclassName,
-		AncestryName:  summary.AncestryName,
+		HeritageName:  summary.HeritageName,
 		CommunityName: summary.CommunityName,
 	}
 }

@@ -1,6 +1,8 @@
 package snapshottransport
 
 import (
+	"strings"
+
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/game/charactertransport"
 	daggerheart "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -77,9 +79,9 @@ func buildDaggerheartCharacterStatePatch(
 	}
 
 	var normalizedConditions []string
-	conditionPatch := patch.Conditions != nil
+	conditionPatch := patch.ConditionStates != nil
 	if conditionPatch {
-		conditions, err := charactertransport.DaggerheartConditionsFromProto(patch.Conditions)
+		conditions, err := protoConditionCodes(patch.ConditionStates)
 		if err != nil {
 			return daggerheartCharacterStatePatch{}, status.Error(codes.InvalidArgument, err.Error())
 		}
@@ -112,6 +114,27 @@ func buildDaggerheartCharacterStatePatch(
 		conditionPatch:       conditionPatch,
 		normalizedConditions: normalizedConditions,
 	}, nil
+}
+
+func protoConditionCodes(states []*daggerheartv1.DaggerheartConditionState) ([]string, error) {
+	if len(states) == 0 {
+		return nil, nil
+	}
+	result := make([]string, 0, len(states))
+	for _, state := range states {
+		if state == nil {
+			return nil, status.Error(codes.InvalidArgument, "condition state is required")
+		}
+		code := strings.TrimSpace(state.GetCode())
+		if code == "" {
+			code = strings.TrimSpace(strings.ToLower(strings.TrimPrefix(state.GetStandard().String(), "DAGGERHEART_CONDITION_")))
+		}
+		if code == "" {
+			return nil, status.Error(codes.InvalidArgument, "condition code is required")
+		}
+		result = append(result, code)
+	}
+	return result, nil
 }
 
 func (p daggerheartCharacterStatePatch) stateUnchanged(current projectionstore.DaggerheartCharacterState) bool {

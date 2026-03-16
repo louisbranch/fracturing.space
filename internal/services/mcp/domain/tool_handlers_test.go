@@ -1213,11 +1213,22 @@ func TestCharacterCreationWorkflowApplyHandler(t *testing.T) {
 		}
 		handler := CharacterCreationWorkflowApplyHandler(client, func() Context { return Context{CampaignID: "c1"} }, nil)
 		_, result, err := handler(context.Background(), nil, CharacterCreationWorkflowApplyInput{
-			CharacterID:   "ch1",
-			ClassID:       "class.guardian",
-			SubclassID:    "subclass.stalwart",
-			AncestryID:    "heritage.ancestry.clank",
-			CommunityID:   "heritage.community.farmer",
+			CharacterID: "ch1",
+			ClassID:     "class.guardian",
+			SubclassID:  "subclass.beastbound",
+			Companion: &CharacterCreationCompanionInput{
+				AnimalKind:        "wolf",
+				Name:              "Ash",
+				ExperienceIDs:     []string{"companion-experience.scout", "companion-experience.vigilant"},
+				AttackDescription: "Savage bite",
+				DamageType:        "physical",
+			},
+			Heritage: CharacterCreationHeritageInput{
+				AncestryLabel:           "Mixed Lineage",
+				FirstFeatureAncestryID:  "heritage.ancestry.clank",
+				SecondFeatureAncestryID: "heritage.ancestry.giant",
+				CommunityID:             "heritage.community.farmer",
+			},
 			Agility:       2,
 			Strength:      1,
 			Finesse:       1,
@@ -1237,6 +1248,19 @@ func TestCharacterCreationWorkflowApplyHandler(t *testing.T) {
 		}
 		if !result.Progress.Ready {
 			t.Fatal("progress.ready = false, want true")
+		}
+		if client.lastWorkflow == nil || client.lastWorkflow.GetDaggerheart() == nil {
+			t.Fatal("expected workflow request to be captured")
+		}
+		got := client.lastWorkflow.GetDaggerheart()
+		if got.GetClassSubclassInput().GetCompanion().GetName() != "Ash" {
+			t.Fatalf("companion.name = %q, want %q", got.GetClassSubclassInput().GetCompanion().GetName(), "Ash")
+		}
+		if got.GetHeritageInput().GetHeritage().GetFirstFeatureAncestryId() != "heritage.ancestry.clank" {
+			t.Fatalf("heritage.first_feature_ancestry_id = %q, want %q", got.GetHeritageInput().GetHeritage().GetFirstFeatureAncestryId(), "heritage.ancestry.clank")
+		}
+		if got.GetHeritageInput().GetHeritage().GetSecondFeatureAncestryId() != "heritage.ancestry.giant" {
+			t.Fatalf("heritage.second_feature_ancestry_id = %q, want %q", got.GetHeritageInput().GetHeritage().GetSecondFeatureAncestryId(), "heritage.ancestry.giant")
 		}
 	})
 

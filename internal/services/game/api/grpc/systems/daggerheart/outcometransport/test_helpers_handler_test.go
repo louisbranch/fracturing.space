@@ -5,6 +5,7 @@ import (
 
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	bridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/session"
@@ -22,6 +23,18 @@ type fakeSessionSpotlightStore struct{}
 
 func (s *fakeSessionSpotlightStore) GetSessionSpotlight(context.Context, string, string) (storage.SessionSpotlight, error) {
 	return storage.SessionSpotlight{}, storage.ErrNotFound
+}
+
+type fakeContentStore struct {
+	subclasses map[string]contentstore.DaggerheartSubclass
+}
+
+func (s *fakeContentStore) GetDaggerheartSubclass(_ context.Context, id string) (contentstore.DaggerheartSubclass, error) {
+	sc, ok := s.subclasses[id]
+	if !ok {
+		return contentstore.DaggerheartSubclass{}, storage.ErrNotFound
+	}
+	return sc, nil
 }
 
 type callbackRecorder struct {
@@ -73,6 +86,7 @@ func newTestHandler() (*Handler, *gamefakes.EventStore, *callbackRecorder) {
 		SessionGate:      &fakeSessionGateStore{},
 		SessionSpotlight: &fakeSessionSpotlightStore{},
 		Daggerheart:      daggerheartStore,
+		Content:          &fakeContentStore{subclasses: make(map[string]contentstore.DaggerheartSubclass)},
 		Event:            events,
 		ExecuteSystemCommand: func(_ context.Context, in SystemCommandInput) error {
 			recorder.systemCommands = append(recorder.systemCommands, in)

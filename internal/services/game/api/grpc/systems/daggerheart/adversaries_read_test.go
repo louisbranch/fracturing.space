@@ -51,9 +51,7 @@ func TestGetAdversary_NonDaggerheartCampaign(t *testing.T) {
 func TestGetAdversary_Success(t *testing.T) {
 	svc := newAdversaryTestService()
 
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-	})
+	createResp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -97,12 +95,10 @@ func TestListAdversaries_EmptyResult(t *testing.T) {
 func TestListAdversaries_WithResults(t *testing.T) {
 	svc := newAdversaryTestService()
 
-	for _, name := range []string{"Goblin", "Orc"} {
-		_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-			CampaignId: "camp-1", Name: name,
-		})
+	for _, entryID := range []string{testAdversaryEntryGoblinID, testAdversaryEntryOrcID} {
+		_, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(entryID))
 		if err != nil {
-			t.Fatalf("create %s: %v", name, err)
+			t.Fatalf("create %s: %v", entryID, err)
 		}
 	}
 
@@ -120,23 +116,22 @@ func TestListAdversaries_WithResults(t *testing.T) {
 func TestListAdversaries_FilterBySession(t *testing.T) {
 	svc := newAdversaryTestService()
 
-	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Session Goblin",
-		SessionId: wrapperspb.String("sess-1"),
-	})
+	req := adversaryCreateRequest(testAdversaryEntryGoblinID)
+	_, err := svc.CreateAdversary(context.Background(), req)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	_, err = svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Global Orc",
-	})
+	altReq := adversaryCreateRequest(testAdversaryEntryOrcID)
+	altReq.SessionId = testAdversaryAltSessionID
+	altReq.SceneId = testAdversaryAltSceneID
+	_, err = svc.CreateAdversary(context.Background(), altReq)
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 
 	resp, err := svc.ListAdversaries(context.Background(), &pb.DaggerheartListAdversariesRequest{
 		CampaignId: "camp-1",
-		SessionId:  wrapperspb.String("sess-1"),
+		SessionId:  wrapperspb.String(testAdversarySessionID),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -155,10 +150,7 @@ func TestLoadAdversaryForSession_NotFound(t *testing.T) {
 func TestLoadAdversaryForSession_WrongSession(t *testing.T) {
 	svc := newAdversaryTestService()
 
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-		SessionId: wrapperspb.String("sess-1"),
-	})
+	createResp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -170,29 +162,7 @@ func TestLoadAdversaryForSession_WrongSession(t *testing.T) {
 func TestLoadAdversaryForSession_Success(t *testing.T) {
 	svc := newAdversaryTestService()
 
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-		SessionId: wrapperspb.String("sess-1"),
-	})
-	if err != nil {
-		t.Fatalf("create: %v", err)
-	}
-
-	a, err := adversarytransport.LoadAdversaryForSession(context.Background(), svc.stores.Daggerheart, "camp-1", "sess-1", createResp.Adversary.Id)
-	if err != nil {
-		t.Fatalf("load: %v", err)
-	}
-	if a.Name != "Goblin" {
-		t.Errorf("name = %q, want Goblin", a.Name)
-	}
-}
-
-func TestLoadAdversaryForSession_NoSessionAssigned(t *testing.T) {
-	svc := newAdversaryTestService()
-
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-	})
+	createResp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}

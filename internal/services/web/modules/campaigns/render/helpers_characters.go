@@ -43,7 +43,7 @@ func campaignCharacterHasDaggerheartSummary(character CharacterView) bool {
 	}
 	return strings.TrimSpace(character.Daggerheart.ClassName) != "" &&
 		strings.TrimSpace(character.Daggerheart.SubclassName) != "" &&
-		strings.TrimSpace(character.Daggerheart.AncestryName) != "" &&
+		strings.TrimSpace(character.Daggerheart.HeritageName) != "" &&
 		strings.TrimSpace(character.Daggerheart.CommunityName) != "" &&
 		character.Daggerheart.Level > 0
 }

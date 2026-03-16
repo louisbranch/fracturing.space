@@ -48,11 +48,12 @@ func TestApplyRest_ShortRest_Success(t *testing.T) {
 	svc.stores.Write.Executor = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
-		CampaignId:   "camp-1",
-		CharacterIds: []string{"char-1"},
+		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
-			RestType:  pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
-			PartySize: 3,
+			RestType: pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
 		},
 	})
 	if err != nil {
@@ -101,11 +102,12 @@ func TestApplyRest_UsesDomainEngine(t *testing.T) {
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-rest-1")
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
-		CampaignId:   "camp-1",
-		CharacterIds: []string{"char-1"},
+		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
-			RestType:  pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
-			PartySize: 3,
+			RestType: pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
 		},
 	})
 	if err != nil {
@@ -169,11 +171,12 @@ func TestApplyRest_LongRest_Success(t *testing.T) {
 	svc.stores.Write.Executor = domain
 	ctx := contextWithSessionID("sess-1")
 	resp, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
-		CampaignId:   "camp-1",
-		CharacterIds: []string{"char-1"},
+		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
-			RestType:  pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
-			PartySize: 3,
+			RestType: pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
 		},
 	})
 	if err != nil {
@@ -219,12 +222,13 @@ func TestApplyRest_LongRest_CountdownFailureDoesNotCommitRest(t *testing.T) {
 
 	ctx := contextWithSessionID("sess-1")
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
-		CampaignId:   "camp-1",
-		CharacterIds: []string{"char-1"},
+		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
 			RestType:            pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
-			PartySize:           3,
 			LongTermCountdownId: "missing-countdown",
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
 		},
 	})
 	assertStatusCode(t, err, codes.NotFound)
@@ -280,12 +284,13 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 
 	ctx := contextWithSessionID("sess-1")
 	_, err = svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
-		CampaignId:   "camp-1",
-		CharacterIds: []string{"char-1"},
+		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
 			RestType:            pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
-			PartySize:           3,
 			LongTermCountdownId: "cd-1",
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
 		},
 	})
 	if err != nil {
@@ -304,10 +309,10 @@ func TestApplyRest_LongRest_WithCountdown_UsesSingleDomainCommand(t *testing.T) 
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
 		t.Fatalf("decode rest command payload: %v", err)
 	}
-	if got.LongTermCountdown == nil {
-		t.Fatal("expected long_term_countdown payload")
+	if len(got.CountdownUpdates) != 1 {
+		t.Fatalf("countdown updates = %d, want 1", len(got.CountdownUpdates))
 	}
-	if got.LongTermCountdown.CountdownID != "cd-1" {
-		t.Fatalf("countdown id = %s, want %s", got.LongTermCountdown.CountdownID, "cd-1")
+	if got.CountdownUpdates[0].CountdownID != "cd-1" {
+		t.Fatalf("countdown id = %s, want %s", got.CountdownUpdates[0].CountdownID, "cd-1")
 	}
 }

@@ -21,7 +21,7 @@ func TestUpdateAdversary_MissingCampaignID(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.UpdateAdversary(context.Background(), &pb.DaggerheartUpdateAdversaryRequest{
 		AdversaryId: "adv-1",
-		Name:        wrapperspb.String("New Name"),
+		Notes:       wrapperspb.String("New note"),
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -30,7 +30,7 @@ func TestUpdateAdversary_MissingAdversaryID(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.UpdateAdversary(context.Background(), &pb.DaggerheartUpdateAdversaryRequest{
 		CampaignId: "camp-1",
-		Name:       wrapperspb.String("New Name"),
+		Notes:      wrapperspb.String("New note"),
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -46,9 +46,7 @@ func TestUpdateAdversary_NoFieldsProvided(t *testing.T) {
 func TestUpdateAdversary_Success(t *testing.T) {
 	svc := newAdversaryTestService()
 
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-	})
+	createResp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -56,14 +54,17 @@ func TestUpdateAdversary_Success(t *testing.T) {
 	updateResp, err := svc.UpdateAdversary(context.Background(), &pb.DaggerheartUpdateAdversaryRequest{
 		CampaignId:  "camp-1",
 		AdversaryId: createResp.Adversary.Id,
-		Name:        wrapperspb.String("Hobgoblin"),
+		SceneId:     testAdversaryAltSceneID,
 		Notes:       wrapperspb.String("Upgraded"),
 	})
 	if err != nil {
 		t.Fatalf("update: %v", err)
 	}
-	if updateResp.Adversary.Name != "Hobgoblin" {
-		t.Errorf("name = %q, want Hobgoblin", updateResp.Adversary.Name)
+	if updateResp.Adversary.Notes != "Upgraded" {
+		t.Errorf("notes = %q, want Upgraded", updateResp.Adversary.Notes)
+	}
+	if updateResp.Adversary.SceneId != testAdversaryAltSceneID {
+		t.Errorf("scene_id = %q, want %q", updateResp.Adversary.SceneId, testAdversaryAltSceneID)
 	}
 }
 
@@ -72,9 +73,7 @@ func TestUpdateAdversary_UsesDomainEngine(t *testing.T) {
 	engine := &dynamicDomainEngine{store: svc.stores.Event}
 	svc.stores.Write.Executor = engine
 
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-	})
+	createResp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -83,7 +82,7 @@ func TestUpdateAdversary_UsesDomainEngine(t *testing.T) {
 	_, err = svc.UpdateAdversary(context.Background(), &pb.DaggerheartUpdateAdversaryRequest{
 		CampaignId:  "camp-1",
 		AdversaryId: createResp.Adversary.Id,
-		Name:        wrapperspb.String("Hobgoblin"),
+		Notes:       wrapperspb.String("Upgraded"),
 	})
 	if err != nil {
 		t.Fatalf("update: %v", err)
@@ -97,7 +96,7 @@ func TestUpdateAdversary_UsesDomainEngine(t *testing.T) {
 
 	var payload struct {
 		AdversaryID string `json:"adversary_id"`
-		Name        string `json:"name"`
+		Notes       string `json:"notes"`
 	}
 	if err := json.Unmarshal(engine.lastCommand.PayloadJSON, &payload); err != nil {
 		t.Fatalf("decode command payload: %v", err)
@@ -105,8 +104,8 @@ func TestUpdateAdversary_UsesDomainEngine(t *testing.T) {
 	if payload.AdversaryID != createResp.Adversary.Id {
 		t.Fatalf("adversary_id = %s, want %s", payload.AdversaryID, createResp.Adversary.Id)
 	}
-	if payload.Name != "Hobgoblin" {
-		t.Fatalf("name = %s, want %s", payload.Name, "Hobgoblin")
+	if payload.Notes != "Upgraded" {
+		t.Fatalf("notes = %s, want %s", payload.Notes, "Upgraded")
 	}
 }
 
@@ -115,7 +114,7 @@ func TestUpdateAdversary_NotFound(t *testing.T) {
 	_, err := svc.UpdateAdversary(context.Background(), &pb.DaggerheartUpdateAdversaryRequest{
 		CampaignId:  "camp-1",
 		AdversaryId: "nonexistent",
-		Name:        wrapperspb.String("New Name"),
+		Notes:       wrapperspb.String("New note"),
 	})
 	assertStatusCode(t, err, codes.NotFound)
 }

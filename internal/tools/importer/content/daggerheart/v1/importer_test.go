@@ -494,6 +494,30 @@ func TestUpsertSubclasses(t *testing.T) {
 	}
 }
 
+func TestUpsertSubclasses_AppliesBeastboundCompanionRequirement(t *testing.T) {
+	store := newFakeContentStore()
+	items := []subclassRecord{{
+		ID:      "subclass.beastbound",
+		ClassID: "class.ranger",
+		Name:    "Beastbound",
+	}}
+
+	if err := upsertSubclasses(context.Background(), store, items, "en-US", true, time.Now()); err != nil {
+		t.Fatalf("upsertSubclasses: %v", err)
+	}
+
+	subclass, ok := store.subclasses["subclass.beastbound"]
+	if !ok {
+		t.Fatal("beastbound subclass not stored")
+	}
+	if len(subclass.CreationRequirements) != 1 {
+		t.Fatalf("creation requirements = %v, want one requirement", subclass.CreationRequirements)
+	}
+	if got := subclass.CreationRequirements[0]; got != contentstore.DaggerheartSubclassCreationRequirementCompanionSheet {
+		t.Fatalf("creation requirement = %q, want %q", got, contentstore.DaggerheartSubclassCreationRequirementCompanionSheet)
+	}
+}
+
 func TestUpsertSubclasses_EmptyID(t *testing.T) {
 	err := upsertSubclasses(context.Background(), newFakeContentStore(), []subclassRecord{{ID: ""}}, "en-US", true, time.Now())
 	if err == nil {
@@ -677,13 +701,77 @@ func TestUpsertArmor(t *testing.T) {
 	items := []armorRecord{{
 		ID: "armor-1", Name: "Chain Mail", Tier: 2,
 		BaseMajorThreshold: 7, BaseSevereThreshold: 14,
-		ArmorScore: 3, Feature: "Heavy",
+		ArmorScore: 3, Feature: "Heavy: -1 to Evasion",
 	}}
 	if err := upsertArmor(context.Background(), store, items, "en-US", true, time.Now()); err != nil {
 		t.Fatalf("upsertArmor: %v", err)
 	}
 	if a := store.armor["armor-1"]; a.ArmorScore != 3 {
 		t.Errorf("armor score = %d", a.ArmorScore)
+	} else {
+		if a.Rules.AutomationStatus != contentstore.DaggerheartArmorAutomationStatusSupported {
+			t.Fatalf("automation status = %q, want supported", a.Rules.AutomationStatus)
+		}
+		if a.Rules.EvasionDelta != -1 {
+			t.Fatalf("evasion delta = %d, want -1", a.Rules.EvasionDelta)
+		}
+	}
+}
+
+func TestDeriveArmorRules(t *testing.T) {
+	tests := []struct {
+		name string
+		item armorRecord
+		want contentstore.DaggerheartArmorRules
+	}{
+		{
+			name: "warded",
+			item: armorRecord{Feature: "Warded: You reduce incoming magic damage by your Armor Score before applying it to your damage thresholds."},
+			want: contentstore.DaggerheartArmorRules{
+				AutomationStatus:       contentstore.DaggerheartArmorAutomationStatusSupported,
+				MitigationMode:         contentstore.DaggerheartArmorMitigationModeAny,
+				SeverityReductionSteps: 1,
+				WardedMagicReduction:   true,
+			},
+		},
+		{
+			name: "fortified",
+			item: armorRecord{Feature: "Fortified: When you mark an Armor Slot, you reduce the severity of an attack by two thresholds instead of one."},
+			want: contentstore.DaggerheartArmorRules{
+				AutomationStatus:       contentstore.DaggerheartArmorAutomationStatusSupported,
+				MitigationMode:         contentstore.DaggerheartArmorMitigationModeAny,
+				SeverityReductionSteps: 2,
+			},
+		},
+		{
+			name: "shifting",
+			item: armorRecord{Feature: "Shifting: When you are targeted for an attack, you can mark an Armor Slot to give the attack roll against you disadvantage."},
+			want: contentstore.DaggerheartArmorRules{
+				AutomationStatus:           contentstore.DaggerheartArmorAutomationStatusSupported,
+				MitigationMode:             contentstore.DaggerheartArmorMitigationModeAny,
+				SeverityReductionSteps:     1,
+				ShiftingAttackDisadvantage: 1,
+			},
+		},
+		{
+			name: "quiet",
+			item: armorRecord{Feature: "Quiet: You gain a +2 bonus to rolls you make to move silently."},
+			want: contentstore.DaggerheartArmorRules{
+				AutomationStatus:       contentstore.DaggerheartArmorAutomationStatusSupported,
+				MitigationMode:         contentstore.DaggerheartArmorMitigationModeAny,
+				SeverityReductionSteps: 1,
+				SilentMovementBonus:    2,
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := deriveArmorRules(tc.item)
+			if got != tc.want {
+				t.Fatalf("deriveArmorRules() = %+v, want %+v", got, tc.want)
+			}
+		})
 	}
 }
 

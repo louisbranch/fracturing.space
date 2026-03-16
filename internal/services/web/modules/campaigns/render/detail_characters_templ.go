@@ -461,7 +461,7 @@ func charactersFragment(view CharactersPageView, loc Localizer) templ.Component 
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var31 string
-				templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(character.Daggerheart.AncestryName + " / " + character.Daggerheart.CommunityName)
+				templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(character.Daggerheart.HeritageName + " / " + character.Daggerheart.CommunityName)
 				if templ_7745c5c3_Err != nil {
 					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_characters.templ`, Line: 73, Col: 149}
 				}
@@ -474,7 +474,7 @@ func charactersFragment(view CharactersPageView, loc Localizer) templ.Component 
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var32 string
-				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(character.Daggerheart.AncestryName)
+				templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(character.Daggerheart.HeritageName)
 				if templ_7745c5c3_Err != nil {
 					return templ.Error{Err: templ_7745c5c3_Err, FileName: `internal/services/web/modules/campaigns/render/detail_characters.templ`, Line: 73, Col: 188}
 				}

@@ -49,13 +49,21 @@ func (a *Adapter) putCharacterProfile(ctx context.Context, campaignID, character
 	}
 
 	return a.putCharacterState(ctx, projectionstore.DaggerheartCharacterState{
-		CampaignID:  campaignID,
-		CharacterID: characterID,
-		Hp:          profile.HpMax,
-		Hope:        HopeDefault,
-		HopeMax:     HopeMaxDefault,
-		Stress:      StressDefault,
-		Armor:       ArmorDefault,
-		LifeState:   LifeStateAlive,
+		CampaignID:     campaignID,
+		CharacterID:    characterID,
+		Hp:             profile.HpMax,
+		Hope:           HopeDefault,
+		HopeMax:        HopeMaxDefault,
+		Stress:         StressDefault,
+		Armor:          profile.ArmorMax,
+		LifeState:      LifeStateAlive,
+		CompanionState: companionProjectionStateFromProfile(profile),
 	})
+}
+
+func companionProjectionStateFromProfile(profile CharacterProfile) *projectionstore.DaggerheartCompanionState {
+	if profile.CompanionSheet == nil {
+		return nil
+	}
+	return &projectionstore.DaggerheartCompanionState{Status: CompanionStatusPresent}
 }

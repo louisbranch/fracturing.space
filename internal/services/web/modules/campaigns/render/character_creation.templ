@@ -38,12 +38,7 @@ func creationStepSummary(view CampaignCharacterCreationView, step CampaignCharac
 		}
 		return className + subclassName
 	case "heritage":
-		ancestry := creationNameByID(view.Ancestries, view.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name })
-		community := creationNameByID(view.Communities, view.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name })
-		if ancestry != "" && community != "" {
-			return ancestry + ", " + community
-		}
-		return ancestry + community
+		return campaignCreationHeritageStepSummary(view)
 	default:
 		return ""
 	}
@@ -252,11 +247,36 @@ func creationIconMaskStyle(iconURL string) string {
 }
 
 func creationStepClassSubclassReady(view CampaignCharacterCreationView) bool {
-	return strings.TrimSpace(view.ClassID) != "" && strings.TrimSpace(view.SubclassID) != ""
+	if strings.TrimSpace(view.ClassID) == "" || strings.TrimSpace(view.SubclassID) == "" {
+		return false
+	}
+	if !campaignCreationSubclassRequiresCompanion(view.SubclassID, view.SubclassCreationRequirements) {
+		return true
+	}
+	if view.CompanionSheet == nil {
+		return false
+	}
+	if strings.TrimSpace(view.CompanionSheet.AnimalKind) == "" ||
+		strings.TrimSpace(view.CompanionSheet.Name) == "" ||
+		strings.TrimSpace(view.CompanionSheet.AttackDescription) == "" ||
+		strings.TrimSpace(view.CompanionSheet.DamageType) == "" {
+		return false
+	}
+	return campaignCreationCompanionExperienceName(view.CompanionSheet, 0) != "" &&
+		campaignCreationCompanionExperienceName(view.CompanionSheet, 1) != ""
 }
 
 func creationStepHeritageReady(view CampaignCharacterCreationView) bool {
-	return strings.TrimSpace(view.AncestryID) != "" && strings.TrimSpace(view.CommunityID) != ""
+	firstID := strings.TrimSpace(view.Heritage.FirstFeatureAncestryID)
+	secondID := strings.TrimSpace(view.Heritage.SecondFeatureAncestryID)
+	communityID := strings.TrimSpace(view.Heritage.CommunityID)
+	if firstID == "" || communityID == "" {
+		return false
+	}
+	if campaignCreationHeritageMode(view) == "mixed" {
+		return secondID != "" && secondID != firstID
+	}
+	return secondID == "" || secondID == firstID
 }
 
 func creationStepTraitsReady(view CampaignCharacterCreationView) bool {
@@ -348,10 +368,18 @@ func creationStepTextareaReady(value string) bool {
 }
 
 templ creationFeatureList(features []CampaignCreationClassFeatureView) {
+	@creationFeatureListMuted(features, -1)
+}
+
+templ creationFeatureListMuted(features []CampaignCreationClassFeatureView, mutedIndex int) {
 	if len(features) > 0 {
 		<ul class="list-disc list-inside mt-0.5 space-y-1">
-			for _, feature := range features {
-				<li>
+			for idx, feature := range features {
+				<li
+					class={ creationMutedFeatureClass(idx == mutedIndex) }
+					data-creation-feature-index={ fmt.Sprintf("%d", idx) }
+					data-creation-feature-muted={ creationFeatureMutedAttr(idx == mutedIndex) }
+				>
 					<span class="text-sm font-semibold">{ feature.Name }</span>
 					if feature.Description != "" {
 						<p class="text-sm opacity-60 ml-5">@creationCatalogInlineMarkdown(feature.Description)</p>
@@ -360,6 +388,20 @@ templ creationFeatureList(features []CampaignCreationClassFeatureView) {
 			}
 		</ul>
 	}
+}
+
+func creationMutedFeatureClass(muted bool) string {
+	if muted {
+		return "opacity-25"
+	}
+	return ""
+}
+
+func creationFeatureMutedAttr(muted bool) string {
+	if muted {
+		return "true"
+	}
+	return "false"
 }
 
 // creationSelectableOptionCard is the shared shell used by selectable creation cards.
@@ -434,6 +476,24 @@ templ creationOptionCard(id string, name string, imageURL string, radioName stri
 		false,
 		true,
 		"",
+		domainWatermarks,
+	) {
+		{ children... }
+	}
+}
+
+templ creationOptionCardDisabled(id string, name string, imageURL string, radioName string, selectedID string, disabled bool, optionKind string, domainWatermarks []CampaignCreationDomainWatermarkView) {
+	@creationSelectableOptionCard(
+		id,
+		name,
+		imageURL,
+		radioName,
+		"radio",
+		campaignCreationOptionSelected(id, selectedID),
+		true,
+		disabled,
+		strings.TrimSpace(imageURL) != "",
+		optionKind,
 		domainWatermarks,
 	) {
 		{ children... }
@@ -579,12 +639,45 @@ templ creationSummaryBody(creation CampaignCharacterCreationView, loc Localizer)
 			<div>
 				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.heritage") }</span>
 				<p class="text-sm">
-					{ creationNameByID(creation.Ancestries, creation.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
-					<span class="opacity-70">
-						{ ", " + creationNameByID(creation.Communities, creation.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
-					</span>
+					{ campaignCreationHeritageDisplayName(creation) }
+					if creationNameByID(creation.Communities, creation.Heritage.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) != "" {
+						<span class="opacity-70">
+							{ ", " + creationNameByID(creation.Communities, creation.Heritage.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
+						</span>
+					}
 				</p>
+				if len(campaignCreationSelectedHeritageFeatures(creation)) > 0 {
+					<div class="mt-2">
+						<span class="text-sm font-medium opacity-70">Granted ancestry features:</span>
+						@creationFeatureList(campaignCreationSelectedHeritageFeatures(creation))
+					</div>
+				}
+				if len(campaignCreationSelectedCommunityFeatures(creation)) > 0 {
+					<div class="mt-2">
+						<span class="text-sm font-medium opacity-70">Community features:</span>
+						@creationFeatureList(campaignCreationSelectedCommunityFeatures(creation))
+					</div>
+				}
 			</div>
+			if campaignCreationHasCompanionData(creation.CompanionSheet) {
+				<div>
+					<span class="text-sm font-medium opacity-70">Companion</span>
+					<div class="mt-1 flex flex-wrap gap-2">
+						if campaignCreationCompanionText(creation.CompanionSheet, "name") != "" {
+							<span class="badge badge-outline badge-sm">{ campaignCreationCompanionText(creation.CompanionSheet, "name") }</span>
+						}
+						if campaignCreationCompanionText(creation.CompanionSheet, "animal_kind") != "" {
+							<span class="badge badge-outline badge-sm">{ campaignCreationCompanionText(creation.CompanionSheet, "animal_kind") }</span>
+						}
+						if campaignCreationCompanionText(creation.CompanionSheet, "damage_type") != "" {
+							<span class="badge badge-outline badge-sm">{ campaignCreationCompanionText(creation.CompanionSheet, "damage_type") }</span>
+						}
+					</div>
+					if campaignCreationCompanionText(creation.CompanionSheet, "attack_description") != "" {
+						<p class="mt-1 text-sm opacity-70">{ campaignCreationCompanionText(creation.CompanionSheet, "attack_description") }</p>
+					}
+				</div>
+			}
 			<div>
 				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.step.traits") }</span>
 				<div class="mt-1 flex flex-wrap gap-2">
@@ -675,14 +768,12 @@ templ creationSummaryCard(view CharacterCreationPageView, loc Localizer) {
 templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="1">
 		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.class_subclass") }</h3>
-		<!-- Collapsed class summary (shown after class is selected) -->
 		<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.ClassID) } data-class-selected>
 			<span class="font-medium" data-class-selected-name>
 				{ creationNameByID(view.Creation.Classes, view.Creation.ClassID, func(c CampaignCreationClassView) string { return c.ID }, func(c CampaignCreationClassView) string { return c.Name }) }
 			</span>
 			<button type="button" class="btn btn-ghost btn-xs" data-class-change>{ T(loc, "game.character_creation.action_change") }</button>
 		</div>
-		<!-- Class selection grid (hidden when a class is selected) -->
 		<div class={ creationClassGridHidden(view.Creation.ClassID) } data-class-grid>
 			<div class="form-control">
 				<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.class") }</span></label>
@@ -721,31 +812,33 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 				</div>
 			</div>
 		</div>
-		<!-- Subclass selection grouped by class -->
 		if len(view.Creation.Subclasses) > 0 {
 			<div class={ "scroll-mt-20 " + creationSubclassDividerHidden(view.Creation.ClassID) } data-subclass-section>
-				<!-- Collapsed subclass summary -->
 				<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.SubclassID) } data-subclass-selected>
 					<span class="font-medium" data-subclass-selected-name>
 						{ creationNameByID(view.Creation.Subclasses, view.Creation.SubclassID, func(s CampaignCreationSubclassView) string { return s.ID }, func(s CampaignCreationSubclassView) string { return s.Name }) }
 					</span>
 					<button type="button" class="btn btn-ghost btn-xs" data-subclass-change>{ T(loc, "game.character_creation.action_change") }</button>
 				</div>
-				<!-- Subclass grid -->
 				<div class={ creationClassGridHidden(view.Creation.SubclassID) } data-subclass-grid>
 					<div class="divider">{ T(loc, "game.character_creation.field.subclass") }</div>
 					for _, classID := range creationSubclassClassIDs(view.Creation.Subclasses) {
 						<div class={ "form-control " + creationSubclassGroupHidden(classID, view.Creation.ClassID) } data-subclass-group={ classID }>
 							<div class="grid grid-cols-1 gap-4">
 								for _, subclass := range creationSubclassesByClass(view.Creation.Subclasses, classID) {
-									@creationOptionCard(subclass.ID, subclass.Name, subclass.ImageURL, "subclass_id", view.Creation.SubclassID, nil) {
-										if len(subclass.Foundation) > 0 {
-											@creationFeatureList(subclass.Foundation)
+									<div data-subclass-card={ subclass.ID } data-subclass-requires-companion={ fmt.Sprintf("%t", campaignCreationSubclassRequiresCompanion(subclass.ID, subclass.CreationRequirements)) }>
+										@creationOptionCard(subclass.ID, subclass.Name, subclass.ImageURL, "subclass_id", view.Creation.SubclassID, nil) {
+											if len(subclass.Foundation) > 0 {
+												@creationFeatureList(subclass.Foundation)
+											}
+											if subclass.SpellcastTrait != "" {
+												<p class="text-xs opacity-60 mt-1">Spellcast: { subclass.SpellcastTrait }</p>
+											}
+											if campaignCreationSubclassRequiresCompanion(subclass.ID, subclass.CreationRequirements) {
+												<p class="text-xs font-medium uppercase tracking-wide opacity-60 mt-1">Companion required</p>
+											}
 										}
-										if subclass.SpellcastTrait != "" {
-											<p class="text-xs opacity-60 mt-1">Spellcast: { subclass.SpellcastTrait }</p>
-										}
-									}
+									</div>
 								}
 							</div>
 						</div>
@@ -753,6 +846,49 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 				</div>
 			</div>
 		}
+		<div class={ "space-y-4 " + creationConditionalHidden(!campaignCreationSubclassRequiresCompanion(view.Creation.SubclassID, view.Creation.SubclassCreationRequirements)) } data-companion-section>
+			<div class="divider">Companion</div>
+			<div class="grid gap-4 md:grid-cols-2">
+				<label class="form-control">
+					<span class="label-text font-medium">Animal Kind</span>
+					<input class="input input-bordered" type="text" name="companion_animal_kind" value={ campaignCreationCompanionText(view.Creation.CompanionSheet, "animal_kind") } disabled?={ !campaignCreationSubclassRequiresCompanion(view.Creation.SubclassID, view.Creation.SubclassCreationRequirements) } data-companion-field="animal_kind"/>
+				</label>
+				<label class="form-control">
+					<span class="label-text font-medium">Name</span>
+					<input class="input input-bordered" type="text" name="companion_name" value={ campaignCreationCompanionText(view.Creation.CompanionSheet, "name") } disabled?={ !campaignCreationSubclassRequiresCompanion(view.Creation.SubclassID, view.Creation.SubclassCreationRequirements) } data-companion-field="name"/>
+				</label>
+				<label class="form-control">
+					<span class="label-text font-medium">Experience 1</span>
+					<select class="select select-bordered" name="companion_experience_0_id" disabled?={ !campaignCreationSubclassRequiresCompanion(view.Creation.SubclassID, view.Creation.SubclassCreationRequirements) } data-companion-field="experience">
+						<option value="" selected?={ campaignCreationCompanionExperienceID(view.Creation.CompanionSheet, 0) == "" }>Select experience</option>
+						for _, experience := range view.Creation.CompanionExperiences {
+							<option value={ experience.ID } selected?={ experience.ID == campaignCreationCompanionExperienceID(view.Creation.CompanionSheet, 0) }>{ experience.Name }</option>
+						}
+					</select>
+				</label>
+				<label class="form-control">
+					<span class="label-text font-medium">Experience 2</span>
+					<select class="select select-bordered" name="companion_experience_1_id" disabled?={ !campaignCreationSubclassRequiresCompanion(view.Creation.SubclassID, view.Creation.SubclassCreationRequirements) } data-companion-field="experience">
+						<option value="" selected?={ campaignCreationCompanionExperienceID(view.Creation.CompanionSheet, 1) == "" }>Select experience</option>
+						for _, experience := range view.Creation.CompanionExperiences {
+							<option value={ experience.ID } selected?={ experience.ID == campaignCreationCompanionExperienceID(view.Creation.CompanionSheet, 1) }>{ experience.Name }</option>
+						}
+					</select>
+				</label>
+				<label class="form-control md:col-span-2">
+					<span class="label-text font-medium">Attack Description</span>
+					<textarea class="textarea textarea-bordered min-h-24" name="companion_attack_description" disabled?={ !campaignCreationSubclassRequiresCompanion(view.Creation.SubclassID, view.Creation.SubclassCreationRequirements) } data-companion-field="attack_description">{ campaignCreationCompanionText(view.Creation.CompanionSheet, "attack_description") }</textarea>
+				</label>
+				<label class="form-control">
+					<span class="label-text font-medium">Damage Type</span>
+					<select class="select select-bordered" name="companion_damage_type" disabled?={ !campaignCreationSubclassRequiresCompanion(view.Creation.SubclassID, view.Creation.SubclassCreationRequirements) } data-companion-field="damage_type">
+						<option value="" selected?={ campaignCreationCompanionText(view.Creation.CompanionSheet, "damage_type") == "" }>Select damage type</option>
+						<option value="physical" selected?={ strings.EqualFold(campaignCreationCompanionText(view.Creation.CompanionSheet, "damage_type"), "physical") }>Physical</option>
+						<option value="magic" selected?={ strings.EqualFold(campaignCreationCompanionText(view.Creation.CompanionSheet, "damage_type"), "magic") }>Magic</option>
+					</select>
+				</label>
+			</div>
+		</div>
 		@creationFooter(view, loc) {
 			@creationNextButton(loc, !creationStepClassSubclassReady(view.Creation))
 		}
@@ -770,13 +906,48 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 			var subclassSummary = form.querySelector('[data-subclass-selected]');
 			var subclassNameEl = form.querySelector('[data-subclass-selected-name]');
 			var subclassChangeBtn = form.querySelector('[data-subclass-change]');
+			var companionSection = form.querySelector('[data-companion-section]');
+			var companionFields = form.querySelectorAll('[data-companion-field]');
 			var nextButton = form.querySelector('[data-character-creation-next]');
+
+			function selectedSubclassRequiresCompanion() {
+				var selected = form.querySelector('input[name="subclass_id"]:checked');
+				if (!selected) return false;
+				var card = selected.closest('[data-subclass-card]');
+				return !!(card && card.dataset.subclassRequiresCompanion === 'true');
+			}
+
+			function companionReady() {
+				if (!selectedSubclassRequiresCompanion()) return true;
+				var animalKind = form.querySelector('[name="companion_animal_kind"]');
+				var companionName = form.querySelector('[name="companion_name"]');
+				var attackDescription = form.querySelector('[name="companion_attack_description"]');
+				var damageType = form.querySelector('[name="companion_damage_type"]');
+				var exp0 = form.querySelector('[name="companion_experience_0_id"]');
+				var exp1 = form.querySelector('[name="companion_experience_1_id"]');
+				return !!(animalKind && animalKind.value.trim() &&
+					companionName && companionName.value.trim() &&
+					attackDescription && attackDescription.value.trim() &&
+					damageType && damageType.value.trim() &&
+					exp0 && exp0.value.trim() &&
+					exp1 && exp1.value.trim());
+			}
+
+			function syncCompanionSection() {
+				var required = selectedSubclassRequiresCompanion();
+				if (companionSection) {
+					companionSection.classList.toggle('hidden', !required);
+				}
+				companionFields.forEach(function(field) {
+					field.disabled = !required;
+				});
+			}
 
 			function updateNextButton() {
 				if (!nextButton) return;
 				var hasClass = !!form.querySelector('input[name="class_id"]:checked');
 				var hasSubclass = !!form.querySelector('input[name="subclass_id"]:checked');
-				nextButton.disabled = !(hasClass && hasSubclass);
+				nextButton.disabled = !(hasClass && hasSubclass && companionReady());
 			}
 
 			function collapseClass(selectedClassID) {
@@ -789,7 +960,6 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 					expandSubclass();
 					subclassSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
 				}
-				// Show matching subclass group, hide others
 				var groups = form.querySelectorAll('[data-subclass-group]');
 				groups.forEach(function(g) {
 					if (g.dataset.subclassGroup === selectedClassID) {
@@ -799,6 +969,7 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 						g.querySelectorAll('input[name="subclass_id"]').forEach(function(r) { r.checked = false; });
 					}
 				});
+				syncCompanionSection();
 				updateNextButton();
 			}
 
@@ -806,6 +977,7 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 				classGrid.classList.remove('hidden');
 				classSummary.classList.add('hidden');
 				if (subclassSection) subclassSection.classList.add('hidden');
+				syncCompanionSection();
 				updateNextButton();
 			}
 
@@ -822,20 +994,26 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 				});
 				if (subclassGrid) subclassGrid.classList.add('hidden');
 				if (subclassSummary) subclassSummary.classList.remove('hidden');
+				syncCompanionSection();
 				updateNextButton();
 			}
 
 			function expandSubclass() {
 				if (subclassGrid) subclassGrid.classList.remove('hidden');
 				if (subclassSummary) subclassSummary.classList.add('hidden');
+				syncCompanionSection();
 				updateNextButton();
 			}
 
 			form.querySelectorAll('input[name="class_id"]').forEach(function(r) {
-				r.addEventListener('click', function() { collapseClass(r.value); });
+				r.addEventListener('change', function() { collapseClass(r.value); });
 			});
 			form.querySelectorAll('input[name="subclass_id"]').forEach(function(r) {
-				r.addEventListener('click', function() { collapseSubclass(r.value); });
+				r.addEventListener('change', function() { collapseSubclass(r.value); });
+			});
+			companionFields.forEach(function(field) {
+				field.addEventListener('input', updateNextButton);
+				field.addEventListener('change', updateNextButton);
 			});
 
 			if (changeBtn) {
@@ -844,56 +1022,171 @@ templ creationStepClassSubclass(view CharacterCreationPageView, loc Localizer) {
 			if (subclassChangeBtn) {
 				subclassChangeBtn.addEventListener('click', expandSubclass);
 			}
+			syncCompanionSection();
 			updateNextButton();
 		})();
 	</script>
 }
 
-// --- Step 2: Heritage (Ancestry + Community) ---
+// --- Step 2: Heritage ---
 
 templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 	<form method="post" action={ routepath.AppCampaignCharacterCreationStep(view.CampaignID, view.CharacterID) } class="space-y-4" data-character-creation-form-step="2">
 		<h3 class="text-lg font-semibold">{ T(loc, "game.character_creation.step.heritage") }</h3>
-		<!-- Collapsed ancestry summary -->
-		<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.AncestryID) } data-ancestry-selected>
-			<span class="font-medium" data-ancestry-selected-name>
-				{ creationNameByID(view.Creation.Ancestries, view.Creation.AncestryID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
-			</span>
-			<button type="button" class="btn btn-ghost btn-xs" data-ancestry-change>{ T(loc, "game.character_creation.action_change") }</button>
+		<div class="space-y-2 text-sm opacity-80">
+			<p>Single heritage keeps both ancestry features from one ancestry.</p>
+			<p>Mixed heritage takes the first feature from one ancestry and the second feature from another.</p>
 		</div>
-		<!-- Ancestry grid -->
-		<div class={ creationClassGridHidden(view.Creation.AncestryID) } data-ancestry-grid>
-			<div class="form-control">
-				<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.ancestry") }</span></label>
+		<div class="flex flex-wrap gap-3" data-heritage-mode-toggle>
+			<label class="label cursor-pointer gap-2">
+				<input class="radio radio-primary" type="radio" name="heritage_mode" value="single" checked?={ campaignCreationHeritageMode(view.Creation) == "single" }/>
+				<span class="label-text">Single ancestry</span>
+			</label>
+			<label class="label cursor-pointer gap-2">
+				<input class="radio radio-primary" type="radio" name="heritage_mode" value="mixed" checked?={ campaignCreationHeritageMode(view.Creation) == "mixed" }/>
+				<span class="label-text">Mixed ancestry</span>
+			</label>
+		</div>
+		<div class={ creationConditionalHidden(campaignCreationHeritageMode(view.Creation) == "mixed") } data-mixed-heritage-label>
+			<label class="form-control">
+				<span class="label-text font-medium">Heritage label</span>
+				<input
+					class="input input-bordered"
+					type="text"
+					name="ancestry_label"
+					value={ view.Creation.Heritage.AncestryLabel }
+					placeholder="Optional."
+					data-auto-label={ campaignCreationHeritageAutoLabel(view.Creation) }
+					disabled?={ campaignCreationHeritageMode(view.Creation) == "single" }
+					data-mixed-heritage-field="label"
+				/>
+			</label>
+		</div>
+		<div data-heritage-section="first">
+			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.Heritage.FirstFeatureAncestryID) } data-heritage-selected="first">
+				<span class="text-sm font-medium opacity-70" data-heritage-selected-label-text="first">
+					if campaignCreationHeritageMode(view.Creation) == "single" {
+						Ancestry features:
+					} else {
+						Primary ancestry feature:
+					}
+				</span>
+				<span class="font-medium" data-heritage-selected-name>{ campaignCreationSelectedAncestryName(view.Creation, 0) }</span>
+				if campaignCreationSelectedAncestryFeatureNames(view.Creation, 0) != "" {
+					<span class="badge badge-outline badge-sm" data-heritage-selected-feature>{ campaignCreationSelectedAncestryFeatureNames(view.Creation, 0) }</span>
+				}
+				<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="first">{ T(loc, "game.character_creation.action_change") }</button>
+			</div>
+			<div class={ creationClassGridHidden(view.Creation.Heritage.FirstFeatureAncestryID) } data-heritage-grid="first">
+				<div class="form-control">
+					<label class="label">
+						<span class="label-text font-medium" data-heritage-grid-label="first">
+							if campaignCreationHeritageMode(view.Creation) == "single" {
+								Ancestry features
+							} else {
+								Primary ancestry features
+							}
+						</span>
+					</label>
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						for _, ancestry := range view.Creation.Ancestries {
-							<div data-ancestry-card={ ancestry.ID } data-ancestry-name={ ancestry.Name }>
-								@creationOptionCard(ancestry.ID, ancestry.Name, ancestry.ImageURL, "ancestry_id", view.Creation.AncestryID, nil) {
-									@creationFeatureList(ancestry.Features)
+							<div
+								data-heritage-card
+								data-heritage-card-name={ ancestry.Name }
+								data-heritage-card-single-features={ campaignCreationFeatureNames(ancestry.Features) }
+								data-heritage-card-mixed-features={ campaignCreationFeatureNames(campaignCreationHeritageSlotFeatures(ancestry, 0)) }
+								data-heritage-card-summary-features={ campaignCreationAncestryCardSummaryFeatures(view.Creation, ancestry, 0) }
+							>
+								@creationOptionCardDisabled(
+									ancestry.ID,
+									ancestry.Name,
+									ancestry.ImageURL,
+									"first_feature_ancestry_id",
+									view.Creation.Heritage.FirstFeatureAncestryID,
+									campaignCreationHeritageMode(view.Creation) == "mixed" && strings.TrimSpace(view.Creation.Heritage.SecondFeatureAncestryID) != "" && ancestry.ID == view.Creation.Heritage.SecondFeatureAncestryID,
+									"heritage-first-ancestry",
+									nil,
+								) {
+									@creationFeatureListMuted(campaignCreationAncestryCardFeatures(view.Creation, ancestry, 0), campaignCreationMutedAncestryFeatureIndex(view.Creation, 0))
 								}
 							</div>
-					}
+						}
+					</div>
 				</div>
 			</div>
 		</div>
-		<!-- Community section (hidden until ancestry selected) -->
-		<div class={ "scroll-mt-20 " + creationSubclassDividerHidden(view.Creation.AncestryID) } data-community-section>
-			<!-- Collapsed community summary -->
-			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.CommunityID) } data-community-selected>
-				<span class="font-medium" data-community-selected-name>
-					{ creationNameByID(view.Creation.Communities, view.Creation.CommunityID, func(h CampaignCreationHeritageView) string { return h.ID }, func(h CampaignCreationHeritageView) string { return h.Name }) }
-				</span>
-				<button type="button" class="btn btn-ghost btn-xs" data-community-change>{ T(loc, "game.character_creation.action_change") }</button>
+		<div class={ creationConditionalHidden(campaignCreationHeritageMode(view.Creation) == "mixed") } data-mixed-heritage-section>
+			<div data-heritage-section="mixed">
+				<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationConditionalHidden(campaignCreationHeritageMode(view.Creation) == "mixed" && strings.TrimSpace(view.Creation.Heritage.SecondFeatureAncestryID) != "") } data-heritage-selected="mixed">
+					<span class="text-sm font-medium opacity-70" data-heritage-selected-label-text="mixed">Secondary ancestry feature:</span>
+					<span class="font-medium" data-heritage-selected-name>{ campaignCreationSelectedAncestryName(view.Creation, 1) }</span>
+					if campaignCreationSelectedAncestryFeatureNames(view.Creation, 1) != "" {
+						<span class="badge badge-outline badge-sm" data-heritage-selected-feature>{ campaignCreationSelectedAncestryFeatureNames(view.Creation, 1) }</span>
+					}
+					<span class={ "badge badge-ghost badge-sm " + creationConditionalHidden(campaignCreationHeritageAutoLabel(view.Creation) != "") } data-heritage-selected-label>{ campaignCreationHeritageAutoLabel(view.Creation) }</span>
+					<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="mixed">{ T(loc, "game.character_creation.action_change") }</button>
+				</div>
+				<div class={ creationConditionalHidden(campaignCreationHeritageMode(view.Creation) == "mixed" && strings.TrimSpace(view.Creation.Heritage.SecondFeatureAncestryID) == "") } data-heritage-grid="mixed">
+					<div class="form-control mt-4">
+						<label class="label"><span class="label-text font-medium" data-heritage-grid-label="mixed">Secondary ancestry features</span></label>
+						<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+							for _, ancestry := range view.Creation.Ancestries {
+								<div
+									data-heritage-card
+									data-heritage-card-name={ ancestry.Name }
+									data-heritage-card-summary-features={ campaignCreationFeatureNames(campaignCreationHeritageSlotFeatures(ancestry, 1)) }
+								>
+									@creationOptionCardDisabled(
+										ancestry.ID,
+										ancestry.Name,
+										ancestry.ImageURL,
+										"second_feature_ancestry_id",
+										view.Creation.Heritage.SecondFeatureAncestryID,
+										campaignCreationHeritageMode(view.Creation) == "mixed" && strings.TrimSpace(view.Creation.Heritage.FirstFeatureAncestryID) != "" && ancestry.ID == view.Creation.Heritage.FirstFeatureAncestryID,
+										"heritage-second-ancestry",
+										nil,
+									) {
+										@creationFeatureListMuted(campaignCreationAncestryCardFeatures(view.Creation, ancestry, 1), campaignCreationMutedAncestryFeatureIndex(view.Creation, 1))
+									}
+								</div>
+							}
+						</div>
+					</div>
+				</div>
 			</div>
-			<!-- Community grid -->
-			<div class={ creationClassGridHidden(view.Creation.CommunityID) } data-community-grid>
+		</div>
+		<div data-heritage-section="community">
+			<div class={ "flex items-center gap-3 p-3 rounded-lg border border-primary bg-primary/5 " + creationClassCollapsedHidden(view.Creation.Heritage.CommunityID) } data-heritage-selected="community">
+				<span class="text-sm font-medium opacity-70">{ T(loc, "game.character_creation.field.community") }:</span>
+				<span class="font-medium" data-heritage-selected-name>{ campaignCreationSelectedCommunityName(view.Creation) }</span>
+				if campaignCreationFeatureNames(campaignCreationSelectedCommunityFeatures(view.Creation)) != "" {
+					<span class="badge badge-outline badge-sm" data-heritage-selected-feature>{ campaignCreationFeatureNames(campaignCreationSelectedCommunityFeatures(view.Creation)) }</span>
+				}
+				<button type="button" class="btn btn-ghost btn-xs" data-heritage-change="community">{ T(loc, "game.character_creation.action_change") }</button>
+			</div>
+			<div class={ creationClassGridHidden(view.Creation.Heritage.CommunityID) } data-heritage-grid="community">
 				<div class="divider">{ T(loc, "game.character_creation.field.community") }</div>
 				<div class="form-control">
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 						for _, community := range view.Creation.Communities {
-							@creationOptionCard(community.ID, community.Name, community.ImageURL, "community_id", view.Creation.CommunityID, nil) {
-								@creationFeatureList(community.Features)
-							}
+							<div
+								data-heritage-card
+								data-heritage-card-name={ community.Name }
+								data-heritage-card-summary-features={ campaignCreationFeatureNames(community.Features) }
+							>
+								@creationOptionCardDisabled(
+									community.ID,
+									community.Name,
+									community.ImageURL,
+									"community_id",
+									view.Creation.Heritage.CommunityID,
+									false,
+									"heritage-community",
+									nil,
+								) {
+									@creationFeatureList(community.Features)
+								}
+							</div>
 						}
 					</div>
 				</div>
@@ -907,79 +1200,243 @@ templ creationStepHeritage(view CharacterCreationPageView, loc Localizer) {
 		(function() {
 			var form = document.querySelector('[data-character-creation-form-step="2"]');
 			if (!form) return;
-			var ancestryGrid = form.querySelector('[data-ancestry-grid]');
-			var ancestrySummary = form.querySelector('[data-ancestry-selected]');
-			var ancestryNameEl = form.querySelector('[data-ancestry-selected-name]');
-			var changeBtn = form.querySelector('[data-ancestry-change]');
-			var communitySection = form.querySelector('[data-community-section]');
-			var communityGrid = form.querySelector('[data-community-grid]');
-			var communitySummary = form.querySelector('[data-community-selected]');
-			var communityNameEl = form.querySelector('[data-community-selected-name]');
-			var communityChangeBtn = form.querySelector('[data-community-change]');
+			var mixedLabel = form.querySelector('[data-mixed-heritage-label]');
+			var mixedSection = form.querySelector('[data-mixed-heritage-section]');
+			var mixedFields = form.querySelectorAll('[data-mixed-heritage-field], input[name="second_feature_ancestry_id"]');
 			var nextButton = form.querySelector('[data-character-creation-next]');
+			var sectionOrder = ['first', 'mixed', 'community'];
+
+			function heritageMode() {
+				var selected = form.querySelector('input[name="heritage_mode"]:checked');
+				return selected ? selected.value : 'single';
+			}
+
+			function selectedInput(name) {
+				return form.querySelector('input[name="' + name + '"]:checked');
+			}
+
+			function selectedFeatureLabel(sectionName) {
+				if (sectionName === 'first') {
+					return heritageMode() === 'mixed' ? 'Primary ancestry feature:' : 'Ancestry features:';
+				}
+				if (sectionName === 'mixed') {
+					return 'Secondary ancestry feature:';
+				}
+				return '';
+			}
+
+			function gridLabel(sectionName) {
+				if (sectionName === 'first') {
+					return heritageMode() === 'mixed' ? 'Primary ancestry features' : 'Ancestry features';
+				}
+				if (sectionName === 'mixed') {
+					return 'Secondary ancestry features';
+				}
+				return '';
+			}
+
+			function setCardDisabled(input, disabled) {
+				if (!input) return;
+				input.disabled = disabled;
+				var card = input.closest('label');
+				if (!card) return;
+				card.classList.toggle('opacity-60', disabled);
+				card.classList.toggle('cursor-not-allowed', disabled);
+				card.classList.toggle('pointer-events-none', disabled);
+			}
+
+			function syncMixedSection() {
+				var mixed = heritageMode() === 'mixed';
+				var mixedSummary = form.querySelector('[data-heritage-selected="mixed"]');
+				var mixedGrid = form.querySelector('[data-heritage-grid="mixed"]');
+				var hasSecond = !!selectedInput('second_feature_ancestry_id');
+				if (mixedLabel) mixedLabel.classList.toggle('hidden', !mixed);
+				if (mixedSection) mixedSection.classList.toggle('hidden', !mixed);
+				mixedFields.forEach(function(field) {
+					field.disabled = !mixed;
+				});
+				if (mixed) {
+					if (mixedSummary) mixedSummary.classList.toggle('hidden', !hasSecond);
+					if (mixedGrid) mixedGrid.classList.toggle('hidden', hasSecond);
+				} else {
+					if (mixedSummary) mixedSummary.classList.add('hidden');
+					if (mixedGrid) mixedGrid.classList.add('hidden');
+				}
+				syncHeritageLabels();
+				syncFeatureMuting();
+				syncCollapsedSectionSummary('first');
+				syncCollapsedSectionSummary('mixed');
+			}
+
+			function syncHeritageLabels() {
+				form.querySelectorAll('[data-heritage-selected-label-text]').forEach(function(label) {
+					var sectionName = label.dataset.heritageSelectedLabelText;
+					label.textContent = selectedFeatureLabel(sectionName);
+				});
+				form.querySelectorAll('[data-heritage-grid-label]').forEach(function(label) {
+					var sectionName = label.dataset.heritageGridLabel;
+					label.textContent = gridLabel(sectionName);
+				});
+			}
+
+			function syncFeatureMuting() {
+				var mixed = heritageMode() === 'mixed';
+				form.querySelectorAll('[data-heritage-grid="first"] [data-creation-feature-index]').forEach(function(item) {
+					var muted = mixed && item.dataset.creationFeatureIndex === '1';
+					item.classList.toggle('opacity-25', muted);
+					item.dataset.creationFeatureMuted = muted ? 'true' : 'false';
+				});
+				form.querySelectorAll('[data-heritage-grid="mixed"] [data-creation-feature-index]').forEach(function(item) {
+					var muted = mixed && item.dataset.creationFeatureIndex === '0';
+					item.classList.toggle('opacity-25', muted);
+					item.dataset.creationFeatureMuted = muted ? 'true' : 'false';
+				});
+			}
+
+			function heritageCardSummaryFeatures(card, sectionName) {
+				if (!card) return '';
+				if (sectionName === 'first') {
+					return heritageMode() === 'mixed'
+						? (card.dataset.heritageCardMixedFeatures || '')
+						: (card.dataset.heritageCardSingleFeatures || '');
+				}
+				return card.dataset.heritageCardSummaryFeatures || '';
+			}
+
+			function syncCollapsedSectionSummary(sectionName) {
+				var summary = form.querySelector('[data-heritage-selected="' + sectionName + '"]');
+				if (!summary || summary.classList.contains('hidden')) return;
+				var inputName = sectionName === 'first' ? 'first_feature_ancestry_id' : sectionName === 'mixed' ? 'second_feature_ancestry_id' : 'community_id';
+				var checked = selectedInput(inputName);
+				if (!checked) return;
+				var card = checked.closest('[data-heritage-card]');
+				if (!card) return;
+				var nameEl = summary.querySelector('[data-heritage-selected-name]');
+				var featureEl = summary.querySelector('[data-heritage-selected-feature]');
+				if (nameEl) nameEl.textContent = card.dataset.heritageCardName || '';
+				if (featureEl) featureEl.textContent = heritageCardSummaryFeatures(card, sectionName);
+			}
+
+			function collapseSection(sectionName, shouldFocus) {
+				var summary = form.querySelector('[data-heritage-selected="' + sectionName + '"]');
+				var grid = form.querySelector('[data-heritage-grid="' + sectionName + '"]');
+				if (!summary || !grid) return;
+				var inputName = sectionName === 'first' ? 'first_feature_ancestry_id' : sectionName === 'mixed' ? 'second_feature_ancestry_id' : 'community_id';
+				var checked = selectedInput(inputName);
+				if (!checked) return;
+				var card = checked.closest('[data-heritage-card]');
+				if (card) {
+					var nameEl = summary.querySelector('[data-heritage-selected-name]');
+					var featureEl = summary.querySelector('[data-heritage-selected-feature]');
+					if (nameEl) nameEl.textContent = card.dataset.heritageCardName || '';
+					if (featureEl) featureEl.textContent = heritageCardSummaryFeatures(card, sectionName);
+				}
+					if (sectionName === 'mixed') {
+						var labelEl = summary.querySelector('[data-heritage-selected-label]');
+						var labelInput = form.querySelector('input[name="ancestry_label"]');
+						if (labelEl && labelInput) {
+							var autoLabel = labelInput.dataset.autoLabel || '';
+							var customLabel = labelInput.value.trim();
+							labelEl.textContent = customLabel || autoLabel;
+							labelEl.classList.toggle('hidden', !(customLabel || autoLabel));
+						}
+					}
+				grid.classList.add('hidden');
+				summary.classList.remove('hidden');
+				if (shouldFocus) focusNext(sectionName);
+				updateNextButton();
+			}
+
+			function expandSection(sectionName) {
+				var summary = form.querySelector('[data-heritage-selected="' + sectionName + '"]');
+				var grid = form.querySelector('[data-heritage-grid="' + sectionName + '"]');
+				if (!summary || !grid) return;
+				grid.classList.remove('hidden');
+				summary.classList.add('hidden');
+				updateNextButton();
+			}
+
+			function focusNext(sectionName) {
+				var start = sectionOrder.indexOf(sectionName);
+				for (var i = start + 1; i < sectionOrder.length; i++) {
+					var next = sectionOrder[i];
+					if (next === 'mixed' && heritageMode() !== 'mixed') continue;
+					var grid = form.querySelector('[data-heritage-grid="' + next + '"]');
+					if (grid && !grid.classList.contains('hidden')) {
+						grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+						return;
+					}
+				}
+			}
+
+			function syncDistinctAncestries() {
+				var mixed = heritageMode() === 'mixed';
+				var first = selectedInput('first_feature_ancestry_id');
+				var second = selectedInput('second_feature_ancestry_id');
+				form.querySelectorAll('input[name="first_feature_ancestry_id"]').forEach(function(input) {
+					setCardDisabled(input, false);
+				});
+				if (!mixed) {
+					return;
+				}
+				if (mixed && first && second && first.value === second.value) {
+					second.checked = false;
+					second = null;
+				}
+				form.querySelectorAll('input[name="first_feature_ancestry_id"]').forEach(function(input) {
+					setCardDisabled(input, !!second && input.value === second.value);
+				});
+				form.querySelectorAll('input[name="second_feature_ancestry_id"]').forEach(function(input) {
+					setCardDisabled(input, mixed && first && input.value === first.value);
+				});
+			}
 
 			function updateNextButton() {
 				if (!nextButton) return;
-				var hasAncestry = !!form.querySelector('input[name="ancestry_id"]:checked');
-				var hasCommunity = !!form.querySelector('input[name="community_id"]:checked');
-				nextButton.disabled = !(hasAncestry && hasCommunity);
-			}
-
-			function collapseAncestry(selectedID) {
-				var card = form.querySelector('[data-ancestry-card="' + selectedID + '"]');
-				if (card) ancestryNameEl.textContent = card.dataset.ancestryName;
-				ancestryGrid.classList.add('hidden');
-				ancestrySummary.classList.remove('hidden');
-				if (communitySection) {
-					communitySection.classList.remove('hidden');
-					expandCommunity();
-					communitySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				var first = selectedInput('first_feature_ancestry_id');
+				var second = selectedInput('second_feature_ancestry_id');
+				var hasFirst = !!first;
+				var hasCommunity = !!selectedInput('community_id');
+				if (heritageMode() !== 'mixed') {
+					nextButton.disabled = !(hasFirst && hasCommunity);
+					return;
 				}
-				updateNextButton();
+				nextButton.disabled = !(hasFirst && second && hasCommunity && first.value !== second.value);
 			}
 
-			function expandAncestry() {
-				ancestryGrid.classList.remove('hidden');
-				ancestrySummary.classList.add('hidden');
-				if (communitySection) communitySection.classList.add('hidden');
-				updateNextButton();
-			}
-
-			function collapseCommunity(selectedID) {
-				var radios = form.querySelectorAll('input[name="community_id"]');
-				radios.forEach(function(r) {
-					if (r.value === selectedID) {
-						var card = r.closest('[class*="card"]');
-						if (card) {
-							var nameEl = card.querySelector('.card-title');
-							if (nameEl && communityNameEl) communityNameEl.textContent = nameEl.textContent;
-						}
+			form.querySelectorAll('input[name="heritage_mode"], input[name="first_feature_ancestry_id"], input[name="second_feature_ancestry_id"], input[name="community_id"]').forEach(function(field) {
+				field.addEventListener('change', function() {
+					syncMixedSection();
+					syncDistinctAncestries();
+					if (field.name === 'first_feature_ancestry_id') collapseSection('first', true);
+					if (field.name === 'second_feature_ancestry_id' && heritageMode() === 'mixed') collapseSection('mixed', true);
+					if (field.name === 'community_id') collapseSection('community', true);
+					updateNextButton();
+				});
+			});
+			form.querySelectorAll('input[name="ancestry_label"]').forEach(function(field) {
+				field.addEventListener('input', function() {
+					var mixedSummary = form.querySelector('[data-heritage-selected="mixed"] [data-heritage-selected-label]');
+					var autoLabel = field.dataset.autoLabel || '';
+					if (mixedSummary) {
+						var value = field.value.trim() || autoLabel;
+						mixedSummary.textContent = value;
+						mixedSummary.classList.toggle('hidden', !value);
 					}
 				});
-				if (communityGrid) communityGrid.classList.add('hidden');
-				if (communitySummary) communitySummary.classList.remove('hidden');
-				updateNextButton();
-			}
-
-			function expandCommunity() {
-				if (communityGrid) communityGrid.classList.remove('hidden');
-				if (communitySummary) communitySummary.classList.add('hidden');
-				updateNextButton();
-			}
-
-			form.querySelectorAll('input[name="ancestry_id"]').forEach(function(r) {
-				r.addEventListener('click', function() { collapseAncestry(r.value); });
 			});
-			form.querySelectorAll('input[name="community_id"]').forEach(function(r) {
-				r.addEventListener('click', function() { collapseCommunity(r.value); });
+			form.querySelectorAll('[data-heritage-change]').forEach(function(button) {
+				button.addEventListener('click', function() {
+					expandSection(button.dataset.heritageChange);
+				});
 			});
-
-			if (changeBtn) {
-				changeBtn.addEventListener('click', expandAncestry);
-			}
-			if (communityChangeBtn) {
-				communityChangeBtn.addEventListener('click', expandCommunity);
-			}
+			syncMixedSection();
+			syncDistinctAncestries();
+			syncHeritageLabels();
+			syncFeatureMuting();
+			if (selectedInput('first_feature_ancestry_id')) collapseSection('first', false);
+			if (heritageMode() === 'mixed' && selectedInput('second_feature_ancestry_id')) collapseSection('mixed', false);
+			if (selectedInput('community_id')) collapseSection('community', false);
 			updateNextButton();
 		})();
 	</script>

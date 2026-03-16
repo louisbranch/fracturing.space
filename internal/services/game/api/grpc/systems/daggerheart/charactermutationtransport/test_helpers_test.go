@@ -38,6 +38,14 @@ func (s *testDaggerheartStore) GetDaggerheartCharacterProfile(context.Context, s
 	return projectionstore.DaggerheartCharacterProfile{}, storage.ErrNotFound
 }
 
+func (s *testDaggerheartStore) GetDaggerheartCharacterState(context.Context, string, string) (projectionstore.DaggerheartCharacterState, error) {
+	return projectionstore.DaggerheartCharacterState{}, storage.ErrNotFound
+}
+
+func (s *testDaggerheartStore) GetDaggerheartAdversary(context.Context, string, string) (projectionstore.DaggerheartAdversary, error) {
+	return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
+}
+
 func testProfile(campaignID, characterID string) projectionstore.DaggerheartCharacterProfile {
 	return projectionstore.DaggerheartCharacterProfile{
 		CampaignID:   campaignID,

@@ -23,6 +23,13 @@ func TestActionHandlersRejectNilRequests(t *testing.T) {
 			},
 		},
 		{
+			name: "ApplyClassFeature",
+			call: func(s *DaggerheartService) error {
+				_, err := s.ApplyClassFeature(ctx, nil)
+				return err
+			},
+		},
+		{
 			name: "ApplyAdversaryDamage",
 			call: func(s *DaggerheartService) error {
 				_, err := s.ApplyAdversaryDamage(ctx, nil)
@@ -33,13 +40,6 @@ func TestActionHandlersRejectNilRequests(t *testing.T) {
 			name: "ApplyRest",
 			call: func(s *DaggerheartService) error {
 				_, err := s.ApplyRest(ctx, nil)
-				return err
-			},
-		},
-		{
-			name: "ApplyDowntimeMove",
-			call: func(s *DaggerheartService) error {
-				_, err := s.ApplyDowntimeMove(ctx, nil)
 				return err
 			},
 		},

@@ -29,7 +29,7 @@ func TestCharacterStateFromStorage_RoundTrip(t *testing.T) {
 		HopeMax:     6,
 		Stress:      1,
 		Armor:       2,
-		Conditions:  []string{"hidden"},
+		Conditions:  standardProjectionConditions("hidden"),
 		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{
 			{Source: " ritual ", Duration: " short_rest ", SourceID: " src-1 ", Amount: 2},
 		},
@@ -62,13 +62,13 @@ func TestApplyStatePatch_ValidatesRanges(t *testing.T) {
 		Armor:       0,
 	}
 	badHope := 7
-	_, err := ApplyStatePatch(state, 0, nil, &badHope, nil, nil, nil, nil)
+	_, err := ApplyStatePatch(state, 0, nil, &badHope, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err == nil || !strings.Contains(err.Error(), "hope must be in range") {
 		t.Fatalf("expected hope range error, got %v", err)
 	}
 
 	goodHope := 3
-	next, err := ApplyStatePatch(state, 0, nil, &goodHope, nil, nil, nil, nil)
+	next, err := ApplyStatePatch(state, 0, nil, &goodHope, nil, nil, nil, nil, nil, nil, nil, nil)
 	if err != nil {
 		t.Fatalf("ApplyStatePatch: %v", err)
 	}
@@ -81,10 +81,10 @@ func TestApplyConditionPatch_ReplacesConditions(t *testing.T) {
 	state := projectionstore.DaggerheartCharacterState{
 		CampaignID:  "camp-1",
 		CharacterID: "char-1",
-		Conditions:  []string{"old"},
+		Conditions:  standardProjectionConditions("old"),
 	}
-	next := ApplyConditionPatch(state, 0, []string{"new"})
-	if len(next.Conditions) != 1 || next.Conditions[0] != "new" {
+	next := ApplyConditionPatch(state, 0, standardProjectionConditions("new"))
+	if len(next.Conditions) != 1 || next.Conditions[0].Code != "new" {
 		t.Fatalf("conditions = %v, want [new]", next.Conditions)
 	}
 }
@@ -147,6 +147,20 @@ func TestValidateAdversaryStats(t *testing.T) {
 	if err := ValidateAdversaryStats(6, 6, 1, 2, 10, 3, 2, 1); err == nil {
 		t.Fatal("expected severe >= major error")
 	}
+}
+
+func standardProjectionConditions(codes ...string) []projectionstore.DaggerheartConditionState {
+	out := make([]projectionstore.DaggerheartConditionState, 0, len(codes))
+	for _, code := range codes {
+		out = append(out, projectionstore.DaggerheartConditionState{
+			ID:       code,
+			Class:    "standard",
+			Standard: code,
+			Code:     code,
+			Label:    code,
+		})
+	}
+	return out
 }
 
 func TestApplyAdversaryDamagePatch(t *testing.T) {

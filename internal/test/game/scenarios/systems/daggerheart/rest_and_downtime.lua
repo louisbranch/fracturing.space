@@ -1,7 +1,6 @@
 local scn = Scenario.new("rest_and_downtime")
 local dh = scn:system("DAGGERHEART")
 
--- Frame Frodo between encounters for rest and downtime.
 scn:campaign{
   name = "Rest and Downtime",
   system = "DAGGERHEART",
@@ -9,42 +8,39 @@ scn:campaign{
   theme = "rest"
 }
 
-scn:pc("Frodo", { hp = 3, stress = 3, armor = 1 })
+scn:pc("Frodo", { hp = 5, hope = 1, stress = 1, armor = 0 })
+scn:pc("Sam", { hp = 2, hope = 1, stress = 2, armor = 0 })
 
--- Frodo pauses to recover between encounters.
 scn:start_session("Rest")
 
--- A short rest to regain footing, followed by a Prepare downtime move.
--- TODO: Update rest deltas if rest recovery rules change.
--- This keeps scenario expectations aligned with the current recovery model in use by
--- the Daggerheart domain snapshot and session progression flow.
 dh:rest{
   type = "short",
   seed = 42,
-  party_size = 1,
   expect_target = "Frodo",
-  expect_hp_delta = 0,
-  expect_stress_delta = 0,
-  expect_armor_delta = 0,
-  expect_hope_delta = 0,
+  expect_hope_delta = 2,
   expect_rest_type = "short",
   expect_rest_interrupted = false,
   expect_gm_fear_delta = 2,
   expect_refresh_rest = true,
   expect_refresh_long_rest = false,
-  expect_short_rests_after = 1
-}
-dh:downtime_move{
-  target = "Frodo",
-  move = "prepare",
-  prepare_with_group = false,
-  expect_hope_delta = 1,
-  expect_stress_delta = 0,
-  expect_armor_delta = 0,
-  expect_downtime_move = "prepare"
+  expect_short_rests_after = 1,
+  participants = {
+    {
+      character = "Frodo",
+      downtime_moves = {
+        { move = "tend_to_wounds", target = "Sam", seed = 11 },
+        { move = "prepare", group_id = "watch" },
+      },
+    },
+    {
+      character = "Sam",
+      downtime_moves = {
+        { move = "prepare", group_id = "watch" },
+      },
+    },
+  },
 }
 
--- Close the session once the rest is done.
 scn:end_session()
 
 return scn

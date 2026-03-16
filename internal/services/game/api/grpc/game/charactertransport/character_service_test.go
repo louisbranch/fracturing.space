@@ -1252,8 +1252,13 @@ func TestListCharacterProfiles_WithProfiles(t *testing.T) {
 			Level:       3,
 			ClassID:     "warrior",
 			SubclassID:  "guardian",
-			AncestryID:  "clank",
-			CommunityID: "ridgeborne",
+			Heritage: projectionstore.DaggerheartHeritageSelection{
+				FirstFeatureAncestryID:  "clank",
+				FirstFeatureID:          "clank.feature-1",
+				SecondFeatureAncestryID: "clank",
+				SecondFeatureID:         "clank.feature-2",
+				CommunityID:             "ridgeborne",
+			},
 		},
 		"ch-a": {
 			CampaignID:  "c1",
@@ -1261,8 +1266,13 @@ func TestListCharacterProfiles_WithProfiles(t *testing.T) {
 			Level:       2,
 			ClassID:     "seraph",
 			SubclassID:  "wingguard",
-			AncestryID:  "drakona",
-			CommunityID: "wanderborne",
+			Heritage: projectionstore.DaggerheartHeritageSelection{
+				FirstFeatureAncestryID:  "drakona",
+				FirstFeatureID:          "drakona.feature-1",
+				SecondFeatureAncestryID: "drakona",
+				SecondFeatureID:         "drakona.feature-2",
+				CommunityID:             "wanderborne",
+			},
 		},
 	}
 

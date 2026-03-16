@@ -123,7 +123,7 @@ func (d *characterWorkflowDeps) RequireReadPolicy(ctx context.Context, campaignC
 }
 
 func (d *characterWorkflowDeps) ProfileToProto(campaignID, characterID string, profile projectionstore.DaggerheartCharacterProfile) *campaignv1.CharacterProfile {
-	return DaggerheartProfileToProto(campaignID, characterID, profile)
+	return DaggerheartProfileToProto(campaignID, characterID, profile, d.app.stores.DaggerheartContent)
 }
 
 func (c characterApplication) executeDaggerheartProfileReplace(ctx context.Context, campaignContext characterworkflow.CampaignContext, characterID string, profile daggerheart.CharacterProfile) error {

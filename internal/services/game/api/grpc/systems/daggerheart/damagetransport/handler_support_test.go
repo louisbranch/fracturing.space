@@ -4,11 +4,16 @@ import (
 	"context"
 	"testing"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 func TestHandlerRequireDamageDependencies(t *testing.T) {
+	emptyContent := testContentStore{
+		adversaryEntries: make(map[string]contentstore.DaggerheartAdversaryEntry),
+		armors:           make(map[string]contentstore.DaggerheartArmor),
+	}
 	tests := []struct {
 		name string
 		deps Dependencies
@@ -16,8 +21,9 @@ func TestHandlerRequireDamageDependencies(t *testing.T) {
 		{name: "missing campaign", deps: Dependencies{}},
 		{name: "missing gate", deps: Dependencies{Campaign: testCampaignStore{}}},
 		{name: "missing daggerheart", deps: Dependencies{Campaign: testCampaignStore{}, SessionGate: testSessionGateStore{}}},
-		{name: "missing event", deps: Dependencies{Campaign: testCampaignStore{}, SessionGate: testSessionGateStore{}, Daggerheart: testDaggerheartStore{}}},
-		{name: "missing executor", deps: Dependencies{Campaign: testCampaignStore{}, SessionGate: testSessionGateStore{}, Daggerheart: testDaggerheartStore{}, Event: testEventStore{}}},
+		{name: "missing content", deps: Dependencies{Campaign: testCampaignStore{}, SessionGate: testSessionGateStore{}, Daggerheart: testDaggerheartStore{}}},
+		{name: "missing event", deps: Dependencies{Campaign: testCampaignStore{}, SessionGate: testSessionGateStore{}, Daggerheart: testDaggerheartStore{}, Content: emptyContent}},
+		{name: "missing executor", deps: Dependencies{Campaign: testCampaignStore{}, SessionGate: testSessionGateStore{}, Daggerheart: testDaggerheartStore{}, Content: emptyContent, Event: testEventStore{}}},
 	}
 
 	for _, tt := range tests {
@@ -34,6 +40,7 @@ func TestHandlerRequireAdversaryDamageDependencies(t *testing.T) {
 		Campaign:             testCampaignStore{},
 		SessionGate:          testSessionGateStore{},
 		Daggerheart:          testDaggerheartStore{},
+		Content:              testContentStore{adversaryEntries: make(map[string]contentstore.DaggerheartAdversaryEntry), armors: make(map[string]contentstore.DaggerheartArmor)},
 		Event:                testEventStore{},
 		ExecuteSystemCommand: func(context.Context, SystemCommandInput) error { return nil },
 	}

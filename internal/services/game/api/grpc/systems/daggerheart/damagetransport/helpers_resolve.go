@@ -1,23 +1,48 @@
 package damagetransport
 
 import (
+	"strings"
+
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 // ResolveCharacterDamage applies a Daggerheart damage request to one character
 // projection snapshot.
-func ResolveCharacterDamage(req *pb.DaggerheartDamageRequest, profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState) (daggerheart.DamageApplication, bool, error) {
-	return daggerheart.ResolveDamageApplication(
-		daggerheart.DamageTarget{
-			HP:              state.Hp,
-			Armor:           state.Armor,
-			MajorThreshold:  profile.MajorThreshold,
-			SevereThreshold: profile.SevereThreshold,
-		},
-		damageApplyInputFromProto(req),
-	)
+func ResolveCharacterDamage(req *pb.DaggerheartDamageRequest, profile projectionstore.DaggerheartCharacterProfile, state projectionstore.DaggerheartCharacterState, armor *contentstore.DaggerheartArmor) (daggerheart.DamageApplication, bool, error) {
+	target := daggerheart.DamageTarget{
+		HP:              state.Hp,
+		Stress:          state.Stress,
+		Armor:           state.Armor,
+		MajorThreshold:  profile.MajorThreshold,
+		SevereThreshold: profile.SevereThreshold,
+	}
+	if state.SubclassState != nil {
+		target.SevereThreshold += state.SubclassState.TranscendenceSevereThresholdBonus
+		if strings.EqualFold(strings.TrimSpace(state.SubclassState.ElementalChannel), daggerheart.ElementalChannelEarth) && profile.Proficiency > 0 {
+			target.MajorThreshold += profile.Proficiency
+			target.SevereThreshold += profile.Proficiency
+		}
+	}
+	if armor != nil {
+		rules := daggerheart.EffectiveArmorRules(armor)
+		baseArmor := daggerheart.CurrentBaseArmor(state, profile.ArmorMax)
+		if rules.ThresholdBonusWhenArmorDepleted > 0 && baseArmor == 0 && profile.ArmorMax > 0 {
+			target.MajorThreshold += rules.ThresholdBonusWhenArmorDepleted
+			target.SevereThreshold += rules.ThresholdBonusWhenArmorDepleted
+		}
+		target.ArmorRules = daggerheart.ArmorDamageRules{
+			MitigationMode:                  string(rules.MitigationMode),
+			SeverityReductionSteps:          rules.SeverityReductionSteps,
+			StressOnMark:                    rules.StressOnMark,
+			WardedMagicReduction:            rules.WardedMagicReduction,
+			WardedReductionAmount:           armor.ArmorScore,
+			ThresholdBonusWhenArmorDepleted: rules.ThresholdBonusWhenArmorDepleted,
+		}
+	}
+	return daggerheart.ResolveDamageApplication(target, damageApplyInputFromProto(req))
 }
 
 // ResolveAdversaryDamage applies a Daggerheart damage request to one adversary
@@ -64,4 +89,17 @@ func DamageTypeString(t pb.DaggerheartDamageType) string {
 	default:
 		return "unknown"
 	}
+}
+
+func applyCharacterDamageResult(current projectionstore.DaggerheartCharacterState, result daggerheart.DamageApplication) projectionstore.DaggerheartCharacterState {
+	current.Hp = result.HPAfter
+	current.Stress = result.StressAfter
+	current.Armor = result.ArmorAfter
+	return current
+}
+
+func applyAdversaryDamageResult(current projectionstore.DaggerheartAdversary, result daggerheart.DamageApplication) projectionstore.DaggerheartAdversary {
+	current.HP = result.HPAfter
+	current.Armor = result.ArmorAfter
+	return current
 }

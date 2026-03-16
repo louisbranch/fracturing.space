@@ -5,19 +5,137 @@ import (
 	"time"
 )
 
+// DaggerheartSubclassCreationRequirement identifies a structured creation-time
+// setup requirement exposed by subclass content.
+type DaggerheartSubclassCreationRequirement string
+
+const (
+	// DaggerheartSubclassCreationRequirementCompanionSheet marks subclasses that
+	// require a companion sheet during creation.
+	DaggerheartSubclassCreationRequirementCompanionSheet DaggerheartSubclassCreationRequirement = "companion_sheet_required"
+)
+
+// DaggerheartFeatureAutomationStatus captures whether a feature has runtime
+// automation in the current implementation.
+type DaggerheartFeatureAutomationStatus string
+
+const (
+	DaggerheartFeatureAutomationStatusUnspecified DaggerheartFeatureAutomationStatus = ""
+	DaggerheartFeatureAutomationStatusSupported   DaggerheartFeatureAutomationStatus = "supported"
+	DaggerheartFeatureAutomationStatusUnsupported DaggerheartFeatureAutomationStatus = "unsupported"
+)
+
+// DaggerheartSubclassFeatureRuleKind identifies the recurring subclass rule a
+// feature participates in when automation is supported.
+type DaggerheartSubclassFeatureRuleKind string
+
+const (
+	DaggerheartSubclassFeatureRuleKindUnspecified                       DaggerheartSubclassFeatureRuleKind = ""
+	DaggerheartSubclassFeatureRuleKindThresholdBonus                    DaggerheartSubclassFeatureRuleKind = "threshold_bonus"
+	DaggerheartSubclassFeatureRuleKindHPSlotBonus                       DaggerheartSubclassFeatureRuleKind = "hp_slot_bonus"
+	DaggerheartSubclassFeatureRuleKindStressSlotBonus                   DaggerheartSubclassFeatureRuleKind = "stress_slot_bonus"
+	DaggerheartSubclassFeatureRuleKindEvasionBonus                      DaggerheartSubclassFeatureRuleKind = "evasion_bonus"
+	DaggerheartSubclassFeatureRuleKindEvasionBonusWhileHopeAtLeast      DaggerheartSubclassFeatureRuleKind = "evasion_bonus_while_hope_at_least"
+	DaggerheartSubclassFeatureRuleKindGainHopeOnFailureWithFear         DaggerheartSubclassFeatureRuleKind = "gain_hope_on_failure_with_fear"
+	DaggerheartSubclassFeatureRuleKindBonusMagicDamageOnSuccessWithFear DaggerheartSubclassFeatureRuleKind = "bonus_magic_damage_on_success_with_fear"
+	DaggerheartSubclassFeatureRuleKindBonusDamageWhileVulnerable        DaggerheartSubclassFeatureRuleKind = "bonus_damage_while_vulnerable"
+)
+
+// DaggerheartSubclassThresholdScope identifies which threshold a threshold
+// bonus modifies.
+type DaggerheartSubclassThresholdScope string
+
+const (
+	DaggerheartSubclassThresholdScopeUnspecified DaggerheartSubclassThresholdScope = ""
+	DaggerheartSubclassThresholdScopeAll         DaggerheartSubclassThresholdScope = "all"
+	DaggerheartSubclassThresholdScopeSevereOnly  DaggerheartSubclassThresholdScope = "severe_only"
+)
+
+// DaggerheartSubclassFeatureRule stores the typed recurring runtime behavior
+// derived from a subclass feature description.
+type DaggerheartSubclassFeatureRule struct {
+	Kind              DaggerheartSubclassFeatureRuleKind
+	Bonus             int
+	RequiredHopeMin   int
+	DamageDiceCount   int
+	DamageDieSides    int
+	UseCharacterLevel bool
+	ThresholdScope    DaggerheartSubclassThresholdScope
+}
+
+// DaggerheartClassFeatureRuleKind identifies recurring runtime behavior
+// derived from a class feature description.
+type DaggerheartClassFeatureRuleKind string
+
+const (
+	DaggerheartClassFeatureRuleKindUnspecified     DaggerheartClassFeatureRuleKind = ""
+	DaggerheartClassFeatureRuleKindUnstoppable     DaggerheartClassFeatureRuleKind = "unstoppable"
+	DaggerheartClassFeatureRuleKindRally           DaggerheartClassFeatureRuleKind = "rally"
+	DaggerheartClassFeatureRuleKindBeastform       DaggerheartClassFeatureRuleKind = "beastform"
+	DaggerheartClassFeatureRuleKindHuntersFocus    DaggerheartClassFeatureRuleKind = "hunters_focus"
+	DaggerheartClassFeatureRuleKindCloaked         DaggerheartClassFeatureRuleKind = "cloaked"
+	DaggerheartClassFeatureRuleKindSneakAttack     DaggerheartClassFeatureRuleKind = "sneak_attack"
+	DaggerheartClassFeatureRuleKindPrayerDice      DaggerheartClassFeatureRuleKind = "prayer_dice"
+	DaggerheartClassFeatureRuleKindChannelRawPower DaggerheartClassFeatureRuleKind = "channel_raw_power"
+	DaggerheartClassFeatureRuleKindPartingStrike   DaggerheartClassFeatureRuleKind = "parting_strike"
+	DaggerheartClassFeatureRuleKindCombatTraining  DaggerheartClassFeatureRuleKind = "combat_training"
+	DaggerheartClassFeatureRuleKindStrangePatterns DaggerheartClassFeatureRuleKind = "strange_patterns"
+)
+
+// DaggerheartClassFeatureRule stores the typed recurring runtime behavior
+// derived from a class feature description.
+type DaggerheartClassFeatureRule struct {
+	Kind              DaggerheartClassFeatureRuleKind
+	Bonus             int
+	HopeCost          int
+	StressCost        int
+	DieSides          int
+	UseCharacterLevel bool
+}
+
+// DaggerheartHopeFeatureRuleKind identifies recurring runtime behavior for one
+// class hope feature.
+type DaggerheartHopeFeatureRuleKind string
+
+const (
+	DaggerheartHopeFeatureRuleKindUnspecified   DaggerheartHopeFeatureRuleKind = ""
+	DaggerheartHopeFeatureRuleKindFrontlineTank DaggerheartHopeFeatureRuleKind = "frontline_tank"
+	DaggerheartHopeFeatureRuleKindMakeAScene    DaggerheartHopeFeatureRuleKind = "make_a_scene"
+	DaggerheartHopeFeatureRuleKindEvolution     DaggerheartHopeFeatureRuleKind = "evolution"
+	DaggerheartHopeFeatureRuleKindHoldThemOff   DaggerheartHopeFeatureRuleKind = "hold_them_off"
+	DaggerheartHopeFeatureRuleKindRoguesDodge   DaggerheartHopeFeatureRuleKind = "rogues_dodge"
+	DaggerheartHopeFeatureRuleKindLifeSupport   DaggerheartHopeFeatureRuleKind = "life_support"
+	DaggerheartHopeFeatureRuleKindVolatileMagic DaggerheartHopeFeatureRuleKind = "volatile_magic"
+	DaggerheartHopeFeatureRuleKindNoMercy       DaggerheartHopeFeatureRuleKind = "no_mercy"
+	DaggerheartHopeFeatureRuleKindNotThisTime   DaggerheartHopeFeatureRuleKind = "not_this_time"
+)
+
+// DaggerheartHopeFeatureRule stores the typed recurring runtime behavior
+// derived from a class hope feature description.
+type DaggerheartHopeFeatureRule struct {
+	Kind     DaggerheartHopeFeatureRuleKind
+	Bonus    int
+	HopeCost int
+}
+
 // DaggerheartFeature captures reusable feature metadata from campaign content.
 type DaggerheartFeature struct {
-	ID          string
-	Name        string
-	Description string
-	Level       int
+	ID               string
+	Name             string
+	Description      string
+	Level            int
+	AutomationStatus DaggerheartFeatureAutomationStatus
+	SubclassRule     *DaggerheartSubclassFeatureRule
+	ClassRule        *DaggerheartClassFeatureRule
 }
 
 // DaggerheartHopeFeature captures one class hope feature row for reuse.
 type DaggerheartHopeFeature struct {
-	Name        string
-	Description string
-	HopeCost    int
+	Name             string
+	Description      string
+	HopeCost         int
+	AutomationStatus DaggerheartFeatureAutomationStatus
+	HopeFeatureRule  *DaggerheartHopeFeatureRule
 }
 
 // DaggerheartClass represents a catalog class content row.
@@ -40,6 +158,7 @@ type DaggerheartSubclass struct {
 	Name                   string
 	ClassID                string
 	SpellcastTrait         string
+	CreationRequirements   []DaggerheartSubclassCreationRequirement
 	FoundationFeatures     []DaggerheartFeature
 	SpecializationFeatures []DaggerheartFeature
 	MasteryFeatures        []DaggerheartFeature
@@ -97,6 +216,24 @@ type DaggerheartAdversaryFeature struct {
 	Cost        int
 }
 
+// DaggerheartAdversaryMinionRule stores the derived recurring minion rule for
+// one adversary entry.
+type DaggerheartAdversaryMinionRule struct {
+	SpilloverDamageStep int
+}
+
+// DaggerheartAdversaryHordeRule stores the derived recurring horde rule for
+// one adversary entry.
+type DaggerheartAdversaryHordeRule struct {
+	BloodiedAttack DaggerheartAdversaryAttack
+}
+
+// DaggerheartAdversaryRelentlessRule stores the derived recurring relentless
+// spotlight cap for one adversary entry.
+type DaggerheartAdversaryRelentlessRule struct {
+	MaxSpotlightsPerGMTurn int
+}
+
 // DaggerheartAdversaryEntry stores catalog-grade adversary definitions.
 type DaggerheartAdversaryEntry struct {
 	ID              string
@@ -115,6 +252,9 @@ type DaggerheartAdversaryEntry struct {
 	StandardAttack  DaggerheartAdversaryAttack
 	Experiences     []DaggerheartAdversaryExperience
 	Features        []DaggerheartAdversaryFeature
+	MinionRule      *DaggerheartAdversaryMinionRule
+	HordeRule       *DaggerheartAdversaryHordeRule
+	RelentlessRule  *DaggerheartAdversaryRelentlessRule
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
 }
@@ -227,8 +367,55 @@ type DaggerheartArmor struct {
 	BaseSevereThreshold int
 	ArmorScore          int
 	Feature             string
+	Rules               DaggerheartArmorRules
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
+}
+
+// DaggerheartArmorAutomationStatus captures whether an armor feature is
+// automated by the runtime.
+type DaggerheartArmorAutomationStatus string
+
+const (
+	DaggerheartArmorAutomationStatusSupported   DaggerheartArmorAutomationStatus = "supported"
+	DaggerheartArmorAutomationStatusUnsupported DaggerheartArmorAutomationStatus = "unsupported"
+)
+
+// DaggerheartArmorMitigationMode captures which damage types an equipped armor
+// can reduce by marking armor slots.
+type DaggerheartArmorMitigationMode string
+
+const (
+	DaggerheartArmorMitigationModeAny          DaggerheartArmorMitigationMode = "any"
+	DaggerheartArmorMitigationModePhysicalOnly DaggerheartArmorMitigationMode = "physical_only"
+	DaggerheartArmorMitigationModeMagicOnly    DaggerheartArmorMitigationMode = "magic_only"
+)
+
+// DaggerheartArmorRules stores the derived recurring runtime behavior for one
+// armor entry. Raw feature text remains the reader-facing source, while these
+// fields drive automation.
+type DaggerheartArmorRules struct {
+	AutomationStatus                DaggerheartArmorAutomationStatus
+	MitigationMode                  DaggerheartArmorMitigationMode
+	EvasionDelta                    int
+	AgilityDelta                    int
+	PresenceDelta                   int
+	SpellcastRollBonus              int
+	AllTraitsDelta                  int
+	StressOnMark                    bool
+	SeverityReductionSteps          int
+	ThresholdBonusWhenArmorDepleted int
+	WardedMagicReduction            bool
+	HopefulReplaceHopeWithArmor     bool
+	ResilientDieSides               int
+	ResilientSuccessOnOrAbove       int
+	ShiftingAttackDisadvantage      int
+	TimeslowingEvasionBonusDieSides int
+	SharpDamageBonusDieSides        int
+	BurningAttackerStress           int
+	ImpenetrableStressCost          int
+	ImpenetrableUsesPerShortRest    int
+	SilentMovementBonus             int
 }
 
 // DaggerheartItem stores reusable item catalog rows.

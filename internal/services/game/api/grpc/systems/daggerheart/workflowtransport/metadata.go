@@ -33,6 +33,7 @@ type RollSystemMetadata struct {
 	AdversaryID       string                 `json:"adversary_id,omitempty"`
 	Trait             string                 `json:"trait,omitempty"`
 	RollKind          string                 `json:"roll_kind,omitempty"`
+	RollContext       string                 `json:"roll_context,omitempty"`
 	Outcome           string                 `json:"outcome,omitempty"`
 	Flavor            string                 `json:"flavor,omitempty"`
 	BreathCountdownID string                 `json:"breath_countdown_id,omitempty"`

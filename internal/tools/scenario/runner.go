@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
+	"sync"
 	"time"
 
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -63,16 +65,18 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 	}
 
 	auth := newRunnerAuthProvider()
+	contentClient := daggerheartv1.NewDaggerheartContentServiceClient(conn)
 	env := scenarioEnv{
-		campaignClient:    gamev1.NewCampaignServiceClient(conn),
-		participantClient: gamev1.NewParticipantServiceClient(conn),
-		sessionClient:     gamev1.NewSessionServiceClient(conn),
-		sceneClient:       gamev1.NewSceneServiceClient(conn),
-		characterClient:   gamev1.NewCharacterServiceClient(conn),
-		interactionClient: gamev1.NewInteractionServiceClient(conn),
-		snapshotClient:    gamev1.NewSnapshotServiceClient(conn),
-		eventClient:       gamev1.NewEventServiceClient(conn),
-		daggerheartClient: daggerheartv1.NewDaggerheartServiceClient(conn),
+		campaignClient:                     gamev1.NewCampaignServiceClient(conn),
+		participantClient:                  gamev1.NewParticipantServiceClient(conn),
+		sessionClient:                      gamev1.NewSessionServiceClient(conn),
+		sceneClient:                        gamev1.NewSceneServiceClient(conn),
+		characterClient:                    gamev1.NewCharacterServiceClient(conn),
+		interactionClient:                  gamev1.NewInteractionServiceClient(conn),
+		snapshotClient:                     gamev1.NewSnapshotServiceClient(conn),
+		eventClient:                        gamev1.NewEventServiceClient(conn),
+		daggerheartClient:                  daggerheartv1.NewDaggerheartServiceClient(conn),
+		resolveDaggerheartAdversaryEntryID: newAdversaryEntryResolver(contentClient),
 	}
 
 	r, err := newRunnerWithDeps(cfg, runnerDeps{env: env, auth: auth})
@@ -82,6 +86,41 @@ func NewRunner(ctx context.Context, cfg Config) (*Runner, error) {
 	}
 	r.conn = conn
 	return r, nil
+}
+
+func newAdversaryEntryResolver(client daggerheartv1.DaggerheartContentServiceClient) func(ctx context.Context, name string) (string, error) {
+	var (
+		once    sync.Once
+		loadErr error
+		byName  map[string]string
+	)
+	return func(ctx context.Context, name string) (string, error) {
+		trimmed := strings.TrimSpace(name)
+		if trimmed == "" {
+			return "", errors.New("adversary name is required")
+		}
+		once.Do(func() {
+			response, err := client.GetContentCatalog(ctx, &daggerheartv1.GetDaggerheartContentCatalogRequest{})
+			if err != nil {
+				loadErr = fmt.Errorf("get daggerheart content catalog: %w", err)
+				return
+			}
+			byName = make(map[string]string, len(response.GetCatalog().GetAdversaries()))
+			for _, entry := range response.GetCatalog().GetAdversaries() {
+				if key := strings.ToLower(strings.TrimSpace(entry.GetName())); key != "" {
+					byName[key] = entry.GetId()
+				}
+			}
+		})
+		if loadErr != nil {
+			return "", loadErr
+		}
+		entryID, ok := byName[strings.ToLower(trimmed)]
+		if !ok {
+			return "", fmt.Errorf("resolve daggerheart adversary entry %q", trimmed)
+		}
+		return entryID, nil
+	}
 }
 
 // newRunnerWithDeps builds a Runner from pre-built dependencies.

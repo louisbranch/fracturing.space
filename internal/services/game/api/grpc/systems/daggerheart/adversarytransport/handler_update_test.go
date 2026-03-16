@@ -29,8 +29,7 @@ func TestHandlerUpdateAdversarySuccess(t *testing.T) {
 	resp, err := handler.UpdateAdversary(testContext(), &pb.DaggerheartUpdateAdversaryRequest{
 		CampaignId:  "camp-1",
 		AdversaryId: "adv-1",
-		Name:        wrapperspb.String("New"),
-		Hp:          wrapperspb.Int32(5),
+		Notes:       wrapperspb.String("Updated notes"),
 	})
 	if err != nil {
 		t.Fatalf("UpdateAdversary returned error: %v", err)

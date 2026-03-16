@@ -24,11 +24,11 @@ func TestHandlerSessionAdversaryAttackRollSuccess(t *testing.T) {
 	})
 
 	resp, err := handler.SessionAdversaryAttackRoll(context.Background(), &pb.SessionAdversaryAttackRollRequest{
-		CampaignId:     "camp-1",
-		SessionId:      "sess-1",
-		AdversaryId:    "adv-1",
-		AttackModifier: 2,
-		Advantage:      1,
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		AdversaryId: "adv-1",
+		Modifiers:   []*pb.ActionRollModifier{{Source: "attack", Value: 2}},
+		Advantage:   1,
 	})
 	if err != nil {
 		t.Fatalf("SessionAdversaryAttackRoll returned error: %v", err)
@@ -53,7 +53,7 @@ func TestHandlerSessionAdversaryActionCheckAutoSuccess(t *testing.T) {
 		SessionId:   "sess-1",
 		AdversaryId: "adv-1",
 		Difficulty:  10,
-		Modifier:    2,
+		Modifiers:   []*pb.ActionRollModifier{{Source: "action", Value: 2}},
 		Dramatic:    false,
 	})
 	if err != nil {

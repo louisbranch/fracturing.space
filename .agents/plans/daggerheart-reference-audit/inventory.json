@@ -1,0 +1,8003 @@
+{
+  "version": 1,
+  "generated_at": "2026-03-15T16:21:15Z",
+  "reference_root": "/home/louis/code/daggerheart/reference-corpus/v1/reference",
+  "entry_count": 786,
+  "entries": [
+    {
+      "id": "ability-a-soldier-s-bond",
+      "title": "A Soldier's Bond",
+      "kind": "ability",
+      "path": "abilities/a-soldier-s-bond.md",
+      "aliases": [
+        "a soldier's bond",
+        "asoldiersbond",
+        "blade a soldier's bond",
+        "blade asoldiersbond"
+      ]
+    },
+    {
+      "id": "ability-adjust-reality",
+      "title": "Adjust Reality",
+      "kind": "ability",
+      "path": "abilities/adjust-reality.md",
+      "aliases": [
+        "adjust reality",
+        "adjustreality",
+        "arcana adjust reality",
+        "arcana adjustreality"
+      ]
+    },
+    {
+      "id": "ability-arcana-touched",
+      "title": "Arcana-Touched",
+      "kind": "ability",
+      "path": "abilities/arcana-touched.md",
+      "aliases": [
+        "arcana arcana-touched",
+        "arcana arcanatouched",
+        "arcana-touched",
+        "arcanatouched"
+      ]
+    },
+    {
+      "id": "ability-arcane-reflection",
+      "title": "Arcane Reflection",
+      "kind": "ability",
+      "path": "abilities/arcane-reflection.md",
+      "aliases": [
+        "arcana arcane reflection",
+        "arcana arcanereflection",
+        "arcane reflection",
+        "arcanereflection"
+      ]
+    },
+    {
+      "id": "ability-armorer",
+      "title": "Armorer",
+      "kind": "ability",
+      "path": "abilities/armorer.md",
+      "aliases": [
+        "armorer",
+        "valor armorer"
+      ]
+    },
+    {
+      "id": "ability-astral-projection",
+      "title": "Astral Projection",
+      "kind": "ability",
+      "path": "abilities/astral-projection.md",
+      "aliases": [
+        "astral projection",
+        "astralprojection",
+        "grace astral projection",
+        "grace astralprojection"
+      ]
+    },
+    {
+      "id": "ability-banish",
+      "title": "Banish",
+      "kind": "ability",
+      "path": "abilities/banish.md",
+      "aliases": [
+        "banish",
+        "codex banish"
+      ]
+    },
+    {
+      "id": "ability-bare-bones",
+      "title": "Bare Bones",
+      "kind": "ability",
+      "path": "abilities/bare-bones.md",
+      "aliases": [
+        "bare bones",
+        "barebones",
+        "valor bare bones",
+        "valor barebones"
+      ]
+    },
+    {
+      "id": "ability-battle-cry",
+      "title": "Battle Cry",
+      "kind": "ability",
+      "path": "abilities/battle-cry.md",
+      "aliases": [
+        "battle cry",
+        "battlecry",
+        "blade battle cry",
+        "blade battlecry"
+      ]
+    },
+    {
+      "id": "ability-battle-hardened",
+      "title": "Battle-Hardened",
+      "kind": "ability",
+      "path": "abilities/battle-hardened.md",
+      "aliases": [
+        "battle-hardened",
+        "battlehardened",
+        "blade battle-hardened",
+        "blade battlehardened"
+      ]
+    },
+    {
+      "id": "ability-battle-monster",
+      "title": "Battle Monster",
+      "kind": "ability",
+      "path": "abilities/battle-monster.md",
+      "aliases": [
+        "battle monster",
+        "battlemonster",
+        "blade battle monster",
+        "blade battlemonster"
+      ]
+    },
+    {
+      "id": "ability-blade-touched",
+      "title": "Blade-Touched",
+      "kind": "ability",
+      "path": "abilities/blade-touched.md",
+      "aliases": [
+        "blade blade-touched",
+        "blade bladetouched",
+        "blade-touched",
+        "bladetouched"
+      ]
+    },
+    {
+      "id": "ability-blink-out",
+      "title": "Blink Out",
+      "kind": "ability",
+      "path": "abilities/blink-out.md",
+      "aliases": [
+        "arcana blink out",
+        "arcana blinkout",
+        "blink out",
+        "blinkout"
+      ]
+    },
+    {
+      "id": "ability-body-basher",
+      "title": "Body Basher",
+      "kind": "ability",
+      "path": "abilities/body-basher.md",
+      "aliases": [
+        "body basher",
+        "bodybasher",
+        "valor body basher",
+        "valor bodybasher"
+      ]
+    },
+    {
+      "id": "ability-bold-presence",
+      "title": "Bold Presence",
+      "kind": "ability",
+      "path": "abilities/bold-presence.md",
+      "aliases": [
+        "bold presence",
+        "boldpresence",
+        "valor bold presence",
+        "valor boldpresence"
+      ]
+    },
+    {
+      "id": "ability-bolt-beacon",
+      "title": "Bolt Beacon",
+      "kind": "ability",
+      "path": "abilities/bolt-beacon.md",
+      "aliases": [
+        "bolt beacon",
+        "boltbeacon",
+        "splendor bolt beacon",
+        "splendor boltbeacon"
+      ]
+    },
+    {
+      "id": "ability-bone-touched",
+      "title": "Bone-Touched",
+      "kind": "ability",
+      "path": "abilities/bone-touched.md",
+      "aliases": [
+        "bone bone-touched",
+        "bone bonetouched",
+        "bone-touched",
+        "bonetouched"
+      ]
+    },
+    {
+      "id": "ability-book-of-ava",
+      "title": "Book of Ava",
+      "kind": "ability",
+      "path": "abilities/book-of-ava.md",
+      "aliases": [
+        "book of ava",
+        "bookofava",
+        "codex book of ava",
+        "codex bookofava"
+      ]
+    },
+    {
+      "id": "ability-book-of-exota",
+      "title": "Book of Exota",
+      "kind": "ability",
+      "path": "abilities/book-of-exota.md",
+      "aliases": [
+        "book of exota",
+        "bookofexota",
+        "codex book of exota",
+        "codex bookofexota"
+      ]
+    },
+    {
+      "id": "ability-book-of-grynn",
+      "title": "Book of Grynn",
+      "kind": "ability",
+      "path": "abilities/book-of-grynn.md",
+      "aliases": [
+        "book of grynn",
+        "bookofgrynn",
+        "codex book of grynn",
+        "codex bookofgrynn"
+      ]
+    },
+    {
+      "id": "ability-book-of-homet",
+      "title": "Book of Homet",
+      "kind": "ability",
+      "path": "abilities/book-of-homet.md",
+      "aliases": [
+        "book of homet",
+        "bookofhomet",
+        "codex book of homet",
+        "codex bookofhomet"
+      ]
+    },
+    {
+      "id": "ability-book-of-illiat",
+      "title": "Book of Illiat",
+      "kind": "ability",
+      "path": "abilities/book-of-illiat.md",
+      "aliases": [
+        "book of illiat",
+        "bookofilliat",
+        "codex book of illiat",
+        "codex bookofilliat"
+      ]
+    },
+    {
+      "id": "ability-book-of-korvax",
+      "title": "Book of Korvax",
+      "kind": "ability",
+      "path": "abilities/book-of-korvax.md",
+      "aliases": [
+        "book of korvax",
+        "bookofkorvax",
+        "codex book of korvax",
+        "codex bookofkorvax"
+      ]
+    },
+    {
+      "id": "ability-book-of-norai",
+      "title": "Book of Norai",
+      "kind": "ability",
+      "path": "abilities/book-of-norai.md",
+      "aliases": [
+        "book of norai",
+        "bookofnorai",
+        "codex book of norai",
+        "codex bookofnorai"
+      ]
+    },
+    {
+      "id": "ability-book-of-ronin",
+      "title": "Book of Ronin",
+      "kind": "ability",
+      "path": "abilities/book-of-ronin.md",
+      "aliases": [
+        "book of ronin",
+        "bookofronin",
+        "codex book of ronin",
+        "codex bookofronin"
+      ]
+    },
+    {
+      "id": "ability-book-of-sitil",
+      "title": "Book of Sitil",
+      "kind": "ability",
+      "path": "abilities/book-of-sitil.md",
+      "aliases": [
+        "book of sitil",
+        "bookofsitil",
+        "codex book of sitil",
+        "codex bookofsitil"
+      ]
+    },
+    {
+      "id": "ability-book-of-tyfar",
+      "title": "Book of Tyfar",
+      "kind": "ability",
+      "path": "abilities/book-of-tyfar.md",
+      "aliases": [
+        "book of tyfar",
+        "bookoftyfar",
+        "codex book of tyfar",
+        "codex bookoftyfar"
+      ]
+    },
+    {
+      "id": "ability-book-of-vagras",
+      "title": "Book of Vagras",
+      "kind": "ability",
+      "path": "abilities/book-of-vagras.md",
+      "aliases": [
+        "book of vagras",
+        "bookofvagras",
+        "codex book of vagras",
+        "codex bookofvagras"
+      ]
+    },
+    {
+      "id": "ability-book-of-vyola",
+      "title": "Book of Vyola",
+      "kind": "ability",
+      "path": "abilities/book-of-vyola.md",
+      "aliases": [
+        "book of vyola",
+        "bookofvyola",
+        "codex book of vyola",
+        "codex bookofvyola"
+      ]
+    },
+    {
+      "id": "ability-book-of-yarrow",
+      "title": "Book of Yarrow",
+      "kind": "ability",
+      "path": "abilities/book-of-yarrow.md",
+      "aliases": [
+        "book of yarrow",
+        "bookofyarrow",
+        "codex book of yarrow",
+        "codex bookofyarrow"
+      ]
+    },
+    {
+      "id": "ability-boost",
+      "title": "Boost",
+      "kind": "ability",
+      "path": "abilities/boost.md",
+      "aliases": [
+        "bone boost",
+        "boost"
+      ]
+    },
+    {
+      "id": "ability-brace",
+      "title": "Brace",
+      "kind": "ability",
+      "path": "abilities/brace.md",
+      "aliases": [
+        "bone brace",
+        "brace"
+      ]
+    },
+    {
+      "id": "ability-breaking-blow",
+      "title": "Breaking Blow",
+      "kind": "ability",
+      "path": "abilities/breaking-blow.md",
+      "aliases": [
+        "bone breaking blow",
+        "bone breakingblow",
+        "breaking blow",
+        "breakingblow"
+      ]
+    },
+    {
+      "id": "ability-chain-lightning",
+      "title": "Chain Lightning",
+      "kind": "ability",
+      "path": "abilities/chain-lightning.md",
+      "aliases": [
+        "arcana chain lightning",
+        "arcana chainlightning",
+        "chain lightning",
+        "chainlightning"
+      ]
+    },
+    {
+      "id": "ability-champion-s-edge",
+      "title": "Champion's Edge",
+      "kind": "ability",
+      "path": "abilities/champion-s-edge.md",
+      "aliases": [
+        "blade champion's edge",
+        "blade championsedge",
+        "champion's edge",
+        "championsedge"
+      ]
+    },
+    {
+      "id": "ability-chokehold",
+      "title": "Chokehold",
+      "kind": "ability",
+      "path": "abilities/chokehold.md",
+      "aliases": [
+        "chokehold",
+        "midnight chokehold"
+      ]
+    },
+    {
+      "id": "ability-cinder-grasp",
+      "title": "Cinder Grasp",
+      "kind": "ability",
+      "path": "abilities/cinder-grasp.md",
+      "aliases": [
+        "arcana cinder grasp",
+        "arcana cindergrasp",
+        "cinder grasp",
+        "cindergrasp"
+      ]
+    },
+    {
+      "id": "ability-cloaking-blast",
+      "title": "Cloaking Blast",
+      "kind": "ability",
+      "path": "abilities/cloaking-blast.md",
+      "aliases": [
+        "arcana cloaking blast",
+        "arcana cloakingblast",
+        "cloaking blast",
+        "cloakingblast"
+      ]
+    },
+    {
+      "id": "ability-codex-touched",
+      "title": "Codex-Touched",
+      "kind": "ability",
+      "path": "abilities/codex-touched.md",
+      "aliases": [
+        "codex codex-touched",
+        "codex codextouched",
+        "codex-touched",
+        "codextouched"
+      ]
+    },
+    {
+      "id": "ability-confusing-aura",
+      "title": "Confusing Aura",
+      "kind": "ability",
+      "path": "abilities/confusing-aura.md",
+      "aliases": [
+        "arcana confusing aura",
+        "arcana confusingaura",
+        "confusing aura",
+        "confusingaura"
+      ]
+    },
+    {
+      "id": "ability-conjure-swarm",
+      "title": "Conjure Swarm",
+      "kind": "ability",
+      "path": "abilities/conjure-swarm.md",
+      "aliases": [
+        "conjure swarm",
+        "conjureswarm",
+        "sage conjure swarm",
+        "sage conjureswarm"
+      ]
+    },
+    {
+      "id": "ability-conjured-steeds",
+      "title": "Conjured Steeds",
+      "kind": "ability",
+      "path": "abilities/conjured-steeds.md",
+      "aliases": [
+        "conjured steeds",
+        "conjuredsteeds",
+        "sage conjured steeds",
+        "sage conjuredsteeds"
+      ]
+    },
+    {
+      "id": "ability-copycat",
+      "title": "Copycat",
+      "kind": "ability",
+      "path": "abilities/copycat.md",
+      "aliases": [
+        "copycat",
+        "grace copycat"
+      ]
+    },
+    {
+      "id": "ability-corrosive-projectile",
+      "title": "Corrosive Projectile",
+      "kind": "ability",
+      "path": "abilities/corrosive-projectile.md",
+      "aliases": [
+        "corrosive projectile",
+        "corrosiveprojectile",
+        "sage corrosive projectile",
+        "sage corrosiveprojectile"
+      ]
+    },
+    {
+      "id": "ability-counterspell",
+      "title": "Counterspell",
+      "kind": "ability",
+      "path": "abilities/counterspell.md",
+      "aliases": [
+        "arcana counterspell",
+        "counterspell"
+      ]
+    },
+    {
+      "id": "ability-critical-inspiration",
+      "title": "Critical Inspiration",
+      "kind": "ability",
+      "path": "abilities/critical-inspiration.md",
+      "aliases": [
+        "critical inspiration",
+        "criticalinspiration",
+        "valor critical inspiration",
+        "valor criticalinspiration"
+      ]
+    },
+    {
+      "id": "ability-cruel-precision",
+      "title": "Cruel Precision",
+      "kind": "ability",
+      "path": "abilities/cruel-precision.md",
+      "aliases": [
+        "bone cruel precision",
+        "bone cruelprecision",
+        "cruel precision",
+        "cruelprecision"
+      ]
+    },
+    {
+      "id": "ability-dark-whispers",
+      "title": "Dark Whispers",
+      "kind": "ability",
+      "path": "abilities/dark-whispers.md",
+      "aliases": [
+        "dark whispers",
+        "darkwhispers",
+        "midnight dark whispers",
+        "midnight darkwhispers"
+      ]
+    },
+    {
+      "id": "ability-deadly-focus",
+      "title": "Deadly Focus",
+      "kind": "ability",
+      "path": "abilities/deadly-focus.md",
+      "aliases": [
+        "blade deadly focus",
+        "blade deadlyfocus",
+        "deadly focus",
+        "deadlyfocus"
+      ]
+    },
+    {
+      "id": "ability-death-grip",
+      "title": "Death Grip",
+      "kind": "ability",
+      "path": "abilities/death-grip.md",
+      "aliases": [
+        "death grip",
+        "deathgrip",
+        "sage death grip",
+        "sage deathgrip"
+      ]
+    },
+    {
+      "id": "ability-deathrun",
+      "title": "Deathrun",
+      "kind": "ability",
+      "path": "abilities/deathrun.md",
+      "aliases": [
+        "bone deathrun",
+        "deathrun"
+      ]
+    },
+    {
+      "id": "ability-deft-deceiver",
+      "title": "Deft Deceiver",
+      "kind": "ability",
+      "path": "abilities/deft-deceiver.md",
+      "aliases": [
+        "deft deceiver",
+        "deftdeceiver",
+        "grace deft deceiver",
+        "grace deftdeceiver"
+      ]
+    },
+    {
+      "id": "ability-deft-maneuvers",
+      "title": "Deft Maneuvers",
+      "kind": "ability",
+      "path": "abilities/deft-maneuvers.md",
+      "aliases": [
+        "bone deft maneuvers",
+        "bone deftmaneuvers",
+        "deft maneuvers",
+        "deftmaneuvers"
+      ]
+    },
+    {
+      "id": "ability-disintegration-wave",
+      "title": "Disintegration Wave",
+      "kind": "ability",
+      "path": "abilities/disintegration-wave.md",
+      "aliases": [
+        "codex disintegration wave",
+        "codex disintegrationwave",
+        "disintegration wave",
+        "disintegrationwave"
+      ]
+    },
+    {
+      "id": "ability-divination",
+      "title": "Divination",
+      "kind": "ability",
+      "path": "abilities/divination.md",
+      "aliases": [
+        "divination",
+        "splendor divination"
+      ]
+    },
+    {
+      "id": "ability-earthquake",
+      "title": "Earthquake",
+      "kind": "ability",
+      "path": "abilities/earthquake.md",
+      "aliases": [
+        "arcana earthquake",
+        "earthquake"
+      ]
+    },
+    {
+      "id": "ability-eclipse",
+      "title": "Eclipse",
+      "kind": "ability",
+      "path": "abilities/eclipse.md",
+      "aliases": [
+        "eclipse",
+        "midnight eclipse"
+      ]
+    },
+    {
+      "id": "ability-encore",
+      "title": "Encore",
+      "kind": "ability",
+      "path": "abilities/encore.md",
+      "aliases": [
+        "encore",
+        "grace encore"
+      ]
+    },
+    {
+      "id": "ability-endless-charisma",
+      "title": "Endless Charisma",
+      "kind": "ability",
+      "path": "abilities/endless-charisma.md",
+      "aliases": [
+        "endless charisma",
+        "endlesscharisma",
+        "grace endless charisma",
+        "grace endlesscharisma"
+      ]
+    },
+    {
+      "id": "ability-enrapture",
+      "title": "Enrapture",
+      "kind": "ability",
+      "path": "abilities/enrapture.md",
+      "aliases": [
+        "enrapture",
+        "grace enrapture"
+      ]
+    },
+    {
+      "id": "ability-falling-sky",
+      "title": "Falling Sky",
+      "kind": "ability",
+      "path": "abilities/falling-sky.md",
+      "aliases": [
+        "arcana falling sky",
+        "arcana fallingsky",
+        "falling sky",
+        "fallingsky"
+      ]
+    },
+    {
+      "id": "ability-fane-of-the-wilds",
+      "title": "Fane of the Wilds",
+      "kind": "ability",
+      "path": "abilities/fane-of-the-wilds.md",
+      "aliases": [
+        "fane of the wilds",
+        "faneofthewilds",
+        "sage fane of the wilds",
+        "sage faneofthewilds"
+      ]
+    },
+    {
+      "id": "ability-ferocity",
+      "title": "Ferocity",
+      "kind": "ability",
+      "path": "abilities/ferocity.md",
+      "aliases": [
+        "bone ferocity",
+        "ferocity"
+      ]
+    },
+    {
+      "id": "ability-final-words",
+      "title": "Final Words",
+      "kind": "ability",
+      "path": "abilities/final-words.md",
+      "aliases": [
+        "final words",
+        "finalwords",
+        "splendor final words",
+        "splendor finalwords"
+      ]
+    },
+    {
+      "id": "ability-flight",
+      "title": "Flight",
+      "kind": "ability",
+      "path": "abilities/flight.md",
+      "aliases": [
+        "arcana flight",
+        "flight"
+      ]
+    },
+    {
+      "id": "ability-floating-eye",
+      "title": "Floating Eye",
+      "kind": "ability",
+      "path": "abilities/floating-eye.md",
+      "aliases": [
+        "arcana floating eye",
+        "arcana floatingeye",
+        "floating eye",
+        "floatingeye"
+      ]
+    },
+    {
+      "id": "ability-forager",
+      "title": "Forager",
+      "kind": "ability",
+      "path": "abilities/forager.md",
+      "aliases": [
+        "forager",
+        "sage forager"
+      ]
+    },
+    {
+      "id": "ability-force-of-nature",
+      "title": "Force of Nature",
+      "kind": "ability",
+      "path": "abilities/force-of-nature.md",
+      "aliases": [
+        "force of nature",
+        "forceofnature",
+        "sage force of nature",
+        "sage forceofnature"
+      ]
+    },
+    {
+      "id": "ability-forceful-push",
+      "title": "Forceful Push",
+      "kind": "ability",
+      "path": "abilities/forceful-push.md",
+      "aliases": [
+        "forceful push",
+        "forcefulpush",
+        "valor forceful push",
+        "valor forcefulpush"
+      ]
+    },
+    {
+      "id": "ability-forest-sprites",
+      "title": "Forest Sprites",
+      "kind": "ability",
+      "path": "abilities/forest-sprites.md",
+      "aliases": [
+        "forest sprites",
+        "forestsprites",
+        "sage forest sprites",
+        "sage forestsprites"
+      ]
+    },
+    {
+      "id": "ability-fortified-armor",
+      "title": "Fortified Armor",
+      "kind": "ability",
+      "path": "abilities/fortified-armor.md",
+      "aliases": [
+        "blade fortified armor",
+        "blade fortifiedarmor",
+        "fortified armor",
+        "fortifiedarmor"
+      ]
+    },
+    {
+      "id": "ability-frenzy",
+      "title": "Frenzy",
+      "kind": "ability",
+      "path": "abilities/frenzy.md",
+      "aliases": [
+        "blade frenzy",
+        "frenzy"
+      ]
+    },
+    {
+      "id": "ability-full-surge",
+      "title": "Full Surge",
+      "kind": "ability",
+      "path": "abilities/full-surge.md",
+      "aliases": [
+        "full surge",
+        "fullsurge",
+        "valor full surge",
+        "valor fullsurge"
+      ]
+    },
+    {
+      "id": "ability-get-back-up",
+      "title": "Get Back Up",
+      "kind": "ability",
+      "path": "abilities/get-back-up.md",
+      "aliases": [
+        "blade get back up",
+        "blade getbackup",
+        "get back up",
+        "getbackup"
+      ]
+    },
+    {
+      "id": "ability-gifted-tracker",
+      "title": "Gifted Tracker",
+      "kind": "ability",
+      "path": "abilities/gifted-tracker.md",
+      "aliases": [
+        "gifted tracker",
+        "giftedtracker",
+        "sage gifted tracker",
+        "sage giftedtracker"
+      ]
+    },
+    {
+      "id": "ability-glancing-blow",
+      "title": "Glancing Blow",
+      "kind": "ability",
+      "path": "abilities/glancing-blow.md",
+      "aliases": [
+        "blade glancing blow",
+        "blade glancingblow",
+        "glancing blow",
+        "glancingblow"
+      ]
+    },
+    {
+      "id": "ability-glyph-of-nightfall",
+      "title": "Glyph of Nightfall",
+      "kind": "ability",
+      "path": "abilities/glyph-of-nightfall.md",
+      "aliases": [
+        "glyph of nightfall",
+        "glyphofnightfall",
+        "midnight glyph of nightfall",
+        "midnight glyphofnightfall"
+      ]
+    },
+    {
+      "id": "ability-goad-them-on",
+      "title": "Goad Them on",
+      "kind": "ability",
+      "path": "abilities/goad-them-on.md",
+      "aliases": [
+        "goad them on",
+        "goadthemon",
+        "valor goad them on",
+        "valor goadthemon"
+      ]
+    },
+    {
+      "id": "ability-gore-and-glory",
+      "title": "Gore and Glory",
+      "kind": "ability",
+      "path": "abilities/gore-and-glory.md",
+      "aliases": [
+        "blade gore and glory",
+        "blade goreandglory",
+        "gore and glory",
+        "goreandglory"
+      ]
+    },
+    {
+      "id": "ability-grace-touched",
+      "title": "Grace-Touched",
+      "kind": "ability",
+      "path": "abilities/grace-touched.md",
+      "aliases": [
+        "grace grace-touched",
+        "grace gracetouched",
+        "grace-touched",
+        "gracetouched"
+      ]
+    },
+    {
+      "id": "ability-ground-pound",
+      "title": "Ground Pound",
+      "kind": "ability",
+      "path": "abilities/ground-pound.md",
+      "aliases": [
+        "ground pound",
+        "groundpound",
+        "valor ground pound",
+        "valor groundpound"
+      ]
+    },
+    {
+      "id": "ability-healing-field",
+      "title": "Healing Field",
+      "kind": "ability",
+      "path": "abilities/healing-field.md",
+      "aliases": [
+        "healing field",
+        "healingfield",
+        "sage healing field",
+        "sage healingfield"
+      ]
+    },
+    {
+      "id": "ability-healing-hands",
+      "title": "Healing Hands",
+      "kind": "ability",
+      "path": "abilities/healing-hands.md",
+      "aliases": [
+        "healing hands",
+        "healinghands",
+        "splendor healing hands",
+        "splendor healinghands"
+      ]
+    },
+    {
+      "id": "ability-healing-strike",
+      "title": "Healing Strike",
+      "kind": "ability",
+      "path": "abilities/healing-strike.md",
+      "aliases": [
+        "healing strike",
+        "healingstrike",
+        "splendor healing strike",
+        "splendor healingstrike"
+      ]
+    },
+    {
+      "id": "ability-hold-the-line",
+      "title": "Hold the Line",
+      "kind": "ability",
+      "path": "abilities/hold-the-line.md",
+      "aliases": [
+        "hold the line",
+        "holdtheline",
+        "valor hold the line",
+        "valor holdtheline"
+      ]
+    },
+    {
+      "id": "ability-hush",
+      "title": "Hush",
+      "kind": "ability",
+      "path": "abilities/hush.md",
+      "aliases": [
+        "hush",
+        "midnight hush"
+      ]
+    },
+    {
+      "id": "ability-hypnotic-shimmer",
+      "title": "Hypnotic Shimmer",
+      "kind": "ability",
+      "path": "abilities/hypnotic-shimmer.md",
+      "aliases": [
+        "grace hypnotic shimmer",
+        "grace hypnoticshimmer",
+        "hypnotic shimmer",
+        "hypnoticshimmer"
+      ]
+    },
+    {
+      "id": "ability-i-am-your-shield",
+      "title": "I Am Your Shield",
+      "kind": "ability",
+      "path": "abilities/i-am-your-shield.md",
+      "aliases": [
+        "i am your shield",
+        "iamyourshield",
+        "valor i am your shield",
+        "valor iamyourshield"
+      ]
+    },
+    {
+      "id": "ability-i-see-it-coming",
+      "title": "I See It Coming",
+      "kind": "ability",
+      "path": "abilities/i-see-it-coming.md",
+      "aliases": [
+        "bone i see it coming",
+        "bone iseeitcoming",
+        "i see it coming",
+        "iseeitcoming"
+      ]
+    },
+    {
+      "id": "ability-inevitable",
+      "title": "Inevitable",
+      "kind": "ability",
+      "path": "abilities/inevitable.md",
+      "aliases": [
+        "inevitable",
+        "valor inevitable"
+      ]
+    },
+    {
+      "id": "ability-inspirational-words",
+      "title": "Inspirational Words",
+      "kind": "ability",
+      "path": "abilities/inspirational-words.md",
+      "aliases": [
+        "grace inspirational words",
+        "grace inspirationalwords",
+        "inspirational words",
+        "inspirationalwords"
+      ]
+    },
+    {
+      "id": "ability-invigoration",
+      "title": "Invigoration",
+      "kind": "ability",
+      "path": "abilities/invigoration.md",
+      "aliases": [
+        "invigoration",
+        "splendor invigoration"
+      ]
+    },
+    {
+      "id": "ability-invisibility",
+      "title": "Invisibility",
+      "kind": "ability",
+      "path": "abilities/invisibility.md",
+      "aliases": [
+        "grace invisibility",
+        "invisibility"
+      ]
+    },
+    {
+      "id": "ability-know-thy-enemy",
+      "title": "Know Thy Enemy",
+      "kind": "ability",
+      "path": "abilities/know-thy-enemy.md",
+      "aliases": [
+        "bone know thy enemy",
+        "bone knowthyenemy",
+        "know thy enemy",
+        "knowthyenemy"
+      ]
+    },
+    {
+      "id": "ability-lead-by-example",
+      "title": "Lead by Example",
+      "kind": "ability",
+      "path": "abilities/lead-by-example.md",
+      "aliases": [
+        "lead by example",
+        "leadbyexample",
+        "valor lead by example",
+        "valor leadbyexample"
+      ]
+    },
+    {
+      "id": "ability-lean-on-me",
+      "title": "Lean on Me",
+      "kind": "ability",
+      "path": "abilities/lean-on-me.md",
+      "aliases": [
+        "lean on me",
+        "leanonme",
+        "valor lean on me",
+        "valor leanonme"
+      ]
+    },
+    {
+      "id": "ability-life-ward",
+      "title": "Life Ward",
+      "kind": "ability",
+      "path": "abilities/life-ward.md",
+      "aliases": [
+        "life ward",
+        "lifeward",
+        "splendor life ward",
+        "splendor lifeward"
+      ]
+    },
+    {
+      "id": "ability-manifest-wall",
+      "title": "Manifest Wall",
+      "kind": "ability",
+      "path": "abilities/manifest-wall.md",
+      "aliases": [
+        "codex manifest wall",
+        "codex manifestwall",
+        "manifest wall",
+        "manifestwall"
+      ]
+    },
+    {
+      "id": "ability-mass-disguise",
+      "title": "Mass Disguise",
+      "kind": "ability",
+      "path": "abilities/mass-disguise.md",
+      "aliases": [
+        "mass disguise",
+        "massdisguise",
+        "midnight mass disguise",
+        "midnight massdisguise"
+      ]
+    },
+    {
+      "id": "ability-mass-enrapture",
+      "title": "Mass Enrapture",
+      "kind": "ability",
+      "path": "abilities/mass-enrapture.md",
+      "aliases": [
+        "grace mass enrapture",
+        "grace massenrapture",
+        "mass enrapture",
+        "massenrapture"
+      ]
+    },
+    {
+      "id": "ability-master-of-the-craft",
+      "title": "Master of the Craft",
+      "kind": "ability",
+      "path": "abilities/master-of-the-craft.md",
+      "aliases": [
+        "grace master of the craft",
+        "grace masterofthecraft",
+        "master of the craft",
+        "masterofthecraft"
+      ]
+    },
+    {
+      "id": "ability-mending-touch",
+      "title": "Mending Touch",
+      "kind": "ability",
+      "path": "abilities/mending-touch.md",
+      "aliases": [
+        "mending touch",
+        "mendingtouch",
+        "splendor mending touch",
+        "splendor mendingtouch"
+      ]
+    },
+    {
+      "id": "ability-midnight-spirit",
+      "title": "Midnight Spirit",
+      "kind": "ability",
+      "path": "abilities/midnight-spirit.md",
+      "aliases": [
+        "midnight midnight spirit",
+        "midnight midnightspirit",
+        "midnight spirit",
+        "midnightspirit"
+      ]
+    },
+    {
+      "id": "ability-midnight-touched",
+      "title": "Midnight-Touched",
+      "kind": "ability",
+      "path": "abilities/midnight-touched.md",
+      "aliases": [
+        "midnight midnight-touched",
+        "midnight midnighttouched",
+        "midnight-touched",
+        "midnighttouched"
+      ]
+    },
+    {
+      "id": "ability-natural-familiar",
+      "title": "Natural Familiar",
+      "kind": "ability",
+      "path": "abilities/natural-familiar.md",
+      "aliases": [
+        "natural familiar",
+        "naturalfamiliar",
+        "sage natural familiar",
+        "sage naturalfamiliar"
+      ]
+    },
+    {
+      "id": "ability-nature-s-tongue",
+      "title": "Nature's Tongue",
+      "kind": "ability",
+      "path": "abilities/nature-s-tongue.md",
+      "aliases": [
+        "nature's tongue",
+        "naturestongue",
+        "sage nature's tongue",
+        "sage naturestongue"
+      ]
+    },
+    {
+      "id": "ability-never-upstaged",
+      "title": "Never Upstaged",
+      "kind": "ability",
+      "path": "abilities/never-upstaged.md",
+      "aliases": [
+        "grace never upstaged",
+        "grace neverupstaged",
+        "never upstaged",
+        "neverupstaged"
+      ]
+    },
+    {
+      "id": "ability-night-terror",
+      "title": "Night Terror",
+      "kind": "ability",
+      "path": "abilities/night-terror.md",
+      "aliases": [
+        "midnight night terror",
+        "midnight nightterror",
+        "night terror",
+        "nightterror"
+      ]
+    },
+    {
+      "id": "ability-not-good-enough",
+      "title": "Not Good Enough",
+      "kind": "ability",
+      "path": "abilities/not-good-enough.md",
+      "aliases": [
+        "blade not good enough",
+        "blade notgoodenough",
+        "not good enough",
+        "notgoodenough"
+      ]
+    },
+    {
+      "id": "ability-notorious",
+      "title": "Notorious",
+      "kind": "ability",
+      "path": "abilities/notorious.md",
+      "aliases": [
+        "grace notorious",
+        "notorious"
+      ]
+    },
+    {
+      "id": "ability-on-the-brink",
+      "title": "On the Brink",
+      "kind": "ability",
+      "path": "abilities/on-the-brink.md",
+      "aliases": [
+        "bone on the brink",
+        "bone onthebrink",
+        "on the brink",
+        "onthebrink"
+      ]
+    },
+    {
+      "id": "ability-onslaught",
+      "title": "Onslaught",
+      "kind": "ability",
+      "path": "abilities/onslaught.md",
+      "aliases": [
+        "blade onslaught",
+        "onslaught"
+      ]
+    },
+    {
+      "id": "ability-overwhelming-aura",
+      "title": "Overwhelming Aura",
+      "kind": "ability",
+      "path": "abilities/overwhelming-aura.md",
+      "aliases": [
+        "overwhelming aura",
+        "overwhelmingaura",
+        "splendor overwhelming aura",
+        "splendor overwhelmingaura"
+      ]
+    },
+    {
+      "id": "ability-phantom-retreat",
+      "title": "Phantom Retreat",
+      "kind": "ability",
+      "path": "abilities/phantom-retreat.md",
+      "aliases": [
+        "midnight phantom retreat",
+        "midnight phantomretreat",
+        "phantom retreat",
+        "phantomretreat"
+      ]
+    },
+    {
+      "id": "ability-pick-and-pull",
+      "title": "Pick and Pull",
+      "kind": "ability",
+      "path": "abilities/pick-and-pull.md",
+      "aliases": [
+        "midnight pick and pull",
+        "midnight pickandpull",
+        "pick and pull",
+        "pickandpull"
+      ]
+    },
+    {
+      "id": "ability-plant-dominion",
+      "title": "Plant Dominion",
+      "kind": "ability",
+      "path": "abilities/plant-dominion.md",
+      "aliases": [
+        "plant dominion",
+        "plantdominion",
+        "sage plant dominion",
+        "sage plantdominion"
+      ]
+    },
+    {
+      "id": "ability-premonition",
+      "title": "Premonition",
+      "kind": "ability",
+      "path": "abilities/premonition.md",
+      "aliases": [
+        "arcana premonition",
+        "premonition"
+      ]
+    },
+    {
+      "id": "ability-preservation-blast",
+      "title": "Preservation Blast",
+      "kind": "ability",
+      "path": "abilities/preservation-blast.md",
+      "aliases": [
+        "arcana preservation blast",
+        "arcana preservationblast",
+        "preservation blast",
+        "preservationblast"
+      ]
+    },
+    {
+      "id": "ability-rage-up",
+      "title": "Rage Up",
+      "kind": "ability",
+      "path": "abilities/rage-up.md",
+      "aliases": [
+        "blade rage up",
+        "blade rageup",
+        "rage up",
+        "rageup"
+      ]
+    },
+    {
+      "id": "ability-rain-of-blades",
+      "title": "Rain of Blades",
+      "kind": "ability",
+      "path": "abilities/rain-of-blades.md",
+      "aliases": [
+        "midnight rain of blades",
+        "midnight rainofblades",
+        "rain of blades",
+        "rainofblades"
+      ]
+    },
+    {
+      "id": "ability-rapid-riposte",
+      "title": "Rapid Riposte",
+      "kind": "ability",
+      "path": "abilities/rapid-riposte.md",
+      "aliases": [
+        "bone rapid riposte",
+        "bone rapidriposte",
+        "rapid riposte",
+        "rapidriposte"
+      ]
+    },
+    {
+      "id": "ability-reaper-s-strike",
+      "title": "Reaper's Strike",
+      "kind": "ability",
+      "path": "abilities/reaper-s-strike.md",
+      "aliases": [
+        "blade reaper's strike",
+        "blade reapersstrike",
+        "reaper's strike",
+        "reapersstrike"
+      ]
+    },
+    {
+      "id": "ability-reassurance",
+      "title": "Reassurance",
+      "kind": "ability",
+      "path": "abilities/reassurance.md",
+      "aliases": [
+        "reassurance",
+        "splendor reassurance"
+      ]
+    },
+    {
+      "id": "ability-reckless",
+      "title": "Reckless",
+      "kind": "ability",
+      "path": "abilities/reckless.md",
+      "aliases": [
+        "blade reckless",
+        "reckless"
+      ]
+    },
+    {
+      "id": "ability-recovery",
+      "title": "Recovery",
+      "kind": "ability",
+      "path": "abilities/recovery.md",
+      "aliases": [
+        "bone recovery",
+        "recovery"
+      ]
+    },
+    {
+      "id": "ability-redirect",
+      "title": "Redirect",
+      "kind": "ability",
+      "path": "abilities/redirect.md",
+      "aliases": [
+        "bone redirect",
+        "redirect"
+      ]
+    },
+    {
+      "id": "ability-rejuvenation-barrier",
+      "title": "Rejuvenation Barrier",
+      "kind": "ability",
+      "path": "abilities/rejuvenation-barrier.md",
+      "aliases": [
+        "rejuvenation barrier",
+        "rejuvenationbarrier",
+        "sage rejuvenation barrier",
+        "sage rejuvenationbarrier"
+      ]
+    },
+    {
+      "id": "ability-restoration",
+      "title": "Restoration",
+      "kind": "ability",
+      "path": "abilities/restoration.md",
+      "aliases": [
+        "restoration",
+        "splendor restoration"
+      ]
+    },
+    {
+      "id": "ability-resurrection",
+      "title": "Resurrection",
+      "kind": "ability",
+      "path": "abilities/resurrection.md",
+      "aliases": [
+        "resurrection",
+        "splendor resurrection"
+      ]
+    },
+    {
+      "id": "ability-rift-walker",
+      "title": "Rift Walker",
+      "kind": "ability",
+      "path": "abilities/rift-walker.md",
+      "aliases": [
+        "arcana rift walker",
+        "arcana riftwalker",
+        "rift walker",
+        "riftwalker"
+      ]
+    },
+    {
+      "id": "ability-rise-up",
+      "title": "Rise Up",
+      "kind": "ability",
+      "path": "abilities/rise-up.md",
+      "aliases": [
+        "rise up",
+        "riseup",
+        "valor rise up",
+        "valor riseup"
+      ]
+    },
+    {
+      "id": "ability-rousing-strike",
+      "title": "Rousing Strike",
+      "kind": "ability",
+      "path": "abilities/rousing-strike.md",
+      "aliases": [
+        "rousing strike",
+        "rousingstrike",
+        "valor rousing strike",
+        "valor rousingstrike"
+      ]
+    },
+    {
+      "id": "ability-rune-ward",
+      "title": "Rune Ward",
+      "kind": "ability",
+      "path": "abilities/rune-ward.md",
+      "aliases": [
+        "arcana rune ward",
+        "arcana runeward",
+        "rune ward",
+        "runeward"
+      ]
+    },
+    {
+      "id": "ability-safe-haven",
+      "title": "Safe Haven",
+      "kind": "ability",
+      "path": "abilities/safe-haven.md",
+      "aliases": [
+        "codex safe haven",
+        "codex safehaven",
+        "safe haven",
+        "safehaven"
+      ]
+    },
+    {
+      "id": "ability-sage-touched",
+      "title": "Sage-Touched",
+      "kind": "ability",
+      "path": "abilities/sage-touched.md",
+      "aliases": [
+        "sage sage-touched",
+        "sage sagetouched",
+        "sage-touched",
+        "sagetouched"
+      ]
+    },
+    {
+      "id": "ability-salvation-beam",
+      "title": "Salvation Beam",
+      "kind": "ability",
+      "path": "abilities/salvation-beam.md",
+      "aliases": [
+        "salvation beam",
+        "salvationbeam",
+        "splendor salvation beam",
+        "splendor salvationbeam"
+      ]
+    },
+    {
+      "id": "ability-scramble",
+      "title": "Scramble",
+      "kind": "ability",
+      "path": "abilities/scramble.md",
+      "aliases": [
+        "blade scramble",
+        "scramble"
+      ]
+    },
+    {
+      "id": "ability-second-wind",
+      "title": "Second Wind",
+      "kind": "ability",
+      "path": "abilities/second-wind.md",
+      "aliases": [
+        "second wind",
+        "secondwind",
+        "splendor second wind",
+        "splendor secondwind"
+      ]
+    },
+    {
+      "id": "ability-sensory-projection",
+      "title": "Sensory Projection",
+      "kind": "ability",
+      "path": "abilities/sensory-projection.md",
+      "aliases": [
+        "arcana sensory projection",
+        "arcana sensoryprojection",
+        "sensory projection",
+        "sensoryprojection"
+      ]
+    },
+    {
+      "id": "ability-shadowbind",
+      "title": "Shadowbind",
+      "kind": "ability",
+      "path": "abilities/shadowbind.md",
+      "aliases": [
+        "midnight shadowbind",
+        "shadowbind"
+      ]
+    },
+    {
+      "id": "ability-shadowhunter",
+      "title": "Shadowhunter",
+      "kind": "ability",
+      "path": "abilities/shadowhunter.md",
+      "aliases": [
+        "midnight shadowhunter",
+        "shadowhunter"
+      ]
+    },
+    {
+      "id": "ability-shape-material",
+      "title": "Shape Material",
+      "kind": "ability",
+      "path": "abilities/shape-material.md",
+      "aliases": [
+        "shape material",
+        "shapematerial",
+        "splendor shape material",
+        "splendor shapematerial"
+      ]
+    },
+    {
+      "id": "ability-share-the-burden",
+      "title": "Share the Burden",
+      "kind": "ability",
+      "path": "abilities/share-the-burden.md",
+      "aliases": [
+        "grace share the burden",
+        "grace sharetheburden",
+        "share the burden",
+        "sharetheburden"
+      ]
+    },
+    {
+      "id": "ability-shield-aura",
+      "title": "Shield Aura",
+      "kind": "ability",
+      "path": "abilities/shield-aura.md",
+      "aliases": [
+        "shield aura",
+        "shieldaura",
+        "splendor shield aura",
+        "splendor shieldaura"
+      ]
+    },
+    {
+      "id": "ability-shrug-it-off",
+      "title": "Shrug It Off",
+      "kind": "ability",
+      "path": "abilities/shrug-it-off.md",
+      "aliases": [
+        "shrug it off",
+        "shrugitoff",
+        "valor shrug it off",
+        "valor shrugitoff"
+      ]
+    },
+    {
+      "id": "ability-sigil-of-retribution",
+      "title": "Sigil of Retribution",
+      "kind": "ability",
+      "path": "abilities/sigil-of-retribution.md",
+      "aliases": [
+        "codex sigil of retribution",
+        "codex sigilofretribution",
+        "sigil of retribution",
+        "sigilofretribution"
+      ]
+    },
+    {
+      "id": "ability-signature-move",
+      "title": "Signature Move",
+      "kind": "ability",
+      "path": "abilities/signature-move.md",
+      "aliases": [
+        "bone signature move",
+        "bone signaturemove",
+        "signature move",
+        "signaturemove"
+      ]
+    },
+    {
+      "id": "ability-smite",
+      "title": "Smite",
+      "kind": "ability",
+      "path": "abilities/smite.md",
+      "aliases": [
+        "smite",
+        "splendor smite"
+      ]
+    },
+    {
+      "id": "ability-soothing-speech",
+      "title": "Soothing Speech",
+      "kind": "ability",
+      "path": "abilities/soothing-speech.md",
+      "aliases": [
+        "grace soothing speech",
+        "grace soothingspeech",
+        "soothing speech",
+        "soothingspeech"
+      ]
+    },
+    {
+      "id": "ability-specter-of-the-dark",
+      "title": "Specter of the Dark",
+      "kind": "ability",
+      "path": "abilities/specter-of-the-dark.md",
+      "aliases": [
+        "midnight specter of the dark",
+        "midnight specterofthedark",
+        "specter of the dark",
+        "specterofthedark"
+      ]
+    },
+    {
+      "id": "ability-spellcharge",
+      "title": "Spellcharge",
+      "kind": "ability",
+      "path": "abilities/spellcharge.md",
+      "aliases": [
+        "midnight spellcharge",
+        "spellcharge"
+      ]
+    },
+    {
+      "id": "ability-splendor-touched",
+      "title": "Splendor-Touched",
+      "kind": "ability",
+      "path": "abilities/splendor-touched.md",
+      "aliases": [
+        "splendor splendor-touched",
+        "splendor splendortouched",
+        "splendor-touched",
+        "splendortouched"
+      ]
+    },
+    {
+      "id": "ability-splintering-strike",
+      "title": "Splintering Strike",
+      "kind": "ability",
+      "path": "abilities/splintering-strike.md",
+      "aliases": [
+        "bone splintering strike",
+        "bone splinteringstrike",
+        "splintering strike",
+        "splinteringstrike"
+      ]
+    },
+    {
+      "id": "ability-stealth-expertise",
+      "title": "Stealth Expertise",
+      "kind": "ability",
+      "path": "abilities/stealth-expertise.md",
+      "aliases": [
+        "midnight stealth expertise",
+        "midnight stealthexpertise",
+        "stealth expertise",
+        "stealthexpertise"
+      ]
+    },
+    {
+      "id": "ability-strategic-approach",
+      "title": "Strategic Approach",
+      "kind": "ability",
+      "path": "abilities/strategic-approach.md",
+      "aliases": [
+        "bone strategic approach",
+        "bone strategicapproach",
+        "strategic approach",
+        "strategicapproach"
+      ]
+    },
+    {
+      "id": "ability-stunning-sunlight",
+      "title": "Stunning Sunlight",
+      "kind": "ability",
+      "path": "abilities/stunning-sunlight.md",
+      "aliases": [
+        "splendor stunning sunlight",
+        "splendor stunningsunlight",
+        "stunning sunlight",
+        "stunningsunlight"
+      ]
+    },
+    {
+      "id": "ability-support-tank",
+      "title": "Support Tank",
+      "kind": "ability",
+      "path": "abilities/support-tank.md",
+      "aliases": [
+        "support tank",
+        "supporttank",
+        "valor support tank",
+        "valor supporttank"
+      ]
+    },
+    {
+      "id": "ability-swift-step",
+      "title": "Swift Step",
+      "kind": "ability",
+      "path": "abilities/swift-step.md",
+      "aliases": [
+        "bone swift step",
+        "bone swiftstep",
+        "swift step",
+        "swiftstep"
+      ]
+    },
+    {
+      "id": "ability-tactician",
+      "title": "Tactician",
+      "kind": "ability",
+      "path": "abilities/tactician.md",
+      "aliases": [
+        "bone tactician",
+        "tactician"
+      ]
+    },
+    {
+      "id": "ability-telekinesis",
+      "title": "Telekinesis",
+      "kind": "ability",
+      "path": "abilities/telekinesis.md",
+      "aliases": [
+        "arcana telekinesis",
+        "telekinesis"
+      ]
+    },
+    {
+      "id": "ability-teleport",
+      "title": "Teleport",
+      "kind": "ability",
+      "path": "abilities/teleport.md",
+      "aliases": [
+        "codex teleport",
+        "teleport"
+      ]
+    },
+    {
+      "id": "ability-tell-no-lies",
+      "title": "Tell No Lies",
+      "kind": "ability",
+      "path": "abilities/tell-no-lies.md",
+      "aliases": [
+        "grace tell no lies",
+        "grace tellnolies",
+        "tell no lies",
+        "tellnolies"
+      ]
+    },
+    {
+      "id": "ability-tempest",
+      "title": "Tempest",
+      "kind": "ability",
+      "path": "abilities/tempest.md",
+      "aliases": [
+        "sage tempest",
+        "tempest"
+      ]
+    },
+    {
+      "id": "ability-thorn-skin",
+      "title": "Thorn Skin",
+      "kind": "ability",
+      "path": "abilities/thorn-skin.md",
+      "aliases": [
+        "sage thorn skin",
+        "sage thornskin",
+        "thorn skin",
+        "thornskin"
+      ]
+    },
+    {
+      "id": "ability-thought-delver",
+      "title": "Thought Delver",
+      "kind": "ability",
+      "path": "abilities/thought-delver.md",
+      "aliases": [
+        "grace thought delver",
+        "grace thoughtdelver",
+        "thought delver",
+        "thoughtdelver"
+      ]
+    },
+    {
+      "id": "ability-through-your-eyes",
+      "title": "Through Your Eyes",
+      "kind": "ability",
+      "path": "abilities/through-your-eyes.md",
+      "aliases": [
+        "grace through your eyes",
+        "grace throughyoureyes",
+        "through your eyes",
+        "throughyoureyes"
+      ]
+    },
+    {
+      "id": "ability-towering-stalk",
+      "title": "Towering Stalk",
+      "kind": "ability",
+      "path": "abilities/towering-stalk.md",
+      "aliases": [
+        "sage towering stalk",
+        "sage toweringstalk",
+        "towering stalk",
+        "toweringstalk"
+      ]
+    },
+    {
+      "id": "ability-transcendent-union",
+      "title": "Transcendent Union",
+      "kind": "ability",
+      "path": "abilities/transcendent-union.md",
+      "aliases": [
+        "codex transcendent union",
+        "codex transcendentunion",
+        "transcendent union",
+        "transcendentunion"
+      ]
+    },
+    {
+      "id": "ability-troublemaker",
+      "title": "Troublemaker",
+      "kind": "ability",
+      "path": "abilities/troublemaker.md",
+      "aliases": [
+        "grace troublemaker",
+        "troublemaker"
+      ]
+    },
+    {
+      "id": "ability-twilight-toll",
+      "title": "Twilight Toll",
+      "kind": "ability",
+      "path": "abilities/twilight-toll.md",
+      "aliases": [
+        "midnight twilight toll",
+        "midnight twilighttoll",
+        "twilight toll",
+        "twilighttoll"
+      ]
+    },
+    {
+      "id": "ability-unbreakable",
+      "title": "Unbreakable",
+      "kind": "ability",
+      "path": "abilities/unbreakable.md",
+      "aliases": [
+        "unbreakable",
+        "valor unbreakable"
+      ]
+    },
+    {
+      "id": "ability-uncanny-disguise",
+      "title": "Uncanny Disguise",
+      "kind": "ability",
+      "path": "abilities/uncanny-disguise.md",
+      "aliases": [
+        "midnight uncanny disguise",
+        "midnight uncannydisguise",
+        "uncanny disguise",
+        "uncannydisguise"
+      ]
+    },
+    {
+      "id": "ability-unleash-chaos",
+      "title": "Unleash Chaos",
+      "kind": "ability",
+      "path": "abilities/unleash-chaos.md",
+      "aliases": [
+        "arcana unleash chaos",
+        "arcana unleashchaos",
+        "unleash chaos",
+        "unleashchaos"
+      ]
+    },
+    {
+      "id": "ability-untouchable",
+      "title": "Untouchable",
+      "kind": "ability",
+      "path": "abilities/untouchable.md",
+      "aliases": [
+        "bone untouchable",
+        "untouchable"
+      ]
+    },
+    {
+      "id": "ability-unyielding-armor",
+      "title": "Unyielding Armor",
+      "kind": "ability",
+      "path": "abilities/unyielding-armor.md",
+      "aliases": [
+        "unyielding armor",
+        "unyieldingarmor",
+        "valor unyielding armor",
+        "valor unyieldingarmor"
+      ]
+    },
+    {
+      "id": "ability-valor-touched",
+      "title": "Valor-Touched",
+      "kind": "ability",
+      "path": "abilities/valor-touched.md",
+      "aliases": [
+        "valor valor-touched",
+        "valor valortouched",
+        "valor-touched",
+        "valortouched"
+      ]
+    },
+    {
+      "id": "ability-vanishing-dodge",
+      "title": "Vanishing Dodge",
+      "kind": "ability",
+      "path": "abilities/vanishing-dodge.md",
+      "aliases": [
+        "midnight vanishing dodge",
+        "midnight vanishingdodge",
+        "vanishing dodge",
+        "vanishingdodge"
+      ]
+    },
+    {
+      "id": "ability-veil-of-night",
+      "title": "Veil of Night",
+      "kind": "ability",
+      "path": "abilities/veil-of-night.md",
+      "aliases": [
+        "midnight veil of night",
+        "midnight veilofnight",
+        "veil of night",
+        "veilofnight"
+      ]
+    },
+    {
+      "id": "ability-versatile-fighter",
+      "title": "Versatile Fighter",
+      "kind": "ability",
+      "path": "abilities/versatile-fighter.md",
+      "aliases": [
+        "blade versatile fighter",
+        "blade versatilefighter",
+        "versatile fighter",
+        "versatilefighter"
+      ]
+    },
+    {
+      "id": "ability-vicious-entangle",
+      "title": "Vicious Entangle",
+      "kind": "ability",
+      "path": "abilities/vicious-entangle.md",
+      "aliases": [
+        "sage vicious entangle",
+        "sage viciousentangle",
+        "vicious entangle",
+        "viciousentangle"
+      ]
+    },
+    {
+      "id": "ability-vitality",
+      "title": "Vitality",
+      "kind": "ability",
+      "path": "abilities/vitality.md",
+      "aliases": [
+        "blade vitality",
+        "vitality"
+      ]
+    },
+    {
+      "id": "ability-voice-of-reason",
+      "title": "Voice of Reason",
+      "kind": "ability",
+      "path": "abilities/voice-of-reason.md",
+      "aliases": [
+        "splendor voice of reason",
+        "splendor voiceofreason",
+        "voice of reason",
+        "voiceofreason"
+      ]
+    },
+    {
+      "id": "ability-wall-walk",
+      "title": "Wall Walk",
+      "kind": "ability",
+      "path": "abilities/wall-walk.md",
+      "aliases": [
+        "arcana wall walk",
+        "arcana wallwalk",
+        "wall walk",
+        "wallwalk"
+      ]
+    },
+    {
+      "id": "ability-whirlwind",
+      "title": "Whirlwind",
+      "kind": "ability",
+      "path": "abilities/whirlwind.md",
+      "aliases": [
+        "blade whirlwind",
+        "whirlwind"
+      ]
+    },
+    {
+      "id": "ability-wild-fortress",
+      "title": "Wild Fortress",
+      "kind": "ability",
+      "path": "abilities/wild-fortress.md",
+      "aliases": [
+        "sage wild fortress",
+        "sage wildfortress",
+        "wild fortress",
+        "wildfortress"
+      ]
+    },
+    {
+      "id": "ability-wild-surge",
+      "title": "Wild Surge",
+      "kind": "ability",
+      "path": "abilities/wild-surge.md",
+      "aliases": [
+        "sage wild surge",
+        "sage wildsurge",
+        "wild surge",
+        "wildsurge"
+      ]
+    },
+    {
+      "id": "ability-words-of-discord",
+      "title": "Words of Discord",
+      "kind": "ability",
+      "path": "abilities/words-of-discord.md",
+      "aliases": [
+        "grace words of discord",
+        "grace wordsofdiscord",
+        "words of discord",
+        "wordsofdiscord"
+      ]
+    },
+    {
+      "id": "ability-wrangle",
+      "title": "Wrangle",
+      "kind": "ability",
+      "path": "abilities/wrangle.md",
+      "aliases": [
+        "bone wrangle",
+        "wrangle"
+      ]
+    },
+    {
+      "id": "ability-zone-of-protection",
+      "title": "Zone of Protection",
+      "kind": "ability",
+      "path": "abilities/zone-of-protection.md",
+      "aliases": [
+        "splendor zone of protection",
+        "splendor zoneofprotection",
+        "zone of protection",
+        "zoneofprotection"
+      ]
+    },
+    {
+      "id": "adversary-acid-burrower",
+      "title": "Acid Burrower",
+      "kind": "adversary",
+      "path": "adversaries/acid-burrower.md",
+      "aliases": [
+        "acid burrower",
+        "acidburrower"
+      ]
+    },
+    {
+      "id": "adversary-adult-flickerfly",
+      "title": "Adult Flickerfly",
+      "kind": "adversary",
+      "path": "adversaries/adult-flickerfly.md",
+      "aliases": [
+        "adult flickerfly",
+        "adultflickerfly"
+      ]
+    },
+    {
+      "id": "adversary-apprentice-assassin",
+      "title": "Apprentice Assassin",
+      "kind": "adversary",
+      "path": "adversaries/apprentice-assassin.md",
+      "aliases": [
+        "apprentice assassin",
+        "apprenticeassassin"
+      ]
+    },
+    {
+      "id": "adversary-arch-necromancer",
+      "title": "Arch-Necromancer",
+      "kind": "adversary",
+      "path": "adversaries/arch-necromancer.md",
+      "aliases": [
+        "arch-necromancer",
+        "archnecromancer"
+      ]
+    },
+    {
+      "id": "adversary-archer-guard",
+      "title": "Archer Guard",
+      "kind": "adversary",
+      "path": "adversaries/archer-guard.md",
+      "aliases": [
+        "archer guard",
+        "archerguard"
+      ]
+    },
+    {
+      "id": "adversary-archer-squadron",
+      "title": "Archer Squadron",
+      "kind": "adversary",
+      "path": "adversaries/archer-squadron.md",
+      "aliases": [
+        "archer squadron",
+        "archersquadron"
+      ]
+    },
+    {
+      "id": "adversary-assassin-poisoner",
+      "title": "Assassin Poisoner",
+      "kind": "adversary",
+      "path": "adversaries/assassin-poisoner.md",
+      "aliases": [
+        "assassin poisoner",
+        "assassinpoisoner"
+      ]
+    },
+    {
+      "id": "adversary-battle-box",
+      "title": "Battle Box",
+      "kind": "adversary",
+      "path": "adversaries/battle-box.md",
+      "aliases": [
+        "battle box",
+        "battlebox"
+      ]
+    },
+    {
+      "id": "adversary-bear",
+      "title": "Bear",
+      "kind": "adversary",
+      "path": "adversaries/bear.md",
+      "aliases": [
+        "bear"
+      ]
+    },
+    {
+      "id": "adversary-bladed-guard",
+      "title": "Bladed Guard",
+      "kind": "adversary",
+      "path": "adversaries/bladed-guard.md",
+      "aliases": [
+        "bladed guard",
+        "bladedguard"
+      ]
+    },
+    {
+      "id": "adversary-brawny-zombie",
+      "title": "Brawny Zombie",
+      "kind": "adversary",
+      "path": "adversaries/brawny-zombie.md",
+      "aliases": [
+        "brawny zombie",
+        "brawnyzombie"
+      ]
+    },
+    {
+      "id": "adversary-cave-ogre",
+      "title": "Cave Ogre",
+      "kind": "adversary",
+      "path": "adversaries/cave-ogre.md",
+      "aliases": [
+        "cave ogre",
+        "caveogre"
+      ]
+    },
+    {
+      "id": "adversary-chaos-skull",
+      "title": "Chaos Skull",
+      "kind": "adversary",
+      "path": "adversaries/chaos-skull.md",
+      "aliases": [
+        "chaos skull",
+        "chaosskull"
+      ]
+    },
+    {
+      "id": "adversary-conscript",
+      "title": "Conscript",
+      "kind": "adversary",
+      "path": "adversaries/conscript.md",
+      "aliases": [
+        "conscript"
+      ]
+    },
+    {
+      "id": "adversary-construct",
+      "title": "Construct",
+      "kind": "adversary",
+      "path": "adversaries/construct.md",
+      "aliases": [
+        "construct"
+      ]
+    },
+    {
+      "id": "adversary-courtesan",
+      "title": "Courtesan",
+      "kind": "adversary",
+      "path": "adversaries/courtesan.md",
+      "aliases": [
+        "courtesan"
+      ]
+    },
+    {
+      "id": "adversary-courtier",
+      "title": "Courtier",
+      "kind": "adversary",
+      "path": "adversaries/courtier.md",
+      "aliases": [
+        "courtier"
+      ]
+    },
+    {
+      "id": "adversary-cult-adept",
+      "title": "Cult Adept",
+      "kind": "adversary",
+      "path": "adversaries/cult-adept.md",
+      "aliases": [
+        "cult adept",
+        "cultadept"
+      ]
+    },
+    {
+      "id": "adversary-cult-fang",
+      "title": "Cult Fang",
+      "kind": "adversary",
+      "path": "adversaries/cult-fang.md",
+      "aliases": [
+        "cult fang",
+        "cultfang"
+      ]
+    },
+    {
+      "id": "adversary-cult-initiate",
+      "title": "Cult Initiate",
+      "kind": "adversary",
+      "path": "adversaries/cult-initiate.md",
+      "aliases": [
+        "cult initiate",
+        "cultinitiate"
+      ]
+    },
+    {
+      "id": "adversary-deeproot-defender",
+      "title": "Deeproot Defender",
+      "kind": "adversary",
+      "path": "adversaries/deeproot-defender.md",
+      "aliases": [
+        "deeproot defender",
+        "deeprootdefender"
+      ]
+    },
+    {
+      "id": "adversary-demon-of-avarice",
+      "title": "Demon of Avarice",
+      "kind": "adversary",
+      "path": "adversaries/demon-of-avarice.md",
+      "aliases": [
+        "demon of avarice",
+        "demonofavarice"
+      ]
+    },
+    {
+      "id": "adversary-demon-of-despair",
+      "title": "Demon of Despair",
+      "kind": "adversary",
+      "path": "adversaries/demon-of-despair.md",
+      "aliases": [
+        "demon of despair",
+        "demonofdespair"
+      ]
+    },
+    {
+      "id": "adversary-demon-of-hubris",
+      "title": "Demon of Hubris",
+      "kind": "adversary",
+      "path": "adversaries/demon-of-hubris.md",
+      "aliases": [
+        "demon of hubris",
+        "demonofhubris"
+      ]
+    },
+    {
+      "id": "adversary-demon-of-jealousy",
+      "title": "Demon of Jealousy",
+      "kind": "adversary",
+      "path": "adversaries/demon-of-jealousy.md",
+      "aliases": [
+        "demon of jealousy",
+        "demonofjealousy"
+      ]
+    },
+    {
+      "id": "adversary-demon-of-wrath",
+      "title": "Demon of Wrath",
+      "kind": "adversary",
+      "path": "adversaries/demon-of-wrath.md",
+      "aliases": [
+        "demon of wrath",
+        "demonofwrath"
+      ]
+    },
+    {
+      "id": "adversary-demonic-hound-pack",
+      "title": "Demonic Hound Pack",
+      "kind": "adversary",
+      "path": "adversaries/demonic-hound-pack.md",
+      "aliases": [
+        "demonic hound pack",
+        "demonichoundpack"
+      ]
+    },
+    {
+      "id": "adversary-dire-bat",
+      "title": "Dire Bat",
+      "kind": "adversary",
+      "path": "adversaries/dire-bat.md",
+      "aliases": [
+        "dire bat",
+        "direbat"
+      ]
+    },
+    {
+      "id": "adversary-dire-wolf",
+      "title": "Dire Wolf",
+      "kind": "adversary",
+      "path": "adversaries/dire-wolf.md",
+      "aliases": [
+        "dire wolf",
+        "direwolf"
+      ]
+    },
+    {
+      "id": "adversary-dryad",
+      "title": "Dryad",
+      "kind": "adversary",
+      "path": "adversaries/dryad.md",
+      "aliases": [
+        "dryad"
+      ]
+    },
+    {
+      "id": "adversary-electric-eels",
+      "title": "Electric Eels",
+      "kind": "adversary",
+      "path": "adversaries/electric-eels.md",
+      "aliases": [
+        "electric eels",
+        "electriceels"
+      ]
+    },
+    {
+      "id": "adversary-elemental-spark",
+      "title": "Elemental Spark",
+      "kind": "adversary",
+      "path": "adversaries/elemental-spark.md",
+      "aliases": [
+        "elemental spark",
+        "elementalspark"
+      ]
+    },
+    {
+      "id": "adversary-elite-soldier",
+      "title": "Elite Soldier",
+      "kind": "adversary",
+      "path": "adversaries/elite-soldier.md",
+      "aliases": [
+        "elite soldier",
+        "elitesoldier"
+      ]
+    },
+    {
+      "id": "adversary-failed-experiment",
+      "title": "Failed Experiment",
+      "kind": "adversary",
+      "path": "adversaries/failed-experiment.md",
+      "aliases": [
+        "failed experiment",
+        "failedexperiment"
+      ]
+    },
+    {
+      "id": "adversary-fallen-shock-troop",
+      "title": "Fallen Shock Troop",
+      "kind": "adversary",
+      "path": "adversaries/fallen-shock-troop.md",
+      "aliases": [
+        "fallen shock troop",
+        "fallenshocktroop"
+      ]
+    },
+    {
+      "id": "adversary-fallen-sorcerer",
+      "title": "Fallen Sorcerer",
+      "kind": "adversary",
+      "path": "adversaries/fallen-sorcerer.md",
+      "aliases": [
+        "fallen sorcerer",
+        "fallensorcerer"
+      ]
+    },
+    {
+      "id": "adversary-fallen-warlord-realm-breaker",
+      "title": "Fallen Warlord: Realm-Breaker",
+      "kind": "adversary",
+      "path": "adversaries/fallen-warlord-realm-breaker.md",
+      "aliases": [
+        "fallen warlord: realm-breaker",
+        "fallenwarlordrealmbreaker"
+      ]
+    },
+    {
+      "id": "adversary-fallen-warlord-undefeated-champion",
+      "title": "Fallen Warlord: Undefeated Champion",
+      "kind": "adversary",
+      "path": "adversaries/fallen-warlord-undefeated-champion.md",
+      "aliases": [
+        "fallen warlord: undefeated champion",
+        "fallenwarlordundefeatedchampion"
+      ]
+    },
+    {
+      "id": "adversary-giant-beastmaster",
+      "title": "Giant Beastmaster",
+      "kind": "adversary",
+      "path": "adversaries/giant-beastmaster.md",
+      "aliases": [
+        "giant beastmaster",
+        "giantbeastmaster"
+      ]
+    },
+    {
+      "id": "adversary-giant-brawler",
+      "title": "Giant Brawler",
+      "kind": "adversary",
+      "path": "adversaries/giant-brawler.md",
+      "aliases": [
+        "giant brawler",
+        "giantbrawler"
+      ]
+    },
+    {
+      "id": "adversary-giant-eagle",
+      "title": "Giant Eagle",
+      "kind": "adversary",
+      "path": "adversaries/giant-eagle.md",
+      "aliases": [
+        "giant eagle",
+        "gianteagle"
+      ]
+    },
+    {
+      "id": "adversary-giant-mosquitoes",
+      "title": "Giant Mosquitoes",
+      "kind": "adversary",
+      "path": "adversaries/giant-mosquitoes.md",
+      "aliases": [
+        "giant mosquitoes",
+        "giantmosquitoes"
+      ]
+    },
+    {
+      "id": "adversary-giant-rat",
+      "title": "Giant Rat",
+      "kind": "adversary",
+      "path": "adversaries/giant-rat.md",
+      "aliases": [
+        "giant rat",
+        "giantrat"
+      ]
+    },
+    {
+      "id": "adversary-giant-recruit",
+      "title": "Giant Recruit",
+      "kind": "adversary",
+      "path": "adversaries/giant-recruit.md",
+      "aliases": [
+        "giant recruit",
+        "giantrecruit"
+      ]
+    },
+    {
+      "id": "adversary-giant-scorpion",
+      "title": "Giant Scorpion",
+      "kind": "adversary",
+      "path": "adversaries/giant-scorpion.md",
+      "aliases": [
+        "giant scorpion",
+        "giantscorpion"
+      ]
+    },
+    {
+      "id": "adversary-glass-snake",
+      "title": "Glass Snake",
+      "kind": "adversary",
+      "path": "adversaries/glass-snake.md",
+      "aliases": [
+        "glass snake",
+        "glasssnake"
+      ]
+    },
+    {
+      "id": "adversary-gorgon",
+      "title": "Gorgon",
+      "kind": "adversary",
+      "path": "adversaries/gorgon.md",
+      "aliases": [
+        "gorgon"
+      ]
+    },
+    {
+      "id": "adversary-greater-earth-elemental",
+      "title": "Greater Earth Elemental",
+      "kind": "adversary",
+      "path": "adversaries/greater-earth-elemental.md",
+      "aliases": [
+        "greater earth elemental",
+        "greaterearthelemental"
+      ]
+    },
+    {
+      "id": "adversary-greater-water-elemental",
+      "title": "Greater Water Elemental",
+      "kind": "adversary",
+      "path": "adversaries/greater-water-elemental.md",
+      "aliases": [
+        "greater water elemental",
+        "greaterwaterelemental"
+      ]
+    },
+    {
+      "id": "adversary-green-ooze",
+      "title": "Green Ooze",
+      "kind": "adversary",
+      "path": "adversaries/green-ooze.md",
+      "aliases": [
+        "green ooze",
+        "greenooze"
+      ]
+    },
+    {
+      "id": "adversary-hallowed-archer",
+      "title": "Hallowed Archer",
+      "kind": "adversary",
+      "path": "adversaries/hallowed-archer.md",
+      "aliases": [
+        "hallowed archer",
+        "hallowedarcher"
+      ]
+    },
+    {
+      "id": "adversary-hallowed-soldier",
+      "title": "Hallowed Soldier",
+      "kind": "adversary",
+      "path": "adversaries/hallowed-soldier.md",
+      "aliases": [
+        "hallowed soldier",
+        "hallowedsoldier"
+      ]
+    },
+    {
+      "id": "adversary-harrier",
+      "title": "Harrier",
+      "kind": "adversary",
+      "path": "adversaries/harrier.md",
+      "aliases": [
+        "harrier"
+      ]
+    },
+    {
+      "id": "adversary-head-guard",
+      "title": "Head Guard",
+      "kind": "adversary",
+      "path": "adversaries/head-guard.md",
+      "aliases": [
+        "head guard",
+        "headguard"
+      ]
+    },
+    {
+      "id": "adversary-head-vampire",
+      "title": "Head Vampire",
+      "kind": "adversary",
+      "path": "adversaries/head-vampire.md",
+      "aliases": [
+        "head vampire",
+        "headvampire"
+      ]
+    },
+    {
+      "id": "adversary-high-seraph",
+      "title": "High Seraph",
+      "kind": "adversary",
+      "path": "adversaries/high-seraph.md",
+      "aliases": [
+        "high seraph",
+        "highseraph"
+      ]
+    },
+    {
+      "id": "adversary-huge-green-ooze",
+      "title": "Huge Green Ooze",
+      "kind": "adversary",
+      "path": "adversaries/huge-green-ooze.md",
+      "aliases": [
+        "huge green ooze",
+        "hugegreenooze"
+      ]
+    },
+    {
+      "id": "adversary-hydra",
+      "title": "Hydra",
+      "kind": "adversary",
+      "path": "adversaries/hydra.md",
+      "aliases": [
+        "hydra"
+      ]
+    },
+    {
+      "id": "adversary-jagged-knife-bandit",
+      "title": "Jagged Knife Bandit",
+      "kind": "adversary",
+      "path": "adversaries/jagged-knife-bandit.md",
+      "aliases": [
+        "jagged knife bandit",
+        "jaggedknifebandit"
+      ]
+    },
+    {
+      "id": "adversary-jagged-knife-hexer",
+      "title": "Jagged Knife Hexer",
+      "kind": "adversary",
+      "path": "adversaries/jagged-knife-hexer.md",
+      "aliases": [
+        "jagged knife hexer",
+        "jaggedknifehexer"
+      ]
+    },
+    {
+      "id": "adversary-jagged-knife-kneebreaker",
+      "title": "Jagged Knife Kneebreaker",
+      "kind": "adversary",
+      "path": "adversaries/jagged-knife-kneebreaker.md",
+      "aliases": [
+        "jagged knife kneebreaker",
+        "jaggedknifekneebreaker"
+      ]
+    },
+    {
+      "id": "adversary-jagged-knife-lackey",
+      "title": "Jagged Knife Lackey",
+      "kind": "adversary",
+      "path": "adversaries/jagged-knife-lackey.md",
+      "aliases": [
+        "jagged knife lackey",
+        "jaggedknifelackey"
+      ]
+    },
+    {
+      "id": "adversary-jagged-knife-lieutenant",
+      "title": "Jagged Knife Lieutenant",
+      "kind": "adversary",
+      "path": "adversaries/jagged-knife-lieutenant.md",
+      "aliases": [
+        "jagged knife lieutenant",
+        "jaggedknifelieutenant"
+      ]
+    },
+    {
+      "id": "adversary-jagged-knife-shadow",
+      "title": "Jagged Knife Shadow",
+      "kind": "adversary",
+      "path": "adversaries/jagged-knife-shadow.md",
+      "aliases": [
+        "jagged knife shadow",
+        "jaggedknifeshadow"
+      ]
+    },
+    {
+      "id": "adversary-jagged-knife-sniper",
+      "title": "Jagged Knife Sniper",
+      "kind": "adversary",
+      "path": "adversaries/jagged-knife-sniper.md",
+      "aliases": [
+        "jagged knife sniper",
+        "jaggedknifesniper"
+      ]
+    },
+    {
+      "id": "adversary-juvenile-flickerfly",
+      "title": "Juvenile Flickerfly",
+      "kind": "adversary",
+      "path": "adversaries/juvenile-flickerfly.md",
+      "aliases": [
+        "juvenile flickerfly",
+        "juvenileflickerfly"
+      ]
+    },
+    {
+      "id": "adversary-knight-of-the-realm",
+      "title": "Knight of the Realm",
+      "kind": "adversary",
+      "path": "adversaries/knight-of-the-realm.md",
+      "aliases": [
+        "knight of the realm",
+        "knightoftherealm"
+      ]
+    },
+    {
+      "id": "adversary-kraken",
+      "title": "Kraken",
+      "kind": "adversary",
+      "path": "adversaries/kraken.md",
+      "aliases": [
+        "kraken"
+      ]
+    },
+    {
+      "id": "adversary-masked-thief",
+      "title": "Masked Thief",
+      "kind": "adversary",
+      "path": "adversaries/masked-thief.md",
+      "aliases": [
+        "masked thief",
+        "maskedthief"
+      ]
+    },
+    {
+      "id": "adversary-master-assassin",
+      "title": "Master Assassin",
+      "kind": "adversary",
+      "path": "adversaries/master-assassin.md",
+      "aliases": [
+        "master assassin",
+        "masterassassin"
+      ]
+    },
+    {
+      "id": "adversary-merchant",
+      "title": "Merchant",
+      "kind": "adversary",
+      "path": "adversaries/merchant.md",
+      "aliases": [
+        "merchant"
+      ]
+    },
+    {
+      "id": "adversary-merchant-baron",
+      "title": "Merchant Baron",
+      "kind": "adversary",
+      "path": "adversaries/merchant-baron.md",
+      "aliases": [
+        "merchant baron",
+        "merchantbaron"
+      ]
+    },
+    {
+      "id": "adversary-minor-chaos-elemental",
+      "title": "Minor Chaos Elemental",
+      "kind": "adversary",
+      "path": "adversaries/minor-chaos-elemental.md",
+      "aliases": [
+        "minor chaos elemental",
+        "minorchaoselemental"
+      ]
+    },
+    {
+      "id": "adversary-minor-demon",
+      "title": "Minor Demon",
+      "kind": "adversary",
+      "path": "adversaries/minor-demon.md",
+      "aliases": [
+        "minor demon",
+        "minordemon"
+      ]
+    },
+    {
+      "id": "adversary-minor-fire-elemental",
+      "title": "Minor Fire Elemental",
+      "kind": "adversary",
+      "path": "adversaries/minor-fire-elemental.md",
+      "aliases": [
+        "minor fire elemental",
+        "minorfireelemental"
+      ]
+    },
+    {
+      "id": "adversary-minor-treant",
+      "title": "Minor Treant",
+      "kind": "adversary",
+      "path": "adversaries/minor-treant.md",
+      "aliases": [
+        "minor treant",
+        "minortreant"
+      ]
+    },
+    {
+      "id": "adversary-minotaur-wrecker",
+      "title": "Minotaur Wrecker",
+      "kind": "adversary",
+      "path": "adversaries/minotaur-wrecker.md",
+      "aliases": [
+        "minotaur wrecker",
+        "minotaurwrecker"
+      ]
+    },
+    {
+      "id": "adversary-monarch",
+      "title": "Monarch",
+      "kind": "adversary",
+      "path": "adversaries/monarch.md",
+      "aliases": [
+        "monarch"
+      ]
+    },
+    {
+      "id": "adversary-mortal-hunter",
+      "title": "Mortal Hunter",
+      "kind": "adversary",
+      "path": "adversaries/mortal-hunter.md",
+      "aliases": [
+        "mortal hunter",
+        "mortalhunter"
+      ]
+    },
+    {
+      "id": "adversary-oak-treant",
+      "title": "Oak Treant",
+      "kind": "adversary",
+      "path": "adversaries/oak-treant.md",
+      "aliases": [
+        "oak treant",
+        "oaktreant"
+      ]
+    },
+    {
+      "id": "adversary-oracle-of-doom",
+      "title": "Oracle of Doom",
+      "kind": "adversary",
+      "path": "adversaries/oracle-of-doom.md",
+      "aliases": [
+        "oracle of doom",
+        "oracleofdoom"
+      ]
+    },
+    {
+      "id": "adversary-outer-realms-abomination",
+      "title": "Outer Realms Abomination",
+      "kind": "adversary",
+      "path": "adversaries/outer-realms-abomination.md",
+      "aliases": [
+        "outer realms abomination",
+        "outerrealmsabomination"
+      ]
+    },
+    {
+      "id": "adversary-outer-realms-corruptor",
+      "title": "Outer Realms Corruptor",
+      "kind": "adversary",
+      "path": "adversaries/outer-realms-corruptor.md",
+      "aliases": [
+        "outer realms corruptor",
+        "outerrealmscorruptor"
+      ]
+    },
+    {
+      "id": "adversary-outer-realms-thrall",
+      "title": "Outer Realms Thrall",
+      "kind": "adversary",
+      "path": "adversaries/outer-realms-thrall.md",
+      "aliases": [
+        "outer realms thrall",
+        "outerrealmsthrall"
+      ]
+    },
+    {
+      "id": "adversary-patchwork-zombie-hulk",
+      "title": "Patchwork Zombie Hulk",
+      "kind": "adversary",
+      "path": "adversaries/patchwork-zombie-hulk.md",
+      "aliases": [
+        "patchwork zombie hulk",
+        "patchworkzombiehulk"
+      ]
+    },
+    {
+      "id": "adversary-perfected-zombie",
+      "title": "Perfected Zombie",
+      "kind": "adversary",
+      "path": "adversaries/perfected-zombie.md",
+      "aliases": [
+        "perfected zombie",
+        "perfectedzombie"
+      ]
+    },
+    {
+      "id": "adversary-petty-noble",
+      "title": "Petty Noble",
+      "kind": "adversary",
+      "path": "adversaries/petty-noble.md",
+      "aliases": [
+        "petty noble",
+        "pettynoble"
+      ]
+    },
+    {
+      "id": "adversary-pirate-captain",
+      "title": "Pirate Captain",
+      "kind": "adversary",
+      "path": "adversaries/pirate-captain.md",
+      "aliases": [
+        "pirate captain",
+        "piratecaptain"
+      ]
+    },
+    {
+      "id": "adversary-pirate-raiders",
+      "title": "Pirate Raiders",
+      "kind": "adversary",
+      "path": "adversaries/pirate-raiders.md",
+      "aliases": [
+        "pirate raiders",
+        "pirateraiders"
+      ]
+    },
+    {
+      "id": "adversary-pirate-tough",
+      "title": "Pirate Tough",
+      "kind": "adversary",
+      "path": "adversaries/pirate-tough.md",
+      "aliases": [
+        "pirate tough",
+        "piratetough"
+      ]
+    },
+    {
+      "id": "adversary-red-ooze",
+      "title": "Red Ooze",
+      "kind": "adversary",
+      "path": "adversaries/red-ooze.md",
+      "aliases": [
+        "red ooze",
+        "redooze"
+      ]
+    },
+    {
+      "id": "adversary-rotted-zombie",
+      "title": "Rotted Zombie",
+      "kind": "adversary",
+      "path": "adversaries/rotted-zombie.md",
+      "aliases": [
+        "rotted zombie",
+        "rottedzombie"
+      ]
+    },
+    {
+      "id": "adversary-royal-advisor",
+      "title": "Royal Advisor",
+      "kind": "adversary",
+      "path": "adversaries/royal-advisor.md",
+      "aliases": [
+        "royal advisor",
+        "royaladvisor"
+      ]
+    },
+    {
+      "id": "adversary-secret-keeper",
+      "title": "Secret-Keeper",
+      "kind": "adversary",
+      "path": "adversaries/secret-keeper.md",
+      "aliases": [
+        "secret-keeper",
+        "secretkeeper"
+      ]
+    },
+    {
+      "id": "adversary-sellsword",
+      "title": "Sellsword",
+      "kind": "adversary",
+      "path": "adversaries/sellsword.md",
+      "aliases": [
+        "sellsword"
+      ]
+    },
+    {
+      "id": "adversary-shambling-zombie",
+      "title": "Shambling Zombie",
+      "kind": "adversary",
+      "path": "adversaries/shambling-zombie.md",
+      "aliases": [
+        "shambling zombie",
+        "shamblingzombie"
+      ]
+    },
+    {
+      "id": "adversary-shark",
+      "title": "Shark",
+      "kind": "adversary",
+      "path": "adversaries/shark.md",
+      "aliases": [
+        "shark"
+      ]
+    },
+    {
+      "id": "adversary-siren",
+      "title": "Siren",
+      "kind": "adversary",
+      "path": "adversaries/siren.md",
+      "aliases": [
+        "siren"
+      ]
+    },
+    {
+      "id": "adversary-skeleton-archer",
+      "title": "Skeleton Archer",
+      "kind": "adversary",
+      "path": "adversaries/skeleton-archer.md",
+      "aliases": [
+        "skeleton archer",
+        "skeletonarcher"
+      ]
+    },
+    {
+      "id": "adversary-skeleton-dredge",
+      "title": "Skeleton Dredge",
+      "kind": "adversary",
+      "path": "adversaries/skeleton-dredge.md",
+      "aliases": [
+        "skeleton dredge",
+        "skeletondredge"
+      ]
+    },
+    {
+      "id": "adversary-skeleton-knight",
+      "title": "Skeleton Knight",
+      "kind": "adversary",
+      "path": "adversaries/skeleton-knight.md",
+      "aliases": [
+        "skeleton knight",
+        "skeletonknight"
+      ]
+    },
+    {
+      "id": "adversary-skeleton-warrior",
+      "title": "Skeleton Warrior",
+      "kind": "adversary",
+      "path": "adversaries/skeleton-warrior.md",
+      "aliases": [
+        "skeleton warrior",
+        "skeletonwarrior"
+      ]
+    },
+    {
+      "id": "adversary-spectral-archer",
+      "title": "Spectral Archer",
+      "kind": "adversary",
+      "path": "adversaries/spectral-archer.md",
+      "aliases": [
+        "spectral archer",
+        "spectralarcher"
+      ]
+    },
+    {
+      "id": "adversary-spectral-captain",
+      "title": "Spectral Captain",
+      "kind": "adversary",
+      "path": "adversaries/spectral-captain.md",
+      "aliases": [
+        "spectral captain",
+        "spectralcaptain"
+      ]
+    },
+    {
+      "id": "adversary-spectral-guardian",
+      "title": "Spectral Guardian",
+      "kind": "adversary",
+      "path": "adversaries/spectral-guardian.md",
+      "aliases": [
+        "spectral guardian",
+        "spectralguardian"
+      ]
+    },
+    {
+      "id": "adversary-spellblade",
+      "title": "Spellblade",
+      "kind": "adversary",
+      "path": "adversaries/spellblade.md",
+      "aliases": [
+        "spellblade"
+      ]
+    },
+    {
+      "id": "adversary-spy",
+      "title": "Spy",
+      "kind": "adversary",
+      "path": "adversaries/spy.md",
+      "aliases": [
+        "spy"
+      ]
+    },
+    {
+      "id": "adversary-stag-knight",
+      "title": "Stag Knight",
+      "kind": "adversary",
+      "path": "adversaries/stag-knight.md",
+      "aliases": [
+        "stag knight",
+        "stagknight"
+      ]
+    },
+    {
+      "id": "adversary-stonewraith",
+      "title": "Stonewraith",
+      "kind": "adversary",
+      "path": "adversaries/stonewraith.md",
+      "aliases": [
+        "stonewraith"
+      ]
+    },
+    {
+      "id": "adversary-swarm-of-rats",
+      "title": "Swarm of Rats",
+      "kind": "adversary",
+      "path": "adversaries/swarm-of-rats.md",
+      "aliases": [
+        "swarm of rats",
+        "swarmofrats"
+      ]
+    },
+    {
+      "id": "adversary-sylvan-soldier",
+      "title": "Sylvan Soldier",
+      "kind": "adversary",
+      "path": "adversaries/sylvan-soldier.md",
+      "aliases": [
+        "sylvan soldier",
+        "sylvansoldier"
+      ]
+    },
+    {
+      "id": "adversary-tangle-bramble",
+      "title": "Tangle Bramble",
+      "kind": "adversary",
+      "path": "adversaries/tangle-bramble.md",
+      "aliases": [
+        "tangle bramble",
+        "tanglebramble"
+      ]
+    },
+    {
+      "id": "adversary-tangle-bramble-swarm",
+      "title": "Tangle Bramble Swarm",
+      "kind": "adversary",
+      "path": "adversaries/tangle-bramble-swarm.md",
+      "aliases": [
+        "tangle bramble swarm",
+        "tanglebrambleswarm"
+      ]
+    },
+    {
+      "id": "adversary-tiny-green-ooze",
+      "title": "Tiny Green Ooze",
+      "kind": "adversary",
+      "path": "adversaries/tiny-green-ooze.md",
+      "aliases": [
+        "tiny green ooze",
+        "tinygreenooze"
+      ]
+    },
+    {
+      "id": "adversary-tiny-red-ooze",
+      "title": "Tiny Red Ooze",
+      "kind": "adversary",
+      "path": "adversaries/tiny-red-ooze.md",
+      "aliases": [
+        "tiny red ooze",
+        "tinyredooze"
+      ]
+    },
+    {
+      "id": "adversary-treant-sapling",
+      "title": "Treant Sapling",
+      "kind": "adversary",
+      "path": "adversaries/treant-sapling.md",
+      "aliases": [
+        "treant sapling",
+        "treantsapling"
+      ]
+    },
+    {
+      "id": "adversary-vampire",
+      "title": "Vampire",
+      "kind": "adversary",
+      "path": "adversaries/vampire.md",
+      "aliases": [
+        "vampire"
+      ]
+    },
+    {
+      "id": "adversary-vault-guardian-gaoler",
+      "title": "Vault Guardian Gaoler",
+      "kind": "adversary",
+      "path": "adversaries/vault-guardian-gaoler.md",
+      "aliases": [
+        "vault guardian gaoler",
+        "vaultguardiangaoler"
+      ]
+    },
+    {
+      "id": "adversary-vault-guardian-sentinel",
+      "title": "Vault Guardian Sentinel",
+      "kind": "adversary",
+      "path": "adversaries/vault-guardian-sentinel.md",
+      "aliases": [
+        "vault guardian sentinel",
+        "vaultguardiansentinel"
+      ]
+    },
+    {
+      "id": "adversary-vault-guardian-turret",
+      "title": "Vault Guardian Turret",
+      "kind": "adversary",
+      "path": "adversaries/vault-guardian-turret.md",
+      "aliases": [
+        "vault guardian turret",
+        "vaultguardianturret"
+      ]
+    },
+    {
+      "id": "adversary-volcanic-dragon-ashen-tyrant",
+      "title": "Volcanic Dragon: Ashen Tyrant",
+      "kind": "adversary",
+      "path": "adversaries/volcanic-dragon-ashen-tyrant.md",
+      "aliases": [
+        "volcanic dragon: ashen tyrant",
+        "volcanicdragonashentyrant"
+      ]
+    },
+    {
+      "id": "adversary-volcanic-dragon-molten-scourge",
+      "title": "Volcanic Dragon: Molten Scourge",
+      "kind": "adversary",
+      "path": "adversaries/volcanic-dragon-molten-scourge.md",
+      "aliases": [
+        "volcanic dragon: molten scourge",
+        "volcanicdragonmoltenscourge"
+      ]
+    },
+    {
+      "id": "adversary-volcanic-dragon-obsidian-predator",
+      "title": "Volcanic Dragon: Obsidian Predator",
+      "kind": "adversary",
+      "path": "adversaries/volcanic-dragon-obsidian-predator.md",
+      "aliases": [
+        "volcanic dragon: obsidian predator",
+        "volcanicdragonobsidianpredator"
+      ]
+    },
+    {
+      "id": "adversary-war-wizard",
+      "title": "War Wizard",
+      "kind": "adversary",
+      "path": "adversaries/war-wizard.md",
+      "aliases": [
+        "war wizard",
+        "warwizard"
+      ]
+    },
+    {
+      "id": "adversary-weaponmaster",
+      "title": "Weaponmaster",
+      "kind": "adversary",
+      "path": "adversaries/weaponmaster.md",
+      "aliases": [
+        "weaponmaster"
+      ]
+    },
+    {
+      "id": "adversary-young-dryad",
+      "title": "Young Dryad",
+      "kind": "adversary",
+      "path": "adversaries/young-dryad.md",
+      "aliases": [
+        "young dryad",
+        "youngdryad"
+      ]
+    },
+    {
+      "id": "adversary-young-ice-dragon",
+      "title": "Young Ice Dragon",
+      "kind": "adversary",
+      "path": "adversaries/young-ice-dragon.md",
+      "aliases": [
+        "young ice dragon",
+        "youngicedragon"
+      ]
+    },
+    {
+      "id": "adversary-zombie-legion",
+      "title": "Zombie Legion",
+      "kind": "adversary",
+      "path": "adversaries/zombie-legion.md",
+      "aliases": [
+        "zombie legion",
+        "zombielegion"
+      ]
+    },
+    {
+      "id": "adversary-zombie-pack",
+      "title": "Zombie Pack",
+      "kind": "adversary",
+      "path": "adversaries/zombie-pack.md",
+      "aliases": [
+        "zombie pack",
+        "zombiepack"
+      ]
+    },
+    {
+      "id": "ancestry-clank",
+      "title": "Clank",
+      "kind": "ancestry",
+      "path": "ancestries/clank.md",
+      "aliases": [
+        "clank"
+      ]
+    },
+    {
+      "id": "ancestry-drakona",
+      "title": "Drakona",
+      "kind": "ancestry",
+      "path": "ancestries/drakona.md",
+      "aliases": [
+        "drakona"
+      ]
+    },
+    {
+      "id": "ancestry-dwarf",
+      "title": "Dwarf",
+      "kind": "ancestry",
+      "path": "ancestries/dwarf.md",
+      "aliases": [
+        "dwarf"
+      ]
+    },
+    {
+      "id": "ancestry-elf",
+      "title": "Elf",
+      "kind": "ancestry",
+      "path": "ancestries/elf.md",
+      "aliases": [
+        "elf"
+      ]
+    },
+    {
+      "id": "ancestry-faerie",
+      "title": "Faerie",
+      "kind": "ancestry",
+      "path": "ancestries/faerie.md",
+      "aliases": [
+        "faerie"
+      ]
+    },
+    {
+      "id": "ancestry-faun",
+      "title": "Faun",
+      "kind": "ancestry",
+      "path": "ancestries/faun.md",
+      "aliases": [
+        "faun"
+      ]
+    },
+    {
+      "id": "ancestry-firbolg",
+      "title": "Firbolg",
+      "kind": "ancestry",
+      "path": "ancestries/firbolg.md",
+      "aliases": [
+        "firbolg"
+      ]
+    },
+    {
+      "id": "ancestry-fungril",
+      "title": "Fungril",
+      "kind": "ancestry",
+      "path": "ancestries/fungril.md",
+      "aliases": [
+        "fungril"
+      ]
+    },
+    {
+      "id": "ancestry-galapa",
+      "title": "Galapa",
+      "kind": "ancestry",
+      "path": "ancestries/galapa.md",
+      "aliases": [
+        "galapa"
+      ]
+    },
+    {
+      "id": "ancestry-giant",
+      "title": "Giant",
+      "kind": "ancestry",
+      "path": "ancestries/giant.md",
+      "aliases": [
+        "giant"
+      ]
+    },
+    {
+      "id": "ancestry-goblin",
+      "title": "Goblin",
+      "kind": "ancestry",
+      "path": "ancestries/goblin.md",
+      "aliases": [
+        "goblin"
+      ]
+    },
+    {
+      "id": "ancestry-halfling",
+      "title": "Halfling",
+      "kind": "ancestry",
+      "path": "ancestries/halfling.md",
+      "aliases": [
+        "halfling"
+      ]
+    },
+    {
+      "id": "ancestry-human",
+      "title": "Human",
+      "kind": "ancestry",
+      "path": "ancestries/human.md",
+      "aliases": [
+        "human"
+      ]
+    },
+    {
+      "id": "ancestry-infernis",
+      "title": "Infernis",
+      "kind": "ancestry",
+      "path": "ancestries/infernis.md",
+      "aliases": [
+        "infernis"
+      ]
+    },
+    {
+      "id": "ancestry-katari",
+      "title": "Katari",
+      "kind": "ancestry",
+      "path": "ancestries/katari.md",
+      "aliases": [
+        "katari"
+      ]
+    },
+    {
+      "id": "ancestry-orc",
+      "title": "Orc",
+      "kind": "ancestry",
+      "path": "ancestries/orc.md",
+      "aliases": [
+        "orc"
+      ]
+    },
+    {
+      "id": "ancestry-ribbet",
+      "title": "Ribbet",
+      "kind": "ancestry",
+      "path": "ancestries/ribbet.md",
+      "aliases": [
+        "ribbet"
+      ]
+    },
+    {
+      "id": "ancestry-simiah",
+      "title": "Simiah",
+      "kind": "ancestry",
+      "path": "ancestries/simiah.md",
+      "aliases": [
+        "simiah"
+      ]
+    },
+    {
+      "id": "armor-advanced-chainmail-armor",
+      "title": "Advanced Chainmail Armor",
+      "kind": "armor",
+      "path": "armor/advanced-chainmail-armor.md",
+      "aliases": [
+        "advanced chainmail armor",
+        "advancedchainmailarmor"
+      ]
+    },
+    {
+      "id": "armor-advanced-full-plate-armor",
+      "title": "Advanced Full Plate Armor",
+      "kind": "armor",
+      "path": "armor/advanced-full-plate-armor.md",
+      "aliases": [
+        "advanced full plate armor",
+        "advancedfullplatearmor"
+      ]
+    },
+    {
+      "id": "armor-advanced-gambeson-armor",
+      "title": "Advanced Gambeson Armor",
+      "kind": "armor",
+      "path": "armor/advanced-gambeson-armor.md",
+      "aliases": [
+        "advanced gambeson armor",
+        "advancedgambesonarmor"
+      ]
+    },
+    {
+      "id": "armor-advanced-leather-armor",
+      "title": "Advanced Leather Armor",
+      "kind": "armor",
+      "path": "armor/advanced-leather-armor.md",
+      "aliases": [
+        "advanced leather armor",
+        "advancedleatherarmor"
+      ]
+    },
+    {
+      "id": "armor-bellamoi-fine-armor",
+      "title": "Bellamoi Fine Armor",
+      "kind": "armor",
+      "path": "armor/bellamoi-fine-armor.md",
+      "aliases": [
+        "bellamoi fine armor",
+        "bellamoifinearmor"
+      ]
+    },
+    {
+      "id": "armor-bladefare-armor",
+      "title": "Bladefare Armor",
+      "kind": "armor",
+      "path": "armor/bladefare-armor.md",
+      "aliases": [
+        "bladefare armor",
+        "bladefarearmor"
+      ]
+    },
+    {
+      "id": "armor-chainmail-armor",
+      "title": "Chainmail Armor",
+      "kind": "armor",
+      "path": "armor/chainmail-armor.md",
+      "aliases": [
+        "chainmail armor",
+        "chainmailarmor"
+      ]
+    },
+    {
+      "id": "armor-channeling-armor",
+      "title": "Channeling Armor",
+      "kind": "armor",
+      "path": "armor/channeling-armor.md",
+      "aliases": [
+        "channeling armor",
+        "channelingarmor"
+      ]
+    },
+    {
+      "id": "armor-dragonscale-armor",
+      "title": "Dragonscale Armor",
+      "kind": "armor",
+      "path": "armor/dragonscale-armor.md",
+      "aliases": [
+        "dragonscale armor",
+        "dragonscalearmor"
+      ]
+    },
+    {
+      "id": "armor-dunamis-silkchain",
+      "title": "Dunamis Silkchain",
+      "kind": "armor",
+      "path": "armor/dunamis-silkchain.md",
+      "aliases": [
+        "dunamis silkchain",
+        "dunamissilkchain"
+      ]
+    },
+    {
+      "id": "armor-elundrian-chain-armor",
+      "title": "Elundrian Chain Armor",
+      "kind": "armor",
+      "path": "armor/elundrian-chain-armor.md",
+      "aliases": [
+        "elundrian chain armor",
+        "elundrianchainarmor"
+      ]
+    },
+    {
+      "id": "armor-emberwoven-armor",
+      "title": "Emberwoven Armor",
+      "kind": "armor",
+      "path": "armor/emberwoven-armor.md",
+      "aliases": [
+        "emberwoven armor",
+        "emberwovenarmor"
+      ]
+    },
+    {
+      "id": "armor-full-fortified-armor",
+      "title": "Full Fortified Armor",
+      "kind": "armor",
+      "path": "armor/full-fortified-armor.md",
+      "aliases": [
+        "full fortified armor",
+        "fullfortifiedarmor"
+      ]
+    },
+    {
+      "id": "armor-full-plate-armor",
+      "title": "Full Plate Armor",
+      "kind": "armor",
+      "path": "armor/full-plate-armor.md",
+      "aliases": [
+        "full plate armor",
+        "fullplatearmor"
+      ]
+    },
+    {
+      "id": "armor-gambeson-armor",
+      "title": "Gambeson Armor",
+      "kind": "armor",
+      "path": "armor/gambeson-armor.md",
+      "aliases": [
+        "gambeson armor",
+        "gambesonarmor"
+      ]
+    },
+    {
+      "id": "armor-harrowbone-armor",
+      "title": "Harrowbone Armor",
+      "kind": "armor",
+      "path": "armor/harrowbone-armor.md",
+      "aliases": [
+        "harrowbone armor",
+        "harrowbonearmor"
+      ]
+    },
+    {
+      "id": "armor-improved-chainmail-armor",
+      "title": "Improved Chainmail Armor",
+      "kind": "armor",
+      "path": "armor/improved-chainmail-armor.md",
+      "aliases": [
+        "improved chainmail armor",
+        "improvedchainmailarmor"
+      ]
+    },
+    {
+      "id": "armor-improved-full-plate-armor",
+      "title": "Improved Full Plate Armor",
+      "kind": "armor",
+      "path": "armor/improved-full-plate-armor.md",
+      "aliases": [
+        "improved full plate armor",
+        "improvedfullplatearmor"
+      ]
+    },
+    {
+      "id": "armor-improved-gambeson-armor",
+      "title": "Improved Gambeson Armor",
+      "kind": "armor",
+      "path": "armor/improved-gambeson-armor.md",
+      "aliases": [
+        "improved gambeson armor",
+        "improvedgambesonarmor"
+      ]
+    },
+    {
+      "id": "armor-improved-leather-armor",
+      "title": "Improved Leather Armor",
+      "kind": "armor",
+      "path": "armor/improved-leather-armor.md",
+      "aliases": [
+        "improved leather armor",
+        "improvedleatherarmor"
+      ]
+    },
+    {
+      "id": "armor-irontree-breastplate-armor",
+      "title": "IronTree Breastplate Armor",
+      "kind": "armor",
+      "path": "armor/irontree-breastplate-armor.md",
+      "aliases": [
+        "irontree breastplate armor",
+        "irontreebreastplatearmor"
+      ]
+    },
+    {
+      "id": "armor-leather-armor",
+      "title": "Leather Armor",
+      "kind": "armor",
+      "path": "armor/leather-armor.md",
+      "aliases": [
+        "leather armor",
+        "leatherarmor"
+      ]
+    },
+    {
+      "id": "armor-legendary-chainmail-armor",
+      "title": "Legendary Chainmail Armor",
+      "kind": "armor",
+      "path": "armor/legendary-chainmail-armor.md",
+      "aliases": [
+        "legendary chainmail armor",
+        "legendarychainmailarmor"
+      ]
+    },
+    {
+      "id": "armor-legendary-full-plate-armor",
+      "title": "Legendary Full Plate Armor",
+      "kind": "armor",
+      "path": "armor/legendary-full-plate-armor.md",
+      "aliases": [
+        "legendary full plate armor",
+        "legendaryfullplatearmor"
+      ]
+    },
+    {
+      "id": "armor-legendary-gambeson-armor",
+      "title": "Legendary Gambeson Armor",
+      "kind": "armor",
+      "path": "armor/legendary-gambeson-armor.md",
+      "aliases": [
+        "legendary gambeson armor",
+        "legendarygambesonarmor"
+      ]
+    },
+    {
+      "id": "armor-legendary-leather-armor",
+      "title": "Legendary Leather Armor",
+      "kind": "armor",
+      "path": "armor/legendary-leather-armor.md",
+      "aliases": [
+        "legendary leather armor",
+        "legendaryleatherarmor"
+      ]
+    },
+    {
+      "id": "armor-monett-s-cloak",
+      "title": "Monett's Cloak",
+      "kind": "armor",
+      "path": "armor/monett-s-cloak.md",
+      "aliases": [
+        "monett's cloak",
+        "monettscloak"
+      ]
+    },
+    {
+      "id": "armor-rosewild-armor",
+      "title": "Rosewild Armor",
+      "kind": "armor",
+      "path": "armor/rosewild-armor.md",
+      "aliases": [
+        "rosewild armor",
+        "rosewildarmor"
+      ]
+    },
+    {
+      "id": "armor-runes-of-fortification",
+      "title": "Runes of Fortification",
+      "kind": "armor",
+      "path": "armor/runes-of-fortification.md",
+      "aliases": [
+        "runes of fortification",
+        "runesoffortification"
+      ]
+    },
+    {
+      "id": "armor-runetan-floating-armor",
+      "title": "Runetan Floating Armor",
+      "kind": "armor",
+      "path": "armor/runetan-floating-armor.md",
+      "aliases": [
+        "runetan floating armor",
+        "runetanfloatingarmor"
+      ]
+    },
+    {
+      "id": "armor-savior-chainmail",
+      "title": "Savior Chainmail",
+      "kind": "armor",
+      "path": "armor/savior-chainmail.md",
+      "aliases": [
+        "savior chainmail",
+        "saviorchainmail"
+      ]
+    },
+    {
+      "id": "armor-spiked-plate-armor",
+      "title": "Spiked Plate Armor",
+      "kind": "armor",
+      "path": "armor/spiked-plate-armor.md",
+      "aliases": [
+        "spiked plate armor",
+        "spikedplatearmor"
+      ]
+    },
+    {
+      "id": "armor-tyris-soft-armor",
+      "title": "Tyris Soft Armor",
+      "kind": "armor",
+      "path": "armor/tyris-soft-armor.md",
+      "aliases": [
+        "tyris soft armor",
+        "tyrissoftarmor"
+      ]
+    },
+    {
+      "id": "armor-veritas-opal-armor",
+      "title": "Veritas Opal Armor",
+      "kind": "armor",
+      "path": "armor/veritas-opal-armor.md",
+      "aliases": [
+        "veritas opal armor",
+        "veritasopalarmor"
+      ]
+    },
+    {
+      "id": "beastform-agile-scout",
+      "title": "Agile Scout",
+      "kind": "beastform",
+      "path": "beastforms/agile-scout.md",
+      "aliases": [
+        "agile scout",
+        "agilescout"
+      ]
+    },
+    {
+      "id": "beastform-aquatic-predator",
+      "title": "Aquatic Predator",
+      "kind": "beastform",
+      "path": "beastforms/aquatic-predator.md",
+      "aliases": [
+        "aquatic predator",
+        "aquaticpredator"
+      ]
+    },
+    {
+      "id": "beastform-aquatic-scout",
+      "title": "Aquatic Scout",
+      "kind": "beastform",
+      "path": "beastforms/aquatic-scout.md",
+      "aliases": [
+        "aquatic scout",
+        "aquaticscout"
+      ]
+    },
+    {
+      "id": "beastform-armored-sentry",
+      "title": "Armored Sentry",
+      "kind": "beastform",
+      "path": "beastforms/armored-sentry.md",
+      "aliases": [
+        "armored sentry",
+        "armoredsentry"
+      ]
+    },
+    {
+      "id": "beastform-epic-aquatic-beast",
+      "title": "Epic Aquatic Beast",
+      "kind": "beastform",
+      "path": "beastforms/epic-aquatic-beast.md",
+      "aliases": [
+        "epic aquatic beast",
+        "epicaquaticbeast"
+      ]
+    },
+    {
+      "id": "beastform-great-predator",
+      "title": "Great Predator",
+      "kind": "beastform",
+      "path": "beastforms/great-predator.md",
+      "aliases": [
+        "great predator",
+        "greatpredator"
+      ]
+    },
+    {
+      "id": "beastform-great-winged-beast",
+      "title": "Great Winged Beast",
+      "kind": "beastform",
+      "path": "beastforms/great-winged-beast.md",
+      "aliases": [
+        "great winged beast",
+        "greatwingedbeast"
+      ]
+    },
+    {
+      "id": "beastform-household-friend",
+      "title": "Household Friend",
+      "kind": "beastform",
+      "path": "beastforms/household-friend.md",
+      "aliases": [
+        "household friend",
+        "householdfriend"
+      ]
+    },
+    {
+      "id": "beastform-legendary-beast",
+      "title": "Legendary Beast",
+      "kind": "beastform",
+      "path": "beastforms/legendary-beast.md",
+      "aliases": [
+        "legendary beast",
+        "legendarybeast"
+      ]
+    },
+    {
+      "id": "beastform-legendary-hybrid",
+      "title": "Legendary Hybrid",
+      "kind": "beastform",
+      "path": "beastforms/legendary-hybrid.md",
+      "aliases": [
+        "legendary hybrid",
+        "legendaryhybrid"
+      ]
+    },
+    {
+      "id": "beastform-massive-behemoth",
+      "title": "Massive Behemoth",
+      "kind": "beastform",
+      "path": "beastforms/massive-behemoth.md",
+      "aliases": [
+        "massive behemoth",
+        "massivebehemoth"
+      ]
+    },
+    {
+      "id": "beastform-mighty-lizard",
+      "title": "Mighty Lizard",
+      "kind": "beastform",
+      "path": "beastforms/mighty-lizard.md",
+      "aliases": [
+        "mighty lizard",
+        "mightylizard"
+      ]
+    },
+    {
+      "id": "beastform-mighty-strider",
+      "title": "Mighty Strider",
+      "kind": "beastform",
+      "path": "beastforms/mighty-strider.md",
+      "aliases": [
+        "mighty strider",
+        "mightystrider"
+      ]
+    },
+    {
+      "id": "beastform-mythic-aerial-hunter",
+      "title": "Mythic Aerial Hunter",
+      "kind": "beastform",
+      "path": "beastforms/mythic-aerial-hunter.md",
+      "aliases": [
+        "mythic aerial hunter",
+        "mythicaerialhunter"
+      ]
+    },
+    {
+      "id": "beastform-mythic-beast",
+      "title": "Mythic Beast",
+      "kind": "beastform",
+      "path": "beastforms/mythic-beast.md",
+      "aliases": [
+        "mythic beast",
+        "mythicbeast"
+      ]
+    },
+    {
+      "id": "beastform-mythic-hybrid",
+      "title": "Mythic Hybrid",
+      "kind": "beastform",
+      "path": "beastforms/mythic-hybrid.md",
+      "aliases": [
+        "mythic hybrid",
+        "mythichybrid"
+      ]
+    },
+    {
+      "id": "beastform-nimble-grazer",
+      "title": "Nimble Grazer",
+      "kind": "beastform",
+      "path": "beastforms/nimble-grazer.md",
+      "aliases": [
+        "nimble grazer",
+        "nimblegrazer"
+      ]
+    },
+    {
+      "id": "beastform-pack-predator",
+      "title": "Pack Predator",
+      "kind": "beastform",
+      "path": "beastforms/pack-predator.md",
+      "aliases": [
+        "pack predator",
+        "packpredator"
+      ]
+    },
+    {
+      "id": "beastform-pouncing-predator",
+      "title": "Pouncing Predator",
+      "kind": "beastform",
+      "path": "beastforms/pouncing-predator.md",
+      "aliases": [
+        "pouncing predator",
+        "pouncingpredator"
+      ]
+    },
+    {
+      "id": "beastform-powerful-beast",
+      "title": "Powerful Beast",
+      "kind": "beastform",
+      "path": "beastforms/powerful-beast.md",
+      "aliases": [
+        "powerful beast",
+        "powerfulbeast"
+      ]
+    },
+    {
+      "id": "beastform-stalking-arachnid",
+      "title": "Stalking Arachnid",
+      "kind": "beastform",
+      "path": "beastforms/stalking-arachnid.md",
+      "aliases": [
+        "stalking arachnid",
+        "stalkingarachnid"
+      ]
+    },
+    {
+      "id": "beastform-striking-serpent",
+      "title": "Striking Serpent",
+      "kind": "beastform",
+      "path": "beastforms/striking-serpent.md",
+      "aliases": [
+        "striking serpent",
+        "strikingserpent"
+      ]
+    },
+    {
+      "id": "beastform-terrible-lizard",
+      "title": "Terrible Lizard",
+      "kind": "beastform",
+      "path": "beastforms/terrible-lizard.md",
+      "aliases": [
+        "terrible lizard",
+        "terriblelizard"
+      ]
+    },
+    {
+      "id": "beastform-winged-beast",
+      "title": "Winged Beast",
+      "kind": "beastform",
+      "path": "beastforms/winged-beast.md",
+      "aliases": [
+        "winged beast",
+        "wingedbeast"
+      ]
+    },
+    {
+      "id": "character-creation",
+      "title": "Character Creation",
+      "kind": "rule",
+      "path": "rules/character-creation.md",
+      "aliases": [
+        "build a character",
+        "create a character",
+        "choose a class"
+      ]
+    },
+    {
+      "id": "class-bard",
+      "title": "Bard",
+      "kind": "class",
+      "path": "classes/bard.md",
+      "aliases": [
+        "bard"
+      ]
+    },
+    {
+      "id": "class-druid",
+      "title": "Druid",
+      "kind": "class",
+      "path": "classes/druid.md",
+      "aliases": [
+        "druid"
+      ]
+    },
+    {
+      "id": "class-guardian",
+      "title": "Guardian",
+      "kind": "class",
+      "path": "classes/guardian.md",
+      "aliases": [
+        "guardian"
+      ]
+    },
+    {
+      "id": "class-ranger",
+      "title": "Ranger",
+      "kind": "class",
+      "path": "classes/ranger.md",
+      "aliases": [
+        "ranger"
+      ]
+    },
+    {
+      "id": "class-rogue",
+      "title": "Rogue",
+      "kind": "class",
+      "path": "classes/rogue.md",
+      "aliases": [
+        "rogue"
+      ]
+    },
+    {
+      "id": "class-seraph",
+      "title": "Seraph",
+      "kind": "class",
+      "path": "classes/seraph.md",
+      "aliases": [
+        "seraph"
+      ]
+    },
+    {
+      "id": "class-sorcerer",
+      "title": "Sorcerer",
+      "kind": "class",
+      "path": "classes/sorcerer.md",
+      "aliases": [
+        "sorcerer"
+      ]
+    },
+    {
+      "id": "class-warrior",
+      "title": "Warrior",
+      "kind": "class",
+      "path": "classes/warrior.md",
+      "aliases": [
+        "warrior"
+      ]
+    },
+    {
+      "id": "class-wizard",
+      "title": "Wizard",
+      "kind": "class",
+      "path": "classes/wizard.md",
+      "aliases": [
+        "wizard"
+      ]
+    },
+    {
+      "id": "community-highborne",
+      "title": "Highborne",
+      "kind": "community",
+      "path": "communities/highborne.md",
+      "aliases": [
+        "highborne"
+      ]
+    },
+    {
+      "id": "community-loreborne",
+      "title": "Loreborne",
+      "kind": "community",
+      "path": "communities/loreborne.md",
+      "aliases": [
+        "loreborne"
+      ]
+    },
+    {
+      "id": "community-orderborne",
+      "title": "Orderborne",
+      "kind": "community",
+      "path": "communities/orderborne.md",
+      "aliases": [
+        "orderborne"
+      ]
+    },
+    {
+      "id": "community-ridgeborne",
+      "title": "Ridgeborne",
+      "kind": "community",
+      "path": "communities/ridgeborne.md",
+      "aliases": [
+        "ridgeborne"
+      ]
+    },
+    {
+      "id": "community-seaborne",
+      "title": "Seaborne",
+      "kind": "community",
+      "path": "communities/seaborne.md",
+      "aliases": [
+        "seaborne"
+      ]
+    },
+    {
+      "id": "community-slyborne",
+      "title": "Slyborne",
+      "kind": "community",
+      "path": "communities/slyborne.md",
+      "aliases": [
+        "slyborne"
+      ]
+    },
+    {
+      "id": "community-underborne",
+      "title": "Underborne",
+      "kind": "community",
+      "path": "communities/underborne.md",
+      "aliases": [
+        "underborne"
+      ]
+    },
+    {
+      "id": "community-wanderborne",
+      "title": "Wanderborne",
+      "kind": "community",
+      "path": "communities/wanderborne.md",
+      "aliases": [
+        "wanderborne"
+      ]
+    },
+    {
+      "id": "community-wildborne",
+      "title": "Wildborne",
+      "kind": "community",
+      "path": "communities/wildborne.md",
+      "aliases": [
+        "wildborne"
+      ]
+    },
+    {
+      "id": "consumable-acidpaste",
+      "title": "Acidpaste",
+      "kind": "consumable",
+      "path": "consumables/acidpaste.md",
+      "aliases": [
+        "acidpaste"
+      ]
+    },
+    {
+      "id": "consumable-armor-stitcher",
+      "title": "Armor Stitcher",
+      "kind": "consumable",
+      "path": "consumables/armor-stitcher.md",
+      "aliases": [
+        "armor stitcher",
+        "armorstitcher"
+      ]
+    },
+    {
+      "id": "consumable-attune-potion",
+      "title": "Attune Potion",
+      "kind": "consumable",
+      "path": "consumables/attune-potion.md",
+      "aliases": [
+        "attune potion",
+        "attunepotion"
+      ]
+    },
+    {
+      "id": "consumable-blinding-orb",
+      "title": "Blinding Orb",
+      "kind": "consumable",
+      "path": "consumables/blinding-orb.md",
+      "aliases": [
+        "blinding orb",
+        "blindingorb"
+      ]
+    },
+    {
+      "id": "consumable-blood-of-the-yorgi",
+      "title": "Blood of the Yorgi",
+      "kind": "consumable",
+      "path": "consumables/blood-of-the-yorgi.md",
+      "aliases": [
+        "blood of the yorgi",
+        "bloodoftheyorgi"
+      ]
+    },
+    {
+      "id": "consumable-bolster-potion",
+      "title": "Bolster Potion",
+      "kind": "consumable",
+      "path": "consumables/bolster-potion.md",
+      "aliases": [
+        "bolster potion",
+        "bolsterpotion"
+      ]
+    },
+    {
+      "id": "consumable-bonding-honey",
+      "title": "Bonding Honey",
+      "kind": "consumable",
+      "path": "consumables/bonding-honey.md",
+      "aliases": [
+        "bonding honey",
+        "bondinghoney"
+      ]
+    },
+    {
+      "id": "consumable-bridge-seed",
+      "title": "Bridge Seed",
+      "kind": "consumable",
+      "path": "consumables/bridge-seed.md",
+      "aliases": [
+        "bridge seed",
+        "bridgeseed"
+      ]
+    },
+    {
+      "id": "consumable-channelstone",
+      "title": "Channelstone",
+      "kind": "consumable",
+      "path": "consumables/channelstone.md",
+      "aliases": [
+        "channelstone"
+      ]
+    },
+    {
+      "id": "consumable-charm-potion",
+      "title": "Charm Potion",
+      "kind": "consumable",
+      "path": "consumables/charm-potion.md",
+      "aliases": [
+        "charm potion",
+        "charmpotion"
+      ]
+    },
+    {
+      "id": "consumable-circle-of-the-void",
+      "title": "Circle of the Void",
+      "kind": "consumable",
+      "path": "consumables/circle-of-the-void.md",
+      "aliases": [
+        "circle of the void",
+        "circleofthevoid"
+      ]
+    },
+    {
+      "id": "consumable-control-potion",
+      "title": "Control Potion",
+      "kind": "consumable",
+      "path": "consumables/control-potion.md",
+      "aliases": [
+        "control potion",
+        "controlpotion"
+      ]
+    },
+    {
+      "id": "consumable-death-tea",
+      "title": "Death Tea",
+      "kind": "consumable",
+      "path": "consumables/death-tea.md",
+      "aliases": [
+        "death tea",
+        "deathtea"
+      ]
+    },
+    {
+      "id": "consumable-dragonbloom-tea",
+      "title": "Dragonbloom Tea",
+      "kind": "consumable",
+      "path": "consumables/dragonbloom-tea.md",
+      "aliases": [
+        "dragonbloom tea",
+        "dragonbloomtea"
+      ]
+    },
+    {
+      "id": "consumable-dripfang-poison",
+      "title": "Dripfang Poison",
+      "kind": "consumable",
+      "path": "consumables/dripfang-poison.md",
+      "aliases": [
+        "dripfang poison",
+        "dripfangpoison"
+      ]
+    },
+    {
+      "id": "consumable-enlighten-potion",
+      "title": "Enlighten Potion",
+      "kind": "consumable",
+      "path": "consumables/enlighten-potion.md",
+      "aliases": [
+        "enlighten potion",
+        "enlightenpotion"
+      ]
+    },
+    {
+      "id": "consumable-feast-of-xuria",
+      "title": "Feast of Xuria",
+      "kind": "consumable",
+      "path": "consumables/feast-of-xuria.md",
+      "aliases": [
+        "feast of xuria",
+        "feastofxuria"
+      ]
+    },
+    {
+      "id": "consumable-featherbone",
+      "title": "Featherbone",
+      "kind": "consumable",
+      "path": "consumables/featherbone.md",
+      "aliases": [
+        "featherbone"
+      ]
+    },
+    {
+      "id": "consumable-gill-salve",
+      "title": "Gill Salve",
+      "kind": "consumable",
+      "path": "consumables/gill-salve.md",
+      "aliases": [
+        "gill salve",
+        "gillsalve"
+      ]
+    },
+    {
+      "id": "consumable-grindletooth-venom",
+      "title": "Grindletooth Venom",
+      "kind": "consumable",
+      "path": "consumables/grindletooth-venom.md",
+      "aliases": [
+        "grindletooth venom",
+        "grindletoothvenom"
+      ]
+    },
+    {
+      "id": "consumable-growing-potion",
+      "title": "Growing Potion",
+      "kind": "consumable",
+      "path": "consumables/growing-potion.md",
+      "aliases": [
+        "growing potion",
+        "growingpotion"
+      ]
+    },
+    {
+      "id": "consumable-health-potion",
+      "title": "Health Potion",
+      "kind": "consumable",
+      "path": "consumables/health-potion.md",
+      "aliases": [
+        "health potion",
+        "healthpotion"
+      ]
+    },
+    {
+      "id": "consumable-homet-s-secret-potion",
+      "title": "Homet's Secret Potion",
+      "kind": "consumable",
+      "path": "consumables/homet-s-secret-potion.md",
+      "aliases": [
+        "homet's secret potion",
+        "hometssecretpotion"
+      ]
+    },
+    {
+      "id": "consumable-hopehold-flare",
+      "title": "Hopehold Flare",
+      "kind": "consumable",
+      "path": "consumables/hopehold-flare.md",
+      "aliases": [
+        "hopehold flare",
+        "hopeholdflare"
+      ]
+    },
+    {
+      "id": "consumable-improved-arcane-shard",
+      "title": "Improved Arcane Shard",
+      "kind": "consumable",
+      "path": "consumables/improved-arcane-shard.md",
+      "aliases": [
+        "improved arcane shard",
+        "improvedarcaneshard"
+      ]
+    },
+    {
+      "id": "consumable-improved-grindletooth-venom",
+      "title": "Improved Grindletooth Venom",
+      "kind": "consumable",
+      "path": "consumables/improved-grindletooth-venom.md",
+      "aliases": [
+        "improved grindletooth venom",
+        "improvedgrindletoothvenom"
+      ]
+    },
+    {
+      "id": "consumable-jar-of-lost-voices",
+      "title": "Jar of Lost Voices",
+      "kind": "consumable",
+      "path": "consumables/jar-of-lost-voices.md",
+      "aliases": [
+        "jar of lost voices",
+        "jaroflostvoices"
+      ]
+    },
+    {
+      "id": "consumable-jumping-root",
+      "title": "Jumping Root",
+      "kind": "consumable",
+      "path": "consumables/jumping-root.md",
+      "aliases": [
+        "jumping root",
+        "jumpingroot"
+      ]
+    },
+    {
+      "id": "consumable-knowledge-stone",
+      "title": "Knowledge Stone",
+      "kind": "consumable",
+      "path": "consumables/knowledge-stone.md",
+      "aliases": [
+        "knowledge stone",
+        "knowledgestone"
+      ]
+    },
+    {
+      "id": "consumable-major-arcane-shard",
+      "title": "Major Arcane Shard",
+      "kind": "consumable",
+      "path": "consumables/major-arcane-shard.md",
+      "aliases": [
+        "major arcane shard",
+        "majorarcaneshard"
+      ]
+    },
+    {
+      "id": "consumable-major-attune-potion",
+      "title": "Major Attune Potion",
+      "kind": "consumable",
+      "path": "consumables/major-attune-potion.md",
+      "aliases": [
+        "major attune potion",
+        "majorattunepotion"
+      ]
+    },
+    {
+      "id": "consumable-major-bolster-potion",
+      "title": "Major Bolster Potion",
+      "kind": "consumable",
+      "path": "consumables/major-bolster-potion.md",
+      "aliases": [
+        "major bolster potion",
+        "majorbolsterpotion"
+      ]
+    },
+    {
+      "id": "consumable-major-charm-potion",
+      "title": "Major Charm Potion",
+      "kind": "consumable",
+      "path": "consumables/major-charm-potion.md",
+      "aliases": [
+        "major charm potion",
+        "majorcharmpotion"
+      ]
+    },
+    {
+      "id": "consumable-major-control-potion",
+      "title": "Major Control Potion",
+      "kind": "consumable",
+      "path": "consumables/major-control-potion.md",
+      "aliases": [
+        "major control potion",
+        "majorcontrolpotion"
+      ]
+    },
+    {
+      "id": "consumable-major-enlighten-potion",
+      "title": "Major Enlighten Potion",
+      "kind": "consumable",
+      "path": "consumables/major-enlighten-potion.md",
+      "aliases": [
+        "major enlighten potion",
+        "majorenlightenpotion"
+      ]
+    },
+    {
+      "id": "consumable-major-health-potion",
+      "title": "Major Health Potion",
+      "kind": "consumable",
+      "path": "consumables/major-health-potion.md",
+      "aliases": [
+        "major health potion",
+        "majorhealthpotion"
+      ]
+    },
+    {
+      "id": "consumable-major-stamina-potion",
+      "title": "Major Stamina Potion",
+      "kind": "consumable",
+      "path": "consumables/major-stamina-potion.md",
+      "aliases": [
+        "major stamina potion",
+        "majorstaminapotion"
+      ]
+    },
+    {
+      "id": "consumable-major-stride-potion",
+      "title": "Major Stride Potion",
+      "kind": "consumable",
+      "path": "consumables/major-stride-potion.md",
+      "aliases": [
+        "major stride potion",
+        "majorstridepotion"
+      ]
+    },
+    {
+      "id": "consumable-minor-health-potion",
+      "title": "Minor Health Potion",
+      "kind": "consumable",
+      "path": "consumables/minor-health-potion.md",
+      "aliases": [
+        "minor health potion",
+        "minorhealthpotion"
+      ]
+    },
+    {
+      "id": "consumable-minor-stamina-potion",
+      "title": "Minor Stamina Potion",
+      "kind": "consumable",
+      "path": "consumables/minor-stamina-potion.md",
+      "aliases": [
+        "minor stamina potion",
+        "minorstaminapotion"
+      ]
+    },
+    {
+      "id": "consumable-mirror-of-marigold",
+      "title": "Mirror of Marigold",
+      "kind": "consumable",
+      "path": "consumables/mirror-of-marigold.md",
+      "aliases": [
+        "mirror of marigold",
+        "mirrorofmarigold"
+      ]
+    },
+    {
+      "id": "consumable-morphing-clay",
+      "title": "Morphing Clay",
+      "kind": "consumable",
+      "path": "consumables/morphing-clay.md",
+      "aliases": [
+        "morphing clay",
+        "morphingclay"
+      ]
+    },
+    {
+      "id": "consumable-mythic-dust",
+      "title": "Mythic Dust",
+      "kind": "consumable",
+      "path": "consumables/mythic-dust.md",
+      "aliases": [
+        "mythic dust",
+        "mythicdust"
+      ]
+    },
+    {
+      "id": "consumable-ogre-musk",
+      "title": "Ogre Musk",
+      "kind": "consumable",
+      "path": "consumables/ogre-musk.md",
+      "aliases": [
+        "ogre musk",
+        "ogremusk"
+      ]
+    },
+    {
+      "id": "consumable-potion-of-stability",
+      "title": "Potion of Stability",
+      "kind": "consumable",
+      "path": "consumables/potion-of-stability.md",
+      "aliases": [
+        "potion of stability",
+        "potionofstability"
+      ]
+    },
+    {
+      "id": "consumable-redthorn-saliva",
+      "title": "Redthorn Saliva",
+      "kind": "consumable",
+      "path": "consumables/redthorn-saliva.md",
+      "aliases": [
+        "redthorn saliva",
+        "redthornsaliva"
+      ]
+    },
+    {
+      "id": "consumable-replication-parchment",
+      "title": "Replication Parchment",
+      "kind": "consumable",
+      "path": "consumables/replication-parchment.md",
+      "aliases": [
+        "replication parchment",
+        "replicationparchment"
+      ]
+    },
+    {
+      "id": "consumable-shrinking-potion",
+      "title": "Shrinking Potion",
+      "kind": "consumable",
+      "path": "consumables/shrinking-potion.md",
+      "aliases": [
+        "shrinking potion",
+        "shrinkingpotion"
+      ]
+    },
+    {
+      "id": "consumable-sleeping-sap",
+      "title": "Sleeping Sap",
+      "kind": "consumable",
+      "path": "consumables/sleeping-sap.md",
+      "aliases": [
+        "sleeping sap",
+        "sleepingsap"
+      ]
+    },
+    {
+      "id": "consumable-snap-powder",
+      "title": "Snap Powder",
+      "kind": "consumable",
+      "path": "consumables/snap-powder.md",
+      "aliases": [
+        "snap powder",
+        "snappowder"
+      ]
+    },
+    {
+      "id": "consumable-stamina-potion",
+      "title": "Stamina Potion",
+      "kind": "consumable",
+      "path": "consumables/stamina-potion.md",
+      "aliases": [
+        "stamina potion",
+        "staminapotion"
+      ]
+    },
+    {
+      "id": "consumable-stardrop",
+      "title": "Stardrop",
+      "kind": "consumable",
+      "path": "consumables/stardrop.md",
+      "aliases": [
+        "stardrop"
+      ]
+    },
+    {
+      "id": "consumable-stride-potion",
+      "title": "Stride Potion",
+      "kind": "consumable",
+      "path": "consumables/stride-potion.md",
+      "aliases": [
+        "stride potion",
+        "stridepotion"
+      ]
+    },
+    {
+      "id": "consumable-sun-tree-sap",
+      "title": "Sun Tree Sap",
+      "kind": "consumable",
+      "path": "consumables/sun-tree-sap.md",
+      "aliases": [
+        "sun tree sap",
+        "suntreesap"
+      ]
+    },
+    {
+      "id": "consumable-sweet-moss",
+      "title": "Sweet Moss",
+      "kind": "consumable",
+      "path": "consumables/sweet-moss.md",
+      "aliases": [
+        "sweet moss",
+        "sweetmoss"
+      ]
+    },
+    {
+      "id": "consumable-unstable-arcane-shard",
+      "title": "Unstable Arcane Shard",
+      "kind": "consumable",
+      "path": "consumables/unstable-arcane-shard.md",
+      "aliases": [
+        "unstable arcane shard",
+        "unstablearcaneshard"
+      ]
+    },
+    {
+      "id": "consumable-varik-leaves",
+      "title": "Varik Leaves",
+      "kind": "consumable",
+      "path": "consumables/varik-leaves.md",
+      "aliases": [
+        "varik leaves",
+        "varikleaves"
+      ]
+    },
+    {
+      "id": "consumable-vial-of-darksmoke",
+      "title": "Vial of Darksmoke",
+      "kind": "consumable",
+      "path": "consumables/vial-of-darksmoke.md",
+      "aliases": [
+        "vial of darksmoke",
+        "vialofdarksmoke"
+      ]
+    },
+    {
+      "id": "consumable-vial-of-moondrip",
+      "title": "Vial of Moondrip",
+      "kind": "consumable",
+      "path": "consumables/vial-of-moondrip.md",
+      "aliases": [
+        "vial of moondrip",
+        "vialofmoondrip"
+      ]
+    },
+    {
+      "id": "consumable-wingsprout",
+      "title": "Wingsprout",
+      "kind": "consumable",
+      "path": "consumables/wingsprout.md",
+      "aliases": [
+        "wingsprout"
+      ]
+    },
+    {
+      "id": "core-materials",
+      "title": "Core Materials",
+      "kind": "rule",
+      "path": "rules/core-materials.md",
+      "aliases": [
+        "domains",
+        "classes",
+        "ancestries",
+        "communities"
+      ]
+    },
+    {
+      "id": "core-mechanics",
+      "title": "Core Mechanics",
+      "kind": "rule",
+      "path": "rules/core-mechanics.md",
+      "aliases": [
+        "combat",
+        "downtime",
+        "rest",
+        "conditions",
+        "leveling"
+      ]
+    },
+    {
+      "id": "domain-arcana",
+      "title": "Arcana",
+      "kind": "domain",
+      "path": "domains/arcana.md",
+      "aliases": [
+        "arcana"
+      ]
+    },
+    {
+      "id": "domain-blade",
+      "title": "Blade",
+      "kind": "domain",
+      "path": "domains/blade.md",
+      "aliases": [
+        "blade"
+      ]
+    },
+    {
+      "id": "domain-bone",
+      "title": "Bone",
+      "kind": "domain",
+      "path": "domains/bone.md",
+      "aliases": [
+        "bone"
+      ]
+    },
+    {
+      "id": "domain-codex",
+      "title": "Codex",
+      "kind": "domain",
+      "path": "domains/codex.md",
+      "aliases": [
+        "codex"
+      ]
+    },
+    {
+      "id": "domain-grace",
+      "title": "Grace",
+      "kind": "domain",
+      "path": "domains/grace.md",
+      "aliases": [
+        "grace"
+      ]
+    },
+    {
+      "id": "domain-midnight",
+      "title": "Midnight",
+      "kind": "domain",
+      "path": "domains/midnight.md",
+      "aliases": [
+        "midnight"
+      ]
+    },
+    {
+      "id": "domain-sage",
+      "title": "Sage",
+      "kind": "domain",
+      "path": "domains/sage.md",
+      "aliases": [
+        "sage"
+      ]
+    },
+    {
+      "id": "domain-splendor",
+      "title": "Splendor",
+      "kind": "domain",
+      "path": "domains/splendor.md",
+      "aliases": [
+        "splendor"
+      ]
+    },
+    {
+      "id": "domain-valor",
+      "title": "Valor",
+      "kind": "domain",
+      "path": "domains/valor.md",
+      "aliases": [
+        "valor"
+      ]
+    },
+    {
+      "id": "environment-abandoned-grove",
+      "title": "Abandoned Grove",
+      "kind": "environment",
+      "path": "environments/abandoned-grove.md",
+      "aliases": [
+        "abandoned grove",
+        "abandonedgrove"
+      ]
+    },
+    {
+      "id": "environment-ambushed",
+      "title": "Ambushed",
+      "kind": "environment",
+      "path": "environments/ambushed.md",
+      "aliases": [
+        "ambushed"
+      ]
+    },
+    {
+      "id": "environment-ambushers",
+      "title": "Ambushers",
+      "kind": "environment",
+      "path": "environments/ambushers.md",
+      "aliases": [
+        "ambushers"
+      ]
+    },
+    {
+      "id": "environment-burning-heart-of-the-woods",
+      "title": "Burning Heart of the Woods",
+      "kind": "environment",
+      "path": "environments/burning-heart-of-the-woods.md",
+      "aliases": [
+        "burning heart of the woods",
+        "burningheartofthewoods"
+      ]
+    },
+    {
+      "id": "environment-bustling-marketplace",
+      "title": "Bustling Marketplace",
+      "kind": "environment",
+      "path": "environments/bustling-marketplace.md",
+      "aliases": [
+        "bustling marketplace",
+        "bustlingmarketplace"
+      ]
+    },
+    {
+      "id": "environment-castle-siege",
+      "title": "Castle Siege",
+      "kind": "environment",
+      "path": "environments/castle-siege.md",
+      "aliases": [
+        "castle siege",
+        "castlesiege"
+      ]
+    },
+    {
+      "id": "environment-chaos-realm",
+      "title": "Chaos Realm",
+      "kind": "environment",
+      "path": "environments/chaos-realm.md",
+      "aliases": [
+        "chaos realm",
+        "chaosrealm"
+      ]
+    },
+    {
+      "id": "environment-cliffside-ascent",
+      "title": "Cliffside Ascent",
+      "kind": "environment",
+      "path": "environments/cliffside-ascent.md",
+      "aliases": [
+        "cliffside ascent",
+        "cliffsideascent"
+      ]
+    },
+    {
+      "id": "environment-cult-ritual",
+      "title": "Cult Ritual",
+      "kind": "environment",
+      "path": "environments/cult-ritual.md",
+      "aliases": [
+        "cult ritual",
+        "cultritual"
+      ]
+    },
+    {
+      "id": "environment-divine-usurpation",
+      "title": "Divine Usurpation",
+      "kind": "environment",
+      "path": "environments/divine-usurpation.md",
+      "aliases": [
+        "divine usurpation",
+        "divineusurpation"
+      ]
+    },
+    {
+      "id": "environment-hallowed-temple",
+      "title": "Hallowed Temple",
+      "kind": "environment",
+      "path": "environments/hallowed-temple.md",
+      "aliases": [
+        "hallowed temple",
+        "hallowedtemple"
+      ]
+    },
+    {
+      "id": "environment-haunted-city",
+      "title": "Haunted City",
+      "kind": "environment",
+      "path": "environments/haunted-city.md",
+      "aliases": [
+        "haunted city",
+        "hauntedcity"
+      ]
+    },
+    {
+      "id": "environment-imperial-court",
+      "title": "Imperial Court",
+      "kind": "environment",
+      "path": "environments/imperial-court.md",
+      "aliases": [
+        "imperial court",
+        "imperialcourt"
+      ]
+    },
+    {
+      "id": "environment-local-tavern",
+      "title": "Local Tavern",
+      "kind": "environment",
+      "path": "environments/local-tavern.md",
+      "aliases": [
+        "local tavern",
+        "localtavern"
+      ]
+    },
+    {
+      "id": "environment-mountain-pass",
+      "title": "Mountain Pass",
+      "kind": "environment",
+      "path": "environments/mountain-pass.md",
+      "aliases": [
+        "mountain pass",
+        "mountainpass"
+      ]
+    },
+    {
+      "id": "environment-necromancer-s-ossuary",
+      "title": "Necromancer's Ossuary",
+      "kind": "environment",
+      "path": "environments/necromancer-s-ossuary.md",
+      "aliases": [
+        "necromancer's ossuary",
+        "necromancersossuary"
+      ]
+    },
+    {
+      "id": "environment-outpost-town",
+      "title": "Outpost Town",
+      "kind": "environment",
+      "path": "environments/outpost-town.md",
+      "aliases": [
+        "outpost town",
+        "outposttown"
+      ]
+    },
+    {
+      "id": "environment-pitched-battle",
+      "title": "Pitched Battle",
+      "kind": "environment",
+      "path": "environments/pitched-battle.md",
+      "aliases": [
+        "pitched battle",
+        "pitchedbattle"
+      ]
+    },
+    {
+      "id": "environment-raging-river",
+      "title": "Raging River",
+      "kind": "environment",
+      "path": "environments/raging-river.md",
+      "aliases": [
+        "raging river",
+        "ragingriver"
+      ]
+    },
+    {
+      "id": "glossary-conditions",
+      "title": "Conditions",
+      "kind": "glossary",
+      "path": "glossary/glossary-conditions.md"
+    },
+    {
+      "id": "glossary-death",
+      "title": "Death Moves",
+      "kind": "glossary",
+      "path": "glossary/glossary-death.md"
+    },
+    {
+      "id": "glossary-downtime",
+      "title": "Downtime",
+      "kind": "glossary",
+      "path": "glossary/glossary-downtime.md"
+    },
+    {
+      "id": "glossary-fear",
+      "title": "Fear",
+      "kind": "glossary",
+      "path": "glossary/glossary-fear.md"
+    },
+    {
+      "id": "glossary-hope",
+      "title": "Hope",
+      "kind": "glossary",
+      "path": "glossary/glossary-hope.md"
+    },
+    {
+      "id": "glossary-session-zero",
+      "title": "Session Zero",
+      "kind": "glossary",
+      "path": "glossary/glossary-session-zero.md"
+    },
+    {
+      "id": "glossary-stress",
+      "title": "Stress",
+      "kind": "glossary",
+      "path": "glossary/glossary-stress.md"
+    },
+    {
+      "id": "introduction",
+      "title": "Introduction",
+      "kind": "rule",
+      "path": "rules/introduction.md",
+      "aliases": [
+        "what is daggerheart",
+        "golden rule",
+        "rulings over rules"
+      ]
+    },
+    {
+      "id": "item-airblade-charm",
+      "title": "Airblade Charm",
+      "kind": "item",
+      "path": "items/airblade-charm.md",
+      "aliases": [
+        "airblade charm",
+        "airbladecharm"
+      ]
+    },
+    {
+      "id": "item-alistair-s-torch",
+      "title": "Alistair's Torch",
+      "kind": "item",
+      "path": "items/alistair-s-torch.md",
+      "aliases": [
+        "alistair's torch",
+        "alistairstorch"
+      ]
+    },
+    {
+      "id": "item-arcane-cloak",
+      "title": "Arcane Cloak",
+      "kind": "item",
+      "path": "items/arcane-cloak.md",
+      "aliases": [
+        "arcane cloak",
+        "arcanecloak"
+      ]
+    },
+    {
+      "id": "item-arcane-prism",
+      "title": "Arcane Prism",
+      "kind": "item",
+      "path": "items/arcane-prism.md",
+      "aliases": [
+        "arcane prism",
+        "arcaneprism"
+      ]
+    },
+    {
+      "id": "item-attune-relic",
+      "title": "Attune Relic",
+      "kind": "item",
+      "path": "items/attune-relic.md",
+      "aliases": [
+        "attune relic",
+        "attunerelic"
+      ]
+    },
+    {
+      "id": "item-bag-of-ficklesand",
+      "title": "Bag of Ficklesand",
+      "kind": "item",
+      "path": "items/bag-of-ficklesand.md",
+      "aliases": [
+        "bag of ficklesand",
+        "bagofficklesand"
+      ]
+    },
+    {
+      "id": "item-belt-of-unity",
+      "title": "Belt of Unity",
+      "kind": "item",
+      "path": "items/belt-of-unity.md",
+      "aliases": [
+        "belt of unity",
+        "beltofunity"
+      ]
+    },
+    {
+      "id": "item-bloodstone",
+      "title": "Bloodstone",
+      "kind": "item",
+      "path": "items/bloodstone.md",
+      "aliases": [
+        "bloodstone"
+      ]
+    },
+    {
+      "id": "item-bolster-relic",
+      "title": "Bolster Relic",
+      "kind": "item",
+      "path": "items/bolster-relic.md",
+      "aliases": [
+        "bolster relic",
+        "bolsterrelic"
+      ]
+    },
+    {
+      "id": "item-box-of-many-goods",
+      "title": "Box of Many Goods",
+      "kind": "item",
+      "path": "items/box-of-many-goods.md",
+      "aliases": [
+        "box of many goods",
+        "boxofmanygoods"
+      ]
+    },
+    {
+      "id": "item-calming-pendant",
+      "title": "Calming Pendant",
+      "kind": "item",
+      "path": "items/calming-pendant.md",
+      "aliases": [
+        "calming pendant",
+        "calmingpendant"
+      ]
+    },
+    {
+      "id": "item-charging-quiver",
+      "title": "Charging Quiver",
+      "kind": "item",
+      "path": "items/charging-quiver.md",
+      "aliases": [
+        "charging quiver",
+        "chargingquiver"
+      ]
+    },
+    {
+      "id": "item-charm-relic",
+      "title": "Charm Relic",
+      "kind": "item",
+      "path": "items/charm-relic.md",
+      "aliases": [
+        "charm relic",
+        "charmrelic"
+      ]
+    },
+    {
+      "id": "item-clay-companion",
+      "title": "Clay Companion",
+      "kind": "item",
+      "path": "items/clay-companion.md",
+      "aliases": [
+        "clay companion",
+        "claycompanion"
+      ]
+    },
+    {
+      "id": "item-companion-case",
+      "title": "Companion Case",
+      "kind": "item",
+      "path": "items/companion-case.md",
+      "aliases": [
+        "companion case",
+        "companioncase"
+      ]
+    },
+    {
+      "id": "item-control-relic",
+      "title": "Control Relic",
+      "kind": "item",
+      "path": "items/control-relic.md",
+      "aliases": [
+        "control relic",
+        "controlrelic"
+      ]
+    },
+    {
+      "id": "item-corrector-sprite",
+      "title": "Corrector Sprite",
+      "kind": "item",
+      "path": "items/corrector-sprite.md",
+      "aliases": [
+        "corrector sprite",
+        "correctorsprite"
+      ]
+    },
+    {
+      "id": "item-dual-flask",
+      "title": "Dual Flask",
+      "kind": "item",
+      "path": "items/dual-flask.md",
+      "aliases": [
+        "dual flask",
+        "dualflask"
+      ]
+    },
+    {
+      "id": "item-elusive-amulet",
+      "title": "Elusive Amulet",
+      "kind": "item",
+      "path": "items/elusive-amulet.md",
+      "aliases": [
+        "elusive amulet",
+        "elusiveamulet"
+      ]
+    },
+    {
+      "id": "item-empty-chest",
+      "title": "Empty Chest",
+      "kind": "item",
+      "path": "items/empty-chest.md",
+      "aliases": [
+        "empty chest",
+        "emptychest"
+      ]
+    },
+    {
+      "id": "item-enlighten-relic",
+      "title": "Enlighten Relic",
+      "kind": "item",
+      "path": "items/enlighten-relic.md",
+      "aliases": [
+        "enlighten relic",
+        "enlightenrelic"
+      ]
+    },
+    {
+      "id": "item-fire-jar",
+      "title": "Fire Jar",
+      "kind": "item",
+      "path": "items/fire-jar.md",
+      "aliases": [
+        "fire jar",
+        "firejar"
+      ]
+    },
+    {
+      "id": "item-flickerfly-pendant",
+      "title": "Flickerfly Pendant",
+      "kind": "item",
+      "path": "items/flickerfly-pendant.md",
+      "aliases": [
+        "flickerfly pendant",
+        "flickerflypendant"
+      ]
+    },
+    {
+      "id": "item-gecko-gloves",
+      "title": "Gecko Gloves",
+      "kind": "item",
+      "path": "items/gecko-gloves.md",
+      "aliases": [
+        "gecko gloves",
+        "geckogloves"
+      ]
+    },
+    {
+      "id": "item-gem-of-alacrity",
+      "title": "Gem of Alacrity",
+      "kind": "item",
+      "path": "items/gem-of-alacrity.md",
+      "aliases": [
+        "gem of alacrity",
+        "gemofalacrity"
+      ]
+    },
+    {
+      "id": "item-gem-of-audacity",
+      "title": "Gem of Audacity",
+      "kind": "item",
+      "path": "items/gem-of-audacity.md",
+      "aliases": [
+        "gem of audacity",
+        "gemofaudacity"
+      ]
+    },
+    {
+      "id": "item-gem-of-insight",
+      "title": "Gem of Insight",
+      "kind": "item",
+      "path": "items/gem-of-insight.md",
+      "aliases": [
+        "gem of insight",
+        "gemofinsight"
+      ]
+    },
+    {
+      "id": "item-gem-of-might",
+      "title": "Gem of Might",
+      "kind": "item",
+      "path": "items/gem-of-might.md",
+      "aliases": [
+        "gem of might",
+        "gemofmight"
+      ]
+    },
+    {
+      "id": "item-gem-of-precision",
+      "title": "Gem of Precision",
+      "kind": "item",
+      "path": "items/gem-of-precision.md",
+      "aliases": [
+        "gem of precision",
+        "gemofprecision"
+      ]
+    },
+    {
+      "id": "item-gem-of-sagacity",
+      "title": "Gem of Sagacity",
+      "kind": "item",
+      "path": "items/gem-of-sagacity.md",
+      "aliases": [
+        "gem of sagacity",
+        "gemofsagacity"
+      ]
+    },
+    {
+      "id": "item-glamour-stone",
+      "title": "Glamour Stone",
+      "kind": "item",
+      "path": "items/glamour-stone.md",
+      "aliases": [
+        "glamour stone",
+        "glamourstone"
+      ]
+    },
+    {
+      "id": "item-glider",
+      "title": "Glider",
+      "kind": "item",
+      "path": "items/glider.md",
+      "aliases": [
+        "glider"
+      ]
+    },
+    {
+      "id": "item-greatstone",
+      "title": "Greatstone",
+      "kind": "item",
+      "path": "items/greatstone.md",
+      "aliases": [
+        "greatstone"
+      ]
+    },
+    {
+      "id": "item-homing-compasses",
+      "title": "Homing Compasses",
+      "kind": "item",
+      "path": "items/homing-compasses.md",
+      "aliases": [
+        "homing compasses",
+        "homingcompasses"
+      ]
+    },
+    {
+      "id": "item-honing-relic",
+      "title": "Honing Relic",
+      "kind": "item",
+      "path": "items/honing-relic.md",
+      "aliases": [
+        "honing relic",
+        "honingrelic"
+      ]
+    },
+    {
+      "id": "item-hopekeeper-locket",
+      "title": "Hopekeeper Locket",
+      "kind": "item",
+      "path": "items/hopekeeper-locket.md",
+      "aliases": [
+        "hopekeeper locket",
+        "hopekeeperlocket"
+      ]
+    },
+    {
+      "id": "item-infinite-bag",
+      "title": "Infinite Bag",
+      "kind": "item",
+      "path": "items/infinite-bag.md",
+      "aliases": [
+        "infinite bag",
+        "infinitebag"
+      ]
+    },
+    {
+      "id": "item-lakestrider-boots",
+      "title": "Lakestrider Boots",
+      "kind": "item",
+      "path": "items/lakestrider-boots.md",
+      "aliases": [
+        "lakestrider boots",
+        "lakestriderboots"
+      ]
+    },
+    {
+      "id": "item-lorekeeper",
+      "title": "Lorekeeper",
+      "kind": "item",
+      "path": "items/lorekeeper.md",
+      "aliases": [
+        "lorekeeper"
+      ]
+    },
+    {
+      "id": "item-manacles",
+      "title": "Manacles",
+      "kind": "item",
+      "path": "items/manacles.md",
+      "aliases": [
+        "manacles"
+      ]
+    },
+    {
+      "id": "item-minor-health-potion-recipe",
+      "title": "Minor Health Potion Recipe",
+      "kind": "item",
+      "path": "items/minor-health-potion-recipe.md",
+      "aliases": [
+        "minor health potion recipe",
+        "minorhealthpotionrecipe"
+      ]
+    },
+    {
+      "id": "item-minor-stamina-potion-recipe",
+      "title": "Minor Stamina Potion Recipe",
+      "kind": "item",
+      "path": "items/minor-stamina-potion-recipe.md",
+      "aliases": [
+        "minor stamina potion recipe",
+        "minorstaminapotionrecipe"
+      ]
+    },
+    {
+      "id": "item-mythic-dust-recipe",
+      "title": "Mythic Dust Recipe",
+      "kind": "item",
+      "path": "items/mythic-dust-recipe.md",
+      "aliases": [
+        "mythic dust recipe",
+        "mythicdustrecipe"
+      ]
+    },
+    {
+      "id": "item-paragon-s-chain",
+      "title": "Paragon’s Chain",
+      "kind": "item",
+      "path": "items/paragon-s-chain.md",
+      "aliases": [
+        "paragonschain",
+        "paragon’s chain"
+      ]
+    },
+    {
+      "id": "item-phoenix-feather",
+      "title": "Phoenix Feather",
+      "kind": "item",
+      "path": "items/phoenix-feather.md",
+      "aliases": [
+        "phoenix feather",
+        "phoenixfeather"
+      ]
+    },
+    {
+      "id": "item-piercing-arrows",
+      "title": "Piercing Arrows",
+      "kind": "item",
+      "path": "items/piercing-arrows.md",
+      "aliases": [
+        "piercing arrows",
+        "piercingarrows"
+      ]
+    },
+    {
+      "id": "item-piper-whistle",
+      "title": "Piper Whistle",
+      "kind": "item",
+      "path": "items/piper-whistle.md",
+      "aliases": [
+        "piper whistle",
+        "piperwhistle"
+      ]
+    },
+    {
+      "id": "item-portal-seed",
+      "title": "Portal Seed",
+      "kind": "item",
+      "path": "items/portal-seed.md",
+      "aliases": [
+        "portal seed",
+        "portalseed"
+      ]
+    },
+    {
+      "id": "item-premium-bedroll",
+      "title": "Premium Bedroll",
+      "kind": "item",
+      "path": "items/premium-bedroll.md",
+      "aliases": [
+        "premium bedroll",
+        "premiumbedroll"
+      ]
+    },
+    {
+      "id": "item-ring-of-resistance",
+      "title": "Ring of Resistance",
+      "kind": "item",
+      "path": "items/ring-of-resistance.md",
+      "aliases": [
+        "ring of resistance",
+        "ringofresistance"
+      ]
+    },
+    {
+      "id": "item-ring-of-silence",
+      "title": "Ring of Silence",
+      "kind": "item",
+      "path": "items/ring-of-silence.md",
+      "aliases": [
+        "ring of silence",
+        "ringofsilence"
+      ]
+    },
+    {
+      "id": "item-ring-of-unbreakable-resolve",
+      "title": "Ring of Unbreakable Resolve",
+      "kind": "item",
+      "path": "items/ring-of-unbreakable-resolve.md",
+      "aliases": [
+        "ring of unbreakable resolve",
+        "ringofunbreakableresolve"
+      ]
+    },
+    {
+      "id": "item-shard-of-memory",
+      "title": "Shard of Memory",
+      "kind": "item",
+      "path": "items/shard-of-memory.md",
+      "aliases": [
+        "shard of memory",
+        "shardofmemory"
+      ]
+    },
+    {
+      "id": "item-skeleton-key",
+      "title": "Skeleton Key",
+      "kind": "item",
+      "path": "items/skeleton-key.md",
+      "aliases": [
+        "skeleton key",
+        "skeletonkey"
+      ]
+    },
+    {
+      "id": "item-speaking-orbs",
+      "title": "Speaking Orbs",
+      "kind": "item",
+      "path": "items/speaking-orbs.md",
+      "aliases": [
+        "speaking orbs",
+        "speakingorbs"
+      ]
+    },
+    {
+      "id": "item-stride-relic",
+      "title": "Stride Relic",
+      "kind": "item",
+      "path": "items/stride-relic.md",
+      "aliases": [
+        "stride relic",
+        "striderelic"
+      ]
+    },
+    {
+      "id": "item-suspended-rod",
+      "title": "Suspended Rod",
+      "kind": "item",
+      "path": "items/suspended-rod.md",
+      "aliases": [
+        "suspended rod",
+        "suspendedrod"
+      ]
+    },
+    {
+      "id": "item-valorstone",
+      "title": "Valorstone",
+      "kind": "item",
+      "path": "items/valorstone.md",
+      "aliases": [
+        "valorstone"
+      ]
+    },
+    {
+      "id": "item-vial-of-darksmoke-recipe",
+      "title": "Vial of Darksmoke Recipe",
+      "kind": "item",
+      "path": "items/vial-of-darksmoke-recipe.md",
+      "aliases": [
+        "vial of darksmoke recipe",
+        "vialofdarksmokerecipe"
+      ]
+    },
+    {
+      "id": "item-woven-net",
+      "title": "Woven Net",
+      "kind": "item",
+      "path": "items/woven-net.md",
+      "aliases": [
+        "woven net",
+        "wovennet"
+      ]
+    },
+    {
+      "id": "playbook-gm-fear-and-moves",
+      "title": "GM Fear and Moves",
+      "kind": "playbook",
+      "path": "playbooks/playbook-gm-fear-and-moves.md"
+    },
+    {
+      "id": "playbook-rests-and-downtime",
+      "title": "Rests and Downtime",
+      "kind": "playbook",
+      "path": "playbooks/playbook-rests-and-downtime.md"
+    },
+    {
+      "id": "playbook-session-flow",
+      "title": "Session Flow",
+      "kind": "playbook",
+      "path": "playbooks/playbook-session-flow.md"
+    },
+    {
+      "id": "playbook-witherwild-session-zero",
+      "title": "Witherwild Session Zero",
+      "kind": "playbook",
+      "path": "playbooks/playbook-witherwild-session-zero.md"
+    },
+    {
+      "id": "running-an-adventure",
+      "title": "Running an Adventure",
+      "kind": "rule",
+      "path": "rules/running-an-adventure.md",
+      "aliases": [
+        "gm guidance",
+        "fear",
+        "gm moves",
+        "session zero"
+      ]
+    },
+    {
+      "id": "subclass-beastbound",
+      "title": "Beastbound",
+      "kind": "subclass",
+      "path": "subclasses/beastbound.md",
+      "aliases": [
+        "beastbound"
+      ]
+    },
+    {
+      "id": "subclass-call-of-the-brave",
+      "title": "Call of the Brave",
+      "kind": "subclass",
+      "path": "subclasses/call-of-the-brave.md",
+      "aliases": [
+        "call of the brave",
+        "callofthebrave"
+      ]
+    },
+    {
+      "id": "subclass-call-of-the-slayer",
+      "title": "Call of the Slayer",
+      "kind": "subclass",
+      "path": "subclasses/call-of-the-slayer.md",
+      "aliases": [
+        "call of the slayer",
+        "calloftheslayer"
+      ]
+    },
+    {
+      "id": "subclass-divine-wielder",
+      "title": "Divine Wielder",
+      "kind": "subclass",
+      "path": "subclasses/divine-wielder.md",
+      "aliases": [
+        "divine wielder",
+        "divinewielder"
+      ]
+    },
+    {
+      "id": "subclass-elemental-origin",
+      "title": "Elemental Origin",
+      "kind": "subclass",
+      "path": "subclasses/elemental-origin.md",
+      "aliases": [
+        "elemental origin",
+        "elementalorigin"
+      ]
+    },
+    {
+      "id": "subclass-nightwalker",
+      "title": "Nightwalker",
+      "kind": "subclass",
+      "path": "subclasses/nightwalker.md",
+      "aliases": [
+        "nightwalker"
+      ]
+    },
+    {
+      "id": "subclass-primal-origin",
+      "title": "Primal Origin",
+      "kind": "subclass",
+      "path": "subclasses/primal-origin.md",
+      "aliases": [
+        "primal origin",
+        "primalorigin"
+      ]
+    },
+    {
+      "id": "subclass-school-of-knowledge",
+      "title": "School of Knowledge",
+      "kind": "subclass",
+      "path": "subclasses/school-of-knowledge.md",
+      "aliases": [
+        "school of knowledge",
+        "schoolofknowledge"
+      ]
+    },
+    {
+      "id": "subclass-school-of-war",
+      "title": "School of War",
+      "kind": "subclass",
+      "path": "subclasses/school-of-war.md",
+      "aliases": [
+        "school of war",
+        "schoolofwar"
+      ]
+    },
+    {
+      "id": "subclass-stalwart",
+      "title": "Stalwart",
+      "kind": "subclass",
+      "path": "subclasses/stalwart.md",
+      "aliases": [
+        "stalwart"
+      ]
+    },
+    {
+      "id": "subclass-syndicate",
+      "title": "Syndicate",
+      "kind": "subclass",
+      "path": "subclasses/syndicate.md",
+      "aliases": [
+        "syndicate"
+      ]
+    },
+    {
+      "id": "subclass-troubadour",
+      "title": "Troubadour",
+      "kind": "subclass",
+      "path": "subclasses/troubadour.md",
+      "aliases": [
+        "troubadour"
+      ]
+    },
+    {
+      "id": "subclass-vengeance",
+      "title": "Vengeance",
+      "kind": "subclass",
+      "path": "subclasses/vengeance.md",
+      "aliases": [
+        "vengeance"
+      ]
+    },
+    {
+      "id": "subclass-warden-of-renewal",
+      "title": "Warden of Renewal",
+      "kind": "subclass",
+      "path": "subclasses/warden-of-renewal.md",
+      "aliases": [
+        "warden of renewal",
+        "wardenofrenewal"
+      ]
+    },
+    {
+      "id": "subclass-warden-of-the-elements",
+      "title": "Warden of the Elements",
+      "kind": "subclass",
+      "path": "subclasses/warden-of-the-elements.md",
+      "aliases": [
+        "warden of the elements",
+        "wardenoftheelements"
+      ]
+    },
+    {
+      "id": "subclass-wayfinder",
+      "title": "Wayfinder",
+      "kind": "subclass",
+      "path": "subclasses/wayfinder.md",
+      "aliases": [
+        "wayfinder"
+      ]
+    },
+    {
+      "id": "subclass-winged-sentinel",
+      "title": "Winged Sentinel",
+      "kind": "subclass",
+      "path": "subclasses/winged-sentinel.md",
+      "aliases": [
+        "winged sentinel",
+        "wingedsentinel"
+      ]
+    },
+    {
+      "id": "subclass-wordsmith",
+      "title": "Wordsmith",
+      "kind": "subclass",
+      "path": "subclasses/wordsmith.md",
+      "aliases": [
+        "wordsmith"
+      ]
+    },
+    {
+      "id": "weapon-aantari-bow",
+      "title": "Aantari Bow",
+      "kind": "weapon",
+      "path": "weapons/aantari-bow.md",
+      "aliases": [
+        "aantari bow",
+        "aantaribow"
+      ]
+    },
+    {
+      "id": "weapon-advanced-arcane-gauntlets",
+      "title": "Advanced Arcane Gauntlets",
+      "kind": "weapon",
+      "path": "weapons/advanced-arcane-gauntlets.md",
+      "aliases": [
+        "advanced arcane gauntlets",
+        "advancedarcanegauntlets"
+      ]
+    },
+    {
+      "id": "weapon-advanced-battleaxe",
+      "title": "Advanced Battleaxe",
+      "kind": "weapon",
+      "path": "weapons/advanced-battleaxe.md",
+      "aliases": [
+        "advanced battleaxe",
+        "advancedbattleaxe"
+      ]
+    },
+    {
+      "id": "weapon-advanced-broadsword",
+      "title": "Advanced Broadsword",
+      "kind": "weapon",
+      "path": "weapons/advanced-broadsword.md",
+      "aliases": [
+        "advanced broadsword",
+        "advancedbroadsword"
+      ]
+    },
+    {
+      "id": "weapon-advanced-crossbow",
+      "title": "Advanced Crossbow",
+      "kind": "weapon",
+      "path": "weapons/advanced-crossbow.md",
+      "aliases": [
+        "advanced crossbow",
+        "advancedcrossbow"
+      ]
+    },
+    {
+      "id": "weapon-advanced-cutlass",
+      "title": "Advanced Cutlass",
+      "kind": "weapon",
+      "path": "weapons/advanced-cutlass.md",
+      "aliases": [
+        "advanced cutlass",
+        "advancedcutlass"
+      ]
+    },
+    {
+      "id": "weapon-advanced-dagger",
+      "title": "Advanced Dagger",
+      "kind": "weapon",
+      "path": "weapons/advanced-dagger.md",
+      "aliases": [
+        "advanced dagger",
+        "advanceddagger"
+      ]
+    },
+    {
+      "id": "weapon-advanced-dualstaff",
+      "title": "Advanced Dualstaff",
+      "kind": "weapon",
+      "path": "weapons/advanced-dualstaff.md",
+      "aliases": [
+        "advanced dualstaff",
+        "advanceddualstaff"
+      ]
+    },
+    {
+      "id": "weapon-advanced-glowing-rings",
+      "title": "Advanced Glowing Rings",
+      "kind": "weapon",
+      "path": "weapons/advanced-glowing-rings.md",
+      "aliases": [
+        "advanced glowing rings",
+        "advancedglowingrings"
+      ]
+    },
+    {
+      "id": "weapon-advanced-grappler",
+      "title": "Advanced Grappler",
+      "kind": "weapon",
+      "path": "weapons/advanced-grappler.md",
+      "aliases": [
+        "advanced grappler",
+        "advancedgrappler"
+      ]
+    },
+    {
+      "id": "weapon-advanced-greatstaff",
+      "title": "Advanced Greatstaff",
+      "kind": "weapon",
+      "path": "weapons/advanced-greatstaff.md",
+      "aliases": [
+        "advanced greatstaff",
+        "advancedgreatstaff"
+      ]
+    },
+    {
+      "id": "weapon-advanced-greatsword",
+      "title": "Advanced Greatsword",
+      "kind": "weapon",
+      "path": "weapons/advanced-greatsword.md",
+      "aliases": [
+        "advanced greatsword",
+        "advancedgreatsword"
+      ]
+    },
+    {
+      "id": "weapon-advanced-halberd",
+      "title": "Advanced Halberd",
+      "kind": "weapon",
+      "path": "weapons/advanced-halberd.md",
+      "aliases": [
+        "advanced halberd",
+        "advancedhalberd"
+      ]
+    },
+    {
+      "id": "weapon-advanced-hallowed-axe",
+      "title": "Advanced Hallowed Axe",
+      "kind": "weapon",
+      "path": "weapons/advanced-hallowed-axe.md",
+      "aliases": [
+        "advanced hallowed axe",
+        "advancedhallowedaxe"
+      ]
+    },
+    {
+      "id": "weapon-advanced-hand-crossbow",
+      "title": "Advanced Hand Crossbow",
+      "kind": "weapon",
+      "path": "weapons/advanced-hand-crossbow.md",
+      "aliases": [
+        "advanced hand crossbow",
+        "advancedhandcrossbow"
+      ]
+    },
+    {
+      "id": "weapon-advanced-hand-runes",
+      "title": "Advanced Hand Runes",
+      "kind": "weapon",
+      "path": "weapons/advanced-hand-runes.md",
+      "aliases": [
+        "advanced hand runes",
+        "advancedhandrunes"
+      ]
+    },
+    {
+      "id": "weapon-advanced-longbow",
+      "title": "Advanced Longbow",
+      "kind": "weapon",
+      "path": "weapons/advanced-longbow.md",
+      "aliases": [
+        "advanced longbow",
+        "advancedlongbow"
+      ]
+    },
+    {
+      "id": "weapon-advanced-longsword",
+      "title": "Advanced Longsword",
+      "kind": "weapon",
+      "path": "weapons/advanced-longsword.md",
+      "aliases": [
+        "advanced longsword",
+        "advancedlongsword"
+      ]
+    },
+    {
+      "id": "weapon-advanced-mace",
+      "title": "Advanced Mace",
+      "kind": "weapon",
+      "path": "weapons/advanced-mace.md",
+      "aliases": [
+        "advanced mace",
+        "advancedmace"
+      ]
+    },
+    {
+      "id": "weapon-advanced-quarterstaff",
+      "title": "Advanced Quarterstaff",
+      "kind": "weapon",
+      "path": "weapons/advanced-quarterstaff.md",
+      "aliases": [
+        "advanced quarterstaff",
+        "advancedquarterstaff"
+      ]
+    },
+    {
+      "id": "weapon-advanced-rapier",
+      "title": "Advanced Rapier",
+      "kind": "weapon",
+      "path": "weapons/advanced-rapier.md",
+      "aliases": [
+        "advanced rapier",
+        "advancedrapier"
+      ]
+    },
+    {
+      "id": "weapon-advanced-returning-blade",
+      "title": "Advanced Returning Blade",
+      "kind": "weapon",
+      "path": "weapons/advanced-returning-blade.md",
+      "aliases": [
+        "advanced returning blade",
+        "advancedreturningblade"
+      ]
+    },
+    {
+      "id": "weapon-advanced-round-shield",
+      "title": "Advanced Round Shield",
+      "kind": "weapon",
+      "path": "weapons/advanced-round-shield.md",
+      "aliases": [
+        "advanced round shield",
+        "advancedroundshield"
+      ]
+    },
+    {
+      "id": "weapon-advanced-scepter",
+      "title": "Advanced Scepter",
+      "kind": "weapon",
+      "path": "weapons/advanced-scepter.md",
+      "aliases": [
+        "advanced scepter",
+        "advancedscepter"
+      ]
+    },
+    {
+      "id": "weapon-advanced-shortbow",
+      "title": "Advanced Shortbow",
+      "kind": "weapon",
+      "path": "weapons/advanced-shortbow.md",
+      "aliases": [
+        "advanced shortbow",
+        "advancedshortbow"
+      ]
+    },
+    {
+      "id": "weapon-advanced-shortstaff",
+      "title": "Advanced Shortstaff",
+      "kind": "weapon",
+      "path": "weapons/advanced-shortstaff.md",
+      "aliases": [
+        "advanced shortstaff",
+        "advancedshortstaff"
+      ]
+    },
+    {
+      "id": "weapon-advanced-shortsword",
+      "title": "Advanced Shortsword",
+      "kind": "weapon",
+      "path": "weapons/advanced-shortsword.md",
+      "aliases": [
+        "advanced shortsword",
+        "advancedshortsword"
+      ]
+    },
+    {
+      "id": "weapon-advanced-small-dagger",
+      "title": "Advanced Small Dagger",
+      "kind": "weapon",
+      "path": "weapons/advanced-small-dagger.md",
+      "aliases": [
+        "advanced small dagger",
+        "advancedsmalldagger"
+      ]
+    },
+    {
+      "id": "weapon-advanced-spear",
+      "title": "Advanced Spear",
+      "kind": "weapon",
+      "path": "weapons/advanced-spear.md",
+      "aliases": [
+        "advanced spear",
+        "advancedspear"
+      ]
+    },
+    {
+      "id": "weapon-advanced-tower-shield",
+      "title": "Advanced Tower Shield",
+      "kind": "weapon",
+      "path": "weapons/advanced-tower-shield.md",
+      "aliases": [
+        "advanced tower shield",
+        "advancedtowershield"
+      ]
+    },
+    {
+      "id": "weapon-advanced-wand",
+      "title": "Advanced Wand",
+      "kind": "weapon",
+      "path": "weapons/advanced-wand.md",
+      "aliases": [
+        "advanced wand",
+        "advancedwand"
+      ]
+    },
+    {
+      "id": "weapon-advanced-warhammer",
+      "title": "Advanced Warhammer",
+      "kind": "weapon",
+      "path": "weapons/advanced-warhammer.md",
+      "aliases": [
+        "advanced warhammer",
+        "advancedwarhammer"
+      ]
+    },
+    {
+      "id": "weapon-advanced-whip",
+      "title": "Advanced Whip",
+      "kind": "weapon",
+      "path": "weapons/advanced-whip.md",
+      "aliases": [
+        "advanced whip",
+        "advancedwhip"
+      ]
+    },
+    {
+      "id": "weapon-arcane-gauntlets",
+      "title": "Arcane Gauntlets",
+      "kind": "weapon",
+      "path": "weapons/arcane-gauntlets.md",
+      "aliases": [
+        "arcane gauntlets",
+        "arcanegauntlets"
+      ]
+    },
+    {
+      "id": "weapon-axe-of-fortunis",
+      "title": "Axe of Fortunis",
+      "kind": "weapon",
+      "path": "weapons/axe-of-fortunis.md",
+      "aliases": [
+        "axe of fortunis",
+        "axeoffortunis"
+      ]
+    },
+    {
+      "id": "weapon-battleaxe",
+      "title": "Battleaxe",
+      "kind": "weapon",
+      "path": "weapons/battleaxe.md",
+      "aliases": [
+        "battleaxe"
+      ]
+    },
+    {
+      "id": "weapon-black-powder-revolver",
+      "title": "Black Powder Revolver",
+      "kind": "weapon",
+      "path": "weapons/black-powder-revolver.md",
+      "aliases": [
+        "black powder revolver",
+        "blackpowderrevolver"
+      ]
+    },
+    {
+      "id": "weapon-bladed-whip",
+      "title": "Bladed Whip",
+      "kind": "weapon",
+      "path": "weapons/bladed-whip.md",
+      "aliases": [
+        "bladed whip",
+        "bladedwhip"
+      ]
+    },
+    {
+      "id": "weapon-blessed-anlace",
+      "title": "Blessed Anlace",
+      "kind": "weapon",
+      "path": "weapons/blessed-anlace.md",
+      "aliases": [
+        "blessed anlace",
+        "blessedanlace"
+      ]
+    },
+    {
+      "id": "weapon-bloodstaff",
+      "title": "Bloodstaff",
+      "kind": "weapon",
+      "path": "weapons/bloodstaff.md",
+      "aliases": [
+        "bloodstaff"
+      ]
+    },
+    {
+      "id": "weapon-blunderbuss",
+      "title": "Blunderbuss",
+      "kind": "weapon",
+      "path": "weapons/blunderbuss.md",
+      "aliases": [
+        "blunderbuss"
+      ]
+    },
+    {
+      "id": "weapon-braveshield",
+      "title": "Braveshield",
+      "kind": "weapon",
+      "path": "weapons/braveshield.md",
+      "aliases": [
+        "braveshield"
+      ]
+    },
+    {
+      "id": "weapon-bravesword",
+      "title": "Bravesword",
+      "kind": "weapon",
+      "path": "weapons/bravesword.md",
+      "aliases": [
+        "bravesword"
+      ]
+    },
+    {
+      "id": "weapon-broadsword",
+      "title": "Broadsword",
+      "kind": "weapon",
+      "path": "weapons/broadsword.md",
+      "aliases": [
+        "broadsword"
+      ]
+    },
+    {
+      "id": "weapon-buckler",
+      "title": "Buckler",
+      "kind": "weapon",
+      "path": "weapons/buckler.md",
+      "aliases": [
+        "buckler"
+      ]
+    },
+    {
+      "id": "weapon-casting-sword",
+      "title": "Casting Sword",
+      "kind": "weapon",
+      "path": "weapons/casting-sword.md",
+      "aliases": [
+        "casting sword",
+        "castingsword"
+      ]
+    },
+    {
+      "id": "weapon-crossbow",
+      "title": "Crossbow",
+      "kind": "weapon",
+      "path": "weapons/crossbow.md",
+      "aliases": [
+        "crossbow"
+      ]
+    },
+    {
+      "id": "weapon-curved-dagger",
+      "title": "Curved Dagger",
+      "kind": "weapon",
+      "path": "weapons/curved-dagger.md",
+      "aliases": [
+        "curved dagger",
+        "curveddagger"
+      ]
+    },
+    {
+      "id": "weapon-cutlass",
+      "title": "Cutlass",
+      "kind": "weapon",
+      "path": "weapons/cutlass.md",
+      "aliases": [
+        "cutlass"
+      ]
+    },
+    {
+      "id": "weapon-dagger",
+      "title": "Dagger",
+      "kind": "weapon",
+      "path": "weapons/dagger.md",
+      "aliases": [
+        "dagger"
+      ]
+    },
+    {
+      "id": "weapon-devouring-dagger",
+      "title": "Devouring Dagger",
+      "kind": "weapon",
+      "path": "weapons/devouring-dagger.md",
+      "aliases": [
+        "devouring dagger",
+        "devouringdagger"
+      ]
+    },
+    {
+      "id": "weapon-double-flail",
+      "title": "Double Flail",
+      "kind": "weapon",
+      "path": "weapons/double-flail.md",
+      "aliases": [
+        "double flail",
+        "doubleflail"
+      ]
+    },
+    {
+      "id": "weapon-dual-ended-sword",
+      "title": "Dual-Ended Sword",
+      "kind": "weapon",
+      "path": "weapons/dual-ended-sword.md",
+      "aliases": [
+        "dual-ended sword",
+        "dualendedsword"
+      ]
+    },
+    {
+      "id": "weapon-dualstaff",
+      "title": "Dualstaff",
+      "kind": "weapon",
+      "path": "weapons/dualstaff.md",
+      "aliases": [
+        "dualstaff"
+      ]
+    },
+    {
+      "id": "weapon-ego-blade",
+      "title": "Ego Blade",
+      "kind": "weapon",
+      "path": "weapons/ego-blade.md",
+      "aliases": [
+        "ego blade",
+        "egoblade"
+      ]
+    },
+    {
+      "id": "weapon-elder-bow",
+      "title": "Elder Bow",
+      "kind": "weapon",
+      "path": "weapons/elder-bow.md",
+      "aliases": [
+        "elder bow",
+        "elderbow"
+      ]
+    },
+    {
+      "id": "weapon-extended-polearm",
+      "title": "Extended Polearm",
+      "kind": "weapon",
+      "path": "weapons/extended-polearm.md",
+      "aliases": [
+        "extended polearm",
+        "extendedpolearm"
+      ]
+    },
+    {
+      "id": "weapon-finehair-bow",
+      "title": "Finehair Bow",
+      "kind": "weapon",
+      "path": "weapons/finehair-bow.md",
+      "aliases": [
+        "finehair bow",
+        "finehairbow"
+      ]
+    },
+    {
+      "id": "weapon-firestaff",
+      "title": "Firestaff",
+      "kind": "weapon",
+      "path": "weapons/firestaff.md",
+      "aliases": [
+        "firestaff"
+      ]
+    },
+    {
+      "id": "weapon-flickerfly-blade",
+      "title": "Flickerfly Blade",
+      "kind": "weapon",
+      "path": "weapons/flickerfly-blade.md",
+      "aliases": [
+        "flickerfly blade",
+        "flickerflyblade"
+      ]
+    },
+    {
+      "id": "weapon-floating-bladeshards",
+      "title": "Floating Bladeshards",
+      "kind": "weapon",
+      "path": "weapons/floating-bladeshards.md",
+      "aliases": [
+        "floating bladeshards",
+        "floatingbladeshards"
+      ]
+    },
+    {
+      "id": "weapon-fusion-gloves",
+      "title": "Fusion Gloves",
+      "kind": "weapon",
+      "path": "weapons/fusion-gloves.md",
+      "aliases": [
+        "fusion gloves",
+        "fusiongloves"
+      ]
+    },
+    {
+      "id": "weapon-ghostblade",
+      "title": "Ghostblade",
+      "kind": "weapon",
+      "path": "weapons/ghostblade.md",
+      "aliases": [
+        "ghostblade"
+      ]
+    },
+    {
+      "id": "weapon-gilded-bow",
+      "title": "Gilded Bow",
+      "kind": "weapon",
+      "path": "weapons/gilded-bow.md",
+      "aliases": [
+        "gilded bow",
+        "gildedbow"
+      ]
+    },
+    {
+      "id": "weapon-gilded-falchion",
+      "title": "Gilded Falchion",
+      "kind": "weapon",
+      "path": "weapons/gilded-falchion.md",
+      "aliases": [
+        "gilded falchion",
+        "gildedfalchion"
+      ]
+    },
+    {
+      "id": "weapon-glowing-rings",
+      "title": "Glowing Rings",
+      "kind": "weapon",
+      "path": "weapons/glowing-rings.md",
+      "aliases": [
+        "glowing rings",
+        "glowingrings"
+      ]
+    },
+    {
+      "id": "weapon-grappler",
+      "title": "Grappler",
+      "kind": "weapon",
+      "path": "weapons/grappler.md",
+      "aliases": [
+        "grappler"
+      ]
+    },
+    {
+      "id": "weapon-greatbow",
+      "title": "Greatbow",
+      "kind": "weapon",
+      "path": "weapons/greatbow.md",
+      "aliases": [
+        "greatbow"
+      ]
+    },
+    {
+      "id": "weapon-greatstaff",
+      "title": "Greatstaff",
+      "kind": "weapon",
+      "path": "weapons/greatstaff.md",
+      "aliases": [
+        "greatstaff"
+      ]
+    },
+    {
+      "id": "weapon-greatsword",
+      "title": "Greatsword",
+      "kind": "weapon",
+      "path": "weapons/greatsword.md",
+      "aliases": [
+        "greatsword"
+      ]
+    },
+    {
+      "id": "weapon-halberd",
+      "title": "Halberd",
+      "kind": "weapon",
+      "path": "weapons/halberd.md",
+      "aliases": [
+        "halberd"
+      ]
+    },
+    {
+      "id": "weapon-hallowed-axe",
+      "title": "Hallowed Axe",
+      "kind": "weapon",
+      "path": "weapons/hallowed-axe.md",
+      "aliases": [
+        "hallowed axe",
+        "hallowedaxe"
+      ]
+    },
+    {
+      "id": "weapon-hammer-of-exota",
+      "title": "Hammer of Exota",
+      "kind": "weapon",
+      "path": "weapons/hammer-of-exota.md",
+      "aliases": [
+        "hammer of exota",
+        "hammerofexota"
+      ]
+    },
+    {
+      "id": "weapon-hammer-of-wrath",
+      "title": "Hammer of Wrath",
+      "kind": "weapon",
+      "path": "weapons/hammer-of-wrath.md",
+      "aliases": [
+        "hammer of wrath",
+        "hammerofwrath"
+      ]
+    },
+    {
+      "id": "weapon-hand-cannon",
+      "title": "Hand Cannon",
+      "kind": "weapon",
+      "path": "weapons/hand-cannon.md",
+      "aliases": [
+        "hand cannon",
+        "handcannon"
+      ]
+    },
+    {
+      "id": "weapon-hand-crossbow",
+      "title": "Hand Crossbow",
+      "kind": "weapon",
+      "path": "weapons/hand-crossbow.md",
+      "aliases": [
+        "hand crossbow",
+        "handcrossbow"
+      ]
+    },
+    {
+      "id": "weapon-hand-runes",
+      "title": "Hand Runes",
+      "kind": "weapon",
+      "path": "weapons/hand-runes.md",
+      "aliases": [
+        "hand runes",
+        "handrunes"
+      ]
+    },
+    {
+      "id": "weapon-hand-sling",
+      "title": "Hand Sling",
+      "kind": "weapon",
+      "path": "weapons/hand-sling.md",
+      "aliases": [
+        "hand sling",
+        "handsling"
+      ]
+    },
+    {
+      "id": "weapon-ilmari-s-rifle",
+      "title": "Ilmari's Rifle",
+      "kind": "weapon",
+      "path": "weapons/ilmari-s-rifle.md",
+      "aliases": [
+        "ilmari's rifle",
+        "ilmarisrifle"
+      ]
+    },
+    {
+      "id": "weapon-impact-gauntlet",
+      "title": "Impact Gauntlet",
+      "kind": "weapon",
+      "path": "weapons/impact-gauntlet.md",
+      "aliases": [
+        "impact gauntlet",
+        "impactgauntlet"
+      ]
+    },
+    {
+      "id": "weapon-improved-arcane-gauntlets",
+      "title": "Improved Arcane Gauntlets",
+      "kind": "weapon",
+      "path": "weapons/improved-arcane-gauntlets.md",
+      "aliases": [
+        "improved arcane gauntlets",
+        "improvedarcanegauntlets"
+      ]
+    },
+    {
+      "id": "weapon-improved-battleaxe",
+      "title": "Improved Battleaxe",
+      "kind": "weapon",
+      "path": "weapons/improved-battleaxe.md",
+      "aliases": [
+        "improved battleaxe",
+        "improvedbattleaxe"
+      ]
+    },
+    {
+      "id": "weapon-improved-broadsword",
+      "title": "Improved Broadsword",
+      "kind": "weapon",
+      "path": "weapons/improved-broadsword.md",
+      "aliases": [
+        "improved broadsword",
+        "improvedbroadsword"
+      ]
+    },
+    {
+      "id": "weapon-improved-crossbow",
+      "title": "Improved Crossbow",
+      "kind": "weapon",
+      "path": "weapons/improved-crossbow.md",
+      "aliases": [
+        "improved crossbow",
+        "improvedcrossbow"
+      ]
+    },
+    {
+      "id": "weapon-improved-cutlass",
+      "title": "Improved Cutlass",
+      "kind": "weapon",
+      "path": "weapons/improved-cutlass.md",
+      "aliases": [
+        "improved cutlass",
+        "improvedcutlass"
+      ]
+    },
+    {
+      "id": "weapon-improved-dagger",
+      "title": "Improved Dagger",
+      "kind": "weapon",
+      "path": "weapons/improved-dagger.md",
+      "aliases": [
+        "improved dagger",
+        "improveddagger"
+      ]
+    },
+    {
+      "id": "weapon-improved-dualstaff",
+      "title": "Improved Dualstaff",
+      "kind": "weapon",
+      "path": "weapons/improved-dualstaff.md",
+      "aliases": [
+        "improved dualstaff",
+        "improveddualstaff"
+      ]
+    },
+    {
+      "id": "weapon-improved-glowing-rings",
+      "title": "Improved Glowing Rings",
+      "kind": "weapon",
+      "path": "weapons/improved-glowing-rings.md",
+      "aliases": [
+        "improved glowing rings",
+        "improvedglowingrings"
+      ]
+    },
+    {
+      "id": "weapon-improved-grappler",
+      "title": "Improved Grappler",
+      "kind": "weapon",
+      "path": "weapons/improved-grappler.md",
+      "aliases": [
+        "improved grappler",
+        "improvedgrappler"
+      ]
+    },
+    {
+      "id": "weapon-improved-greatstaff",
+      "title": "Improved Greatstaff",
+      "kind": "weapon",
+      "path": "weapons/improved-greatstaff.md",
+      "aliases": [
+        "improved greatstaff",
+        "improvedgreatstaff"
+      ]
+    },
+    {
+      "id": "weapon-improved-greatsword",
+      "title": "Improved Greatsword",
+      "kind": "weapon",
+      "path": "weapons/improved-greatsword.md",
+      "aliases": [
+        "improved greatsword",
+        "improvedgreatsword"
+      ]
+    },
+    {
+      "id": "weapon-improved-halberd",
+      "title": "Improved Halberd",
+      "kind": "weapon",
+      "path": "weapons/improved-halberd.md",
+      "aliases": [
+        "improved halberd",
+        "improvedhalberd"
+      ]
+    },
+    {
+      "id": "weapon-improved-hallowed-axe",
+      "title": "Improved Hallowed Axe",
+      "kind": "weapon",
+      "path": "weapons/improved-hallowed-axe.md",
+      "aliases": [
+        "improved hallowed axe",
+        "improvedhallowedaxe"
+      ]
+    },
+    {
+      "id": "weapon-improved-hand-crossbow",
+      "title": "Improved Hand Crossbow",
+      "kind": "weapon",
+      "path": "weapons/improved-hand-crossbow.md",
+      "aliases": [
+        "improved hand crossbow",
+        "improvedhandcrossbow"
+      ]
+    },
+    {
+      "id": "weapon-improved-hand-runes",
+      "title": "Improved Hand Runes",
+      "kind": "weapon",
+      "path": "weapons/improved-hand-runes.md",
+      "aliases": [
+        "improved hand runes",
+        "improvedhandrunes"
+      ]
+    },
+    {
+      "id": "weapon-improved-longbow",
+      "title": "Improved Longbow",
+      "kind": "weapon",
+      "path": "weapons/improved-longbow.md",
+      "aliases": [
+        "improved longbow",
+        "improvedlongbow"
+      ]
+    },
+    {
+      "id": "weapon-improved-longsword",
+      "title": "Improved Longsword",
+      "kind": "weapon",
+      "path": "weapons/improved-longsword.md",
+      "aliases": [
+        "improved longsword",
+        "improvedlongsword"
+      ]
+    },
+    {
+      "id": "weapon-improved-mace",
+      "title": "Improved Mace",
+      "kind": "weapon",
+      "path": "weapons/improved-mace.md",
+      "aliases": [
+        "improved mace",
+        "improvedmace"
+      ]
+    },
+    {
+      "id": "weapon-improved-quarterstaff",
+      "title": "Improved Quarterstaff",
+      "kind": "weapon",
+      "path": "weapons/improved-quarterstaff.md",
+      "aliases": [
+        "improved quarterstaff",
+        "improvedquarterstaff"
+      ]
+    },
+    {
+      "id": "weapon-improved-rapier",
+      "title": "Improved Rapier",
+      "kind": "weapon",
+      "path": "weapons/improved-rapier.md",
+      "aliases": [
+        "improved rapier",
+        "improvedrapier"
+      ]
+    },
+    {
+      "id": "weapon-improved-returning-blade",
+      "title": "Improved Returning Blade",
+      "kind": "weapon",
+      "path": "weapons/improved-returning-blade.md",
+      "aliases": [
+        "improved returning blade",
+        "improvedreturningblade"
+      ]
+    },
+    {
+      "id": "weapon-improved-round-shield",
+      "title": "Improved Round Shield",
+      "kind": "weapon",
+      "path": "weapons/improved-round-shield.md",
+      "aliases": [
+        "improved round shield",
+        "improvedroundshield"
+      ]
+    },
+    {
+      "id": "weapon-improved-scepter",
+      "title": "Improved Scepter",
+      "kind": "weapon",
+      "path": "weapons/improved-scepter.md",
+      "aliases": [
+        "improved scepter",
+        "improvedscepter"
+      ]
+    },
+    {
+      "id": "weapon-improved-shortbow",
+      "title": "Improved Shortbow",
+      "kind": "weapon",
+      "path": "weapons/improved-shortbow.md",
+      "aliases": [
+        "improved shortbow",
+        "improvedshortbow"
+      ]
+    },
+    {
+      "id": "weapon-improved-shortstaff",
+      "title": "Improved Shortstaff",
+      "kind": "weapon",
+      "path": "weapons/improved-shortstaff.md",
+      "aliases": [
+        "improved shortstaff",
+        "improvedshortstaff"
+      ]
+    },
+    {
+      "id": "weapon-improved-shortsword",
+      "title": "Improved Shortsword",
+      "kind": "weapon",
+      "path": "weapons/improved-shortsword.md",
+      "aliases": [
+        "improved shortsword",
+        "improvedshortsword"
+      ]
+    },
+    {
+      "id": "weapon-improved-small-dagger",
+      "title": "Improved Small Dagger",
+      "kind": "weapon",
+      "path": "weapons/improved-small-dagger.md",
+      "aliases": [
+        "improved small dagger",
+        "improvedsmalldagger"
+      ]
+    },
+    {
+      "id": "weapon-improved-spear",
+      "title": "Improved Spear",
+      "kind": "weapon",
+      "path": "weapons/improved-spear.md",
+      "aliases": [
+        "improved spear",
+        "improvedspear"
+      ]
+    },
+    {
+      "id": "weapon-improved-tower-shield",
+      "title": "Improved Tower Shield",
+      "kind": "weapon",
+      "path": "weapons/improved-tower-shield.md",
+      "aliases": [
+        "improved tower shield",
+        "improvedtowershield"
+      ]
+    },
+    {
+      "id": "weapon-improved-wand",
+      "title": "Improved Wand",
+      "kind": "weapon",
+      "path": "weapons/improved-wand.md",
+      "aliases": [
+        "improved wand",
+        "improvedwand"
+      ]
+    },
+    {
+      "id": "weapon-improved-warhammer",
+      "title": "Improved Warhammer",
+      "kind": "weapon",
+      "path": "weapons/improved-warhammer.md",
+      "aliases": [
+        "improved warhammer",
+        "improvedwarhammer"
+      ]
+    },
+    {
+      "id": "weapon-improved-whip",
+      "title": "Improved Whip",
+      "kind": "weapon",
+      "path": "weapons/improved-whip.md",
+      "aliases": [
+        "improved whip",
+        "improvedwhip"
+      ]
+    },
+    {
+      "id": "weapon-keeper-s-staff",
+      "title": "Keeper's Staff",
+      "kind": "weapon",
+      "path": "weapons/keeper-s-staff.md",
+      "aliases": [
+        "keeper's staff",
+        "keepersstaff"
+      ]
+    },
+    {
+      "id": "weapon-knuckle-blades",
+      "title": "Knuckle Blades",
+      "kind": "weapon",
+      "path": "weapons/knuckle-blades.md",
+      "aliases": [
+        "knuckle blades",
+        "knuckleblades"
+      ]
+    },
+    {
+      "id": "weapon-knuckle-claws",
+      "title": "Knuckle Claws",
+      "kind": "weapon",
+      "path": "weapons/knuckle-claws.md",
+      "aliases": [
+        "knuckle claws",
+        "knuckleclaws"
+      ]
+    },
+    {
+      "id": "weapon-labrys-axe",
+      "title": "Labrys Axe",
+      "kind": "weapon",
+      "path": "weapons/labrys-axe.md",
+      "aliases": [
+        "labrys axe",
+        "labrysaxe"
+      ]
+    },
+    {
+      "id": "weapon-legendary-arcane-gauntlets",
+      "title": "Legendary Arcane Gauntlets",
+      "kind": "weapon",
+      "path": "weapons/legendary-arcane-gauntlets.md",
+      "aliases": [
+        "legendary arcane gauntlets",
+        "legendaryarcanegauntlets"
+      ]
+    },
+    {
+      "id": "weapon-legendary-battleaxe",
+      "title": "Legendary Battleaxe",
+      "kind": "weapon",
+      "path": "weapons/legendary-battleaxe.md",
+      "aliases": [
+        "legendary battleaxe",
+        "legendarybattleaxe"
+      ]
+    },
+    {
+      "id": "weapon-legendary-broadsword",
+      "title": "Legendary Broadsword",
+      "kind": "weapon",
+      "path": "weapons/legendary-broadsword.md",
+      "aliases": [
+        "legendary broadsword",
+        "legendarybroadsword"
+      ]
+    },
+    {
+      "id": "weapon-legendary-crossbow",
+      "title": "Legendary Crossbow",
+      "kind": "weapon",
+      "path": "weapons/legendary-crossbow.md",
+      "aliases": [
+        "legendary crossbow",
+        "legendarycrossbow"
+      ]
+    },
+    {
+      "id": "weapon-legendary-cutlass",
+      "title": "Legendary Cutlass",
+      "kind": "weapon",
+      "path": "weapons/legendary-cutlass.md",
+      "aliases": [
+        "legendary cutlass",
+        "legendarycutlass"
+      ]
+    },
+    {
+      "id": "weapon-legendary-dagger",
+      "title": "Legendary Dagger",
+      "kind": "weapon",
+      "path": "weapons/legendary-dagger.md",
+      "aliases": [
+        "legendary dagger",
+        "legendarydagger"
+      ]
+    },
+    {
+      "id": "weapon-legendary-dualstaff",
+      "title": "Legendary Dualstaff",
+      "kind": "weapon",
+      "path": "weapons/legendary-dualstaff.md",
+      "aliases": [
+        "legendary dualstaff",
+        "legendarydualstaff"
+      ]
+    },
+    {
+      "id": "weapon-legendary-glowing-rings",
+      "title": "Legendary Glowing Rings",
+      "kind": "weapon",
+      "path": "weapons/legendary-glowing-rings.md",
+      "aliases": [
+        "legendary glowing rings",
+        "legendaryglowingrings"
+      ]
+    },
+    {
+      "id": "weapon-legendary-grappler",
+      "title": "Legendary Grappler",
+      "kind": "weapon",
+      "path": "weapons/legendary-grappler.md",
+      "aliases": [
+        "legendary grappler",
+        "legendarygrappler"
+      ]
+    },
+    {
+      "id": "weapon-legendary-greatstaff",
+      "title": "Legendary Greatstaff",
+      "kind": "weapon",
+      "path": "weapons/legendary-greatstaff.md",
+      "aliases": [
+        "legendary greatstaff",
+        "legendarygreatstaff"
+      ]
+    },
+    {
+      "id": "weapon-legendary-greatsword",
+      "title": "Legendary Greatsword",
+      "kind": "weapon",
+      "path": "weapons/legendary-greatsword.md",
+      "aliases": [
+        "legendary greatsword",
+        "legendarygreatsword"
+      ]
+    },
+    {
+      "id": "weapon-legendary-halberd",
+      "title": "Legendary Halberd",
+      "kind": "weapon",
+      "path": "weapons/legendary-halberd.md",
+      "aliases": [
+        "legendary halberd",
+        "legendaryhalberd"
+      ]
+    },
+    {
+      "id": "weapon-legendary-hallowed-axe",
+      "title": "Legendary Hallowed Axe",
+      "kind": "weapon",
+      "path": "weapons/legendary-hallowed-axe.md",
+      "aliases": [
+        "legendary hallowed axe",
+        "legendaryhallowedaxe"
+      ]
+    },
+    {
+      "id": "weapon-legendary-hand-crossbow",
+      "title": "Legendary Hand Crossbow",
+      "kind": "weapon",
+      "path": "weapons/legendary-hand-crossbow.md",
+      "aliases": [
+        "legendary hand crossbow",
+        "legendaryhandcrossbow"
+      ]
+    },
+    {
+      "id": "weapon-legendary-hand-runes",
+      "title": "Legendary Hand Runes",
+      "kind": "weapon",
+      "path": "weapons/legendary-hand-runes.md",
+      "aliases": [
+        "legendary hand runes",
+        "legendaryhandrunes"
+      ]
+    },
+    {
+      "id": "weapon-legendary-longbow",
+      "title": "Legendary Longbow",
+      "kind": "weapon",
+      "path": "weapons/legendary-longbow.md",
+      "aliases": [
+        "legendary longbow",
+        "legendarylongbow"
+      ]
+    },
+    {
+      "id": "weapon-legendary-longsword",
+      "title": "Legendary Longsword",
+      "kind": "weapon",
+      "path": "weapons/legendary-longsword.md",
+      "aliases": [
+        "legendary longsword",
+        "legendarylongsword"
+      ]
+    },
+    {
+      "id": "weapon-legendary-mace",
+      "title": "Legendary Mace",
+      "kind": "weapon",
+      "path": "weapons/legendary-mace.md",
+      "aliases": [
+        "legendary mace",
+        "legendarymace"
+      ]
+    },
+    {
+      "id": "weapon-legendary-quarterstaff",
+      "title": "Legendary Quarterstaff",
+      "kind": "weapon",
+      "path": "weapons/legendary-quarterstaff.md",
+      "aliases": [
+        "legendary quarterstaff",
+        "legendaryquarterstaff"
+      ]
+    },
+    {
+      "id": "weapon-legendary-rapier",
+      "title": "Legendary Rapier",
+      "kind": "weapon",
+      "path": "weapons/legendary-rapier.md",
+      "aliases": [
+        "legendary rapier",
+        "legendaryrapier"
+      ]
+    },
+    {
+      "id": "weapon-legendary-returning-blade",
+      "title": "Legendary Returning Blade",
+      "kind": "weapon",
+      "path": "weapons/legendary-returning-blade.md",
+      "aliases": [
+        "legendary returning blade",
+        "legendaryreturningblade"
+      ]
+    },
+    {
+      "id": "weapon-legendary-round-shield",
+      "title": "Legendary Round Shield",
+      "kind": "weapon",
+      "path": "weapons/legendary-round-shield.md",
+      "aliases": [
+        "legendary round shield",
+        "legendaryroundshield"
+      ]
+    },
+    {
+      "id": "weapon-legendary-scepter",
+      "title": "Legendary Scepter",
+      "kind": "weapon",
+      "path": "weapons/legendary-scepter.md",
+      "aliases": [
+        "legendary scepter",
+        "legendaryscepter"
+      ]
+    },
+    {
+      "id": "weapon-legendary-shortbow",
+      "title": "Legendary Shortbow",
+      "kind": "weapon",
+      "path": "weapons/legendary-shortbow.md",
+      "aliases": [
+        "legendary shortbow",
+        "legendaryshortbow"
+      ]
+    },
+    {
+      "id": "weapon-legendary-shortstaff",
+      "title": "Legendary Shortstaff",
+      "kind": "weapon",
+      "path": "weapons/legendary-shortstaff.md",
+      "aliases": [
+        "legendary shortstaff",
+        "legendaryshortstaff"
+      ]
+    },
+    {
+      "id": "weapon-legendary-shortsword",
+      "title": "Legendary Shortsword",
+      "kind": "weapon",
+      "path": "weapons/legendary-shortsword.md",
+      "aliases": [
+        "legendary shortsword",
+        "legendaryshortsword"
+      ]
+    },
+    {
+      "id": "weapon-legendary-small-dagger",
+      "title": "Legendary Small Dagger",
+      "kind": "weapon",
+      "path": "weapons/legendary-small-dagger.md",
+      "aliases": [
+        "legendary small dagger",
+        "legendarysmalldagger"
+      ]
+    },
+    {
+      "id": "weapon-legendary-spear",
+      "title": "Legendary Spear",
+      "kind": "weapon",
+      "path": "weapons/legendary-spear.md",
+      "aliases": [
+        "legendary spear",
+        "legendaryspear"
+      ]
+    },
+    {
+      "id": "weapon-legendary-tower-shield",
+      "title": "Legendary Tower Shield",
+      "kind": "weapon",
+      "path": "weapons/legendary-tower-shield.md",
+      "aliases": [
+        "legendary tower shield",
+        "legendarytowershield"
+      ]
+    },
+    {
+      "id": "weapon-legendary-wand",
+      "title": "Legendary Wand",
+      "kind": "weapon",
+      "path": "weapons/legendary-wand.md",
+      "aliases": [
+        "legendary wand",
+        "legendarywand"
+      ]
+    },
+    {
+      "id": "weapon-legendary-warhammer",
+      "title": "Legendary Warhammer",
+      "kind": "weapon",
+      "path": "weapons/legendary-warhammer.md",
+      "aliases": [
+        "legendary warhammer",
+        "legendarywarhammer"
+      ]
+    },
+    {
+      "id": "weapon-legendary-whip",
+      "title": "Legendary Whip",
+      "kind": "weapon",
+      "path": "weapons/legendary-whip.md",
+      "aliases": [
+        "legendary whip",
+        "legendarywhip"
+      ]
+    },
+    {
+      "id": "weapon-longbow",
+      "title": "Longbow",
+      "kind": "weapon",
+      "path": "weapons/longbow.md",
+      "aliases": [
+        "longbow"
+      ]
+    },
+    {
+      "id": "weapon-longsword",
+      "title": "Longsword",
+      "kind": "weapon",
+      "path": "weapons/longsword.md",
+      "aliases": [
+        "longsword"
+      ]
+    },
+    {
+      "id": "weapon-mace",
+      "title": "Mace",
+      "kind": "weapon",
+      "path": "weapons/mace.md",
+      "aliases": [
+        "mace"
+      ]
+    },
+    {
+      "id": "weapon-mage-orb",
+      "title": "Mage Orb",
+      "kind": "weapon",
+      "path": "weapons/mage-orb.md",
+      "aliases": [
+        "mage orb",
+        "mageorb"
+      ]
+    },
+    {
+      "id": "weapon-magus-revolver",
+      "title": "Magus Revolver",
+      "kind": "weapon",
+      "path": "weapons/magus-revolver.md",
+      "aliases": [
+        "magus revolver",
+        "magusrevolver"
+      ]
+    },
+    {
+      "id": "weapon-meridian-cutlass",
+      "title": "Meridian Cutlass",
+      "kind": "weapon",
+      "path": "weapons/meridian-cutlass.md",
+      "aliases": [
+        "meridian cutlass",
+        "meridiancutlass"
+      ]
+    },
+    {
+      "id": "weapon-midas-scythe",
+      "title": "Midas Scythe",
+      "kind": "weapon",
+      "path": "weapons/midas-scythe.md",
+      "aliases": [
+        "midas scythe",
+        "midasscythe"
+      ]
+    },
+    {
+      "id": "weapon-parrying-dagger",
+      "title": "Parrying Dagger",
+      "kind": "weapon",
+      "path": "weapons/parrying-dagger.md",
+      "aliases": [
+        "parrying dagger",
+        "parryingdagger"
+      ]
+    },
+    {
+      "id": "weapon-powered-gauntlet",
+      "title": "Powered Gauntlet",
+      "kind": "weapon",
+      "path": "weapons/powered-gauntlet.md",
+      "aliases": [
+        "powered gauntlet",
+        "poweredgauntlet"
+      ]
+    },
+    {
+      "id": "weapon-primer-shard",
+      "title": "Primer Shard",
+      "kind": "weapon",
+      "path": "weapons/primer-shard.md",
+      "aliases": [
+        "primer shard",
+        "primershard"
+      ]
+    },
+    {
+      "id": "weapon-quarterstaff",
+      "title": "Quarterstaff",
+      "kind": "weapon",
+      "path": "weapons/quarterstaff.md",
+      "aliases": [
+        "quarterstaff"
+      ]
+    },
+    {
+      "id": "weapon-rapier",
+      "title": "Rapier",
+      "kind": "weapon",
+      "path": "weapons/rapier.md",
+      "aliases": [
+        "rapier"
+      ]
+    },
+    {
+      "id": "weapon-retractable-saber",
+      "title": "Retractable Saber",
+      "kind": "weapon",
+      "path": "weapons/retractable-saber.md",
+      "aliases": [
+        "retractable saber",
+        "retractablesaber"
+      ]
+    },
+    {
+      "id": "weapon-returning-axe",
+      "title": "Returning Axe",
+      "kind": "weapon",
+      "path": "weapons/returning-axe.md",
+      "aliases": [
+        "returning axe",
+        "returningaxe"
+      ]
+    },
+    {
+      "id": "weapon-returning-blade",
+      "title": "Returning Blade",
+      "kind": "weapon",
+      "path": "weapons/returning-blade.md",
+      "aliases": [
+        "returning blade",
+        "returningblade"
+      ]
+    },
+    {
+      "id": "weapon-ricochet-axes",
+      "title": "Ricochet Axes",
+      "kind": "weapon",
+      "path": "weapons/ricochet-axes.md",
+      "aliases": [
+        "ricochet axes",
+        "ricochetaxes"
+      ]
+    },
+    {
+      "id": "weapon-round-shield",
+      "title": "Round Shield",
+      "kind": "weapon",
+      "path": "weapons/round-shield.md",
+      "aliases": [
+        "round shield",
+        "roundshield"
+      ]
+    },
+    {
+      "id": "weapon-runes-of-ruination",
+      "title": "Runes of Ruination",
+      "kind": "weapon",
+      "path": "weapons/runes-of-ruination.md",
+      "aliases": [
+        "runes of ruination",
+        "runesofruination"
+      ]
+    },
+    {
+      "id": "weapon-scepter",
+      "title": "Scepter",
+      "kind": "weapon",
+      "path": "weapons/scepter.md",
+      "aliases": [
+        "scepter"
+      ]
+    },
+    {
+      "id": "weapon-scepter-of-elias",
+      "title": "Scepter of Elias",
+      "kind": "weapon",
+      "path": "weapons/scepter-of-elias.md",
+      "aliases": [
+        "scepter of elias",
+        "scepterofelias"
+      ]
+    },
+    {
+      "id": "weapon-shortbow",
+      "title": "Shortbow",
+      "kind": "weapon",
+      "path": "weapons/shortbow.md",
+      "aliases": [
+        "shortbow"
+      ]
+    },
+    {
+      "id": "weapon-shortstaff",
+      "title": "Shortstaff",
+      "kind": "weapon",
+      "path": "weapons/shortstaff.md",
+      "aliases": [
+        "shortstaff"
+      ]
+    },
+    {
+      "id": "weapon-shortsword",
+      "title": "Shortsword",
+      "kind": "weapon",
+      "path": "weapons/shortsword.md",
+      "aliases": [
+        "shortsword"
+      ]
+    },
+    {
+      "id": "weapon-siphoning-gauntlets",
+      "title": "Siphoning Gauntlets",
+      "kind": "weapon",
+      "path": "weapons/siphoning-gauntlets.md",
+      "aliases": [
+        "siphoning gauntlets",
+        "siphoninggauntlets"
+      ]
+    },
+    {
+      "id": "weapon-sledge-axe",
+      "title": "Sledge Axe",
+      "kind": "weapon",
+      "path": "weapons/sledge-axe.md",
+      "aliases": [
+        "sledge axe",
+        "sledgeaxe"
+      ]
+    },
+    {
+      "id": "weapon-small-dagger",
+      "title": "Small Dagger",
+      "kind": "weapon",
+      "path": "weapons/small-dagger.md",
+      "aliases": [
+        "small dagger",
+        "smalldagger"
+      ]
+    },
+    {
+      "id": "weapon-spear",
+      "title": "Spear",
+      "kind": "weapon",
+      "path": "weapons/spear.md",
+      "aliases": [
+        "spear"
+      ]
+    },
+    {
+      "id": "weapon-spiked-bow",
+      "title": "Spiked Bow",
+      "kind": "weapon",
+      "path": "weapons/spiked-bow.md",
+      "aliases": [
+        "spiked bow",
+        "spikedbow"
+      ]
+    },
+    {
+      "id": "weapon-spiked-shield",
+      "title": "Spiked Shield",
+      "kind": "weapon",
+      "path": "weapons/spiked-shield.md",
+      "aliases": [
+        "spiked shield",
+        "spikedshield"
+      ]
+    },
+    {
+      "id": "weapon-steelforged-halberd",
+      "title": "Steelforged Halberd",
+      "kind": "weapon",
+      "path": "weapons/steelforged-halberd.md",
+      "aliases": [
+        "steelforged halberd",
+        "steelforgedhalberd"
+      ]
+    },
+    {
+      "id": "weapon-swinging-ropeblade",
+      "title": "Swinging Ropeblade",
+      "kind": "weapon",
+      "path": "weapons/swinging-ropeblade.md",
+      "aliases": [
+        "swinging ropeblade",
+        "swingingropeblade"
+      ]
+    },
+    {
+      "id": "weapon-sword-of-light-flame",
+      "title": "Sword of Light \u0026 Flame",
+      "kind": "weapon",
+      "path": "weapons/sword-of-light-flame.md",
+      "aliases": [
+        "sword of light \u0026 flame",
+        "swordoflightflame"
+      ]
+    },
+    {
+      "id": "weapon-talon-blades",
+      "title": "Talon Blades",
+      "kind": "weapon",
+      "path": "weapons/talon-blades.md",
+      "aliases": [
+        "talon blades",
+        "talonblades"
+      ]
+    },
+    {
+      "id": "weapon-thistlebow",
+      "title": "Thistlebow",
+      "kind": "weapon",
+      "path": "weapons/thistlebow.md",
+      "aliases": [
+        "thistlebow"
+      ]
+    },
+    {
+      "id": "weapon-tower-shield",
+      "title": "Tower Shield",
+      "kind": "weapon",
+      "path": "weapons/tower-shield.md",
+      "aliases": [
+        "tower shield",
+        "towershield"
+      ]
+    },
+    {
+      "id": "weapon-urok-broadsword",
+      "title": "Urok Broadsword",
+      "kind": "weapon",
+      "path": "weapons/urok-broadsword.md",
+      "aliases": [
+        "urok broadsword",
+        "urokbroadsword"
+      ]
+    },
+    {
+      "id": "weapon-wand",
+      "title": "Wand",
+      "kind": "weapon",
+      "path": "weapons/wand.md",
+      "aliases": [
+        "wand"
+      ]
+    },
+    {
+      "id": "weapon-wand-of-enthrallment",
+      "title": "Wand of Enthrallment",
+      "kind": "weapon",
+      "path": "weapons/wand-of-enthrallment.md",
+      "aliases": [
+        "wand of enthrallment",
+        "wandofenthrallment"
+      ]
+    },
+    {
+      "id": "weapon-wand-of-essek",
+      "title": "Wand of Essek",
+      "kind": "weapon",
+      "path": "weapons/wand-of-essek.md",
+      "aliases": [
+        "wand of essek",
+        "wandofessek"
+      ]
+    },
+    {
+      "id": "weapon-war-scythe",
+      "title": "War Scythe",
+      "kind": "weapon",
+      "path": "weapons/war-scythe.md",
+      "aliases": [
+        "war scythe",
+        "warscythe"
+      ]
+    },
+    {
+      "id": "weapon-warhammer",
+      "title": "Warhammer",
+      "kind": "weapon",
+      "path": "weapons/warhammer.md",
+      "aliases": [
+        "warhammer"
+      ]
+    },
+    {
+      "id": "weapon-whip",
+      "title": "Whip",
+      "kind": "weapon",
+      "path": "weapons/whip.md",
+      "aliases": [
+        "whip"
+      ]
+    },
+    {
+      "id": "weapon-widogast-pendant",
+      "title": "Widogast Pendant",
+      "kind": "weapon",
+      "path": "weapons/widogast-pendant.md",
+      "aliases": [
+        "widogast pendant",
+        "widogastpendant"
+      ]
+    },
+    {
+      "id": "weapon-yutari-bloodbow",
+      "title": "Yutari Bloodbow",
+      "kind": "weapon",
+      "path": "weapons/yutari-bloodbow.md",
+      "aliases": [
+        "yutari bloodbow",
+        "yutaribloodbow"
+      ]
+    }
+  ]
+}

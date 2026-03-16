@@ -67,6 +67,20 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 	}
 	ownerParticipantID := participantsResp.GetParticipants()[0].GetId()
 	ensureSessionStartReadiness(t, ctxWithUser, participantClient, characterClient, campaignID, ownerParticipantID)
+	characters := listAllCharactersForReadiness(t, ctxWithUser, characterClient, campaignID)
+	if len(characters) == 0 {
+		t.Fatal("expected at least one character for rest participants")
+	}
+	participants := make([]*daggerheartv1.DaggerheartRestParticipant, 0, len(characters))
+	for _, ch := range characters {
+		if ch.GetId() == "" {
+			continue
+		}
+		participants = append(participants, &daggerheartv1.DaggerheartRestParticipant{CharacterId: ch.GetId()})
+	}
+	if len(participants) == 0 {
+		t.Fatal("expected non-empty rest participants")
+	}
 
 	startSession, err := sessionClient.StartSession(ctxWithUser, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -114,7 +128,7 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 		t.Fatalf("update snapshot: %v", err)
 	}
 
-	partySize := 3
+	partySize := len(participants)
 	seed := uint64(9)
 	outcome, err := daggerheart.ResolveRestOutcome(
 		daggerheart.RestState{ConsecutiveShortRests: 0},
@@ -140,8 +154,8 @@ func TestDaggerheartRestConsequences(t *testing.T) {
 		Rest: &daggerheartv1.DaggerheartRestRequest{
 			RestType:            daggerheartv1.DaggerheartRestType_DAGGERHEART_REST_TYPE_LONG,
 			Interrupted:         false,
-			PartySize:           int32(partySize),
 			LongTermCountdownId: countdownID,
+			Participants:        participants,
 			Rng: &commonv1.RngRequest{
 				Seed:     &seed,
 				RollMode: commonv1.RollMode_REPLAY,

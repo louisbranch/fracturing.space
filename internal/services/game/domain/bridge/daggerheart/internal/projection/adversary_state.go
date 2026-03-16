@@ -36,9 +36,9 @@ func ValidateAdversaryStats(hp, hpMax, stress, stressMax, evasion, major, severe
 }
 
 // ApplyAdversaryConditionPatch replaces adversary conditions.
-func ApplyAdversaryConditionPatch(adversary projectionstore.DaggerheartAdversary, conditions []string) projectionstore.DaggerheartAdversary {
+func ApplyAdversaryConditionPatch(adversary projectionstore.DaggerheartAdversary, conditions []projectionstore.DaggerheartConditionState) projectionstore.DaggerheartAdversary {
 	next := adversary
-	next.Conditions = append([]string(nil), conditions...)
+	next.Conditions = append([]projectionstore.DaggerheartConditionState(nil), conditions...)
 	return next
 }
 

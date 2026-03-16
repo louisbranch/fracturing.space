@@ -396,10 +396,15 @@ func TestCharacterCreationProfileMapsDaggerheartFields(t *testing.T) {
 
 	characterClient := &fakeCharacterWorkflowClient{
 		sheetResp: &statev1.GetCharacterSheetResponse{Profile: &statev1.CharacterProfile{SystemProfile: &statev1.CharacterProfile_Daggerheart{Daggerheart: &daggerheartv1.DaggerheartProfile{
-			ClassId:              "warrior",
-			SubclassId:           "guardian",
-			AncestryId:           "human",
-			CommunityId:          "loreborne",
+			ClassId:    "warrior",
+			SubclassId: "guardian",
+			Heritage: &daggerheartv1.DaggerheartHeritageSelection{
+				FirstFeatureAncestryId:  "human",
+				FirstFeatureId:          "human.feature-1",
+				SecondFeatureAncestryId: "human",
+				SecondFeatureId:         "human.feature-2",
+				CommunityId:             "loreborne",
+			},
 			Agility:              wrapperspb.Int32(1),
 			Strength:             wrapperspb.Int32(2),
 			Finesse:              wrapperspb.Int32(0),
@@ -421,7 +426,8 @@ func TestCharacterCreationProfileMapsDaggerheartFields(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CharacterCreationProfile() error = %v", err)
 	}
-	if profile.ClassID != "warrior" || profile.SubclassID != "guardian" || profile.AncestryID != "human" || profile.CommunityID != "loreborne" {
+	if profile.ClassID != "warrior" || profile.SubclassID != "guardian" ||
+		profile.Heritage.FirstFeatureAncestryID != "human" || profile.Heritage.CommunityID != "loreborne" {
 		t.Fatalf("profile = %#v", profile)
 	}
 	if profile.Agility != "1" || profile.Strength != "2" || profile.Finesse != "0" || profile.Instinct != "-1" || profile.Presence != "0" || profile.Knowledge != "1" {

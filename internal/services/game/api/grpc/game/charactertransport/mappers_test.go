@@ -107,26 +107,43 @@ func TestCharacterEnumAndDaggerheartConversions(t *testing.T) {
 
 func TestDaggerheartProfileAndStateToProto(t *testing.T) {
 	profile := DaggerheartProfileToProto("camp-1", "char-1", projectionstore.DaggerheartCharacterProfile{
-		Level:                2,
-		HpMax:                14,
-		StressMax:            6,
-		Evasion:              11,
-		MajorThreshold:       18,
-		SevereThreshold:      24,
-		Proficiency:          3,
-		ArmorScore:           1,
-		ArmorMax:             2,
-		Agility:              1,
-		Strength:             2,
-		Finesse:              3,
-		Instinct:             4,
-		Presence:             5,
-		Knowledge:            6,
-		Experiences:          []projectionstore.DaggerheartExperience{{Name: "Scout", Modifier: 2}},
-		ClassID:              "class-1",
-		SubclassID:           "sub-1",
-		AncestryID:           "anc-1",
-		CommunityID:          "comm-1",
+		Level:                        2,
+		HpMax:                        14,
+		StressMax:                    6,
+		Evasion:                      11,
+		MajorThreshold:               18,
+		SevereThreshold:              24,
+		Proficiency:                  3,
+		ArmorScore:                   1,
+		ArmorMax:                     2,
+		Agility:                      1,
+		Strength:                     2,
+		Finesse:                      3,
+		Instinct:                     4,
+		Presence:                     5,
+		Knowledge:                    6,
+		Experiences:                  []projectionstore.DaggerheartExperience{{Name: "Scout", Modifier: 2}},
+		ClassID:                      "class-1",
+		SubclassID:                   "sub-1",
+		SubclassCreationRequirements: []projectionstore.DaggerheartSubclassCreationRequirement{projectionstore.DaggerheartSubclassCreationRequirementCompanionSheet},
+		Heritage: projectionstore.DaggerheartHeritageSelection{
+			AncestryLabel:           "Half-Clank",
+			FirstFeatureAncestryID:  "anc-1",
+			FirstFeatureID:          "anc-1.feature-1",
+			SecondFeatureAncestryID: "anc-2",
+			SecondFeatureID:         "anc-2.feature-2",
+			CommunityID:             "comm-1",
+		},
+		CompanionSheet: &projectionstore.DaggerheartCompanionSheet{
+			AnimalKind:        "Wolf",
+			Name:              "Ash",
+			Evasion:           10,
+			Experiences:       []projectionstore.DaggerheartCompanionExperience{{ExperienceID: "companion-experience.tracking", Name: "Tracking", Modifier: 2}, {ExperienceID: "companion-experience.guarding", Name: "Guarding", Modifier: 2}},
+			AttackDescription: "Bites at close range",
+			AttackRange:       "melee",
+			DamageDieSides:    6,
+			DamageType:        "physical",
+		},
 		TraitsAssigned:       true,
 		DetailsRecorded:      true,
 		StartingWeaponIDs:    []string{"weapon-1"},
@@ -136,21 +153,33 @@ func TestDaggerheartProfileAndStateToProto(t *testing.T) {
 		Description:          "desc",
 		DomainCardIDs:        []string{"domain-1"},
 		Connections:          "conn",
-	})
+	}, nil)
 	if profile.GetDaggerheart().GetLevel() != 2 || len(profile.GetDaggerheart().GetExperiences()) != 1 {
 		t.Fatalf("profile = %+v", profile.GetDaggerheart())
 	}
+	if got := profile.GetDaggerheart().GetHeritage().GetAncestryLabel(); got != "Half-Clank" {
+		t.Fatalf("heritage ancestry label = %q, want %q", got, "Half-Clank")
+	}
+	if got := profile.GetDaggerheart().GetCompanionSheet().GetName(); got != "Ash" {
+		t.Fatalf("companion name = %q, want %q", got, "Ash")
+	}
 
 	state := DaggerheartStateToProto("camp-1", "char-1", projectionstore.DaggerheartCharacterState{
-		Hp:         10,
-		Hope:       2,
-		HopeMax:    6,
-		Stress:     1,
-		Armor:      0,
-		Conditions: []string{daggerheart.ConditionHidden},
-		LifeState:  daggerheart.LifeStateAlive,
+		Hp:      10,
+		Hope:    2,
+		HopeMax: 6,
+		Stress:  1,
+		Armor:   0,
+		Conditions: []projectionstore.DaggerheartConditionState{{
+			ID:       daggerheart.ConditionHidden,
+			Class:    "standard",
+			Standard: daggerheart.ConditionHidden,
+			Code:     daggerheart.ConditionHidden,
+			Label:    daggerheart.ConditionHidden,
+		}},
+		LifeState: daggerheart.LifeStateAlive,
 	})
-	if state.GetDaggerheart().GetHp() != 10 || len(state.GetDaggerheart().GetConditions()) != 1 {
+	if state.GetDaggerheart().GetHp() != 10 || len(state.GetDaggerheart().GetConditionStates()) != 1 {
 		t.Fatalf("state = %+v", state.GetDaggerheart())
 	}
 }

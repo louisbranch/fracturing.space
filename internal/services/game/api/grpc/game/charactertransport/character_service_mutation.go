@@ -156,6 +156,6 @@ func (s *Service) PatchCharacterProfile(ctx context.Context, in *campaignv1.Patc
 	}
 
 	return &campaignv1.PatchCharacterProfileResponse{
-		Profile: DaggerheartProfileToProto(campaignID, characterID, dhProfile),
+		Profile: DaggerheartProfileToProto(campaignID, characterID, dhProfile, s.app.stores.DaggerheartContent),
 	}, nil
 }

@@ -4,11 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
 )
+
+func toMillis(value time.Time) int64 {
+	return sqliteutil.ToMillis(value)
+}
 
 func unmarshalOptionalJSON[T any](raw string, dest *T, label string) error {
 	if strings.TrimSpace(raw) == "" {
@@ -52,6 +57,9 @@ func dbDaggerheartSubclassToStorage(row db.DaggerheartSubclass) (contentstore.Da
 		SpellcastTrait: row.SpellcastTrait,
 		CreatedAt:      sqliteutil.FromMillis(row.CreatedAt),
 		UpdatedAt:      sqliteutil.FromMillis(row.UpdatedAt),
+	}
+	if err := unmarshalOptionalJSON(row.CreationRequirementsJson, &subclass.CreationRequirements, "daggerheart subclass creation requirements"); err != nil {
+		return contentstore.DaggerheartSubclass{}, err
 	}
 	if err := unmarshalOptionalJSON(row.FoundationFeaturesJson, &subclass.FoundationFeatures, "daggerheart subclass foundation features"); err != nil {
 		return contentstore.DaggerheartSubclass{}, err
@@ -115,6 +123,24 @@ func dbDaggerheartAdversaryEntryToStorage(row db.DaggerheartAdversaryEntry) (con
 	}
 	if err := unmarshalOptionalJSON(row.FeaturesJson, &entry.Features, "daggerheart adversary features"); err != nil {
 		return contentstore.DaggerheartAdversaryEntry{}, err
+	}
+	if strings.TrimSpace(row.MinionRuleJson) != "" {
+		entry.MinionRule = &contentstore.DaggerheartAdversaryMinionRule{}
+		if err := unmarshalOptionalJSON(row.MinionRuleJson, entry.MinionRule, "daggerheart adversary minion rule"); err != nil {
+			return contentstore.DaggerheartAdversaryEntry{}, err
+		}
+	}
+	if strings.TrimSpace(row.HordeRuleJson) != "" {
+		entry.HordeRule = &contentstore.DaggerheartAdversaryHordeRule{}
+		if err := unmarshalOptionalJSON(row.HordeRuleJson, entry.HordeRule, "daggerheart adversary horde rule"); err != nil {
+			return contentstore.DaggerheartAdversaryEntry{}, err
+		}
+	}
+	if strings.TrimSpace(row.RelentlessRuleJson) != "" {
+		entry.RelentlessRule = &contentstore.DaggerheartAdversaryRelentlessRule{}
+		if err := unmarshalOptionalJSON(row.RelentlessRuleJson, entry.RelentlessRule, "daggerheart adversary relentless rule"); err != nil {
+			return contentstore.DaggerheartAdversaryEntry{}, err
+		}
 	}
 	return entry, nil
 }
@@ -220,7 +246,7 @@ func dbDaggerheartWeaponToStorage(row db.DaggerheartWeapon) (contentstore.Dagger
 }
 
 func dbDaggerheartArmorToStorage(row db.DaggerheartArmor) contentstore.DaggerheartArmor {
-	return contentstore.DaggerheartArmor{
+	armor := contentstore.DaggerheartArmor{
 		ID:                  row.ID,
 		Name:                row.Name,
 		Tier:                int(row.Tier),
@@ -231,6 +257,8 @@ func dbDaggerheartArmorToStorage(row db.DaggerheartArmor) contentstore.Daggerhea
 		CreatedAt:           sqliteutil.FromMillis(row.CreatedAt),
 		UpdatedAt:           sqliteutil.FromMillis(row.UpdatedAt),
 	}
+	_ = unmarshalOptionalJSON(row.RulesJson, &armor.Rules, "daggerheart armor rules")
+	return armor
 }
 
 func dbDaggerheartItemToStorage(row db.DaggerheartItem) contentstore.DaggerheartItem {

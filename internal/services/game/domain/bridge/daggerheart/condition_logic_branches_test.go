@@ -136,14 +136,14 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 		{
 			name:      "conditions after required",
 			wantErr:   true,
-			errSubstr: "conditions_after is required",
+			errSubstr: "conditions must change",
 		},
 		{
 			name:      "conditions before required when removed provided",
 			after:     []string{ConditionHidden},
 			removed:   []string{ConditionVulnerable},
 			wantErr:   true,
-			errSubstr: "conditions_before is required when removed are provided",
+			errSubstr: "added must match conditions_before and conditions_after diff",
 		},
 		{
 			name:      "added mismatch with before",
@@ -159,7 +159,7 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 			after:     []string{ConditionHidden},
 			added:     []string{ConditionVulnerable},
 			wantErr:   true,
-			errSubstr: "added must match conditions_after when conditions_before is omitted",
+			errSubstr: "added must match conditions_before and conditions_after diff",
 		},
 		{
 			name:      "removed mismatch with before",
@@ -196,7 +196,12 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			err := validateConditionSetPayload(tc.before, tc.after, tc.added, tc.removed)
+			err := validateConditionSetPayload(
+				mustConditionStates(tc.before),
+				mustConditionStates(tc.after),
+				mustConditionStates(tc.added),
+				mustConditionStates(tc.removed),
+			)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatal("expected error")
@@ -211,6 +216,14 @@ func TestValidateConditionSetPayload_Branches(t *testing.T) {
 			}
 		})
 	}
+}
+
+func mustConditionStates(codes []string) []ConditionState {
+	out := make([]ConditionState, 0, len(codes))
+	for _, code := range codes {
+		out = append(out, mustConditionState(code))
+	}
+	return out
 }
 
 func TestFoldGMFearChangedAndCountdownUpdate_Branches(t *testing.T) {

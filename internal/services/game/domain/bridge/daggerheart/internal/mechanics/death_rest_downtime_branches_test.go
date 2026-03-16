@@ -144,6 +144,38 @@ func TestResolveDeathMoveAvoidDeathBranches(t *testing.T) {
 		if outcome.HopeAfter != 4 {
 			t.Fatalf("HopeAfter = %d, want 4", outcome.HopeAfter)
 		}
+		if outcome.LifeState != LifeStateUnconscious {
+			t.Fatalf("LifeState = %q, want %q", outcome.LifeState, LifeStateUnconscious)
+		}
+	})
+
+	t.Run("scar gained on last hope slot is terminal", func(t *testing.T) {
+		outcome, err := ResolveDeathMove(DeathMoveInput{
+			Move:      DeathMoveAvoidDeath,
+			Level:     12,
+			HP:        0,
+			HPMax:     6,
+			Hope:      1,
+			HopeMax:   1,
+			Stress:    2,
+			StressMax: 6,
+			Seed:      10,
+		})
+		if err != nil {
+			t.Fatalf("ResolveDeathMove: %v", err)
+		}
+		if !outcome.ScarGained {
+			t.Fatalf("expected ScarGained=true")
+		}
+		if outcome.LifeState != LifeStateDead {
+			t.Fatalf("LifeState = %q, want %q", outcome.LifeState, LifeStateDead)
+		}
+		if outcome.HopeMaxAfter != 0 {
+			t.Fatalf("HopeMaxAfter = %d, want 0", outcome.HopeMaxAfter)
+		}
+		if outcome.HopeAfter != 0 {
+			t.Fatalf("HopeAfter = %d, want 0", outcome.HopeAfter)
+		}
 	})
 
 	t.Run("no scar gained", func(t *testing.T) {

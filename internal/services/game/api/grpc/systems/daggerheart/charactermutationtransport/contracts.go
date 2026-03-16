@@ -3,6 +3,7 @@ package charactermutationtransport
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -18,6 +19,15 @@ type CampaignStore interface {
 // character mutation transport.
 type DaggerheartStore interface {
 	GetDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error)
+	GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
+	GetDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error)
+}
+
+type ContentStore interface {
+	GetDaggerheartArmor(ctx context.Context, id string) (contentstore.DaggerheartArmor, error)
+	GetDaggerheartBeastform(ctx context.Context, id string) (contentstore.DaggerheartBeastformEntry, error)
+	GetDaggerheartClass(ctx context.Context, id string) (contentstore.DaggerheartClass, error)
+	GetDaggerheartSubclass(ctx context.Context, id string) (contentstore.DaggerheartSubclass, error)
 }
 
 // CharacterCommandInput describes one character-targeted Daggerheart domain
@@ -39,6 +49,7 @@ type CharacterCommandInput struct {
 type Dependencies struct {
 	Campaign    CampaignStore
 	Daggerheart DaggerheartStore
+	Content     ContentStore
 
 	ExecuteCharacterCommand func(ctx context.Context, in CharacterCommandInput) error
 }

@@ -17,6 +17,7 @@ func (s *DaggerheartService) characterMutationHandler() *charactermutationtransp
 	return charactermutationtransport.NewHandler(charactermutationtransport.Dependencies{
 		Campaign:    s.stores.Campaign,
 		Daggerheart: s.stores.Daggerheart,
+		Content:     s.stores.Content,
 		ExecuteCharacterCommand: func(ctx context.Context, in charactermutationtransport.CharacterCommandInput) error {
 			adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 			_, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, adapter, command.Command{
@@ -39,6 +40,14 @@ func (s *DaggerheartService) characterMutationHandler() *charactermutationtransp
 
 func (s *DaggerheartService) ApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevelUpRequest) (*pb.DaggerheartApplyLevelUpResponse, error) {
 	return s.characterMutationHandler().ApplyLevelUp(ctx, in)
+}
+
+func (s *DaggerheartService) ApplyClassFeature(ctx context.Context, in *pb.DaggerheartApplyClassFeatureRequest) (*pb.DaggerheartApplyClassFeatureResponse, error) {
+	return s.characterMutationHandler().ApplyClassFeature(ctx, in)
+}
+
+func (s *DaggerheartService) ApplySubclassFeature(ctx context.Context, in *pb.DaggerheartApplySubclassFeatureRequest) (*pb.DaggerheartApplySubclassFeatureResponse, error) {
+	return s.characterMutationHandler().ApplySubclassFeature(ctx, in)
 }
 
 func (s *DaggerheartService) UpdateGold(ctx context.Context, in *pb.DaggerheartUpdateGoldRequest) (*pb.DaggerheartUpdateGoldResponse, error) {

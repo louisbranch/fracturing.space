@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -41,8 +40,8 @@ func (s *Store) PutDaggerheartWeapon(ctx context.Context, weapon contentstore.Da
 		DamageType:     weapon.DamageType,
 		Burden:         int64(weapon.Burden),
 		Feature:        weapon.Feature,
-		CreatedAt:      sqliteutil.ToMillis(weapon.CreatedAt),
-		UpdatedAt:      sqliteutil.ToMillis(weapon.UpdatedAt),
+		CreatedAt:      toMillis(weapon.CreatedAt),
+		UpdatedAt:      toMillis(weapon.UpdatedAt),
 	})
 }
 
@@ -125,6 +124,11 @@ func (s *Store) PutDaggerheartArmor(ctx context.Context, armor contentstore.Dagg
 		return fmt.Errorf("armor id is required")
 	}
 
+	rulesJSON, err := json.Marshal(armor.Rules)
+	if err != nil {
+		return fmt.Errorf("marshal armor rules: %w", err)
+	}
+
 	return s.q.PutDaggerheartArmor(ctx, db.PutDaggerheartArmorParams{
 		ID:                  armor.ID,
 		Name:                armor.Name,
@@ -133,8 +137,9 @@ func (s *Store) PutDaggerheartArmor(ctx context.Context, armor contentstore.Dagg
 		BaseSevereThreshold: int64(armor.BaseSevereThreshold),
 		ArmorScore:          int64(armor.ArmorScore),
 		Feature:             armor.Feature,
-		CreatedAt:           sqliteutil.ToMillis(armor.CreatedAt),
-		UpdatedAt:           sqliteutil.ToMillis(armor.UpdatedAt),
+		RulesJson:           string(rulesJSON),
+		CreatedAt:           toMillis(armor.CreatedAt),
+		UpdatedAt:           toMillis(armor.UpdatedAt),
 	})
 }
 
@@ -217,8 +222,8 @@ func (s *Store) PutDaggerheartItem(ctx context.Context, item contentstore.Dagger
 		StackMax:    int64(item.StackMax),
 		Description: item.Description,
 		EffectText:  item.EffectText,
-		CreatedAt:   sqliteutil.ToMillis(item.CreatedAt),
-		UpdatedAt:   sqliteutil.ToMillis(item.UpdatedAt),
+		CreatedAt:   toMillis(item.CreatedAt),
+		UpdatedAt:   toMillis(item.UpdatedAt),
 	})
 }
 

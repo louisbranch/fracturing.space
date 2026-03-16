@@ -29,16 +29,22 @@ func applyLevelUpToCharacterProfile(profile *CharacterProfile, payload LevelUpAp
 			if adv.DomainCardID != "" {
 				profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, strings.TrimSpace(adv.DomainCardID))
 			}
-		case "upgraded_subclass":
-			if adv.SubclassCardID != "" {
-				profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, strings.TrimSpace(adv.SubclassCardID))
-			}
 		}
 	}
 
-	if payload.NewDomainCardID != "" {
-		profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, strings.TrimSpace(payload.NewDomainCardID))
+	for _, reward := range payload.Rewards {
+		if strings.TrimSpace(reward.Type) == "domain_card" && reward.DomainCardID != "" {
+			profile.DomainCardIDs = appendUnique(profile.DomainCardIDs, strings.TrimSpace(reward.DomainCardID))
+		}
 	}
+	if len(payload.SubclassTracksAfter) > 0 {
+		profile.SubclassTracks = append([]CharacterSubclassTrack(nil), payload.SubclassTracksAfter...)
+	}
+	profile.HpMax += payload.SubclassHpMaxDelta
+	profile.StressMax += payload.SubclassStressMaxDelta
+	profile.Evasion += payload.SubclassEvasionDelta
+	profile.MajorThreshold += payload.SubclassMajorThresholdDelta
+	profile.SevereThreshold += payload.SubclassSevereThresholdDelta
 }
 
 func applyCharacterProfileTraitIncrease(profile *CharacterProfile, trait string) {

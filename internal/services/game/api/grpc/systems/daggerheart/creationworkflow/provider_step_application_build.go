@@ -46,30 +46,123 @@ func applyClassSubclassInput(ctx context.Context, content contentstore.Daggerhea
 	}
 	profile.ClassID = classID
 	profile.SubclassID = subclassID
+	requirements := make([]projectionstore.DaggerheartSubclassCreationRequirement, 0, len(subclass.CreationRequirements))
+	requiresCompanion := false
+	for _, requirement := range subclass.CreationRequirements {
+		value := strings.TrimSpace(string(requirement))
+		if value != "" {
+			typed := projectionstore.DaggerheartSubclassCreationRequirement(value)
+			requirements = append(requirements, typed)
+			if typed == projectionstore.DaggerheartSubclassCreationRequirementCompanionSheet {
+				requiresCompanion = true
+			}
+		}
+	}
+	if len(requirements) == 0 {
+		profile.SubclassCreationRequirements = nil
+	} else {
+		profile.SubclassCreationRequirements = requirements
+	}
+	companion, err := companionSheetFromInput(ctx, content, input.GetCompanion(), requiresCompanion)
+	if err != nil {
+		return err
+	}
+	profile.CompanionSheet = companion
 	return nil
+}
+
+func companionSheetFromInput(ctx context.Context, content contentstore.DaggerheartContentReadStore, input *daggerheartv1.DaggerheartCreationCompanionInput, required bool) (*projectionstore.DaggerheartCompanionSheet, error) {
+	if input == nil {
+		if required {
+			return nil, status.Error(codes.InvalidArgument, "companion is required")
+		}
+		return nil, nil
+	}
+
+	experienceIDs := input.GetExperienceIds()
+	if len(experienceIDs) != 2 {
+		return nil, status.Error(codes.InvalidArgument, "companion requires exactly two experience_ids")
+	}
+	seen := make(map[string]struct{}, len(experienceIDs))
+	experiences := make([]projectionstore.DaggerheartCompanionExperience, 0, len(experienceIDs))
+	for _, rawID := range experienceIDs {
+		experienceID, err := validate.RequiredID(rawID, "companion experience_id")
+		if err != nil {
+			return nil, err
+		}
+		if _, exists := seen[experienceID]; exists {
+			return nil, status.Error(codes.InvalidArgument, "companion experience_ids must be distinct")
+		}
+		if _, err := content.GetDaggerheartCompanionExperience(ctx, experienceID); err != nil {
+			if errors.Is(err, storage.ErrNotFound) {
+				return nil, status.Errorf(codes.InvalidArgument, "companion experience_id %q is not found", experienceID)
+			}
+			return nil, grpcerror.Internal("get companion experience", err)
+		}
+		seen[experienceID] = struct{}{}
+		experiences = append(experiences, projectionstore.DaggerheartCompanionExperience{
+			ExperienceID: experienceID,
+			Modifier:     daggerheart.CompanionSheetExperienceModifier,
+		})
+	}
+
+	damageType := strings.TrimSpace(input.GetDamageType())
+	if damageType == "" {
+		return nil, status.Error(codes.InvalidArgument, "companion damage_type is required")
+	}
+
+	return &projectionstore.DaggerheartCompanionSheet{
+		AnimalKind:        strings.TrimSpace(input.GetAnimalKind()),
+		Name:              strings.TrimSpace(input.GetName()),
+		Evasion:           daggerheart.CompanionSheetDefaultEvasion,
+		Experiences:       experiences,
+		AttackDescription: strings.TrimSpace(input.GetAttackDescription()),
+		AttackRange:       daggerheart.CompanionSheetDefaultAttackRange,
+		DamageDieSides:    daggerheart.CompanionSheetDefaultDamageDieSides,
+		DamageType:        damageType,
+	}, nil
 }
 
 // applyHeritageInput validates the ancestry/community split before storing the
 // selected heritage IDs on the creation profile.
 func applyHeritageInput(ctx context.Context, content contentstore.DaggerheartContentReadStore, profile *projectionstore.DaggerheartCharacterProfile, input *daggerheartv1.DaggerheartCreationStepHeritageInput) error {
-	ancestryID, err := validate.RequiredID(input.GetAncestryId(), "ancestry_id")
+	selection := input.GetHeritage()
+	if selection == nil {
+		return status.Error(codes.InvalidArgument, "heritage is required")
+	}
+	firstAncestryID, err := validate.RequiredID(selection.GetFirstFeatureAncestryId(), "first_feature_ancestry_id")
 	if err != nil {
 		return err
 	}
-	communityID, err := validate.RequiredID(input.GetCommunityId(), "community_id")
+	secondAncestryID := strings.TrimSpace(selection.GetSecondFeatureAncestryId())
+	if secondAncestryID == "" {
+		secondAncestryID = firstAncestryID
+	}
+	communityID, err := validate.RequiredID(selection.GetCommunityId(), "community_id")
 	if err != nil {
 		return err
 	}
 
-	ancestry, err := content.GetDaggerheartHeritage(ctx, ancestryID)
+	firstAncestry, err := content.GetDaggerheartHeritage(ctx, firstAncestryID)
 	if err != nil {
 		if errors.Is(err, storage.ErrNotFound) {
-			return status.Errorf(codes.InvalidArgument, "ancestry_id %q is not found", ancestryID)
+			return status.Errorf(codes.InvalidArgument, "first_feature_ancestry_id %q is not found", firstAncestryID)
 		}
 		return grpcerror.Internal("get ancestry heritage", err)
 	}
-	if !strings.EqualFold(strings.TrimSpace(ancestry.Kind), "ancestry") {
-		return status.Errorf(codes.InvalidArgument, "ancestry_id %q is not an ancestry heritage", ancestryID)
+	if !strings.EqualFold(strings.TrimSpace(firstAncestry.Kind), "ancestry") {
+		return status.Errorf(codes.InvalidArgument, "first_feature_ancestry_id %q is not an ancestry heritage", firstAncestryID)
+	}
+
+	secondAncestry, err := content.GetDaggerheartHeritage(ctx, secondAncestryID)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotFound) {
+			return status.Errorf(codes.InvalidArgument, "second_feature_ancestry_id %q is not found", secondAncestryID)
+		}
+		return grpcerror.Internal("get secondary ancestry heritage", err)
+	}
+	if !strings.EqualFold(strings.TrimSpace(secondAncestry.Kind), "ancestry") {
+		return status.Errorf(codes.InvalidArgument, "second_feature_ancestry_id %q is not an ancestry heritage", secondAncestryID)
 	}
 
 	community, err := content.GetDaggerheartHeritage(ctx, communityID)
@@ -83,9 +176,35 @@ func applyHeritageInput(ctx context.Context, content contentstore.DaggerheartCon
 		return status.Errorf(codes.InvalidArgument, "community_id %q is not a community heritage", communityID)
 	}
 
-	profile.AncestryID = ancestryID
-	profile.CommunityID = communityID
+	firstFeatureID, err := requiredHeritageFeatureID(firstAncestry)
+	if err != nil {
+		return err
+	}
+	secondFeatureID, err := requiredHeritageFeatureID(secondAncestry)
+	if err != nil {
+		return err
+	}
+
+	profile.Heritage = projectionstore.DaggerheartHeritageSelection{
+		AncestryLabel:           strings.TrimSpace(selection.GetAncestryLabel()),
+		FirstFeatureAncestryID:  firstAncestryID,
+		FirstFeatureID:          firstFeatureID,
+		SecondFeatureAncestryID: secondAncestryID,
+		SecondFeatureID:         secondFeatureID,
+		CommunityID:             communityID,
+	}
 	return nil
+}
+
+func requiredHeritageFeatureID(heritage contentstore.DaggerheartHeritage) (string, error) {
+	if len(heritage.Features) == 0 {
+		return "", status.Errorf(codes.InvalidArgument, "heritage %q is missing features", heritage.ID)
+	}
+	featureID := strings.TrimSpace(heritage.Features[0].ID)
+	if featureID == "" {
+		return "", status.Errorf(codes.InvalidArgument, "heritage %q has an empty feature id", heritage.ID)
+	}
+	return featureID, nil
 }
 
 // applyTraitsInput validates the creation trait allocation before persisting it

@@ -135,6 +135,11 @@ func ResolveDeathMove(input DeathMoveInput) (DeathMoveOutcome, error) {
 			if outcome.HopeMaxAfter > 0 {
 				outcome.HopeMaxAfter--
 			}
+			if outcome.HopeMaxAfter == 0 {
+				outcome.LifeState = LifeStateDead
+				outcome.HopeAfter = 0
+				return outcome, nil
+			}
 		}
 		if outcome.HopeAfter > outcome.HopeMaxAfter {
 			outcome.HopeAfter = outcome.HopeMaxAfter

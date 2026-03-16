@@ -14,7 +14,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 type gmFearChangedPayload struct {
@@ -55,6 +54,7 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 	characterClient := gamev1.NewCharacterServiceClient(conn)
 	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
+	sceneClient := gamev1.NewSceneServiceClient(conn)
 	snapshotClient := gamev1.NewSnapshotServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
@@ -78,7 +78,9 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
-	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID)
+	sceneAnchor := createCharacter(t, ctx, characterClient, campaignID, "GM Scene Anchor")
+	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -91,12 +93,27 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 		t.Fatal("expected session")
 	}
 	sessionID := startSession.GetSession().GetId()
+	createScene, err := sceneClient.CreateScene(ctx, &gamev1.CreateSceneRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
+		Name:       "GM Scene",
+		CharacterIds: []string{
+			sceneAnchor,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create scene: %v", err)
+	}
+	sceneID := createScene.GetSceneId()
+	if sceneID == "" {
+		t.Fatal("expected scene")
+	}
 
 	createAdversary, err := daggerheartClient.CreateAdversary(ctx, &daggerheartv1.DaggerheartCreateAdversaryRequest{
-		CampaignId: campaignID,
-		Name:       "Adversary One",
-		Kind:       "minion",
-		SessionId:  wrapperspb.String(sessionID),
+		CampaignId:       campaignID,
+		SessionId:        sessionID,
+		SceneId:          sceneID,
+		AdversaryEntryId: "adversary.integration-foe",
 	})
 	if err != nil {
 		t.Fatalf("create adversary: %v", err)
@@ -121,8 +138,13 @@ func TestDaggerheartGmMoveSpendFear(t *testing.T) {
 	moveResp, err := daggerheartClient.ApplyGmMove(ctx, &daggerheartv1.DaggerheartApplyGmMoveRequest{
 		CampaignId: campaignID,
 		SessionId:  sessionID,
-		Move:       "hard_move",
 		FearSpent:  2,
+		SpendTarget: &daggerheartv1.DaggerheartApplyGmMoveRequest_DirectMove{
+			DirectMove: &daggerheartv1.DaggerheartDirectGmMoveTarget{
+				Kind:  daggerheartv1.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE,
+				Shape: daggerheartv1.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT,
+			},
+		},
 	})
 	if err != nil {
 		t.Fatalf("apply gm move: %v", err)
@@ -176,7 +198,9 @@ func TestDaggerheartCountdownLifecycle(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
-	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID)
+	sceneAnchor := createCharacter(t, ctx, characterClient, campaignID, "Adversary Scene Anchor")
+	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -264,6 +288,7 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 	characterClient := gamev1.NewCharacterServiceClient(conn)
 	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
+	sceneClient := gamev1.NewSceneServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
@@ -286,7 +311,9 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
-	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID)
+	sceneAnchor := createCharacter(t, ctx, characterClient, campaignID, "Adversary Scene Anchor")
+	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -299,12 +326,27 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 		t.Fatal("expected session")
 	}
 	sessionID := startSession.GetSession().GetId()
+	createScene, err := sceneClient.CreateScene(ctx, &gamev1.CreateSceneRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
+		Name:       "Adversary Scene",
+		CharacterIds: []string{
+			sceneAnchor,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create scene: %v", err)
+	}
+	sceneID := createScene.GetSceneId()
+	if sceneID == "" {
+		t.Fatal("expected scene")
+	}
 
 	createAdversary, err := daggerheartClient.CreateAdversary(ctx, &daggerheartv1.DaggerheartCreateAdversaryRequest{
-		CampaignId: campaignID,
-		Name:       "Adversary One",
-		Kind:       "minion",
-		SessionId:  wrapperspb.String(sessionID),
+		CampaignId:       campaignID,
+		SessionId:        sessionID,
+		SceneId:          sceneID,
+		AdversaryEntryId: "adversary.integration-foe",
 	})
 	if err != nil {
 		t.Fatalf("create adversary: %v", err)
@@ -315,11 +357,13 @@ func TestDaggerheartAdversaryAttackRoll(t *testing.T) {
 
 	seed := uint64(42)
 	rollResp, err := daggerheartClient.SessionAdversaryAttackRoll(ctx, &daggerheartv1.SessionAdversaryAttackRollRequest{
-		CampaignId:     campaignID,
-		SessionId:      sessionID,
-		AdversaryId:    createAdversary.GetAdversary().GetId(),
-		AttackModifier: 2,
-		Advantage:      1,
+		CampaignId:  campaignID,
+		SessionId:   sessionID,
+		AdversaryId: createAdversary.GetAdversary().GetId(),
+		Modifiers: []*daggerheartv1.ActionRollModifier{
+			{Source: "attack_modifier", Value: 2},
+		},
+		Advantage: 1,
 		Rng: &commonv1.RngRequest{
 			Seed:     &seed,
 			RollMode: commonv1.RollMode_REPLAY,

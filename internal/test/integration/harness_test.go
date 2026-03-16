@@ -810,11 +810,15 @@ func ensureDaggerheartCreationReadiness(
 		SystemWorkflow: &statev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
 				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{ClassId: "class.guardian", SubclassId: "subclass.stalwart"},
-				HeritageInput:      &daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: "heritage.human", CommunityId: "heritage.highborne"},
-				TraitsInput:        &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1},
-				DetailsInput:       &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A brave adventurer."},
-				EquipmentInput:     &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: []string{"weapon.longsword"}, ArmorId: "armor.gambeson-armor", PotionItemId: "item.minor-health-potion"},
-				BackgroundInput:    &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: "integration background"},
+				HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{Heritage: &daggerheartv1.DaggerheartCreationStepHeritageSelectionInput{
+					FirstFeatureAncestryId:  "heritage.human",
+					SecondFeatureAncestryId: "heritage.human",
+					CommunityId:             "heritage.highborne",
+				}},
+				TraitsInput:     &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1},
+				DetailsInput:    &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A brave adventurer."},
+				EquipmentInput:  &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: []string{"weapon.longsword"}, ArmorId: "armor.gambeson-armor", PotionItemId: "item.minor-health-potion"},
+				BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{Background: "integration background"},
 				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{Experiences: []*daggerheartv1.DaggerheartExperience{
 					{Name: "integration experience", Modifier: 2},
 					{Name: "integration patrol", Modifier: 2},

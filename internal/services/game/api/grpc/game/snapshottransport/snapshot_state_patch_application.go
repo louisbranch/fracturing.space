@@ -85,7 +85,7 @@ func (a snapshotApplication) PatchCharacterState(ctx context.Context, campaignID
 				campaignID,
 				grpcmeta.SessionIDFromContext(ctx),
 				characterID,
-				dhState.Conditions,
+				projectionConditionCodes(dhState.Conditions),
 				dhState.Stress,
 				patch.stress,
 				patch.stressMax,
@@ -129,7 +129,7 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 	actorType event.ActorType,
 	actorID string,
 ) (projectionstore.DaggerheartCharacterState, error) {
-	normalizedBefore, err := daggerheart.NormalizeConditions(current.Conditions)
+	normalizedBefore, err := daggerheart.NormalizeConditions(projectionConditionCodes(current.Conditions))
 	if err != nil {
 		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid stored conditions", err)
 	}
@@ -138,12 +138,28 @@ func (a snapshotApplication) applyConditionPatchIfChanged(
 	}
 
 	added, removed := daggerheart.DiffConditions(normalizedBefore, normalizedAfter)
+	beforeStates, err := conditionStatesFromCodes(normalizedBefore)
+	if err != nil {
+		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid stored conditions", err)
+	}
+	afterStates, err := conditionStatesFromCodes(normalizedAfter)
+	if err != nil {
+		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid condition patch", err)
+	}
+	addedStates, err := conditionStatesFromCodes(added)
+	if err != nil {
+		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid condition patch", err)
+	}
+	removedStates, err := conditionStatesFromCodes(removed)
+	if err != nil {
+		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("invalid condition patch", err)
+	}
 	conditionPayload := daggerheart.ConditionChangePayload{
 		CharacterID:      ids.CharacterID(characterID),
-		ConditionsBefore: normalizedBefore,
-		ConditionsAfter:  normalizedAfter,
-		Added:            added,
-		Removed:          removed,
+		ConditionsBefore: beforeStates,
+		ConditionsAfter:  afterStates,
+		Added:            addedStates,
+		Removed:          removedStates,
 	}
 	if err := executeDaggerheartConditionChangeCommand(
 		ctx,
@@ -169,4 +185,22 @@ func (a snapshotApplication) loadDaggerheartCharacterState(ctx context.Context, 
 		return projectionstore.DaggerheartCharacterState{}, grpcerror.Internal("load daggerheart character state", err)
 	}
 	return dhState, nil
+}
+
+func projectionConditionCodes(values []projectionstore.DaggerheartConditionState) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		code := strings.TrimSpace(value.Code)
+		if code == "" {
+			code = strings.TrimSpace(value.Standard)
+		}
+		if code == "" {
+			continue
+		}
+		result = append(result, code)
+	}
+	return result
 }

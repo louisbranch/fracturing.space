@@ -18,7 +18,9 @@ func (s *DaggerheartService) damageHandler() *damagetransport.Handler {
 		Campaign:    s.stores.Campaign,
 		SessionGate: s.stores.SessionGate,
 		Daggerheart: s.stores.Daggerheart,
+		Content:     s.stores.Content,
 		Event:       s.stores.Event,
+		SeedFunc:    s.seedFunc,
 		ExecuteSystemCommand: func(ctx context.Context, in damagetransport.SystemCommandInput) error {
 			return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
 				CampaignID:      in.CampaignID,

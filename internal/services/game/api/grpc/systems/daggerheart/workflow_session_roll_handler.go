@@ -12,6 +12,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 )
 
@@ -21,6 +22,7 @@ func (s *DaggerheartService) sessionRollHandler() *sessionrolltransport.Handler 
 		Session:     s.stores.Session,
 		SessionGate: s.stores.SessionGate,
 		Daggerheart: s.stores.Daggerheart,
+		Content:     s.stores.Content,
 		Event:       s.stores.Event,
 		SeedFunc:    s.seedFunc,
 		ExecuteActionRollResolve: func(ctx context.Context, in sessionrolltransport.RollResolveInput) (uint64, error) {
@@ -34,6 +36,12 @@ func (s *DaggerheartService) sessionRollHandler() *sessionrolltransport.Handler 
 		},
 		ExecuteHopeSpend: func(ctx context.Context, in sessionrolltransport.HopeSpendInput) error {
 			return s.executeSessionHopeSpend(ctx, in)
+		},
+		ExecuteArmorBackedHopeSpend: func(ctx context.Context, in sessionrolltransport.ArmorBackedHopeSpendInput) error {
+			return s.executeArmorBackedHopeSpend(ctx, in)
+		},
+		ExecuteAdversaryFeatureApply: func(ctx context.Context, in sessionrolltransport.AdversaryFeatureApplyInput) error {
+			return s.executeSessionRollAdversaryFeatureApply(ctx, in)
 		},
 		AdvanceBreathCountdown: s.workflowEffectsHandler().AdvanceBreathCountdown,
 		LoadAdversaryForSession: func(ctx context.Context, campaignID, sessionID, adversaryID string) (projectionstore.DaggerheartAdversary, error) {
@@ -85,6 +93,77 @@ func (s *DaggerheartService) executeSessionHopeSpend(ctx context.Context, in ses
 		EntityID:        in.CharacterID,
 		PayloadJSON:     payloadJSON,
 		MissingEventMsg: "hope spend did not emit an event",
+		ApplyErrMessage: "execute domain command",
+	})
+}
+
+func (s *DaggerheartService) executeArmorBackedHopeSpend(ctx context.Context, in sessionrolltransport.ArmorBackedHopeSpendInput) error {
+	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
+	payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchPayload{
+		CharacterID: ids.CharacterID(in.CharacterID),
+		Source:      "armor.hopeful",
+		ArmorBefore: &in.ArmorBefore,
+		ArmorAfter:  &in.ArmorAfter,
+	})
+	if err != nil {
+		return err
+	}
+	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+		CampaignID:      in.CampaignID,
+		CommandType:     commandTypeDaggerheartCharacterStatePatch,
+		SessionID:       in.SessionID,
+		SceneID:         in.SceneID,
+		RequestID:       in.RequestID,
+		InvocationID:    in.InvocationID,
+		EntityType:      "character",
+		EntityID:        in.CharacterID,
+		PayloadJSON:     payloadJSON,
+		MissingEventMsg: "armor-backed hope spend did not emit an event",
+		ApplyErrMessage: "execute domain command",
+	})
+}
+
+func (s *DaggerheartService) executeSessionRollAdversaryFeatureApply(ctx context.Context, in sessionrolltransport.AdversaryFeatureApplyInput) error {
+	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
+	payloadJSON, err := json.Marshal(daggerheart.AdversaryFeatureApplyPayload{
+		ActorAdversaryID:    ids.AdversaryID(in.Adversary.AdversaryID),
+		AdversaryID:         ids.AdversaryID(in.Adversary.AdversaryID),
+		FeatureID:           in.FeatureID,
+		FeatureStatesBefore: nil,
+		FeatureStatesAfter:  nil,
+		PendingExperienceBefore: func() *daggerheart.AdversaryPendingExperience {
+			if in.PendingExperienceBefore == nil {
+				return nil
+			}
+			return &daggerheart.AdversaryPendingExperience{
+				Name:     in.PendingExperienceBefore.Name,
+				Modifier: in.PendingExperienceBefore.Modifier,
+			}
+		}(),
+		PendingExperienceAfter: func() *daggerheart.AdversaryPendingExperience {
+			if in.PendingExperienceAfter == nil {
+				return nil
+			}
+			return &daggerheart.AdversaryPendingExperience{
+				Name:     in.PendingExperienceAfter.Name,
+				Modifier: in.PendingExperienceAfter.Modifier,
+			}
+		}(),
+	})
+	if err != nil {
+		return err
+	}
+	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+		CampaignID:      in.CampaignID,
+		CommandType:     commandids.DaggerheartAdversaryFeatureApply,
+		SessionID:       in.SessionID,
+		SceneID:         in.SceneID,
+		RequestID:       in.RequestID,
+		InvocationID:    in.InvocationID,
+		EntityType:      "adversary",
+		EntityID:        in.Adversary.AdversaryID,
+		PayloadJSON:     payloadJSON,
+		MissingEventMsg: "session roll adversary feature apply did not emit an event",
 		ApplyErrMessage: "execute domain command",
 	})
 }

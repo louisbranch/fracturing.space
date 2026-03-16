@@ -82,22 +82,25 @@ func (f *fakeClosableEventStore) Close() error {
 // return "not implemented".
 type fakeProjectionStore struct {
 	// Injectable function fields for methods used in replay/integrity paths.
-	get                        func(ctx context.Context, id string) (storage.CampaignRecord, error)
-	put                        func(ctx context.Context, c storage.CampaignRecord) error
-	listCharacters             func(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error)
-	listCharactersByOwner      func(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error)
-	getDaggerheartSnapshot     func(ctx context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error)
-	putDaggerheartSnapshot     func(ctx context.Context, snap projectionstore.DaggerheartSnapshot) error
-	getDaggerheartCharState    func(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
-	putDaggerheartCharState    func(ctx context.Context, state projectionstore.DaggerheartCharacterState) error
-	putDaggerheartCharProfile  func(ctx context.Context, profile projectionstore.DaggerheartCharacterProfile) error
-	putDaggerheartCountdown    func(ctx context.Context, countdown projectionstore.DaggerheartCountdown) error
-	getDaggerheartCountdown    func(ctx context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error)
-	deleteDaggerheartCountdown func(ctx context.Context, campaignID, countdownID string) error
-	putDaggerheartAdversary    func(ctx context.Context, adversary projectionstore.DaggerheartAdversary) error
-	getDaggerheartAdversary    func(ctx context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error)
-	deleteDaggerheartAdversary func(ctx context.Context, campaignID, adversaryID string) error
-	listProjectionWatermarks   func(ctx context.Context) ([]storage.ProjectionWatermark, error)
+	get                          func(ctx context.Context, id string) (storage.CampaignRecord, error)
+	put                          func(ctx context.Context, c storage.CampaignRecord) error
+	listCharacters               func(ctx context.Context, campaignID string, pageSize int, pageToken string) (storage.CharacterPage, error)
+	listCharactersByOwner        func(ctx context.Context, campaignID, participantID string) ([]storage.CharacterRecord, error)
+	getDaggerheartSnapshot       func(ctx context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error)
+	putDaggerheartSnapshot       func(ctx context.Context, snap projectionstore.DaggerheartSnapshot) error
+	getDaggerheartCharState      func(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
+	putDaggerheartCharState      func(ctx context.Context, state projectionstore.DaggerheartCharacterState) error
+	putDaggerheartCharProfile    func(ctx context.Context, profile projectionstore.DaggerheartCharacterProfile) error
+	putDaggerheartCountdown      func(ctx context.Context, countdown projectionstore.DaggerheartCountdown) error
+	getDaggerheartCountdown      func(ctx context.Context, campaignID, countdownID string) (projectionstore.DaggerheartCountdown, error)
+	deleteDaggerheartCountdown   func(ctx context.Context, campaignID, countdownID string) error
+	putDaggerheartAdversary      func(ctx context.Context, adversary projectionstore.DaggerheartAdversary) error
+	getDaggerheartAdversary      func(ctx context.Context, campaignID, adversaryID string) (projectionstore.DaggerheartAdversary, error)
+	deleteDaggerheartAdversary   func(ctx context.Context, campaignID, adversaryID string) error
+	putDaggerheartEnvironment    func(ctx context.Context, environmentEntity projectionstore.DaggerheartEnvironmentEntity) error
+	getDaggerheartEnvironment    func(ctx context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error)
+	deleteDaggerheartEnvironment func(ctx context.Context, campaignID, environmentEntityID string) error
+	listProjectionWatermarks     func(ctx context.Context) ([]storage.ProjectionWatermark, error)
 }
 
 func (f *fakeProjectionStore) Put(ctx context.Context, c storage.CampaignRecord) error {
@@ -313,6 +316,31 @@ func (f *fakeProjectionStore) ListDaggerheartAdversaries(context.Context, string
 func (f *fakeProjectionStore) DeleteDaggerheartAdversary(ctx context.Context, campaignID, adversaryID string) error {
 	if f.deleteDaggerheartAdversary != nil {
 		return f.deleteDaggerheartAdversary(ctx, campaignID, adversaryID)
+	}
+	return fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) PutDaggerheartEnvironmentEntity(ctx context.Context, environmentEntity projectionstore.DaggerheartEnvironmentEntity) error {
+	if f.putDaggerheartEnvironment != nil {
+		return f.putDaggerheartEnvironment(ctx, environmentEntity)
+	}
+	return fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) GetDaggerheartEnvironmentEntity(ctx context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error) {
+	if f.getDaggerheartEnvironment != nil {
+		return f.getDaggerheartEnvironment(ctx, campaignID, environmentEntityID)
+	}
+	return projectionstore.DaggerheartEnvironmentEntity{}, fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) ListDaggerheartEnvironmentEntities(context.Context, string, string, string) ([]projectionstore.DaggerheartEnvironmentEntity, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+
+func (f *fakeProjectionStore) DeleteDaggerheartEnvironmentEntity(ctx context.Context, campaignID, environmentEntityID string) error {
+	if f.deleteDaggerheartEnvironment != nil {
+		return f.deleteDaggerheartEnvironment(ctx, campaignID, environmentEntityID)
 	}
 	return fmt.Errorf("not implemented")
 }

@@ -11,7 +11,6 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
@@ -32,6 +31,7 @@ func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
 	characterClient := gamev1.NewCharacterServiceClient(conn)
 	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
+	sceneClient := gamev1.NewSceneServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
@@ -70,12 +70,27 @@ func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
 		t.Fatal("expected session")
 	}
 	sessionID := startSession.GetSession().GetId()
+	createScene, err := sceneClient.CreateScene(ctx, &gamev1.CreateSceneRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
+		Name:       "Adversary Flow Scene",
+		CharacterIds: []string{
+			target,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create scene: %v", err)
+	}
+	sceneID := createScene.GetSceneId()
+	if sceneID == "" {
+		t.Fatal("expected scene")
+	}
 
 	createAdversary, err := daggerheartClient.CreateAdversary(ctx, &daggerheartv1.DaggerheartCreateAdversaryRequest{
-		CampaignId: campaignID,
-		Name:       "Adversary One",
-		Kind:       "elite",
-		SessionId:  wrapperspb.String(sessionID),
+		CampaignId:       campaignID,
+		SessionId:        sessionID,
+		SceneId:          sceneID,
+		AdversaryEntryId: "adversary.integration-foe",
 	})
 	if err != nil {
 		t.Fatalf("create adversary: %v", err)
@@ -87,13 +102,12 @@ func TestDaggerheartAdversaryAttackFlow(t *testing.T) {
 	attackSeed := uint64(21)
 	damageSeed := uint64(42)
 	result, err := daggerheartClient.SessionAdversaryAttackFlow(ctx, &daggerheartv1.SessionAdversaryAttackFlowRequest{
-		CampaignId:     campaignID,
-		SessionId:      sessionID,
-		AdversaryId:    createAdversary.GetAdversary().GetId(),
-		TargetId:       target,
-		Difficulty:     1,
-		AttackModifier: 0,
-		DamageDice:     []*daggerheartv1.DiceSpec{{Sides: 6, Count: 1}},
+		CampaignId:  campaignID,
+		SessionId:   sessionID,
+		SceneId:     sceneID,
+		AdversaryId: createAdversary.GetAdversary().GetId(),
+		TargetId:    target,
+		Difficulty:  1,
 		Damage: &daggerheartv1.DaggerheartAttackDamageSpec{
 			DamageType: daggerheartv1.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 			Source:     "adversary attack",
