@@ -203,11 +203,14 @@ func patchBlackboxCharacterReadiness(
 		"params": map[string]any{
 			"name": "character_creation_workflow_apply",
 			"arguments": map[string]any{
-				"character_id":    characterID,
-				"class_id":        classID,
-				"subclass_id":     subclassID,
-				"ancestry_id":     ancestryID,
-				"community_id":    communityID,
+				"character_id": characterID,
+				"class_id":     classID,
+				"subclass_id":  subclassID,
+				"heritage": map[string]any{
+					"first_feature_ancestry_id":  ancestryID,
+					"second_feature_ancestry_id": ancestryID,
+					"community_id":               communityID,
+				},
 				"agility":         2,
 				"strength":        1,
 				"finesse":         1,

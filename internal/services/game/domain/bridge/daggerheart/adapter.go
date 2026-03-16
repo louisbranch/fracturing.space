@@ -74,6 +74,10 @@ func (a *Adapter) buildRouter() *module.AdapterRouter {
 	module.HandleAdapter(r, EventTypeDowntimeMoveApplied, a.handleDowntimeMoveApplied)
 	module.HandleAdapter(r, EventTypeLoadoutSwapped, a.handleLoadoutSwapped)
 	module.HandleAdapter(r, EventTypeCharacterStatePatched, a.handleCharacterStatePatched)
+	module.HandleAdapter(r, EventTypeBeastformTransformed, a.handleBeastformTransformed)
+	module.HandleAdapter(r, EventTypeBeastformDropped, a.handleBeastformDropped)
+	module.HandleAdapter(r, EventTypeCompanionExperienceBegun, a.handleCompanionExperienceBegun)
+	module.HandleAdapter(r, EventTypeCompanionReturned, a.handleCompanionReturned)
 	module.HandleAdapter(r, EventTypeConditionChanged, a.handleConditionChanged)
 	module.HandleAdapter(r, EventTypeAdversaryConditionChanged, a.handleAdversaryConditionChanged)
 	module.HandleAdapter(r, EventTypeGMFearChanged, a.handleGMFearChanged)
@@ -84,6 +88,9 @@ func (a *Adapter) buildRouter() *module.AdapterRouter {
 	module.HandleAdapter(r, EventTypeAdversaryDamageApplied, a.handleAdversaryDamageApplied)
 	module.HandleAdapter(r, EventTypeAdversaryUpdated, a.handleAdversaryUpdated)
 	module.HandleAdapter(r, EventTypeAdversaryDeleted, a.handleAdversaryDeleted)
+	module.HandleAdapter(r, EventTypeEnvironmentEntityCreated, a.handleEnvironmentEntityCreated)
+	module.HandleAdapter(r, EventTypeEnvironmentEntityUpdated, a.handleEnvironmentEntityUpdated)
+	module.HandleAdapter(r, EventTypeEnvironmentEntityDeleted, a.handleEnvironmentEntityDeleted)
 	module.HandleAdapter(r, EventTypeLevelUpApplied, a.handleLevelUpApplied)
 	module.HandleAdapter(r, EventTypeGoldUpdated, a.handleGoldUpdated)
 	module.HandleAdapter(r, EventTypeDomainCardAcquired, a.handleDomainCardAcquired)
@@ -100,22 +107,19 @@ func (a *Adapter) buildRouter() *module.AdapterRouter {
 // an ID directly, follow the trim convention.
 
 func (a *Adapter) handleDamageApplied(ctx context.Context, evt event.Event, payload DamageAppliedPayload) error {
-	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), payload.Hp, nil, nil, nil, payload.Armor, nil)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), payload.Hp, nil, nil, payload.Stress, payload.Armor, nil, nil, nil, nil, nil)
 }
 
 func (a *Adapter) handleRestTaken(ctx context.Context, evt event.Event, payload RestTakenPayload) error {
 	if err := a.putSnapshot(ctx, string(evt.CampaignID), payload.GMFear, payload.ShortRests); err != nil {
 		return err
 	}
-	for _, patch := range payload.CharacterStates {
-		characterID := strings.TrimSpace(patch.CharacterID.String())
+	for _, participantID := range payload.Participants {
+		characterID := strings.TrimSpace(participantID.String())
 		if payload.RefreshRest || payload.RefreshLongRest {
 			if err := a.clearRestTemporaryArmor(ctx, string(evt.CampaignID), characterID, payload.RefreshRest, payload.RefreshLongRest); err != nil {
 				return err
 			}
-		}
-		if err := a.applyStatePatch(ctx, string(evt.CampaignID), characterID, nil, patch.Hope, nil, patch.Stress, patch.Armor, nil); err != nil {
-			return err
 		}
 	}
 	return nil
@@ -145,20 +149,14 @@ func (a *Adapter) clearRestTemporaryArmor(ctx context.Context, campaignID, chara
 }
 
 func (a *Adapter) handleDowntimeMoveApplied(ctx context.Context, evt event.Event, payload DowntimeMoveAppliedPayload) error {
-	characterID := strings.TrimSpace(payload.CharacterID.String())
-	state, err := a.getCharacterStateOrDefault(ctx, string(evt.CampaignID), characterID)
-	if err != nil {
-		return err
+	characterID := strings.TrimSpace(payload.TargetCharacterID.String())
+	if characterID == "" {
+		characterID = strings.TrimSpace(payload.ActorCharacterID.String())
 	}
-	armorMax, err := a.characterArmorMax(ctx, state)
-	if err != nil {
-		return err
+	if characterID == "" {
+		return nil
 	}
-	nextState, err := projection.ApplyDowntimeMove(state, armorMax, payload.Move, payload.Hope, payload.Stress, payload.Armor)
-	if err != nil {
-		return err
-	}
-	return a.putCharacterState(ctx, nextState)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), characterID, payload.HP, payload.Hope, nil, payload.Stress, payload.Armor, nil, nil, nil, nil, nil)
 }
 
 func (a *Adapter) handleCharacterTemporaryArmorApplied(ctx context.Context, evt event.Event, payload CharacterTemporaryArmorAppliedPayload) error {
@@ -187,11 +185,37 @@ func (a *Adapter) handleCharacterTemporaryArmorApplied(ctx context.Context, evt 
 }
 
 func (a *Adapter) handleLoadoutSwapped(ctx context.Context, evt event.Event, payload LoadoutSwappedPayload) error {
-	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), nil, nil, nil, payload.Stress, nil, nil)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), nil, nil, nil, payload.Stress, nil, nil, nil, nil, nil, nil)
 }
 
 func (a *Adapter) handleCharacterStatePatched(ctx context.Context, evt event.Event, payload CharacterStatePatchedPayload) error {
-	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), payload.HP, payload.Hope, payload.HopeMax, payload.Stress, payload.Armor, payload.LifeState)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), payload.HP, payload.Hope, payload.HopeMax, payload.Stress, payload.Armor, payload.LifeState, payload.ClassState, payload.SubclassState, nil, payload.ImpenetrableUsedThisShortRest)
+}
+
+func (a *Adapter) handleBeastformTransformed(ctx context.Context, evt event.Event, payload BeastformTransformedPayload) error {
+	state, err := a.getCharacterStateOrDefault(ctx, string(evt.CampaignID), payload.CharacterID.String())
+	if err != nil {
+		return err
+	}
+	nextClassState := WithActiveBeastform(classStateFromProjection(state.ClassState), payload.ActiveBeastform)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), nil, payload.Hope, nil, payload.Stress, nil, nil, &nextClassState, nil, nil, nil)
+}
+
+func (a *Adapter) handleBeastformDropped(ctx context.Context, evt event.Event, payload BeastformDroppedPayload) error {
+	state, err := a.getCharacterStateOrDefault(ctx, string(evt.CampaignID), payload.CharacterID.String())
+	if err != nil {
+		return err
+	}
+	nextClassState := WithActiveBeastform(classStateFromProjection(state.ClassState), nil)
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), nil, nil, nil, nil, nil, nil, &nextClassState, nil, nil, nil)
+}
+
+func (a *Adapter) handleCompanionExperienceBegun(ctx context.Context, evt event.Event, payload CompanionExperienceBegunPayload) error {
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), nil, nil, nil, nil, nil, nil, nil, nil, payload.CompanionState, nil)
+}
+
+func (a *Adapter) handleCompanionReturned(ctx context.Context, evt event.Event, payload CompanionReturnedPayload) error {
+	return a.applyStatePatch(ctx, string(evt.CampaignID), payload.CharacterID.String(), nil, nil, nil, payload.Stress, nil, nil, nil, nil, payload.CompanionState, nil)
 }
 
 func (a *Adapter) handleConditionChanged(ctx context.Context, evt event.Event, payload ConditionChangedPayload) error {
@@ -199,7 +223,7 @@ func (a *Adapter) handleConditionChanged(ctx context.Context, evt event.Event, p
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("condition_changed roll_seq must be positive")
 	}
-	normalizedAfter, err := NormalizeConditions(payload.Conditions)
+	normalizedAfter, err := NormalizeConditionStates(payload.Conditions)
 	if err != nil {
 		return fmt.Errorf("condition_changed conditions_after: %w", err)
 	}
@@ -211,7 +235,7 @@ func (a *Adapter) handleAdversaryConditionChanged(ctx context.Context, evt event
 	if payload.RollSeq != nil && *payload.RollSeq == 0 {
 		return fmt.Errorf("adversary_condition_changed roll_seq must be positive")
 	}
-	normalizedAfter, err := NormalizeConditions(payload.Conditions)
+	normalizedAfter, err := NormalizeConditionStates(payload.Conditions)
 	if err != nil {
 		return fmt.Errorf("adversary_condition_changed conditions_after: %w", err)
 	}
@@ -265,22 +289,28 @@ func (a *Adapter) handleAdversaryCreated(ctx context.Context, evt event.Event, p
 	}
 	createdAt := evt.Timestamp.UTC()
 	return a.store.PutDaggerheartAdversary(ctx, projectionstore.DaggerheartAdversary{
-		CampaignID:  string(evt.CampaignID),
-		AdversaryID: strings.TrimSpace(payload.AdversaryID.String()),
-		Name:        strings.TrimSpace(payload.Name),
-		Kind:        strings.TrimSpace(payload.Kind),
-		SessionID:   strings.TrimSpace(payload.SessionID.String()),
-		Notes:       strings.TrimSpace(payload.Notes),
-		HP:          payload.HP,
-		HPMax:       payload.HPMax,
-		Stress:      payload.Stress,
-		StressMax:   payload.StressMax,
-		Evasion:     payload.Evasion,
-		Major:       payload.Major,
-		Severe:      payload.Severe,
-		Armor:       payload.Armor,
-		CreatedAt:   createdAt,
-		UpdatedAt:   createdAt,
+		CampaignID:        string(evt.CampaignID),
+		AdversaryID:       strings.TrimSpace(payload.AdversaryID.String()),
+		AdversaryEntryID:  strings.TrimSpace(payload.AdversaryEntryID),
+		Name:              strings.TrimSpace(payload.Name),
+		Kind:              strings.TrimSpace(payload.Kind),
+		SessionID:         strings.TrimSpace(payload.SessionID.String()),
+		SceneID:           strings.TrimSpace(payload.SceneID.String()),
+		Notes:             strings.TrimSpace(payload.Notes),
+		HP:                payload.HP,
+		HPMax:             payload.HPMax,
+		Stress:            payload.Stress,
+		StressMax:         payload.StressMax,
+		Evasion:           payload.Evasion,
+		Major:             payload.Major,
+		Severe:            payload.Severe,
+		Armor:             payload.Armor,
+		FeatureStates:     toProjectionAdversaryFeatureStates(payload.FeatureStates),
+		PendingExperience: toProjectionAdversaryPendingExperience(payload.PendingExperience),
+		SpotlightGateID:   strings.TrimSpace(payload.SpotlightGateID.String()),
+		SpotlightCount:    payload.SpotlightCount,
+		CreatedAt:         createdAt,
+		UpdatedAt:         createdAt,
 	})
 }
 
@@ -295,24 +325,52 @@ func (a *Adapter) handleAdversaryUpdated(ctx context.Context, evt event.Event, p
 	}
 	updatedAt := evt.Timestamp.UTC()
 	return a.store.PutDaggerheartAdversary(ctx, projectionstore.DaggerheartAdversary{
-		CampaignID:  string(evt.CampaignID),
-		AdversaryID: adversaryID,
-		Name:        strings.TrimSpace(payload.Name),
-		Kind:        strings.TrimSpace(payload.Kind),
-		SessionID:   strings.TrimSpace(payload.SessionID.String()),
-		Notes:       strings.TrimSpace(payload.Notes),
-		HP:          payload.HP,
-		HPMax:       payload.HPMax,
-		Stress:      payload.Stress,
-		StressMax:   payload.StressMax,
-		Evasion:     payload.Evasion,
-		Major:       payload.Major,
-		Severe:      payload.Severe,
-		Armor:       payload.Armor,
-		Conditions:  current.Conditions,
-		CreatedAt:   current.CreatedAt,
-		UpdatedAt:   updatedAt,
+		CampaignID:        string(evt.CampaignID),
+		AdversaryID:       adversaryID,
+		AdversaryEntryID:  strings.TrimSpace(payload.AdversaryEntryID),
+		Name:              strings.TrimSpace(payload.Name),
+		Kind:              strings.TrimSpace(payload.Kind),
+		SessionID:         strings.TrimSpace(payload.SessionID.String()),
+		SceneID:           strings.TrimSpace(payload.SceneID.String()),
+		Notes:             strings.TrimSpace(payload.Notes),
+		HP:                payload.HP,
+		HPMax:             payload.HPMax,
+		Stress:            payload.Stress,
+		StressMax:         payload.StressMax,
+		Evasion:           payload.Evasion,
+		Major:             payload.Major,
+		Severe:            payload.Severe,
+		Armor:             payload.Armor,
+		Conditions:        current.Conditions,
+		FeatureStates:     toProjectionAdversaryFeatureStates(payload.FeatureStates),
+		PendingExperience: toProjectionAdversaryPendingExperience(payload.PendingExperience),
+		SpotlightGateID:   strings.TrimSpace(payload.SpotlightGateID.String()),
+		SpotlightCount:    payload.SpotlightCount,
+		CreatedAt:         current.CreatedAt,
+		UpdatedAt:         updatedAt,
 	})
+}
+
+func toProjectionAdversaryFeatureStates(in []AdversaryFeatureState) []projectionstore.DaggerheartAdversaryFeatureState {
+	out := make([]projectionstore.DaggerheartAdversaryFeatureState, 0, len(in))
+	for _, featureState := range in {
+		out = append(out, projectionstore.DaggerheartAdversaryFeatureState{
+			FeatureID:       strings.TrimSpace(featureState.FeatureID),
+			Status:          strings.TrimSpace(featureState.Status),
+			FocusedTargetID: strings.TrimSpace(featureState.FocusedTargetID),
+		})
+	}
+	return out
+}
+
+func toProjectionAdversaryPendingExperience(in *AdversaryPendingExperience) *projectionstore.DaggerheartAdversaryPendingExperience {
+	if in == nil {
+		return nil
+	}
+	return &projectionstore.DaggerheartAdversaryPendingExperience{
+		Name:     strings.TrimSpace(in.Name),
+		Modifier: in.Modifier,
+	}
 }
 
 func (a *Adapter) handleAdversaryDamageApplied(ctx context.Context, evt event.Event, payload AdversaryDamageAppliedPayload) error {
@@ -335,6 +393,50 @@ func (a *Adapter) handleAdversaryDamageApplied(ctx context.Context, evt event.Ev
 
 func (a *Adapter) handleAdversaryDeleted(ctx context.Context, evt event.Event, payload AdversaryDeletedPayload) error {
 	return a.store.DeleteDaggerheartAdversary(ctx, string(evt.CampaignID), strings.TrimSpace(payload.AdversaryID.String()))
+}
+
+func (a *Adapter) handleEnvironmentEntityCreated(ctx context.Context, evt event.Event, payload EnvironmentEntityCreatedPayload) error {
+	createdAt := evt.Timestamp.UTC()
+	return a.store.PutDaggerheartEnvironmentEntity(ctx, projectionstore.DaggerheartEnvironmentEntity{
+		CampaignID:          string(evt.CampaignID),
+		EnvironmentEntityID: strings.TrimSpace(payload.EnvironmentEntityID.String()),
+		EnvironmentID:       strings.TrimSpace(payload.EnvironmentID),
+		Name:                strings.TrimSpace(payload.Name),
+		Type:                strings.TrimSpace(payload.Type),
+		Tier:                payload.Tier,
+		Difficulty:          payload.Difficulty,
+		SessionID:           strings.TrimSpace(payload.SessionID.String()),
+		SceneID:             strings.TrimSpace(payload.SceneID.String()),
+		Notes:               strings.TrimSpace(payload.Notes),
+		CreatedAt:           createdAt,
+		UpdatedAt:           createdAt,
+	})
+}
+
+func (a *Adapter) handleEnvironmentEntityUpdated(ctx context.Context, evt event.Event, payload EnvironmentEntityUpdatedPayload) error {
+	environmentEntityID := strings.TrimSpace(payload.EnvironmentEntityID.String())
+	current, err := a.store.GetDaggerheartEnvironmentEntity(ctx, string(evt.CampaignID), environmentEntityID)
+	if err != nil {
+		return err
+	}
+	return a.store.PutDaggerheartEnvironmentEntity(ctx, projectionstore.DaggerheartEnvironmentEntity{
+		CampaignID:          string(evt.CampaignID),
+		EnvironmentEntityID: environmentEntityID,
+		EnvironmentID:       strings.TrimSpace(payload.EnvironmentID),
+		Name:                strings.TrimSpace(payload.Name),
+		Type:                strings.TrimSpace(payload.Type),
+		Tier:                payload.Tier,
+		Difficulty:          payload.Difficulty,
+		SessionID:           strings.TrimSpace(payload.SessionID.String()),
+		SceneID:             strings.TrimSpace(payload.SceneID.String()),
+		Notes:               strings.TrimSpace(payload.Notes),
+		CreatedAt:           current.CreatedAt,
+		UpdatedAt:           evt.Timestamp.UTC(),
+	})
+}
+
+func (a *Adapter) handleEnvironmentEntityDeleted(ctx context.Context, evt event.Event, payload EnvironmentEntityDeletedPayload) error {
+	return a.store.DeleteDaggerheartEnvironmentEntity(ctx, string(evt.CampaignID), strings.TrimSpace(payload.EnvironmentEntityID.String()))
 }
 
 func (a *Adapter) handleLevelUpApplied(ctx context.Context, evt event.Event, payload LevelUpAppliedPayload) error {
@@ -381,8 +483,75 @@ func (a *Adapter) handleDomainCardAcquired(ctx context.Context, evt event.Event,
 	return a.store.PutDaggerheartCharacterProfile(ctx, profile)
 }
 
-func (a *Adapter) handleEquipmentSwapped(_ context.Context, _ event.Event, _ EquipmentSwappedPayload) error {
-	// Equipment state is event-sourced; no projection update needed.
+func (a *Adapter) handleEquipmentSwapped(ctx context.Context, evt event.Event, payload EquipmentSwappedPayload) error {
+	characterID := strings.TrimSpace(payload.CharacterID.String())
+	if characterID == "" {
+		return nil
+	}
+	if strings.TrimSpace(payload.ItemType) == "armor" {
+		profile, err := a.store.GetDaggerheartCharacterProfile(ctx, string(evt.CampaignID), characterID)
+		if err != nil {
+			if !errors.Is(err, storage.ErrNotFound) {
+				return fmt.Errorf("get daggerheart character profile for equipment swap: %w", err)
+			}
+		} else {
+			profile.EquippedArmorID = strings.TrimSpace(payload.EquippedArmorID)
+			if payload.EvasionAfter != nil {
+				profile.Evasion = *payload.EvasionAfter
+			}
+			if payload.MajorThresholdAfter != nil {
+				profile.MajorThreshold = *payload.MajorThresholdAfter
+			}
+			if payload.SevereThresholdAfter != nil {
+				profile.SevereThreshold = *payload.SevereThresholdAfter
+			}
+			if payload.ArmorScoreAfter != nil {
+				profile.ArmorScore = *payload.ArmorScoreAfter
+			}
+			if payload.ArmorMaxAfter != nil {
+				profile.ArmorMax = *payload.ArmorMaxAfter
+			}
+			if payload.SpellcastRollBonusAfter != nil {
+				profile.SpellcastRollBonus = *payload.SpellcastRollBonusAfter
+			}
+			if payload.AgilityAfter != nil {
+				profile.Agility = *payload.AgilityAfter
+			}
+			if payload.StrengthAfter != nil {
+				profile.Strength = *payload.StrengthAfter
+			}
+			if payload.FinesseAfter != nil {
+				profile.Finesse = *payload.FinesseAfter
+			}
+			if payload.InstinctAfter != nil {
+				profile.Instinct = *payload.InstinctAfter
+			}
+			if payload.PresenceAfter != nil {
+				profile.Presence = *payload.PresenceAfter
+			}
+			if payload.KnowledgeAfter != nil {
+				profile.Knowledge = *payload.KnowledgeAfter
+			}
+			if err := a.store.PutDaggerheartCharacterProfile(ctx, profile); err != nil {
+				return fmt.Errorf("put daggerheart character profile for equipment swap: %w", err)
+			}
+		}
+		if payload.ArmorAfter != nil {
+			if err := a.applyStatePatch(ctx, string(evt.CampaignID), characterID, nil, nil, nil, nil, payload.ArmorAfter, nil, nil, nil, nil, nil); err != nil {
+				return err
+			}
+		}
+	}
+	if payload.StressCost > 0 {
+		state, err := a.getCharacterStateOrDefault(ctx, string(evt.CampaignID), characterID)
+		if err != nil {
+			return err
+		}
+		stressAfter := state.Stress + payload.StressCost
+		if err := a.applyStatePatch(ctx, string(evt.CampaignID), characterID, nil, nil, nil, &stressAfter, nil, nil, nil, nil, nil, nil); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -421,7 +590,7 @@ func (a *Adapter) characterArmorMax(ctx context.Context, state projectionstore.D
 	return profile.ArmorMax, nil
 }
 
-func (a *Adapter) applyStatePatch(ctx context.Context, campaignID, characterID string, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string) error {
+func (a *Adapter) applyStatePatch(ctx context.Context, campaignID, characterID string, hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int, lifeStateAfter *string, classStateAfter *CharacterClassState, subclassStateAfter *CharacterSubclassState, companionStateAfter *CharacterCompanionState, impenetrableUsedThisShortRestAfter *bool) error {
 	state, err := a.getCharacterStateOrDefault(ctx, campaignID, characterID)
 	if err != nil {
 		return err
@@ -439,6 +608,10 @@ func (a *Adapter) applyStatePatch(ctx context.Context, campaignID, characterID s
 		stressAfter,
 		armorAfter,
 		lifeStateAfter,
+		classStateToProjection(classStateAfter),
+		subclassStateToProjection(subclassStateAfter),
+		companionStateToProjection(companionStateAfter),
+		impenetrableUsedThisShortRestAfter,
 	)
 	if err != nil {
 		return err
@@ -446,7 +619,176 @@ func (a *Adapter) applyStatePatch(ctx context.Context, campaignID, characterID s
 	return a.putCharacterState(ctx, nextState)
 }
 
-func (a *Adapter) applyConditionPatch(ctx context.Context, campaignID, characterID string, conditions []string) error {
+func subclassStateToProjection(value *CharacterSubclassState) *projectionstore.DaggerheartSubclassState {
+	normalized := normalizedSubclassStatePtr(value)
+	if normalized == nil {
+		return nil
+	}
+	return &projectionstore.DaggerheartSubclassState{
+		BattleRitualUsedThisLongRest:           normalized.BattleRitualUsedThisLongRest,
+		GiftedPerformerRelaxingSongUses:        normalized.GiftedPerformerRelaxingSongUses,
+		GiftedPerformerEpicSongUses:            normalized.GiftedPerformerEpicSongUses,
+		GiftedPerformerHeartbreakingSongUses:   normalized.GiftedPerformerHeartbreakingSongUses,
+		ContactsEverywhereUsesThisSession:      normalized.ContactsEverywhereUsesThisSession,
+		ContactsEverywhereActionDieBonus:       normalized.ContactsEverywhereActionDieBonus,
+		ContactsEverywhereDamageDiceBonusCount: normalized.ContactsEverywhereDamageDiceBonusCount,
+		SparingTouchUsesThisLongRest:           normalized.SparingTouchUsesThisLongRest,
+		ElementalistActionBonus:                normalized.ElementalistActionBonus,
+		ElementalistDamageBonus:                normalized.ElementalistDamageBonus,
+		TranscendenceActive:                    normalized.TranscendenceActive,
+		TranscendenceTraitBonusTarget:          normalized.TranscendenceTraitBonusTarget,
+		TranscendenceTraitBonusValue:           normalized.TranscendenceTraitBonusValue,
+		TranscendenceProficiencyBonus:          normalized.TranscendenceProficiencyBonus,
+		TranscendenceEvasionBonus:              normalized.TranscendenceEvasionBonus,
+		TranscendenceSevereThresholdBonus:      normalized.TranscendenceSevereThresholdBonus,
+		ClarityOfNatureUsedThisLongRest:        normalized.ClarityOfNatureUsedThisLongRest,
+		ElementalChannel:                       normalized.ElementalChannel,
+		NemesisTargetID:                        normalized.NemesisTargetID,
+		RousingSpeechUsedThisLongRest:          normalized.RousingSpeechUsedThisLongRest,
+		WardensProtectionUsedThisLongRest:      normalized.WardensProtectionUsedThisLongRest,
+	}
+}
+
+func classStateToProjection(value *CharacterClassState) *projectionstore.DaggerheartClassState {
+	if value == nil {
+		return nil
+	}
+	normalized := value.Normalized()
+	return &projectionstore.DaggerheartClassState{
+		AttackBonusUntilRest:       normalized.AttackBonusUntilRest,
+		EvasionBonusUntilHitOrRest: normalized.EvasionBonusUntilHitOrRest,
+		DifficultyPenaltyUntilRest: normalized.DifficultyPenaltyUntilRest,
+		FocusTargetID:              normalized.FocusTargetID,
+		ActiveBeastform:            activeBeastformToProjection(normalized.ActiveBeastform),
+		StrangePatternsNumber:      normalized.StrangePatternsNumber,
+		RallyDice:                  append([]int(nil), normalized.RallyDice...),
+		PrayerDice:                 append([]int(nil), normalized.PrayerDice...),
+		Unstoppable: projectionstore.DaggerheartUnstoppableState{
+			Active:           normalized.Unstoppable.Active,
+			CurrentValue:     normalized.Unstoppable.CurrentValue,
+			DieSides:         normalized.Unstoppable.DieSides,
+			UsedThisLongRest: normalized.Unstoppable.UsedThisLongRest,
+		},
+		ChannelRawPowerUsedThisLongRest: normalized.ChannelRawPowerUsedThisLongRest,
+	}
+}
+
+func companionStateToProjection(value *CharacterCompanionState) *projectionstore.DaggerheartCompanionState {
+	normalized := normalizedCompanionStatePtr(value)
+	if normalized == nil {
+		return nil
+	}
+	return &projectionstore.DaggerheartCompanionState{
+		Status:             normalized.Status,
+		ActiveExperienceID: normalized.ActiveExperienceID,
+	}
+}
+
+func activeBeastformToProjection(value *CharacterActiveBeastformState) *projectionstore.DaggerheartActiveBeastformState {
+	normalized := normalizedActiveBeastformPtr(value)
+	if normalized == nil {
+		return nil
+	}
+	damageDice := make([]projectionstore.DaggerheartDamageDie, 0, len(normalized.DamageDice))
+	for _, die := range normalized.DamageDice {
+		damageDice = append(damageDice, projectionstore.DaggerheartDamageDie{Count: die.Count, Sides: die.Sides})
+	}
+	return &projectionstore.DaggerheartActiveBeastformState{
+		BeastformID:            normalized.BeastformID,
+		BaseTrait:              normalized.BaseTrait,
+		AttackTrait:            normalized.AttackTrait,
+		TraitBonus:             normalized.TraitBonus,
+		EvasionBonus:           normalized.EvasionBonus,
+		AttackRange:            normalized.AttackRange,
+		DamageDice:             damageDice,
+		DamageBonus:            normalized.DamageBonus,
+		DamageType:             normalized.DamageType,
+		EvolutionTraitOverride: normalized.EvolutionTraitOverride,
+		DropOnAnyHPMark:        normalized.DropOnAnyHPMark,
+	}
+}
+
+func classStateFromProjection(value projectionstore.DaggerheartClassState) CharacterClassState {
+	damageDice := []CharacterDamageDie(nil)
+	active := normalizedActiveBeastformPtr(nil)
+	if value.ActiveBeastform != nil {
+		damageDice = make([]CharacterDamageDie, 0, len(value.ActiveBeastform.DamageDice))
+		for _, die := range value.ActiveBeastform.DamageDice {
+			damageDice = append(damageDice, CharacterDamageDie{Count: die.Count, Sides: die.Sides})
+		}
+		active = &CharacterActiveBeastformState{
+			BeastformID:            value.ActiveBeastform.BeastformID,
+			BaseTrait:              value.ActiveBeastform.BaseTrait,
+			AttackTrait:            value.ActiveBeastform.AttackTrait,
+			TraitBonus:             value.ActiveBeastform.TraitBonus,
+			EvasionBonus:           value.ActiveBeastform.EvasionBonus,
+			AttackRange:            value.ActiveBeastform.AttackRange,
+			DamageDice:             damageDice,
+			DamageBonus:            value.ActiveBeastform.DamageBonus,
+			DamageType:             value.ActiveBeastform.DamageType,
+			EvolutionTraitOverride: value.ActiveBeastform.EvolutionTraitOverride,
+			DropOnAnyHPMark:        value.ActiveBeastform.DropOnAnyHPMark,
+		}
+	}
+	return CharacterClassState{
+		AttackBonusUntilRest:            value.AttackBonusUntilRest,
+		EvasionBonusUntilHitOrRest:      value.EvasionBonusUntilHitOrRest,
+		DifficultyPenaltyUntilRest:      value.DifficultyPenaltyUntilRest,
+		FocusTargetID:                   value.FocusTargetID,
+		ActiveBeastform:                 active,
+		StrangePatternsNumber:           value.StrangePatternsNumber,
+		RallyDice:                       append([]int(nil), value.RallyDice...),
+		PrayerDice:                      append([]int(nil), value.PrayerDice...),
+		ChannelRawPowerUsedThisLongRest: value.ChannelRawPowerUsedThisLongRest,
+		Unstoppable: CharacterUnstoppableState{
+			Active:           value.Unstoppable.Active,
+			CurrentValue:     value.Unstoppable.CurrentValue,
+			DieSides:         value.Unstoppable.DieSides,
+			UsedThisLongRest: value.Unstoppable.UsedThisLongRest,
+		},
+	}.Normalized()
+}
+
+func subclassStateFromProjection(value *projectionstore.DaggerheartSubclassState) *CharacterSubclassState {
+	if value == nil {
+		return nil
+	}
+	return normalizedSubclassStatePtr(&CharacterSubclassState{
+		BattleRitualUsedThisLongRest:           value.BattleRitualUsedThisLongRest,
+		GiftedPerformerRelaxingSongUses:        value.GiftedPerformerRelaxingSongUses,
+		GiftedPerformerEpicSongUses:            value.GiftedPerformerEpicSongUses,
+		GiftedPerformerHeartbreakingSongUses:   value.GiftedPerformerHeartbreakingSongUses,
+		ContactsEverywhereUsesThisSession:      value.ContactsEverywhereUsesThisSession,
+		ContactsEverywhereActionDieBonus:       value.ContactsEverywhereActionDieBonus,
+		ContactsEverywhereDamageDiceBonusCount: value.ContactsEverywhereDamageDiceBonusCount,
+		SparingTouchUsesThisLongRest:           value.SparingTouchUsesThisLongRest,
+		ElementalistActionBonus:                value.ElementalistActionBonus,
+		ElementalistDamageBonus:                value.ElementalistDamageBonus,
+		TranscendenceActive:                    value.TranscendenceActive,
+		TranscendenceTraitBonusTarget:          value.TranscendenceTraitBonusTarget,
+		TranscendenceTraitBonusValue:           value.TranscendenceTraitBonusValue,
+		TranscendenceProficiencyBonus:          value.TranscendenceProficiencyBonus,
+		TranscendenceEvasionBonus:              value.TranscendenceEvasionBonus,
+		TranscendenceSevereThresholdBonus:      value.TranscendenceSevereThresholdBonus,
+		ClarityOfNatureUsedThisLongRest:        value.ClarityOfNatureUsedThisLongRest,
+		ElementalChannel:                       value.ElementalChannel,
+		NemesisTargetID:                        value.NemesisTargetID,
+		RousingSpeechUsedThisLongRest:          value.RousingSpeechUsedThisLongRest,
+		WardensProtectionUsedThisLongRest:      value.WardensProtectionUsedThisLongRest,
+	})
+}
+
+func companionStateFromProjection(value *projectionstore.DaggerheartCompanionState) *CharacterCompanionState {
+	if value == nil {
+		return nil
+	}
+	return normalizedCompanionStatePtr(&CharacterCompanionState{
+		Status:             value.Status,
+		ActiveExperienceID: value.ActiveExperienceID,
+	})
+}
+
+func (a *Adapter) applyConditionPatch(ctx context.Context, campaignID, characterID string, conditions []ConditionState) error {
 	state, err := a.getCharacterStateOrDefault(ctx, campaignID, characterID)
 	if err != nil {
 		return err
@@ -455,18 +797,41 @@ func (a *Adapter) applyConditionPatch(ctx context.Context, campaignID, character
 	if err != nil {
 		return err
 	}
-	nextState := projection.ApplyConditionPatch(state, armorMax, conditions)
+	nextState := projection.ApplyConditionPatch(state, armorMax, conditionStatesToProjection(conditions))
 	return a.putCharacterState(ctx, nextState)
 }
 
-func (a *Adapter) applyAdversaryConditionPatch(ctx context.Context, campaignID, adversaryID string, conditions []string) error {
+func (a *Adapter) applyAdversaryConditionPatch(ctx context.Context, campaignID, adversaryID string, conditions []ConditionState) error {
 	adversary, err := a.store.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
 	if err != nil {
 		return fmt.Errorf("get daggerheart adversary: %w", err)
 	}
-	next := projection.ApplyAdversaryConditionPatch(adversary, conditions)
+	next := projection.ApplyAdversaryConditionPatch(adversary, conditionStatesToProjection(conditions))
 	if err := a.store.PutDaggerheartAdversary(ctx, next); err != nil {
 		return fmt.Errorf("put daggerheart adversary: %w", err)
 	}
 	return nil
+}
+
+func conditionStatesToProjection(values []ConditionState) []projectionstore.DaggerheartConditionState {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]projectionstore.DaggerheartConditionState, 0, len(values))
+	for _, value := range values {
+		entry := projectionstore.DaggerheartConditionState{
+			ID:       value.ID,
+			Class:    string(value.Class),
+			Standard: value.Standard,
+			Code:     value.Code,
+			Label:    value.Label,
+			Source:   value.Source,
+			SourceID: value.SourceID,
+		}
+		for _, trigger := range value.ClearTriggers {
+			entry.ClearTriggers = append(entry.ClearTriggers, string(trigger))
+		}
+		result = append(result, entry)
+	}
+	return result
 }

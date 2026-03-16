@@ -1,7 +1,7 @@
 local scn = Scenario.new("gm_move_examples")
 local dh = scn:system("DAGGERHEART")
 
--- Showcase a few GM move examples tied to roll outcomes.
+-- Showcase typed direct GM move spends tied to roll outcomes.
 scn:campaign{
   name = "GM Move Examples",
   system = "DAGGERHEART",
@@ -16,15 +16,15 @@ dh:adversary("Nazgul")
 scn:start_session("GM Moves")
 dh:gm_fear(2)
 
--- Example: roll with Fear triggers a move showing how the world reacts.
+-- Example: an additional move can still be recorded explicitly without opening
+-- a new interruption gate.
+dh:gm_spend_fear(1):move("custom", { description = "Ash and embers swirl through the chamber." })
+
+-- Example: roll with Fear triggers an interrupt-style move that opens the GM
+-- consequence path.
 dh:action_roll{ actor = "Gandalf", trait = "presence", difficulty = 12, outcome = "success_hope" }
 dh:apply_roll_outcome{}
-dh:gm_spend_fear(1):spotlight("Nazgul", { description = "reveal immediate danger" })
-
--- Example: a hard move foreshadows danger even when the door opens.
--- Missing DSL: encode the specific GM move type and consequence.
-dh:gm_spend_fear(1):spotlight("Gandalf", { description = "mark stress consequence" })
-scn:set_spotlight{ target = "Gandalf" }
+dh:gm_spend_fear(1):move("reveal_danger", { description = "The Nazgul closes the distance in a blur." })
 
 -- Close the session after the GM move sequence.
 scn:end_session()

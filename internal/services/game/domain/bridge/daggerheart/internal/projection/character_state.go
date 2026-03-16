@@ -41,7 +41,7 @@ func CharacterStateFromStorage(state projectionstore.DaggerheartCharacterState, 
 		ArmorMax:    armorMax,
 		LifeState:   state.LifeState,
 	})
-	domainState.Conditions = append([]string(nil), state.Conditions...)
+	domainState.Conditions = projectionConditionCodes(state.Conditions)
 	domainState.ArmorBonus = make([]mechanics.TemporaryArmorBucket, 0, len(state.TemporaryArmor))
 	for _, bucket := range state.TemporaryArmor {
 		domainState.ArmorBonus = append(domainState.ArmorBonus, mechanics.TemporaryArmorBucket{
@@ -80,7 +80,7 @@ func StorageCharacterStateFromDomain(state *mechanics.CharacterState) projection
 		HopeMax:        state.HopeMax,
 		Stress:         state.Stress,
 		Armor:          state.Armor,
-		Conditions:     append([]string(nil), state.Conditions...),
+		Conditions:     projectionStandardConditionsFromCodes(state.Conditions),
 		TemporaryArmor: temporaryArmor,
 		LifeState:      state.LifeState,
 	}
@@ -92,6 +92,10 @@ func ApplyStatePatch(
 	armorMax int,
 	hpAfter, hopeAfter, hopeMaxAfter, stressAfter, armorAfter *int,
 	lifeStateAfter *string,
+	classStateAfter *projectionstore.DaggerheartClassState,
+	subclassStateAfter *projectionstore.DaggerheartSubclassState,
+	companionStateAfter *projectionstore.DaggerheartCompanionState,
+	impenetrableUsedThisShortRestAfter *bool,
 ) (projectionstore.DaggerheartCharacterState, error) {
 	domainState := CharacterStateFromStorage(state, armorMax)
 	reducer.ApplyCharacterStatePatch(&domainState, reducer.CharacterStatePatch{
@@ -105,14 +109,60 @@ func ApplyStatePatch(
 	if err := reducer.NormalizeAndValidateCharacterState(&domainState); err != nil {
 		return projectionstore.DaggerheartCharacterState{}, err
 	}
-	return StorageCharacterStateFromDomain(&domainState), nil
+	next := StorageCharacterStateFromDomain(&domainState)
+	next.ClassState = state.ClassState
+	if classStateAfter != nil {
+		next.ClassState = *classStateAfter
+	}
+	next.SubclassState = state.SubclassState
+	if subclassStateAfter != nil {
+		next.SubclassState = subclassStateAfter
+		if next.SubclassState.BattleRitualUsedThisLongRest == false &&
+			next.SubclassState.GiftedPerformerRelaxingSongUses == 0 &&
+			next.SubclassState.GiftedPerformerEpicSongUses == 0 &&
+			next.SubclassState.GiftedPerformerHeartbreakingSongUses == 0 &&
+			next.SubclassState.ContactsEverywhereUsesThisSession == 0 &&
+			next.SubclassState.ContactsEverywhereActionDieBonus == 0 &&
+			next.SubclassState.ContactsEverywhereDamageDiceBonusCount == 0 &&
+			next.SubclassState.SparingTouchUsesThisLongRest == 0 &&
+			next.SubclassState.ElementalistActionBonus == 0 &&
+			next.SubclassState.ElementalistDamageBonus == 0 &&
+			next.SubclassState.TranscendenceActive == false &&
+			next.SubclassState.TranscendenceTraitBonusTarget == "" &&
+			next.SubclassState.TranscendenceTraitBonusValue == 0 &&
+			next.SubclassState.TranscendenceProficiencyBonus == 0 &&
+			next.SubclassState.TranscendenceEvasionBonus == 0 &&
+			next.SubclassState.TranscendenceSevereThresholdBonus == 0 &&
+			next.SubclassState.ClarityOfNatureUsedThisLongRest == false &&
+			next.SubclassState.ElementalChannel == "" &&
+			next.SubclassState.NemesisTargetID == "" &&
+			next.SubclassState.RousingSpeechUsedThisLongRest == false &&
+			next.SubclassState.WardensProtectionUsedThisLongRest == false {
+			next.SubclassState = nil
+		}
+	}
+	next.CompanionState = state.CompanionState
+	if companionStateAfter != nil {
+		next.CompanionState = companionStateAfter
+	}
+	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
+	if impenetrableUsedThisShortRestAfter != nil {
+		next.ImpenetrableUsedThisShortRest = *impenetrableUsedThisShortRestAfter
+	}
+	return next, nil
 }
 
 // ApplyConditionPatch applies a normalized condition list to state.
-func ApplyConditionPatch(state projectionstore.DaggerheartCharacterState, armorMax int, conditions []string) projectionstore.DaggerheartCharacterState {
+func ApplyConditionPatch(state projectionstore.DaggerheartCharacterState, armorMax int, conditions []projectionstore.DaggerheartConditionState) projectionstore.DaggerheartCharacterState {
 	domainState := CharacterStateFromStorage(state, armorMax)
-	reducer.ApplyConditionPatch(&domainState, conditions)
-	return StorageCharacterStateFromDomain(&domainState)
+	reducer.ApplyConditionPatch(&domainState, projectionConditionCodes(conditions))
+	next := StorageCharacterStateFromDomain(&domainState)
+	next.Conditions = append([]projectionstore.DaggerheartConditionState(nil), conditions...)
+	next.ClassState = state.ClassState
+	next.SubclassState = state.SubclassState
+	next.CompanionState = state.CompanionState
+	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
+	return next
 }
 
 // ApplyTemporaryArmor applies a temporary armor patch and normalizes bounds.
@@ -132,7 +182,12 @@ func ApplyTemporaryArmor(
 	if err := reducer.NormalizeAndValidateCharacterState(&domainState); err != nil {
 		return projectionstore.DaggerheartCharacterState{}, err
 	}
-	return StorageCharacterStateFromDomain(&domainState), nil
+	next := StorageCharacterStateFromDomain(&domainState)
+	next.ClassState = state.ClassState
+	next.SubclassState = state.SubclassState
+	next.CompanionState = state.CompanionState
+	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
+	return next, nil
 }
 
 // ApplyDowntimeMove applies downtime move effects and normalizes bounds.
@@ -147,7 +202,12 @@ func ApplyDowntimeMove(
 	if err := reducer.NormalizeAndValidateCharacterState(&domainState); err != nil {
 		return projectionstore.DaggerheartCharacterState{}, err
 	}
-	return StorageCharacterStateFromDomain(&domainState), nil
+	next := StorageCharacterStateFromDomain(&domainState)
+	next.ClassState = state.ClassState
+	next.SubclassState = state.SubclassState
+	next.CompanionState = state.CompanionState
+	next.ImpenetrableUsedThisShortRest = state.ImpenetrableUsedThisShortRest
+	return next, nil
 }
 
 // ClearRestTemporaryArmor removes temporary armor by rest duration and returns
@@ -163,8 +223,114 @@ func ClearRestTemporaryArmor(
 	beforeArmorBonus := append([]mechanics.TemporaryArmorBucket(nil), domainState.ArmorBonus...)
 	reducer.ClearRestTemporaryArmor(&domainState, clearShortRest, clearLongRest)
 	changed := beforeArmor != domainState.Armor || !reflect.DeepEqual(beforeArmorBonus, domainState.ArmorBonus)
+	if (clearShortRest || clearLongRest) && state.ImpenetrableUsedThisShortRest {
+		changed = true
+	}
 	if !changed {
 		return state, false
 	}
-	return StorageCharacterStateFromDomain(&domainState), true
+	next := StorageCharacterStateFromDomain(&domainState)
+	next.Conditions = append([]projectionstore.DaggerheartConditionState(nil), state.Conditions...)
+	if clearShortRest {
+		next.Conditions = clearProjectionConditionsByTrigger(next.Conditions, "short_rest")
+	}
+	if clearLongRest {
+		next.Conditions = clearProjectionConditionsByTrigger(next.Conditions, "long_rest")
+	}
+	next.ClassState = state.ClassState
+	next.SubclassState = state.SubclassState
+	next.CompanionState = state.CompanionState
+	next.ClassState.AttackBonusUntilRest = 0
+	next.ClassState.EvasionBonusUntilHitOrRest = 0
+	next.ClassState.DifficultyPenaltyUntilRest = 0
+	if next.SubclassState != nil {
+		next.SubclassState.ElementalistActionBonus = 0
+		next.SubclassState.ElementalistDamageBonus = 0
+		next.SubclassState.TranscendenceActive = false
+		next.SubclassState.TranscendenceTraitBonusTarget = ""
+		next.SubclassState.TranscendenceTraitBonusValue = 0
+		next.SubclassState.TranscendenceProficiencyBonus = 0
+		next.SubclassState.TranscendenceEvasionBonus = 0
+		next.SubclassState.TranscendenceSevereThresholdBonus = 0
+		next.SubclassState.ClarityOfNatureUsedThisLongRest = false
+		next.SubclassState.ElementalChannel = ""
+		next.SubclassState.NemesisTargetID = ""
+	}
+	if clearLongRest {
+		next.ClassState.Unstoppable.UsedThisLongRest = false
+		next.ClassState.ChannelRawPowerUsedThisLongRest = false
+		if next.SubclassState != nil {
+			next.SubclassState.BattleRitualUsedThisLongRest = false
+			next.SubclassState.GiftedPerformerRelaxingSongUses = 0
+			next.SubclassState.GiftedPerformerEpicSongUses = 0
+			next.SubclassState.GiftedPerformerHeartbreakingSongUses = 0
+			next.SubclassState.SparingTouchUsesThisLongRest = 0
+			next.SubclassState.ClarityOfNatureUsedThisLongRest = false
+			next.SubclassState.RousingSpeechUsedThisLongRest = false
+			next.SubclassState.WardensProtectionUsedThisLongRest = false
+		}
+	}
+	next.ImpenetrableUsedThisShortRest = false
+	return next, true
+}
+
+func projectionConditionCodes(values []projectionstore.DaggerheartConditionState) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		switch {
+		case strings.TrimSpace(value.Code) != "":
+			result = append(result, strings.TrimSpace(value.Code))
+		case strings.TrimSpace(value.Standard) != "":
+			result = append(result, strings.TrimSpace(value.Standard))
+		case strings.TrimSpace(value.ID) != "":
+			result = append(result, strings.TrimSpace(value.ID))
+		}
+	}
+	return result
+}
+
+func projectionStandardConditionsFromCodes(values []string) []projectionstore.DaggerheartConditionState {
+	if len(values) == 0 {
+		return []projectionstore.DaggerheartConditionState{}
+	}
+	result := make([]projectionstore.DaggerheartConditionState, 0, len(values))
+	for _, value := range values {
+		code := strings.ToLower(strings.TrimSpace(value))
+		if code == "" {
+			continue
+		}
+		result = append(result, projectionstore.DaggerheartConditionState{
+			ID:       code,
+			Class:    "standard",
+			Standard: code,
+			Code:     code,
+			Label:    code,
+		})
+	}
+	return result
+}
+
+func clearProjectionConditionsByTrigger(values []projectionstore.DaggerheartConditionState, trigger string) []projectionstore.DaggerheartConditionState {
+	if len(values) == 0 || strings.TrimSpace(trigger) == "" {
+		return append([]projectionstore.DaggerheartConditionState(nil), values...)
+	}
+	result := make([]projectionstore.DaggerheartConditionState, 0, len(values))
+	for _, value := range values {
+		if !projectionConditionHasTrigger(value, trigger) {
+			result = append(result, value)
+		}
+	}
+	return result
+}
+
+func projectionConditionHasTrigger(value projectionstore.DaggerheartConditionState, trigger string) bool {
+	for _, current := range value.ClearTriggers {
+		if strings.EqualFold(strings.TrimSpace(current), trigger) {
+			return true
+		}
+	}
+	return false
 }

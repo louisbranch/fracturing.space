@@ -22,6 +22,7 @@ type commandValidationCase struct {
 
 func commandValidationCases() []commandValidationCase {
 	return []commandValidationCase{
+		{typ: commandTypeGMMoveApply, validPayload: `{"target":{"type":"direct_move","kind":"interrupt_and_move","shape":"reveal_danger"},"fear_spent":1}`, invalidPayload: `{"target":{"type":"","kind":"interrupt_and_move","shape":"reveal_danger"},"fear_spent":1}`},
 		{typ: commandTypeGMFearSet, validPayload: `{"after":2}`, invalidPayload: `{"after":"nope"}`, actorType: command.ActorTypeGM, actorID: "gm-1"},
 		{typ: commandTypeCharacterProfileReplace, validPayload: `{"character_id":"char-1","profile":{"class_id":"class.guardian","level":1,"hp_max":6,"stress_max":6,"evasion":10,"major_threshold":1,"severe_threshold":2,"proficiency":1,"armor_score":0,"armor_max":0}}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeCharacterProfileDelete, validPayload: `{"character_id":"char-1"}`, invalidPayload: `{"character_id":1}`},
@@ -30,20 +31,29 @@ func commandValidationCases() []commandValidationCase {
 		{typ: commandTypeCharacterStatePatch, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeConditionChange, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeLoadoutSwap, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
-		{typ: commandTypeRestTake, validPayload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":2,"short_rests_before":0,"short_rests_after":1,"refresh_rest":true}`, invalidPayload: `{"rest_type":1}`},
+		{typ: commandTypeRestTake, validPayload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":2,"short_rests_before":0,"short_rests_after":1,"refresh_rest":true,"participants":["char-1"]}`, invalidPayload: `{"rest_type":1}`},
 		{typ: commandTypeCountdownCreate, validPayload: `{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: commandTypeCountdownUpdate, validPayload: `{"countdown_id":"cd-1","before":2,"after":3,"delta":1,"looped":false}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: commandTypeCountdownDelete, validPayload: `{"countdown_id":"cd-1"}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: commandTypeDamageApply, validPayload: `{"character_id":"char-1","hp_before":6,"hp_after":3}`, invalidPayload: `{"character_id":1}`},
 		{typ: commandTypeAdversaryDamageApply, validPayload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":3}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: commandTypeDowntimeMoveApply, validPayload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":3,"stress_after":2}`, invalidPayload: `{"character_id":"char-1","move":""}`},
 		{typ: commandTypeCharacterTemporaryArmorApply, validPayload: `{"character_id":"char-1","source":"ritual","duration":"short_rest","amount":2,"source_id":"temp-1"}`, invalidPayload: `{"duration":"short_rest","amount":2}`},
 		{typ: commandTypeAdversaryConditionChange, validPayload: `{"adversary_id":"adv-1","conditions_after":["hidden"]}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: commandTypeAdversaryCreate, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: commandTypeAdversaryUpdate, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: commandTypeAdversaryCreate, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: commandTypeAdversaryUpdate, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: commandTypeAdversaryFeatureApply, validPayload: `{"actor_adversary_id":"adv-1","adversary_id":"adv-1","feature_id":"feature.cloaked","feature_states_after":[{"feature_id":"feature.cloaked","status":"active"}]}`, invalidPayload: `{"actor_adversary_id":"adv-1","adversary_id":"adv-1","feature_id":"feature.cloaked"}`},
 		{typ: commandTypeAdversaryDelete, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: commandTypeEnvironmentEntityCreate, validPayload: `{"environment_entity_id":"env-1","environment_id":"environment.falling-ruins","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":15,"session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"environment_entity_id":"env-1","environment_id":"","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":15,"session_id":"sess-1","scene_id":"scene-1"}`},
+		{typ: commandTypeEnvironmentEntityUpdate, validPayload: `{"environment_entity_id":"env-1","environment_id":"environment.falling-ruins","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":16,"session_id":"sess-1","scene_id":"scene-2","notes":"moved"}`, invalidPayload: `{"environment_entity_id":"","environment_id":"environment.falling-ruins","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":16,"session_id":"sess-1","scene_id":"scene-2"}`},
+		{typ: commandTypeEnvironmentEntityDelete, validPayload: `{"environment_entity_id":"env-1","reason":"cleanup"}`, invalidPayload: `{"environment_entity_id":""}`},
 		{typ: commandTypeMultiTargetDamageApply, validPayload: `{"targets":[{"character_id":"char-1","hp_before":6,"hp_after":3}]}`, invalidPayload: `{"targets":[]}`},
 		{typ: commandTypeLevelUpApply, validPayload: `{"character_id":"char-1","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"},{"type":"add_stress_slots"}]}`, invalidPayload: `{"character_id":"","level_before":1,"level_after":2,"advancements":[{"type":"add_hp_slots"}]}`},
+		{typ: commandTypeClassFeatureApply, validPayload: `{"actor_character_id":"char-1","feature":"frontline_tank","targets":[{"character_id":"char-1","hope_before":3,"hope_after":0,"armor_before":1,"armor_after":3}]}`, invalidPayload: `{"actor_character_id":"char-1","feature":"","targets":[{"character_id":"char-1"}]}`},
+		{typ: commandTypeSubclassFeatureApply, validPayload: `{"actor_character_id":"char-1","feature":"battle_ritual","targets":[{"character_id":"char-1","hope_before":1,"hope_after":3,"stress_before":2,"stress_after":0,"subclass_state_after":{"battle_ritual_used_this_long_rest":true}}]}`, invalidPayload: `{"actor_character_id":"char-1","feature":"","targets":[{"character_id":"char-1"}]}`},
+		{typ: commandTypeBeastformTransform, validPayload: `{"actor_character_id":"char-1","character_id":"char-1","beastform_id":"beastform.wolf","stress_before":1,"stress_after":2,"class_state_after":{"active_beastform":{"beastform_id":"beastform.wolf","base_trait":"agility","attack_trait":"agility","trait_bonus":1,"evasion_bonus":1,"attack_range":"melee","damage_dice":[{"count":1,"sides":8}],"damage_bonus":1,"damage_type":"physical"}}}`, invalidPayload: `{"actor_character_id":"char-1","character_id":"","beastform_id":"beastform.wolf"}`},
+		{typ: commandTypeBeastformDrop, validPayload: `{"actor_character_id":"char-1","character_id":"char-1","beastform_id":"beastform.wolf","source":"beastform.drop","class_state_before":{"active_beastform":{"beastform_id":"beastform.wolf","base_trait":"agility","attack_trait":"agility","attack_range":"melee","damage_dice":[{"count":1,"sides":8}]}},"class_state_after":{}}`, invalidPayload: `{"actor_character_id":"char-1","character_id":"","beastform_id":"beastform.wolf"}`},
+		{typ: commandTypeCompanionExperienceBegin, validPayload: `{"actor_character_id":"char-1","character_id":"char-1","experience_id":"companion-experience.scout","companion_state_before":{"status":"present"},"companion_state_after":{"status":"away","active_experience_id":"companion-experience.scout"}}`, invalidPayload: `{"actor_character_id":"char-1","character_id":"char-1","experience_id":"","companion_state_before":{"status":"present"},"companion_state_after":{"status":"away","active_experience_id":"companion-experience.scout"}}`},
+		{typ: commandTypeCompanionReturn, validPayload: `{"actor_character_id":"char-1","character_id":"char-1","resolution":"experience_completed","stress_before":1,"stress_after":0,"companion_state_before":{"status":"away","active_experience_id":"companion-experience.scout"},"companion_state_after":{"status":"present"}}`, invalidPayload: `{"actor_character_id":"char-1","character_id":"char-1","resolution":"","companion_state_before":{"status":"away","active_experience_id":"companion-experience.scout"},"companion_state_after":{"status":"present"}}`},
 		{typ: commandTypeGoldUpdate, validPayload: `{"character_id":"char-1","handfuls_before":0,"handfuls_after":3,"bags_before":0,"bags_after":0,"chests_before":0,"chests_after":0}`, invalidPayload: `{"character_id":""}`},
 		{typ: commandTypeDomainCardAcquire, validPayload: `{"character_id":"char-1","card_id":"card-1","card_level":1,"destination":"vault"}`, invalidPayload: `{"character_id":"char-1","card_id":"card-1","destination":"backpack"}`},
 		{typ: commandTypeEquipmentSwap, validPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"inventory","to":"active"}`, invalidPayload: `{"character_id":"char-1","item_id":"sword-1","item_type":"weapon","from":"active","to":"active"}`},
@@ -62,24 +72,32 @@ type eventValidationCase struct {
 
 func eventValidationCases() []eventValidationCase {
 	return []eventValidationCase{
+		{typ: EventTypeGMMoveApplied, validPayload: `{"target":{"type":"direct_move","kind":"interrupt_and_move","shape":"reveal_danger"},"fear_spent":1}`, invalidPayload: `{"target":{"type":"","kind":"interrupt_and_move","shape":"reveal_danger"},"fear_spent":1}`},
 		{typ: EventTypeGMFearChanged, validPayload: `{"after":2}`, invalidPayload: `{"after":"nope"}`, actorType: event.ActorTypeGM, actorID: "gm-1"},
 		{typ: EventTypeCharacterProfileReplaced, validPayload: `{"character_id":"char-1","profile":{"class_id":"class.guardian","level":1,"hp_max":6,"stress_max":6,"evasion":10,"major_threshold":1,"severe_threshold":2,"proficiency":1,"armor_score":0,"armor_max":0}}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeCharacterProfileDeleted, validPayload: `{"character_id":"char-1"}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeCharacterStatePatched, validPayload: `{"character_id":"char-1","hp_after":5}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeConditionChanged, validPayload: `{"character_id":"char-1","conditions_after":["vulnerable"]}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeLoadoutSwapped, validPayload: `{"character_id":"char-1","card_id":"card-1","from":"vault","to":"active"}`, invalidPayload: `{"character_id":1}`},
-		{typ: EventTypeRestTaken, validPayload: `{"rest_type":"short","gm_fear_after":2,"short_rests_after":1,"refresh_rest":true}`, invalidPayload: `{"rest_type":1}`},
+		{typ: EventTypeRestTaken, validPayload: `{"rest_type":"short","gm_fear_after":2,"short_rests_after":1,"refresh_rest":true,"participants":["char-1"]}`, invalidPayload: `{"rest_type":1}`},
 		{typ: EventTypeCountdownCreated, validPayload: `{"countdown_id":"cd-1","name":"Doom","kind":"progress","current":0,"max":4,"direction":"increase","looping":true}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: EventTypeCountdownUpdated, validPayload: `{"countdown_id":"cd-1","after":3,"delta":1,"looped":false}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: EventTypeCountdownDeleted, validPayload: `{"countdown_id":"cd-1"}`, invalidPayload: `{"countdown_id":1}`},
 		{typ: EventTypeDamageApplied, validPayload: `{"character_id":"char-1","hp_before":6,"hp_after":3}`, invalidPayload: `{"character_id":1}`},
 		{typ: EventTypeAdversaryDamageApplied, validPayload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":3}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: EventTypeDowntimeMoveApplied, validPayload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":3,"stress_after":2}`, invalidPayload: `{"character_id":"char-1","move":1}`},
+		{typ: EventTypeDowntimeMoveApplied, validPayload: `{"actor_character_id":"char-1","target_character_id":"char-1","move":"clear_all_stress","stress_after":2}`, invalidPayload: `{"actor_character_id":"char-1","move":1}`},
 		{typ: EventTypeCharacterTemporaryArmorApplied, validPayload: `{"character_id":"char-1","source":"ritual","duration":"short_rest","amount":2,"source_id":"temp-1"}`, invalidPayload: `{"character_id":1}`},
+		{typ: EventTypeBeastformTransformed, validPayload: `{"character_id":"char-1","beastform_id":"beastform.wolf","stress_after":2,"active_beastform":{"beastform_id":"beastform.wolf","base_trait":"agility","attack_trait":"agility","trait_bonus":1,"evasion_bonus":1,"attack_range":"melee","damage_dice":[{"count":1,"sides":8}],"damage_bonus":1,"damage_type":"physical"}}`, invalidPayload: `{"character_id":"char-1","beastform_id":""}`},
+		{typ: EventTypeBeastformDropped, validPayload: `{"character_id":"char-1","beastform_id":"beastform.wolf","source":"beastform.drop"}`, invalidPayload: `{"character_id":"char-1","beastform_id":""}`},
+		{typ: EventTypeCompanionExperienceBegun, validPayload: `{"character_id":"char-1","experience_id":"companion-experience.scout","companion_state":{"status":"away","active_experience_id":"companion-experience.scout"},"source":"companion.experience.begin"}`, invalidPayload: `{"character_id":"char-1","experience_id":"","companion_state":{"status":"away","active_experience_id":"companion-experience.scout"}}`},
+		{typ: EventTypeCompanionReturned, validPayload: `{"character_id":"char-1","resolution":"experience_completed","stress_after":0,"companion_state":{"status":"present"},"source":"companion.return"}`, invalidPayload: `{"character_id":"char-1","resolution":"","companion_state":{"status":"present"}}`},
 		{typ: EventTypeAdversaryConditionChanged, validPayload: `{"adversary_id":"adv-1","conditions_after":["hidden"]}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: EventTypeAdversaryCreated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
-		{typ: EventTypeAdversaryUpdated, validPayload: `{"adversary_id":"adv-1","name":"Goblin"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: EventTypeAdversaryCreated, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: EventTypeAdversaryUpdated, validPayload: `{"adversary_id":"adv-1","adversary_entry_id":"adversary.goblin","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"adversary_id":1}`},
 		{typ: EventTypeAdversaryDeleted, validPayload: `{"adversary_id":"adv-1"}`, invalidPayload: `{"adversary_id":1}`},
+		{typ: EventTypeEnvironmentEntityCreated, validPayload: `{"environment_entity_id":"env-1","environment_id":"environment.falling-ruins","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":15,"session_id":"sess-1","scene_id":"scene-1"}`, invalidPayload: `{"environment_entity_id":"env-1","environment_id":"","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":15,"session_id":"sess-1","scene_id":"scene-1"}`},
+		{typ: EventTypeEnvironmentEntityUpdated, validPayload: `{"environment_entity_id":"env-1","environment_id":"environment.falling-ruins","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":16,"session_id":"sess-1","scene_id":"scene-2","notes":"moved"}`, invalidPayload: `{"environment_entity_id":"","environment_id":"environment.falling-ruins","name":"Falling Ruins","type":"hazard","tier":2,"difficulty":16,"session_id":"sess-1","scene_id":"scene-2"}`},
+		{typ: EventTypeEnvironmentEntityDeleted, validPayload: `{"environment_entity_id":"env-1","reason":"cleanup"}`, invalidPayload: `{"environment_entity_id":""}`},
 		{typ: EventTypeLevelUpApplied, validPayload: `{"character_id":"char-1","level_after":2,"advancements":[{"type":"add_hp_slots"},{"type":"add_stress_slots"}]}`, invalidPayload: `{"character_id":"","level_after":2,"advancements":[{"type":"add_hp_slots"}]}`},
 		{typ: EventTypeGoldUpdated, validPayload: `{"character_id":"char-1","handfuls_after":3,"bags_after":0,"chests_after":0}`, invalidPayload: `{"character_id":""}`},
 		{typ: EventTypeDomainCardAcquired, validPayload: `{"character_id":"char-1","card_id":"card-1","card_level":1,"destination":"vault"}`, invalidPayload: `{"character_id":"char-1","card_id":"card-1","destination":"backpack"}`},
@@ -202,10 +220,15 @@ func TestModule_ImplementsCharacterReadinessChecker(t *testing.T) {
 		SnapshotState{
 			CharacterProfiles: map[ids.CharacterID]CharacterProfile{
 				"char-1": {
-					ClassID:              "class.guardian",
-					SubclassID:           "subclass.stalwart",
-					AncestryID:           "heritage.clank",
-					CommunityID:          "heritage.farmer",
+					ClassID:    "class.guardian",
+					SubclassID: "subclass.stalwart",
+					Heritage: CharacterHeritage{
+						FirstFeatureAncestryID:  "heritage.clank",
+						FirstFeatureID:          "heritage.clank.feature-1",
+						SecondFeatureAncestryID: "heritage.clank",
+						SecondFeatureID:         "heritage.clank.feature-2",
+						CommunityID:             "heritage.farmer",
+					},
 					TraitsAssigned:       true,
 					Agility:              2,
 					Strength:             1,
@@ -354,7 +377,6 @@ func TestModuleRegisterEvents_ResolvedNotificationEventsRemoved(t *testing.T) {
 		event.Type("sys.daggerheart.damage_roll_resolved"),
 		event.Type("sys.daggerheart.group_action_resolved"),
 		event.Type("sys.daggerheart.tag_team_resolved"),
-		event.Type("sys.daggerheart.gm_move_applied"),
 	}
 
 	definitions := make(map[event.Type]event.Definition, len(removed))
@@ -370,8 +392,15 @@ func TestModuleRegisterEvents_ResolvedNotificationEventsRemoved(t *testing.T) {
 	}
 
 	for _, def := range registry.ListDefinitions() {
-		if def.Intent != event.IntentProjectionAndReplay {
-			t.Fatalf("event %s intent = %s, want %s", def.Type, def.Intent, event.IntentProjectionAndReplay)
+		switch def.Type {
+		case EventTypeGMMoveApplied:
+			if def.Intent != event.IntentAuditOnly {
+				t.Fatalf("event %s intent = %s, want %s", def.Type, def.Intent, event.IntentAuditOnly)
+			}
+		default:
+			if def.Intent != event.IntentProjectionAndReplay {
+				t.Fatalf("event %s intent = %s, want %s", def.Type, def.Intent, event.IntentProjectionAndReplay)
+			}
 		}
 	}
 }
@@ -563,12 +592,7 @@ func TestModuleRegisterCommands_RejectsNoOpMutatingPayloads(t *testing.T) {
 			payload: `{"adversary_id":"adv-1","hp_before":8,"hp_after":8}`,
 		},
 		{
-			name:    "downtime_move.apply requires state change",
-			typ:     commandTypeDowntimeMoveApply,
-			payload: `{"character_id":"char-1","move":"clear_all_stress","stress_before":2,"stress_after":2}`,
-		},
-		{
-			name:    "rest.take requires rest change or character patches",
+			name:    "rest.take requires durable outcome",
 			typ:     commandTypeRestTake,
 			payload: `{"rest_type":"short","gm_fear_before":1,"gm_fear_after":1,"short_rests_before":0,"short_rests_after":0,"refresh_rest":false,"refresh_long_rest":false}`,
 		},

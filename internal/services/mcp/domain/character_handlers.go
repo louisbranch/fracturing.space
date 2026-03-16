@@ -443,6 +443,16 @@ func CharacterCreationWorkflowApplyHandler(client statev1.CharacterServiceClient
 				Modifier: int32(experience.Modifier),
 			})
 		}
+		var companionInput *daggerheartv1.DaggerheartCreationCompanionInput
+		if input.Companion != nil {
+			companionInput = &daggerheartv1.DaggerheartCreationCompanionInput{
+				AnimalKind:        input.Companion.AnimalKind,
+				Name:              input.Companion.Name,
+				ExperienceIds:     append([]string(nil), input.Companion.ExperienceIDs...),
+				AttackDescription: input.Companion.AttackDescription,
+				DamageType:        input.Companion.DamageType,
+			}
+		}
 
 		req := &statev1.ApplyCharacterCreationWorkflowRequest{
 			CampaignId:  campaignID,
@@ -452,10 +462,15 @@ func CharacterCreationWorkflowApplyHandler(client statev1.CharacterServiceClient
 					ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
 						ClassId:    input.ClassID,
 						SubclassId: input.SubclassID,
+						Companion:  companionInput,
 					},
 					HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
-						AncestryId:  input.AncestryID,
-						CommunityId: input.CommunityID,
+						Heritage: &daggerheartv1.DaggerheartCreationStepHeritageSelectionInput{
+							AncestryLabel:           input.Heritage.AncestryLabel,
+							FirstFeatureAncestryId:  input.Heritage.FirstFeatureAncestryID,
+							SecondFeatureAncestryId: input.Heritage.SecondFeatureAncestryID,
+							CommunityId:             input.Heritage.CommunityID,
+						},
 					},
 					TraitsInput:  &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: int32(input.Agility), Strength: int32(input.Strength), Finesse: int32(input.Finesse), Instinct: int32(input.Instinct), Presence: int32(input.Presence), Knowledge: int32(input.Knowledge)},
 					DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: input.Description},

@@ -49,7 +49,7 @@ type StressConditionInput struct {
 	CampaignID    string
 	SessionID     string
 	CharacterID   string
-	Conditions    []string
+	Conditions    []projectionstore.DaggerheartConditionState
 	StressBefore  int
 	StressAfter   int
 	StressMax     int
@@ -69,6 +69,7 @@ type CharacterDeleteInput struct {
 type RestResult struct {
 	Snapshot        projectionstore.DaggerheartSnapshot
 	CharacterStates []CharacterStateEntry
+	Countdowns      []projectionstore.DaggerheartCountdown
 }
 
 // CharacterStateEntry couples a character ID with its updated gameplay state.

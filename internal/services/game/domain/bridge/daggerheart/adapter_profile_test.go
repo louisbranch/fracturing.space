@@ -68,10 +68,15 @@ func TestApplyCharacterProfileReplaced_PersistsValidatedProfile(t *testing.T) {
 			Experiences: []CharacterProfileExperience{
 				{Name: "Scout", Modifier: 1},
 			},
-			ClassID:              "class-1",
-			SubclassID:           "sub-1",
-			AncestryID:           "anc-1",
-			CommunityID:          "com-1",
+			ClassID:    "class-1",
+			SubclassID: "sub-1",
+			Heritage: CharacterHeritage{
+				FirstFeatureAncestryID:  "anc-1",
+				FirstFeatureID:          "anc-1.feature-1",
+				SecondFeatureAncestryID: "anc-1",
+				SecondFeatureID:         "anc-1.feature-2",
+				CommunityID:             "com-1",
+			},
 			TraitsAssigned:       true,
 			DetailsRecorded:      true,
 			StartingWeaponIDs:    []string{"w-1"},
@@ -116,7 +121,7 @@ func TestApplyCharacterProfileReplaced_PersistsValidatedProfile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("get state: %v", err)
 	}
-	if state.Hp != 6 || state.Hope != HopeDefault || state.HopeMax != HopeMaxDefault || state.Stress != StressDefault || state.Armor != ArmorDefault || state.LifeState != LifeStateAlive {
+	if state.Hp != 6 || state.Hope != HopeDefault || state.HopeMax != HopeMaxDefault || state.Stress != StressDefault || state.Armor != 2 || state.LifeState != LifeStateAlive {
 		t.Fatalf("unexpected seeded state: %+v", state)
 	}
 }

@@ -31,9 +31,14 @@ dh:attack{
   damage_type = "physical"
 }
 
--- The GM briefly spotlights Frodo: vulnerable, then breaking free.
+-- The GM presses the advantage, then Frodo breaks free.
 dh:apply_condition{ target = "Frodo", add = { "VULNERABLE" } }
-dh:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
+dh:gm_spend_fear(1):move("custom", {
+  description = "Nazgul presses the attack.",
+  expect_gm_fear_delta = -1,
+  expect_gm_move = "custom",
+  expect_gm_fear_spent = 1
+})
 dh:apply_condition{ target = "Frodo", remove = { "VULNERABLE" }, source = "break_free" }
 
 -- The spotlight shifts to Nazgul, who lashes out at Frodo.
@@ -43,19 +48,24 @@ dh:adversary_attack{
   difficulty = 0,
   expect_hope_delta = 0,
   expect_stress_delta = 0,
-  expect_hp_delta = -2,
+  expect_hp_delta = -1,
   expect_armor_delta = -1,
   expect_damage_total = 4,
-  expect_damage_severity = "major",
-  expect_damage_marks = 2,
+  expect_damage_severity = "minor",
+  expect_damage_marks = 1,
   expect_armor_spent = 1,
   expect_damage_mitigated = true,
   expect_damage_critical = false,
   damage_type = "physical"
 }
 
--- The GM spends fear to keep the spotlight on Nazgul.
-dh:gm_spend_fear(1):spotlight("Nazgul", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
+-- The GM spends fear to keep the pressure on Nazgul.
+dh:gm_spend_fear(1):move("custom", {
+  description = "Nazgul keeps the pressure on.",
+  expect_gm_fear_delta = -1,
+  expect_gm_move = "custom",
+  expect_gm_fear_spent = 1
+})
 
 -- Spotlight returns to the players after the GM move resolves.
 scn:set_spotlight{ target = "Frodo", expect_spotlight = "Frodo" }

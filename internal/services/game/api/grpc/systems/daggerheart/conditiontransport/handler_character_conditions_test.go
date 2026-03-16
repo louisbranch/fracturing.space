@@ -26,7 +26,11 @@ func TestHandlerApplyConditionsSuccess(t *testing.T) {
 	resp, err := handler.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+		AddConditions: []*pb.DaggerheartConditionState{{
+			Id:       "vulnerable",
+			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE,
+		}},
 	})
 	if err != nil {
 		t.Fatalf("ApplyConditions returned error: %v", err)
@@ -34,7 +38,7 @@ func TestHandlerApplyConditionsSuccess(t *testing.T) {
 	if resp.CharacterID != "char-1" {
 		t.Fatalf("character_id = %q, want char-1", resp.CharacterID)
 	}
-	if len(resp.Added) != 1 || resp.Added[0] != daggerheart.ConditionVulnerable {
+	if len(resp.Added) != 1 || resp.Added[0].Standard != pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE {
 		t.Fatalf("added = %v, want vulnerable", resp.Added)
 	}
 	if len(commands) != 1 || commands[0].CommandType != commandids.DaggerheartConditionChange {
@@ -79,7 +83,11 @@ func TestHandlerApplyConditionsRequiresExecutor(t *testing.T) {
 	_, err := handler.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
 		CampaignId:  "camp-1",
 		CharacterId: "char-1",
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+		AddConditions: []*pb.DaggerheartConditionState{{
+			Id:       "hidden",
+			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN,
+		}},
 	})
 	if status.Code(err) != codes.Internal {
 		t.Fatalf("status code = %v, want %v", status.Code(err), codes.Internal)

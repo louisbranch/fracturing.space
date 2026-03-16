@@ -117,7 +117,7 @@ func TestApplyResistance(t *testing.T) {
 }
 
 func TestReduceDamageWithArmor(t *testing.T) {
-	result, spent := ReduceDamageWithArmor(DamageResult{Severity: DamageSevere, Marks: 3}, 1)
+	result, spent := ReduceDamageWithArmor(DamageResult{Severity: DamageSevere, Marks: 3}, 1, 1)
 	if spent != 1 {
 		t.Fatalf("spent = %d, want 1", spent)
 	}
@@ -125,7 +125,7 @@ func TestReduceDamageWithArmor(t *testing.T) {
 		t.Fatalf("result = %+v, want major/2", result)
 	}
 
-	result, spent = ReduceDamageWithArmor(DamageResult{Severity: DamageMinor, Marks: 1}, 1)
+	result, spent = ReduceDamageWithArmor(DamageResult{Severity: DamageMinor, Marks: 1}, 1, 1)
 	if result.Marks != 0 || result.Severity != DamageNone {
 		t.Fatalf("result = %+v, want none/0", result)
 	}
@@ -133,7 +133,7 @@ func TestReduceDamageWithArmor(t *testing.T) {
 		t.Fatalf("spent = %d, want 1", spent)
 	}
 
-	result, spent = ReduceDamageWithArmor(DamageResult{Severity: DamageMajor, Marks: 2}, 0)
+	result, spent = ReduceDamageWithArmor(DamageResult{Severity: DamageMajor, Marks: 2}, 0, 1)
 	if spent != 0 || result.Marks != 2 {
 		t.Fatalf("unexpected armor spend with no slots")
 	}
@@ -141,7 +141,7 @@ func TestReduceDamageWithArmor(t *testing.T) {
 
 func TestApplyDamageWithArmor(t *testing.T) {
 	result := DamageResult{Severity: DamageSevere, Marks: 3}
-	app := ApplyDamageWithArmor(6, 1, result)
+	app := ApplyDamageWithArmor(6, 0, 1, result, ArmorDamageRules{})
 	if app.ArmorSpent != 1 || app.ArmorAfter != 0 {
 		t.Fatalf("armor = %d->%d, spent %d", app.ArmorBefore, app.ArmorAfter, app.ArmorSpent)
 	}
@@ -152,7 +152,7 @@ func TestApplyDamageWithArmor(t *testing.T) {
 
 func TestApplyDamageWithArmorNoArmor(t *testing.T) {
 	result := DamageResult{Severity: DamageMajor, Marks: 2}
-	app := ApplyDamageWithArmor(6, 0, result)
+	app := ApplyDamageWithArmor(6, 0, 0, result, ArmorDamageRules{})
 	if app.ArmorSpent != 0 {
 		t.Fatalf("armor spent = %d, want 0", app.ArmorSpent)
 	}
@@ -190,7 +190,7 @@ func TestApplyResistanceMagicNoResist(t *testing.T) {
 }
 
 func TestReduceDamageWithArmorNoMarks(t *testing.T) {
-	result, spent := ReduceDamageWithArmor(DamageResult{Severity: DamageNone, Marks: 0}, 2)
+	result, spent := ReduceDamageWithArmor(DamageResult{Severity: DamageNone, Marks: 0}, 2, 1)
 	if spent != 0 || result.Marks != 0 {
 		t.Fatalf("expected no reduction for zero marks")
 	}

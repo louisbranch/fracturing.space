@@ -147,14 +147,18 @@ CREATE TABLE IF NOT EXISTS daggerheart_character_profiles (
     experiences_json TEXT NOT NULL DEFAULT '[]',
     class_id TEXT NOT NULL DEFAULT '',
     subclass_id TEXT NOT NULL DEFAULT '',
-    ancestry_id TEXT NOT NULL DEFAULT '',
-    community_id TEXT NOT NULL DEFAULT '',
+    subclass_tracks_json TEXT NOT NULL DEFAULT '[]',
+    subclass_creation_requirements_json TEXT NOT NULL DEFAULT '[]',
+    heritage_json TEXT NOT NULL DEFAULT '',
+    companion_sheet_json TEXT NOT NULL DEFAULT '',
+    equipped_armor_id TEXT NOT NULL DEFAULT '',
+    spellcast_roll_bonus INTEGER NOT NULL DEFAULT 0,
     traits_assigned INTEGER NOT NULL DEFAULT 0,
+    background TEXT NOT NULL DEFAULT '',
     details_recorded INTEGER NOT NULL DEFAULT 0,
     starting_weapon_ids_json TEXT NOT NULL DEFAULT '[]',
     starting_armor_id TEXT NOT NULL DEFAULT '',
     starting_potion_item_id TEXT NOT NULL DEFAULT '',
-    background TEXT NOT NULL DEFAULT '',
     domain_card_ids_json TEXT NOT NULL DEFAULT '[]',
     connections TEXT NOT NULL DEFAULT '',
     PRIMARY KEY (campaign_id, character_id),
@@ -173,6 +177,10 @@ CREATE TABLE IF NOT EXISTS daggerheart_character_states (
     conditions_json TEXT NOT NULL DEFAULT '[]',
     temporary_armor_json TEXT NOT NULL DEFAULT '[]',
     life_state TEXT NOT NULL DEFAULT 'alive',
+    class_state_json TEXT NOT NULL DEFAULT '{}',
+    subclass_state_json TEXT NOT NULL DEFAULT '{}',
+    companion_state_json TEXT NOT NULL DEFAULT '{}',
+    impenetrable_used_this_short_rest INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (campaign_id, character_id),
     FOREIGN KEY (campaign_id, character_id)
         REFERENCES characters(campaign_id, id) ON DELETE CASCADE
@@ -200,9 +208,11 @@ CREATE TABLE IF NOT EXISTS daggerheart_countdowns (
 CREATE TABLE IF NOT EXISTS daggerheart_adversaries (
     campaign_id TEXT NOT NULL,
     adversary_id TEXT NOT NULL,
+    adversary_entry_id TEXT NOT NULL,
     name TEXT NOT NULL,
     kind TEXT NOT NULL DEFAULT '',
-    session_id TEXT,
+    session_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL DEFAULT '',
     notes TEXT NOT NULL DEFAULT '',
     hp INTEGER NOT NULL DEFAULT 6,
     hp_max INTEGER NOT NULL DEFAULT 6,
@@ -212,9 +222,31 @@ CREATE TABLE IF NOT EXISTS daggerheart_adversaries (
     major_threshold INTEGER NOT NULL DEFAULT 8,
     severe_threshold INTEGER NOT NULL DEFAULT 12,
     armor INTEGER NOT NULL DEFAULT 0,
+    conditions_json TEXT NOT NULL DEFAULT '[]',
+    feature_state_json TEXT NOT NULL DEFAULT '[]',
+    pending_experience_json TEXT NOT NULL DEFAULT '',
+    spotlight_gate_id TEXT NOT NULL DEFAULT '',
+    spotlight_count INTEGER NOT NULL DEFAULT 0,
     created_at INTEGER NOT NULL,
     updated_at INTEGER NOT NULL,
     PRIMARY KEY (campaign_id, adversary_id),
+    FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS daggerheart_environment_entities (
+    campaign_id TEXT NOT NULL,
+    environment_entity_id TEXT NOT NULL,
+    environment_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT '',
+    tier INTEGER NOT NULL DEFAULT 0,
+    difficulty INTEGER NOT NULL DEFAULT 0,
+    session_id TEXT NOT NULL,
+    scene_id TEXT NOT NULL DEFAULT '',
+    notes TEXT NOT NULL DEFAULT '',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    PRIMARY KEY (campaign_id, environment_entity_id),
     FOREIGN KEY (campaign_id) REFERENCES campaigns(id) ON DELETE CASCADE
 );
 
@@ -308,6 +340,7 @@ DROP TABLE IF EXISTS session_gate_eligible_participants;
 DROP INDEX IF EXISTS idx_session_gates_open;
 DROP TABLE IF EXISTS session_gates;
 DROP TABLE IF EXISTS daggerheart_adversaries;
+DROP TABLE IF EXISTS daggerheart_environment_entities;
 DROP TABLE IF EXISTS daggerheart_countdowns;
 DROP TABLE IF EXISTS daggerheart_snapshots;
 DROP TABLE IF EXISTS daggerheart_character_states;

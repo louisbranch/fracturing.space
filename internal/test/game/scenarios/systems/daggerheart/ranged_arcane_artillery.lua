@@ -18,7 +18,7 @@ scn:start_session("Arcane Artillery")
 dh:gm_fear(1)
 
 -- Example: all targets roll Agility or take 2d12 magic damage (half on success).
-dh:gm_spend_fear(1):spotlight("Saruman")
+dh:gm_spend_fear(1):move("change_environment", { description = "Arcane fire floods the battlefield." })
 dh:group_reaction{
   targets = {"Frodo", "Sam"},
   trait = "agility",

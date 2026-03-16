@@ -17,8 +17,7 @@ scn:start_session("Artifact Theft")
 dh:gm_fear(1)
 
 -- Example: GM move steals an artifact and forces a chase.
--- Missing DSL: represent item theft and chase trigger.
-dh:gm_spend_fear(1):spotlight("Golum")
+dh:gm_spend_fear(1):move("custom", { description = "Golum snatches the artifact and bolts into the crowd." })
 dh:countdown_create{ name = "Recover Artifact", kind = "progress", current = 0, max = 6, direction = "increase" }
 dh:countdown_create{ name = "Thief Escape", kind = "consequence", current = 0, max = 4, direction = "increase" }
 dh:action_roll{ actor = "Gandalf", trait = "instinct", difficulty = 12, outcome = "success_fear" }

@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage/sqlite/db"
@@ -37,6 +36,30 @@ func (s *Store) PutDaggerheartAdversaryEntry(ctx context.Context, adversary cont
 	if err != nil {
 		return fmt.Errorf("marshal adversary features: %w", err)
 	}
+	minionRuleJSON := ""
+	if adversary.MinionRule != nil {
+		rawMinionRuleJSON, err := json.Marshal(adversary.MinionRule)
+		if err != nil {
+			return fmt.Errorf("marshal adversary minion rule: %w", err)
+		}
+		minionRuleJSON = string(rawMinionRuleJSON)
+	}
+	hordeRuleJSON := ""
+	if adversary.HordeRule != nil {
+		rawHordeRuleJSON, err := json.Marshal(adversary.HordeRule)
+		if err != nil {
+			return fmt.Errorf("marshal adversary horde rule: %w", err)
+		}
+		hordeRuleJSON = string(rawHordeRuleJSON)
+	}
+	relentlessRuleJSON := ""
+	if adversary.RelentlessRule != nil {
+		rawRelentlessRuleJSON, err := json.Marshal(adversary.RelentlessRule)
+		if err != nil {
+			return fmt.Errorf("marshal adversary relentless rule: %w", err)
+		}
+		relentlessRuleJSON = string(rawRelentlessRuleJSON)
+	}
 
 	return s.q.PutDaggerheartAdversaryEntry(ctx, db.PutDaggerheartAdversaryEntryParams{
 		ID:                 adversary.ID,
@@ -55,8 +78,11 @@ func (s *Store) PutDaggerheartAdversaryEntry(ctx context.Context, adversary cont
 		StandardAttackJson: string(attackJSON),
 		ExperiencesJson:    string(experiencesJSON),
 		FeaturesJson:       string(featuresJSON),
-		CreatedAt:          sqliteutil.ToMillis(adversary.CreatedAt),
-		UpdatedAt:          sqliteutil.ToMillis(adversary.UpdatedAt),
+		MinionRuleJson:     minionRuleJSON,
+		HordeRuleJson:      hordeRuleJSON,
+		RelentlessRuleJson: relentlessRuleJSON,
+		CreatedAt:          toMillis(adversary.CreatedAt),
+		UpdatedAt:          toMillis(adversary.UpdatedAt),
 	})
 }
 
@@ -159,8 +185,8 @@ func (s *Store) PutDaggerheartBeastform(ctx context.Context, beastform contentst
 		AttackJson:     string(attackJSON),
 		AdvantagesJson: string(advantagesJSON),
 		FeaturesJson:   string(featuresJSON),
-		CreatedAt:      sqliteutil.ToMillis(beastform.CreatedAt),
-		UpdatedAt:      sqliteutil.ToMillis(beastform.UpdatedAt),
+		CreatedAt:      toMillis(beastform.CreatedAt),
+		UpdatedAt:      toMillis(beastform.UpdatedAt),
 	})
 }
 
@@ -243,8 +269,8 @@ func (s *Store) PutDaggerheartCompanionExperience(ctx context.Context, experienc
 		ID:          experience.ID,
 		Name:        experience.Name,
 		Description: experience.Description,
-		CreatedAt:   sqliteutil.ToMillis(experience.CreatedAt),
-		UpdatedAt:   sqliteutil.ToMillis(experience.UpdatedAt),
+		CreatedAt:   toMillis(experience.CreatedAt),
+		UpdatedAt:   toMillis(experience.UpdatedAt),
 	})
 }
 

@@ -32,7 +32,13 @@ func TestApplyHeritageInputRejectsWrongKind(t *testing.T) {
 		context.Background(),
 		newTestContentStore(),
 		&projectionstore.DaggerheartCharacterProfile{},
-		&daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: "community-1", CommunityId: "community-1"},
+		&daggerheartv1.DaggerheartCreationStepHeritageInput{
+			Heritage: &daggerheartv1.DaggerheartCreationStepHeritageSelectionInput{
+				FirstFeatureAncestryId:  "community-1",
+				SecondFeatureAncestryId: "community-1",
+				CommunityId:             "community-1",
+			},
+		},
 	)
 	if err == nil {
 		t.Fatal("applyHeritageInput() error = nil, want failure")

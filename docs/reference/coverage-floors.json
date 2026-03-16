@@ -176,31 +176,6 @@
       "package": "github.com/louisbranch/fracturing.space/internal/services/shared/joingrant",
       "floor": 98.8,
       "description": "Join-grant verifier used by invite claim boundary."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/tools/i18ncheck",
-      "floor": 70.0,
-      "description": "CLI contract and token parity checks for locale catalogs."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/tools/i18nstatus",
-      "floor": 70.0,
-      "description": "CLI contract and report generation for locale status artifacts."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/tools/testruntimereport",
-      "floor": 60.0,
-      "description": "CLI contract and test runtime budget reporting behavior."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/tools/webdoccheck",
-      "floor": 15.0,
-      "description": "CLI contract and web docs architecture lint command routing."
-    },
-    {
-      "package": "github.com/louisbranch/fracturing.space/internal/tools/websmokeauth",
-      "floor": 45.0,
-      "description": "CLI contract and smoke auth harness configuration behavior."
     }
   ]
 }

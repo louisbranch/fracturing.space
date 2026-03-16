@@ -13,15 +13,32 @@ func newAdversaryDamageTestService() *DaggerheartService {
 	svc := newAdversaryTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartAdversaryStore)
 	dhStore.adversaries["camp-1:adv-1"] = projectionstore.DaggerheartAdversary{
-		AdversaryID: "adv-1",
+		AdversaryID:      "adv-1",
+		AdversaryEntryID: testAdversaryEntryGoblinID,
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		Name:             "Goblin",
+		HP:               8,
+		HPMax:            8,
+		Armor:            1,
+		Major:            4,
+		Severe:           7,
+	}
+	// Character data needed by session adversary attack flow tests.
+	dhStore.Profiles["camp-1:char-1"] = projectionstore.DaggerheartCharacterProfile{
 		CampaignID:  "camp-1",
-		SessionID:   "sess-1",
-		Name:        "Goblin",
-		HP:          8,
-		HPMax:       8,
-		Armor:       1,
-		Major:       4,
-		Severe:      7,
+		CharacterID: "char-1",
+		HpMax:       6,
+		StressMax:   6,
+		ArmorMax:    2,
+	}
+	dhStore.States["camp-1:char-1"] = projectionstore.DaggerheartCharacterState{
+		CampaignID:  "camp-1",
+		CharacterID: "char-1",
+		Hp:          6,
+		Hope:        2,
+		Stress:      3,
+		Armor:       0,
 	}
 	return svc
 }

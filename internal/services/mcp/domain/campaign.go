@@ -289,8 +289,8 @@ type CharacterProfileResult struct {
 	Knowledge            int                        `json:"knowledge" jsonschema:"knowledge trait (-2 to +4)"`
 	ClassID              string                     `json:"class_id" jsonschema:"selected class content id"`
 	SubclassID           string                     `json:"subclass_id" jsonschema:"selected subclass content id"`
-	AncestryID           string                     `json:"ancestry_id" jsonschema:"selected ancestry heritage id"`
-	CommunityID          string                     `json:"community_id" jsonschema:"selected community heritage id"`
+	SubclassRequirements []string                   `json:"subclass_requirements" jsonschema:"creation-time subclass requirements enforced by the workflow"`
+	Heritage             CharacterHeritageResult    `json:"heritage" jsonschema:"resolved structured heritage selection"`
 	TraitsAssigned       bool                       `json:"traits_assigned" jsonschema:"whether traits were assigned in creation"`
 	DetailsRecorded      bool                       `json:"details_recorded" jsonschema:"whether details were recorded in creation"`
 	StartingWeaponIDs    []string                   `json:"starting_weapon_ids" jsonschema:"selected starting weapon ids"`
@@ -300,12 +300,52 @@ type CharacterProfileResult struct {
 	Experiences          []CharacterExperienceInput `json:"experiences" jsonschema:"character experiences"`
 	DomainCardIDs        []string                   `json:"domain_card_ids" jsonschema:"selected domain card ids"`
 	Connections          string                     `json:"connections" jsonschema:"free-form character connections"`
+	CompanionSheet       *CharacterCompanionSheet   `json:"companion_sheet,omitempty" jsonschema:"optional companion sheet selected during creation"`
 }
 
 // CharacterExperienceInput represents a Daggerheart experience entry.
 type CharacterExperienceInput struct {
 	Name     string `json:"name" jsonschema:"experience name"`
 	Modifier int    `json:"modifier" jsonschema:"experience modifier"`
+}
+
+// CharacterHeritageResult represents the resolved heritage selection on a sheet.
+type CharacterHeritageResult struct {
+	AncestryLabel           string `json:"ancestry_label" jsonschema:"optional display label for mixed or renamed ancestry presentation"`
+	FirstFeatureAncestryID  string `json:"first_feature_ancestry_id" jsonschema:"ancestry providing the first selected ancestry feature"`
+	FirstFeatureID          string `json:"first_feature_id" jsonschema:"resolved first ancestry feature id"`
+	SecondFeatureAncestryID string `json:"second_feature_ancestry_id" jsonschema:"ancestry providing the second selected ancestry feature"`
+	SecondFeatureID         string `json:"second_feature_id" jsonschema:"resolved second ancestry feature id"`
+	CommunityID             string `json:"community_id" jsonschema:"selected community heritage id"`
+}
+
+// CharacterCompanionSheet represents the stored companion sheet for character creation.
+type CharacterCompanionSheet struct {
+	AnimalKind        string                     `json:"animal_kind" jsonschema:"selected animal kind for the companion"`
+	Name              string                     `json:"name" jsonschema:"companion name"`
+	Evasion           int                        `json:"evasion" jsonschema:"derived companion evasion"`
+	Experiences       []CharacterExperienceInput `json:"experiences" jsonschema:"companion experiences"`
+	AttackDescription string                     `json:"attack_description" jsonschema:"companion attack description"`
+	AttackRange       string                     `json:"attack_range" jsonschema:"derived companion attack range"`
+	DamageDieSides    int                        `json:"damage_die_sides" jsonschema:"derived companion damage die sides"`
+	DamageType        string                     `json:"damage_type" jsonschema:"companion damage type"`
+}
+
+// CharacterCreationCompanionInput represents the optional subclass-specific companion setup in step 1.
+type CharacterCreationCompanionInput struct {
+	AnimalKind        string   `json:"animal_kind" jsonschema:"selected animal kind for the companion"`
+	Name              string   `json:"name" jsonschema:"companion name"`
+	ExperienceIDs     []string `json:"experience_ids" jsonschema:"exactly two companion experience ids"`
+	AttackDescription string   `json:"attack_description" jsonschema:"companion attack description"`
+	DamageType        string   `json:"damage_type" jsonschema:"companion damage type"`
+}
+
+// CharacterCreationHeritageInput represents the structured heritage input for creation step 2.
+type CharacterCreationHeritageInput struct {
+	AncestryLabel           string `json:"ancestry_label,omitempty" jsonschema:"optional display label for mixed or renamed ancestry presentation"`
+	FirstFeatureAncestryID  string `json:"first_feature_ancestry_id" jsonschema:"ancestry providing the first selected ancestry feature"`
+	SecondFeatureAncestryID string `json:"second_feature_ancestry_id" jsonschema:"ancestry providing the second selected ancestry feature"`
+	CommunityID             string `json:"community_id" jsonschema:"selected community heritage id"`
 }
 
 // CharacterStateResult represents character state data in MCP responses.
@@ -333,25 +373,25 @@ type CharacterProfilePatchResult struct {
 
 // CharacterCreationWorkflowApplyInput represents MCP bulk creation input.
 type CharacterCreationWorkflowApplyInput struct {
-	CharacterID   string                     `json:"character_id" jsonschema:"character identifier"`
-	ClassID       string                     `json:"class_id" jsonschema:"class content id"`
-	SubclassID    string                     `json:"subclass_id" jsonschema:"subclass content id"`
-	AncestryID    string                     `json:"ancestry_id" jsonschema:"ancestry heritage id"`
-	CommunityID   string                     `json:"community_id" jsonschema:"community heritage id"`
-	Agility       int                        `json:"agility" jsonschema:"agility trait (-2 to +4)"`
-	Strength      int                        `json:"strength" jsonschema:"strength trait (-2 to +4)"`
-	Finesse       int                        `json:"finesse" jsonschema:"finesse trait (-2 to +4)"`
-	Instinct      int                        `json:"instinct" jsonschema:"instinct trait (-2 to +4)"`
-	Presence      int                        `json:"presence" jsonschema:"presence trait (-2 to +4)"`
-	Knowledge     int                        `json:"knowledge" jsonschema:"knowledge trait (-2 to +4)"`
-	WeaponIDs     []string                   `json:"weapon_ids" jsonschema:"starting weapon ids (one or two)"`
-	ArmorID       string                     `json:"armor_id" jsonschema:"starting armor id"`
-	PotionItemID  string                     `json:"potion_item_id" jsonschema:"starting potion item id"`
-	Description   string                     `json:"description" jsonschema:"character description text"`
-	Background    string                     `json:"background" jsonschema:"background text"`
-	Experiences   []CharacterExperienceInput `json:"experiences" jsonschema:"experiences list"`
-	DomainCardIDs []string                   `json:"domain_card_ids" jsonschema:"selected domain card ids"`
-	Connections   string                     `json:"connections" jsonschema:"connections text"`
+	CharacterID   string                           `json:"character_id" jsonschema:"character identifier"`
+	ClassID       string                           `json:"class_id" jsonschema:"class content id"`
+	SubclassID    string                           `json:"subclass_id" jsonschema:"subclass content id"`
+	Companion     *CharacterCreationCompanionInput `json:"companion,omitempty" jsonschema:"optional subclass-specific companion setup for step 1"`
+	Heritage      CharacterCreationHeritageInput   `json:"heritage" jsonschema:"structured heritage selection for step 2"`
+	Agility       int                              `json:"agility" jsonschema:"agility trait (-2 to +4)"`
+	Strength      int                              `json:"strength" jsonschema:"strength trait (-2 to +4)"`
+	Finesse       int                              `json:"finesse" jsonschema:"finesse trait (-2 to +4)"`
+	Instinct      int                              `json:"instinct" jsonschema:"instinct trait (-2 to +4)"`
+	Presence      int                              `json:"presence" jsonschema:"presence trait (-2 to +4)"`
+	Knowledge     int                              `json:"knowledge" jsonschema:"knowledge trait (-2 to +4)"`
+	WeaponIDs     []string                         `json:"weapon_ids" jsonschema:"starting weapon ids (one or two)"`
+	ArmorID       string                           `json:"armor_id" jsonschema:"starting armor id"`
+	PotionItemID  string                           `json:"potion_item_id" jsonschema:"starting potion item id"`
+	Description   string                           `json:"description" jsonschema:"character description text"`
+	Background    string                           `json:"background" jsonschema:"background text"`
+	Experiences   []CharacterExperienceInput       `json:"experiences" jsonschema:"experiences list"`
+	DomainCardIDs []string                         `json:"domain_card_ids" jsonschema:"selected domain card ids"`
+	Connections   string                           `json:"connections" jsonschema:"connections text"`
 }
 
 // CharacterCreationStepProgressResult represents one step completion entry.

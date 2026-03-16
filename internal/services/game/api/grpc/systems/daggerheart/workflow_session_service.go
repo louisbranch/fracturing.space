@@ -2,9 +2,17 @@ package daggerheart
 
 import (
 	"context"
+	"encoding/json"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/sessionflowtransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowruntime"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowwrite"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/commandids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -17,6 +25,8 @@ func (s *DaggerheartService) requireSessionFlowStores() error {
 		return status.Error(codes.Internal, "session store is not configured")
 	case s.stores.Daggerheart == nil:
 		return status.Error(codes.Internal, "daggerheart store is not configured")
+	case s.stores.Content == nil:
+		return status.Error(codes.Internal, "daggerheart content store is not configured")
 	case s.stores.Event == nil:
 		return status.Error(codes.Internal, "event store is not configured")
 	case s.seedFunc == nil:
@@ -38,8 +48,12 @@ func (s *DaggerheartService) requireSessionAdversaryFlowStores() error {
 		return status.Error(codes.Internal, "daggerheart store is not configured")
 	case s.stores.Event == nil:
 		return status.Error(codes.Internal, "event store is not configured")
+	case s.stores.Content == nil:
+		return status.Error(codes.Internal, "daggerheart content store is not configured")
 	case s.seedFunc == nil:
 		return status.Error(codes.Internal, "seed generator is not configured")
+	case s.stores.Write.Executor == nil:
+		return status.Error(codes.Internal, "domain engine is not configured")
 	default:
 		return nil
 	}
@@ -56,6 +70,172 @@ func (s *DaggerheartService) sessionFlowHandler() *sessionflowtransport.Handler 
 		ApplyReactionOutcome:        s.outcomeHandler().ApplyReactionOutcome,
 		ApplyAdversaryAttackOutcome: s.outcomeHandler().ApplyAdversaryAttackOutcome,
 		ApplyDamage:                 s.ApplyDamage,
+		ApplyAdversaryDamage:        s.ApplyAdversaryDamage,
+		LoadCharacterProfile: func(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error) {
+			return s.stores.Daggerheart.GetDaggerheartCharacterProfile(ctx, campaignID, characterID)
+		},
+		LoadCharacterState: func(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error) {
+			return s.stores.Daggerheart.GetDaggerheartCharacterState(ctx, campaignID, characterID)
+		},
+		LoadAdversary: func(ctx context.Context, campaignID, adversaryID, sessionID string) (projectionstore.DaggerheartAdversary, error) {
+			adversary, err := s.stores.Daggerheart.GetDaggerheartAdversary(ctx, campaignID, adversaryID)
+			if err != nil {
+				return projectionstore.DaggerheartAdversary{}, err
+			}
+			if adversary.SessionID != sessionID {
+				return projectionstore.DaggerheartAdversary{}, storage.ErrNotFound
+			}
+			return adversary, nil
+		},
+		LoadAdversaryEntry:         s.stores.Content.GetDaggerheartAdversaryEntry,
+		LoadSubclass:               s.stores.Content.GetDaggerheartSubclass,
+		LoadArmor:                  s.stores.Content.GetDaggerheartArmor,
+		ExecuteCharacterStatePatch: s.executeSessionFlowCharacterStatePatch,
+		ExecuteAdversaryUpdate:     s.executeSessionFlowAdversaryUpdate,
+		AdjustGMFear:               s.executeSessionFlowGMFearAdjust,
+		SeedFunc:                   s.seedFunc,
+	})
+}
+
+func (s *DaggerheartService) executeSessionFlowCharacterStatePatch(ctx context.Context, in sessionflowtransport.CharacterStatePatchInput) error {
+	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
+	payloadJSON, err := json.Marshal(daggerheart.CharacterStatePatchPayload{
+		CharacterID:                         ids.CharacterID(in.CharacterID),
+		Source:                              in.Source,
+		HopeBefore:                          in.HopeBefore,
+		HopeAfter:                           in.HopeAfter,
+		ArmorBefore:                         in.ArmorBefore,
+		ArmorAfter:                          in.ArmorAfter,
+		ClassStateBefore:                    in.ClassStateBefore,
+		ClassStateAfter:                     in.ClassStateAfter,
+		SubclassStateBefore:                 in.SubclassStateBefore,
+		SubclassStateAfter:                  in.SubclassStateAfter,
+		ImpenetrableUsedThisShortRestBefore: in.ImpenetrableUsedThisShortRestBefore,
+		ImpenetrableUsedThisShortRestAfter:  in.ImpenetrableUsedThisShortRestAfter,
+	})
+	if err != nil {
+		return err
+	}
+	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+		CampaignID:      in.CampaignID,
+		CommandType:     commandids.DaggerheartCharacterStatePatch,
+		SessionID:       in.SessionID,
+		SceneID:         in.SceneID,
+		RequestID:       in.RequestID,
+		InvocationID:    in.InvocationID,
+		EntityType:      "character",
+		EntityID:        in.CharacterID,
+		PayloadJSON:     payloadJSON,
+		MissingEventMsg: "character state patch did not emit an event",
+		ApplyErrMessage: "execute domain command",
+	})
+}
+
+func (s *DaggerheartService) executeSessionFlowAdversaryUpdate(ctx context.Context, in sessionflowtransport.AdversaryUpdateInput) error {
+	payloadJSON, err := json.Marshal(daggerheart.AdversaryUpdatePayload{
+		AdversaryID:      ids.AdversaryID(in.Adversary.AdversaryID),
+		AdversaryEntryID: in.Adversary.AdversaryEntryID,
+		Name:             in.Adversary.Name,
+		Kind:             in.Adversary.Kind,
+		SessionID:        ids.SessionID(in.Adversary.SessionID),
+		SceneID:          ids.SceneID(in.Adversary.SceneID),
+		Notes:            in.Adversary.Notes,
+		HP:               in.Adversary.HP,
+		HPMax:            in.Adversary.HPMax,
+		Stress:           in.UpdatedStress,
+		StressMax:        in.Adversary.StressMax,
+		Evasion:          in.Adversary.Evasion,
+		Major:            in.Adversary.Major,
+		Severe:           in.Adversary.Severe,
+		Armor:            in.Adversary.Armor,
+		FeatureStates: func() []daggerheart.AdversaryFeatureState {
+			source := in.UpdatedFeatureStates
+			if source == nil {
+				source = in.Adversary.FeatureStates
+			}
+			out := make([]daggerheart.AdversaryFeatureState, 0, len(source))
+			for _, state := range source {
+				out = append(out, daggerheart.AdversaryFeatureState{
+					FeatureID:       state.FeatureID,
+					Status:          state.Status,
+					FocusedTargetID: state.FocusedTargetID,
+				})
+			}
+			return out
+		}(),
+		PendingExperience: func() *daggerheart.AdversaryPendingExperience {
+			if in.ClearPendingExperience {
+				return nil
+			}
+			source := in.UpdatedPendingExperience
+			if source == nil {
+				source = in.Adversary.PendingExperience
+			}
+			if source == nil {
+				return nil
+			}
+			return &daggerheart.AdversaryPendingExperience{
+				Name:     source.Name,
+				Modifier: source.Modifier,
+			}
+		}(),
+		SpotlightGateID: ids.GateID(in.Adversary.SpotlightGateID),
+		SpotlightCount:  in.Adversary.SpotlightCount,
+	})
+	if err != nil {
+		return err
+	}
+	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
+	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+		CampaignID:      in.CampaignID,
+		CommandType:     commandids.DaggerheartAdversaryUpdate,
+		SessionID:       in.SessionID,
+		SceneID:         in.SceneID,
+		RequestID:       in.RequestID,
+		InvocationID:    in.InvocationID,
+		EntityType:      "adversary",
+		EntityID:        in.Adversary.AdversaryID,
+		PayloadJSON:     payloadJSON,
+		MissingEventMsg: "adversary update did not emit an event",
+		ApplyErrMessage: "execute domain command",
+	})
+}
+
+func (s *DaggerheartService) executeSessionFlowGMFearAdjust(ctx context.Context, in sessionflowtransport.GMFearAdjustInput) error {
+	snapshot, err := s.stores.Daggerheart.GetDaggerheartSnapshot(ctx, in.CampaignID)
+	if err != nil {
+		return err
+	}
+	nextFear := snapshot.GMFear + in.Delta
+	if nextFear < daggerheart.GMFearMin {
+		nextFear = daggerheart.GMFearMin
+	}
+	if nextFear > daggerheart.GMFearMax {
+		nextFear = daggerheart.GMFearMax
+	}
+	if nextFear == snapshot.GMFear {
+		return nil
+	}
+	runtime := workflowwrite.NewRuntime(s.stores.Write, s.stores.Event, s.stores.Daggerheart)
+	payloadJSON, err := json.Marshal(daggerheart.GMFearSetPayload{
+		After:  &nextFear,
+		Reason: in.Reason,
+	})
+	if err != nil {
+		return err
+	}
+	return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{
+		CampaignID:      in.CampaignID,
+		CommandType:     commandids.DaggerheartGMFearSet,
+		SessionID:       in.SessionID,
+		SceneID:         in.SceneID,
+		RequestID:       in.RequestID,
+		InvocationID:    in.InvocationID,
+		EntityType:      "campaign",
+		EntityID:        in.CampaignID,
+		PayloadJSON:     payloadJSON,
+		MissingEventMsg: "gm fear adjust did not emit an event",
+		ApplyErrMessage: "execute domain command",
 	})
 }
 

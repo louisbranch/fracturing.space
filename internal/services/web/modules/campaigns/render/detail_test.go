@@ -29,7 +29,7 @@ func TestFragmentRendersCharacterDetailState(t *testing.T) {
 				Level:         2,
 				ClassName:     "Rogue",
 				SubclassName:  "Night",
-				AncestryName:  "Human",
+				HeritageName:  "Human",
 				CommunityName: "Warden",
 			},
 		},

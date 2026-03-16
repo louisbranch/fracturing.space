@@ -77,6 +77,7 @@ func buildServiceDescriptors(
 	daggerheartStores := gameplaystores.NewFromProjection(gameplaystores.FromProjectionConfig{
 		ProjectionStore:  bundle.projections,
 		DaggerheartStore: stores.SystemStores.Daggerheart,
+		ContentStore:     bundle.content,
 		EventStore:       bundle.events,
 		Domain:           stores.Write.Executor,
 		Events:           stores.Events,

@@ -9,7 +9,6 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 func TestCreateAdversary_NilRequest(t *testing.T) {
@@ -20,24 +19,26 @@ func TestCreateAdversary_NilRequest(t *testing.T) {
 
 func TestCreateAdversary_MissingStores(t *testing.T) {
 	svc := &DaggerheartService{}
-	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-	})
+	_, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	assertStatusCode(t, err, codes.Internal)
 }
 
 func TestCreateAdversary_MissingCampaignID(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		Name: "Goblin",
+		SessionId:        testAdversarySessionID,
+		SceneId:          testAdversarySceneID,
+		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestCreateAdversary_MissingName(t *testing.T) {
+func TestCreateAdversary_MissingAdversaryEntryID(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
 		CampaignId: "camp-1",
+		SessionId:  testAdversarySessionID,
+		SceneId:    testAdversarySceneID,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -45,7 +46,10 @@ func TestCreateAdversary_MissingName(t *testing.T) {
 func TestCreateAdversary_CampaignNotFound(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "nonexistent", Name: "Goblin",
+		CampaignId:       "nonexistent",
+		SessionId:        testAdversarySessionID,
+		SceneId:          testAdversarySceneID,
+		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
 	assertStatusCode(t, err, codes.NotFound)
 }
@@ -53,21 +57,19 @@ func TestCreateAdversary_CampaignNotFound(t *testing.T) {
 func TestCreateAdversary_NonDaggerheartCampaign(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-non-dh", Name: "Goblin",
+		CampaignId:       "camp-non-dh",
+		SessionId:        testAdversarySessionID,
+		SceneId:          testAdversarySceneID,
+		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
 
 func TestCreateAdversary_Success(t *testing.T) {
 	svc := newAdversaryTestService()
-	resp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1",
-		Name:       "Goblin",
-		Kind:       "bruiser",
-		Notes:      "A test goblin",
-		Hp:         wrapperspb.Int32(6),
-		HpMax:      wrapperspb.Int32(6),
-	})
+	req := adversaryCreateRequest(testAdversaryEntryGoblinID)
+	req.Notes = "A test goblin"
+	resp, err := svc.CreateAdversary(context.Background(), req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -80,6 +82,9 @@ func TestCreateAdversary_Success(t *testing.T) {
 	if resp.Adversary.Kind != "bruiser" {
 		t.Errorf("kind = %q, want bruiser", resp.Adversary.Kind)
 	}
+	if resp.Adversary.AdversaryEntryId != testAdversaryEntryGoblinID {
+		t.Errorf("adversary_entry_id = %q, want %q", resp.Adversary.AdversaryEntryId, testAdversaryEntryGoblinID)
+	}
 	if resp.Adversary.Id == "" {
 		t.Error("expected non-empty adversary ID")
 	}
@@ -87,16 +92,12 @@ func TestCreateAdversary_Success(t *testing.T) {
 
 func TestCreateAdversary_WithSession(t *testing.T) {
 	svc := newAdversaryTestService()
-	resp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1",
-		Name:       "Goblin",
-		SessionId:  wrapperspb.String("sess-1"),
-	})
+	resp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resp.Adversary.SessionId == nil || resp.Adversary.SessionId.Value != "sess-1" {
-		t.Errorf("expected session_id = sess-1, got %v", resp.Adversary.SessionId)
+	if resp.Adversary.SessionId != testAdversarySessionID {
+		t.Errorf("expected session_id = %s, got %q", testAdversarySessionID, resp.Adversary.SessionId)
 	}
 }
 
@@ -105,12 +106,9 @@ func TestCreateAdversary_UsesDomainEngine(t *testing.T) {
 	engine := &dynamicDomainEngine{store: svc.stores.Event}
 	svc.stores.Write.Executor = engine
 
-	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1",
-		Name:       " Goblin ",
-		Kind:       "bruiser",
-		Notes:      " note ",
-	})
+	req := adversaryCreateRequest(testAdversaryEntryGoblinID)
+	req.Notes = " note "
+	_, err := svc.CreateAdversary(context.Background(), req)
 	if err != nil {
 		t.Fatalf("create adversary: %v", err)
 	}
@@ -153,19 +151,20 @@ func TestCreateAdversary_UsesDomainEngine(t *testing.T) {
 func TestCreateAdversary_SessionNotFound(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1",
-		Name:       "Goblin",
-		SessionId:  wrapperspb.String("nonexistent"),
+		CampaignId:       "camp-1",
+		SessionId:        "nonexistent",
+		SceneId:          testAdversarySceneID,
+		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
 	assertStatusCode(t, err, codes.NotFound)
 }
 
-func TestCreateAdversary_InvalidStats(t *testing.T) {
+func TestCreateAdversary_MissingSceneID(t *testing.T) {
 	svc := newAdversaryTestService()
 	_, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1",
-		Name:       "Goblin",
-		HpMax:      wrapperspb.Int32(0),
+		CampaignId:       "camp-1",
+		SessionId:        testAdversarySessionID,
+		AdversaryEntryId: testAdversaryEntryGoblinID,
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }

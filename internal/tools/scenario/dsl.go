@@ -295,6 +295,32 @@ func scenarioAdversary(state *lua.State) int {
 	return 0
 }
 
+// scenarioCreationWorkflow adds an explicit Daggerheart creation workflow step
+// so scenarios can drive character creation without relying on readiness
+// shortcuts.
+func scenarioCreationWorkflow(state *lua.State) int {
+	handle := checkSystemHandle(state, "creation_workflow")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "creation_workflow", data)
+	return 0
+}
+
+// scenarioExpectGMFear adds a read-only GM Fear assertion step for Daggerheart
+// scenarios.
+func scenarioExpectGMFear(state *lua.State) int {
+	handle := checkSystemHandle(state, "expect_gm_fear")
+	if handle == nil {
+		return 0
+	}
+	value := int(lua.CheckNumber(state, 2))
+	appendStepWithSystem(handle.scenario, handle.system, "expect_gm_fear", map[string]any{"value": value})
+	return 0
+}
+
 func scenarioGMFear(state *lua.State) int {
 	handle := checkSystemHandle(state, "gm_fear")
 	if handle == nil {
@@ -385,6 +411,17 @@ func scenarioAdversaryAttack(state *lua.State) int {
 	return 0
 }
 
+func scenarioAdversaryFeature(state *lua.State) int {
+	handle := checkSystemHandle(state, "adversary_feature")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "adversary_feature", data)
+	return 0
+}
+
 func scenarioAdversaryReaction(state *lua.State) int {
 	handle := checkSystemHandle(state, "adversary_reaction")
 	if handle == nil {
@@ -459,17 +496,6 @@ func scenarioRest(state *lua.State) int {
 	lua.CheckType(state, 2, lua.TypeTable)
 	data := tableToMap(state, 2)
 	appendStepWithSystem(handle.scenario, handle.system, "rest", data)
-	return 0
-}
-
-func scenarioDowntimeMove(state *lua.State) int {
-	handle := checkSystemHandle(state, "downtime_move")
-	if handle == nil {
-		return 0
-	}
-	lua.CheckType(state, 2, lua.TypeTable)
-	data := tableToMap(state, 2)
-	appendStepWithSystem(handle.scenario, handle.system, "downtime_move", data)
 	return 0
 }
 
@@ -660,6 +686,17 @@ func scenarioLevelUp(state *lua.State) int {
 	return 0
 }
 
+func scenarioClassFeature(state *lua.State) int {
+	handle := checkSystemHandle(state, "class_feature")
+	if handle == nil {
+		return 0
+	}
+	lua.CheckType(state, 2, lua.TypeTable)
+	data := tableToMap(state, 2)
+	appendStepWithSystem(handle.scenario, handle.system, "class_feature", data)
+	return 0
+}
+
 func scenarioUpdateGold(state *lua.State) int {
 	handle := checkSystemHandle(state, "update_gold")
 	if handle == nil {
@@ -717,6 +754,11 @@ func scenarioAcquireConsumable(state *lua.State) int {
 
 var gmActionMethods = []lua.RegistryFunction{
 	{Name: "spotlight", Function: gmActionSpotlight},
+	{Name: "adversary_spotlight", Function: gmActionAdversarySpotlight},
+	{Name: "move", Function: gmActionMove},
+	{Name: "adversary_feature", Function: gmActionAdversaryFeature},
+	{Name: "environment_feature", Function: gmActionEnvironmentFeature},
+	{Name: "adversary_experience", Function: gmActionAdversaryExperience},
 }
 
 var participantMethods = []lua.RegistryFunction{
@@ -731,16 +773,139 @@ func gmActionSpotlight(state *lua.State) int {
 		return 0
 	}
 	name := lua.CheckString(state, 2)
+	opts := optionalTable(state, 3)
+	step := gmActionStep(state, action)
+	if step == nil {
+		return 0
+	}
+	step.Args["spend_target"] = "direct_move"
+	step.Args["move"] = "custom"
+	step.Args["description"] = "spotlight " + name
+	mergeScenarioStepArgs(step, opts)
+	return 0
+}
+
+func gmActionAdversarySpotlight(state *lua.State) int {
+	ud := lua.CheckUserData(state, 1, gmActionTypeName)
+	action, ok := ud.(*gmAction)
+	if !ok || action == nil {
+		lua.Errorf(state, "invalid gm action")
+		return 0
+	}
+	name := lua.CheckString(state, 2)
+	opts := optionalTable(state, 3)
+	step := gmActionStep(state, action)
+	if step == nil {
+		return 0
+	}
+	step.Args["spend_target"] = "direct_move"
+	step.Args["move"] = "spotlight"
+	step.Args["target"] = name
+	mergeScenarioStepArgs(step, opts)
+	return 0
+}
+
+func gmActionMove(state *lua.State) int {
+	ud := lua.CheckUserData(state, 1, gmActionTypeName)
+	action, ok := ud.(*gmAction)
+	if !ok || action == nil {
+		lua.Errorf(state, "invalid gm action")
+		return 0
+	}
+	move := lua.CheckString(state, 2)
+	opts := optionalTable(state, 3)
+	step := gmActionStep(state, action)
+	if step == nil {
+		return 0
+	}
+	step.Args["spend_target"] = "direct_move"
+	step.Args["move"] = move
+	mergeScenarioStepArgs(step, opts)
+	return 0
+}
+
+func gmActionAdversaryFeature(state *lua.State) int {
+	ud := lua.CheckUserData(state, 1, gmActionTypeName)
+	action, ok := ud.(*gmAction)
+	if !ok || action == nil {
+		lua.Errorf(state, "invalid gm action")
+		return 0
+	}
+	target := lua.CheckString(state, 2)
+	featureID := lua.CheckString(state, 3)
+	opts := optionalTable(state, 4)
+	step := gmActionStep(state, action)
+	if step == nil {
+		return 0
+	}
+	step.Args["spend_target"] = "adversary_feature"
+	step.Args["target"] = target
+	step.Args["feature_id"] = featureID
+	mergeScenarioStepArgs(step, opts)
+	return 0
+}
+
+func gmActionEnvironmentFeature(state *lua.State) int {
+	ud := lua.CheckUserData(state, 1, gmActionTypeName)
+	action, ok := ud.(*gmAction)
+	if !ok || action == nil {
+		lua.Errorf(state, "invalid gm action")
+		return 0
+	}
+	environmentID := lua.CheckString(state, 2)
+	featureID := lua.CheckString(state, 3)
+	opts := optionalTable(state, 4)
+	step := gmActionStep(state, action)
+	if step == nil {
+		return 0
+	}
+	step.Args["spend_target"] = "environment_feature"
+	step.Args["environment_id"] = environmentID
+	step.Args["feature_id"] = featureID
+	mergeScenarioStepArgs(step, opts)
+	return 0
+}
+
+func gmActionAdversaryExperience(state *lua.State) int {
+	ud := lua.CheckUserData(state, 1, gmActionTypeName)
+	action, ok := ud.(*gmAction)
+	if !ok || action == nil {
+		lua.Errorf(state, "invalid gm action")
+		return 0
+	}
+	target := lua.CheckString(state, 2)
+	experienceName := lua.CheckString(state, 3)
+	opts := optionalTable(state, 4)
+	step := gmActionStep(state, action)
+	if step == nil {
+		return 0
+	}
+	step.Args["spend_target"] = "adversary_experience"
+	step.Args["target"] = target
+	step.Args["experience_name"] = experienceName
+	mergeScenarioStepArgs(step, opts)
+	return 0
+}
+
+func gmActionStep(state *lua.State, action *gmAction) *Step {
 	if action.stepIndex < 0 || action.stepIndex >= len(action.scenario.Steps) {
 		lua.Errorf(state, "gm action is out of range")
-		return 0
+		return nil
 	}
 	step := &action.scenario.Steps[action.stepIndex]
 	if step.Args == nil {
 		step.Args = map[string]any{}
 	}
-	step.Args["target"] = name
-	return 0
+	return step
+}
+
+func mergeScenarioStepArgs(step *Step, opts map[string]any) {
+	if step == nil || len(opts) == 0 {
+		return
+	}
+	for key, value := range opts {
+		step.Args[key] = value
+	}
 }
 
 func participantCharacter(state *lua.State) int {

@@ -302,6 +302,10 @@ func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, s
 	switch step.Kind {
 	case "adversary":
 		return r.runAdversaryStep(ctx, state, step)
+	case "creation_workflow":
+		return r.runCreationWorkflowStep(ctx, state, step)
+	case "expect_gm_fear":
+		return r.runExpectGMFearStep(ctx, state, step)
 	case "gm_fear":
 		return r.runGMFearStep(ctx, state, step)
 	case "reaction":
@@ -320,8 +324,6 @@ func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, s
 		return r.runTemporaryArmorStep(ctx, state, step)
 	case "rest":
 		return r.runRestStep(ctx, state, step)
-	case "downtime_move":
-		return r.runDowntimeMoveStep(ctx, state, step)
 	case "death_move":
 		return r.runDeathMoveStep(ctx, state, step)
 	case "blaze_of_glory":
@@ -334,6 +336,8 @@ func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, s
 		return r.runCombinedDamageStep(ctx, state, step)
 	case "adversary_attack":
 		return r.runAdversaryAttackStep(ctx, state, step)
+	case "adversary_feature":
+		return r.runAdversaryFeatureStep(ctx, state, step)
 	case "adversary_reaction":
 		return r.runAdversaryReactionStep(ctx, state, step)
 	case "adversary_update":
@@ -366,6 +370,8 @@ func (r *Runner) runDaggerheartStep(ctx context.Context, state *scenarioState, s
 		return r.runMitigateDamageStep(ctx, state, step)
 	case "level_up":
 		return r.runLevelUpStep(ctx, state, step)
+	case "class_feature":
+		return r.runClassFeatureStep(ctx, state, step)
 	case "update_gold":
 		return r.runUpdateGoldStep(ctx, state, step)
 	case "acquire_domain_card":
@@ -526,6 +532,14 @@ func (r *Runner) runStartSessionStep(ctx context.Context, state *scenarioState, 
 	if state.campaignID == "" {
 		return r.failf("campaign is required before session")
 	}
+	if state.sessionID != "" {
+		if state.sessionImplicit {
+			state.sessionImplicit = false
+			r.logf("session adopted: id=%s name=%s", state.sessionID, optionalString(step.Args, "name", "Scenario Session"))
+			return nil
+		}
+		return r.failf("session is already started")
+	}
 	if err := r.ensureSessionStartReadiness(ctx, state); err != nil {
 		return err
 	}
@@ -544,6 +558,7 @@ func (r *Runner) runStartSessionStep(ctx context.Context, state *scenarioState, 
 		return r.failf("expected session")
 	}
 	state.sessionID = response.GetSession().GetId()
+	state.sessionImplicit = false
 	r.logf("session started: id=%s name=%s", state.sessionID, name)
 	return r.requireEventTypesAfterSeq(ctx, state, before, event.TypeSessionStarted)
 }
@@ -568,6 +583,7 @@ func (r *Runner) runEndSessionStep(ctx context.Context, state *scenarioState) er
 	}
 	r.logf("session ended: id=%s", state.sessionID)
 	state.sessionID = ""
+	state.sessionImplicit = false
 	return nil
 }
 
@@ -605,15 +621,24 @@ func (r *Runner) runCharacterStep(ctx context.Context, state *scenarioState, ste
 	characterID := response.GetCharacter().GetId()
 	state.actors[name] = characterID
 	r.logf("character created: name=%s id=%s kind=%s", name, characterID, parsedKind.String())
-	if err := r.ensureScenarioCharacterReadiness(ctx, state, characterID); err != nil {
-		return err
+	if !optionalBool(step.Args, "skip_system_readiness", false) {
+		if err := r.ensureScenarioCharacterReadiness(ctx, state, characterID, step.Args); err != nil {
+			return err
+		}
 	}
 
-	if err := r.applyDefaultDaggerheartProfile(ctx, state, characterID, step.Args); err != nil {
+	expectedProfile, err := r.applyDefaultDaggerheartProfile(ctx, state, characterID, step.Args)
+	if err != nil {
 		return err
 	}
-	if err := r.applyOptionalCharacterState(ctx, state, characterID, step.Args); err != nil {
+	expectedState, err := r.applyOptionalCharacterState(ctx, state, characterID, step.Args, expectedProfile)
+	if err != nil {
 		return err
+	}
+	if expectedProfile != nil || expectedState != nil {
+		if err := r.waitForDaggerheartCharacterProjection(ctx, state, characterID, expectedProfile, expectedState); err != nil {
+			return err
+		}
 	}
 
 	if control := optionalString(step.Args, "control", ""); control != "" {

@@ -16,14 +16,19 @@ dh:adversary("Galadriel")
 scn:start_session("Conditions")
 dh:gm_fear(3)
 
--- Galadriel becomes Vulnerable, then uses a spotlight moment to break free.
+-- Galadriel becomes Vulnerable, then the GM spends Fear to frame the break free.
 dh:apply_condition{
   target = "Galadriel",
   add = { "VULNERABLE" },
   expect_conditions = { "VULNERABLE" },
   expect_added = { "VULNERABLE" }
 }
-dh:gm_spend_fear(1):spotlight("Galadriel", { expect_gm_fear_delta = -1, expect_gm_move = "spotlight", expect_gm_fear_spent = 1 })
+dh:gm_spend_fear(1):move("custom", {
+  description = "Galadriel gathers herself and breaks free.",
+  expect_gm_fear_delta = -1,
+  expect_gm_move = "custom",
+  expect_gm_fear_spent = 1
+})
 dh:apply_condition{
   target = "Galadriel",
   remove = { "VULNERABLE" },

@@ -59,27 +59,43 @@ func (h *Handler) ApplyLevelUp(ctx context.Context, in *pb.DaggerheartApplyLevel
 			Trait:           strings.TrimSpace(adv.GetTrait()),
 			DomainCardID:    strings.TrimSpace(adv.GetDomainCardId()),
 			DomainCardLevel: int(adv.GetDomainCardLevel()),
-			SubclassCardID:  strings.TrimSpace(adv.GetSubclassCardId()),
 		}
 		if adv.GetMulticlass() != nil {
 			entry.Multiclass = &daggerheart.LevelUpMulticlassPayload{
 				SecondaryClassID:    strings.TrimSpace(adv.GetMulticlass().GetSecondaryClassId()),
 				SecondarySubclassID: strings.TrimSpace(adv.GetMulticlass().GetSecondarySubclassId()),
-				FoundationCardID:    strings.TrimSpace(adv.GetMulticlass().GetFoundationCardId()),
 				SpellcastTrait:      strings.TrimSpace(adv.GetMulticlass().GetSpellcastTrait()),
 				DomainID:            strings.TrimSpace(adv.GetMulticlass().GetDomainId()),
 			}
 		}
 		advancements = append(advancements, entry)
 	}
+	rewards := make([]daggerheart.LevelUpRewardPayload, 0, len(in.GetRewards()))
+	for _, reward := range in.GetRewards() {
+		rewards = append(rewards, daggerheart.LevelUpRewardPayload{
+			Type:                  strings.TrimSpace(reward.GetType()),
+			DomainCardID:          strings.TrimSpace(reward.GetDomainCardId()),
+			DomainCardLevel:       int(reward.GetDomainCardLevel()),
+			CompanionBonusChoices: int(reward.GetCompanionBonusChoices()),
+		})
+	}
+	subclassTracksAfter, subclassBonuses, err := h.deriveLevelUpSubclassProgression(ctx, profile, advancements)
+	if err != nil {
+		return nil, err
+	}
 
 	payloadJSON, err := json.Marshal(daggerheart.LevelUpApplyPayload{
-		CharacterID:        ids.CharacterID(characterID),
-		LevelBefore:        levelBefore,
-		LevelAfter:         levelAfter,
-		Advancements:       advancements,
-		NewDomainCardID:    strings.TrimSpace(in.GetNewDomainCardId()),
-		NewDomainCardLevel: int(in.GetNewDomainCardLevel()),
+		CharacterID:                  ids.CharacterID(characterID),
+		LevelBefore:                  levelBefore,
+		LevelAfter:                   levelAfter,
+		Advancements:                 advancements,
+		Rewards:                      rewards,
+		SubclassTracksAfter:          subclassTracksAfter,
+		SubclassHpMaxDelta:           subclassBonuses.HpMaxDelta,
+		SubclassStressMaxDelta:       subclassBonuses.StressMaxDelta,
+		SubclassEvasionDelta:         subclassBonuses.EvasionDelta,
+		SubclassMajorThresholdDelta:  subclassBonuses.MajorThresholdDelta,
+		SubclassSevereThresholdDelta: subclassBonuses.SevereThresholdDelta,
 	})
 	if err != nil {
 		return nil, grpcerror.Internal("encode payload", err)

@@ -15,10 +15,10 @@ func TestCharacterStateToProto(t *testing.T) {
 		HopeMax: 6,
 		Stress:  3,
 		Armor:   1,
-		Conditions: []string{
+		Conditions: standardProjectionConditions(
 			daggerheart.ConditionHidden,
 			daggerheart.ConditionVulnerable,
-		},
+		),
 		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{
 			{Source: "spell", Duration: "scene", SourceID: "src-1", Amount: 2},
 		},
@@ -32,8 +32,8 @@ func TestCharacterStateToProto(t *testing.T) {
 	if got.GetLifeState() != pb.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS {
 		t.Fatalf("life state = %v, want unconscious", got.GetLifeState())
 	}
-	if len(got.GetConditions()) != 2 {
-		t.Fatalf("conditions len = %d, want 2", len(got.GetConditions()))
+	if len(got.GetConditionStates()) != 2 {
+		t.Fatalf("conditions len = %d, want 2", len(got.GetConditionStates()))
 	}
 	if len(got.GetTemporaryArmorBuckets()) != 1 {
 		t.Fatalf("temporary armor len = %d, want 1", len(got.GetTemporaryArmorBuckets()))
@@ -52,4 +52,18 @@ func TestOptionalInt32(t *testing.T) {
 	if got == nil || *got != 7 {
 		t.Fatalf("OptionalInt32(&7) = %v, want 7", got)
 	}
+}
+
+func standardProjectionConditions(codes ...string) []projectionstore.DaggerheartConditionState {
+	out := make([]projectionstore.DaggerheartConditionState, 0, len(codes))
+	for _, code := range codes {
+		out = append(out, projectionstore.DaggerheartConditionState{
+			ID:       code,
+			Class:    "standard",
+			Standard: code,
+			Code:     code,
+			Label:    code,
+		})
+	}
+	return out
 }

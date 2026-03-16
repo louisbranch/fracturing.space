@@ -27,7 +27,14 @@ func TestApplyGmMove_MissingStores(t *testing.T) {
 func TestApplyGmMove_MissingCampaignId(t *testing.T) {
 	svc := newActionTestService()
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
-		SessionId: "sess-1", Move: "test_move",
+		SessionId: "sess-1",
+		FearSpent: 1,
+		SpendTarget: &pb.DaggerheartApplyGmMoveRequest_DirectMove{
+			DirectMove: &pb.DaggerheartDirectGmMoveTarget{
+				Kind:  pb.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE,
+				Shape: pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT,
+			},
+		},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -35,15 +42,29 @@ func TestApplyGmMove_MissingCampaignId(t *testing.T) {
 func TestApplyGmMove_MissingSessionId(t *testing.T) {
 	svc := newActionTestService()
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1", Move: "test_move",
+		CampaignId: "camp-1",
+		FearSpent:  1,
+		SpendTarget: &pb.DaggerheartApplyGmMoveRequest_DirectMove{
+			DirectMove: &pb.DaggerheartDirectGmMoveTarget{
+				Kind:  pb.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE,
+				Shape: pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT,
+			},
+		},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyGmMove_MissingMove(t *testing.T) {
+func TestApplyGmMove_MissingKind(t *testing.T) {
 	svc := newActionTestService()
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1", SessionId: "sess-1",
+		CampaignId: "camp-1",
+		SessionId:  "sess-1",
+		FearSpent:  1,
+		SpendTarget: &pb.DaggerheartApplyGmMoveRequest_DirectMove{
+			DirectMove: &pb.DaggerheartDirectGmMoveTarget{
+				Shape: pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT,
+			},
+		},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
@@ -51,24 +72,33 @@ func TestApplyGmMove_MissingMove(t *testing.T) {
 func TestApplyGmMove_NegativeFearSpent(t *testing.T) {
 	svc := newActionTestService()
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", Move: "test_move", FearSpent: -1,
+		CampaignId: "camp-1",
+		SessionId:  "sess-1",
+		FearSpent:  -1,
+		SpendTarget: &pb.DaggerheartApplyGmMoveRequest_DirectMove{
+			DirectMove: &pb.DaggerheartDirectGmMoveTarget{
+				Kind:  pb.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE,
+				Shape: pb.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT,
+			},
+		},
 	})
 	assertStatusCode(t, err, codes.InvalidArgument)
 }
 
-func TestApplyGmMove_Success(t *testing.T) {
+func TestApplyGmMove_SuccessAdditionalMove(t *testing.T) {
 	svc := newActionTestService()
 	domain := &fakeDomainEngine{}
 	svc.stores.Write.Executor = domain
 	ctx := context.Background()
 	resp, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment",
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		FearSpent:   1,
+		SpendTarget: directAdditionalMoveRequest("camp-1", "sess-1", 1).GetSpendTarget(),
 	})
-	if err != nil {
-		t.Fatalf("ApplyGmMove returned error: %v", err)
-	}
-	if resp == nil {
-		t.Fatal("expected response")
+	assertStatusCode(t, err, codes.InvalidArgument)
+	if resp != nil {
+		t.Fatal("expected nil response when fear is unavailable")
 	}
 	if domain.calls != 0 {
 		t.Fatalf("expected no domain calls, got %d", domain.calls)
@@ -81,14 +111,36 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	dhStore.Snapshots["camp-1"] = projectionstore.DaggerheartSnapshot{CampaignID: "camp-1", GMFear: 3}
 	eventStore := svc.stores.Event.(*fakeEventStore)
-	gmPayload := daggerheart.GMFearSetPayload{After: optionalInt(2), Reason: "gm_move"}
-	gmPayloadJSON, err := json.Marshal(gmPayload)
+	gmMovePayloadJSON, err := json.Marshal(daggerheart.GMMoveAppliedPayload{
+		Target: daggerheart.GMMoveTarget{
+			Type:  daggerheart.GMMoveTargetTypeDirectMove,
+			Kind:  daggerheart.GMMoveKindAdditionalMove,
+			Shape: daggerheart.GMMoveShapeShiftEnvironment,
+		},
+		FearSpent: 1,
+	})
+	if err != nil {
+		t.Fatalf("encode gm move payload: %v", err)
+	}
+	gmFearPayloadJSON, err := json.Marshal(daggerheart.GMFearChangedPayload{Value: 2, Reason: "gm_move"})
 	if err != nil {
 		t.Fatalf("encode gm fear payload: %v", err)
 	}
 	serviceDomain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("sys.daggerheart.gm_fear.set"): {
+		command.Type("sys.daggerheart.gm_move.apply"): {
 			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.gm_move_applied"),
+				Timestamp:     testTimestamp,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				RequestID:     "req-gm-move-fear",
+				EntityType:    "session",
+				EntityID:      "sess-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   gmMovePayloadJSON,
+			}, event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 				Timestamp:     testTimestamp,
@@ -99,14 +151,17 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 				EntityID:      "camp-1",
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   gmPayloadJSON,
+				PayloadJSON:   gmFearPayloadJSON,
 			}),
 		},
 	}}
 	svc.stores.Write.Executor = serviceDomain
 	ctx := context.Background()
 	resp, err := svc.ApplyGmMove(ctx, &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1", SessionId: "sess-1", Move: "change_environment", FearSpent: 1,
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		FearSpent:   1,
+		SpendTarget: directAdditionalMoveRequest("camp-1", "sess-1", 1).GetSpendTarget(),
 	})
 	if err != nil {
 		t.Fatalf("ApplyGmMove returned error: %v", err)
@@ -120,11 +175,14 @@ func TestApplyGmMove_WithFearSpent(t *testing.T) {
 	if resp.GetGmFearAfter() != 2 {
 		t.Fatalf("expected gm fear after = 2, got %d", resp.GetGmFearAfter())
 	}
-	if len(eventStore.Events["camp-1"]) != 1 {
-		t.Fatalf("expected 1 event, got %d", len(eventStore.Events["camp-1"]))
+	if len(eventStore.Events["camp-1"]) != 2 {
+		t.Fatalf("expected 2 events, got %d", len(eventStore.Events["camp-1"]))
 	}
-	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
+	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_move_applied") {
+		t.Fatalf("first event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_move_applied"))
+	}
+	if eventStore.Events["camp-1"][1].Type != event.Type("sys.daggerheart.gm_fear_changed") {
+		t.Fatalf("second event type = %s, want %s", eventStore.Events["camp-1"][1].Type, event.Type("sys.daggerheart.gm_fear_changed"))
 	}
 }
 
@@ -136,8 +194,19 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	now := testTimestamp
 
 	domain := &fakeDomainEngine{store: eventStore, resultsByType: map[command.Type]engine.Result{
-		command.Type("sys.daggerheart.gm_fear.set"): {
+		command.Type("sys.daggerheart.gm_move.apply"): {
 			Decision: command.Accept(event.Event{
+				CampaignID:    "camp-1",
+				Type:          event.Type("sys.daggerheart.gm_move_applied"),
+				Timestamp:     now,
+				ActorType:     event.ActorTypeSystem,
+				SessionID:     "sess-1",
+				EntityType:    "session",
+				EntityID:      "sess-1",
+				SystemID:      daggerheart.SystemID,
+				SystemVersion: daggerheart.SystemVersion,
+				PayloadJSON:   []byte(`{"target":{"type":"direct_move","kind":"additional_move","shape":"shift_environment"},"fear_spent":1}`),
+			}, event.Event{
 				CampaignID:    "camp-1",
 				Type:          event.Type("sys.daggerheart.gm_fear_changed"),
 				Timestamp:     now,
@@ -147,7 +216,7 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 				EntityID:      "camp-1",
 				SystemID:      daggerheart.SystemID,
 				SystemVersion: daggerheart.SystemVersion,
-				PayloadJSON:   []byte(`{"before":2,"after":1,"reason":"gm_move"}`),
+				PayloadJSON:   []byte(`{"after":1,"reason":"gm_move"}`),
 			}),
 		},
 	}}
@@ -155,10 +224,10 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	svc.stores.Write.Executor = domain
 
 	_, err := svc.ApplyGmMove(context.Background(), &pb.DaggerheartApplyGmMoveRequest{
-		CampaignId: "camp-1",
-		SessionId:  "sess-1",
-		Move:       "change_environment",
-		FearSpent:  1,
+		CampaignId:  "camp-1",
+		SessionId:   "sess-1",
+		FearSpent:   1,
+		SpendTarget: directAdditionalMoveRequest("camp-1", "sess-1", 1).GetSpendTarget(),
 	})
 	if err != nil {
 		t.Fatalf("ApplyGmMove returned error: %v", err)
@@ -169,8 +238,8 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 	if len(domain.commands) != 1 {
 		t.Fatalf("expected 1 domain command, got %d", len(domain.commands))
 	}
-	if domain.commands[0].Type != command.Type("sys.daggerheart.gm_fear.set") {
-		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.gm_fear.set")
+	if domain.commands[0].Type != command.Type("sys.daggerheart.gm_move.apply") {
+		t.Fatalf("command type = %s, want %s", domain.commands[0].Type, "sys.daggerheart.gm_move.apply")
 	}
 	if domain.commands[0].SystemID != daggerheart.SystemID {
 		t.Fatalf("command system id = %s, want %s", domain.commands[0].SystemID, daggerheart.SystemID)
@@ -179,18 +248,32 @@ func TestApplyGmMove_UsesDomainEngine(t *testing.T) {
 		t.Fatalf("command system version = %s, want %s", domain.commands[0].SystemVersion, daggerheart.SystemVersion)
 	}
 	var got struct {
-		After int `json:"after"`
+		Target struct {
+			Type  string `json:"type"`
+			Kind  string `json:"kind"`
+			Shape string `json:"shape"`
+		} `json:"target"`
+		FearSpent int `json:"fear_spent"`
 	}
 	if err := json.Unmarshal(domain.commands[0].PayloadJSON, &got); err != nil {
-		t.Fatalf("decode gm fear command payload: %v", err)
+		t.Fatalf("decode gm move command payload: %v", err)
 	}
-	if got.After != 1 {
-		t.Fatalf("command fear value = %d, want 1", got.After)
+	if got.Target.Kind != "additional_move" {
+		t.Fatalf("command kind = %q, want additional_move", got.Target.Kind)
 	}
-	if got := len(eventStore.Events["camp-1"]); got != 1 {
-		t.Fatalf("expected 1 event, got %d", got)
+	if got.Target.Shape != "shift_environment" {
+		t.Fatalf("command shape = %q, want shift_environment", got.Target.Shape)
 	}
-	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_fear_changed") {
-		t.Fatalf("event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_fear_changed"))
+	if got.FearSpent != 1 {
+		t.Fatalf("command fear_spent = %d, want 1", got.FearSpent)
+	}
+	if got := len(eventStore.Events["camp-1"]); got != 2 {
+		t.Fatalf("expected 2 events, got %d", got)
+	}
+	if eventStore.Events["camp-1"][0].Type != event.Type("sys.daggerheart.gm_move_applied") {
+		t.Fatalf("first event type = %s, want %s", eventStore.Events["camp-1"][0].Type, event.Type("sys.daggerheart.gm_move_applied"))
+	}
+	if eventStore.Events["camp-1"][1].Type != event.Type("sys.daggerheart.gm_fear_changed") {
+		t.Fatalf("second event type = %s, want %s", eventStore.Events["camp-1"][1].Type, event.Type("sys.daggerheart.gm_fear_changed"))
 	}
 }

@@ -7,7 +7,11 @@ import (
 
 func characterProfileResultFromProto(profile *statev1.CharacterProfile) CharacterProfileResult {
 	result := CharacterProfileResult{
-		CharacterID: profile.GetCharacterId(),
+		CharacterID:          profile.GetCharacterId(),
+		SubclassRequirements: []string{},
+		StartingWeaponIDs:    []string{},
+		Experiences:          []CharacterExperienceInput{},
+		DomainCardIDs:        []string{},
 	}
 
 	// Extract Daggerheart-specific fields if present (includes HP max)
@@ -25,11 +29,20 @@ func characterProfileResultFromProto(profile *statev1.CharacterProfile) Characte
 		result.Knowledge = int(dh.GetKnowledge().GetValue())
 		result.ClassID = dh.GetClassId()
 		result.SubclassID = dh.GetSubclassId()
-		result.AncestryID = dh.GetAncestryId()
-		result.CommunityID = dh.GetCommunityId()
+		result.SubclassRequirements = append(result.SubclassRequirements, dh.GetSubclassCreationRequirements()...)
+		if heritage := dh.GetHeritage(); heritage != nil {
+			result.Heritage = CharacterHeritageResult{
+				AncestryLabel:           heritage.GetAncestryLabel(),
+				FirstFeatureAncestryID:  heritage.GetFirstFeatureAncestryId(),
+				FirstFeatureID:          heritage.GetFirstFeatureId(),
+				SecondFeatureAncestryID: heritage.GetSecondFeatureAncestryId(),
+				SecondFeatureID:         heritage.GetSecondFeatureId(),
+				CommunityID:             heritage.GetCommunityId(),
+			}
+		}
 		result.TraitsAssigned = dh.GetTraitsAssigned().GetValue()
 		result.DetailsRecorded = dh.GetDetailsRecorded().GetValue()
-		result.StartingWeaponIDs = append([]string(nil), dh.GetStartingWeaponIds()...)
+		result.StartingWeaponIDs = append(result.StartingWeaponIDs, dh.GetStartingWeaponIds()...)
 		result.StartingArmorID = dh.GetStartingArmorId()
 		result.StartingPotionItemID = dh.GetStartingPotionItemId()
 		result.Background = dh.GetBackground()
@@ -39,8 +52,26 @@ func characterProfileResultFromProto(profile *statev1.CharacterProfile) Characte
 				Modifier: int(experience.GetModifier()),
 			})
 		}
-		result.DomainCardIDs = append([]string(nil), dh.GetDomainCardIds()...)
+		result.DomainCardIDs = append(result.DomainCardIDs, dh.GetDomainCardIds()...)
 		result.Connections = dh.GetConnections()
+		if companion := dh.GetCompanionSheet(); companion != nil {
+			result.CompanionSheet = &CharacterCompanionSheet{
+				AnimalKind:        companion.GetAnimalKind(),
+				Name:              companion.GetName(),
+				Evasion:           int(companion.GetEvasion()),
+				Experiences:       []CharacterExperienceInput{},
+				AttackDescription: companion.GetAttackDescription(),
+				AttackRange:       companion.GetAttackRange(),
+				DamageDieSides:    int(companion.GetDamageDieSides()),
+				DamageType:        companion.GetDamageType(),
+			}
+			for _, experience := range companion.GetExperiences() {
+				result.CompanionSheet.Experiences = append(result.CompanionSheet.Experiences, CharacterExperienceInput{
+					Name:     experience.GetName(),
+					Modifier: int(experience.GetModifier()),
+				})
+			}
+		}
 	}
 
 	return result

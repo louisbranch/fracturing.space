@@ -112,6 +112,16 @@ func testEnv() testEnvFixture {
 			},
 		},
 		daggerheartClient: dhClient,
+		resolveDaggerheartAdversaryEntryID: func(_ context.Context, name string) (string, error) {
+			switch name {
+			case "Goblin":
+				return "adversary.goblin", nil
+			case "Shadow Hound":
+				return "adversary.shadow-hound", nil
+			default:
+				return "adversary." + strings.ToLower(strings.ReplaceAll(name, " ", "-")), nil
+			}
+		},
 	}
 	return testEnvFixture{
 		env:               env,
@@ -141,6 +151,27 @@ func quietRunner(env scenarioEnv) *Runner {
 		assertions: Assertions{Mode: AssertionStrict},
 		logger:     log.New(io.Discard, "", 0),
 		env:        env,
+	}
+}
+
+func readyDaggerheartSheetResponse() *gamev1.GetCharacterSheetResponse {
+	return &gamev1.GetCharacterSheetResponse{
+		Profile: &gamev1.CharacterProfile{
+			SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+				Daggerheart: &daggerheartv1.DaggerheartProfile{
+					ClassId:    "class.guardian",
+					SubclassId: "subclass.stalwart",
+				},
+			},
+		},
+		State: &gamev1.CharacterState{
+			SystemState: &gamev1.CharacterState_Daggerheart{
+				Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+					Hp:      6,
+					HopeMax: 2,
+				},
+			},
+		},
 	}
 }
 
@@ -286,6 +317,44 @@ func TestRunCharacterStepControlGM(t *testing.T) {
 	}
 	if controlRequest.GetParticipantId() != nil {
 		t.Fatalf("participant_id = %v, want nil", controlRequest.GetParticipantId())
+	}
+}
+
+func TestRunCharacterStepSkipSystemReadiness(t *testing.T) {
+	characterClient := &fakeCharacterClient{
+		create: func(_ context.Context, req *gamev1.CreateCharacterRequest, _ ...grpc.CallOption) (*gamev1.CreateCharacterResponse, error) {
+			return &gamev1.CreateCharacterResponse{
+				Character: &gamev1.Character{Id: "character-1"},
+			}, nil
+		},
+		patchProfile: func(context.Context, *gamev1.PatchCharacterProfileRequest, ...grpc.CallOption) (*gamev1.PatchCharacterProfileResponse, error) {
+			return &gamev1.PatchCharacterProfileResponse{}, nil
+		},
+	}
+
+	runner := &Runner{
+		assertions: Assertions{Mode: AssertionStrict},
+		env: scenarioEnv{
+			characterClient: characterClient,
+			snapshotClient:  &fakeSnapshotClient{},
+			eventClient:     &fakeEventClient{},
+		},
+	}
+	state := &scenarioState{
+		campaignID:         "campaign-1",
+		ownerParticipantID: "owner-1",
+		actors:             map[string]string{},
+	}
+	step := Step{Kind: "character", Args: map[string]any{
+		"name":                  "Frodo",
+		"skip_system_readiness": true,
+	}}
+
+	if err := runner.runCharacterStep(context.Background(), state, step); err != nil {
+		t.Fatalf("runCharacterStep: %v", err)
+	}
+	if got := state.actors["Frodo"]; got != "character-1" {
+		t.Fatalf("actor id = %q, want character-1", got)
 	}
 }
 
@@ -606,6 +675,43 @@ func TestRunStartSessionStep(t *testing.T) {
 	}
 }
 
+func TestRunStartSessionStepAdoptsImplicitSession(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	runner := quietRunner(env)
+	state := testState()
+	state.sessionID = "session-implicit"
+	state.sessionImplicit = true
+	err := runner.runStartSessionStep(context.Background(), state, Step{
+		Kind: "start_session",
+		Args: map[string]any{"name": "Session 1"},
+	})
+	if err != nil {
+		t.Fatalf("runStartSessionStep: %v", err)
+	}
+	if state.sessionID != "session-implicit" {
+		t.Fatalf("sessionID = %q, want session-implicit", state.sessionID)
+	}
+	if state.sessionImplicit {
+		t.Fatal("expected implicit session to be adopted")
+	}
+}
+
+func TestRunStartSessionStepRejectsDuplicateExplicitSession(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	runner := quietRunner(env)
+	state := testState()
+	state.sessionID = "session-existing"
+	err := runner.runStartSessionStep(context.Background(), state, Step{
+		Kind: "start_session",
+		Args: map[string]any{"name": "Session 1"},
+	})
+	if err == nil || !strings.Contains(err.Error(), "session is already started") {
+		t.Fatalf("expected duplicate session error, got %v", err)
+	}
+}
+
 func TestRunStartSessionStepRequiresCampaign(t *testing.T) {
 	fixture := testEnv()
 	env := fixture.env
@@ -732,12 +838,19 @@ func TestRunAdversaryStep(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.createAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartCreateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateAdversaryResponse, error) {
+		if req.GetAdversaryEntryId() != "adversary.goblin" {
+			t.Fatalf("adversary_entry_id = %q", req.GetAdversaryEntryId())
+		}
+		if req.GetSessionId() != "session-1" || req.GetSceneId() != "scene-1" {
+			t.Fatalf("request = %+v", req)
+		}
 		return &daggerheartv1.DaggerheartCreateAdversaryResponse{
 			Adversary: &daggerheartv1.DaggerheartAdversary{Id: "adv-1"},
 		}, nil
 	}
 	runner := quietRunner(env)
 	state := testState()
+	state.activeSceneID = "scene-1"
 	err := runner.runAdversaryStep(context.Background(), state, Step{
 		Kind: "adversary",
 		Args: map[string]any{"name": "Goblin"},
@@ -808,6 +921,154 @@ func TestRunGMFearStepMissingValue(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "value is required") {
 		t.Fatalf("expected value required, got %v", err)
+	}
+}
+
+func TestRunExpectGMFearStep(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	env.snapshotClient = &fakeSnapshotClient{
+		getSnapshot: func(_ context.Context, _ *gamev1.GetSnapshotRequest, _ ...grpc.CallOption) (*gamev1.GetSnapshotResponse, error) {
+			return &gamev1.GetSnapshotResponse{
+				Snapshot: &gamev1.Snapshot{
+					SystemSnapshot: &gamev1.Snapshot_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 2},
+					},
+				},
+			}, nil
+		},
+	}
+	runner := quietRunner(env)
+	state := testState()
+	if err := runner.runExpectGMFearStep(context.Background(), state, Step{
+		Kind: "expect_gm_fear",
+		Args: map[string]any{"value": 2},
+	}); err != nil {
+		t.Fatalf("runExpectGMFearStep: %v", err)
+	}
+	if state.gmFear != 2 {
+		t.Fatalf("gmFear = %d, want 2", state.gmFear)
+	}
+}
+
+func TestRunExpectGMFearStepMismatch(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	env.snapshotClient = &fakeSnapshotClient{
+		getSnapshot: func(_ context.Context, _ *gamev1.GetSnapshotRequest, _ ...grpc.CallOption) (*gamev1.GetSnapshotResponse, error) {
+			return &gamev1.GetSnapshotResponse{
+				Snapshot: &gamev1.Snapshot{
+					SystemSnapshot: &gamev1.Snapshot_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartSnapshot{GmFear: 1},
+					},
+				},
+			}, nil
+		},
+	}
+	runner := quietRunner(env)
+	state := testState()
+	err := runner.runExpectGMFearStep(context.Background(), state, Step{
+		Kind: "expect_gm_fear",
+		Args: map[string]any{"value": 2},
+	})
+	if err == nil || !strings.Contains(err.Error(), "expect_gm_fear") {
+		t.Fatalf("expected gm fear assertion, got %v", err)
+	}
+}
+
+func TestRunCreationWorkflowStepAppliesWorkflowAndAssertsProfile(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	var applyReq *gamev1.ApplyCharacterCreationWorkflowRequest
+	env.characterClient = &fakeCharacterClient{
+		applyWorkflow: func(_ context.Context, req *gamev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
+			applyReq = req
+			return &gamev1.ApplyCharacterCreationWorkflowResponse{}, nil
+		},
+		getSheet: func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			return &gamev1.GetCharacterSheetResponse{
+				Profile: &gamev1.CharacterProfile{
+					SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartProfile{
+							ClassId:    "class.ranger",
+							SubclassId: "subclass.beastbound",
+							Heritage: &daggerheartv1.DaggerheartHeritageSelection{
+								AncestryLabel:           "Stoneleaf",
+								FirstFeatureAncestryId:  "heritage.dwarf",
+								SecondFeatureAncestryId: "heritage.elf",
+								CommunityId:             "heritage.highborne",
+							},
+							CompanionSheet: &daggerheartv1.DaggerheartCompanionSheet{
+								Name:       "Rocket",
+								AnimalKind: "Raccoon",
+								DamageType: "physical",
+							},
+						},
+					},
+				},
+			}, nil
+		},
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Mira"] = "char-mira"
+	err := runner.runCreationWorkflowStep(context.Background(), state, Step{
+		Kind: "creation_workflow",
+		Args: map[string]any{
+			"target":      "Mira",
+			"class_id":    "class.ranger",
+			"subclass_id": "subclass.beastbound",
+			"heritage": map[string]any{
+				"first_feature_ancestry_id":  "heritage.dwarf",
+				"second_feature_ancestry_id": "heritage.elf",
+				"ancestry_label":             "Stoneleaf",
+				"community_id":               "heritage.highborne",
+			},
+			"companion": map[string]any{
+				"animal_kind":        "Raccoon",
+				"name":               "Rocket",
+				"experience_ids":     []any{"companion-experience.scout", "companion-experience.vigilant"},
+				"attack_description": "Short range concussion blast",
+				"damage_type":        "physical",
+			},
+			"expect_class_id":                   "class.ranger",
+			"expect_subclass_id":                "subclass.beastbound",
+			"expect_heritage_label":             "Stoneleaf",
+			"expect_first_feature_ancestry_id":  "heritage.dwarf",
+			"expect_second_feature_ancestry_id": "heritage.elf",
+			"expect_community_id":               "heritage.highborne",
+			"expect_companion_present":          true,
+			"expect_companion_name":             "Rocket",
+			"expect_companion_animal_kind":      "Raccoon",
+			"expect_companion_damage_type":      "physical",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runCreationWorkflowStep: %v", err)
+	}
+	if applyReq == nil {
+		t.Fatal("expected ApplyCharacterCreationWorkflow request")
+	}
+	got := applyReq.GetDaggerheart()
+	if got == nil || got.GetClassSubclassInput() == nil || got.GetClassSubclassInput().GetCompanion() == nil {
+		t.Fatalf("workflow input = %+v, want companion-backed class/subclass input", got)
+	}
+	if got.GetHeritageInput().GetHeritage().GetSecondFeatureAncestryId() != "heritage.elf" {
+		t.Fatalf("second ancestry = %q, want heritage.elf", got.GetHeritageInput().GetHeritage().GetSecondFeatureAncestryId())
+	}
+}
+
+func TestRunCreationWorkflowStepMissingTarget(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	runner := quietRunner(env)
+	state := testState()
+	err := runner.runCreationWorkflowStep(context.Background(), state, Step{
+		Kind: "creation_workflow",
+		Args: map[string]any{},
+	})
+	if err == nil || !strings.Contains(err.Error(), "target is required") {
+		t.Fatalf("expected target required, got %v", err)
 	}
 }
 
@@ -920,7 +1181,7 @@ func TestRunActionRollStep(t *testing.T) {
 	var request *daggerheartv1.SessionActionRollRequest
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
 		request = req
-		return &daggerheartv1.SessionActionRollResponse{RollSeq: 42}, nil
+		return &daggerheartv1.SessionActionRollResponse{RollSeq: 42, Total: 15}, nil
 	}
 	runner := quietRunner(env)
 	state := testState()
@@ -934,6 +1195,8 @@ func TestRunActionRollStep(t *testing.T) {
 			"seed":         1,
 			"advantage":    2,
 			"disadvantage": 1,
+			"context":      "move_silently",
+			"expect_total": 15,
 		},
 	})
 	if err != nil {
@@ -944,6 +1207,9 @@ func TestRunActionRollStep(t *testing.T) {
 	}
 	if request.GetAdvantage() != 2 || request.GetDisadvantage() != 1 {
 		t.Fatalf("advantage/disadvantage mismatch: %d/%d", request.GetAdvantage(), request.GetDisadvantage())
+	}
+	if request.GetContext() != daggerheartv1.ActionRollContext_ACTION_ROLL_CONTEXT_MOVE_SILENTLY {
+		t.Fatalf("context = %v, want MOVE_SILENTLY", request.GetContext())
 	}
 	if state.lastRollSeq != 42 {
 		t.Fatalf("lastRollSeq = %d, want 42", state.lastRollSeq)
@@ -997,6 +1263,24 @@ func TestRunActionRollStepMissingActor(t *testing.T) {
 	})
 	if err == nil || !strings.Contains(err.Error(), "requires actor") {
 		t.Fatalf("expected requires actor error, got %v", err)
+	}
+}
+
+func TestRunActionRollStepRejectsUnknownContext(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	err := runner.runActionRollStep(context.Background(), state, Step{
+		Kind: "action_roll",
+		Args: map[string]any{
+			"actor":   "Frodo",
+			"context": "unknown",
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "unsupported action roll context") {
+		t.Fatalf("expected unsupported context error, got %v", err)
 	}
 }
 
@@ -1104,8 +1388,8 @@ func TestRunReactionRollStepAdversaryActorUsesAdversaryRoll(t *testing.T) {
 	if request.GetAdversaryId() != "adv-golum" {
 		t.Fatalf("adversary_id = %q, want adv-golum", request.GetAdversaryId())
 	}
-	if request.GetAttackModifier() != 3 {
-		t.Fatalf("attack_modifier = %d, want 3", request.GetAttackModifier())
+	if len(request.GetModifiers()) != 1 || request.GetModifiers()[0].GetValue() != 3 {
+		t.Fatalf("modifiers = %+v, want one modifier with value 3", request.GetModifiers())
 	}
 	if request.GetRng() == nil || request.GetRng().GetSeed() != 5 {
 		t.Fatalf("expected replay seed 5, got %+v", request.GetRng())
@@ -1158,36 +1442,68 @@ func TestRunReactionStep(t *testing.T) {
 
 // --- adversary_attack step ---
 
-func TestRunAdversaryAttackStepStressForAdvantageSpendsStressBeforeRoll(t *testing.T) {
+func TestRunAdversaryAttackStepForwardsFeatureTargetsAndContributors(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-	callOrder := make([]string, 0, 3)
-
-	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
-		callOrder = append(callOrder, "get")
-		return &daggerheartv1.DaggerheartGetAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{
-				Id:     req.GetAdversaryId(),
-				Stress: 2,
-			},
-		}, nil
-	}
-
-	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
-	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
-		callOrder = append(callOrder, "update")
-		updateReq = req
-		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{
-				Id:     req.GetAdversaryId(),
-				Stress: req.GetStress().GetValue(),
-			},
-		}, nil
-	}
+	callOrder := make([]string, 0, 1)
 
 	var attackReq *daggerheartv1.SessionAdversaryAttackFlowRequest
 	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, req *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
 		callOrder = append(callOrder, "attack")
+		attackReq = req
+		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.adversaries["Skulk"] = "adv-skulk"
+	state.adversaries["Packmate"] = "adv-packmate"
+	state.actors["Frodo"] = "char-frodo"
+	state.actors["Sam"] = "char-sam"
+
+	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
+		Kind: "adversary_attack",
+		Args: map[string]any{
+			"actor":        "Skulk",
+			"targets":      []any{"Frodo", "Sam"},
+			"difficulty":   10,
+			"damage_type":  "physical",
+			"feature_id":   "group_attack",
+			"contributors": []any{"Packmate"},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runAdversaryAttackStep: %v", err)
+	}
+	if attackReq == nil {
+		t.Fatal("expected SessionAdversaryAttackFlow request")
+	}
+	if got := attackReq.GetFeatureId(); got != "group_attack" {
+		t.Fatalf("feature_id = %q, want group_attack", got)
+	}
+	if got := attackReq.GetTargetId(); got != "char-frodo" {
+		t.Fatalf("target_id = %q, want char-frodo", got)
+	}
+	if got := attackReq.GetTargetIds(); len(got) != 2 || got[0] != "char-frodo" || got[1] != "char-sam" {
+		t.Fatalf("target_ids = %v, want [char-frodo char-sam]", got)
+	}
+	if got := attackReq.GetContributorAdversaryIds(); len(got) != 1 || got[0] != "adv-packmate" {
+		t.Fatalf("contributor_adversary_ids = %v, want [adv-packmate]", got)
+	}
+	if attackReq.GetTargetArmorReaction() != nil {
+		t.Fatalf("target armor reaction = %v, want nil", attackReq.GetTargetArmorReaction())
+	}
+	if got := strings.Join(callOrder, ","); got != "attack" {
+		t.Fatalf("call order = %q, want attack", got)
+	}
+}
+
+func TestRunAdversaryAttackStepForwardsTimeslowingReaction(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var attackReq *daggerheartv1.SessionAdversaryAttackFlowRequest
+
+	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, req *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
 		attackReq = req
 		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
 	}
@@ -1200,34 +1516,29 @@ func TestRunAdversaryAttackStepStressForAdvantageSpendsStressBeforeRoll(t *testi
 	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
 		Kind: "adversary_attack",
 		Args: map[string]any{
-			"actor":                "Ranger",
-			"target":               "Frodo",
-			"difficulty":           10,
-			"damage_type":          "physical",
-			"stress_for_advantage": 1,
+			"actor":               "Ranger",
+			"target":              "Frodo",
+			"difficulty":          10,
+			"damage_type":         "physical",
+			"armor_reaction":      "timeslowing",
+			"armor_reaction_seed": 17,
 		},
 	})
 	if err != nil {
 		t.Fatalf("runAdversaryAttackStep: %v", err)
 	}
-	if updateReq == nil || updateReq.GetStress() == nil {
-		t.Fatal("expected stress update request before attack roll")
-	}
-	if got := updateReq.GetStress().GetValue(); got != 3 {
-		t.Fatalf("stress after spend = %d, want 3", got)
-	}
 	if attackReq == nil {
 		t.Fatal("expected SessionAdversaryAttackFlow request")
 	}
-	if got := attackReq.GetAdvantage(); got != 1 {
-		t.Fatalf("advantage = %d, want 1", got)
+	if attackReq.GetTargetArmorReaction() == nil || attackReq.GetTargetArmorReaction().GetTimeslowing() == nil {
+		t.Fatalf("target armor reaction = %v, want timeslowing", attackReq.GetTargetArmorReaction())
 	}
-	if got := strings.Join(callOrder, ","); got != "get,update,attack" {
-		t.Fatalf("call order = %q, want get,update,attack", got)
+	if got := attackReq.GetTargetArmorReaction().GetTimeslowing().GetRng().GetSeed(); got != 17 {
+		t.Fatalf("armor reaction seed = %d, want 17", got)
 	}
 }
 
-func TestRunAdversaryAttackStepStressForAdvantageRejectsMultipleSpends(t *testing.T) {
+func TestRunAdversaryAttackStepRequiresTargetOrTargets(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
 	attackFlowCalls := 0
@@ -1244,54 +1555,26 @@ func TestRunAdversaryAttackStepStressForAdvantageRejectsMultipleSpends(t *testin
 	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
 		Kind: "adversary_attack",
 		Args: map[string]any{
-			"actor":                "Ranger",
-			"target":               "Frodo",
-			"difficulty":           10,
-			"damage_type":          "physical",
-			"stress_for_advantage": 2,
+			"actor":       "Ranger",
+			"difficulty":  10,
+			"damage_type": "physical",
 		},
 	})
 	if err == nil {
-		t.Fatal("expected error for stress_for_advantage > 1")
+		t.Fatal("expected error for missing target data")
 	}
 	if attackFlowCalls != 0 {
 		t.Fatalf("attack flow calls = %d, want 0", attackFlowCalls)
 	}
 }
 
-func TestRunAdversaryAttackStepTeleportRepositionUpdatesAdversaryBeforeRoll(t *testing.T) {
+func TestRunAdversaryFeatureStepCallsApplyAdversaryFeature(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-	callOrder := make([]string, 0, 3)
-
-	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
-		callOrder = append(callOrder, "get")
-		return &daggerheartv1.DaggerheartGetAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{
-				Id:     req.GetAdversaryId(),
-				Stress: 2,
-			},
-		}, nil
-	}
-
-	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
-	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
-		callOrder = append(callOrder, "update")
-		updateReq = req
-		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{
-				Id:     req.GetAdversaryId(),
-				Stress: req.GetStress().GetValue(),
-				Notes:  req.GetNotes().GetValue(),
-			},
-		}, nil
-	}
-
-	var attackReq *daggerheartv1.SessionAdversaryAttackFlowRequest
-	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, req *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
-		callOrder = append(callOrder, "attack")
-		attackReq = req
-		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
+	var featureReq *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest
+	dhClient.applyAdversaryFeature = func(_ context.Context, req *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryFeatureResponse, error) {
+		featureReq = req
+		return &daggerheartv1.DaggerheartApplyAdversaryFeatureResponse{}, nil
 	}
 
 	runner := quietRunner(env)
@@ -1299,44 +1582,38 @@ func TestRunAdversaryAttackStepTeleportRepositionUpdatesAdversaryBeforeRoll(t *t
 	state.adversaries["Saruman"] = "adv-saruman"
 	state.actors["Frodo"] = "char-frodo"
 
-	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
-		Kind: "adversary_attack",
+	err := runner.runAdversaryFeatureStep(context.Background(), state, Step{
+		Kind: "adversary_feature",
 		Args: map[string]any{
-			"actor":                "Saruman",
-			"target":               "Frodo",
-			"difficulty":           10,
-			"damage_type":          "magic",
-			"teleport_range":       "far",
-			"teleport_stress_cost": 1,
+			"actor":   "Saruman",
+			"target":  "Frodo",
+			"feature": "warding_sphere",
 		},
 	})
 	if err != nil {
-		t.Fatalf("runAdversaryAttackStep: %v", err)
+		t.Fatalf("runAdversaryFeatureStep: %v", err)
 	}
-	if updateReq == nil || updateReq.GetStress() == nil {
-		t.Fatal("expected adversary stress update before attack roll")
+	if featureReq == nil {
+		t.Fatal("expected apply adversary feature request")
 	}
-	if got := updateReq.GetStress().GetValue(); got != 3 {
-		t.Fatalf("stress after teleport spend = %d, want 3", got)
+	if got := featureReq.GetAdversaryId(); got != "adv-saruman" {
+		t.Fatalf("adversary_id = %q, want adv-saruman", got)
 	}
-	if updateReq.GetNotes() == nil || updateReq.GetNotes().GetValue() != "teleport:far" {
-		t.Fatalf("teleport note = %v, want teleport:far", updateReq.GetNotes())
+	if got := featureReq.GetFeatureId(); got != "warding_sphere" {
+		t.Fatalf("feature_id = %q, want warding_sphere", got)
 	}
-	if attackReq == nil {
-		t.Fatal("expected SessionAdversaryAttackFlow request")
-	}
-	if got := strings.Join(callOrder, ","); got != "get,update,attack" {
-		t.Fatalf("call order = %q, want get,update,attack", got)
+	if got := featureReq.GetTargetCharacterId(); got != "char-frodo" {
+		t.Fatalf("target_character_id = %q, want char-frodo", got)
 	}
 }
 
-func TestRunAdversaryAttackStepRejectsOutOfBoundsTeleportRange(t *testing.T) {
+func TestRunAdversaryReactionStepFeatureDelegatesToAdversaryFeature(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-	attackFlowCalls := 0
-	dhClient.sessionAdversaryAttackFlow = func(_ context.Context, _ *daggerheartv1.SessionAdversaryAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAdversaryAttackFlowResponse, error) {
-		attackFlowCalls++
-		return &daggerheartv1.SessionAdversaryAttackFlowResponse{}, nil
+	var featureReq *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest
+	dhClient.applyAdversaryFeature = func(_ context.Context, req *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryFeatureResponse, error) {
+		featureReq = req
+		return &daggerheartv1.DaggerheartApplyAdversaryFeatureResponse{}, nil
 	}
 
 	runner := quietRunner(env)
@@ -1344,22 +1621,23 @@ func TestRunAdversaryAttackStepRejectsOutOfBoundsTeleportRange(t *testing.T) {
 	state.adversaries["Saruman"] = "adv-saruman"
 	state.actors["Frodo"] = "char-frodo"
 
-	err := runner.runAdversaryAttackStep(context.Background(), state, Step{
-		Kind: "adversary_attack",
+	err := runner.runStep(context.Background(), state, Step{
+		System: "DAGGERHEART",
+		Kind:   "adversary_reaction",
 		Args: map[string]any{
-			"actor":                "Saruman",
-			"target":               "Frodo",
-			"difficulty":           10,
-			"damage_type":          "magic",
-			"teleport_range":       "across-the-map",
-			"teleport_stress_cost": 1,
+			"actor":   "Saruman",
+			"target":  "Frodo",
+			"feature": "warding_sphere",
 		},
 	})
-	if err == nil {
-		t.Fatal("expected error for out-of-bounds teleport_range")
+	if err != nil {
+		t.Fatalf("runStep: %v", err)
 	}
-	if attackFlowCalls != 0 {
-		t.Fatalf("attack flow calls = %d, want 0", attackFlowCalls)
+	if featureReq == nil {
+		t.Fatal("expected apply adversary feature request")
+	}
+	if got := featureReq.GetFeatureId(); got != "warding_sphere" {
+		t.Fatalf("feature_id = %q, want warding_sphere", got)
 	}
 }
 
@@ -1418,18 +1696,9 @@ func TestRunStepAdversaryReactionStepAppliesDamageAndCooldown(t *testing.T) {
 	}
 }
 
-func TestRunStepAdversaryUpdateAppliesEvasionDelta(t *testing.T) {
+func TestRunStepAdversaryUpdateSetsSceneAndNotes(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-
-	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
-		return &daggerheartv1.DaggerheartGetAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{
-				Id:      req.GetAdversaryId(),
-				Evasion: 11,
-			},
-		}, nil
-	}
 
 	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
 	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
@@ -1437,7 +1706,8 @@ func TestRunStepAdversaryUpdateAppliesEvasionDelta(t *testing.T) {
 		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
 			Adversary: &daggerheartv1.DaggerheartAdversary{
 				Id:      req.GetAdversaryId(),
-				Evasion: req.GetEvasion().GetValue(),
+				SceneId: req.GetSceneId(),
+				Notes:   req.GetNotes().GetValue(),
 			},
 		}, nil
 	}
@@ -1450,9 +1720,9 @@ func TestRunStepAdversaryUpdateAppliesEvasionDelta(t *testing.T) {
 		System: "DAGGERHEART",
 		Kind:   "adversary_update",
 		Args: map[string]any{
-			"target":        "Mirkwood Warden",
-			"evasion_delta": 1,
-			"notes":         "ferocious_defense",
+			"target":   "Mirkwood Warden",
+			"scene_id": "scene-2",
+			"notes":    "ferocious_defense",
 		},
 	})
 	if err != nil {
@@ -1461,40 +1731,21 @@ func TestRunStepAdversaryUpdateAppliesEvasionDelta(t *testing.T) {
 	if updateReq == nil {
 		t.Fatal("expected update adversary request")
 	}
-	if got := updateReq.GetEvasion().GetValue(); got != 12 {
-		t.Fatalf("evasion = %d, want 12", got)
+	if got := updateReq.GetSceneId(); got != "scene-2" {
+		t.Fatalf("scene_id = %q, want scene-2", got)
 	}
 	if got := updateReq.GetNotes().GetValue(); got != "ferocious_defense" {
 		t.Fatalf("notes = %q, want ferocious_defense", got)
 	}
 }
 
-func TestRunStepAdversaryUpdateAppliesStressDelta(t *testing.T) {
+func TestRunStepAdversaryUpdateMapsLegacyStatMutationToNotes(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-
-	dhClient.getAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
-		return &daggerheartv1.DaggerheartGetAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{
-				Id:     req.GetAdversaryId(),
-				Stress: 2,
-			},
-		}, nil
-	}
-
 	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
 	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
 		updateReq = req
-		stressValue := int32(0)
-		if req.GetStress() != nil {
-			stressValue = req.GetStress().GetValue()
-		}
-		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{
-				Id:     req.GetAdversaryId(),
-				Stress: stressValue,
-			},
-		}, nil
+		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{}, nil
 	}
 
 	runner := quietRunner(env)
@@ -1515,14 +1766,17 @@ func TestRunStepAdversaryUpdateAppliesStressDelta(t *testing.T) {
 	if updateReq == nil {
 		t.Fatal("expected update adversary request")
 	}
-	if got := updateReq.GetStress().GetValue(); got != 3 {
-		t.Fatalf("stress = %d, want 3", got)
+	if got := updateReq.GetNotes().GetValue(); got != "stress_delta=1" {
+		t.Fatalf("notes = %q, want stress_delta=1", got)
 	}
 }
 
 func TestRunStepGroupReactionAppliesFailureConditionsOnly(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
+	env.characterClient.(*fakeCharacterClient).getSheet = func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+		return readyDaggerheartSheetResponse(), nil
+	}
 
 	reactionRollCalls := 0
 	applyReactionRollSeqs := make([]uint64, 0, 2)
@@ -1612,6 +1866,9 @@ func TestRunStepGroupReactionAppliesFailureConditionsOnly(t *testing.T) {
 func TestRunStepGroupReactionAppliesHalfDamageOnSuccess(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
+	env.characterClient.(*fakeCharacterClient).getSheet = func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+		return readyDaggerheartSheetResponse(), nil
+	}
 
 	dhClient.sessionActionRoll = func(_ context.Context, req *daggerheartv1.SessionActionRollRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionActionRollResponse, error) {
 		if req.GetCharacterId() == "char-frodo" {
@@ -1719,6 +1976,55 @@ func TestRunAttackStepAdversaryTargetForwardsDisadvantage(t *testing.T) {
 	}
 	if actionRollReq.GetDisadvantage() != 1 {
 		t.Fatalf("disadvantage = %d, want 1", actionRollReq.GetDisadvantage())
+	}
+}
+
+func TestRunAttackStepForwardsAttackRangeAndArmorBackedHopeSpend(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var attackReq *daggerheartv1.SessionAttackFlowRequest
+
+	dhClient.sessionAttackFlow = func(_ context.Context, req *daggerheartv1.SessionAttackFlowRequest, _ ...grpc.CallOption) (*daggerheartv1.SessionAttackFlowResponse, error) {
+		attackReq = req
+		return &daggerheartv1.SessionAttackFlowResponse{
+			ActionRoll:    &daggerheartv1.SessionActionRollResponse{RollSeq: 11},
+			AttackOutcome: &daggerheartv1.DaggerheartApplyAttackOutcomeResponse{Result: &daggerheartv1.DaggerheartAttackOutcomeResult{Success: false}},
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.actors["Sam"] = "char-sam"
+
+	err := runner.runAttackStep(context.Background(), state, Step{
+		Kind: "attack",
+		Args: map[string]any{
+			"actor":                   "Frodo",
+			"target":                  "Sam",
+			"trait":                   "instinct",
+			"difficulty":              10,
+			"attack_range":            "ranged",
+			"replace_hope_with_armor": true,
+			"modifiers": []any{
+				map[string]any{"source": "experience"},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runAttackStep: %v", err)
+	}
+	if attackReq == nil {
+		t.Fatal("expected SessionAttackFlow request")
+	}
+	if attackReq.GetStandardAttack() == nil {
+		t.Fatal("expected standard attack profile")
+	}
+	if attackReq.GetStandardAttack().GetAttackRange() != daggerheartv1.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_RANGED {
+		t.Fatalf("attack range = %v, want ranged", attackReq.GetStandardAttack().GetAttackRange())
+	}
+	if !attackReq.GetReplaceHopeWithArmor() {
+		t.Fatal("replace_hope_with_armor = false, want true")
 	}
 }
 
@@ -2119,12 +2425,11 @@ func TestRunCombinedDamageStep_RejectsDuplicateContributors(t *testing.T) {
 	}
 }
 
-func TestRunCombinedDamageStep_AdversaryOverflowDeletesExtraTargets(t *testing.T) {
+func TestRunCombinedDamageStep_DoesNotFakeOverflowDeletion(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
 
 	applyAdversaryDamageCalls := 0
-	deletedAdversaries := make([]string, 0, 2)
 	dhClient.applyAdversaryDamage = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyAdversaryDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryDamageResponse, error) {
 		applyAdversaryDamageCalls++
 		return &daggerheartv1.DaggerheartApplyAdversaryDamageResponse{
@@ -2133,10 +2438,8 @@ func TestRunCombinedDamageStep_AdversaryOverflowDeletesExtraTargets(t *testing.T
 		}, nil
 	}
 	dhClient.deleteAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartDeleteAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartDeleteAdversaryResponse, error) {
-		deletedAdversaries = append(deletedAdversaries, req.GetAdversaryId())
-		return &daggerheartv1.DaggerheartDeleteAdversaryResponse{
-			Adversary: &daggerheartv1.DaggerheartAdversary{Id: req.GetAdversaryId()},
-		}, nil
+		t.Fatalf("unexpected delete adversary call: %s", req.GetAdversaryId())
+		return nil, nil
 	}
 
 	runner := quietRunner(env)
@@ -2149,10 +2452,8 @@ func TestRunCombinedDamageStep_AdversaryOverflowDeletesExtraTargets(t *testing.T
 	err := runner.runCombinedDamageStep(context.Background(), state, Step{
 		Kind: "combined_damage",
 		Args: map[string]any{
-			"target":             "Moria Rat A",
-			"damage_type":        "physical",
-			"overflow_threshold": 3,
-			"overflow_targets":   []any{"Moria Rat B", "Moria Rat C"},
+			"target":      "Moria Rat A",
+			"damage_type": "physical",
 			"sources": []any{
 				map[string]any{"character": "Frodo", "amount": 6},
 			},
@@ -2164,11 +2465,58 @@ func TestRunCombinedDamageStep_AdversaryOverflowDeletesExtraTargets(t *testing.T
 	if applyAdversaryDamageCalls != 1 {
 		t.Fatalf("apply adversary damage calls = %d, want 1", applyAdversaryDamageCalls)
 	}
-	if len(deletedAdversaries) != 2 {
-		t.Fatalf("deleted adversaries = %v, want 2 overflow deletions", deletedAdversaries)
+}
+
+func TestRunCombinedDamageStepForwardsImpenetrableReaction(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var applyDamageReq *daggerheartv1.DaggerheartApplyDamageRequest
+	currentState := &daggerheartv1.DaggerheartCharacterState{Hp: 2, Armor: 1}
+	env.characterClient = &fakeCharacterClient{
+		getSheet: func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			return &gamev1.GetCharacterSheetResponse{
+				State: &gamev1.CharacterState{
+					SystemState: &gamev1.CharacterState_Daggerheart{
+						Daggerheart: currentState,
+					},
+				},
+			}, nil
+		},
 	}
-	if deletedAdversaries[0] != "adv-rat-b" || deletedAdversaries[1] != "adv-rat-c" {
-		t.Fatalf("deleted adversaries order = %v, want [adv-rat-b adv-rat-c]", deletedAdversaries)
+
+	dhClient.applyDamage = func(_ context.Context, req *daggerheartv1.DaggerheartApplyDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDamageResponse, error) {
+		applyDamageReq = req
+		currentState = &daggerheartv1.DaggerheartCharacterState{Hp: 1, Stress: 2, Armor: 0}
+		return &daggerheartv1.DaggerheartApplyDamageResponse{
+			CharacterId: req.GetCharacterId(),
+			State:       currentState,
+		}, nil
+	}
+
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	state.actors["Rat A"] = "char-rat-a"
+
+	err := runner.runCombinedDamageStep(context.Background(), state, Step{
+		Kind: "combined_damage",
+		Args: map[string]any{
+			"target":         "Frodo",
+			"damage_type":    "physical",
+			"armor_reaction": "impenetrable",
+			"sources": []any{
+				map[string]any{"character": "Rat A", "amount": 10},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("runCombinedDamageStep: %v", err)
+	}
+	if applyDamageReq == nil {
+		t.Fatal("expected ApplyDamage request")
+	}
+	if applyDamageReq.GetArmorReaction() == nil || applyDamageReq.GetArmorReaction().GetImpenetrable() == nil {
+		t.Fatalf("armor reaction = %v, want impenetrable", applyDamageReq.GetArmorReaction())
 	}
 }
 
@@ -2294,6 +2642,16 @@ func TestRunGMSpendFearStep(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
 	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
+		target := req.GetDirectMove()
+		if target == nil {
+			t.Fatal("expected direct move target")
+		}
+		if target.GetKind() != daggerheartv1.DaggerheartGmMoveKind_DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE {
+			t.Fatalf("kind = %v, want additional_move", target.GetKind())
+		}
+		if target.GetShape() != daggerheartv1.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_SPOTLIGHT_ADVERSARY {
+			t.Fatalf("shape = %v, want spotlight_adversary", target.GetShape())
+		}
 		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 1}, nil
 	}
 	runner := quietRunner(env)
@@ -2311,12 +2669,201 @@ func TestRunGMSpendFearStep(t *testing.T) {
 	}
 }
 
-func TestRunGMSpendFearStepZeroAmount(t *testing.T) {
+func TestRunGMSpendFearStepDescriptionDefaultsToCustomMove(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
+	var gotRequest *daggerheartv1.DaggerheartApplyGmMoveRequest
 	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
-		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 3}, nil
+		gotRequest = req
+		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 1}, nil
 	}
+	runner := quietRunner(env)
+	state := testState()
+	state.gmFear = 2
+	state.adversaries["Shire Elder"] = "adv-elder"
+	err := runner.runGMSpendFearStep(context.Background(), state, Step{
+		Kind: "gm_spend_fear",
+		Args: map[string]any{
+			"amount":      1,
+			"target":      "Shire Elder",
+			"description": "there_will_be_peace_rebuke",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runGMSpendFearStep: %v", err)
+	}
+	if gotRequest == nil || gotRequest.GetDirectMove() == nil {
+		t.Fatal("expected direct move request")
+	}
+	if got := gotRequest.GetDirectMove().GetShape(); got != daggerheartv1.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_CUSTOM {
+		t.Fatalf("shape = %v, want custom", got)
+	}
+	if got := gotRequest.GetDirectMove().GetAdversaryId(); got != "adv-elder" {
+		t.Fatalf("adversary_id = %q, want adv-elder", got)
+	}
+}
+
+func TestRunGMSpendFearStepUnknownSpotlightTargetFallsBackToCustom(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var gotRequest *daggerheartv1.DaggerheartApplyGmMoveRequest
+	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
+		gotRequest = req
+		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 0}, nil
+	}
+	dhClient.createEnvironmentEntity = func(_ context.Context, req *daggerheartv1.DaggerheartCreateEnvironmentEntityRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateEnvironmentEntityResponse, error) {
+		return &daggerheartv1.DaggerheartCreateEnvironmentEntityResponse{
+			EnvironmentEntity: &daggerheartv1.DaggerheartEnvironmentEntity{
+				Id:            "env-entity-1",
+				EnvironmentId: req.GetEnvironmentId(),
+				SessionId:     req.GetSessionId(),
+				SceneId:       req.GetSceneId(),
+			},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.gmFear = 1
+	err := runner.runGMSpendFearStep(context.Background(), state, Step{
+		Kind: "gm_spend_fear",
+		Args: map[string]any{
+			"amount": 1,
+			"move":   "spotlight",
+			"target": "Bruinen Ford",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runGMSpendFearStep: %v", err)
+	}
+	if gotRequest == nil || gotRequest.GetDirectMove() == nil {
+		t.Fatal("expected direct move request")
+	}
+	if got := gotRequest.GetDirectMove().GetShape(); got != daggerheartv1.DaggerheartGmMoveShape_DAGGERHEART_GM_MOVE_SHAPE_CUSTOM {
+		t.Fatalf("shape = %v, want custom", got)
+	}
+	if got := gotRequest.GetDirectMove().GetDescription(); got != "spotlight Bruinen Ford" {
+		t.Fatalf("description = %q, want spotlight Bruinen Ford", got)
+	}
+}
+
+func TestRunGMSpendFearStepAdversaryFeature(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var gotRequest *daggerheartv1.DaggerheartApplyGmMoveRequest
+	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
+		gotRequest = req
+		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 0}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.gmFear = 1
+	state.adversaries["Shadow Hound"] = "adv-1"
+	err := runner.runGMSpendFearStep(context.Background(), state, Step{
+		Kind: "gm_spend_fear",
+		Args: map[string]any{
+			"amount":       1,
+			"spend_target": "adversary_feature",
+			"target":       "Shadow Hound",
+			"feature_id":   "feature.shadow-hound-pounce",
+			"description":  "Leap from shadow",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runGMSpendFearStep: %v", err)
+	}
+	if gotRequest == nil || gotRequest.GetAdversaryFeature() == nil {
+		t.Fatal("expected adversary feature request")
+	}
+	if gotRequest.GetAdversaryFeature().GetAdversaryId() != "adv-1" {
+		t.Fatalf("adversary_id = %q", gotRequest.GetAdversaryFeature().GetAdversaryId())
+	}
+	if gotRequest.GetAdversaryFeature().GetFeatureId() != "feature.shadow-hound-pounce" {
+		t.Fatalf("feature_id = %q", gotRequest.GetAdversaryFeature().GetFeatureId())
+	}
+}
+
+func TestRunGMSpendFearStepEnvironmentFeature(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var gotRequest *daggerheartv1.DaggerheartApplyGmMoveRequest
+	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
+		gotRequest = req
+		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 0}, nil
+	}
+	dhClient.createEnvironmentEntity = func(_ context.Context, req *daggerheartv1.DaggerheartCreateEnvironmentEntityRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartCreateEnvironmentEntityResponse, error) {
+		return &daggerheartv1.DaggerheartCreateEnvironmentEntityResponse{
+			EnvironmentEntity: &daggerheartv1.DaggerheartEnvironmentEntity{
+				Id:            "env-entity-1",
+				EnvironmentId: req.GetEnvironmentId(),
+				SessionId:     req.GetSessionId(),
+				SceneId:       req.GetSceneId(),
+			},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.gmFear = 2
+	err := runner.runGMSpendFearStep(context.Background(), state, Step{
+		Kind: "gm_spend_fear",
+		Args: map[string]any{
+			"amount":         2,
+			"spend_target":   "environment_feature",
+			"environment_id": "environment.crumbling-bridge",
+			"feature_id":     "feature.crumbling-bridge-falling-stones",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runGMSpendFearStep: %v", err)
+	}
+	if gotRequest == nil || gotRequest.GetEnvironmentFeature() == nil {
+		t.Fatal("expected environment feature request")
+	}
+	if gotRequest.GetEnvironmentFeature().GetEnvironmentEntityId() == "" {
+		t.Fatal("environment_entity_id should be populated")
+	}
+	if gotRequest.GetEnvironmentFeature().GetFeatureId() != "feature.crumbling-bridge-falling-stones" {
+		t.Fatalf("feature_id = %q", gotRequest.GetEnvironmentFeature().GetFeatureId())
+	}
+}
+
+func TestRunGMSpendFearStepAdversaryExperience(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	var gotRequest *daggerheartv1.DaggerheartApplyGmMoveRequest
+	dhClient.applyGmMove = func(_ context.Context, req *daggerheartv1.DaggerheartApplyGmMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyGmMoveResponse, error) {
+		gotRequest = req
+		return &daggerheartv1.DaggerheartApplyGmMoveResponse{GmFearAfter: 0}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.gmFear = 1
+	state.adversaries["Shadow Hound"] = "adv-1"
+	err := runner.runGMSpendFearStep(context.Background(), state, Step{
+		Kind: "gm_spend_fear",
+		Args: map[string]any{
+			"amount":          1,
+			"spend_target":    "adversary_experience",
+			"target":          "Shadow Hound",
+			"experience_name": "Pack Hunter",
+		},
+	})
+	if err != nil {
+		t.Fatalf("runGMSpendFearStep: %v", err)
+	}
+	if gotRequest == nil || gotRequest.GetAdversaryExperience() == nil {
+		t.Fatal("expected adversary experience request")
+	}
+	if gotRequest.GetAdversaryExperience().GetAdversaryId() != "adv-1" {
+		t.Fatalf("adversary_id = %q", gotRequest.GetAdversaryExperience().GetAdversaryId())
+	}
+	if gotRequest.GetAdversaryExperience().GetExperienceName() != "Pack Hunter" {
+		t.Fatalf("experience_name = %q", gotRequest.GetAdversaryExperience().GetExperienceName())
+	}
+}
+
+func TestRunGMSpendFearStepZeroAmount(t *testing.T) {
+	fixture := testEnv()
+	env := fixture.env
 	runner := quietRunner(env)
 	state := testState()
 	state.gmFear = 3
@@ -2324,8 +2871,8 @@ func TestRunGMSpendFearStepZeroAmount(t *testing.T) {
 		Kind: "gm_spend_fear",
 		Args: map[string]any{"amount": 0, "move": "spotlight"},
 	})
-	if err != nil {
-		t.Fatalf("runGMSpendFearStep: %v", err)
+	if err == nil || !strings.Contains(err.Error(), "greater than zero") {
+		t.Fatalf("expected greater-than-zero error, got %v", err)
 	}
 }
 
@@ -2423,8 +2970,8 @@ func TestRunApplyConditionStepAdversaryTarget(t *testing.T) {
 	if got := request.GetSource(); got != "cloaked" {
 		t.Fatalf("source = %q, want cloaked", got)
 	}
-	if len(request.GetAdd()) != 1 || request.GetAdd()[0] != daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN {
-		t.Fatalf("add conditions = %v, want [HIDDEN]", request.GetAdd())
+	if len(request.GetAddConditions()) != 1 || request.GetAddConditions()[0].GetCode() != "hidden" {
+		t.Fatalf("add conditions = %v, want [hidden]", request.GetAddConditions())
 	}
 }
 
@@ -2510,7 +3057,10 @@ func TestRunStepTemporaryArmor(t *testing.T) {
 func TestRunRestStep(t *testing.T) {
 	fixture := testEnv()
 	env, dhClient := fixture.env, fixture.daggerheartClient
-	dhClient.applyRest = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyRestRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error) {
+	dhClient.applyRest = func(_ context.Context, in *daggerheartv1.DaggerheartApplyRestRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyRestResponse, error) {
+		if len(in.GetRest().GetParticipants()) != 1 || in.GetRest().GetParticipants()[0].GetCharacterId() != "char-frodo" {
+			t.Fatalf("participants = %+v, want char-frodo", in.GetRest().GetParticipants())
+		}
 		return &daggerheartv1.DaggerheartApplyRestResponse{}, nil
 	}
 	runner := quietRunner(env)
@@ -2539,26 +3089,6 @@ func TestRunRestStepMissingType(t *testing.T) {
 	}
 }
 
-// --- downtime_move step ---
-
-func TestRunDowntimeMoveStep(t *testing.T) {
-	fixture := testEnv()
-	env, dhClient := fixture.env, fixture.daggerheartClient
-	dhClient.applyDowntimeMove = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyDowntimeMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDowntimeMoveResponse, error) {
-		return &daggerheartv1.DaggerheartApplyDowntimeMoveResponse{}, nil
-	}
-	runner := quietRunner(env)
-	state := testState()
-	state.actors["Frodo"] = "char-frodo"
-	err := runner.runDowntimeMoveStep(context.Background(), state, Step{
-		Kind: "downtime_move",
-		Args: map[string]any{"target": "Frodo", "move": "clear_all_stress"},
-	})
-	if err != nil {
-		t.Fatalf("runDowntimeMoveStep: %v", err)
-	}
-}
-
 // --- death_move step ---
 
 func TestRunDeathMoveStep(t *testing.T) {
@@ -2576,6 +3106,73 @@ func TestRunDeathMoveStep(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("runDeathMoveStep: %v", err)
+	}
+}
+
+func TestRunDeathMoveStepAssertsExpectedDeathOutcome(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	dhClient.applyDeathMove = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyDeathMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDeathMoveResponse, error) {
+		hopeDie := int32(7)
+		return &daggerheartv1.DaggerheartApplyDeathMoveResponse{
+			Result: &daggerheartv1.DaggerheartDeathMoveResult{
+				LifeState:  daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD,
+				ScarGained: true,
+				HopeDie:    &hopeDie,
+			},
+			State: &daggerheartv1.DaggerheartCharacterState{
+				HopeMax:   0,
+				LifeState: daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_DEAD,
+			},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	err := runner.runDeathMoveStep(context.Background(), state, Step{
+		Kind: "death_move",
+		Args: map[string]any{
+			"target":             "Frodo",
+			"move":               "avoid_death",
+			"expect_life_state":  "dead",
+			"expect_scar_gained": true,
+			"expect_hope_die":    7,
+			"expect_hope_max":    0,
+		},
+	})
+	if err != nil {
+		t.Fatalf("runDeathMoveStep: %v", err)
+	}
+}
+
+func TestRunDeathMoveStepRejectsMismatchedDeathOutcome(t *testing.T) {
+	fixture := testEnv()
+	env, dhClient := fixture.env, fixture.daggerheartClient
+	dhClient.applyDeathMove = func(_ context.Context, _ *daggerheartv1.DaggerheartApplyDeathMoveRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyDeathMoveResponse, error) {
+		return &daggerheartv1.DaggerheartApplyDeathMoveResponse{
+			Result: &daggerheartv1.DaggerheartDeathMoveResult{
+				LifeState:  daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
+				ScarGained: false,
+			},
+			State: &daggerheartv1.DaggerheartCharacterState{
+				HopeMax:   1,
+				LifeState: daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_UNCONSCIOUS,
+			},
+		}, nil
+	}
+	runner := quietRunner(env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	err := runner.runDeathMoveStep(context.Background(), state, Step{
+		Kind: "death_move",
+		Args: map[string]any{
+			"target":            "Frodo",
+			"move":              "avoid_death",
+			"expect_life_state": "dead",
+		},
+	})
+	if err == nil || !strings.Contains(err.Error(), "death_move life_state") {
+		t.Fatalf("expected life_state assertion failure, got %v", err)
 	}
 }
 
@@ -3105,6 +3702,210 @@ func TestNewRunnerEmptyAddr(t *testing.T) {
 	_, err := NewRunner(context.Background(), Config{})
 	if err == nil || !strings.Contains(err.Error(), "grpc address is required") {
 		t.Fatalf("expected grpc address required, got %v", err)
+	}
+}
+
+func TestRunLevelUpStepBuildsStageBasedRequestAndChecksSubclassExpectations(t *testing.T) {
+	fixture := testEnv()
+	var req *daggerheartv1.DaggerheartApplyLevelUpRequest
+	fixture.daggerheartClient.applyLevelUp = func(_ context.Context, in *daggerheartv1.DaggerheartApplyLevelUpRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error) {
+		req = in
+		return &daggerheartv1.DaggerheartApplyLevelUpResponse{}, nil
+	}
+	listCalls := 0
+	fixture.eventClient.listEvents = func(_ context.Context, _ *gamev1.ListEventsRequest, _ ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
+		listCalls++
+		if listCalls == 1 {
+			return &gamev1.ListEventsResponse{
+				Events: []*gamev1.Event{{Seq: 1, Type: "baseline"}},
+			}, nil
+		}
+		return &gamev1.ListEventsResponse{
+			Events: []*gamev1.Event{{Seq: 2, Type: "sys.daggerheart.level_up_applied"}},
+		}, nil
+	}
+	fixture.env.characterClient.(*fakeCharacterClient).getSheet = func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+		return &gamev1.GetCharacterSheetResponse{
+			Profile: &gamev1.CharacterProfile{
+				SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+					Daggerheart: &daggerheartv1.DaggerheartProfile{
+						Level: 2,
+						SubclassTracks: []*daggerheartv1.DaggerheartSubclassTrack{{
+							Origin:     daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_PRIMARY,
+							ClassId:    "class.guardian",
+							SubclassId: "subclass.stalwart",
+							Rank:       daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_SPECIALIZATION,
+						}},
+						ActiveSubclassFeatures: []*daggerheartv1.DaggerheartActiveSubclassTrackFeatures{{
+							FoundationFeatures:     []*daggerheartv1.DaggerheartActiveSubclassFeature{{Id: "feature.stalwart-unwavering"}},
+							SpecializationFeatures: []*daggerheartv1.DaggerheartActiveSubclassFeature{{Id: "feature.stalwart-unrelenting"}},
+						}},
+					},
+				},
+			},
+		}, nil
+	}
+
+	runner := quietRunner(fixture.env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	step := Step{
+		Kind: "level_up",
+		Args: map[string]any{
+			"target":                       "Frodo",
+			"level_after":                  2,
+			"expect_level":                 2,
+			"expect_subclass_track_count":  1,
+			"expect_primary_subclass_rank": "specialization",
+			"expect_active_feature_ids":    []any{"feature.stalwart-unwavering", "feature.stalwart-unrelenting"},
+			"advancements": []any{
+				map[string]any{"type": "upgraded_subclass"},
+				map[string]any{"type": "add_hp_slots"},
+			},
+		},
+	}
+
+	if err := runner.runLevelUpStep(context.Background(), state, step); err != nil {
+		t.Fatalf("runLevelUpStep returned error: %v", err)
+	}
+	if req == nil {
+		t.Fatal("expected ApplyLevelUp request")
+	}
+	if req.GetCharacterId() != "char-frodo" || req.GetLevelAfter() != 2 {
+		t.Fatalf("request = %+v", req)
+	}
+	if got := req.GetAdvancements(); len(got) != 2 || got[0].GetType() != "upgraded_subclass" || got[1].GetType() != "add_hp_slots" {
+		t.Fatalf("advancements = %+v", got)
+	}
+}
+
+func TestRunLevelUpStepBuildsMulticlassWithoutFoundationCard(t *testing.T) {
+	fixture := testEnv()
+	var req *daggerheartv1.DaggerheartApplyLevelUpRequest
+	fixture.daggerheartClient.applyLevelUp = func(_ context.Context, in *daggerheartv1.DaggerheartApplyLevelUpRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error) {
+		req = in
+		return &daggerheartv1.DaggerheartApplyLevelUpResponse{}, nil
+	}
+	listCalls := 0
+	fixture.eventClient.listEvents = func(_ context.Context, _ *gamev1.ListEventsRequest, _ ...grpc.CallOption) (*gamev1.ListEventsResponse, error) {
+		listCalls++
+		if listCalls == 1 {
+			return &gamev1.ListEventsResponse{
+				Events: []*gamev1.Event{{Seq: 1, Type: "baseline"}},
+			}, nil
+		}
+		return &gamev1.ListEventsResponse{
+			Events: []*gamev1.Event{{Seq: 2, Type: "sys.daggerheart.level_up_applied"}},
+		}, nil
+	}
+	fixture.env.characterClient.(*fakeCharacterClient).getSheet = func(_ context.Context, _ *gamev1.GetCharacterSheetRequest, _ ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+		return &gamev1.GetCharacterSheetResponse{
+			Profile: &gamev1.CharacterProfile{
+				SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+					Daggerheart: &daggerheartv1.DaggerheartProfile{
+						Level: 6,
+						SubclassTracks: []*daggerheartv1.DaggerheartSubclassTrack{
+							{Origin: daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_PRIMARY, ClassId: "class.guardian", SubclassId: "subclass.stalwart", Rank: daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_FOUNDATION},
+							{Origin: daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_MULTICLASS, ClassId: "class.bard", SubclassId: "subclass.wordsmith", Rank: daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_FOUNDATION, DomainId: "domain.codex"},
+						},
+						ActiveSubclassFeatures: []*daggerheartv1.DaggerheartActiveSubclassTrackFeatures{{
+							FoundationFeatures: []*daggerheartv1.DaggerheartActiveSubclassFeature{{Id: "feature.wordsmith-foundation"}},
+						}},
+					},
+				},
+			},
+		}, nil
+	}
+
+	runner := quietRunner(fixture.env)
+	state := testState()
+	state.actors["Frodo"] = "char-frodo"
+	step := Step{
+		Kind: "level_up",
+		Args: map[string]any{
+			"target":                        "Frodo",
+			"level_after":                   6,
+			"expect_level":                  6,
+			"expect_subclass_track_count":   2,
+			"expect_multiclass_subclass_id": "subclass.wordsmith",
+			"expect_active_feature_ids":     []string{"feature.wordsmith-foundation"},
+			"advancements": []any{
+				map[string]any{
+					"type": "multiclass",
+					"multiclass": map[string]any{
+						"secondary_class_id":    "class.bard",
+						"secondary_subclass_id": "subclass.wordsmith",
+						"spellcast_trait":       "presence",
+						"domain_id":             "domain.codex",
+					},
+				},
+			},
+		},
+	}
+
+	if err := runner.runLevelUpStep(context.Background(), state, step); err != nil {
+		t.Fatalf("runLevelUpStep returned error: %v", err)
+	}
+	if req == nil || len(req.GetAdvancements()) != 1 || req.GetAdvancements()[0].GetMulticlass() == nil {
+		t.Fatalf("request = %+v", req)
+	}
+	if req.GetAdvancements()[0].GetMulticlass().GetSecondaryClassId() != "class.bard" || req.GetAdvancements()[0].GetMulticlass().GetDomainId() != "domain.codex" {
+		t.Fatalf("multiclass payload = %+v", req.GetAdvancements()[0].GetMulticlass())
+	}
+}
+
+func TestSubclassTrackHelpers(t *testing.T) {
+	tracks := []*daggerheartv1.DaggerheartSubclassTrack{
+		{
+			Origin:     daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_PRIMARY,
+			ClassId:    "class.guardian",
+			SubclassId: "subclass.stalwart",
+			Rank:       daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_SPECIALIZATION,
+		},
+		{
+			Origin:     daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_MULTICLASS,
+			ClassId:    "class.bard",
+			SubclassId: "subclass.wordsmith",
+			Rank:       daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_FOUNDATION,
+		},
+	}
+
+	if track, ok := findSubclassTrack(tracks, daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_MULTICLASS); !ok || track.GetSubclassId() != "subclass.wordsmith" {
+		t.Fatalf("multiclass track = %+v ok=%v", track, ok)
+	}
+	if _, ok := findSubclassTrack(tracks, daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_UNSPECIFIED); ok {
+		t.Fatal("expected unspecified origin lookup to miss")
+	}
+	if rank, ok := findSubclassTrackRank(tracks, daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_PRIMARY); !ok || normalizeSubclassTrackRank(rank) != "specialization" {
+		t.Fatalf("primary rank = %v ok=%v", rank, ok)
+	}
+	if got := normalizeSubclassTrackRank(daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_UNSPECIFIED); got != "" {
+		t.Fatalf("normalized rank = %q, want empty", got)
+	}
+	if got := normalizeScenarioKey("  FEATURE.Stalwart-Unwavering  "); got != "feature.stalwart-unwavering" {
+		t.Fatalf("normalized key = %q", got)
+	}
+}
+
+func TestProfileHasActiveSubclassFeatureAcrossStages(t *testing.T) {
+	profile := &daggerheartv1.DaggerheartProfile{
+		ActiveSubclassFeatures: []*daggerheartv1.DaggerheartActiveSubclassTrackFeatures{
+			{
+				FoundationFeatures:     []*daggerheartv1.DaggerheartActiveSubclassFeature{{Id: "feature.stalwart-unwavering"}},
+				SpecializationFeatures: []*daggerheartv1.DaggerheartActiveSubclassFeature{{Id: "feature.stalwart-unrelenting"}},
+				MasteryFeatures:        []*daggerheartv1.DaggerheartActiveSubclassFeature{{Id: "feature.stalwart-undaunted"}},
+			},
+		},
+	}
+
+	if !profileHasActiveSubclassFeature(profile, "FEATURE.STALWART-UNRELENTING") {
+		t.Fatal("expected specialization feature to be found")
+	}
+	if !profileHasActiveSubclassFeature(profile, "feature.stalwart-undaunted") {
+		t.Fatal("expected mastery feature to be found")
+	}
+	if profileHasActiveSubclassFeature(profile, "feature.unknown") {
+		t.Fatal("unexpected unknown feature match")
 	}
 }
 

@@ -42,9 +42,10 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		adapter := NewAdapter(store)
 
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
-			CharacterID: "char-1",
-			Move:        "prepare",
-			Hope:        intPtr(3),
+			ActorCharacterID:  "char-1",
+			TargetCharacterID: "char-1",
+			Move:              "prepare",
+			Hope:              intPtr(3),
 		})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character state: character read failed") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want wrapped read error", err)
@@ -65,9 +66,10 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		store.getCharacterProfileErr = errors.New("profile read failed")
 
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
-			CharacterID: "char-1",
-			Move:        "prepare",
-			Hope:        intPtr(3),
+			ActorCharacterID:  "char-1",
+			TargetCharacterID: "char-1",
+			Move:              "prepare",
+			Hope:              intPtr(3),
 		})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character profile: profile read failed") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want wrapped profile read error", err)
@@ -79,9 +81,10 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		adapter := NewAdapter(store)
 
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
-			CharacterID: "char-1",
-			Move:        "prepare",
-			Hope:        intPtr(-1),
+			ActorCharacterID:  "char-1",
+			TargetCharacterID: "char-1",
+			Move:              "prepare",
+			Hope:              intPtr(-1),
 		})
 		if err == nil || !strings.Contains(err.Error(), "character_state hope must be in range") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want projection validation error", err)
@@ -94,9 +97,10 @@ func TestHandleDowntimeMoveApplied_ErrorBranches(t *testing.T) {
 		adapter := NewAdapter(store)
 
 		err := adapter.handleDowntimeMoveApplied(context.Background(), event.Event{CampaignID: "camp-1"}, DowntimeMoveAppliedPayload{
-			CharacterID: "char-1",
-			Move:        "prepare",
-			Hope:        intPtr(3),
+			ActorCharacterID:  "char-1",
+			TargetCharacterID: "char-1",
+			Move:              "prepare",
+			Hope:              intPtr(3),
 		})
 		if err == nil || !strings.Contains(err.Error(), "put daggerheart character state: character write failed") {
 			t.Fatalf("handleDowntimeMoveApplied() error = %v, want wrapped write error", err)
@@ -297,7 +301,7 @@ func TestApplyConditionPatch_ErrorBranches(t *testing.T) {
 		store.getCharacterStateErr = errors.New("character read failed")
 		adapter := NewAdapter(store)
 
-		err := adapter.applyConditionPatch(context.Background(), "camp-1", "char-1", []string{"hidden"})
+		err := adapter.applyConditionPatch(context.Background(), "camp-1", "char-1", []ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character state: character read failed") {
 			t.Fatalf("applyConditionPatch() error = %v, want wrapped read error", err)
 		}
@@ -315,7 +319,7 @@ func TestApplyConditionPatch_ErrorBranches(t *testing.T) {
 		}
 		store.getCharacterProfileErr = errors.New("profile read failed")
 
-		err := adapter.applyConditionPatch(context.Background(), "camp-1", "char-1", []string{"hidden"})
+		err := adapter.applyConditionPatch(context.Background(), "camp-1", "char-1", []ConditionState{mustTestConditionState(t, "hidden")})
 		if err == nil || !strings.Contains(err.Error(), "get daggerheart character profile: profile read failed") {
 			t.Fatalf("applyConditionPatch() error = %v, want wrapped profile read error", err)
 		}

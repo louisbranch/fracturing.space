@@ -126,6 +126,10 @@ func (s *Store) PutDaggerheartSubclass(ctx context.Context, subclass contentstor
 	if err != nil {
 		return fmt.Errorf("marshal subclass foundation features: %w", err)
 	}
+	requirementsJSON, err := json.Marshal(subclass.CreationRequirements)
+	if err != nil {
+		return fmt.Errorf("marshal subclass creation requirements: %w", err)
+	}
 	specializationJSON, err := json.Marshal(subclass.SpecializationFeatures)
 	if err != nil {
 		return fmt.Errorf("marshal subclass specialization features: %w", err)
@@ -140,6 +144,7 @@ func (s *Store) PutDaggerheartSubclass(ctx context.Context, subclass contentstor
 		Name:                       subclass.Name,
 		ClassID:                    subclass.ClassID,
 		SpellcastTrait:             subclass.SpellcastTrait,
+		CreationRequirementsJson:   string(requirementsJSON),
 		FoundationFeaturesJson:     string(foundationJSON),
 		SpecializationFeaturesJson: string(specializationJSON),
 		MasteryFeaturesJson:        string(masteryJSON),

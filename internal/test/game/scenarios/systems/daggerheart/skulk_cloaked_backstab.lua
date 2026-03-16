@@ -10,22 +10,21 @@ scn:campaign{
 }
 
 scn:pc("Frodo")
-dh:adversary("Orc Stalker")
+dh:adversary("Golum Shadow")
 
 -- The shadow hides, then strikes with advantage for boosted damage.
 scn:start_session("Cloaked Backstab")
 
--- Example: Cloaked grants Hidden; Backstab replaces damage on advantaged hit.
--- Partial mapping: Hidden application and advantaged attack are represented.
--- Missing DSL: backstab damage replacement (1d6+6) and Hidden-clear-on-attack lifecycle.
-dh:apply_condition{ target = "Orc Stalker", add = { "HIDDEN" }, source = "cloaked" }
+dh:adversary_feature{
+  actor = "Golum Shadow",
+  feature_id = "feature.golum-cloaked"
+}
 dh:adversary_attack{
-  actor = "Orc Stalker",
+  actor = "Golum Shadow",
   target = "Frodo",
+  feature_id = "feature.golum-backstab",
   difficulty = 0,
-  advantage = 1,
-  damage_type = "physical",
-  damage_dice = { { sides = 6, count = 1 } }
+  damage_type = "physical"
 }
 
 scn:end_session()

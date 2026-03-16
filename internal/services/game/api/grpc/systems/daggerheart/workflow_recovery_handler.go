@@ -10,6 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/conditiontransport"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/countdowntransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/recoverytransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/statetransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workfloweffects"
@@ -105,17 +106,13 @@ func (s *DaggerheartService) ApplyRest(ctx context.Context, in *pb.DaggerheartAp
 			ConsecutiveShortRests: int32(result.Snapshot.ConsecutiveShortRests),
 		},
 		CharacterStates: entries,
-	}, nil
-}
-
-func (s *DaggerheartService) ApplyDowntimeMove(ctx context.Context, in *pb.DaggerheartApplyDowntimeMoveRequest) (*pb.DaggerheartApplyDowntimeMoveResponse, error) {
-	result, err := s.recoveryHandler().ApplyDowntimeMove(ctx, in)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.DaggerheartApplyDowntimeMoveResponse{
-		CharacterId: result.CharacterID,
-		State:       statetransport.CharacterStateToProto(result.State),
+		Countdowns: func() []*pb.DaggerheartCountdown {
+			countdowns := make([]*pb.DaggerheartCountdown, 0, len(result.Countdowns))
+			for _, countdown := range result.Countdowns {
+				countdowns = append(countdowns, countdowntransport.CountdownToProto(countdown))
+			}
+			return countdowns
+		}(),
 	}, nil
 }
 

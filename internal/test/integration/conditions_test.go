@@ -17,15 +17,20 @@ import (
 )
 
 type conditionChangedPayload struct {
-	CharacterID string   `json:"character_id"`
-	Added       []string `json:"added,omitempty"`
-	Removed     []string `json:"removed,omitempty"`
+	CharacterID string                  `json:"character_id"`
+	Added       []conditionStatePayload `json:"added,omitempty"`
+	Removed     []conditionStatePayload `json:"removed,omitempty"`
 }
 
 type adversaryConditionChangedPayload struct {
-	AdversaryID string   `json:"adversary_id"`
-	Added       []string `json:"added,omitempty"`
-	Removed     []string `json:"removed,omitempty"`
+	AdversaryID string                  `json:"adversary_id"`
+	Added       []conditionStatePayload `json:"added,omitempty"`
+	Removed     []conditionStatePayload `json:"removed,omitempty"`
+}
+
+type conditionStatePayload struct {
+	Code     string `json:"code,omitempty"`
+	Standard string `json:"standard,omitempty"`
 }
 
 func TestDaggerheartApplyConditions(t *testing.T) {
@@ -87,10 +92,10 @@ func TestDaggerheartApplyConditions(t *testing.T) {
 	sessionCtx := withSessionID(ctx, sessionID)
 
 	addResp, err := daggerheartClient.ApplyConditions(sessionCtx, &daggerheartv1.DaggerheartApplyConditionsRequest{
-		CampaignId:  campaignID,
-		CharacterId: characterID,
-		Add:         []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
-		Source:      "test",
+		CampaignId:    campaignID,
+		CharacterId:   characterID,
+		AddConditions: []*daggerheartv1.DaggerheartConditionState{protoStandardConditionState(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
+		Source:        "test",
 	})
 	if err != nil {
 		t.Fatalf("apply conditions add: %v", err)
@@ -98,16 +103,16 @@ func TestDaggerheartApplyConditions(t *testing.T) {
 	if addResp.GetState() == nil {
 		t.Fatal("expected state in add response")
 	}
-	if !hasCondition(addResp.GetState().GetConditions(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
+	if !hasCondition(addResp.GetState().GetConditionStates(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
 		t.Fatal("expected hidden condition after add")
 	}
 
 	changeResp, err := daggerheartClient.ApplyConditions(sessionCtx, &daggerheartv1.DaggerheartApplyConditionsRequest{
-		CampaignId:  campaignID,
-		CharacterId: characterID,
-		Add:         []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
-		Remove:      []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
-		Source:      "test",
+		CampaignId:         campaignID,
+		CharacterId:        characterID,
+		AddConditions:      []*daggerheartv1.DaggerheartConditionState{protoStandardConditionState(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
+		RemoveConditionIds: []string{conditionCode(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
+		Source:             "test",
 	})
 	if err != nil {
 		t.Fatalf("apply conditions change: %v", err)
@@ -115,10 +120,10 @@ func TestDaggerheartApplyConditions(t *testing.T) {
 	if changeResp.GetState() == nil {
 		t.Fatal("expected state in change response")
 	}
-	if hasCondition(changeResp.GetState().GetConditions(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
+	if hasCondition(changeResp.GetState().GetConditionStates(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
 		t.Fatal("expected hidden condition cleared")
 	}
-	if !hasCondition(changeResp.GetState().GetConditions(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE) {
+	if !hasCondition(changeResp.GetState().GetConditionStates(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE) {
 		t.Fatal("expected vulnerable condition after change")
 	}
 
@@ -145,6 +150,7 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	characterClient := gamev1.NewCharacterServiceClient(conn)
 	participantClient := gamev1.NewParticipantServiceClient(conn)
 	sessionClient := gamev1.NewSessionServiceClient(conn)
+	sceneClient := gamev1.NewSceneServiceClient(conn)
 	eventClient := gamev1.NewEventServiceClient(conn)
 	daggerheartClient := daggerheartv1.NewDaggerheartServiceClient(conn)
 
@@ -167,7 +173,9 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	}
 	campaignID := createCampaign.GetCampaign().GetId()
 	ownerParticipantID := createCampaign.GetOwnerParticipant().GetId()
-	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID)
+	sceneAnchor := createCharacter(t, ctx, characterClient, campaignID, "Adversary Condition Anchor")
+	patchDaggerheartProfile(t, ctx, characterClient, campaignID, sceneAnchor)
+	ensureSessionStartReadiness(t, ctx, participantClient, characterClient, campaignID, ownerParticipantID, sceneAnchor)
 
 	startSession, err := sessionClient.StartSession(ctx, &gamev1.StartSessionRequest{
 		CampaignId: campaignID,
@@ -181,11 +189,27 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	}
 	sessionID := startSession.GetSession().GetId()
 	sessionCtx := withSessionID(ctx, sessionID)
+	createScene, err := sceneClient.CreateScene(ctx, &gamev1.CreateSceneRequest{
+		CampaignId: campaignID,
+		SessionId:  sessionID,
+		Name:       "Condition Scene",
+		CharacterIds: []string{
+			sceneAnchor,
+		},
+	})
+	if err != nil {
+		t.Fatalf("create scene: %v", err)
+	}
+	sceneID := createScene.GetSceneId()
+	if sceneID == "" {
+		t.Fatal("expected scene")
+	}
 
 	createAdversary, err := daggerheartClient.CreateAdversary(ctx, &daggerheartv1.DaggerheartCreateAdversaryRequest{
-		CampaignId: campaignID,
-		Name:       "Condition Foe",
-		SessionId:  nil,
+		CampaignId:       campaignID,
+		SessionId:        sessionID,
+		SceneId:          sceneID,
+		AdversaryEntryId: "adversary.integration-foe",
 	})
 	if err != nil {
 		t.Fatalf("create adversary: %v", err)
@@ -196,10 +220,10 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	adversaryID := createAdversary.GetAdversary().GetId()
 
 	addResp, err := daggerheartClient.ApplyAdversaryConditions(sessionCtx, &daggerheartv1.DaggerheartApplyAdversaryConditionsRequest{
-		CampaignId:  campaignID,
-		AdversaryId: adversaryID,
-		Add:         []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
-		Source:      "test",
+		CampaignId:    campaignID,
+		AdversaryId:   adversaryID,
+		AddConditions: []*daggerheartv1.DaggerheartConditionState{protoStandardConditionState(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
+		Source:        "test",
 	})
 	if err != nil {
 		t.Fatalf("apply adversary conditions add: %v", err)
@@ -207,16 +231,16 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	if addResp.GetAdversary() == nil {
 		t.Fatal("expected adversary in add response")
 	}
-	if !hasCondition(addResp.GetAdversary().GetConditions(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
+	if !hasCondition(addResp.GetAdversary().GetConditionStates(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
 		t.Fatal("expected hidden condition after add")
 	}
 
 	changeResp, err := daggerheartClient.ApplyAdversaryConditions(sessionCtx, &daggerheartv1.DaggerheartApplyAdversaryConditionsRequest{
-		CampaignId:  campaignID,
-		AdversaryId: adversaryID,
-		Add:         []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
-		Remove:      []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
-		Source:      "test",
+		CampaignId:         campaignID,
+		AdversaryId:        adversaryID,
+		AddConditions:      []*daggerheartv1.DaggerheartConditionState{protoStandardConditionState(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
+		RemoveConditionIds: []string{conditionCode(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
+		Source:             "test",
 	})
 	if err != nil {
 		t.Fatalf("apply adversary conditions change: %v", err)
@@ -224,10 +248,10 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	if changeResp.GetAdversary() == nil {
 		t.Fatal("expected adversary in change response")
 	}
-	if hasCondition(changeResp.GetAdversary().GetConditions(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
+	if hasCondition(changeResp.GetAdversary().GetConditionStates(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN) {
 		t.Fatal("expected hidden condition cleared")
 	}
-	if !hasCondition(changeResp.GetAdversary().GetConditions(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE) {
+	if !hasCondition(changeResp.GetAdversary().GetConditionStates(), daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE) {
 		t.Fatal("expected vulnerable condition after change")
 	}
 
@@ -236,9 +260,9 @@ func TestDaggerheartApplyAdversaryConditions(t *testing.T) {
 	}
 }
 
-func hasCondition(conditions []daggerheartv1.DaggerheartCondition, target daggerheartv1.DaggerheartCondition) bool {
+func hasCondition(conditions []*daggerheartv1.DaggerheartConditionState, target daggerheartv1.DaggerheartCondition) bool {
 	for _, condition := range conditions {
-		if condition == target {
+		if condition != nil && condition.GetStandard() == target {
 			return true
 		}
 	}
@@ -260,7 +284,7 @@ func findConditionChange(ctx context.Context, client gamev1.EventServiceClient, 
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return err
 		}
-		if stringSliceEqual(payload.Added, added) && stringSliceEqual(payload.Removed, removed) {
+		if conditionPayloadCodesEqual(payload.Added, added) && conditionPayloadCodesEqual(payload.Removed, removed) {
 			return nil
 		}
 	}
@@ -282,11 +306,51 @@ func findAdversaryConditionChange(ctx context.Context, client gamev1.EventServic
 		if err := json.Unmarshal(evt.GetPayloadJson(), &payload); err != nil {
 			return err
 		}
-		if stringSliceEqual(payload.Added, added) && stringSliceEqual(payload.Removed, removed) {
+		if conditionPayloadCodesEqual(payload.Added, added) && conditionPayloadCodesEqual(payload.Removed, removed) {
 			return nil
 		}
 	}
 	return fmt.Errorf("matching adversary condition change event not found")
+}
+
+func protoStandardConditionState(condition daggerheartv1.DaggerheartCondition) *daggerheartv1.DaggerheartConditionState {
+	code := conditionCode(condition)
+	return &daggerheartv1.DaggerheartConditionState{
+		Id:       code,
+		Code:     code,
+		Label:    code,
+		Class:    daggerheartv1.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+		Standard: condition,
+	}
+}
+
+func conditionCode(condition daggerheartv1.DaggerheartCondition) string {
+	switch condition {
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN:
+		return "hidden"
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED:
+		return "restrained"
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE:
+		return "vulnerable"
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_CLOAKED:
+		return "cloaked"
+	default:
+		return ""
+	}
+}
+
+func conditionPayloadCodesEqual(states []conditionStatePayload, expected []string) bool {
+	actual := make([]string, 0, len(states))
+	for _, state := range states {
+		code := state.Code
+		if code == "" {
+			code = state.Standard
+		}
+		if code != "" {
+			actual = append(actual, code)
+		}
+	}
+	return stringSliceEqual(actual, expected)
 }
 
 func stringSliceEqual(left, right []string) bool {

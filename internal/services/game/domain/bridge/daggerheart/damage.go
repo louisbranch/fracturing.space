@@ -53,12 +53,25 @@ type DamageResult struct {
 
 // DamageApplication captures HP deltas alongside damage evaluation.
 type DamageApplication struct {
-	Result      DamageResult
-	HPBefore    int
-	HPAfter     int
-	ArmorBefore int
-	ArmorAfter  int
-	ArmorSpent  int
+	Result       DamageResult
+	HPBefore     int
+	HPAfter      int
+	StressBefore int
+	StressAfter  int
+	ArmorBefore  int
+	ArmorAfter   int
+	ArmorSpent   int
+}
+
+// ArmorDamageRules captures the recurring armor-specific rules that alter
+// damage application.
+type ArmorDamageRules struct {
+	MitigationMode                  string
+	SeverityReductionSteps          int
+	StressOnMark                    bool
+	WardedMagicReduction            bool
+	WardedReductionAmount           int
+	ThresholdBonusWhenArmorDepleted int
 }
 
 // EvaluateDamage determines severity and HP marks from damage totals and thresholds.
@@ -106,47 +119,62 @@ func ApplyDamage(currentHP, amount, majorThreshold, severeThreshold int, opts Da
 	}
 	before, after := ApplyDamageMarks(currentHP, result.Marks)
 	return DamageApplication{
-		Result:      result,
-		HPBefore:    before,
-		HPAfter:     after,
-		ArmorBefore: 0,
-		ArmorAfter:  0,
+		Result:       result,
+		HPBefore:     before,
+		HPAfter:      after,
+		StressBefore: 0,
+		StressAfter:  0,
+		ArmorBefore:  0,
+		ArmorAfter:   0,
 	}, nil
 }
 
 // ApplyDamageWithArmor applies armor mitigation before marking HP.
-func ApplyDamageWithArmor(currentHP, currentArmor int, result DamageResult) DamageApplication {
+func ApplyDamageWithArmor(currentHP, currentStress, currentArmor int, result DamageResult, rules ArmorDamageRules) DamageApplication {
 	armorBefore := currentArmor
+	stressBefore := currentStress
 	reduced := result
 	spent := 0
 	if currentArmor > 0 {
-		reduced, spent = ReduceDamageWithArmor(result, currentArmor)
+		reduced, spent = ReduceDamageWithArmor(result, currentArmor, rules.SeverityReductionSteps)
 		currentArmor -= spent
+		if spent > 0 && rules.StressOnMark {
+			currentStress++
+		}
 	}
 	before, after := ApplyDamageMarks(currentHP, reduced.Marks)
 	return DamageApplication{
-		Result:      reduced,
-		HPBefore:    before,
-		HPAfter:     after,
-		ArmorBefore: armorBefore,
-		ArmorAfter:  currentArmor,
-		ArmorSpent:  spent,
+		Result:       reduced,
+		HPBefore:     before,
+		HPAfter:      after,
+		StressBefore: stressBefore,
+		StressAfter:  currentStress,
+		ArmorBefore:  armorBefore,
+		ArmorAfter:   currentArmor,
+		ArmorSpent:   spent,
 	}
 }
 
 // ReduceDamageWithArmor reduces damage severity by one step when armor is spent.
-func ReduceDamageWithArmor(result DamageResult, availableSlots int) (DamageResult, int) {
+func ReduceDamageWithArmor(result DamageResult, availableSlots int, reductionSteps int) (DamageResult, int) {
 	if availableSlots <= 0 {
 		return result, 0
 	}
 	if result.Marks <= 0 {
 		return result, 0
 	}
-	reduced := result
-	if reduced.Severity > DamageNone {
-		reduced.Severity--
+	if reductionSteps <= 0 {
+		reductionSteps = 1
 	}
-	reduced.Marks = reduced.Marks - 1
+	reduced := result
+	for i := 0; i < reductionSteps; i++ {
+		if reduced.Severity > DamageNone {
+			reduced.Severity--
+		}
+		if reduced.Marks > 0 {
+			reduced.Marks--
+		}
+	}
 	if reduced.Marks < 0 {
 		reduced.Marks = 0
 	}

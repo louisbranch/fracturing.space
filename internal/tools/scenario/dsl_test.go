@@ -219,6 +219,86 @@ return scn
 	}
 }
 
+func TestScenarioGmSpendFearTypedTargetsCreateSteps(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scn = Scenario.new("gm_fear_targets")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Typed GM fear spend targets
+dh:gm_spend_fear(1):move("reveal_danger", { description = "Danger closes in." })
+dh:gm_spend_fear(1):adversary_spotlight("Shadow Hound")
+dh:gm_spend_fear(1):adversary_feature("adversary.shadow-hound", "feature.shadow-hound-pounce")
+dh:gm_spend_fear(2):environment_feature("environment.crumbling-bridge", "feature.crumbling-bridge-falling-stones")
+dh:gm_spend_fear(1):adversary_experience("adversary.shadow-hound", "Pack Hunter")
+
+return scn
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 6 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 6)
+	}
+
+	direct := scenario.Steps[1]
+	if direct.Kind != "gm_spend_fear" {
+		t.Fatalf("step[1].Kind = %q", direct.Kind)
+	}
+	if direct.Args["spend_target"] != "direct_move" {
+		t.Fatalf("direct spend_target = %v, want direct_move", direct.Args["spend_target"])
+	}
+	if direct.Args["move"] != "reveal_danger" {
+		t.Fatalf("direct move = %v, want reveal_danger", direct.Args["move"])
+	}
+
+	adversarySpotlight := scenario.Steps[2]
+	if adversarySpotlight.Args["spend_target"] != "direct_move" {
+		t.Fatalf("adversary spotlight spend_target = %v", adversarySpotlight.Args["spend_target"])
+	}
+	if adversarySpotlight.Args["move"] != "spotlight" {
+		t.Fatalf("adversary spotlight move = %v, want spotlight", adversarySpotlight.Args["move"])
+	}
+	if adversarySpotlight.Args["target"] != "Shadow Hound" {
+		t.Fatalf("adversary spotlight target = %v, want Shadow Hound", adversarySpotlight.Args["target"])
+	}
+
+	adversaryFeature := scenario.Steps[3]
+	if adversaryFeature.Args["spend_target"] != "adversary_feature" {
+		t.Fatalf("adversary feature spend_target = %v", adversaryFeature.Args["spend_target"])
+	}
+	if adversaryFeature.Args["target"] != "adversary.shadow-hound" {
+		t.Fatalf("target = %v", adversaryFeature.Args["target"])
+	}
+	if adversaryFeature.Args["feature_id"] != "feature.shadow-hound-pounce" {
+		t.Fatalf("feature_id = %v", adversaryFeature.Args["feature_id"])
+	}
+
+	environmentFeature := scenario.Steps[4]
+	if environmentFeature.Args["spend_target"] != "environment_feature" {
+		t.Fatalf("environment feature spend_target = %v", environmentFeature.Args["spend_target"])
+	}
+	if environmentFeature.Args["environment_id"] != "environment.crumbling-bridge" {
+		t.Fatalf("environment_id = %v", environmentFeature.Args["environment_id"])
+	}
+	if environmentFeature.Args["feature_id"] != "feature.crumbling-bridge-falling-stones" {
+		t.Fatalf("feature_id = %v", environmentFeature.Args["feature_id"])
+	}
+
+	adversaryExperience := scenario.Steps[5]
+	if adversaryExperience.Args["spend_target"] != "adversary_experience" {
+		t.Fatalf("adversary experience spend_target = %v", adversaryExperience.Args["spend_target"])
+	}
+	if adversaryExperience.Args["target"] != "adversary.shadow-hound" {
+		t.Fatalf("target = %v", adversaryExperience.Args["target"])
+	}
+	if adversaryExperience.Args["experience_name"] != "Pack Hunter" {
+		t.Fatalf("experience_name = %v", adversaryExperience.Args["experience_name"])
+	}
+}
+
 func TestScenarioInteractionMethodsCreateSteps(t *testing.T) {
 	path := writeScenarioFixture(t, `-- Setup
 local scn = Scenario.new("interaction")
@@ -502,6 +582,80 @@ return scn
 	}
 	if scenario.Steps[1].System != "DAGGERHEART" {
 		t.Fatalf("step system = %q, want DAGGERHEART", scenario.Steps[1].System)
+	}
+}
+
+func TestScenarioCreationWorkflowCreatesSystemStep(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scn = Scenario.new("creation_workflow")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
+scn:pc("Frodo", { skip_system_readiness = true })
+
+-- Apply explicit Daggerheart creation workflow data.
+dh:creation_workflow({
+  target = "Frodo",
+  class_id = "class.ranger",
+  subclass_id = "subclass.beastbound",
+  heritage = {
+    first_feature_ancestry_id = "heritage.dwarf",
+    second_feature_ancestry_id = "heritage.elf",
+    ancestry_label = "Stoneleaf",
+    community_id = "heritage.highborne"
+  }
+})
+
+return scn
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 3 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 3)
+	}
+	step := scenario.Steps[2]
+	if step.Kind != "creation_workflow" {
+		t.Fatalf("step kind = %q, want creation_workflow", step.Kind)
+	}
+	if step.System != "DAGGERHEART" {
+		t.Fatalf("step system = %q, want DAGGERHEART", step.System)
+	}
+	heritage, ok := step.Args["heritage"].(map[string]any)
+	if !ok {
+		t.Fatalf("heritage = %#v, want map", step.Args["heritage"])
+	}
+	if heritage["first_feature_ancestry_id"] != "heritage.dwarf" {
+		t.Fatalf("first_feature_ancestry_id = %v, want heritage.dwarf", heritage["first_feature_ancestry_id"])
+	}
+}
+
+func TestScenarioExpectGMFearCreatesSystemStep(t *testing.T) {
+	path := writeScenarioFixture(t, `-- Setup
+local scn = Scenario.new("expect_gm_fear")
+local dh = scn:system("DAGGERHEART")
+scn:campaign({name = "Test", system = "DAGGERHEART"})
+
+-- Assert the current fear pool without mutating it.
+dh:expect_gm_fear(2)
+
+return scn
+`)
+
+	scenario, err := LoadScenarioFromFile(path)
+	if err != nil {
+		t.Fatalf("load scenario: %v", err)
+	}
+	if len(scenario.Steps) != 2 {
+		t.Fatalf("steps = %d, want %d", len(scenario.Steps), 2)
+	}
+	step := scenario.Steps[1]
+	if step.Kind != "expect_gm_fear" {
+		t.Fatalf("step kind = %q, want expect_gm_fear", step.Kind)
+	}
+	if step.Args["value"] != 2 {
+		t.Fatalf("value = %v, want 2", step.Args["value"])
 	}
 }
 

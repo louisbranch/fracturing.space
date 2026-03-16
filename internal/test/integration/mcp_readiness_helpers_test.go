@@ -15,11 +15,14 @@ func ensureMCPCharacterCreationReadiness(t *testing.T, ctx context.Context, clie
 	result, err := client.CallTool(ctx, &mcp.CallToolParams{
 		Name: "character_creation_workflow_apply",
 		Arguments: map[string]any{
-			"character_id":    characterID,
-			"class_id":        "class.guardian",
-			"subclass_id":     "subclass.stalwart",
-			"ancestry_id":     "heritage.human",
-			"community_id":    "heritage.highborne",
+			"character_id": characterID,
+			"class_id":     "class.guardian",
+			"subclass_id":  "subclass.stalwart",
+			"heritage": map[string]any{
+				"first_feature_ancestry_id":  "heritage.human",
+				"second_feature_ancestry_id": "heritage.human",
+				"community_id":               "heritage.highborne",
+			},
 			"agility":         2,
 			"strength":        1,
 			"finesse":         1,

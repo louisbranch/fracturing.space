@@ -43,8 +43,8 @@ func upsertClasses(ctx context.Context, store contentstore.DaggerheartContentSto
 				StartingEvasion: item.StartingEvasion,
 				StartingHP:      item.StartingHP,
 				StartingItems:   append([]string{}, item.StartingItems...),
-				Features:        toStorageFeatures(item.Features),
-				HopeFeature:     toStorageHopeFeature(item.HopeFeature),
+				Features:        toStorageClassFeatures(item.Features),
+				HopeFeature:     toStorageClassHopeFeature(item.ID, item.HopeFeature),
 				DomainIDs:       append([]string{}, item.DomainIDs...),
 				CreatedAt:       now,
 				UpdatedAt:       now,
@@ -74,9 +74,10 @@ func upsertSubclasses(ctx context.Context, store contentstore.DaggerheartContent
 				Name:                   item.Name,
 				ClassID:                item.ClassID,
 				SpellcastTrait:         item.SpellcastTrait,
-				FoundationFeatures:     toStorageFeatures(item.FoundationFeatures),
-				SpecializationFeatures: toStorageFeatures(item.SpecializationFeatures),
-				MasteryFeatures:        toStorageFeatures(item.MasteryFeatures),
+				CreationRequirements:   append([]contentstore.DaggerheartSubclassCreationRequirement(nil), subclassCreationRequirementsByID[item.ID]...),
+				FoundationFeatures:     toStorageSubclassFeatures(item.FoundationFeatures),
+				SpecializationFeatures: toStorageSubclassFeatures(item.SpecializationFeatures),
+				MasteryFeatures:        toStorageSubclassFeatures(item.MasteryFeatures),
 				CreatedAt:              now,
 				UpdatedAt:              now,
 			}
@@ -142,6 +143,7 @@ func upsertExperiences(ctx context.Context, store contentstore.DaggerheartConten
 
 func upsertAdversaries(ctx context.Context, store contentstore.DaggerheartContentStore, items []adversaryRecord, locale string, isBase bool, now time.Time) error {
 	for _, item := range items {
+		item = deriveAdversaryRecurringRules(item)
 		if strings.TrimSpace(item.ID) == "" {
 			return fmt.Errorf("adversary id is required")
 		}
@@ -163,6 +165,9 @@ func upsertAdversaries(ctx context.Context, store contentstore.DaggerheartConten
 				StandardAttack:  toStorageAdversaryAttack(item.StandardAttack),
 				Experiences:     toStorageAdversaryExperiences(item.Experiences),
 				Features:        toStorageAdversaryFeatures(item.Features),
+				MinionRule:      toStorageAdversaryMinionRule(item.MinionRule),
+				HordeRule:       toStorageAdversaryHordeRule(item.HordeRule),
+				RelentlessRule:  toStorageAdversaryRelentlessRule(item.RelentlessRule),
 				CreatedAt:       now,
 				UpdatedAt:       now,
 			}
@@ -379,6 +384,7 @@ func upsertArmor(ctx context.Context, store contentstore.DaggerheartContentStore
 				BaseSevereThreshold: item.BaseSevereThreshold,
 				ArmorScore:          item.ArmorScore,
 				Feature:             item.Feature,
+				Rules:               deriveArmorRules(item),
 				CreatedAt:           now,
 				UpdatedAt:           now,
 			}

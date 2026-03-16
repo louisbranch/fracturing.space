@@ -15,7 +15,16 @@ func validateAdversaryCreatePayload(raw json.RawMessage) error {
 	if err := requireTrimmedValue(payload.AdversaryID.String(), "adversary_id"); err != nil {
 		return err
 	}
+	if err := requireTrimmedValue(payload.AdversaryEntryID, "adversary_entry_id"); err != nil {
+		return err
+	}
 	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SessionID.String(), "session_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SceneID.String(), "scene_id"); err != nil {
 		return err
 	}
 	return nil
@@ -33,7 +42,16 @@ func validateAdversaryUpdatePayload(raw json.RawMessage) error {
 	if err := requireTrimmedValue(payload.AdversaryID.String(), "adversary_id"); err != nil {
 		return err
 	}
+	if err := requireTrimmedValue(payload.AdversaryEntryID, "adversary_entry_id"); err != nil {
+		return err
+	}
 	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SessionID.String(), "session_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SceneID.String(), "scene_id"); err != nil {
 		return err
 	}
 	return nil
@@ -41,6 +59,29 @@ func validateAdversaryUpdatePayload(raw json.RawMessage) error {
 
 func validateAdversaryUpdatedPayload(raw json.RawMessage) error {
 	return validateAdversaryUpdatePayload(raw)
+}
+
+func validateAdversaryFeatureApplyPayload(raw json.RawMessage) error {
+	var payload AdversaryFeatureApplyPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.ActorAdversaryID.String(), "actor_adversary_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.AdversaryID.String(), "adversary_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.FeatureID, "feature_id"); err != nil {
+		return err
+	}
+	hasMutation := hasIntFieldChange(payload.StressBefore, payload.StressAfter) ||
+		!equalAdversaryFeatureStates(payload.FeatureStatesBefore, payload.FeatureStatesAfter) ||
+		!equalAdversaryPendingExperience(payload.PendingExperienceBefore, payload.PendingExperienceAfter)
+	if !hasMutation {
+		return errors.New("adversary_feature apply must change at least one field")
+	}
+	return nil
 }
 
 func validateAdversaryDeletePayload(raw json.RawMessage) error {
@@ -56,6 +97,112 @@ func validateAdversaryDeletePayload(raw json.RawMessage) error {
 
 func validateAdversaryDeletedPayload(raw json.RawMessage) error {
 	return validateAdversaryDeletePayload(raw)
+}
+
+func equalAdversaryFeatureStates(before, after []AdversaryFeatureState) bool {
+	if len(before) != len(after) {
+		return false
+	}
+	for i := range before {
+		if before[i] != after[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func equalAdversaryPendingExperience(before, after *AdversaryPendingExperience) bool {
+	if before == nil || after == nil {
+		return before == after
+	}
+	return *before == *after
+}
+
+func validateEnvironmentEntityCreatePayload(raw json.RawMessage) error {
+	var payload EnvironmentEntityCreatePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.EnvironmentEntityID.String(), "environment_entity_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.EnvironmentID, "environment_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.Type, "type"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SessionID.String(), "session_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SceneID.String(), "scene_id"); err != nil {
+		return err
+	}
+	if payload.Tier < 0 {
+		return errors.New("tier must be non-negative")
+	}
+	if payload.Difficulty <= 0 {
+		return errors.New("difficulty must be positive")
+	}
+	return nil
+}
+
+func validateEnvironmentEntityCreatedPayload(raw json.RawMessage) error {
+	return validateEnvironmentEntityCreatePayload(raw)
+}
+
+func validateEnvironmentEntityUpdatePayload(raw json.RawMessage) error {
+	var payload EnvironmentEntityUpdatePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.EnvironmentEntityID.String(), "environment_entity_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.EnvironmentID, "environment_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.Name, "name"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.Type, "type"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SessionID.String(), "session_id"); err != nil {
+		return err
+	}
+	if err := requireTrimmedValue(payload.SceneID.String(), "scene_id"); err != nil {
+		return err
+	}
+	if payload.Tier < 0 {
+		return errors.New("tier must be non-negative")
+	}
+	if payload.Difficulty <= 0 {
+		return errors.New("difficulty must be positive")
+	}
+	return nil
+}
+
+func validateEnvironmentEntityUpdatedPayload(raw json.RawMessage) error {
+	return validateEnvironmentEntityUpdatePayload(raw)
+}
+
+func validateEnvironmentEntityDeletePayload(raw json.RawMessage) error {
+	var payload EnvironmentEntityDeletePayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.EnvironmentEntityID.String()) == "" {
+		return errors.New("environment_entity_id is required")
+	}
+	return nil
+}
+
+func validateEnvironmentEntityDeletedPayload(raw json.RawMessage) error {
+	return validateEnvironmentEntityDeletePayload(raw)
 }
 
 func validateLevelUpApplyPayload(raw json.RawMessage) error {
@@ -77,6 +224,25 @@ func validateLevelUpApplyPayload(raw json.RawMessage) error {
 	}
 	if len(payload.Advancements) == 0 {
 		return errors.New("advancements is required")
+	}
+	for _, reward := range payload.Rewards {
+		switch strings.TrimSpace(reward.Type) {
+		case "domain_card":
+			if strings.TrimSpace(reward.DomainCardID) == "" {
+				return errors.New("reward domain_card_id is required")
+			}
+			if reward.DomainCardLevel < 1 {
+				return errors.New("reward domain_card_level must be at least 1")
+			}
+		case "companion_bonus_choices":
+			if reward.CompanionBonusChoices <= 0 {
+				return errors.New("reward companion_bonus_choices must be positive")
+			}
+		case "":
+			return errors.New("reward type is required")
+		default:
+			return fmt.Errorf("reward type %q is unsupported", reward.Type)
+		}
 	}
 	return nil
 }

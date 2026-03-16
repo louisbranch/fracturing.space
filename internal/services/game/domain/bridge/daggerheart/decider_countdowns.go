@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
@@ -21,14 +22,14 @@ func decideRestTake(snapshotState SnapshotState, cmd command.Command, now func()
 	}
 	now = command.NowFunc(now)
 	payload.RestType = strings.TrimSpace(payload.RestType)
-	if payload.LongTermCountdown != nil {
-		if rejection := countdownUpdateSnapshotRejection(snapshotState, *payload.LongTermCountdown); rejection != nil {
+	for i := range payload.CountdownUpdates {
+		if rejection := countdownUpdateSnapshotRejection(snapshotState, payload.CountdownUpdates[i]); rejection != nil {
 			return command.Reject(*rejection)
 		}
-		payload.LongTermCountdown.CountdownID = ids.CountdownID(strings.TrimSpace(payload.LongTermCountdown.CountdownID.String()))
-		payload.LongTermCountdown.Reason = strings.TrimSpace(payload.LongTermCountdown.Reason)
+		payload.CountdownUpdates[i].CountdownID = ids.CountdownID(strings.TrimSpace(payload.CountdownUpdates[i].CountdownID.String()))
+		payload.CountdownUpdates[i].Reason = strings.TrimSpace(payload.CountdownUpdates[i].Reason)
 	}
-	// Build event payload, stripping Before fields and LongTermCountdown.
+
 	eventPayload := RestTakenPayload{
 		RestType:        payload.RestType,
 		Interrupted:     payload.Interrupted,
@@ -37,35 +38,43 @@ func decideRestTake(snapshotState SnapshotState, cmd command.Command, now func()
 		RefreshRest:     payload.RefreshRest,
 		RefreshLongRest: payload.RefreshLongRest,
 	}
-	for _, patch := range payload.CharacterStates {
-		eventPayload.CharacterStates = append(eventPayload.CharacterStates, RestTakenCharacterPatch{
-			CharacterID: patch.CharacterID,
-			Hope:        patch.HopeAfter,
-			Stress:      patch.StressAfter,
-			Armor:       patch.ArmorAfter,
-		})
-	}
+	eventPayload.Participants = append(eventPayload.Participants, payload.Participants...)
 	eventPayloadJSON, _ := json.Marshal(eventPayload)
 	entityID := strings.TrimSpace(cmd.EntityID)
 	if entityID == "" {
 		entityID = string(cmd.CampaignID)
 	}
 	restEvent := command.NewEvent(cmd, EventTypeRestTaken, "session", entityID, eventPayloadJSON, now().UTC())
+	events := []event.Event{restEvent}
 
-	if payload.LongTermCountdown == nil {
-		return command.Accept(restEvent)
+	for _, move := range payload.DowntimeMoves {
+		move.ActorCharacterID = ids.CharacterID(strings.TrimSpace(move.ActorCharacterID.String()))
+		move.TargetCharacterID = ids.CharacterID(strings.TrimSpace(move.TargetCharacterID.String()))
+		move.CountdownID = ids.CountdownID(strings.TrimSpace(move.CountdownID.String()))
+		move.GroupID = strings.TrimSpace(move.GroupID)
+		move.RestType = strings.TrimSpace(move.RestType)
+		move.Move = strings.TrimSpace(move.Move)
+		movePayloadJSON, _ := json.Marshal(move)
+		entityID := move.ActorCharacterID.String()
+		if entityID == "" {
+			entityID = string(cmd.CampaignID)
+		}
+		events = append(events, command.NewEvent(cmd, EventTypeDowntimeMoveApplied, "character", entityID, movePayloadJSON, now().UTC()))
 	}
-	src := *payload.LongTermCountdown
-	countdownEventPayload := CountdownUpdatedPayload{
-		CountdownID: src.CountdownID,
-		Value:       src.After,
-		Delta:       src.Delta,
-		Looped:      src.Looped,
-		Reason:      src.Reason,
+
+	for _, src := range payload.CountdownUpdates {
+		countdownEventPayload := CountdownUpdatedPayload{
+			CountdownID: src.CountdownID,
+			Value:       src.After,
+			Delta:       src.Delta,
+			Looped:      src.Looped,
+			Reason:      src.Reason,
+		}
+		countdownPayloadJSON, _ := json.Marshal(countdownEventPayload)
+		events = append(events, command.NewEvent(cmd, EventTypeCountdownUpdated, "countdown", countdownEventPayload.CountdownID.String(), countdownPayloadJSON, now().UTC()))
 	}
-	countdownPayloadJSON, _ := json.Marshal(countdownEventPayload)
-	countdownEvent := command.NewEvent(cmd, EventTypeCountdownUpdated, "countdown", countdownEventPayload.CountdownID.String(), countdownPayloadJSON, now().UTC())
-	return command.Accept(restEvent, countdownEvent)
+
+	return command.Accept(events...)
 }
 
 func decideCountdownCreate(cmd command.Command, now func() time.Time) command.Decision {

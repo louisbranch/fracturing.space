@@ -36,6 +36,10 @@ type testDaggerheartStore struct {
 	state projectionstore.DaggerheartCharacterState
 }
 
+func (s testDaggerheartStore) GetDaggerheartCharacterProfile(context.Context, string, string) (projectionstore.DaggerheartCharacterProfile, error) {
+	return projectionstore.DaggerheartCharacterProfile{}, nil
+}
+
 func (s testDaggerheartStore) GetDaggerheartCharacterState(context.Context, string, string) (projectionstore.DaggerheartCharacterState, error) {
 	return s.state, nil
 }

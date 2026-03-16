@@ -15,8 +15,8 @@ type CreationClassFeatureView struct {
 	Description string
 }
 
-// CreationDomainWatermarkView carries class-domain icon metadata for selectable
-// cards.
+// CreationDomainWatermarkView carries class-domain icon metadata for
+// selectable cards.
 type CreationDomainWatermarkView struct {
 	ID      string
 	Name    string
@@ -38,12 +38,13 @@ type CreationClassView struct {
 
 // CreationSubclassView carries one subclass option card.
 type CreationSubclassView struct {
-	ID             string
-	Name           string
-	ImageURL       string
-	ClassID        string
-	SpellcastTrait string
-	Foundation     []CreationClassFeatureView
+	ID                   string
+	Name                 string
+	ImageURL             string
+	ClassID              string
+	SpellcastTrait       string
+	CreationRequirements []string
+	Foundation           []CreationClassFeatureView
 }
 
 // CreationHeritageView carries one ancestry or community option card.
@@ -86,8 +87,39 @@ type CreationItemView struct {
 
 // CreationExperienceView carries one freeform experience row.
 type CreationExperienceView struct {
+	ID       string
 	Name     string
 	Modifier string
+}
+
+// CreationCompanionExperienceOptionView carries one companion experience catalog option.
+type CreationCompanionExperienceOptionView struct {
+	ID          string
+	Name        string
+	Description string
+}
+
+// CreationHeritageSelectionView carries structured heritage state for creation
+// rendering.
+type CreationHeritageSelectionView struct {
+	AncestryLabel           string
+	FirstFeatureAncestryID  string
+	FirstFeatureID          string
+	SecondFeatureAncestryID string
+	SecondFeatureID         string
+	CommunityID             string
+}
+
+// CreationCompanionView carries the creation/detail companion sheet.
+type CreationCompanionView struct {
+	AnimalKind        string
+	Name              string
+	Evasion           int32
+	Experiences       []CreationExperienceView
+	AttackDescription string
+	AttackRange       string
+	DamageDieSides    int32
+	DamageType        string
 }
 
 // CreationDomainCardView carries one domain-card choice.
@@ -106,38 +138,40 @@ type CreationDomainCardView struct {
 // CharacterCreationView carries the workflow-owned page model for one
 // character-creation state before HTML render adaptation.
 type CharacterCreationView struct {
-	Ready                       bool
-	NextStep                    int32
-	UnmetReasons                []string
-	ClassID                     string
-	SubclassID                  string
-	AncestryID                  string
-	CommunityID                 string
-	Agility                     string
-	Strength                    string
-	Finesse                     string
-	Instinct                    string
-	Presence                    string
-	Knowledge                   string
-	PrimaryWeaponID             string
-	SecondaryWeaponID           string
-	ArmorID                     string
-	PotionItemID                string
-	Background                  string
-	Description                 string
-	Experiences                 []CreationExperienceView
-	DomainCardIDs               []string
-	Connections                 string
-	NextStepPrefetchURLs        []string
-	Steps                       []CharacterCreationStepView
-	Classes                     []CreationClassView
-	Subclasses                  []CreationSubclassView
-	Ancestries                  []CreationHeritageView
-	Communities                 []CreationHeritageView
-	PrimaryWeapons              []CreationWeaponView
-	SecondaryWeapons            []CreationWeaponView
-	SecondaryWeaponNoneImageURL string
-	Armor                       []CreationArmorView
-	PotionItems                 []CreationItemView
-	DomainCards                 []CreationDomainCardView
+	Ready                        bool
+	NextStep                     int32
+	UnmetReasons                 []string
+	ClassID                      string
+	SubclassID                   string
+	SubclassCreationRequirements []string
+	Heritage                     CreationHeritageSelectionView
+	CompanionSheet               *CreationCompanionView
+	CompanionExperiences         []CreationCompanionExperienceOptionView
+	Agility                      string
+	Strength                     string
+	Finesse                      string
+	Instinct                     string
+	Presence                     string
+	Knowledge                    string
+	PrimaryWeaponID              string
+	SecondaryWeaponID            string
+	ArmorID                      string
+	PotionItemID                 string
+	Background                   string
+	Description                  string
+	Experiences                  []CreationExperienceView
+	DomainCardIDs                []string
+	Connections                  string
+	NextStepPrefetchURLs         []string
+	Steps                        []CharacterCreationStepView
+	Classes                      []CreationClassView
+	Subclasses                   []CreationSubclassView
+	Ancestries                   []CreationHeritageView
+	Communities                  []CreationHeritageView
+	PrimaryWeapons               []CreationWeaponView
+	SecondaryWeapons             []CreationWeaponView
+	SecondaryWeaponNoneImageURL  string
+	Armor                        []CreationArmorView
+	PotionItems                  []CreationItemView
+	DomainCards                  []CreationDomainCardView
 }

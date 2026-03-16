@@ -26,7 +26,7 @@ func TestHandlerApplyAdversaryConditionsSuccess(t *testing.T) {
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
 				SessionID:   "sess-1",
-				Conditions:  []string{daggerheart.ConditionHidden},
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
 			}, nil
 		},
 	})
@@ -35,7 +35,11 @@ func TestHandlerApplyAdversaryConditionsSuccess(t *testing.T) {
 	resp, err := handler.ApplyAdversaryConditions(ctx, &pb.DaggerheartApplyAdversaryConditionsRequest{
 		CampaignId:  "camp-1",
 		AdversaryId: "adv-1",
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+		AddConditions: []*pb.DaggerheartConditionState{{
+			Id:       "vulnerable",
+			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE,
+		}},
 	})
 	if err != nil {
 		t.Fatalf("ApplyAdversaryConditions returned error: %v", err)
@@ -60,7 +64,7 @@ func TestHandlerApplyAdversaryConditionsRejectsSessionMismatch(t *testing.T) {
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
 				SessionID:   "sess-1",
-				Conditions:  []string{daggerheart.ConditionHidden},
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
 			}, nil
 		},
 	})
@@ -71,7 +75,11 @@ func TestHandlerApplyAdversaryConditionsRejectsSessionMismatch(t *testing.T) {
 		CampaignId:  "camp-1",
 		AdversaryId: "adv-1",
 		RollSeq:     &rollSeq,
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+		AddConditions: []*pb.DaggerheartConditionState{{
+			Id:       "vulnerable",
+			Class:    pb.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+			Standard: pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE,
+		}},
 	})
 	if status.Code(err) != codes.InvalidArgument {
 		t.Fatalf("status code = %v, want %v (err=%v)", status.Code(err), codes.InvalidArgument, err)

@@ -281,9 +281,177 @@ func TestFolderApplyAdversaryUpdated_AppliesZeroAndEmptyValues(t *testing.T) {
 	}
 }
 
+func TestFoldEquipmentSwapped_ArmorUpdatesProfileAndState(t *testing.T) {
+	state := SnapshotState{
+		CampaignID: "camp-1",
+		CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+			"char-1": {
+				Evasion:         10,
+				MajorThreshold:  3,
+				SevereThreshold: 6,
+				ArmorScore:      1,
+				ArmorMax:        2,
+				Agility:         1,
+				Strength:        1,
+				Finesse:         1,
+				Instinct:        1,
+				Presence:        1,
+				Knowledge:       1,
+			},
+		},
+		CharacterStates: map[ids.CharacterID]CharacterState{
+			"char-1": {
+				CampaignID:  "camp-1",
+				CharacterID: "char-1",
+				Armor:       2,
+				Stress:      1,
+			},
+		},
+	}
+
+	err := foldEquipmentSwapped(&state, EquipmentSwappedPayload{
+		CharacterID:             "char-1",
+		ItemType:                "armor",
+		EquippedArmorID:         "armor.chainmail-armor",
+		EvasionAfter:            intPtr(8),
+		MajorThresholdAfter:     intPtr(7),
+		SevereThresholdAfter:    intPtr(15),
+		ArmorScoreAfter:         intPtr(4),
+		ArmorMaxAfter:           intPtr(4),
+		SpellcastRollBonusAfter: intPtr(1),
+		AgilityAfter:            intPtr(0),
+		StrengthAfter:           intPtr(0),
+		FinesseAfter:            intPtr(0),
+		InstinctAfter:           intPtr(0),
+		PresenceAfter:           intPtr(0),
+		KnowledgeAfter:          intPtr(0),
+		ArmorAfter:              intPtr(4),
+		StressCost:              2,
+	})
+	if err != nil {
+		t.Fatalf("foldEquipmentSwapped: %v", err)
+	}
+
+	profile := state.CharacterProfiles["char-1"]
+	if profile.EquippedArmorID != "armor.chainmail-armor" ||
+		profile.Evasion != 8 ||
+		profile.MajorThreshold != 7 ||
+		profile.SevereThreshold != 15 ||
+		profile.ArmorScore != 4 ||
+		profile.ArmorMax != 4 ||
+		profile.SpellcastRollBonus != 1 {
+		t.Fatalf("profile after fold = %+v", profile)
+	}
+	if profile.Agility != 0 || profile.Strength != 0 || profile.Finesse != 0 ||
+		profile.Instinct != 0 || profile.Presence != 0 || profile.Knowledge != 0 {
+		t.Fatalf("profile traits after fold = %+v", profile)
+	}
+
+	character := state.CharacterStates["char-1"]
+	if character.Armor != 4 || character.Stress != 3 {
+		t.Fatalf("state after fold = %+v, want armor=4 stress=3", character)
+	}
+}
+
+func TestFolderApplyGoldUpdated_UpdatesProfileWhenPresent(t *testing.T) {
+	projector := NewFolder()
+	payload, err := json.Marshal(GoldUpdatedPayload{
+		CharacterID: "char-1",
+		Handfuls:    3,
+		Bags:        2,
+		Chests:      1,
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	updated, err := projector.Fold(SnapshotState{
+		CampaignID: "camp-1",
+		CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+			"char-1": {},
+		},
+	}, event.Event{
+		CampaignID:    "camp-1",
+		Type:          EventTypeGoldUpdated,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   payload,
+	})
+	if err != nil {
+		t.Fatalf("apply event: %v", err)
+	}
+
+	snapshot := assertTestSnapshotState(t, updated)
+	profile := snapshot.CharacterProfiles["char-1"]
+	if profile.GoldHandfuls != 3 || profile.GoldBags != 2 || profile.GoldChests != 1 {
+		t.Fatalf("gold profile = %+v, want handfuls=3 bags=2 chests=1", profile)
+	}
+}
+
+func TestFolderApplyDomainCardAcquired_AppendsToProfileWhenPresent(t *testing.T) {
+	projector := NewFolder()
+	payload, err := json.Marshal(DomainCardAcquiredPayload{
+		CharacterID: "char-1",
+		CardID:      "card-2",
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	updated, err := projector.Fold(SnapshotState{
+		CampaignID: "camp-1",
+		CharacterProfiles: map[ids.CharacterID]CharacterProfile{
+			"char-1": {
+				DomainCardIDs: []string{"card-1"},
+			},
+		},
+	}, event.Event{
+		CampaignID:    "camp-1",
+		Type:          EventTypeDomainCardAcquired,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   payload,
+	})
+	if err != nil {
+		t.Fatalf("apply event: %v", err)
+	}
+
+	snapshot := assertTestSnapshotState(t, updated)
+	profile := snapshot.CharacterProfiles["char-1"]
+	if len(profile.DomainCardIDs) != 2 || profile.DomainCardIDs[0] != "card-1" || profile.DomainCardIDs[1] != "card-2" {
+		t.Fatalf("domain cards = %v, want [card-1 card-2]", profile.DomainCardIDs)
+	}
+}
+
+func TestFolderApplyRestTaken_RejectsOutOfRangeGMFear(t *testing.T) {
+	projector := NewFolder()
+	payload, err := json.Marshal(RestTakenPayload{
+		RestType:     "short",
+		GMFear:       GMFearMax + 1,
+		Participants: []ids.CharacterID{"char-1"},
+	})
+	if err != nil {
+		t.Fatalf("marshal payload: %v", err)
+	}
+
+	_, err = projector.Fold(SnapshotState{CampaignID: "camp-1"}, event.Event{
+		CampaignID:    "camp-1",
+		Type:          EventTypeRestTaken,
+		SystemID:      SystemID,
+		SystemVersion: SystemVersion,
+		PayloadJSON:   payload,
+	})
+	if err == nil {
+		t.Fatal("expected gm fear range validation error")
+	}
+}
+
 func TestFolderApplyHandlesAllRegisteredEvents(t *testing.T) {
 	projector := NewFolder()
 	for _, def := range daggerheartEventDefinitions {
+		if def.Intent != event.IntentProjectionAndReplay {
+			continue
+		}
 		t.Run(string(def.Type), func(t *testing.T) {
 			payloadJSON := []byte(`{}`)
 			if def.Type == EventTypeGMFearChanged {

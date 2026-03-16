@@ -599,12 +599,99 @@ message DaggerheartFeature {
   string name = 2;
   string description = 3;
   int32 level = 4;
+  DaggerheartFeatureAutomationStatus automation_status = 5;
+  DaggerheartSubclassFeatureRule subclass_rule = 6;
+  DaggerheartClassFeatureRule class_rule = 7;
+}
+
+enum DaggerheartFeatureAutomationStatus {
+  DAGGERHEART_FEATURE_AUTOMATION_STATUS_UNSPECIFIED = 0;
+  DAGGERHEART_FEATURE_AUTOMATION_STATUS_SUPPORTED = 1;
+  DAGGERHEART_FEATURE_AUTOMATION_STATUS_UNSUPPORTED = 2;
+}
+
+enum DaggerheartSubclassFeatureRuleKind {
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_UNSPECIFIED = 0;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_THRESHOLD_BONUS = 1;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_HP_SLOT_BONUS = 2;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_STRESS_SLOT_BONUS = 3;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_EVASION_BONUS = 4;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_EVASION_BONUS_WHILE_HOPE_AT_LEAST = 5;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_GAIN_HOPE_ON_FAILURE_WITH_FEAR = 6;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_BONUS_MAGIC_DAMAGE_ON_SUCCESS_WITH_FEAR = 7;
+  DAGGERHEART_SUBCLASS_FEATURE_RULE_KIND_BONUS_DAMAGE_WHILE_VULNERABLE = 8;
+}
+
+enum DaggerheartSubclassThresholdScope {
+  DAGGERHEART_SUBCLASS_THRESHOLD_SCOPE_UNSPECIFIED = 0;
+  DAGGERHEART_SUBCLASS_THRESHOLD_SCOPE_ALL = 1;
+  DAGGERHEART_SUBCLASS_THRESHOLD_SCOPE_SEVERE_ONLY = 2;
+}
+
+message DaggerheartSubclassFeatureRule {
+  DaggerheartSubclassFeatureRuleKind kind = 1;
+  int32 bonus = 2;
+  int32 required_hope_min = 3;
+  int32 damage_dice_count = 4;
+  int32 damage_die_sides = 5;
+  bool use_character_level = 6;
+  DaggerheartSubclassThresholdScope threshold_scope = 7;
+}
+
+enum DaggerheartClassFeatureRuleKind {
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_UNSPECIFIED = 0;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_UNSTOPPABLE = 1;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_RALLY = 2;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_BEASTFORM = 3;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_HUNTERS_FOCUS = 4;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_CLOAKED = 5;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_SNEAK_ATTACK = 6;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_PRAYER_DICE = 7;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_CHANNEL_RAW_POWER = 8;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_PARTING_STRIKE = 9;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_COMBAT_TRAINING = 10;
+  DAGGERHEART_CLASS_FEATURE_RULE_KIND_STRANGE_PATTERNS = 11;
+}
+
+message DaggerheartClassFeatureRule {
+  DaggerheartClassFeatureRuleKind kind = 1;
+  int32 bonus = 2;
+  int32 hope_cost = 3;
+  int32 stress_cost = 4;
+  int32 die_sides = 5;
+  bool use_character_level = 6;
+}
+
+enum DaggerheartHopeFeatureRuleKind {
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_UNSPECIFIED = 0;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_FRONTLINE_TANK = 1;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_MAKE_A_SCENE = 2;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_EVOLUTION = 3;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_HOLD_THEM_OFF = 4;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_ROGUES_DODGE = 5;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_LIFE_SUPPORT = 6;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_VOLATILE_MAGIC = 7;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_NO_MERCY = 8;
+  DAGGERHEART_HOPE_FEATURE_RULE_KIND_NOT_THIS_TIME = 9;
+}
+
+message DaggerheartHopeFeatureRule {
+  DaggerheartHopeFeatureRuleKind kind = 1;
+  int32 bonus = 2;
+  int32 hope_cost = 3;
 }
 
 message DaggerheartHopeFeature {
   string name = 1;
   string description = 2;
   int32 hope_cost = 3;
+  DaggerheartFeatureAutomationStatus automation_status = 4;
+  DaggerheartHopeFeatureRule hope_feature_rule = 5;
+}
+
+enum DaggerheartCreationRequirement {
+  DAGGERHEART_CREATION_REQUIREMENT_UNSPECIFIED = 0;
+  DAGGERHEART_CREATION_REQUIREMENT_COMPANION_SHEET = 1;
 }
 
 message DaggerheartClass {
@@ -622,10 +709,11 @@ message DaggerheartSubclass {
   string id = 1;
   string name = 2;
   string spellcast_trait = 3;
-  repeated DaggerheartFeature foundation_features = 4;
-  repeated DaggerheartFeature specialization_features = 5;
-  repeated DaggerheartFeature mastery_features = 6;
-  string class_id = 7;
+  repeated DaggerheartCreationRequirement creation_requirements = 4;
+  repeated DaggerheartFeature foundation_features = 5;
+  repeated DaggerheartFeature specialization_features = 6;
+  repeated DaggerheartFeature mastery_features = 7;
+  string class_id = 8;
 }
 
 enum DaggerheartHeritageKind {
@@ -660,6 +748,32 @@ message DaggerheartAdversaryExperience {
   int32 modifier = 2;
 }
 
+enum DaggerheartAdversaryFeatureRuleKind {
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_UNSPECIFIED = 0;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_MOMENTUM_GAIN_FEAR_ON_SUCCESSFUL_ATTACK = 1;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_TERRIFYING_HOPE_LOSS_ON_SUCCESSFUL_ATTACK = 2;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_GROUP_ATTACK = 3;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_HIDDEN_UNTIL_NEXT_ATTACK = 4;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_DAMAGE_REPLACEMENT_ON_ADVANTAGED_ATTACK = 5;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_DIFFICULTY_BONUS_WHILE_ACTIVE = 6;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_CONDITIONAL_DAMAGE_REPLACEMENT_WITH_CONTRIBUTOR = 7;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_ARMOR_SHRED_ON_SUCCESSFUL_ATTACK = 8;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_RETALIATORY_DAMAGE_ON_CLOSE_HIT = 9;
+  DAGGERHEART_ADVERSARY_FEATURE_RULE_KIND_FOCUS_TARGET_DISADVANTAGE = 10;
+}
+
+message DaggerheartAdversaryFeatureRule {
+  DaggerheartAdversaryFeatureRuleKind kind = 1;
+  int32 fear_gain = 2;
+  int32 hope_loss = 3;
+  int32 difficulty_bonus = 4;
+  repeated DiceSpec damage_dice = 5;
+  int32 damage_bonus = 6;
+  DaggerheartDamageType damage_type = 7;
+  bool requires_advantage = 8;
+  bool requires_contributor = 9;
+}
+
 message DaggerheartAdversaryFeature {
   string id = 1;
   string name = 2;
@@ -667,6 +781,20 @@ message DaggerheartAdversaryFeature {
   string description = 4;
   string cost_type = 5;
   int32 cost = 6;
+  DaggerheartFeatureAutomationStatus automation_status = 7;
+  DaggerheartAdversaryFeatureRule adversary_feature_rule = 8;
+}
+
+message DaggerheartAdversaryMinionRule {
+  int32 spillover_damage_step = 1;
+}
+
+message DaggerheartAdversaryHordeRule {
+  DaggerheartAdversaryAttack bloodied_attack = 1;
+}
+
+message DaggerheartAdversaryRelentlessRule {
+  int32 max_spotlights_per_gm_turn = 1;
 }
 
 message DaggerheartAdversaryEntry {
@@ -686,6 +814,9 @@ message DaggerheartAdversaryEntry {
   DaggerheartAdversaryAttack standard_attack = 14;
   repeated DaggerheartAdversaryExperience experiences = 15;
   repeated DaggerheartAdversaryFeature features = 16;
+  DaggerheartAdversaryMinionRule minion_rule = 17;
+  DaggerheartAdversaryHordeRule horde_rule = 18;
+  DaggerheartAdversaryRelentlessRule relentless_rule = 19;
 }
 
 message DaggerheartBeastformAttack {
@@ -777,6 +908,43 @@ message DaggerheartWeapon {
   string feature = 10;
 }
 
+enum DaggerheartArmorAutomationStatus {
+  DAGGERHEART_ARMOR_AUTOMATION_STATUS_UNSPECIFIED = 0;
+  DAGGERHEART_ARMOR_AUTOMATION_STATUS_SUPPORTED = 1;
+  DAGGERHEART_ARMOR_AUTOMATION_STATUS_UNSUPPORTED = 2;
+}
+
+enum DaggerheartArmorMitigationMode {
+  DAGGERHEART_ARMOR_MITIGATION_MODE_UNSPECIFIED = 0;
+  DAGGERHEART_ARMOR_MITIGATION_MODE_ANY = 1;
+  DAGGERHEART_ARMOR_MITIGATION_MODE_PHYSICAL_ONLY = 2;
+  DAGGERHEART_ARMOR_MITIGATION_MODE_MAGIC_ONLY = 3;
+}
+
+message DaggerheartArmorRules {
+  DaggerheartArmorAutomationStatus automation_status = 1;
+  DaggerheartArmorMitigationMode mitigation_mode = 2;
+  int32 evasion_delta = 3;
+  int32 agility_delta = 4;
+  int32 presence_delta = 5;
+  int32 spellcast_roll_bonus = 6;
+  int32 all_traits_delta = 7;
+  bool stress_on_mark = 8;
+  int32 severity_reduction_steps = 9;
+  int32 threshold_bonus_when_armor_depleted = 10;
+  bool warded_magic_reduction = 11;
+  bool hopeful_replace_hope_with_armor = 12;
+  int32 resilient_die_sides = 13;
+  int32 resilient_success_on_or_above = 14;
+  int32 shifting_attack_disadvantage = 15;
+  int32 timeslowing_evasion_bonus_die_sides = 16;
+  int32 sharp_damage_bonus_die_sides = 17;
+  int32 burning_attacker_stress = 18;
+  int32 impenetrable_stress_cost = 19;
+  int32 impenetrable_uses_per_short_rest = 20;
+  int32 silent_movement_bonus = 21;
+}
+
 message DaggerheartArmor {
   string id = 1;
   string name = 2;
@@ -785,6 +953,7 @@ message DaggerheartArmor {
   int32 base_severe_threshold = 5;
   int32 armor_score = 6;
   string feature = 7;
+  DaggerheartArmorRules rules = 8;
 }
 
 enum DaggerheartItemRarity {

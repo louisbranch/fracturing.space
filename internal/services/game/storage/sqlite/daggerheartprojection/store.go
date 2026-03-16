@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -39,6 +39,77 @@ func Bind(sqlDB *sql.DB, q *db.Queries) *Store {
 	}
 }
 
+func domainConditionStatesToProjection(values []daggerheart.ConditionState) []projectionstore.DaggerheartConditionState {
+	if len(values) == 0 {
+		return []projectionstore.DaggerheartConditionState{}
+	}
+	items := make([]projectionstore.DaggerheartConditionState, 0, len(values))
+	for _, value := range values {
+		triggers := make([]string, 0, len(value.ClearTriggers))
+		for _, trigger := range value.ClearTriggers {
+			triggers = append(triggers, string(trigger))
+		}
+		items = append(items, projectionstore.DaggerheartConditionState{
+			ID:            value.ID,
+			Class:         string(value.Class),
+			Standard:      value.Standard,
+			Code:          value.Code,
+			Label:         value.Label,
+			Source:        value.Source,
+			SourceID:      value.SourceID,
+			ClearTriggers: triggers,
+		})
+	}
+	return items
+}
+
+func projectionConditionStatesToDomain(values []projectionstore.DaggerheartConditionState) []daggerheart.ConditionState {
+	if len(values) == 0 {
+		return []daggerheart.ConditionState{}
+	}
+	items := make([]daggerheart.ConditionState, 0, len(values))
+	for _, value := range values {
+		triggers := make([]daggerheart.ConditionClearTrigger, 0, len(value.ClearTriggers))
+		for _, trigger := range value.ClearTriggers {
+			triggers = append(triggers, daggerheart.ConditionClearTrigger(trigger))
+		}
+		items = append(items, daggerheart.ConditionState{
+			ID:            value.ID,
+			Class:         daggerheart.ConditionClass(value.Class),
+			Standard:      value.Standard,
+			Code:          value.Code,
+			Label:         value.Label,
+			Source:        value.Source,
+			SourceID:      value.SourceID,
+			ClearTriggers: triggers,
+		})
+	}
+	return items
+}
+
+func decodeProjectionConditionStates(raw string) ([]projectionstore.DaggerheartConditionState, error) {
+	if strings.TrimSpace(raw) == "" {
+		return []projectionstore.DaggerheartConditionState{}, nil
+	}
+	var structured []projectionstore.DaggerheartConditionState
+	if err := json.Unmarshal([]byte(raw), &structured); err == nil {
+		return structured, nil
+	}
+	var legacy []string
+	if err := json.Unmarshal([]byte(raw), &legacy); err != nil {
+		return nil, err
+	}
+	items := make([]projectionstore.DaggerheartConditionState, 0, len(legacy))
+	for _, code := range legacy {
+		state, err := daggerheart.StandardConditionState(code)
+		if err != nil {
+			return nil, err
+		}
+		items = append(items, domainConditionStatesToProjection([]daggerheart.ConditionState{state})...)
+	}
+	return items, nil
+}
+
 // PutDaggerheartCharacterProfile persists a Daggerheart character profile extension.
 func (s *Store) PutDaggerheartCharacterProfile(ctx context.Context, profile projectionstore.DaggerheartCharacterProfile) error {
 	if err := ctx.Err(); err != nil {
@@ -58,6 +129,26 @@ func (s *Store) PutDaggerheartCharacterProfile(ctx context.Context, profile proj
 	if err != nil {
 		return fmt.Errorf("marshal experiences: %w", err)
 	}
+	subclassTracksJSON, err := json.Marshal(profile.SubclassTracks)
+	if err != nil {
+		return fmt.Errorf("marshal subclass tracks: %w", err)
+	}
+	subclassCreationRequirementsJSON, err := json.Marshal(profile.SubclassCreationRequirements)
+	if err != nil {
+		return fmt.Errorf("marshal subclass creation requirements: %w", err)
+	}
+	heritageJSON, err := json.Marshal(profile.Heritage)
+	if err != nil {
+		return fmt.Errorf("marshal heritage: %w", err)
+	}
+	companionSheetJSON := ""
+	if profile.CompanionSheet != nil {
+		rawCompanionSheetJSON, err := json.Marshal(profile.CompanionSheet)
+		if err != nil {
+			return fmt.Errorf("marshal companion sheet: %w", err)
+		}
+		companionSheetJSON = string(rawCompanionSheetJSON)
+	}
 	domainCardIDsJSON, err := json.Marshal(profile.DomainCardIDs)
 	if err != nil {
 		return fmt.Errorf("marshal domain card ids: %w", err)
@@ -76,37 +167,41 @@ func (s *Store) PutDaggerheartCharacterProfile(ctx context.Context, profile proj
 	}
 
 	return s.q.PutDaggerheartCharacterProfile(ctx, db.PutDaggerheartCharacterProfileParams{
-		CampaignID:            profile.CampaignID,
-		CharacterID:           profile.CharacterID,
-		Level:                 int64(profile.Level),
-		HpMax:                 int64(profile.HpMax),
-		StressMax:             int64(profile.StressMax),
-		Evasion:               int64(profile.Evasion),
-		MajorThreshold:        int64(profile.MajorThreshold),
-		SevereThreshold:       int64(profile.SevereThreshold),
-		Proficiency:           int64(profile.Proficiency),
-		ArmorScore:            int64(profile.ArmorScore),
-		ArmorMax:              int64(profile.ArmorMax),
-		ExperiencesJson:       string(experiencesJSON),
-		ClassID:               profile.ClassID,
-		SubclassID:            profile.SubclassID,
-		AncestryID:            profile.AncestryID,
-		CommunityID:           profile.CommunityID,
-		TraitsAssigned:        traitsAssigned,
-		DetailsRecorded:       detailsRecorded,
-		StartingWeaponIdsJson: string(startingWeaponIDsJSON),
-		StartingArmorID:       profile.StartingArmorID,
-		StartingPotionItemID:  profile.StartingPotionItemID,
-		Background:            profile.Background,
-		Description:           profile.Description,
-		DomainCardIdsJson:     string(domainCardIDsJSON),
-		Connections:           profile.Connections,
-		Agility:               int64(profile.Agility),
-		Strength:              int64(profile.Strength),
-		Finesse:               int64(profile.Finesse),
-		Instinct:              int64(profile.Instinct),
-		Presence:              int64(profile.Presence),
-		Knowledge:             int64(profile.Knowledge),
+		CampaignID:                       profile.CampaignID,
+		CharacterID:                      profile.CharacterID,
+		Level:                            int64(profile.Level),
+		HpMax:                            int64(profile.HpMax),
+		StressMax:                        int64(profile.StressMax),
+		Evasion:                          int64(profile.Evasion),
+		MajorThreshold:                   int64(profile.MajorThreshold),
+		SevereThreshold:                  int64(profile.SevereThreshold),
+		Proficiency:                      int64(profile.Proficiency),
+		ArmorScore:                       int64(profile.ArmorScore),
+		ArmorMax:                         int64(profile.ArmorMax),
+		ExperiencesJson:                  string(experiencesJSON),
+		ClassID:                          profile.ClassID,
+		SubclassID:                       profile.SubclassID,
+		SubclassTracksJson:               string(subclassTracksJSON),
+		SubclassCreationRequirementsJson: string(subclassCreationRequirementsJSON),
+		HeritageJson:                     string(heritageJSON),
+		CompanionSheetJson:               companionSheetJSON,
+		EquippedArmorID:                  profile.EquippedArmorID,
+		SpellcastRollBonus:               int64(profile.SpellcastRollBonus),
+		TraitsAssigned:                   traitsAssigned,
+		DetailsRecorded:                  detailsRecorded,
+		StartingWeaponIdsJson:            string(startingWeaponIDsJSON),
+		StartingArmorID:                  profile.StartingArmorID,
+		StartingPotionItemID:             profile.StartingPotionItemID,
+		Background:                       profile.Background,
+		Description:                      profile.Description,
+		DomainCardIdsJson:                string(domainCardIDsJSON),
+		Connections:                      profile.Connections,
+		Agility:                          int64(profile.Agility),
+		Strength:                         int64(profile.Strength),
+		Finesse:                          int64(profile.Finesse),
+		Instinct:                         int64(profile.Instinct),
+		Presence:                         int64(profile.Presence),
+		Knowledge:                        int64(profile.Knowledge),
 	})
 }
 
@@ -172,7 +267,7 @@ func (s *Store) ListDaggerheartCharacterProfiles(ctx context.Context, campaignID
 		return projectionstore.DaggerheartCharacterProfilePage{}, fmt.Errorf("list daggerheart character profiles: %w", err)
 	}
 
-	profiles, nextPageToken, err := sqliteutil.MapPageRows(rows, pageSize, func(row db.DaggerheartCharacterProfile) string {
+	profiles, nextPageToken, err := mapPageRows(rows, pageSize, func(row db.DaggerheartCharacterProfile) string {
 		return row.CharacterID
 	}, dbDaggerheartCharacterProfileToDomain)
 	if err != nil {
@@ -221,8 +316,8 @@ func dbDaggerheartCharacterProfileToDomain(row db.DaggerheartCharacterProfile) (
 		ArmorMax:             int(row.ArmorMax),
 		ClassID:              row.ClassID,
 		SubclassID:           row.SubclassID,
-		AncestryID:           row.AncestryID,
-		CommunityID:          row.CommunityID,
+		EquippedArmorID:      row.EquippedArmorID,
+		SpellcastRollBonus:   int(row.SpellcastRollBonus),
 		TraitsAssigned:       row.TraitsAssigned != 0,
 		DetailsRecorded:      row.DetailsRecorded != 0,
 		StartingArmorID:      row.StartingArmorID,
@@ -241,6 +336,28 @@ func dbDaggerheartCharacterProfileToDomain(row db.DaggerheartCharacterProfile) (
 		if err := json.Unmarshal([]byte(row.ExperiencesJson), &profile.Experiences); err != nil {
 			return projectionstore.DaggerheartCharacterProfile{}, fmt.Errorf("decode experiences: %w", err)
 		}
+	}
+	if row.SubclassCreationRequirementsJson != "" {
+		if err := json.Unmarshal([]byte(row.SubclassCreationRequirementsJson), &profile.SubclassCreationRequirements); err != nil {
+			return projectionstore.DaggerheartCharacterProfile{}, fmt.Errorf("decode subclass creation requirements: %w", err)
+		}
+	}
+	if row.SubclassTracksJson != "" {
+		if err := json.Unmarshal([]byte(row.SubclassTracksJson), &profile.SubclassTracks); err != nil {
+			return projectionstore.DaggerheartCharacterProfile{}, fmt.Errorf("decode subclass tracks: %w", err)
+		}
+	}
+	if row.HeritageJson != "" {
+		if err := json.Unmarshal([]byte(row.HeritageJson), &profile.Heritage); err != nil {
+			return projectionstore.DaggerheartCharacterProfile{}, fmt.Errorf("decode heritage: %w", err)
+		}
+	}
+	if row.CompanionSheetJson != "" {
+		var companion projectionstore.DaggerheartCompanionSheet
+		if err := json.Unmarshal([]byte(row.CompanionSheetJson), &companion); err != nil {
+			return projectionstore.DaggerheartCharacterProfile{}, fmt.Errorf("decode companion sheet: %w", err)
+		}
+		profile.CompanionSheet = &companion
 	}
 	if row.DomainCardIdsJson != "" {
 		if err := json.Unmarshal([]byte(row.DomainCardIdsJson), &profile.DomainCardIDs); err != nil {
@@ -272,7 +389,7 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 
 	conditions := state.Conditions
 	if conditions == nil {
-		conditions = []string{}
+		conditions = []projectionstore.DaggerheartConditionState{}
 	}
 	conditionsJSON, err := json.Marshal(conditions)
 	if err != nil {
@@ -281,6 +398,18 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 	temporaryArmorJSON, err := json.Marshal(state.TemporaryArmor)
 	if err != nil {
 		return fmt.Errorf("encode temporary armor: %w", err)
+	}
+	classStateJSON, err := json.Marshal(state.ClassState)
+	if err != nil {
+		return fmt.Errorf("encode class state: %w", err)
+	}
+	subclassStateJSON, err := json.Marshal(state.SubclassState)
+	if err != nil {
+		return fmt.Errorf("encode subclass state: %w", err)
+	}
+	companionStateJSON, err := json.Marshal(state.CompanionState)
+	if err != nil {
+		return fmt.Errorf("encode companion state: %w", err)
 	}
 
 	hopeMax := state.HopeMax
@@ -294,16 +423,20 @@ func (s *Store) PutDaggerheartCharacterState(ctx context.Context, state projecti
 	}
 
 	return s.q.PutDaggerheartCharacterState(ctx, db.PutDaggerheartCharacterStateParams{
-		CampaignID:         state.CampaignID,
-		CharacterID:        state.CharacterID,
-		Hp:                 int64(state.Hp),
-		Hope:               int64(state.Hope),
-		HopeMax:            int64(hopeMax),
-		Stress:             int64(state.Stress),
-		Armor:              int64(state.Armor),
-		ConditionsJson:     string(conditionsJSON),
-		TemporaryArmorJson: string(temporaryArmorJSON),
-		LifeState:          lifeState,
+		CampaignID:                    state.CampaignID,
+		CharacterID:                   state.CharacterID,
+		Hp:                            int64(state.Hp),
+		Hope:                          int64(state.Hope),
+		HopeMax:                       int64(hopeMax),
+		Stress:                        int64(state.Stress),
+		Armor:                         int64(state.Armor),
+		ConditionsJson:                string(conditionsJSON),
+		TemporaryArmorJson:            string(temporaryArmorJSON),
+		LifeState:                     lifeState,
+		ClassStateJson:                string(classStateJSON),
+		SubclassStateJson:             string(subclassStateJSON),
+		CompanionStateJson:            string(companionStateJSON),
+		ImpenetrableUsedThisShortRest: boolToInt64(state.ImpenetrableUsedThisShortRest),
 	})
 }
 
@@ -333,9 +466,10 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 		return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("get daggerheart character state: %w", err)
 	}
 
-	var conditions []string
+	var conditions []projectionstore.DaggerheartConditionState
 	if row.ConditionsJson != "" {
-		if err := json.Unmarshal([]byte(row.ConditionsJson), &conditions); err != nil {
+		conditions, err = decodeProjectionConditionStates(row.ConditionsJson)
+		if err != nil {
 			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode conditions: %w", err)
 		}
 	}
@@ -345,6 +479,28 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode temporary armor: %w", err)
 		}
 	}
+	var classState projectionstore.DaggerheartClassState
+	if row.ClassStateJson != "" {
+		if err := json.Unmarshal([]byte(row.ClassStateJson), &classState); err != nil {
+			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode class state: %w", err)
+		}
+	}
+	var subclassState *projectionstore.DaggerheartSubclassState
+	if row.SubclassStateJson != "" && row.SubclassStateJson != "null" && row.SubclassStateJson != "{}" {
+		var decoded projectionstore.DaggerheartSubclassState
+		if err := json.Unmarshal([]byte(row.SubclassStateJson), &decoded); err != nil {
+			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode subclass state: %w", err)
+		}
+		subclassState = &decoded
+	}
+	var companionState *projectionstore.DaggerheartCompanionState
+	if row.CompanionStateJson != "" && row.CompanionStateJson != "null" && row.CompanionStateJson != "{}" {
+		var decoded projectionstore.DaggerheartCompanionState
+		if err := json.Unmarshal([]byte(row.CompanionStateJson), &decoded); err != nil {
+			return projectionstore.DaggerheartCharacterState{}, fmt.Errorf("decode companion state: %w", err)
+		}
+		companionState = &decoded
+	}
 
 	lifeState := row.LifeState
 	if strings.TrimSpace(lifeState) == "" {
@@ -352,17 +508,28 @@ func (s *Store) GetDaggerheartCharacterState(ctx context.Context, campaignID, ch
 	}
 
 	return projectionstore.DaggerheartCharacterState{
-		CampaignID:     row.CampaignID,
-		CharacterID:    row.CharacterID,
-		Hp:             int(row.Hp),
-		Hope:           int(row.Hope),
-		HopeMax:        int(row.HopeMax),
-		Stress:         int(row.Stress),
-		Armor:          int(row.Armor),
-		TemporaryArmor: temporaryArmor,
-		Conditions:     conditions,
-		LifeState:      lifeState,
+		CampaignID:                    row.CampaignID,
+		CharacterID:                   row.CharacterID,
+		Hp:                            int(row.Hp),
+		Hope:                          int(row.Hope),
+		HopeMax:                       int(row.HopeMax),
+		Stress:                        int(row.Stress),
+		Armor:                         int(row.Armor),
+		TemporaryArmor:                temporaryArmor,
+		Conditions:                    conditions,
+		LifeState:                     lifeState,
+		ClassState:                    classState,
+		SubclassState:                 subclassState,
+		CompanionState:                companionState,
+		ImpenetrableUsedThisShortRest: row.ImpenetrableUsedThisShortRest != 0,
 	}, nil
+}
+
+func boolToInt64(value bool) int64 {
+	if value {
+		return 1
+	}
+	return 0
 }
 
 // PutDaggerheartSnapshot persists a Daggerheart snapshot projection.
@@ -551,36 +718,64 @@ func (s *Store) PutDaggerheartAdversary(ctx context.Context, adversary projectio
 	if strings.TrimSpace(adversary.AdversaryID) == "" {
 		return fmt.Errorf("adversary id is required")
 	}
+	if strings.TrimSpace(adversary.AdversaryEntryID) == "" {
+		return fmt.Errorf("adversary entry id is required")
+	}
 	if strings.TrimSpace(adversary.Name) == "" {
 		return fmt.Errorf("adversary name is required")
 	}
+	if strings.TrimSpace(adversary.SessionID) == "" {
+		return fmt.Errorf("session id is required")
+	}
 	conditions := adversary.Conditions
 	if conditions == nil {
-		conditions = []string{}
+		conditions = []projectionstore.DaggerheartConditionState{}
 	}
 	conditionsJSON, err := json.Marshal(conditions)
 	if err != nil {
 		return fmt.Errorf("marshal adversary conditions: %w", err)
 	}
+	featureStates := adversary.FeatureStates
+	if featureStates == nil {
+		featureStates = []projectionstore.DaggerheartAdversaryFeatureState{}
+	}
+	featureStatesJSON, err := json.Marshal(featureStates)
+	if err != nil {
+		return fmt.Errorf("marshal adversary feature states: %w", err)
+	}
+	pendingExperienceJSON := ""
+	if adversary.PendingExperience != nil {
+		payloadJSON, err := json.Marshal(adversary.PendingExperience)
+		if err != nil {
+			return fmt.Errorf("marshal adversary pending experience: %w", err)
+		}
+		pendingExperienceJSON = string(payloadJSON)
+	}
 
 	return s.q.PutDaggerheartAdversary(ctx, db.PutDaggerheartAdversaryParams{
-		CampaignID:      adversary.CampaignID,
-		AdversaryID:     adversary.AdversaryID,
-		Name:            adversary.Name,
-		Kind:            adversary.Kind,
-		SessionID:       sqliteutil.ToNullString(adversary.SessionID),
-		Notes:           adversary.Notes,
-		Hp:              int64(adversary.HP),
-		HpMax:           int64(adversary.HPMax),
-		Stress:          int64(adversary.Stress),
-		StressMax:       int64(adversary.StressMax),
-		Evasion:         int64(adversary.Evasion),
-		MajorThreshold:  int64(adversary.Major),
-		SevereThreshold: int64(adversary.Severe),
-		Armor:           int64(adversary.Armor),
-		ConditionsJson:  string(conditionsJSON),
-		CreatedAt:       sqliteutil.ToMillis(adversary.CreatedAt),
-		UpdatedAt:       sqliteutil.ToMillis(adversary.UpdatedAt),
+		CampaignID:            adversary.CampaignID,
+		AdversaryID:           adversary.AdversaryID,
+		AdversaryEntryID:      adversary.AdversaryEntryID,
+		Name:                  adversary.Name,
+		Kind:                  adversary.Kind,
+		SessionID:             adversary.SessionID,
+		SceneID:               adversary.SceneID,
+		Notes:                 adversary.Notes,
+		Hp:                    int64(adversary.HP),
+		HpMax:                 int64(adversary.HPMax),
+		Stress:                int64(adversary.Stress),
+		StressMax:             int64(adversary.StressMax),
+		Evasion:               int64(adversary.Evasion),
+		MajorThreshold:        int64(adversary.Major),
+		SevereThreshold:       int64(adversary.Severe),
+		Armor:                 int64(adversary.Armor),
+		ConditionsJson:        string(conditionsJSON),
+		FeatureStateJson:      string(featureStatesJSON),
+		PendingExperienceJson: pendingExperienceJSON,
+		SpotlightGateID:       adversary.SpotlightGateID,
+		SpotlightCount:        int64(adversary.SpotlightCount),
+		CreatedAt:             toMillis(adversary.CreatedAt),
+		UpdatedAt:             toMillis(adversary.UpdatedAt),
 	})
 }
 
@@ -610,35 +805,46 @@ func (s *Store) GetDaggerheartAdversary(ctx context.Context, campaignID, adversa
 		return projectionstore.DaggerheartAdversary{}, fmt.Errorf("get daggerheart adversary: %w", err)
 	}
 
-	sessionID := ""
-	if row.SessionID.Valid {
-		sessionID = row.SessionID.String
-	}
-	conditions := []string{}
+	conditions := []projectionstore.DaggerheartConditionState{}
 	if row.ConditionsJson != "" {
-		if err := json.Unmarshal([]byte(row.ConditionsJson), &conditions); err != nil {
+		conditions, err = decodeProjectionConditionStates(row.ConditionsJson)
+		if err != nil {
 			return projectionstore.DaggerheartAdversary{}, fmt.Errorf("decode daggerheart adversary conditions: %w", err)
 		}
 	}
+	featureStates, err := decodeAdversaryFeatureStates(row.FeatureStateJson)
+	if err != nil {
+		return projectionstore.DaggerheartAdversary{}, fmt.Errorf("decode daggerheart adversary feature states: %w", err)
+	}
+	pendingExperience, err := decodeAdversaryPendingExperience(row.PendingExperienceJson)
+	if err != nil {
+		return projectionstore.DaggerheartAdversary{}, fmt.Errorf("decode daggerheart adversary pending experience: %w", err)
+	}
 
 	return projectionstore.DaggerheartAdversary{
-		CampaignID:  row.CampaignID,
-		AdversaryID: row.AdversaryID,
-		Name:        row.Name,
-		Kind:        row.Kind,
-		SessionID:   sessionID,
-		Notes:       row.Notes,
-		HP:          int(row.Hp),
-		HPMax:       int(row.HpMax),
-		Stress:      int(row.Stress),
-		StressMax:   int(row.StressMax),
-		Evasion:     int(row.Evasion),
-		Major:       int(row.MajorThreshold),
-		Severe:      int(row.SevereThreshold),
-		Armor:       int(row.Armor),
-		Conditions:  conditions,
-		CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
-		UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
+		CampaignID:        row.CampaignID,
+		AdversaryID:       row.AdversaryID,
+		AdversaryEntryID:  row.AdversaryEntryID,
+		Name:              row.Name,
+		Kind:              row.Kind,
+		SessionID:         row.SessionID,
+		SceneID:           row.SceneID,
+		Notes:             row.Notes,
+		HP:                int(row.Hp),
+		HPMax:             int(row.HpMax),
+		Stress:            int(row.Stress),
+		StressMax:         int(row.StressMax),
+		Evasion:           int(row.Evasion),
+		Major:             int(row.MajorThreshold),
+		Severe:            int(row.SevereThreshold),
+		Armor:             int(row.Armor),
+		Conditions:        conditions,
+		FeatureStates:     featureStates,
+		PendingExperience: pendingExperience,
+		SpotlightGateID:   row.SpotlightGateID,
+		SpotlightCount:    int(row.SpotlightCount),
+		CreatedAt:         fromMillis(row.CreatedAt),
+		UpdatedAt:         fromMillis(row.UpdatedAt),
 	}, nil
 }
 
@@ -661,7 +867,7 @@ func (s *Store) ListDaggerheartAdversaries(ctx context.Context, campaignID, sess
 	} else {
 		rows, err = s.q.ListDaggerheartAdversariesBySession(ctx, db.ListDaggerheartAdversariesBySessionParams{
 			CampaignID: campaignID,
-			SessionID:  sqliteutil.ToNullString(sessionID),
+			SessionID:  sessionID,
 		})
 	}
 	if err != nil {
@@ -670,38 +876,74 @@ func (s *Store) ListDaggerheartAdversaries(ctx context.Context, campaignID, sess
 
 	adversaries := make([]projectionstore.DaggerheartAdversary, 0, len(rows))
 	for _, row := range rows {
-		rowSessionID := ""
-		if row.SessionID.Valid {
-			rowSessionID = row.SessionID.String
-		}
-		conditions := []string{}
+		conditions := []projectionstore.DaggerheartConditionState{}
 		if row.ConditionsJson != "" {
-			if err := json.Unmarshal([]byte(row.ConditionsJson), &conditions); err != nil {
+			conditions, err = decodeProjectionConditionStates(row.ConditionsJson)
+			if err != nil {
 				return nil, fmt.Errorf("decode daggerheart adversary conditions: %w", err)
 			}
 		}
+		featureStates, err := decodeAdversaryFeatureStates(row.FeatureStateJson)
+		if err != nil {
+			return nil, fmt.Errorf("decode daggerheart adversary feature states: %w", err)
+		}
+		pendingExperience, err := decodeAdversaryPendingExperience(row.PendingExperienceJson)
+		if err != nil {
+			return nil, fmt.Errorf("decode daggerheart adversary pending experience: %w", err)
+		}
 		adversaries = append(adversaries, projectionstore.DaggerheartAdversary{
-			CampaignID:  row.CampaignID,
-			AdversaryID: row.AdversaryID,
-			Name:        row.Name,
-			Kind:        row.Kind,
-			SessionID:   rowSessionID,
-			Notes:       row.Notes,
-			HP:          int(row.Hp),
-			HPMax:       int(row.HpMax),
-			Stress:      int(row.Stress),
-			StressMax:   int(row.StressMax),
-			Evasion:     int(row.Evasion),
-			Major:       int(row.MajorThreshold),
-			Severe:      int(row.SevereThreshold),
-			Armor:       int(row.Armor),
-			Conditions:  conditions,
-			CreatedAt:   sqliteutil.FromMillis(row.CreatedAt),
-			UpdatedAt:   sqliteutil.FromMillis(row.UpdatedAt),
+			CampaignID:        row.CampaignID,
+			AdversaryID:       row.AdversaryID,
+			AdversaryEntryID:  row.AdversaryEntryID,
+			Name:              row.Name,
+			Kind:              row.Kind,
+			SessionID:         row.SessionID,
+			SceneID:           row.SceneID,
+			Notes:             row.Notes,
+			HP:                int(row.Hp),
+			HPMax:             int(row.HpMax),
+			Stress:            int(row.Stress),
+			StressMax:         int(row.StressMax),
+			Evasion:           int(row.Evasion),
+			Major:             int(row.MajorThreshold),
+			Severe:            int(row.SevereThreshold),
+			Armor:             int(row.Armor),
+			Conditions:        conditions,
+			FeatureStates:     featureStates,
+			PendingExperience: pendingExperience,
+			SpotlightGateID:   row.SpotlightGateID,
+			SpotlightCount:    int(row.SpotlightCount),
+			CreatedAt:         fromMillis(row.CreatedAt),
+			UpdatedAt:         fromMillis(row.UpdatedAt),
 		})
 	}
 
 	return adversaries, nil
+}
+
+func decodeAdversaryFeatureStates(raw string) ([]projectionstore.DaggerheartAdversaryFeatureState, error) {
+	if strings.TrimSpace(raw) == "" {
+		return []projectionstore.DaggerheartAdversaryFeatureState{}, nil
+	}
+	var featureStates []projectionstore.DaggerheartAdversaryFeatureState
+	if err := json.Unmarshal([]byte(raw), &featureStates); err != nil {
+		return nil, err
+	}
+	if featureStates == nil {
+		return []projectionstore.DaggerheartAdversaryFeatureState{}, nil
+	}
+	return featureStates, nil
+}
+
+func decodeAdversaryPendingExperience(raw string) (*projectionstore.DaggerheartAdversaryPendingExperience, error) {
+	if strings.TrimSpace(raw) == "" {
+		return nil, nil
+	}
+	var pending projectionstore.DaggerheartAdversaryPendingExperience
+	if err := json.Unmarshal([]byte(raw), &pending); err != nil {
+		return nil, err
+	}
+	return &pending, nil
 }
 
 // DeleteDaggerheartAdversary removes an adversary projection for a campaign.
@@ -723,4 +965,206 @@ func (s *Store) DeleteDaggerheartAdversary(ctx context.Context, campaignID, adve
 		CampaignID:  campaignID,
 		AdversaryID: adversaryID,
 	})
+}
+
+// PutDaggerheartEnvironmentEntity persists a Daggerheart environment entity projection.
+func (s *Store) PutDaggerheartEnvironmentEntity(ctx context.Context, environmentEntity projectionstore.DaggerheartEnvironmentEntity) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(environmentEntity.CampaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(environmentEntity.EnvironmentEntityID) == "" {
+		return fmt.Errorf("environment entity id is required")
+	}
+	if strings.TrimSpace(environmentEntity.EnvironmentID) == "" {
+		return fmt.Errorf("environment id is required")
+	}
+	if strings.TrimSpace(environmentEntity.Name) == "" {
+		return fmt.Errorf("environment name is required")
+	}
+	if strings.TrimSpace(environmentEntity.Type) == "" {
+		return fmt.Errorf("environment type is required")
+	}
+	if strings.TrimSpace(environmentEntity.SessionID) == "" {
+		return fmt.Errorf("session id is required")
+	}
+
+	return s.q.PutDaggerheartEnvironmentEntity(ctx, db.PutDaggerheartEnvironmentEntityParams{
+		CampaignID:          environmentEntity.CampaignID,
+		EnvironmentEntityID: environmentEntity.EnvironmentEntityID,
+		EnvironmentID:       environmentEntity.EnvironmentID,
+		Name:                environmentEntity.Name,
+		Type:                environmentEntity.Type,
+		Tier:                int64(environmentEntity.Tier),
+		Difficulty:          int64(environmentEntity.Difficulty),
+		SessionID:           environmentEntity.SessionID,
+		SceneID:             environmentEntity.SceneID,
+		Notes:               environmentEntity.Notes,
+		CreatedAt:           toMillis(environmentEntity.CreatedAt),
+		UpdatedAt:           toMillis(environmentEntity.UpdatedAt),
+	})
+}
+
+// GetDaggerheartEnvironmentEntity retrieves a Daggerheart environment entity projection for a campaign.
+func (s *Store) GetDaggerheartEnvironmentEntity(ctx context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error) {
+	if err := ctx.Err(); err != nil {
+		return projectionstore.DaggerheartEnvironmentEntity{}, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return projectionstore.DaggerheartEnvironmentEntity{}, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return projectionstore.DaggerheartEnvironmentEntity{}, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(environmentEntityID) == "" {
+		return projectionstore.DaggerheartEnvironmentEntity{}, fmt.Errorf("environment entity id is required")
+	}
+
+	row, err := s.q.GetDaggerheartEnvironmentEntity(ctx, db.GetDaggerheartEnvironmentEntityParams{
+		CampaignID:          campaignID,
+		EnvironmentEntityID: environmentEntityID,
+	})
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return projectionstore.DaggerheartEnvironmentEntity{}, storage.ErrNotFound
+		}
+		return projectionstore.DaggerheartEnvironmentEntity{}, fmt.Errorf("get daggerheart environment entity: %w", err)
+	}
+
+	return projectionstore.DaggerheartEnvironmentEntity{
+		CampaignID:          row.CampaignID,
+		EnvironmentEntityID: row.EnvironmentEntityID,
+		EnvironmentID:       row.EnvironmentID,
+		Name:                row.Name,
+		Type:                row.Type,
+		Tier:                int(row.Tier),
+		Difficulty:          int(row.Difficulty),
+		SessionID:           row.SessionID,
+		SceneID:             row.SceneID,
+		Notes:               row.Notes,
+		CreatedAt:           fromMillis(row.CreatedAt),
+		UpdatedAt:           fromMillis(row.UpdatedAt),
+	}, nil
+}
+
+// ListDaggerheartEnvironmentEntities retrieves environment entity projections for a campaign session.
+func (s *Store) ListDaggerheartEnvironmentEntities(ctx context.Context, campaignID, sessionID, sceneID string) ([]projectionstore.DaggerheartEnvironmentEntity, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if s == nil || s.sqlDB == nil {
+		return nil, fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return nil, fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(sessionID) == "" {
+		return nil, fmt.Errorf("session id is required")
+	}
+
+	var (
+		rows []db.DaggerheartEnvironmentEntity
+		err  error
+	)
+	if strings.TrimSpace(sceneID) == "" {
+		rows, err = s.q.ListDaggerheartEnvironmentEntitiesBySession(ctx, db.ListDaggerheartEnvironmentEntitiesBySessionParams{
+			CampaignID: campaignID,
+			SessionID:  sessionID,
+		})
+	} else {
+		rows, err = s.q.ListDaggerheartEnvironmentEntitiesByScene(ctx, db.ListDaggerheartEnvironmentEntitiesBySceneParams{
+			CampaignID: campaignID,
+			SessionID:  sessionID,
+			SceneID:    sceneID,
+		})
+	}
+	if err != nil {
+		return nil, fmt.Errorf("list daggerheart environment entities: %w", err)
+	}
+
+	environmentEntities := make([]projectionstore.DaggerheartEnvironmentEntity, 0, len(rows))
+	for _, row := range rows {
+		environmentEntities = append(environmentEntities, projectionstore.DaggerheartEnvironmentEntity{
+			CampaignID:          row.CampaignID,
+			EnvironmentEntityID: row.EnvironmentEntityID,
+			EnvironmentID:       row.EnvironmentID,
+			Name:                row.Name,
+			Type:                row.Type,
+			Tier:                int(row.Tier),
+			Difficulty:          int(row.Difficulty),
+			SessionID:           row.SessionID,
+			SceneID:             row.SceneID,
+			Notes:               row.Notes,
+			CreatedAt:           fromMillis(row.CreatedAt),
+			UpdatedAt:           fromMillis(row.UpdatedAt),
+		})
+	}
+	return environmentEntities, nil
+}
+
+// DeleteDaggerheartEnvironmentEntity removes an environment entity projection for a campaign.
+func (s *Store) DeleteDaggerheartEnvironmentEntity(ctx context.Context, campaignID, environmentEntityID string) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || s.sqlDB == nil {
+		return fmt.Errorf("storage is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" {
+		return fmt.Errorf("campaign id is required")
+	}
+	if strings.TrimSpace(environmentEntityID) == "" {
+		return fmt.Errorf("environment entity id is required")
+	}
+
+	return s.q.DeleteDaggerheartEnvironmentEntity(ctx, db.DeleteDaggerheartEnvironmentEntityParams{
+		CampaignID:          campaignID,
+		EnvironmentEntityID: environmentEntityID,
+	})
+}
+
+func toMillis(value time.Time) int64 {
+	return value.UTC().UnixMilli()
+}
+
+func fromMillis(value int64) time.Time {
+	return time.UnixMilli(value).UTC()
+}
+
+func toNullString(value string) sql.NullString {
+	if strings.TrimSpace(value) == "" {
+		return sql.NullString{}
+	}
+	return sql.NullString{String: value, Valid: true}
+}
+
+func mapPageRows[Row any, Item any](
+	rows []Row,
+	pageSize int,
+	rowID func(Row) string,
+	mapRow func(Row) (Item, error),
+) ([]Item, string, error) {
+	capHint := pageSize
+	if capHint > len(rows) {
+		capHint = len(rows)
+	}
+	items := make([]Item, 0, capHint)
+
+	for i, row := range rows {
+		if i >= pageSize {
+			return items, rowID(rows[pageSize-1]), nil
+		}
+		item, err := mapRow(row)
+		if err != nil {
+			return nil, "", err
+		}
+		items = append(items, item)
+	}
+
+	return items, "", nil
 }

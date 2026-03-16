@@ -45,6 +45,7 @@ func decideDamageApply(snapshotState SnapshotState, hasSnapshot bool, cmd comman
 			return DamageAppliedPayload{
 				CharacterID:        p.CharacterID,
 				Hp:                 p.HpAfter,
+				Stress:             p.StressAfter,
 				Armor:              p.ArmorAfter,
 				ArmorSpent:         p.ArmorSpent,
 				Severity:           p.Severity,
@@ -120,6 +121,7 @@ func decideMultiTargetDamageApply(snapshotState SnapshotState, hasSnapshot bool,
 					Payload: DamageAppliedPayload{
 						CharacterID:        t.CharacterID,
 						Hp:                 t.HpAfter,
+						Stress:             t.StressAfter,
 						Armor:              t.ArmorAfter,
 						ArmorSpent:         t.ArmorSpent,
 						Severity:           t.Severity,
@@ -187,38 +189,6 @@ func decideAdversaryDamageApply(snapshotState SnapshotState, hasSnapshot bool, c
 				Mitigated:          p.Mitigated,
 				Source:             p.Source,
 				SourceCharacterIDs: p.SourceCharacterIDs,
-			}
-		},
-		now)
-}
-
-const (
-	downtimeMovesPerRestLimit         = 2
-	rejectionCodeDowntimeMoveLimitHit = "DOWNTIME_MOVE_LIMIT_HIT"
-)
-
-func decideDowntimeMoveApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
-	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
-		EventTypeDowntimeMoveApplied, "character",
-		func(p *DowntimeMoveApplyPayload) string { return strings.TrimSpace(p.CharacterID.String()) },
-		func(s SnapshotState, hasState bool, p *DowntimeMoveApplyPayload, _ func() time.Time) *command.Rejection {
-			if hasState && s.DowntimeMovesSinceRest >= downtimeMovesPerRestLimit {
-				return &command.Rejection{
-					Code:    rejectionCodeDowntimeMoveLimitHit,
-					Message: "downtime move limit reached (2 per rest)",
-				}
-			}
-			p.CharacterID = ids.CharacterID(strings.TrimSpace(p.CharacterID.String()))
-			p.Move = strings.TrimSpace(p.Move)
-			return nil
-		},
-		func(_ SnapshotState, _ bool, p DowntimeMoveApplyPayload) DowntimeMoveAppliedPayload {
-			return DowntimeMoveAppliedPayload{
-				CharacterID: p.CharacterID,
-				Move:        p.Move,
-				Hope:        p.HopeAfter,
-				Stress:      p.StressAfter,
-				Armor:       p.ArmorAfter,
 			}
 		},
 		now)

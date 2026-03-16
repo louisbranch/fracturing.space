@@ -7,6 +7,7 @@ import (
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -93,14 +94,16 @@ func TestApplyConditions_NoConditionChanges(t *testing.T) {
 	svc := newActionTestService()
 	dhStore := svc.stores.Daggerheart.(*fakeDaggerheartStore)
 	state := dhStore.States["camp-1:char-1"]
-	state.Conditions = []string{"vulnerable"}
+	state.Conditions = []projectionstore.DaggerheartConditionState{
+		projectionStandardConditionState(daggerheart.ConditionVulnerable),
+	}
 	dhStore.States["camp-1:char-1"] = state
 
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
-		CampaignId:  "camp-1",
-		CharacterId: "char-1",
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE},
+		CampaignId:    "camp-1",
+		CharacterId:   "char-1",
+		AddConditions: []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE)},
 	})
 	assertStatusCode(t, err, codes.FailedPrecondition)
 }
@@ -109,9 +112,9 @@ func TestApplyConditions_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
-		CampaignId:  "camp-1",
-		CharacterId: "char-1",
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+		CampaignId:    "camp-1",
+		CharacterId:   "char-1",
+		AddConditions: []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
 	})
 	assertStatusCode(t, err, codes.Internal)
 }
@@ -144,9 +147,9 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 
 	ctx := grpcmeta.WithRequestID(contextWithSessionID("sess-1"), "req-apply-conditions")
 	_, err := svc.ApplyConditions(ctx, &pb.DaggerheartApplyConditionsRequest{
-		CampaignId:  "camp-1",
-		CharacterId: "char-1",
-		Add:         []pb.DaggerheartCondition{pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
+		CampaignId:    "camp-1",
+		CharacterId:   "char-1",
+		AddConditions: []*pb.DaggerheartConditionState{protoStandardConditionState(pb.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
 	})
 	if err != nil {
 		t.Fatalf("ApplyConditions returned error: %v", err)
@@ -173,7 +176,7 @@ func TestApplyConditions_UsesDomainEngine(t *testing.T) {
 	if got.CharacterID != "char-1" {
 		t.Fatalf("command character id = %s, want %s", got.CharacterID, "char-1")
 	}
-	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0] != daggerheart.ConditionHidden {
+	if len(got.ConditionsAfter) != 1 || got.ConditionsAfter[0].Code != daggerheart.ConditionHidden {
 		t.Fatalf("command conditions_after = %v, want %s", got.ConditionsAfter, daggerheart.ConditionHidden)
 	}
 	var foundConditionEvent bool

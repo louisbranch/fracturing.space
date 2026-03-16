@@ -124,7 +124,7 @@ type CampaignCharacterDaggerheartSummary struct {
 	Level         int32  `json:"level"`
 	ClassName     string `json:"className"`
 	SubclassName  string `json:"subclassName"`
-	AncestryName  string `json:"ancestryName"`
+	HeritageName  string `json:"heritageName"`
 	CommunityName string `json:"communityName"`
 }
 

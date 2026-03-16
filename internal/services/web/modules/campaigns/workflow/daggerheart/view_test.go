@@ -37,10 +37,13 @@ func TestCreationViewMapsDomainModelAndCopiesSlices(t *testing.T) {
 			},
 		},
 		Profile: campaignworkflow.Profile{
-			ClassID:           "class-1",
-			SubclassID:        "subclass-1",
-			AncestryID:        "ancestry-1",
-			CommunityID:       "community-1",
+			ClassID:    "class-1",
+			SubclassID: "subclass-1",
+			Heritage: campaignworkflow.HeritageSelection{
+				FirstFeatureAncestryID:  "ancestry-1",
+				SecondFeatureAncestryID: "ancestry-1",
+				CommunityID:             "community-1",
+			},
 			Agility:           "2",
 			Strength:          "1",
 			Finesse:           "0",

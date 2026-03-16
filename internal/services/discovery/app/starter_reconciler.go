@@ -123,8 +123,11 @@ func createStarterTemplateCampaign(
 			SubclassId: starter.Character.SubclassID,
 		},
 		HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
-			AncestryId:  starter.Character.AncestryID,
-			CommunityId: starter.Character.CommunityID,
+			Heritage: &daggerheartv1.DaggerheartCreationStepHeritageSelectionInput{
+				FirstFeatureAncestryId:  starter.Character.AncestryID,
+				SecondFeatureAncestryId: starter.Character.AncestryID,
+				CommunityId:             starter.Character.CommunityID,
+			},
 		},
 		TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
 			Agility:   starter.Character.Traits.Agility,

@@ -58,18 +58,40 @@ func campaignCharacterCreationCatalogFromProto(
 		return campaignapp.CampaignCharacterCreationCatalog{}
 	}
 	return campaignapp.CampaignCharacterCreationCatalog{
-		AssetTheme:   catalogAssetTheme(assetMapResp),
-		Classes:      mapCatalogClasses(catalogResp.GetClasses(), assetBaseURL, assetLookup),
-		Subclasses:   mapCatalogSubclasses(catalogResp.GetSubclasses(), assetBaseURL, assetLookup),
-		Heritages:    mapCatalogHeritages(catalogResp.GetHeritages(), assetBaseURL, assetLookup),
-		Domains:      mapCatalogDomains(catalogResp.GetDomains(), assetBaseURL, assetLookup),
-		Weapons:      mapCatalogWeapons(catalogResp.GetWeapons(), assetBaseURL, assetLookup),
-		Armor:        mapCatalogArmor(catalogResp.GetArmor(), assetBaseURL, assetLookup),
-		Items:        mapCatalogItems(catalogResp.GetItems(), assetBaseURL, assetLookup),
-		DomainCards:  mapCatalogDomainCards(catalogResp.GetDomainCards(), assetBaseURL, assetLookup),
-		Adversaries:  mapCatalogAdversaries(catalogResp.GetAdversaries(), assetBaseURL, assetLookup),
-		Environments: mapCatalogEnvironments(catalogResp.GetEnvironments(), assetBaseURL, assetLookup),
+		AssetTheme:           catalogAssetTheme(assetMapResp),
+		Classes:              mapCatalogClasses(catalogResp.GetClasses(), assetBaseURL, assetLookup),
+		Subclasses:           mapCatalogSubclasses(catalogResp.GetSubclasses(), assetBaseURL, assetLookup),
+		Heritages:            mapCatalogHeritages(catalogResp.GetHeritages(), assetBaseURL, assetLookup),
+		CompanionExperiences: mapCatalogCompanionExperiences(catalogResp.GetCompanionExperiences()),
+		Domains:              mapCatalogDomains(catalogResp.GetDomains(), assetBaseURL, assetLookup),
+		Weapons:              mapCatalogWeapons(catalogResp.GetWeapons(), assetBaseURL, assetLookup),
+		Armor:                mapCatalogArmor(catalogResp.GetArmor(), assetBaseURL, assetLookup),
+		Items:                mapCatalogItems(catalogResp.GetItems(), assetBaseURL, assetLookup),
+		DomainCards:          mapCatalogDomainCards(catalogResp.GetDomainCards(), assetBaseURL, assetLookup),
+		Adversaries:          mapCatalogAdversaries(catalogResp.GetAdversaries(), assetBaseURL, assetLookup),
+		Environments:         mapCatalogEnvironments(catalogResp.GetEnvironments(), assetBaseURL, assetLookup),
 	}
+}
+
+// mapCatalogCompanionExperiences normalizes catalog companion experiences into
+// the app-owned creation catalog shape.
+func mapCatalogCompanionExperiences(experiences []*daggerheartv1.DaggerheartCompanionExperienceEntry) []campaignapp.CatalogCompanionExperience {
+	mapped := make([]campaignapp.CatalogCompanionExperience, 0, len(experiences))
+	for _, experience := range experiences {
+		if experience == nil {
+			continue
+		}
+		id := strings.TrimSpace(experience.GetId())
+		if id == "" {
+			continue
+		}
+		mapped = append(mapped, campaignapp.CatalogCompanionExperience{
+			ID:          id,
+			Name:        strings.TrimSpace(experience.GetName()),
+			Description: strings.TrimSpace(experience.GetDescription()),
+		})
+	}
+	return mapped
 }
 
 // catalogAssetTheme resolves an optional asset-map theme value used by presentation workflows.
@@ -145,11 +167,12 @@ func mapCatalogSubclasses(
 			continue
 		}
 		mapped = append(mapped, campaignapp.CatalogSubclass{
-			ID:             subclassID,
-			Name:           strings.TrimSpace(subclass.GetName()),
-			ClassID:        strings.TrimSpace(subclass.GetClassId()),
-			SpellcastTrait: strings.TrimSpace(subclass.GetSpellcastTrait()),
-			Foundation:     mapCatalogFeatures(subclass.GetFoundationFeatures()),
+			ID:                   subclassID,
+			Name:                 strings.TrimSpace(subclass.GetName()),
+			ClassID:              strings.TrimSpace(subclass.GetClassId()),
+			SpellcastTrait:       strings.TrimSpace(subclass.GetSpellcastTrait()),
+			CreationRequirements: mapSubclassCreationRequirements(subclass.GetCreationRequirements()),
+			Foundation:           mapCatalogFeatures(subclass.GetFoundationFeatures()),
 			Illustration: mapCatalogAssetReference(
 				assetBaseURL,
 				assetLookup.get(
@@ -160,6 +183,18 @@ func mapCatalogSubclasses(
 				creationIllustrationDeliveryWidthPX,
 			),
 		})
+	}
+	return mapped
+}
+
+// mapSubclassCreationRequirements keeps the web layer on stable string labels.
+func mapSubclassCreationRequirements(requirements []daggerheartv1.DaggerheartCreationRequirement) []string {
+	mapped := make([]string, 0, len(requirements))
+	for _, requirement := range requirements {
+		switch requirement {
+		case daggerheartv1.DaggerheartCreationRequirement_DAGGERHEART_CREATION_REQUIREMENT_COMPANION_SHEET:
+			mapped = append(mapped, "companion_sheet_required")
+		}
 	}
 	return mapped
 }

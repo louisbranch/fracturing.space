@@ -24,7 +24,6 @@ const (
 	commandTypeDaggerheartCountdownDelete      = commandids.DaggerheartCountdownDelete
 	commandTypeDaggerheartCountdownUpdate      = commandids.DaggerheartCountdownUpdate
 	commandTypeDaggerheartDamageApply          = commandids.DaggerheartDamageApply
-	commandTypeDaggerheartDowntimeMoveApply    = commandids.DaggerheartDowntimeMoveApply
 	commandTypeDaggerheartGMFearSet            = commandids.DaggerheartGMFearSet
 	commandTypeDaggerheartHopeSpend            = commandids.DaggerheartHopeSpend
 	commandTypeDaggerheartLoadoutSwap          = commandids.DaggerheartLoadoutSwap

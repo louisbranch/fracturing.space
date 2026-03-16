@@ -65,6 +65,26 @@ type CharacterReadinessChecker interface {
 	CharacterReady(systemState any, ch character.State) (ready bool, reason string)
 }
 
+// SessionStartBootstrapper is an optional module extension point used by the
+// readiness-owned session.start workflow.
+//
+// Implementations can emit system-owned bootstrap events that should be
+// appended atomically alongside the first session.started transition. This is
+// intended for ruleset-level campaign/session initialization that depends on
+// current campaign characters, such as Daggerheart's initial GM Fear seeding.
+//
+// The workflow only calls this hook when the campaign is transitioning from
+// draft to active on its first session start. Modules that do not implement the
+// interface simply contribute no bootstrap events.
+type SessionStartBootstrapper interface {
+	SessionStartBootstrap(
+		systemState any,
+		characters map[ids.CharacterID]character.State,
+		cmd command.Command,
+		now time.Time,
+	) ([]event.Event, error)
+}
+
 // CommandTyper must be implemented by deciders whose modules register system
 // commands. ValidateDeciderCommandCoverage verifies at startup that every
 // registered system command has a corresponding decider case, failing loudly

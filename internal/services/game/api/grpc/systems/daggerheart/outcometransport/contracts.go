@@ -3,6 +3,7 @@ package outcometransport
 import (
 	"context"
 
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -27,6 +28,12 @@ type DaggerheartStore interface {
 	GetDaggerheartCharacterProfile(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterProfile, error)
 	GetDaggerheartCharacterState(ctx context.Context, campaignID, characterID string) (projectionstore.DaggerheartCharacterState, error)
 	GetDaggerheartSnapshot(ctx context.Context, campaignID string) (projectionstore.DaggerheartSnapshot, error)
+}
+
+// ContentStore provides subclass catalog reads needed for derived subclass
+// runtime effects.
+type ContentStore interface {
+	GetDaggerheartSubclass(ctx context.Context, id string) (contentstore.DaggerheartSubclass, error)
 }
 
 // EventStore is the event-read contract consumed by outcome validation and
@@ -88,7 +95,7 @@ type ApplyStressVulnerableConditionInput struct {
 	CampaignID    string
 	SessionID     string
 	CharacterID   string
-	Conditions    []string
+	Conditions    []projectionstore.DaggerheartConditionState
 	StressBefore  int
 	StressAfter   int
 	StressMax     int
@@ -105,6 +112,7 @@ type Dependencies struct {
 	SessionGate      SessionGateStore
 	SessionSpotlight SessionSpotlightStore
 	Daggerheart      DaggerheartStore
+	Content          ContentStore
 	Event            EventStore
 
 	ExecuteSystemCommand func(ctx context.Context, in SystemCommandInput) error

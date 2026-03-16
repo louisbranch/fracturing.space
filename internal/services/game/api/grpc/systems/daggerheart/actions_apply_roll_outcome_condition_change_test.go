@@ -9,6 +9,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/action"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -21,7 +22,7 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	profile := dhStore.Profiles["camp-1:char-1"]
 	state := dhStore.States["camp-1:char-1"]
 	state.Stress = profile.StressMax
-	state.Conditions = []string{daggerheart.ConditionVulnerable}
+	state.Conditions = []projectionstore.DaggerheartConditionState{projectionStandardConditionState(daggerheart.ConditionVulnerable)}
 	dhStore.States["camp-1:char-1"] = state
 	now := testTimestamp
 
@@ -78,8 +79,8 @@ func TestApplyRollOutcome_UsesDomainEngineForConditionChange(t *testing.T) {
 	rollSeq := rollEvent.Seq
 	conditionPayload := daggerheart.ConditionChangedPayload{
 		CharacterID: "char-1",
-		Conditions:  []string{},
-		Removed:     []string{daggerheart.ConditionVulnerable},
+		Conditions:  []daggerheart.ConditionState{},
+		Removed:     []daggerheart.ConditionState{mustStandardConditionState(t, daggerheart.ConditionVulnerable)},
 		RollSeq:     &rollSeq,
 	}
 	conditionJSON, err := json.Marshal(conditionPayload)

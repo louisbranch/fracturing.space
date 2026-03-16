@@ -4,6 +4,7 @@ import (
 	"context"
 
 	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/campaign"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -81,6 +82,18 @@ func testContext() context.Context {
 	return gmetadata.NewIncomingContext(context.Background(), gmetadata.Pairs("x-session-id", "sess-1"))
 }
 
+type testContentStore struct {
+	adversaryEntries map[string]contentstore.DaggerheartAdversaryEntry
+}
+
+func (s testContentStore) GetDaggerheartAdversaryEntry(_ context.Context, id string) (contentstore.DaggerheartAdversaryEntry, error) {
+	entry, ok := s.adversaryEntries[id]
+	if !ok {
+		return contentstore.DaggerheartAdversaryEntry{}, storage.ErrNotFound
+	}
+	return entry, nil
+}
+
 func newTestHandler(deps Dependencies) *Handler {
 	if deps.Campaign == nil {
 		deps.Campaign = testCampaignStore{record: storage.CampaignRecord{
@@ -89,11 +102,19 @@ func newTestHandler(deps Dependencies) *Handler {
 			Status: campaign.StatusActive,
 		}}
 	}
+	if deps.Session == nil {
+		deps.Session = testSessionStore{}
+	}
 	if deps.Gate == nil {
 		deps.Gate = testGateStore{err: storage.ErrNotFound}
 	}
 	if deps.Daggerheart == nil {
 		deps.Daggerheart = &testDaggerheartStore{adversaries: map[string]projectionstore.DaggerheartAdversary{}}
+	}
+	if deps.Content == nil {
+		deps.Content = testContentStore{adversaryEntries: map[string]contentstore.DaggerheartAdversaryEntry{
+			"adversary.rival": {ID: "adversary.rival", Name: "Rival", HP: 6, Stress: 2, Difficulty: 11, MajorThreshold: 4, SevereThreshold: 7, Armor: 1},
+		}}
 	}
 	return NewHandler(deps)
 }

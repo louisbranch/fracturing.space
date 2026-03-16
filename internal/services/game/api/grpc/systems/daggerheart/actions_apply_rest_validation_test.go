@@ -20,11 +20,12 @@ func TestApplyRest_RequiresDomainEngine(t *testing.T) {
 	svc := newActionTestService()
 	ctx := contextWithSessionID("sess-1")
 	_, err := svc.ApplyRest(ctx, &pb.DaggerheartApplyRestRequest{
-		CampaignId:   "camp-1",
-		CharacterIds: []string{"char-1"},
+		CampaignId: "camp-1",
 		Rest: &pb.DaggerheartRestRequest{
-			RestType:  pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
-			PartySize: 3,
+			RestType: pb.DaggerheartRestType_DAGGERHEART_REST_TYPE_SHORT,
+			Participants: []*pb.DaggerheartRestParticipant{
+				{CharacterId: "char-1"},
+			},
 		},
 	})
 	assertStatusCode(t, err, codes.Internal)

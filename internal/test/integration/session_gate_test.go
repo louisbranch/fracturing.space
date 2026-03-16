@@ -101,10 +101,10 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 	}
 
 	_, err = daggerheartClient.ApplyConditions(sessionCtx, &daggerheartv1.DaggerheartApplyConditionsRequest{
-		CampaignId:  campaignID,
-		CharacterId: characterID,
-		Add:         []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
-		Source:      "test",
+		CampaignId:    campaignID,
+		CharacterId:   characterID,
+		AddConditions: []*daggerheartv1.DaggerheartConditionState{protoStandardIntegrationConditionState(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
+		Source:        "test",
 	})
 	if err == nil {
 		t.Fatal("expected apply conditions to fail with gate open")
@@ -131,15 +131,36 @@ func TestSessionGateBlocksDaggerheartActions(t *testing.T) {
 	}
 
 	applyResp, err := daggerheartClient.ApplyConditions(sessionCtx, &daggerheartv1.DaggerheartApplyConditionsRequest{
-		CampaignId:  campaignID,
-		CharacterId: characterID,
-		Add:         []daggerheartv1.DaggerheartCondition{daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN},
-		Source:      "test",
+		CampaignId:    campaignID,
+		CharacterId:   characterID,
+		AddConditions: []*daggerheartv1.DaggerheartConditionState{protoStandardIntegrationConditionState(daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN)},
+		Source:        "test",
 	})
 	if err != nil {
 		t.Fatalf("apply conditions after resolve: %v", err)
 	}
 	if applyResp.GetState() == nil {
 		t.Fatal("expected state after resolve")
+	}
+}
+
+func protoStandardIntegrationConditionState(condition daggerheartv1.DaggerheartCondition) *daggerheartv1.DaggerheartConditionState {
+	code := ""
+	switch condition {
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN:
+		code = "hidden"
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED:
+		code = "restrained"
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE:
+		code = "vulnerable"
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_CLOAKED:
+		code = "cloaked"
+	}
+	return &daggerheartv1.DaggerheartConditionState{
+		Id:       code,
+		Code:     code,
+		Label:    code,
+		Class:    daggerheartv1.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+		Standard: condition,
 	}
 }

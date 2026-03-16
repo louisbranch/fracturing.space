@@ -8,6 +8,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwrite"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	systemmanifest "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/manifest"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
@@ -36,6 +37,7 @@ type Stores struct {
 	SessionGate      storage.SessionGateStore
 	SessionSpotlight storage.SessionSpotlightStore
 	Daggerheart      GameplayStore
+	Content          contentstore.DaggerheartContentReadStore
 	Event            storage.EventStore
 	Watermarks       storage.ProjectionWatermarkStore
 	Events           *event.Registry
@@ -65,6 +67,7 @@ type ProjectionStoreBundle interface {
 type FromProjectionConfig struct {
 	ProjectionStore  ProjectionStoreBundle
 	DaggerheartStore GameplayStore
+	ContentStore     contentstore.DaggerheartContentReadStore
 	EventStore       storage.EventStore
 	Domain           Domain
 	WriteRuntime     *domainwrite.Runtime
@@ -81,6 +84,7 @@ func NewFromProjection(config FromProjectionConfig) Stores {
 		SessionGate:      config.ProjectionStore,
 		SessionSpotlight: config.ProjectionStore,
 		Daggerheart:      config.DaggerheartStore,
+		Content:          config.ContentStore,
 		Event:            config.EventStore,
 		Watermarks:       config.ProjectionStore,
 		Events:           config.Events,
@@ -133,6 +137,7 @@ func (s Stores) projectionRequirements() []dependencyRequirement {
 		{name: "SessionGate", configured: s.SessionGate != nil},
 		{name: "SessionSpotlight", configured: s.SessionSpotlight != nil},
 		{name: "Daggerheart", configured: s.Daggerheart != nil},
+		{name: "Content", configured: s.Content != nil},
 	}
 }
 

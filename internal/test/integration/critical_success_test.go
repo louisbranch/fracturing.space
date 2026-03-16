@@ -200,14 +200,19 @@ func TestDaggerheartAttackFlowCriticalDamageBonus(t *testing.T) {
 		CampaignId:  campaignID,
 		SessionId:   sessionID,
 		CharacterId: attacker,
-		Trait:       "strength",
 		Difficulty:  int32(difficulty),
 		TargetId:    target,
-		DamageDice:  []*daggerheartv1.DiceSpec{{Sides: 6, Count: 1}},
 		Damage: &daggerheartv1.DaggerheartAttackDamageSpec{
 			DamageType:         daggerheartv1.DaggerheartDamageType_DAGGERHEART_DAMAGE_TYPE_PHYSICAL,
 			Source:             "attack",
 			SourceCharacterIds: []string{attacker},
+		},
+		AttackProfile: &daggerheartv1.SessionAttackFlowRequest_StandardAttack{
+			StandardAttack: &daggerheartv1.SessionStandardAttackProfile{
+				Trait:       "strength",
+				AttackRange: daggerheartv1.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_MELEE,
+				DamageDice:  []*daggerheartv1.DiceSpec{{Sides: 6, Count: 1}},
+			},
 		},
 		RequireDamageRoll: true,
 		ActionRng: &commonv1.RngRequest{

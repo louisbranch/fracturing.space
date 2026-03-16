@@ -1,6 +1,7 @@
 package daggerheart
 
 import (
+	"reflect"
 	"strings"
 	"time"
 
@@ -8,6 +9,111 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/module"
 )
+
+func decideGMMoveApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncMulti(cmd, snapshotState, hasSnapshot,
+		func(s SnapshotState, hasState bool, p *GMMoveApplyPayload, _ func() time.Time) *command.Rejection {
+			targetType, ok := NormalizeGMMoveTargetType(string(p.Target.Type))
+			if !ok {
+				return &command.Rejection{
+					Code:    rejectionCodeGMMoveKindUnsupported,
+					Message: "gm move target is unsupported",
+				}
+			}
+			switch targetType {
+			case GMMoveTargetTypeDirectMove:
+				kind, ok := NormalizeGMMoveKind(string(p.Target.Kind))
+				if !ok {
+					return &command.Rejection{
+						Code:    rejectionCodeGMMoveKindUnsupported,
+						Message: "gm move kind is unsupported",
+					}
+				}
+				shape, ok := NormalizeGMMoveShape(string(p.Target.Shape))
+				if !ok {
+					return &command.Rejection{
+						Code:    rejectionCodeGMMoveShapeUnsupported,
+						Message: "gm move shape is unsupported",
+					}
+				}
+				description := strings.TrimSpace(p.Target.Description)
+				if shape == GMMoveShapeCustom && description == "" {
+					return &command.Rejection{
+						Code:    rejectionCodeGMMoveDescriptionRequired,
+						Message: "gm move description is required for custom shape",
+					}
+				}
+				p.Target.Kind = kind
+				p.Target.Shape = shape
+				p.Target.Description = description
+				p.Target.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.Target.AdversaryID.String()))
+			case GMMoveTargetTypeAdversaryFeature:
+				p.Target.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.Target.AdversaryID.String()))
+				p.Target.FeatureID = strings.TrimSpace(p.Target.FeatureID)
+				p.Target.Description = strings.TrimSpace(p.Target.Description)
+			case GMMoveTargetTypeEnvironmentFeature:
+				p.Target.EnvironmentEntityID = ids.EnvironmentEntityID(strings.TrimSpace(p.Target.EnvironmentEntityID.String()))
+				p.Target.EnvironmentID = strings.TrimSpace(p.Target.EnvironmentID)
+				p.Target.FeatureID = strings.TrimSpace(p.Target.FeatureID)
+				p.Target.Description = strings.TrimSpace(p.Target.Description)
+			case GMMoveTargetTypeAdversaryExperience:
+				p.Target.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.Target.AdversaryID.String()))
+				p.Target.ExperienceName = strings.TrimSpace(p.Target.ExperienceName)
+				p.Target.Description = strings.TrimSpace(p.Target.Description)
+			default:
+				return &command.Rejection{
+					Code:    rejectionCodeGMMoveKindUnsupported,
+					Message: "gm move target is unsupported",
+				}
+			}
+			p.Target.Type = targetType
+			if p.FearSpent <= 0 {
+				return &command.Rejection{
+					Code:    rejectionCodeGMMoveFearSpentRequired,
+					Message: "gm move fear_spent must be greater than zero",
+				}
+			}
+			currentFear := GMFearDefault
+			if hasState {
+				currentFear = s.GMFear
+			}
+			if currentFear < p.FearSpent {
+				return &command.Rejection{
+					Code:    rejectionCodeGMMoveInsufficientFear,
+					Message: "gm fear is insufficient",
+				}
+			}
+			return nil
+		},
+		func(s SnapshotState, hasState bool, p GMMoveApplyPayload, _ func() time.Time) ([]module.EventSpec, error) {
+			currentFear := GMFearDefault
+			if hasState {
+				currentFear = s.GMFear
+			}
+			specs := []module.EventSpec{{
+				Type:       EventTypeGMMoveApplied,
+				EntityType: "session",
+				EntityID:   strings.TrimSpace(cmd.SessionID.String()),
+				Payload: GMMoveAppliedPayload{
+					Target:    p.Target,
+					FearSpent: p.FearSpent,
+				},
+			}}
+			after := currentFear - p.FearSpent
+			specs = append(specs, module.EventSpec{
+				Type:       EventTypeGMFearChanged,
+				EntityType: "campaign",
+				EntityID:   strings.TrimSpace(string(cmd.CampaignID)),
+				Payload: GMFearChangedPayload{
+					Value:  after,
+					Reason: "gm_move",
+				},
+			})
+			return specs, nil
+		},
+		now,
+	)
+}
 
 func decideGMFearSet(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
 	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
@@ -64,14 +170,16 @@ func decideCharacterStatePatch(snapshotState SnapshotState, hasSnapshot bool, cm
 		},
 		func(_ SnapshotState, _ bool, p CharacterStatePatchPayload) CharacterStatePatchedPayload {
 			return CharacterStatePatchedPayload{
-				CharacterID: p.CharacterID,
-				Source:      strings.TrimSpace(p.Source),
-				HP:          p.HPAfter,
-				Hope:        p.HopeAfter,
-				HopeMax:     p.HopeMaxAfter,
-				Stress:      p.StressAfter,
-				Armor:       p.ArmorAfter,
-				LifeState:   p.LifeStateAfter,
+				CharacterID:   p.CharacterID,
+				Source:        strings.TrimSpace(p.Source),
+				HP:            p.HPAfter,
+				Hope:          p.HopeAfter,
+				HopeMax:       p.HopeMaxAfter,
+				Stress:        p.StressAfter,
+				Armor:         p.ArmorAfter,
+				LifeState:     p.LifeStateAfter,
+				ClassState:    normalizedClassStatePtr(p.ClassStateAfter),
+				SubclassState: normalizedSubclassStatePtr(p.SubclassStateAfter),
 			}
 		},
 		now)
@@ -201,8 +309,28 @@ func isCharacterStatePatchNoMutation(snapshot SnapshotState, payload CharacterSt
 	if payload.LifeStateAfter != nil && character.LifeState != *payload.LifeStateAfter {
 		return false
 	}
+	if payload.ClassStateAfter != nil {
+		current := snapshot.CharacterClassStates[payload.CharacterID].Normalized()
+		if !reflect.DeepEqual(current, payload.ClassStateAfter.Normalized()) {
+			return false
+		}
+	}
+	if payload.SubclassStateAfter != nil {
+		current := snapshot.CharacterSubclassStates[payload.CharacterID].Normalized()
+		if !reflect.DeepEqual(current, payload.SubclassStateAfter.Normalized()) {
+			return false
+		}
+	}
 
 	return true
+}
+
+func normalizedClassStatePtr(value *CharacterClassState) *CharacterClassState {
+	if value == nil {
+		return nil
+	}
+	normalized := value.Normalized()
+	return &normalized
 }
 
 func isConditionChangeNoMutation(snapshot SnapshotState, payload ConditionChangePayload) bool {
@@ -215,7 +343,7 @@ func isConditionChangeNoMutation(snapshot SnapshotState, payload ConditionChange
 	if err != nil {
 		return false
 	}
-	after, err := NormalizeConditions(payload.ConditionsAfter)
+	after, err := NormalizeConditions(ConditionCodes(payload.ConditionsAfter))
 	if err != nil {
 		return false
 	}
@@ -230,7 +358,7 @@ func hasMissingCharacterConditionRemovals(snapshot SnapshotState, payload Condit
 	if !hasCharacter {
 		return false
 	}
-	return hasMissingConditionRemovals(character.Conditions, payload.Removed)
+	return hasMissingConditionRemovals(character.Conditions, ConditionCodes(payload.Removed))
 }
 
 func snapshotCharacterState(snapshot SnapshotState, characterID ids.CharacterID) (CharacterState, bool) {

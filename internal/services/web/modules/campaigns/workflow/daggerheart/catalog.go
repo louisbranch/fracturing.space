@@ -31,6 +31,7 @@ func (Workflow) assembleCatalog(
 	creation.Classes, classDomainsByID = buildClasses(catalog.Classes)
 	creation.Subclasses = buildSubclasses(catalog.Subclasses)
 	creation.Ancestries, creation.Communities = buildHeritages(catalog.Heritages)
+	creation.CompanionExperiences = append([]campaignworkflow.CompanionExperience(nil), catalog.CompanionExperiences...)
 	creation.PrimaryWeapons, creation.SecondaryWeapons = buildWeapons(catalog.Weapons)
 	creation.Armor = buildArmor(catalog.Armor)
 	creation.PotionItems = buildPotionItems(catalog.Items)

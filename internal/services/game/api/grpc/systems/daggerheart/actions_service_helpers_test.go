@@ -110,6 +110,7 @@ func newActionTestService() *DaggerheartService {
 	return &DaggerheartService{
 		stores: Stores{
 			Campaign:         campaignStore,
+			Content:          newFakeContentStore(),
 			Daggerheart:      dhStore,
 			Character:        newFakeCharacterStore(),
 			Event:            newFakeActionEventStore(),

@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
@@ -70,6 +71,7 @@ func (r *Runner) ensureSession(ctx context.Context, state *scenarioState) error 
 		return r.failf("expected session")
 	}
 	state.sessionID = response.GetSession().GetId()
+	state.sessionImplicit = true
 	return nil
 }
 
@@ -178,7 +180,7 @@ func (r *Runner) ensureSessionStartReadiness(ctx context.Context, state *scenari
 					return readinessErr
 				}
 				if needsReadiness && registration.ensureCharacterReadiness != nil {
-					if readinessErr := registration.ensureCharacterReadiness(r, participantCtx, state, characterID); readinessErr != nil {
+					if readinessErr := registration.ensureCharacterReadiness(r, participantCtx, state, characterID, nil); readinessErr != nil {
 						return readinessErr
 					}
 				}
@@ -230,7 +232,7 @@ func (r *Runner) ensureSessionStartReadiness(ctx context.Context, state *scenari
 				return fmt.Errorf("set readiness character control for %s: %w", characterID, setErr)
 			}
 			if hasSystem && registration.ensureCharacterReadiness != nil {
-				if readinessErr := registration.ensureCharacterReadiness(r, participantCtx, state, characterID); readinessErr != nil {
+				if readinessErr := registration.ensureCharacterReadiness(r, participantCtx, state, characterID, nil); readinessErr != nil {
 					return readinessErr
 				}
 			}
@@ -252,6 +254,7 @@ func (r *Runner) ensureScenarioCharacterReadiness(
 	ctx context.Context,
 	state *scenarioState,
 	characterID string,
+	args map[string]any,
 ) error {
 	registration, hasSystem, err := scenarioSystemForState(state)
 	if err != nil {
@@ -260,63 +263,130 @@ func (r *Runner) ensureScenarioCharacterReadiness(
 	if !hasSystem || registration.ensureCharacterReadiness == nil {
 		return nil
 	}
-	return registration.ensureCharacterReadiness(r, ctx, state, characterID)
+	return registration.ensureCharacterReadiness(r, ctx, state, characterID, args)
 }
 
 func (r *Runner) ensureDaggerheartCharacterReadiness(
 	ctx context.Context,
 	state *scenarioState,
 	characterID string,
+	args map[string]any,
 ) error {
+	input := buildScenarioDaggerheartWorkflowInput(args)
 	_, err := r.env.characterClient.ApplyCharacterCreationWorkflow(ctx, &gamev1.ApplyCharacterCreationWorkflowRequest{
 		CampaignId:  state.campaignID,
 		CharacterId: characterID,
 		SystemWorkflow: &gamev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
-			Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
-				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
-					ClassId:    scenarioReadinessClassID,
-					SubclassId: scenarioReadinessSubclassID,
-				},
-				HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
-					AncestryId:  scenarioReadinessAncestryID,
-					CommunityId: scenarioReadinessCommunityID,
-				},
-				TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
-					Agility:   2,
-					Strength:  1,
-					Finesse:   1,
-					Instinct:  0,
-					Presence:  0,
-					Knowledge: -1,
-				},
-				DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A brave adventurer."},
-				EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
-					WeaponIds:    []string{scenarioReadinessWeaponID},
-					ArmorId:      scenarioReadinessArmorID,
-					PotionItemId: scenarioReadinessPotionItemID,
-				},
-				BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{
-					Background: "scenario background",
-				},
-				ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
-					Experiences: []*daggerheartv1.DaggerheartExperience{
-						{Name: "scenario experience", Modifier: 2},
-						{Name: "scenario patrol", Modifier: 2},
-					},
-				},
-				DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{
-					DomainCardIds: []string{scenarioReadinessDomainCardID1, scenarioReadinessDomainCardID2},
-				},
-				ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{
-					Connections: "scenario connections",
-				},
-			},
+			Daggerheart: input,
 		},
 	})
 	if err != nil {
 		return fmt.Errorf("apply readiness workflow for %s: %w", characterID, err)
 	}
+	if err := r.waitForDaggerheartCharacterProjection(ctx, state, characterID, nil, nil); err != nil {
+		return err
+	}
 	return nil
+}
+
+func (r *Runner) waitForDaggerheartCharacterProjection(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+	expectedProfile *daggerheartv1.DaggerheartProfile,
+	expectedState *daggerheartv1.DaggerheartCharacterState,
+) error {
+	const (
+		maxAttempts = 12
+		retryDelay  = 25 * time.Millisecond
+	)
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		sheet, err := r.env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: characterID,
+		})
+		if err != nil {
+			return fmt.Errorf("get character sheet after readiness workflow: %w", err)
+		}
+		profile := sheet.GetProfile().GetDaggerheart()
+		current := sheet.GetState().GetDaggerheart()
+		stateReady := current != nil
+		if expectedState == nil {
+			stateReady = stateReady && current.GetHp() > 0 && current.GetHopeMax() > 0
+		}
+		if profile != nil &&
+			strings.TrimSpace(profile.GetClassId()) != "" &&
+			strings.TrimSpace(profile.GetSubclassId()) != "" &&
+			stateReady &&
+			daggerheartProfileMatches(profile, expectedProfile) &&
+			daggerheartCharacterStateMatches(current, expectedState) {
+			return nil
+		}
+		if attempt < maxAttempts-1 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(retryDelay):
+			}
+		}
+	}
+	return fmt.Errorf("daggerheart readiness did not project for %s", characterID)
+}
+
+func daggerheartProfileMatches(actual, expected *daggerheartv1.DaggerheartProfile) bool {
+	if expected == nil {
+		return true
+	}
+	if actual == nil {
+		return false
+	}
+	if expected.GetLevel() != 0 && actual.GetLevel() != expected.GetLevel() {
+		return false
+	}
+	if expected.GetHpMax() != 0 && actual.GetHpMax() != expected.GetHpMax() {
+		return false
+	}
+	if classID := strings.TrimSpace(expected.GetClassId()); classID != "" && actual.GetClassId() != classID {
+		return false
+	}
+	if subclassID := strings.TrimSpace(expected.GetSubclassId()); subclassID != "" && actual.GetSubclassId() != subclassID {
+		return false
+	}
+	if !optionalInt32Matches(actual.GetStressMax(), expected.GetStressMax()) ||
+		!optionalInt32Matches(actual.GetEvasion(), expected.GetEvasion()) ||
+		!optionalInt32Matches(actual.GetMajorThreshold(), expected.GetMajorThreshold()) ||
+		!optionalInt32Matches(actual.GetSevereThreshold(), expected.GetSevereThreshold()) ||
+		!optionalInt32Matches(actual.GetArmorMax(), expected.GetArmorMax()) ||
+		!optionalInt32Matches(actual.GetArmorScore(), expected.GetArmorScore()) {
+		return false
+	}
+	return true
+}
+
+func daggerheartCharacterStateMatches(actual, expected *daggerheartv1.DaggerheartCharacterState) bool {
+	if expected == nil {
+		return true
+	}
+	if actual == nil {
+		return false
+	}
+	return actual.GetHp() == expected.GetHp() &&
+		actual.GetHope() == expected.GetHope() &&
+		actual.GetHopeMax() == expected.GetHopeMax() &&
+		actual.GetStress() == expected.GetStress() &&
+		actual.GetArmor() == expected.GetArmor() &&
+		actual.GetLifeState() == expected.GetLifeState()
+}
+
+func optionalInt32Matches(actual, expected *wrapperspb.Int32Value) bool {
+	switch {
+	case expected == nil:
+		return true
+	case actual == nil:
+		return false
+	default:
+		return actual.GetValue() == expected.GetValue()
+	}
 }
 
 func (r *Runner) scenarioCharacterNeedsReadiness(
@@ -543,9 +613,9 @@ func isSessionEvent(eventType string) bool {
 	return strings.HasPrefix(eventType, "action.") || strings.HasPrefix(eventType, "session.")
 }
 
-func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scenarioState, characterID string, args map[string]any) error {
+func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scenarioState, characterID string, args map[string]any) (*daggerheartv1.DaggerheartProfile, error) {
 	if !hasDaggerheartProfileOverrides(args) {
-		return nil
+		return nil, nil
 	}
 
 	profile := &daggerheartv1.DaggerheartProfile{
@@ -555,38 +625,6 @@ func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scen
 		Evasion:         wrapperspb.Int32(10),
 		MajorThreshold:  wrapperspb.Int32(3),
 		SevereThreshold: wrapperspb.Int32(6),
-	}
-	if r.env.characterClient != nil {
-		response, err := r.env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
-			CampaignId:  state.campaignID,
-			CharacterId: characterID,
-		})
-		if err != nil {
-			if status.Code(err) != codes.Unimplemented {
-				return fmt.Errorf("get character sheet: %w", err)
-			}
-		} else if current := response.GetProfile().GetDaggerheart(); current != nil {
-			profile.Level = current.GetLevel()
-			profile.HpMax = current.GetHpMax()
-			if current.GetStressMax() != nil {
-				profile.StressMax = wrapperspb.Int32(current.GetStressMax().GetValue())
-			}
-			if current.GetEvasion() != nil {
-				profile.Evasion = wrapperspb.Int32(current.GetEvasion().GetValue())
-			}
-			if current.GetMajorThreshold() != nil {
-				profile.MajorThreshold = wrapperspb.Int32(current.GetMajorThreshold().GetValue())
-			}
-			if current.GetSevereThreshold() != nil {
-				profile.SevereThreshold = wrapperspb.Int32(current.GetSevereThreshold().GetValue())
-			}
-			if current.GetArmorMax() != nil {
-				profile.ArmorMax = wrapperspb.Int32(current.GetArmorMax().GetValue())
-			}
-			if current.GetArmorScore() != nil {
-				profile.ArmorScore = wrapperspb.Int32(current.GetArmorScore().GetValue())
-			}
-		}
 	}
 
 	armorValue := optionalInt(args, "armor", 0)
@@ -606,7 +644,7 @@ func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scen
 		profile.ArmorScore = wrapperspb.Int32(int32(value))
 	}
 
-	_, err := r.env.characterClient.PatchCharacterProfile(ctx, &gamev1.PatchCharacterProfileRequest{
+	response, err := r.env.characterClient.PatchCharacterProfile(ctx, &gamev1.PatchCharacterProfileRequest{
 		CampaignId:  state.campaignID,
 		CharacterId: characterID,
 		SystemProfilePatch: &gamev1.PatchCharacterProfileRequest_Daggerheart{
@@ -614,9 +652,12 @@ func (r *Runner) applyDefaultDaggerheartProfile(ctx context.Context, state *scen
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("patch character profile: %w", err)
+		return nil, fmt.Errorf("patch character profile: %w", err)
 	}
-	return nil
+	if projected := response.GetProfile().GetDaggerheart(); projected != nil {
+		return projected, nil
+	}
+	return nil, nil
 }
 
 func hasDaggerheartProfileOverrides(args map[string]any) bool {
@@ -642,11 +683,19 @@ func hasDaggerheartProfileOverrides(args map[string]any) bool {
 	return false
 }
 
-func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenarioState, characterID string, args map[string]any) error {
+func (r *Runner) applyOptionalCharacterState(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+	args map[string]any,
+	profile *daggerheartv1.DaggerheartProfile,
+) (*daggerheartv1.DaggerheartCharacterState, error) {
 	patch := &daggerheartv1.DaggerheartCharacterState{}
 	hasPatch := false
 	armorSet := false
 	hpSet := false
+	hopeSet := false
+	hopeMaxSet := false
 	stressSet := false
 	lifeStateSet := false
 	if armor, ok := readInt(args, "armor"); ok {
@@ -659,6 +708,16 @@ func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenari
 		hasPatch = true
 		hpSet = true
 	}
+	if hope, ok := readInt(args, "hope"); ok {
+		patch.Hope = int32(hope)
+		hasPatch = true
+		hopeSet = true
+	}
+	if hopeMax, ok := readInt(args, "hope_max"); ok {
+		patch.HopeMax = int32(hopeMax)
+		hasPatch = true
+		hopeMaxSet = true
+	}
 	if stress, ok := readInt(args, "stress"); ok {
 		patch.Stress = int32(stress)
 		hasPatch = true
@@ -667,25 +726,29 @@ func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenari
 	if lifeState := optionalString(args, "life_state", ""); lifeState != "" {
 		value, err := parseLifeState(lifeState)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		patch.LifeState = value
 		hasPatch = true
 		lifeStateSet = true
 	}
 	if !hasPatch {
-		return nil
+		return nil, nil
 	}
 	// PatchCharacterState overwrites the full state, so merge with current values.
 	current, err := r.getCharacterState(ctx, state, characterID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !hpSet {
 		patch.Hp = current.GetHp()
 	}
-	patch.Hope = current.GetHope()
-	patch.HopeMax = current.GetHopeMax()
+	if !hopeSet {
+		patch.Hope = current.GetHope()
+	}
+	if !hopeMaxSet {
+		patch.HopeMax = current.GetHopeMax()
+	}
 	if !stressSet {
 		patch.Stress = current.GetStress()
 	}
@@ -695,7 +758,19 @@ func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenari
 	if !lifeStateSet {
 		patch.LifeState = current.GetLifeState()
 	}
-	_, err = r.env.snapshotClient.PatchCharacterState(ctx, &gamev1.PatchCharacterStateRequest{
+	if !hpSet && profile != nil && patch.GetHp() > profile.GetHpMax() {
+		patch.Hp = profile.GetHpMax()
+	}
+	if !stressSet && profile != nil && profile.GetStressMax() != nil && patch.GetStress() > profile.GetStressMax().GetValue() {
+		patch.Stress = profile.GetStressMax().GetValue()
+	}
+	if !armorSet && profile != nil && profile.GetArmorMax() != nil && patch.GetArmor() > profile.GetArmorMax().GetValue() {
+		patch.Armor = profile.GetArmorMax().GetValue()
+	}
+	if !hopeSet && patch.GetHope() > patch.GetHopeMax() {
+		patch.Hope = patch.GetHopeMax()
+	}
+	response, err := r.env.snapshotClient.PatchCharacterState(ctx, &gamev1.PatchCharacterStateRequest{
 		CampaignId:  state.campaignID,
 		CharacterId: characterID,
 		SystemStatePatch: &gamev1.PatchCharacterStateRequest_Daggerheart{
@@ -703,9 +778,12 @@ func (r *Runner) applyOptionalCharacterState(ctx context.Context, state *scenari
 		},
 	})
 	if err != nil {
-		return fmt.Errorf("patch character state: %w", err)
+		return nil, fmt.Errorf("patch character state: %w", err)
 	}
-	return nil
+	if projected := response.GetState().GetDaggerheart(); projected != nil {
+		return projected, nil
+	}
+	return nil, nil
 }
 
 func applyTraitValue(profile *daggerheartv1.DaggerheartProfile, key string, args map[string]any) {
@@ -741,6 +819,26 @@ func (r *Runner) getSnapshot(ctx context.Context, state *scenarioState) (*dagger
 	return response.GetSnapshot().GetDaggerheart(), nil
 }
 
+// getDaggerheartProfile reads the Daggerheart profile projection for one
+// character so scenario steps can assert durable creation outcomes.
+func (r *Runner) getDaggerheartProfile(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+) (*daggerheartv1.DaggerheartProfile, error) {
+	response, err := r.env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("get character sheet: %w", err)
+	}
+	if response.GetProfile() == nil || response.GetProfile().GetDaggerheart() == nil {
+		return nil, r.failf("expected daggerheart character profile")
+	}
+	return response.GetProfile().GetDaggerheart(), nil
+}
+
 func (r *Runner) getCharacterState(ctx context.Context, state *scenarioState, characterID string) (*daggerheartv1.DaggerheartCharacterState, error) {
 	response, err := r.env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
 		CampaignId:  state.campaignID,
@@ -767,6 +865,79 @@ func (r *Runner) getAdversary(ctx context.Context, state *scenarioState, adversa
 		return nil, r.failf("expected adversary")
 	}
 	return response.GetAdversary(), nil
+}
+
+// buildScenarioDaggerheartWorkflowInput produces a full valid Daggerheart
+// creation workflow payload using scenario defaults, with optional explicit
+// scenario overrides layered on top for focused coverage.
+func buildScenarioDaggerheartWorkflowInput(args map[string]any) *daggerheartv1.DaggerheartCreationWorkflowInput {
+	heritageArgs := readMap(args, "heritage")
+	equipmentArgs := readMap(args, "equipment")
+	firstAncestryID := optionalString(heritageArgs, "first_feature_ancestry_id", scenarioReadinessAncestryID)
+	secondAncestryID := optionalString(heritageArgs, "second_feature_ancestry_id", firstAncestryID)
+	domainCardIDs := readStringSlice(args, "domain_card_ids")
+	if len(domainCardIDs) == 0 {
+		domainCardIDs = []string{scenarioReadinessDomainCardID1, scenarioReadinessDomainCardID2}
+	}
+
+	input := &daggerheartv1.DaggerheartCreationWorkflowInput{
+		ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
+			ClassId:    optionalString(args, "class_id", scenarioReadinessClassID),
+			SubclassId: optionalString(args, "subclass_id", scenarioReadinessSubclassID),
+		},
+		HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
+			Heritage: &daggerheartv1.DaggerheartCreationStepHeritageSelectionInput{
+				AncestryLabel:           optionalString(heritageArgs, "ancestry_label", ""),
+				FirstFeatureAncestryId:  firstAncestryID,
+				SecondFeatureAncestryId: secondAncestryID,
+				CommunityId:             optionalString(heritageArgs, "community_id", scenarioReadinessCommunityID),
+			},
+		},
+		TraitsInput: &daggerheartv1.DaggerheartCreationStepTraitsInput{
+			Agility:   2,
+			Strength:  1,
+			Finesse:   1,
+			Instinct:  0,
+			Presence:  0,
+			Knowledge: -1,
+		},
+		DetailsInput: &daggerheartv1.DaggerheartCreationStepDetailsInput{
+			Description: "A brave adventurer.",
+		},
+		EquipmentInput: &daggerheartv1.DaggerheartCreationStepEquipmentInput{
+			WeaponIds:    []string{scenarioReadinessWeaponID},
+			ArmorId:      optionalString(equipmentArgs, "armor_id", scenarioReadinessArmorID),
+			PotionItemId: optionalString(equipmentArgs, "potion_item_id", scenarioReadinessPotionItemID),
+		},
+		BackgroundInput: &daggerheartv1.DaggerheartCreationStepBackgroundInput{
+			Background: "scenario background",
+		},
+		ExperiencesInput: &daggerheartv1.DaggerheartCreationStepExperiencesInput{
+			Experiences: []*daggerheartv1.DaggerheartExperience{
+				{Name: "scenario experience", Modifier: 2},
+				{Name: "scenario patrol", Modifier: 2},
+			},
+		},
+		DomainCardsInput: &daggerheartv1.DaggerheartCreationStepDomainCardsInput{
+			DomainCardIds: append([]string(nil), domainCardIDs...),
+		},
+		ConnectionsInput: &daggerheartv1.DaggerheartCreationStepConnectionsInput{
+			Connections: "scenario connections",
+		},
+	}
+
+	companionArgs := readMap(args, "companion")
+	if len(companionArgs) > 0 {
+		input.ClassSubclassInput.Companion = &daggerheartv1.DaggerheartCreationCompanionInput{
+			AnimalKind:        optionalString(companionArgs, "animal_kind", ""),
+			Name:              optionalString(companionArgs, "name", ""),
+			ExperienceIds:     readStringSlice(companionArgs, "experience_ids"),
+			AttackDescription: optionalString(companionArgs, "attack_description", ""),
+			DamageType:        optionalString(companionArgs, "damage_type", ""),
+		}
+	}
+
+	return input
 }
 
 func chooseActionSeed(args map[string]any, difficulty int) (uint64, error) {
@@ -1119,6 +1290,28 @@ func buildActionRollModifiers(args map[string]any, key string) []*daggerheartv1.
 	return modifiers
 }
 
+func buildAdversaryRollModifiers(args map[string]any) []*daggerheartv1.ActionRollModifier {
+	modifiers := buildActionRollModifiers(args, "modifiers")
+	if len(modifiers) > 0 {
+		return modifiers
+	}
+	if _, hasAttackModifier := args["attack_modifier"]; hasAttackModifier {
+		modifier := optionalInt(args, "attack_modifier", 0)
+		return []*daggerheartv1.ActionRollModifier{{
+			Source: "attack_modifier",
+			Value:  int32(modifier),
+		}}
+	}
+	if _, hasModifier := args["modifier"]; hasModifier {
+		modifier := optionalInt(args, "modifier", 0)
+		return []*daggerheartv1.ActionRollModifier{{
+			Source: "modifier",
+			Value:  int32(modifier),
+		}}
+	}
+	return nil
+}
+
 func buildDamageDice(args map[string]any) []*daggerheartv1.DiceSpec {
 	value, ok := args["damage_dice"]
 	if !ok {
@@ -1160,6 +1353,69 @@ func buildDamageSpec(args map[string]any, actorID, source string) *daggerheartv1
 	spec.Direct = optionalBool(args, "direct", false)
 	spec.MassiveDamage = optionalBool(args, "massive_damage", false)
 	return spec
+}
+
+func buildAttackRange(args map[string]any) daggerheartv1.DaggerheartAttackRange {
+	switch strings.ToLower(strings.TrimSpace(optionalString(args, "attack_range", "melee"))) {
+	case "", "melee":
+		return daggerheartv1.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_MELEE
+	case "ranged":
+		return daggerheartv1.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_RANGED
+	default:
+		return daggerheartv1.DaggerheartAttackRange_DAGGERHEART_ATTACK_RANGE_UNSPECIFIED
+	}
+}
+
+func buildIncomingAttackArmorReaction(args map[string]any, seed uint64) *daggerheartv1.DaggerheartIncomingAttackArmorReaction {
+	switch strings.ToLower(strings.TrimSpace(optionalString(args, "armor_reaction", ""))) {
+	case "":
+		return nil
+	case "shifting":
+		return &daggerheartv1.DaggerheartIncomingAttackArmorReaction{
+			Reaction: &daggerheartv1.DaggerheartIncomingAttackArmorReaction_Shifting{
+				Shifting: &daggerheartv1.DaggerheartShiftingArmorReaction{},
+			},
+		}
+	case "timeslowing":
+		return &daggerheartv1.DaggerheartIncomingAttackArmorReaction{
+			Reaction: &daggerheartv1.DaggerheartIncomingAttackArmorReaction_Timeslowing{
+				Timeslowing: &daggerheartv1.DaggerheartTimeslowingArmorReaction{
+					Rng: &commonv1.RngRequest{
+						Seed:     &seed,
+						RollMode: commonv1.RollMode_REPLAY,
+					},
+				},
+			},
+		}
+	default:
+		return nil
+	}
+}
+
+func buildDamageArmorReaction(args map[string]any, seed uint64) *daggerheartv1.DaggerheartDamageArmorReaction {
+	switch strings.ToLower(strings.TrimSpace(optionalString(args, "armor_reaction", ""))) {
+	case "":
+		return nil
+	case "resilient":
+		return &daggerheartv1.DaggerheartDamageArmorReaction{
+			Reaction: &daggerheartv1.DaggerheartDamageArmorReaction_Resilient{
+				Resilient: &daggerheartv1.DaggerheartResilientArmorReaction{
+					Rng: &commonv1.RngRequest{
+						Seed:     &seed,
+						RollMode: commonv1.RollMode_REPLAY,
+					},
+				},
+			},
+		}
+	case "impenetrable":
+		return &daggerheartv1.DaggerheartDamageArmorReaction{
+			Reaction: &daggerheartv1.DaggerheartDamageArmorReaction_Impenetrable{
+				Impenetrable: &daggerheartv1.DaggerheartImpenetrableArmorReaction{},
+			},
+		}
+	default:
+		return nil
+	}
 }
 
 func buildDamageRequest(args map[string]any, actorID, source string, amount int32) *daggerheartv1.DaggerheartDamageRequest {
@@ -1236,35 +1492,27 @@ func (r *Runner) applyAdversaryDamage(
 		app.Result = result
 		_, app.HPAfter = daggerheart.ApplyDamageMarks(hpBefore, app.Result.Marks)
 	} else {
-		app = daggerheart.ApplyDamageWithArmor(hpBefore, armorBefore, result)
+		app = daggerheart.ApplyDamageWithArmor(hpBefore, 0, armorBefore, result, daggerheart.ArmorDamageRules{})
 	}
 	if app.HPAfter >= hpBefore && app.ArmorAfter >= armorBefore {
 		if err := r.assertf("expected damage to affect hp or armor for %s", name); err != nil {
 			return false, err
 		}
 	}
-
-	update := &daggerheartv1.DaggerheartUpdateAdversaryRequest{
-		CampaignId:  state.campaignID,
-		AdversaryId: adversaryID,
-	}
-	if state.sessionID != "" {
-		update.SessionId = wrapperspb.String(state.sessionID)
-	}
-	if app.HPAfter != hpBefore {
-		update.Hp = wrapperspb.Int32(int32(app.HPAfter))
-	}
-	if app.ArmorAfter != armorBefore {
-		update.Armor = wrapperspb.Int32(int32(app.ArmorAfter))
-	}
-	if update.Hp == nil && update.Armor == nil {
-		if err := r.assertf("expected adversary damage to change hp or armor for %s", name); err != nil {
-			return false, err
-		}
-	}
 	ctxWithSession := withSessionID(ctx, state.sessionID)
-	if _, err := r.env.daggerheartClient.UpdateAdversary(ctxWithSession, update); err != nil {
-		return false, fmt.Errorf("update adversary damage: %w", err)
+	if _, err := r.env.daggerheartClient.ApplyAdversaryDamage(ctxWithSession, &daggerheartv1.DaggerheartApplyAdversaryDamageRequest{
+		CampaignId:  state.campaignID,
+		SceneId:     state.activeSceneID,
+		AdversaryId: adversaryID,
+		Damage: buildDamageRequest(
+			args,
+			"",
+			optionalString(args, "source", "attack"),
+			damageRoll.GetTotal(),
+		),
+		RequireDamageRoll: false,
+	}); err != nil {
+		return false, fmt.Errorf("apply adversary damage: %w", err)
 	}
 	after, err := r.getAdversary(ctx, state, adversaryID)
 	if err != nil {
@@ -1346,6 +1594,59 @@ func parseConditions(values []string) ([]daggerheartv1.DaggerheartCondition, err
 		}
 	}
 	return result, nil
+}
+
+func parseConditionStates(values []string) ([]*daggerheartv1.DaggerheartConditionState, error) {
+	conditions, err := parseConditions(values)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]*daggerheartv1.DaggerheartConditionState, 0, len(conditions))
+	for _, condition := range conditions {
+		code, err := standardConditionCode(condition)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, &daggerheartv1.DaggerheartConditionState{
+			Id:       code,
+			Code:     code,
+			Label:    code,
+			Class:    daggerheartv1.DaggerheartConditionClass_DAGGERHEART_CONDITION_CLASS_STANDARD,
+			Standard: condition,
+		})
+	}
+	return result, nil
+}
+
+func parseConditionIDs(values []string) ([]string, error) {
+	conditions, err := parseConditions(values)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]string, 0, len(conditions))
+	for _, condition := range conditions {
+		code, err := standardConditionCode(condition)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, code)
+	}
+	return result, nil
+}
+
+func standardConditionCode(condition daggerheartv1.DaggerheartCondition) (string, error) {
+	switch condition {
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_VULNERABLE:
+		return "vulnerable", nil
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_RESTRAINED:
+		return "restrained", nil
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_HIDDEN:
+		return "hidden", nil
+	case daggerheartv1.DaggerheartCondition_DAGGERHEART_CONDITION_CLOAKED:
+		return "cloaked", nil
+	default:
+		return "", fmt.Errorf("unknown condition %v", condition)
+	}
 }
 
 func parseGameSystem(value string) (commonv1.GameSystem, error) {
@@ -1712,8 +2013,19 @@ func readBool(args map[string]any, key string) (bool, bool) {
 type expectedDeltas struct {
 	name        string
 	characterID string
+	hpDelta     *int
 	hopeDelta   *int
 	stressDelta *int
+	armorDelta  *int
+}
+
+type expectedAdversaryDeltas struct {
+	name        string
+	adversaryID string
+	hpDelta     *int
+	stressDelta *int
+	armorDelta  *int
+	deleted     *bool
 }
 
 func (r *Runner) captureExpectedDeltas(
@@ -1724,7 +2036,9 @@ func (r *Runner) captureExpectedDeltas(
 ) (*expectedDeltas, *daggerheartv1.DaggerheartCharacterState, error) {
 	hopeDelta, hopeOk := readInt(args, "expect_hope_delta")
 	stressDelta, stressOk := readInt(args, "expect_stress_delta")
-	if !hopeOk && !stressOk {
+	hpDelta, hpOk := readInt(args, "expect_hp_delta")
+	armorDelta, armorOk := readInt(args, "expect_armor_delta")
+	if !hpOk && !hopeOk && !stressOk && !armorOk {
 		return nil, nil, nil
 	}
 	name := optionalString(args, "expect_target", fallbackName)
@@ -1740,11 +2054,58 @@ func (r *Runner) captureExpectedDeltas(
 		return nil, nil, err
 	}
 	spec := &expectedDeltas{name: name, characterID: characterID}
+	if hpOk {
+		spec.hpDelta = &hpDelta
+	}
 	if hopeOk {
 		spec.hopeDelta = &hopeDelta
 	}
 	if stressOk {
 		spec.stressDelta = &stressDelta
+	}
+	if armorOk {
+		spec.armorDelta = &armorDelta
+	}
+	return spec, before, nil
+}
+
+func (r *Runner) captureExpectedAdversaryDeltas(
+	ctx context.Context,
+	state *scenarioState,
+	args map[string]any,
+	fallbackName string,
+) (*expectedAdversaryDeltas, *daggerheartv1.DaggerheartAdversary, error) {
+	hpDelta, hpOk := readInt(args, "expect_adversary_hp_delta")
+	stressDelta, stressOk := readInt(args, "expect_adversary_stress_delta")
+	armorDelta, armorOk := readInt(args, "expect_adversary_armor_delta")
+	deleted, deletedOk := readBool(args, "expect_adversary_deleted")
+	if !hpOk && !stressOk && !armorOk && !deletedOk {
+		return nil, nil, nil
+	}
+	name := optionalString(args, "expect_adversary_target", fallbackName)
+	if strings.TrimSpace(name) == "" {
+		return nil, nil, r.failf("expect_adversary_* requires expect_adversary_target or an adversary target")
+	}
+	adversaryID, err := adversaryID(state, name)
+	if err != nil {
+		return nil, nil, err
+	}
+	before, err := r.getAdversary(ctx, state, adversaryID)
+	if err != nil {
+		return nil, nil, err
+	}
+	spec := &expectedAdversaryDeltas{name: name, adversaryID: adversaryID}
+	if hpOk {
+		spec.hpDelta = &hpDelta
+	}
+	if stressOk {
+		spec.stressDelta = &stressDelta
+	}
+	if armorOk {
+		spec.armorDelta = &armorDelta
+	}
+	if deletedOk {
+		spec.deleted = &deleted
 	}
 	return spec, before, nil
 }
@@ -1762,6 +2123,25 @@ func (r *Runner) assertExpectedDeltas(
 	if err != nil {
 		return err
 	}
+	return r.assertExpectedDeltasAfterState(spec, before, after)
+}
+
+func (r *Runner) assertExpectedDeltasAfterState(
+	spec *expectedDeltas,
+	before *daggerheartv1.DaggerheartCharacterState,
+	after *daggerheartv1.DaggerheartCharacterState,
+) error {
+	if spec == nil || before == nil || after == nil {
+		return nil
+	}
+	if spec.hpDelta != nil {
+		delta := int(after.GetHp()) - int(before.GetHp())
+		if delta != *spec.hpDelta {
+			if err := r.assertf("hp delta for %s = %d (before=%d after=%d), want %d", spec.name, delta, before.GetHp(), after.GetHp(), *spec.hpDelta); err != nil {
+				return err
+			}
+		}
+	}
 	if spec.hopeDelta != nil {
 		delta := int(after.GetHope()) - int(before.GetHope())
 		if delta != *spec.hopeDelta {
@@ -1774,6 +2154,68 @@ func (r *Runner) assertExpectedDeltas(
 		delta := int(after.GetStress()) - int(before.GetStress())
 		if delta != *spec.stressDelta {
 			if err := r.assertf("stress delta for %s = %d, want %d", spec.name, delta, *spec.stressDelta); err != nil {
+				return err
+			}
+		}
+	}
+	if spec.armorDelta != nil {
+		delta := int(after.GetArmor()) - int(before.GetArmor())
+		if delta != *spec.armorDelta {
+			if err := r.assertf("armor delta for %s = %d (before=%d after=%d), want %d", spec.name, delta, before.GetArmor(), after.GetArmor(), *spec.armorDelta); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (r *Runner) assertExpectedAdversaryDeltas(
+	ctx context.Context,
+	state *scenarioState,
+	spec *expectedAdversaryDeltas,
+	before *daggerheartv1.DaggerheartAdversary,
+) error {
+	if spec == nil || before == nil {
+		return nil
+	}
+	after, err := r.getAdversary(ctx, state, spec.adversaryID)
+	if spec.deleted != nil && *spec.deleted {
+		if err == nil {
+			return r.assertf("expected adversary %s to be deleted", spec.name)
+		}
+		if status.Code(err) != codes.NotFound {
+			return err
+		}
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if spec.deleted != nil && !*spec.deleted {
+		if after == nil {
+			return r.assertf("expected adversary %s to remain present", spec.name)
+		}
+	}
+	if spec.hpDelta != nil {
+		delta := int(after.GetHp()) - int(before.GetHp())
+		if delta != *spec.hpDelta {
+			if err := r.assertf("adversary hp delta for %s = %d (before=%d after=%d), want %d", spec.name, delta, before.GetHp(), after.GetHp(), *spec.hpDelta); err != nil {
+				return err
+			}
+		}
+	}
+	if spec.stressDelta != nil {
+		delta := int(after.GetStress()) - int(before.GetStress())
+		if delta != *spec.stressDelta {
+			if err := r.assertf("adversary stress delta for %s = %d (before=%d after=%d), want %d", spec.name, delta, before.GetStress(), after.GetStress(), *spec.stressDelta); err != nil {
+				return err
+			}
+		}
+	}
+	if spec.armorDelta != nil {
+		delta := int(after.GetArmor()) - int(before.GetArmor())
+		if delta != *spec.armorDelta {
+			if err := r.assertf("adversary armor delta for %s = %d (before=%d after=%d), want %d", spec.name, delta, before.GetArmor(), after.GetArmor(), *spec.armorDelta); err != nil {
 				return err
 			}
 		}
@@ -1933,22 +2375,70 @@ func readStringSlice(args map[string]any, key string) []string {
 	if !ok {
 		return nil
 	}
+	switch list := value.(type) {
+	case []string:
+		results := make([]string, 0, len(list))
+		for _, entry := range list {
+			trimmed := strings.TrimSpace(entry)
+			if trimmed != "" {
+				results = append(results, trimmed)
+			}
+		}
+		return results
+	case []any:
+		results := make([]string, 0, len(list))
+		for _, entry := range list {
+			text, ok := entry.(string)
+			if !ok {
+				continue
+			}
+			trimmed := strings.TrimSpace(text)
+			if trimmed != "" {
+				results = append(results, trimmed)
+			}
+		}
+		return results
+	default:
+		return nil
+	}
+}
+
+// readMap returns a nested table-like argument map when present.
+func readMap(args map[string]any, key string) map[string]any {
+	if args == nil {
+		return nil
+	}
+	value, ok := args[key]
+	if !ok || value == nil {
+		return nil
+	}
+	parsed, ok := value.(map[string]any)
+	if !ok {
+		return nil
+	}
+	return parsed
+}
+
+func readMapSlice(args map[string]any, key string) []map[string]any {
+	if args == nil {
+		return nil
+	}
+	value, ok := args[key]
+	if !ok || value == nil {
+		return nil
+	}
 	list, ok := value.([]any)
 	if !ok {
 		return nil
 	}
-	results := make([]string, 0, len(list))
+	result := make([]map[string]any, 0, len(list))
 	for _, entry := range list {
-		text, ok := entry.(string)
-		if !ok {
-			continue
-		}
-		trimmed := strings.TrimSpace(text)
-		if trimmed != "" {
-			results = append(results, trimmed)
+		parsed, ok := entry.(map[string]any)
+		if ok {
+			result = append(result, parsed)
 		}
 	}
-	return results
+	return result
 }
 
 func uniqueNonEmptyStrings(values []string) []string {
@@ -2038,18 +2528,26 @@ func parseCountdownDirection(value string) (daggerheartv1.DaggerheartCountdownDi
 	}
 }
 
-func parseDowntimeMove(value string) (daggerheartv1.DaggerheartDowntimeMove, error) {
+func parseDowntimeMove(value string) (string, error) {
 	switch strings.ToLower(strings.TrimSpace(value)) {
+	case "tend_to_wounds":
+		return "tend_to_wounds", nil
+	case "clear_stress":
+		return "clear_stress", nil
+	case "repair_armor":
+		return "repair_armor", nil
 	case "clear_all_stress":
-		return daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS, nil
+		return "clear_all_stress", nil
 	case "repair_all_armor":
-		return daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_REPAIR_ALL_ARMOR, nil
+		return "repair_all_armor", nil
 	case "prepare":
-		return daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_PREPARE, nil
+		return "prepare", nil
+	case "tend_to_all_wounds":
+		return "tend_to_all_wounds", nil
 	case "work_on_project":
-		return daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_WORK_ON_PROJECT, nil
+		return "work_on_project", nil
 	default:
-		return daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_UNSPECIFIED, fmt.Errorf("unsupported downtime move %q", value)
+		return "", fmt.Errorf("unsupported downtime move %q", value)
 	}
 }
 

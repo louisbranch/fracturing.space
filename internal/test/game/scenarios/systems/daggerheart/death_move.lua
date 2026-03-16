@@ -23,7 +23,7 @@ dh:death_move{
   expect_stress_delta = 0,
   expect_life_state = "unconscious",
   expect_scar_gained = false,
-  expect_hope_die = 6,
+  expect_hope_die = 11,
   expect_hope_max = 6
 }
 

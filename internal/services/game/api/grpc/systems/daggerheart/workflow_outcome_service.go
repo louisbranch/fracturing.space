@@ -36,6 +36,7 @@ func (s *DaggerheartService) outcomeHandler() *outcometransport.Handler {
 		SessionGate:      s.stores.SessionGate,
 		SessionSpotlight: s.stores.SessionSpotlight,
 		Daggerheart:      s.stores.Daggerheart,
+		Content:          s.stores.Content,
 		Event:            s.stores.Event,
 		ExecuteSystemCommand: func(ctx context.Context, in outcometransport.SystemCommandInput) error {
 			return runtime.ExecuteSystemCommand(ctx, workflowruntime.SystemCommandInput{

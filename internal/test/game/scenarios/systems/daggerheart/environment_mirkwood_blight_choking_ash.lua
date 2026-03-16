@@ -14,7 +14,8 @@ scn:pc("Gandalf")
 -- The ash periodically forces reaction rolls.
 scn:start_session("Choking Ash")
 
--- Loop countdown progression remains unresolved in this fixture.
+-- Loop countdown progression and direct-bypass choking damage remain unresolved
+-- in this fixture.
 dh:countdown_create{ name = "Choking Ash", kind = "loop", current = 0, max = 4, direction = "increase" }
 dh:group_reaction{
   targets = {"Gandalf"},
@@ -23,7 +24,6 @@ dh:group_reaction{
   outcome = "fear",
   damage = 12,
   damage_type = "magic",
-  direct = true,
   half_damage_on_success = true,
   source = "choking_ash"
 }

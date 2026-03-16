@@ -54,13 +54,13 @@ func TestValidateRestTakePayload_Branches(t *testing.T) {
 	if err := validateRestTakePayload(json.RawMessage(`{"rest_type":" "}`)); err == nil {
 		t.Fatal("expected missing rest_type error")
 	}
-	if err := validateRestTakePayload(json.RawMessage(`{"rest_type":"short","long_term_countdown":{"countdown_id":"","before":1,"after":2}}`)); err == nil {
-		t.Fatal("expected invalid long_term_countdown error")
+	if err := validateRestTakePayload(json.RawMessage(`{"rest_type":"short","participants":["char-1"],"countdown_updates":[{"countdown_id":"","before":1,"after":2}]}`)); err == nil {
+		t.Fatal("expected invalid countdown_updates error")
 	}
 	if err := validateRestTakePayload(json.RawMessage(`{"rest_type":"short","gm_fear_before":1,"gm_fear_after":1,"short_rests_before":1,"short_rests_after":1}`)); err == nil {
-		t.Fatal("expected no-mutation error")
+		t.Fatal("expected participants required error")
 	}
-	if err := validateRestTakePayload(json.RawMessage(`{"rest_type":"short","gm_fear_before":1,"gm_fear_after":2}`)); err != nil {
+	if err := validateRestTakePayload(json.RawMessage(`{"rest_type":"short","participants":["char-1"],"gm_fear_before":1,"gm_fear_after":2}`)); err != nil {
 		t.Fatalf("expected valid payload, got: %v", err)
 	}
 }
@@ -80,12 +80,68 @@ func TestValidateCharacterTemporaryArmorApplyPayload_Branches(t *testing.T) {
 	}
 }
 
+func TestValidateDowntimeMoveAppliedPayload_Branches(t *testing.T) {
+	if err := validateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":" ","move":"prepare","hope_after":2}`)); err == nil {
+		t.Fatal("expected missing actor_character_id error")
+	}
+	if err := validateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","move":" "}`)); err == nil {
+		t.Fatal("expected missing move error")
+	}
+	if err := validateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","move":"prepare"}`)); err == nil {
+		t.Fatal("expected target-or-countdown error")
+	}
+	if err := validateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","target_character_id":"char-1","move":"prepare"}`)); err == nil {
+		t.Fatal("expected missing state change error")
+	}
+	if err := validateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","target_character_id":"char-1","move":"prepare","hope_after":3}`)); err != nil {
+		t.Fatalf("expected valid target state change payload, got: %v", err)
+	}
+	if err := validateDowntimeMoveAppliedPayload(json.RawMessage(`{"actor_character_id":"char-1","move":"work_on_project","countdown_id":"cd-1"}`)); err != nil {
+		t.Fatalf("expected valid countdown-only payload, got: %v", err)
+	}
+}
+
+func TestValidateGMMoveTarget_Branches(t *testing.T) {
+	if err := validateGMMoveTarget(GMMoveTarget{Type: "mystery"}); err == nil {
+		t.Fatal("expected unsupported target type error")
+	}
+	if err := validateGMMoveTarget(GMMoveTarget{Type: GMMoveTargetTypeDirectMove, Kind: "interrupt_and_move", Shape: "custom"}); err == nil {
+		t.Fatal("expected custom move description error")
+	}
+	if err := validateGMMoveTarget(GMMoveTarget{Type: GMMoveTargetTypeAdversaryFeature, FeatureID: "fear-feature"}); err == nil {
+		t.Fatal("expected missing adversary_id error")
+	}
+	if err := validateGMMoveTarget(GMMoveTarget{Type: GMMoveTargetTypeEnvironmentFeature, EnvironmentID: "env-1"}); err == nil {
+		t.Fatal("expected missing environment feature_id error")
+	}
+	if err := validateGMMoveTarget(GMMoveTarget{Type: GMMoveTargetTypeAdversaryExperience, AdversaryID: "adv-1"}); err == nil {
+		t.Fatal("expected missing experience_name error")
+	}
+	if err := validateGMMoveTarget(GMMoveTarget{
+		Type:        GMMoveTargetTypeDirectMove,
+		Kind:        GMMoveKindInterruptAndMove,
+		Shape:       GMMoveShapeRevealDanger,
+		Description: "The bridge starts collapsing.",
+	}); err != nil {
+		t.Fatalf("expected valid direct move target, got: %v", err)
+	}
+}
+
 func TestValidateDomainCardAcquirePayload_CardLevel(t *testing.T) {
+	if err := validateDomainCardAcquirePayload(json.RawMessage(`{"character_id":" ","card_id":"card-1","card_level":1,"destination":"vault"}`)); err == nil {
+		t.Fatal("expected missing character_id error")
+	}
+	if err := validateDomainCardAcquirePayload(json.RawMessage(`{"character_id":"char-1","card_id":" ","card_level":1,"destination":"vault"}`)); err == nil {
+		t.Fatal("expected missing card_id error")
+	}
 	if err := validateDomainCardAcquirePayload(json.RawMessage(`{"character_id":"char-1","card_id":"card-1","card_level":0,"destination":"vault"}`)); err == nil {
 		t.Fatal("expected card_level < 1 error")
 	}
 	if err := validateDomainCardAcquirePayload(json.RawMessage(`{"character_id":"char-1","card_id":"card-1","card_level":-1,"destination":"vault"}`)); err == nil {
 		t.Fatal("expected card_level negative error")
+	}
+	if err := validateDomainCardAcquirePayload(json.RawMessage(`{"character_id":"char-1","card_id":"card-1","card_level":1,"destination":"stash"}`)); err == nil {
+		t.Fatal("expected invalid destination error")
 	}
 	if err := validateDomainCardAcquirePayload(json.RawMessage(`{"character_id":"char-1","card_id":"card-1","card_level":1,"destination":"vault"}`)); err != nil {
 		t.Fatalf("expected valid payload, got: %v", err)
@@ -164,6 +220,12 @@ func TestValidateEquipmentSwapPayload_Branches(t *testing.T) {
 }
 
 func TestValidateConsumablePayloads_Branches(t *testing.T) {
+	if err := validateConsumableUsePayload(json.RawMessage(`{"character_id":" ","consumable_id":"p1","quantity_before":2,"quantity_after":1}`)); err == nil {
+		t.Fatal("expected use missing character_id error")
+	}
+	if err := validateConsumableUsePayload(json.RawMessage(`{"character_id":"char-1","consumable_id":" ","quantity_before":2,"quantity_after":1}`)); err == nil {
+		t.Fatal("expected use missing consumable_id error")
+	}
 	// Use: quantity_before must be positive.
 	if err := validateConsumableUsePayload(json.RawMessage(`{"character_id":"char-1","consumable_id":"p1","quantity_before":0,"quantity_after":-1}`)); err == nil {
 		t.Fatal("expected use quantity_before positive error")
@@ -175,6 +237,13 @@ func TestValidateConsumablePayloads_Branches(t *testing.T) {
 	// Use: valid.
 	if err := validateConsumableUsePayload(json.RawMessage(`{"character_id":"char-1","consumable_id":"p1","quantity_before":2,"quantity_after":1}`)); err != nil {
 		t.Fatalf("expected valid use payload, got: %v", err)
+	}
+	// Acquire: missing character_id / consumable_id.
+	if err := validateConsumableAcquirePayload(json.RawMessage(`{"character_id":" ","consumable_id":"p1","quantity_before":1,"quantity_after":2}`)); err == nil {
+		t.Fatal("expected acquire missing character_id error")
+	}
+	if err := validateConsumableAcquirePayload(json.RawMessage(`{"character_id":"char-1","consumable_id":" ","quantity_before":1,"quantity_after":2}`)); err == nil {
+		t.Fatal("expected acquire missing consumable_id error")
 	}
 	// Acquire: quantity_after out of range.
 	if err := validateConsumableAcquirePayload(json.RawMessage(`{"character_id":"char-1","consumable_id":"p1","quantity_before":5,"quantity_after":6}`)); err == nil {
@@ -209,10 +278,31 @@ func TestValidateAdversaryCreateUpdatePayload_Branches(t *testing.T) {
 	if err := validateAdversaryCreatePayload(json.RawMessage(`{"adversary_id":" ","name":"Goblin"}`)); err == nil {
 		t.Fatal("expected missing adversary_id error")
 	}
+	if err := validateAdversaryCreatePayload(json.RawMessage(`{"adversary_id":"adv-1","adversary_entry_id":" ","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`)); err == nil {
+		t.Fatal("expected missing adversary_entry_id error")
+	}
 	if err := validateAdversaryCreatePayload(json.RawMessage(`{"adversary_id":"adv-1","name":" "}`)); err == nil {
 		t.Fatal("expected missing name error")
 	}
+	if err := validateAdversaryCreatePayload(json.RawMessage(`{"adversary_id":"adv-1","adversary_entry_id":"entry-1","name":"Goblin","session_id":" ","scene_id":"scene-1"}`)); err == nil {
+		t.Fatal("expected missing session_id error")
+	}
+	if err := validateAdversaryCreatePayload(json.RawMessage(`{"adversary_id":"adv-1","adversary_entry_id":"entry-1","name":"Goblin","session_id":"sess-1","scene_id":" "}`)); err == nil {
+		t.Fatal("expected missing scene_id error")
+	}
+	if err := validateAdversaryCreatePayload(json.RawMessage(`{"adversary_id":"adv-1","adversary_entry_id":"entry-1","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`)); err != nil {
+		t.Fatalf("expected valid create payload, got: %v", err)
+	}
 	if err := validateAdversaryUpdatePayload(json.RawMessage(`{"adversary_id":"adv-1","name":" "}`)); err == nil {
 		t.Fatal("expected update missing name error")
+	}
+	if err := validateAdversaryUpdatePayload(json.RawMessage(`{"adversary_id":"adv-1","adversary_entry_id":"entry-1","name":"Goblin","session_id":"sess-1","scene_id":"scene-1"}`)); err != nil {
+		t.Fatalf("expected valid update payload, got: %v", err)
+	}
+	if err := validateAdversaryDeletePayload(json.RawMessage(`{"adversary_id":" "}`)); err == nil {
+		t.Fatal("expected delete missing adversary_id error")
+	}
+	if err := validateAdversaryDeletePayload(json.RawMessage(`{"adversary_id":"adv-1"}`)); err != nil {
+		t.Fatalf("expected valid delete payload, got: %v", err)
 	}
 }

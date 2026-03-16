@@ -12,6 +12,40 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
+func standardProjectionConditions(codes ...string) []projectionstore.DaggerheartConditionState {
+	result := make([]projectionstore.DaggerheartConditionState, 0, len(codes))
+	for _, code := range codes {
+		result = append(result, projectionstore.DaggerheartConditionState{
+			ID:       code,
+			Class:    "standard",
+			Standard: code,
+			Code:     code,
+			Label:    code,
+		})
+	}
+	return result
+}
+
+func projectionConditionsEqual(got, want []projectionstore.DaggerheartConditionState) bool {
+	return daggerheart.ConditionStatesEqual(projectionToDomainConditions(got), projectionToDomainConditions(want))
+}
+
+func projectionToDomainConditions(states []projectionstore.DaggerheartConditionState) []daggerheart.ConditionState {
+	result := make([]daggerheart.ConditionState, 0, len(states))
+	for _, state := range states {
+		result = append(result, daggerheart.ConditionState{
+			ID:       state.ID,
+			Class:    daggerheart.ConditionClass(state.Class),
+			Standard: state.Standard,
+			Code:     state.Code,
+			Label:    state.Label,
+			Source:   state.Source,
+			SourceID: state.SourceID,
+		})
+	}
+	return result
+}
+
 func TestDaggerheartCharacterProfilePutGet(t *testing.T) {
 	store := openTestStore(t)
 	now := time.Date(2026, 2, 3, 11, 0, 0, 0, time.UTC)
@@ -34,10 +68,15 @@ func TestDaggerheartCharacterProfilePutGet(t *testing.T) {
 			{Name: "Stealth", Modifier: 2},
 			{Name: "Perception", Modifier: 1},
 		},
-		ClassID:              "class.guardian",
-		SubclassID:           "subclass.stalwart",
-		AncestryID:           "heritage.clank",
-		CommunityID:          "heritage.farmer",
+		ClassID:    "class.guardian",
+		SubclassID: "subclass.stalwart",
+		Heritage: projectionstore.DaggerheartHeritageSelection{
+			FirstFeatureAncestryID:  "heritage.clank",
+			FirstFeatureID:          "heritage.clank.feature-1",
+			SecondFeatureAncestryID: "heritage.clank",
+			SecondFeatureID:         "heritage.clank.feature-2",
+			CommunityID:             "heritage.farmer",
+		},
 		TraitsAssigned:       true,
 		DetailsRecorded:      true,
 		StartingWeaponIDs:    []string{"weapon.longsword", "weapon.dagger"},
@@ -91,8 +130,8 @@ func TestDaggerheartCharacterProfilePutGet(t *testing.T) {
 	if got.ClassID != expected.ClassID || got.SubclassID != expected.SubclassID {
 		t.Fatalf("expected class and subclass ids to match")
 	}
-	if got.AncestryID != expected.AncestryID || got.CommunityID != expected.CommunityID {
-		t.Fatalf("expected ancestry and community ids to match")
+	if got.Heritage != expected.Heritage {
+		t.Fatalf("expected heritage to match: got %+v want %+v", got.Heritage, expected.Heritage)
 	}
 	if got.TraitsAssigned != expected.TraitsAssigned {
 		t.Fatalf("expected traits_assigned to match")
@@ -170,7 +209,7 @@ func TestDaggerheartCharacterStatePutGet(t *testing.T) {
 		HopeMax:     6,
 		Stress:      3,
 		Armor:       2,
-		Conditions:  []string{"blinded", "poisoned"},
+		Conditions:  standardProjectionConditions("blinded", "poisoned"),
 		LifeState:   "alive",
 	}
 
@@ -201,7 +240,7 @@ func TestDaggerheartCharacterStatePutGet(t *testing.T) {
 	if got.LifeState != expected.LifeState {
 		t.Fatalf("expected life state %q, got %q", expected.LifeState, got.LifeState)
 	}
-	if len(got.Conditions) != 2 || got.Conditions[0] != "blinded" || got.Conditions[1] != "poisoned" {
+	if !projectionConditionsEqual(got.Conditions, expected.Conditions) {
 		t.Fatalf("expected conditions [blinded, poisoned], got %v", got.Conditions)
 	}
 }
@@ -379,23 +418,25 @@ func TestDaggerheartAdversaryLifecycle(t *testing.T) {
 	seedCampaign(t, store, "camp-adv", now)
 
 	expected := projectionstore.DaggerheartAdversary{
-		CampaignID:  "camp-adv",
-		AdversaryID: "adv-1",
-		Name:        "Shadow Drake",
-		Kind:        "solo",
-		SessionID:   "sess-1",
-		Notes:       "Dangerous",
-		HP:          20,
-		HPMax:       20,
-		Stress:      0,
-		StressMax:   8,
-		Evasion:     12,
-		Major:       8,
-		Severe:      15,
-		Armor:       3,
-		Conditions:  []string{"hidden", "vulnerable"},
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		CampaignID:       "camp-adv",
+		AdversaryID:      "adv-1",
+		AdversaryEntryID: "adversary.shadow-drake",
+		Name:             "Shadow Drake",
+		Kind:             "solo",
+		SessionID:        "sess-1",
+		SceneID:          "scene-1",
+		Notes:            "Dangerous",
+		HP:               20,
+		HPMax:            20,
+		Stress:           0,
+		StressMax:        8,
+		Evasion:          12,
+		Major:            8,
+		Severe:           15,
+		Armor:            3,
+		Conditions:       standardProjectionConditions("hidden", "vulnerable"),
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 
 	if err := store.PutDaggerheartAdversary(context.Background(), expected); err != nil {
@@ -409,8 +450,14 @@ func TestDaggerheartAdversaryLifecycle(t *testing.T) {
 	if got.Name != expected.Name || got.Kind != expected.Kind {
 		t.Fatalf("expected name/kind to match")
 	}
+	if got.AdversaryEntryID != expected.AdversaryEntryID {
+		t.Fatalf("expected adversary entry id %q, got %q", expected.AdversaryEntryID, got.AdversaryEntryID)
+	}
 	if got.SessionID != expected.SessionID {
 		t.Fatalf("expected session id %q, got %q", expected.SessionID, got.SessionID)
+	}
+	if got.SceneID != expected.SceneID {
+		t.Fatalf("expected scene id %q, got %q", expected.SceneID, got.SceneID)
 	}
 	if got.HP != expected.HP || got.HPMax != expected.HPMax {
 		t.Fatalf("expected hp to match")
@@ -424,20 +471,24 @@ func TestDaggerheartAdversaryLifecycle(t *testing.T) {
 	if got.Armor != expected.Armor {
 		t.Fatalf("expected armor to match")
 	}
-	if !daggerheart.ConditionsEqual(got.Conditions, expected.Conditions) {
+	if !projectionConditionsEqual(got.Conditions, expected.Conditions) {
 		t.Fatalf("expected conditions to match")
 	}
 
-	// Adversary without session (nullable SessionID)
+	// A second adversary in a different session should still list at campaign
+	// scope while remaining absent from the first session filter.
 	adv2 := projectionstore.DaggerheartAdversary{
-		CampaignID:  "camp-adv",
-		AdversaryID: "adv-2",
-		Name:        "Goblin Scout",
-		Kind:        "minion",
-		HP:          4,
-		HPMax:       4,
-		CreatedAt:   now,
-		UpdatedAt:   now,
+		CampaignID:       "camp-adv",
+		AdversaryID:      "adv-2",
+		AdversaryEntryID: "adversary.goblin-scout",
+		Name:             "Goblin Scout",
+		Kind:             "minion",
+		SessionID:        "sess-2",
+		SceneID:          "scene-2",
+		HP:               4,
+		HPMax:            4,
+		CreatedAt:        now,
+		UpdatedAt:        now,
 	}
 	if err := store.PutDaggerheartAdversary(context.Background(), adv2); err != nil {
 		t.Fatalf("put adversary 2: %v", err)

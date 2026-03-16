@@ -3,6 +3,7 @@ syntax = "proto3";
 package systems.daggerheart.v1;
 
 import "common/v1/rng.proto";
+import "google/protobuf/empty.proto";
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/wrappers.proto";
 import "systems/daggerheart/v1/mechanics.proto";
@@ -41,9 +42,6 @@ service DaggerheartService {
   // Apply a rest outcome (system-specific).
   rpc ApplyRest(DaggerheartApplyRestRequest) returns (DaggerheartApplyRestResponse);
 
-  // Apply a downtime move (system-specific).
-  rpc ApplyDowntimeMove(DaggerheartApplyDowntimeMoveRequest) returns (DaggerheartApplyDowntimeMoveResponse);
-
   // Apply temporary armor to a character (system-specific).
   rpc ApplyTemporaryArmor(DaggerheartApplyTemporaryArmorRequest) returns (DaggerheartApplyTemporaryArmorResponse);
 
@@ -61,6 +59,7 @@ service DaggerheartService {
 
   // Apply a GM move (system-specific).
   rpc ApplyGmMove(DaggerheartApplyGmMoveRequest) returns (DaggerheartApplyGmMoveResponse);
+  rpc ApplyAdversaryFeature(DaggerheartApplyAdversaryFeatureRequest) returns (DaggerheartApplyAdversaryFeatureResponse);
 
   // Create a countdown (system-specific).
   rpc CreateCountdown(DaggerheartCreateCountdownRequest) returns (DaggerheartCreateCountdownResponse);
@@ -85,6 +84,21 @@ service DaggerheartService {
 
   // List adversaries (system-specific).
   rpc ListAdversaries(DaggerheartListAdversariesRequest) returns (DaggerheartListAdversariesResponse);
+
+  // Create an instantiated environment entity (system-specific).
+  rpc CreateEnvironmentEntity(DaggerheartCreateEnvironmentEntityRequest) returns (DaggerheartCreateEnvironmentEntityResponse);
+
+  // Update an instantiated environment entity (system-specific).
+  rpc UpdateEnvironmentEntity(DaggerheartUpdateEnvironmentEntityRequest) returns (DaggerheartUpdateEnvironmentEntityResponse);
+
+  // Delete an instantiated environment entity (system-specific).
+  rpc DeleteEnvironmentEntity(DaggerheartDeleteEnvironmentEntityRequest) returns (DaggerheartDeleteEnvironmentEntityResponse);
+
+  // Get an instantiated environment entity (system-specific).
+  rpc GetEnvironmentEntity(DaggerheartGetEnvironmentEntityRequest) returns (DaggerheartGetEnvironmentEntityResponse);
+
+  // List instantiated environment entities (system-specific).
+  rpc ListEnvironmentEntities(DaggerheartListEnvironmentEntitiesRequest) returns (DaggerheartListEnvironmentEntitiesResponse);
 
   // Resolve a Blaze of Glory finale (system-specific).
   rpc ResolveBlazeOfGlory(DaggerheartResolveBlazeOfGloryRequest) returns (DaggerheartResolveBlazeOfGloryResponse);
@@ -131,6 +145,14 @@ service DaggerheartService {
   // Apply a level-up to a character (progression).
   rpc ApplyLevelUp(DaggerheartApplyLevelUpRequest) returns (DaggerheartApplyLevelUpResponse);
 
+  // Apply a class feature activation or stateful class choice.
+  rpc ApplyClassFeature(DaggerheartApplyClassFeatureRequest) returns (DaggerheartApplyClassFeatureResponse);
+  rpc ApplySubclassFeature(DaggerheartApplySubclassFeatureRequest) returns (DaggerheartApplySubclassFeatureResponse);
+  rpc TransformBeastform(DaggerheartTransformBeastformRequest) returns (DaggerheartTransformBeastformResponse);
+  rpc DropBeastform(DaggerheartDropBeastformRequest) returns (DaggerheartDropBeastformResponse);
+  rpc BeginCompanionExperience(DaggerheartBeginCompanionExperienceRequest) returns (DaggerheartBeginCompanionExperienceResponse);
+  rpc ReturnCompanion(DaggerheartReturnCompanionRequest) returns (DaggerheartReturnCompanionResponse);
+
   // Update a character's gold denominations (inventory).
   rpc UpdateGold(DaggerheartUpdateGoldRequest) returns (DaggerheartUpdateGoldResponse);
 
@@ -154,6 +176,7 @@ message DaggerheartApplyDamageRequest {
   optional uint64 roll_seq = 4;
   bool require_damage_roll = 5;
   string scene_id = 6;
+  DaggerheartDamageArmorReaction armor_reaction = 7;
 }
 
 message DaggerheartApplyDamageResponse {
@@ -177,8 +200,7 @@ message DaggerheartApplyAdversaryDamageResponse {
 
 message DaggerheartApplyRestRequest {
   string campaign_id = 1;
-  repeated string character_ids = 2;
-  DaggerheartRestRequest rest = 3;
+  DaggerheartRestRequest rest = 2;
 }
 
 message DaggerheartCharacterStateEntry {
@@ -189,17 +211,7 @@ message DaggerheartCharacterStateEntry {
 message DaggerheartApplyRestResponse {
   DaggerheartSnapshot snapshot = 1;
   repeated DaggerheartCharacterStateEntry character_states = 2;
-}
-
-message DaggerheartApplyDowntimeMoveRequest {
-  string campaign_id = 1;
-  string character_id = 2;
-  DaggerheartDowntimeRequest move = 3;
-}
-
-message DaggerheartApplyDowntimeMoveResponse {
-  string character_id = 1;
-  DaggerheartCharacterState state = 2;
+  repeated DaggerheartCountdown countdowns = 3;
 }
 
 message DaggerheartTemporaryArmor {
@@ -262,8 +274,8 @@ message DaggerheartApplyDeathMoveResponse {
 message DaggerheartApplyConditionsRequest {
   string campaign_id = 1;
   string character_id = 2;
-  repeated DaggerheartCondition add = 3;
-  repeated DaggerheartCondition remove = 4;
+  repeated DaggerheartConditionState add_conditions = 3;
+  repeated string remove_condition_ids = 4;
   DaggerheartLifeState life_state = 5;
   string source = 6;
   optional uint64 roll_seq = 7;
@@ -273,15 +285,15 @@ message DaggerheartApplyConditionsRequest {
 message DaggerheartApplyConditionsResponse {
   string character_id = 1;
   DaggerheartCharacterState state = 2;
-  repeated DaggerheartCondition added = 3;
-  repeated DaggerheartCondition removed = 4;
+  repeated DaggerheartConditionState added_conditions = 3;
+  repeated DaggerheartConditionState removed_conditions = 4;
 }
 
 message DaggerheartApplyAdversaryConditionsRequest {
   string campaign_id = 1;
   string adversary_id = 2;
-  repeated DaggerheartCondition add = 3;
-  repeated DaggerheartCondition remove = 4;
+  repeated DaggerheartConditionState add_conditions = 3;
+  repeated string remove_condition_ids = 4;
   string source = 5;
   optional uint64 roll_seq = 6;
   string scene_id = 7;
@@ -290,24 +302,84 @@ message DaggerheartApplyAdversaryConditionsRequest {
 message DaggerheartApplyAdversaryConditionsResponse {
   string adversary_id = 1;
   DaggerheartAdversary adversary = 2;
-  repeated DaggerheartCondition added = 3;
-  repeated DaggerheartCondition removed = 4;
+  repeated DaggerheartConditionState added_conditions = 3;
+  repeated DaggerheartConditionState removed_conditions = 4;
+}
+
+enum DaggerheartGmMoveKind {
+  DAGGERHEART_GM_MOVE_KIND_UNSPECIFIED = 0;
+  DAGGERHEART_GM_MOVE_KIND_INTERRUPT_AND_MOVE = 1;
+  DAGGERHEART_GM_MOVE_KIND_ADDITIONAL_MOVE = 2;
+}
+
+enum DaggerheartGmMoveShape {
+  DAGGERHEART_GM_MOVE_SHAPE_UNSPECIFIED = 0;
+  DAGGERHEART_GM_MOVE_SHAPE_SHOW_WORLD_REACTION = 1;
+  DAGGERHEART_GM_MOVE_SHAPE_REVEAL_DANGER = 2;
+  DAGGERHEART_GM_MOVE_SHAPE_FORCE_SPLIT = 3;
+  DAGGERHEART_GM_MOVE_SHAPE_MARK_STRESS = 4;
+  DAGGERHEART_GM_MOVE_SHAPE_SHIFT_ENVIRONMENT = 5;
+  DAGGERHEART_GM_MOVE_SHAPE_SPOTLIGHT_ADVERSARY = 6;
+  DAGGERHEART_GM_MOVE_SHAPE_CAPTURE_IMPORTANT_TARGET = 7;
+  DAGGERHEART_GM_MOVE_SHAPE_CUSTOM = 8;
+}
+
+message DaggerheartDirectGmMoveTarget {
+  DaggerheartGmMoveKind kind = 1;
+  DaggerheartGmMoveShape shape = 2;
+  string description = 3;
+  string adversary_id = 4;
+}
+
+message DaggerheartAdversaryFearFeatureTarget {
+  string adversary_id = 1;
+  string feature_id = 2;
+  string description = 3;
+}
+
+message DaggerheartEnvironmentFearFeatureTarget {
+  string environment_entity_id = 1;
+  string feature_id = 2;
+  string description = 3;
+}
+
+message DaggerheartAdversaryExperienceTarget {
+  string adversary_id = 1;
+  string experience_name = 2;
+  string description = 3;
 }
 
 message DaggerheartApplyGmMoveRequest {
   string campaign_id = 1;
   string session_id = 2;
-  string move = 3;
-  string description = 4;
-  int32 fear_spent = 5;
-  string source = 6;
-  string scene_id = 7;
+  int32 fear_spent = 3;
+  string scene_id = 4;
+  oneof spend_target {
+    DaggerheartDirectGmMoveTarget direct_move = 5;
+    DaggerheartAdversaryFearFeatureTarget adversary_feature = 6;
+    DaggerheartEnvironmentFearFeatureTarget environment_feature = 7;
+    DaggerheartAdversaryExperienceTarget adversary_experience = 8;
+  }
 }
 
 message DaggerheartApplyGmMoveResponse {
   string campaign_id = 1;
   int32 gm_fear_before = 2;
   int32 gm_fear_after = 3;
+}
+
+message DaggerheartApplyAdversaryFeatureRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string adversary_id = 3;
+  string feature_id = 4;
+  string scene_id = 5;
+  string target_character_id = 6;
+  string target_adversary_id = 7;
+}
+
+message DaggerheartApplyAdversaryFeatureResponse {
+  DaggerheartAdversary adversary = 1;
 }
 
 enum DaggerheartCountdownKind {
@@ -381,38 +453,35 @@ message DaggerheartDeleteCountdownResponse {
 message DaggerheartAdversary {
   string id = 1;
   string campaign_id = 2;
-  string name = 3;
-  string kind = 4;
-  google.protobuf.StringValue session_id = 5;
-  string notes = 6;
-  int32 hp = 7;
-  int32 hp_max = 8;
-  int32 stress = 9;
-  int32 stress_max = 10;
-  int32 evasion = 11;
-  int32 major_threshold = 12;
-  int32 severe_threshold = 13;
-  int32 armor = 14;
-  repeated DaggerheartCondition conditions = 15;
-  google.protobuf.Timestamp created_at = 16;
-  google.protobuf.Timestamp updated_at = 17;
+  string adversary_entry_id = 3;
+  string name = 4;
+  string kind = 5;
+  string session_id = 6;
+  string scene_id = 7;
+  string notes = 8;
+  int32 hp = 9;
+  int32 hp_max = 10;
+  int32 stress = 11;
+  int32 stress_max = 12;
+  int32 evasion = 13;
+  int32 major_threshold = 14;
+  int32 severe_threshold = 15;
+  int32 armor = 16;
+  repeated DaggerheartConditionState condition_states = 17;
+  string spotlight_gate_id = 18;
+  int32 spotlight_count = 19;
+  google.protobuf.Timestamp created_at = 20;
+  google.protobuf.Timestamp updated_at = 21;
+  repeated DaggerheartAdversaryFeatureState feature_states = 22;
+  DaggerheartAdversaryPendingExperience pending_experience = 23;
 }
 
 message DaggerheartCreateAdversaryRequest {
   string campaign_id = 1;
-  string name = 2;
-  string kind = 3;
-  google.protobuf.StringValue session_id = 4;
+  string session_id = 2;
+  string scene_id = 3;
+  string adversary_entry_id = 4;
   string notes = 5;
-  google.protobuf.Int32Value hp = 6;
-  google.protobuf.Int32Value hp_max = 7;
-  google.protobuf.Int32Value stress = 8;
-  google.protobuf.Int32Value stress_max = 9;
-  google.protobuf.Int32Value evasion = 10;
-  google.protobuf.Int32Value major_threshold = 11;
-  google.protobuf.Int32Value severe_threshold = 12;
-  google.protobuf.Int32Value armor = 13;
-  string scene_id = 14;
 }
 
 message DaggerheartCreateAdversaryResponse {
@@ -422,19 +491,8 @@ message DaggerheartCreateAdversaryResponse {
 message DaggerheartUpdateAdversaryRequest {
   string campaign_id = 1;
   string adversary_id = 2;
-  google.protobuf.StringValue name = 3;
-  google.protobuf.StringValue kind = 4;
-  google.protobuf.StringValue session_id = 5;
-  google.protobuf.StringValue notes = 6;
-  google.protobuf.Int32Value hp = 7;
-  google.protobuf.Int32Value hp_max = 8;
-  google.protobuf.Int32Value stress = 9;
-  google.protobuf.Int32Value stress_max = 10;
-  google.protobuf.Int32Value evasion = 11;
-  google.protobuf.Int32Value major_threshold = 12;
-  google.protobuf.Int32Value severe_threshold = 13;
-  google.protobuf.Int32Value armor = 14;
-  string scene_id = 15;
+  string scene_id = 3;
+  google.protobuf.StringValue notes = 4;
 }
 
 message DaggerheartUpdateAdversaryResponse {
@@ -468,6 +526,76 @@ message DaggerheartListAdversariesRequest {
 
 message DaggerheartListAdversariesResponse {
   repeated DaggerheartAdversary adversaries = 1;
+}
+
+message DaggerheartEnvironmentEntity {
+  string id = 1;
+  string campaign_id = 2;
+  string environment_id = 3;
+  string name = 4;
+  string type = 5;
+  int32 tier = 6;
+  int32 difficulty = 7;
+  string session_id = 8;
+  string scene_id = 9;
+  string notes = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message DaggerheartCreateEnvironmentEntityRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  string scene_id = 3;
+  string environment_id = 4;
+  string notes = 5;
+  google.protobuf.Int32Value difficulty = 6;
+}
+
+message DaggerheartCreateEnvironmentEntityResponse {
+  DaggerheartEnvironmentEntity environment_entity = 1;
+}
+
+message DaggerheartUpdateEnvironmentEntityRequest {
+  string campaign_id = 1;
+  string environment_entity_id = 2;
+  string scene_id = 3;
+  google.protobuf.StringValue notes = 4;
+  google.protobuf.Int32Value difficulty = 5;
+}
+
+message DaggerheartUpdateEnvironmentEntityResponse {
+  DaggerheartEnvironmentEntity environment_entity = 1;
+}
+
+message DaggerheartDeleteEnvironmentEntityRequest {
+  string campaign_id = 1;
+  string environment_entity_id = 2;
+  string reason = 3;
+  string scene_id = 4;
+}
+
+message DaggerheartDeleteEnvironmentEntityResponse {
+  DaggerheartEnvironmentEntity environment_entity = 1;
+}
+
+message DaggerheartGetEnvironmentEntityRequest {
+  string campaign_id = 1;
+  string environment_entity_id = 2;
+}
+
+message DaggerheartGetEnvironmentEntityResponse {
+  DaggerheartEnvironmentEntity environment_entity = 1;
+}
+
+message DaggerheartListEnvironmentEntitiesRequest {
+  string campaign_id = 1;
+  string session_id = 2;
+  google.protobuf.StringValue scene_id = 3;
+}
+
+message DaggerheartListEnvironmentEntitiesResponse {
+  repeated DaggerheartEnvironmentEntity environment_entities = 1;
 }
 
 message DaggerheartResolveBlazeOfGloryRequest {
@@ -665,6 +793,12 @@ message SessionActionRollRequest {
 
   // Optional scene within the session.
   string scene_id = 13;
+
+  // When true, an eligible equipped armor may replace a Hope spend with one base armor slot.
+  bool replace_hope_with_armor = 14;
+
+  // Optional declared context for narrow rules that depend on the kind of action being attempted.
+  ActionRollContext context = 15;
 }
 
 message SessionActionRollResponse {
@@ -728,24 +862,37 @@ message DaggerheartAttackDamageSpec {
   repeated string source_character_ids = 9;
 }
 
+message SessionStandardAttackProfile {
+  string trait = 1;
+  repeated DiceSpec damage_dice = 2;
+  int32 damage_modifier = 3;
+  DaggerheartAttackRange attack_range = 4;
+  bool damage_critical = 5;
+}
+
+message SessionBeastformAttackProfile {}
+
 message SessionAttackFlowRequest {
   string campaign_id = 1;
   string session_id = 2;
   string character_id = 3;
-  string trait = 4;
   int32 difficulty = 5;
   repeated ActionRollModifier modifiers = 6;
   bool underwater = 7;
   string breath_countdown_id = 8;
   string target_id = 9;
-  repeated DiceSpec damage_dice = 10;
-  int32 damage_modifier = 11;
   DaggerheartAttackDamageSpec damage = 12;
   bool require_damage_roll = 13;
-  bool damage_critical = 14;
   common.v1.RngRequest action_rng = 15;
   common.v1.RngRequest damage_rng = 16;
   string scene_id = 17;
+  bool replace_hope_with_armor = 19;
+  bool target_is_adversary = 22;
+  repeated string nearby_adversary_ids = 23;
+  oneof attack_profile {
+    SessionStandardAttackProfile standard_attack = 20;
+    SessionBeastformAttackProfile beastform_attack = 21;
+  }
 }
 
 message SessionAttackFlowResponse {
@@ -754,6 +901,7 @@ message SessionAttackFlowResponse {
   DaggerheartApplyAttackOutcomeResponse attack_outcome = 3;
   SessionDamageRollResponse damage_roll = 4;
   DaggerheartApplyDamageResponse damage_applied = 5;
+  DaggerheartApplyAdversaryDamageResponse adversary_damage_applied = 6;
 }
 
 message SessionReactionFlowRequest {
@@ -767,6 +915,7 @@ message SessionReactionFlowRequest {
   int32 advantage = 8;
   int32 disadvantage = 9;
   string scene_id = 10;
+  bool replace_hope_with_armor = 11;
 }
 
 message SessionReactionFlowResponse {
@@ -779,7 +928,7 @@ message SessionAdversaryAttackRollRequest {
   string campaign_id = 1;
   string session_id = 2;
   string adversary_id = 3;
-  int32 attack_modifier = 4;
+  repeated ActionRollModifier modifiers = 4;
   int32 advantage = 5;
   int32 disadvantage = 6;
   common.v1.RngRequest rng = 7;
@@ -792,7 +941,7 @@ message SessionAdversaryActionCheckRequest {
   string adversary_id = 3;
   int32 difficulty = 4;
   bool dramatic = 5;
-  int32 modifier = 6;
+  repeated ActionRollModifier modifiers = 6;
   common.v1.RngRequest rng = 7;
   string scene_id = 8;
 }
@@ -821,17 +970,18 @@ message SessionAdversaryAttackFlowRequest {
   string adversary_id = 3;
   string target_id = 4;
   int32 difficulty = 5;
-  int32 attack_modifier = 6;
-  int32 advantage = 7;
-  int32 disadvantage = 8;
-  repeated DiceSpec damage_dice = 9;
-  int32 damage_modifier = 10;
-  DaggerheartAttackDamageSpec damage = 11;
-  bool require_damage_roll = 12;
-  bool damage_critical = 13;
-  common.v1.RngRequest attack_rng = 14;
-  common.v1.RngRequest damage_rng = 15;
-  string scene_id = 16;
+  int32 advantage = 6;
+  int32 disadvantage = 7;
+  DaggerheartAttackDamageSpec damage = 8;
+  bool require_damage_roll = 9;
+  bool damage_critical = 10;
+  common.v1.RngRequest attack_rng = 11;
+  common.v1.RngRequest damage_rng = 12;
+  string scene_id = 13;
+  DaggerheartIncomingAttackArmorReaction target_armor_reaction = 14;
+  repeated string target_ids = 15;
+  string feature_id = 16;
+  repeated string contributor_adversary_ids = 17;
 }
 
 message SessionAdversaryAttackFlowResponse {
@@ -839,6 +989,39 @@ message SessionAdversaryAttackFlowResponse {
   DaggerheartApplyAdversaryAttackOutcomeResponse attack_outcome = 2;
   SessionDamageRollResponse damage_roll = 3;
   DaggerheartApplyDamageResponse damage_applied = 4;
+  repeated DaggerheartApplyDamageResponse damage_applications = 5;
+}
+
+enum DaggerheartAttackRange {
+  DAGGERHEART_ATTACK_RANGE_UNSPECIFIED = 0;
+  DAGGERHEART_ATTACK_RANGE_MELEE = 1;
+  DAGGERHEART_ATTACK_RANGE_RANGED = 2;
+}
+
+message DaggerheartShiftingArmorReaction {}
+
+message DaggerheartTimeslowingArmorReaction {
+  common.v1.RngRequest rng = 1;
+}
+
+message DaggerheartIncomingAttackArmorReaction {
+  oneof reaction {
+    DaggerheartShiftingArmorReaction shifting = 1;
+    DaggerheartTimeslowingArmorReaction timeslowing = 2;
+  }
+}
+
+message DaggerheartResilientArmorReaction {
+  common.v1.RngRequest rng = 1;
+}
+
+message DaggerheartImpenetrableArmorReaction {}
+
+message DaggerheartDamageArmorReaction {
+  oneof reaction {
+    DaggerheartResilientArmorReaction resilient = 1;
+    DaggerheartImpenetrableArmorReaction impenetrable = 2;
+  }
 }
 
 message GroupActionSupporter {
@@ -846,6 +1029,7 @@ message GroupActionSupporter {
   string trait = 2;
   repeated ActionRollModifier modifiers = 3;
   common.v1.RngRequest rng = 4;
+  ActionRollContext context = 5;
 }
 
 message GroupActionSupporterRoll {
@@ -864,6 +1048,7 @@ message SessionGroupActionFlowRequest {
   repeated GroupActionSupporter supporters = 7;
   common.v1.RngRequest leader_rng = 8;
   string scene_id = 9;
+  ActionRollContext leader_context = 10;
 }
 
 message SessionGroupActionFlowResponse {
@@ -906,6 +1091,11 @@ enum RollKind {
   ROLL_KIND_REACTION = 2;
 }
 
+enum ActionRollContext {
+  ACTION_ROLL_CONTEXT_UNSPECIFIED = 0;
+  ACTION_ROLL_CONTEXT_MOVE_SILENTLY = 1;
+}
+
 message ApplyRollOutcomeRequest {
   // The session ID to apply the outcome within.
   string session_id = 1;
@@ -919,6 +1109,9 @@ message ApplyRollOutcomeRequest {
 
   // Optional scene within the session.
   string scene_id = 4;
+
+  // When true, treat Hope/Fear duality flavor as swapped for this roll.
+  bool swap_hope_fear = 5;
 }
 
 message ApplyRollOutcomeResponse {
@@ -932,6 +1125,7 @@ message DaggerheartApplyAttackOutcomeRequest {
   uint64 roll_seq = 2;
   repeated string targets = 3;
   string scene_id = 4;
+  bool swap_hope_fear = 5;
 }
 
 message DaggerheartApplyAdversaryAttackOutcomeRequest {
@@ -1002,18 +1196,22 @@ message DaggerheartLevelUpAdvancement {
   string domain_card_id = 3;
   // Level of the gained domain card.
   int32 domain_card_level = 4;
-  // Subclass card to gain.
-  string subclass_card_id = 5;
   // Multiclass details (only if type == "multiclass").
-  DaggerheartLevelUpMulticlass multiclass = 6;
+  DaggerheartLevelUpMulticlass multiclass = 5;
 }
 
 message DaggerheartLevelUpMulticlass {
   string secondary_class_id = 1;
   string secondary_subclass_id = 2;
-  string foundation_card_id = 3;
-  string spellcast_trait = 4;
-  string domain_id = 5;
+  string spellcast_trait = 3;
+  string domain_id = 4;
+}
+
+message DaggerheartLevelUpReward {
+  string type = 1;
+  string domain_card_id = 2;
+  int32 domain_card_level = 3;
+  int32 companion_bonus_choices = 4;
 }
 
 message DaggerheartApplyLevelUpRequest {
@@ -1023,16 +1221,206 @@ message DaggerheartApplyLevelUpRequest {
   int32 level_after = 3;
   // Advancement choices for this level.
   repeated DaggerheartLevelUpAdvancement advancements = 4;
-  // Optional domain card gained at this level.
-  string new_domain_card_id = 5;
-  // Level of the new domain card.
-  int32 new_domain_card_level = 6;
+  // Additional rewards granted by subclass or tier progression.
+  repeated DaggerheartLevelUpReward rewards = 5;
 }
 
 message DaggerheartApplyLevelUpResponse {
   string character_id = 1;
   int32 level = 2;
   int32 tier = 3;
+}
+
+message DaggerheartFrontlineTankFeature {}
+
+message DaggerheartUnstoppableFeature {}
+
+message DaggerheartRallyFeature {
+  repeated string target_character_ids = 1;
+}
+
+message DaggerheartMakeASceneFeature {
+  string target_character_id = 1;
+}
+
+message DaggerheartHuntersFocusFeature {
+  string target_id = 1;
+}
+
+message DaggerheartRoguesDodgeFeature {}
+
+message DaggerheartLifeSupportFeature {
+  string target_character_id = 1;
+}
+
+message DaggerheartNoMercyFeature {}
+
+message DaggerheartStrangePatternsChoice {
+  int32 number = 1;
+}
+
+message DaggerheartApplyClassFeatureRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string session_id = 3;
+  string scene_id = 4;
+  oneof feature {
+    DaggerheartFrontlineTankFeature frontline_tank = 5;
+    DaggerheartRoguesDodgeFeature rogues_dodge = 6;
+    DaggerheartNoMercyFeature no_mercy = 7;
+    DaggerheartStrangePatternsChoice strange_patterns_choice = 8;
+    DaggerheartUnstoppableFeature unstoppable = 9;
+    DaggerheartRallyFeature rally = 10;
+    DaggerheartMakeASceneFeature make_a_scene = 11;
+    DaggerheartHuntersFocusFeature hunters_focus = 12;
+    DaggerheartLifeSupportFeature life_support = 13;
+  }
+}
+
+message DaggerheartApplyClassFeatureResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartGiftedPerformerRequest {
+  string song = 1;
+  repeated string target_character_ids = 2;
+  string target_id = 3;
+  bool target_is_adversary = 4;
+}
+
+message DaggerheartContactsEverywhereRequest {
+  string option = 1;
+}
+
+message DaggerheartSparingTouchRequest {
+  string target_character_id = 1;
+  string clear = 2;
+}
+
+message DaggerheartElementalistRequest {
+  string bonus = 1;
+}
+
+message DaggerheartTranscendenceRequest {
+  repeated string bonuses = 1;
+  string trait = 2;
+}
+
+message DaggerheartStressClearTarget {
+  string character_id = 1;
+  int32 stress_clear = 2;
+}
+
+message DaggerheartClarityOfNatureRequest {
+  repeated DaggerheartStressClearTarget targets = 1;
+}
+
+message DaggerheartRegenerationRequest {
+  string target_character_id = 1;
+  int32 clear_hp = 2;
+}
+
+message DaggerheartWardensProtectionRequest {
+  repeated string target_character_ids = 1;
+}
+
+message DaggerheartElementalIncarnationRequest {
+  string channel = 1;
+}
+
+message DaggerheartRousingSpeechRequest {
+  repeated string target_character_ids = 1;
+}
+
+message DaggerheartNemesisRequest {
+  string adversary_id = 1;
+}
+
+message DaggerheartApplySubclassFeatureRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string session_id = 3;
+  string scene_id = 4;
+  oneof feature {
+    google.protobuf.Empty battle_ritual = 5;
+    DaggerheartGiftedPerformerRequest gifted_performer = 6;
+    DaggerheartContactsEverywhereRequest contacts_everywhere = 7;
+    DaggerheartSparingTouchRequest sparing_touch = 8;
+    DaggerheartElementalistRequest elementalist = 9;
+    DaggerheartTranscendenceRequest transcendence = 10;
+    google.protobuf.Empty vanishing_act = 11;
+    DaggerheartClarityOfNatureRequest clarity_of_nature = 12;
+    DaggerheartRegenerationRequest regeneration = 13;
+    DaggerheartWardensProtectionRequest wardens_protection = 14;
+    DaggerheartElementalIncarnationRequest elemental_incarnation = 15;
+    DaggerheartRousingSpeechRequest rousing_speech = 16;
+    DaggerheartNemesisRequest nemesis = 17;
+  }
+}
+
+message DaggerheartApplySubclassFeatureResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartTransformBeastformRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string session_id = 3;
+  string scene_id = 4;
+  string beastform_id = 5;
+  bool use_evolution = 6;
+  string evolution_trait = 7;
+}
+
+message DaggerheartTransformBeastformResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartDropBeastformRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string session_id = 3;
+  string scene_id = 4;
+}
+
+message DaggerheartDropBeastformResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+enum DaggerheartCompanionReturnResolution {
+  DAGGERHEART_COMPANION_RETURN_RESOLUTION_UNSPECIFIED = 0;
+  DAGGERHEART_COMPANION_RETURN_RESOLUTION_EXPERIENCE_COMPLETED = 1;
+  DAGGERHEART_COMPANION_RETURN_RESOLUTION_EARLY_RETURN = 2;
+}
+
+message DaggerheartBeginCompanionExperienceRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string session_id = 3;
+  string scene_id = 4;
+  string experience_id = 5;
+}
+
+message DaggerheartBeginCompanionExperienceResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
+}
+
+message DaggerheartReturnCompanionRequest {
+  string campaign_id = 1;
+  string character_id = 2;
+  string session_id = 3;
+  string scene_id = 4;
+  DaggerheartCompanionReturnResolution resolution = 5;
+}
+
+message DaggerheartReturnCompanionResponse {
+  string character_id = 1;
+  DaggerheartCharacterState state = 2;
 }
 
 // --- Inventory messages ---

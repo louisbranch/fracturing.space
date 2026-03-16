@@ -84,13 +84,29 @@ func applyStressVulnerableCondition(
 	if len(added) == 0 && len(removed) == 0 {
 		return nil
 	}
+	beforeStates, err := conditionStatesFromCodes(normalized)
+	if err != nil {
+		return grpcerror.Internal("invalid condition set", err)
+	}
+	afterStates, err := conditionStatesFromCodes(after)
+	if err != nil {
+		return grpcerror.Internal("invalid condition set", err)
+	}
+	addedStates, err := conditionStatesFromCodes(added)
+	if err != nil {
+		return grpcerror.Internal("invalid condition set", err)
+	}
+	removedStates, err := conditionStatesFromCodes(removed)
+	if err != nil {
+		return grpcerror.Internal("invalid condition set", err)
+	}
 
 	payload := daggerheart.ConditionChangePayload{
 		CharacterID:      ids.CharacterID(characterID),
-		ConditionsBefore: normalized,
-		ConditionsAfter:  after,
-		Added:            added,
-		Removed:          removed,
+		ConditionsBefore: beforeStates,
+		ConditionsAfter:  afterStates,
+		Added:            addedStates,
+		Removed:          removedStates,
 	}
 	if err := executeDaggerheartConditionChangeCommand(
 		ctx,
@@ -108,4 +124,19 @@ func applyStressVulnerableCondition(
 	}
 
 	return nil
+}
+
+func conditionStatesFromCodes(values []string) ([]daggerheart.ConditionState, error) {
+	if len(values) == 0 {
+		return nil, nil
+	}
+	result := make([]daggerheart.ConditionState, 0, len(values))
+	for _, value := range values {
+		state, err := daggerheart.StandardConditionState(value)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, state)
+	}
+	return result, nil
 }

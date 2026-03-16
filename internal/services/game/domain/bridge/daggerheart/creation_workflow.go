@@ -48,25 +48,29 @@ var creationStepKeys = []string{
 
 // CreationProfile captures Daggerheart-specific character-creation choices.
 type CreationProfile struct {
-	ClassID              string
-	SubclassID           string
-	AncestryID           string
-	CommunityID          string
-	TraitsAssigned       bool
-	Traits               daggerheartprofile.Traits
-	DetailsRecorded      bool
-	Level                int
-	HpMax                int
-	StressMax            int
-	Evasion              int
-	StartingWeaponIDs    []string
-	StartingArmorID      string
-	StartingPotionItemID string
-	Background           string
-	Description          string
-	Experiences          []daggerheartprofile.Experience
-	DomainCardIDs        []string
-	Connections          string
+	ClassID                      string
+	SubclassID                   string
+	SubclassTracks               []CharacterSubclassTrack
+	SubclassCreationRequirements []string
+	Heritage                     CharacterHeritage
+	CompanionSheet               *CharacterCompanionSheet
+	EquippedArmorID              string
+	SpellcastRollBonus           int
+	TraitsAssigned               bool
+	Traits                       daggerheartprofile.Traits
+	DetailsRecorded              bool
+	Level                        int
+	HpMax                        int
+	StressMax                    int
+	Evasion                      int
+	StartingWeaponIDs            []string
+	StartingArmorID              string
+	StartingPotionItemID         string
+	Background                   string
+	Description                  string
+	Experiences                  []daggerheartprofile.Experience
+	DomainCardIDs                []string
+	Connections                  string
 }
 
 // CreationStepProgress represents completion state for one creation step.
@@ -84,8 +88,7 @@ type CreationProgress struct {
 	UnmetReasons []string
 }
 
-// EvaluateCreationProgress evaluates Daggerheart's SRD-aligned 9-step creation
-// workflow.
+// EvaluateCreationProgress evaluates Daggerheart's 9-step creation workflow.
 //
 // Steps complete strictly in order. A later step is not considered complete
 // until all earlier steps are complete, even if its own fields are present.
@@ -103,7 +106,7 @@ func EvaluateCreationProgress(profile CreationProfile) CreationProgress {
 	}
 	reasons := []string{
 		"class and subclass selection is required",
-		"ancestry and community selection are required",
+		"heritage selection is required",
 		"trait assignment must match +2,+1,+1,+0,+0,-1",
 		"starting equipment selection is required",
 		"exactly two experiences are required",
@@ -201,11 +204,17 @@ func EvaluateCreationReadiness(profile CharacterProfile) (bool, string) {
 }
 
 func hasClassAndSubclass(profile CreationProfile) bool {
-	return strings.TrimSpace(profile.ClassID) != "" && strings.TrimSpace(profile.SubclassID) != ""
+	if strings.TrimSpace(profile.ClassID) == "" || strings.TrimSpace(profile.SubclassID) == "" {
+		return false
+	}
+	if requiresCompanionSheet(profile.SubclassCreationRequirements) {
+		return profile.CompanionSheet != nil && profile.CompanionSheet.Validate() == nil
+	}
+	return true
 }
 
 func hasHeritage(profile CreationProfile) bool {
-	return strings.TrimSpace(profile.AncestryID) != "" && strings.TrimSpace(profile.CommunityID) != ""
+	return profile.Heritage != (CharacterHeritage{}) && profile.Heritage.Validate() == nil
 }
 
 func hasTraitAssignment(profile CreationProfile) bool {

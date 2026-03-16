@@ -26,21 +26,23 @@ func TestValidateAdapterIdempotency_Daggerheart(t *testing.T) {
 // memDaggerheartStore is a minimal in-memory implementation of
 // projectionstore.Store sufficient for adapter idempotency testing.
 type memDaggerheartStore struct {
-	mu          sync.Mutex
-	profiles    map[string]projectionstore.DaggerheartCharacterProfile
-	states      map[string]projectionstore.DaggerheartCharacterState
-	snapshots   map[string]projectionstore.DaggerheartSnapshot
-	countdowns  map[string]projectionstore.DaggerheartCountdown
-	adversaries map[string]projectionstore.DaggerheartAdversary
+	mu           sync.Mutex
+	profiles     map[string]projectionstore.DaggerheartCharacterProfile
+	states       map[string]projectionstore.DaggerheartCharacterState
+	snapshots    map[string]projectionstore.DaggerheartSnapshot
+	countdowns   map[string]projectionstore.DaggerheartCountdown
+	adversaries  map[string]projectionstore.DaggerheartAdversary
+	environments map[string]projectionstore.DaggerheartEnvironmentEntity
 }
 
 func newMemDaggerheartStore() *memDaggerheartStore {
 	return &memDaggerheartStore{
-		profiles:    make(map[string]projectionstore.DaggerheartCharacterProfile),
-		states:      make(map[string]projectionstore.DaggerheartCharacterState),
-		snapshots:   make(map[string]projectionstore.DaggerheartSnapshot),
-		countdowns:  make(map[string]projectionstore.DaggerheartCountdown),
-		adversaries: make(map[string]projectionstore.DaggerheartAdversary),
+		profiles:     make(map[string]projectionstore.DaggerheartCharacterProfile),
+		states:       make(map[string]projectionstore.DaggerheartCharacterState),
+		snapshots:    make(map[string]projectionstore.DaggerheartSnapshot),
+		countdowns:   make(map[string]projectionstore.DaggerheartCountdown),
+		adversaries:  make(map[string]projectionstore.DaggerheartAdversary),
+		environments: make(map[string]projectionstore.DaggerheartEnvironmentEntity),
 	}
 }
 
@@ -191,6 +193,50 @@ func (m *memDaggerheartStore) DeleteDaggerheartAdversary(_ context.Context, camp
 	return nil
 }
 
+func (m *memDaggerheartStore) PutDaggerheartEnvironmentEntity(_ context.Context, environmentEntity projectionstore.DaggerheartEnvironmentEntity) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.environments[environmentEntity.CampaignID+"/"+environmentEntity.EnvironmentEntityID] = environmentEntity
+	return nil
+}
+
+func (m *memDaggerheartStore) GetDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	environmentEntity, ok := m.environments[campaignID+"/"+environmentEntityID]
+	if !ok {
+		return projectionstore.DaggerheartEnvironmentEntity{}, storage.ErrNotFound
+	}
+	return environmentEntity, nil
+}
+
+func (m *memDaggerheartStore) ListDaggerheartEnvironmentEntities(_ context.Context, campaignID, sessionID, sceneID string) ([]projectionstore.DaggerheartEnvironmentEntity, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	var result []projectionstore.DaggerheartEnvironmentEntity
+	prefix := campaignID + "/"
+	for key, value := range m.environments {
+		if len(key) <= len(prefix) || key[:len(prefix)] != prefix {
+			continue
+		}
+		if sessionID != "" && value.SessionID != sessionID {
+			continue
+		}
+		if sceneID != "" && value.SceneID != sceneID {
+			continue
+		}
+		result = append(result, value)
+	}
+	return result, nil
+}
+
+func (m *memDaggerheartStore) DeleteDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	delete(m.environments, campaignID+"/"+environmentEntityID)
+	return nil
+}
+
 // Reset clears all stored data between test phases.
 func (m *memDaggerheartStore) Reset() {
 	m.mu.Lock()
@@ -200,6 +246,7 @@ func (m *memDaggerheartStore) Reset() {
 	clear(m.snapshots)
 	clear(m.countdowns)
 	clear(m.adversaries)
+	clear(m.environments)
 }
 
 var _ projectionstore.Store = (*memDaggerheartStore)(nil)

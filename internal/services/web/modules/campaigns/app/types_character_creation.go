@@ -44,12 +44,13 @@ type CatalogClass struct {
 
 // CatalogSubclass stores subclass catalog data used by workflow forms.
 type CatalogSubclass struct {
-	ID             string                `json:"id"`
-	Name           string                `json:"name"`
-	ClassID        string                `json:"classId"`
-	SpellcastTrait string                `json:"spellcastTrait"`
-	Foundation     []CatalogFeature      `json:"foundation"`
-	Illustration   CatalogAssetReference `json:"illustration"`
+	ID                   string                `json:"id"`
+	Name                 string                `json:"name"`
+	ClassID              string                `json:"classId"`
+	SpellcastTrait       string                `json:"spellcastTrait"`
+	CreationRequirements []string              `json:"creationRequirements"`
+	Foundation           []CatalogFeature      `json:"foundation"`
+	Illustration         CatalogAssetReference `json:"illustration"`
 }
 
 // CatalogHeritage stores ancestry/community catalog data.
@@ -131,47 +132,88 @@ type CatalogEnvironment struct {
 
 // CampaignCharacterCreationCatalog stores Daggerheart catalog subsets used by workflow forms.
 type CampaignCharacterCreationCatalog struct {
-	AssetTheme   string               `json:"assetTheme"`
-	Classes      []CatalogClass       `json:"classes"`
-	Subclasses   []CatalogSubclass    `json:"subclasses"`
-	Heritages    []CatalogHeritage    `json:"heritages"`
-	Domains      []CatalogDomain      `json:"domains"`
-	Weapons      []CatalogWeapon      `json:"weapons"`
-	Armor        []CatalogArmor       `json:"armor"`
-	Items        []CatalogItem        `json:"items"`
-	DomainCards  []CatalogDomainCard  `json:"domainCards"`
-	Adversaries  []CatalogAdversary   `json:"adversaries"`
-	Environments []CatalogEnvironment `json:"environments"`
+	AssetTheme           string                       `json:"assetTheme"`
+	Classes              []CatalogClass               `json:"classes"`
+	Subclasses           []CatalogSubclass            `json:"subclasses"`
+	Heritages            []CatalogHeritage            `json:"heritages"`
+	CompanionExperiences []CatalogCompanionExperience `json:"companionExperiences"`
+	Domains              []CatalogDomain              `json:"domains"`
+	Weapons              []CatalogWeapon              `json:"weapons"`
+	Armor                []CatalogArmor               `json:"armor"`
+	Items                []CatalogItem                `json:"items"`
+	DomainCards          []CatalogDomainCard          `json:"domainCards"`
+	Adversaries          []CatalogAdversary           `json:"adversaries"`
+	Environments         []CatalogEnvironment         `json:"environments"`
+}
+
+// CatalogCompanionExperience stores companion experience catalog data used by workflow forms.
+type CatalogCompanionExperience struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
 }
 
 // CampaignCharacterCreationExperience stores one experience name+modifier pair.
 type CampaignCharacterCreationExperience struct {
+	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Modifier string `json:"modifier"`
 }
 
+// CampaignCharacterCreationHeritageSelection stores the structured heritage state.
+type CampaignCharacterCreationHeritageSelection struct {
+	AncestryLabel           string `json:"ancestryLabel"`
+	FirstFeatureAncestryID  string `json:"firstFeatureAncestryId"`
+	FirstFeatureID          string `json:"firstFeatureId"`
+	SecondFeatureAncestryID string `json:"secondFeatureAncestryId"`
+	SecondFeatureID         string `json:"secondFeatureId"`
+	CommunityID             string `json:"communityId"`
+}
+
+// CampaignCharacterCreationCompanionSheet stores the companion sheet returned from profile reads.
+type CampaignCharacterCreationCompanionSheet struct {
+	AnimalKind        string                                `json:"animalKind"`
+	Name              string                                `json:"name"`
+	Evasion           int32                                 `json:"evasion"`
+	Experiences       []CampaignCharacterCreationExperience `json:"experiences"`
+	AttackDescription string                                `json:"attackDescription"`
+	AttackRange       string                                `json:"attackRange"`
+	DamageDieSides    int32                                 `json:"damageDieSides"`
+	DamageType        string                                `json:"damageType"`
+}
+
+// CampaignCharacterCreationCompanionInput stores the editable companion input for creation step 1.
+type CampaignCharacterCreationCompanionInput struct {
+	AnimalKind        string   `json:"animalKind"`
+	Name              string   `json:"name"`
+	ExperienceIDs     []string `json:"experienceIds"`
+	AttackDescription string   `json:"attackDescription"`
+	DamageType        string   `json:"damageType"`
+}
+
 // CampaignCharacterCreationProfile stores selected workflow fields used for filtering options.
 type CampaignCharacterCreationProfile struct {
-	CharacterName     string                                `json:"characterName"`
-	ClassID           string                                `json:"classId"`
-	SubclassID        string                                `json:"subclassId"`
-	AncestryID        string                                `json:"ancestryId"`
-	CommunityID       string                                `json:"communityId"`
-	Agility           string                                `json:"agility"`
-	Strength          string                                `json:"strength"`
-	Finesse           string                                `json:"finesse"`
-	Instinct          string                                `json:"instinct"`
-	Presence          string                                `json:"presence"`
-	Knowledge         string                                `json:"knowledge"`
-	PrimaryWeaponID   string                                `json:"primaryWeaponId"`
-	SecondaryWeaponID string                                `json:"secondaryWeaponId"`
-	ArmorID           string                                `json:"armorId"`
-	PotionItemID      string                                `json:"potionItemId"`
-	Background        string                                `json:"background"`
-	Description       string                                `json:"description"`
-	Experiences       []CampaignCharacterCreationExperience `json:"experiences"`
-	DomainCardIDs     []string                              `json:"domainCardIds"`
-	Connections       string                                `json:"connections"`
+	CharacterName                string                                     `json:"characterName"`
+	ClassID                      string                                     `json:"classId"`
+	SubclassID                   string                                     `json:"subclassId"`
+	SubclassCreationRequirements []string                                   `json:"subclassCreationRequirements"`
+	Heritage                     CampaignCharacterCreationHeritageSelection `json:"heritage"`
+	CompanionSheet               *CampaignCharacterCreationCompanionSheet   `json:"companionSheet,omitempty"`
+	Agility                      string                                     `json:"agility"`
+	Strength                     string                                     `json:"strength"`
+	Finesse                      string                                     `json:"finesse"`
+	Instinct                     string                                     `json:"instinct"`
+	Presence                     string                                     `json:"presence"`
+	Knowledge                    string                                     `json:"knowledge"`
+	PrimaryWeaponID              string                                     `json:"primaryWeaponId"`
+	SecondaryWeaponID            string                                     `json:"secondaryWeaponId"`
+	ArmorID                      string                                     `json:"armorId"`
+	PotionItemID                 string                                     `json:"potionItemId"`
+	Background                   string                                     `json:"background"`
+	Description                  string                                     `json:"description"`
+	Experiences                  []CampaignCharacterCreationExperience      `json:"experiences"`
+	DomainCardIDs                []string                                   `json:"domainCardIds"`
+	Connections                  string                                     `json:"connections"`
 }
 
 // CampaignCharacterCreationStepInput stores one character creation step in domain form.
@@ -189,14 +231,14 @@ type CampaignCharacterCreationStepInput struct {
 
 // CampaignCharacterCreationStepClassSubclass stores class/subclass step input.
 type CampaignCharacterCreationStepClassSubclass struct {
-	ClassID    string `json:"classId"`
-	SubclassID string `json:"subclassId"`
+	ClassID    string                                   `json:"classId"`
+	SubclassID string                                   `json:"subclassId"`
+	Companion  *CampaignCharacterCreationCompanionInput `json:"companion,omitempty"`
 }
 
-// CampaignCharacterCreationStepHeritage stores ancestry/community step input.
+// CampaignCharacterCreationStepHeritage stores structured heritage step input.
 type CampaignCharacterCreationStepHeritage struct {
-	AncestryID  string `json:"ancestryId"`
-	CommunityID string `json:"communityId"`
+	Heritage CampaignCharacterCreationHeritageSelection `json:"heritage"`
 }
 
 // CampaignCharacterCreationStepTraits stores trait allocation step input.

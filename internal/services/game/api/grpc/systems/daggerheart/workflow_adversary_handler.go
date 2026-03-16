@@ -17,6 +17,7 @@ func (s *DaggerheartService) adversaryHandler() *adversarytransport.Handler {
 		Session:     s.stores.Session,
 		Gate:        s.stores.SessionGate,
 		Daggerheart: s.stores.Daggerheart,
+		Content:     s.stores.Content,
 		ExecuteDomainCommand: func(ctx context.Context, in adversarytransport.DomainCommandInput) error {
 			adapter := daggerheart.NewAdapter(s.stores.Daggerheart)
 			_, err := workflowwrite.ExecuteAndApply(ctx, s.stores.Write, adapter, command.Command{

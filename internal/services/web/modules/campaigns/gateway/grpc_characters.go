@@ -172,9 +172,9 @@ func (g characterReadGateway) daggerheartCharacterSummaries(
 
 		className := strings.TrimSpace(classNames[strings.TrimSpace(profileData.GetClassId())])
 		subclassName := strings.TrimSpace(subclassNames[strings.TrimSpace(profileData.GetSubclassId())])
-		ancestryName := strings.TrimSpace(ancestryNames[strings.TrimSpace(profileData.GetAncestryId())])
-		communityName := strings.TrimSpace(communityNames[strings.TrimSpace(profileData.GetCommunityId())])
-		if className == "" || subclassName == "" || ancestryName == "" || communityName == "" {
+		heritageName := daggerheartProfileHeritageName(profileData.GetHeritage(), ancestryNames)
+		communityName := daggerheartProfileCommunityName(profileData.GetHeritage(), communityNames)
+		if className == "" || subclassName == "" || heritageName == "" || communityName == "" {
 			continue
 		}
 
@@ -186,11 +186,43 @@ func (g characterReadGateway) daggerheartCharacterSummaries(
 			Level:         profileData.GetLevel(),
 			ClassName:     className,
 			SubclassName:  subclassName,
-			AncestryName:  ancestryName,
+			HeritageName:  heritageName,
 			CommunityName: communityName,
 		}
 	}
 	return summaries, nil
+}
+
+// daggerheartProfileHeritageName resolves the display heritage label from the stored selection.
+func daggerheartProfileHeritageName(heritage *daggerheartv1.DaggerheartHeritageSelection, ancestryNames map[string]string) string {
+	if heritage == nil {
+		return ""
+	}
+	if label := strings.TrimSpace(heritage.GetAncestryLabel()); label != "" {
+		return label
+	}
+	firstID := strings.TrimSpace(heritage.GetFirstFeatureAncestryId())
+	secondID := strings.TrimSpace(heritage.GetSecondFeatureAncestryId())
+	firstName := strings.TrimSpace(ancestryNames[firstID])
+	secondName := strings.TrimSpace(ancestryNames[secondID])
+	switch {
+	case firstName == "":
+		return ""
+	case secondID == "" || secondID == firstID || secondName == "":
+		return firstName
+	case firstName == secondName:
+		return firstName
+	default:
+		return firstName + " / " + secondName
+	}
+}
+
+// daggerheartProfileCommunityName resolves the stored community display name.
+func daggerheartProfileCommunityName(heritage *daggerheartv1.DaggerheartHeritageSelection, communityNames map[string]string) string {
+	if heritage == nil {
+		return ""
+	}
+	return strings.TrimSpace(communityNames[strings.TrimSpace(heritage.GetCommunityId())])
 }
 
 // daggerheartCharacterCardNameMaps builds the minimal localized lookup tables

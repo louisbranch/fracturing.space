@@ -43,9 +43,7 @@ func TestDeleteAdversary_NotFound(t *testing.T) {
 func TestDeleteAdversary_Success(t *testing.T) {
 	svc := newAdversaryTestService()
 
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-	})
+	createResp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
@@ -73,9 +71,7 @@ func TestDeleteAdversary_UsesDomainEngine(t *testing.T) {
 	engine := &dynamicDomainEngine{store: svc.stores.Event}
 	svc.stores.Write.Executor = engine
 
-	createResp, err := svc.CreateAdversary(context.Background(), &pb.DaggerheartCreateAdversaryRequest{
-		CampaignId: "camp-1", Name: "Goblin",
-	})
+	createResp, err := svc.CreateAdversary(context.Background(), adversaryCreateRequest(testAdversaryEntryGoblinID))
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}

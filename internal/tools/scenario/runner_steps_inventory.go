@@ -3,6 +3,7 @@ package scenario
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
@@ -42,14 +43,12 @@ func (r *Runner) runLevelUpStep(ctx context.Context, state *scenarioState, step 
 			Trait:           optionalString(advMap, "trait", ""),
 			DomainCardId:    optionalString(advMap, "domain_card_id", ""),
 			DomainCardLevel: int32(optionalInt(advMap, "domain_card_level", 0)),
-			SubclassCardId:  optionalString(advMap, "subclass_card_id", ""),
 		}
 		rawMulticlass, _ := advMap["multiclass"].(map[string]any)
 		if rawMulticlass != nil {
 			entry.Multiclass = &daggerheartv1.DaggerheartLevelUpMulticlass{
 				SecondaryClassId:    optionalString(rawMulticlass, "secondary_class_id", ""),
 				SecondarySubclassId: optionalString(rawMulticlass, "secondary_subclass_id", ""),
-				FoundationCardId:    optionalString(rawMulticlass, "foundation_card_id", ""),
 				SpellcastTrait:      optionalString(rawMulticlass, "spellcast_trait", ""),
 				DomainId:            optionalString(rawMulticlass, "domain_id", ""),
 			}
@@ -63,17 +62,198 @@ func (r *Runner) runLevelUpStep(ctx context.Context, state *scenarioState, step 
 	}
 	ctxWithSession := withSessionID(ctx, state.sessionID)
 	_, err = r.env.daggerheartClient.ApplyLevelUp(ctxWithSession, &daggerheartv1.DaggerheartApplyLevelUpRequest{
-		CampaignId:         state.campaignID,
-		CharacterId:        characterID,
-		LevelAfter:         int32(levelAfter),
-		Advancements:       advancements,
-		NewDomainCardId:    optionalString(step.Args, "new_domain_card_id", ""),
-		NewDomainCardLevel: int32(optionalInt(step.Args, "new_domain_card_level", 0)),
+		CampaignId:   state.campaignID,
+		CharacterId:  characterID,
+		LevelAfter:   int32(levelAfter),
+		Advancements: advancements,
 	})
 	if err != nil {
 		return fmt.Errorf("level_up: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeLevelUpApplied)
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeLevelUpApplied); err != nil {
+		return err
+	}
+
+	profile, err := r.getDaggerheartProfile(ctxWithSession, state, characterID)
+	if err != nil {
+		return err
+	}
+	if want := optionalInt(step.Args, "expect_level", 0); want > 0 && int(profile.GetLevel()) != want {
+		return r.assertf("level_up level = %d, want %d", profile.GetLevel(), want)
+	}
+	if want := optionalInt(step.Args, "expect_subclass_track_count", -1); want >= 0 && len(profile.GetSubclassTracks()) != want {
+		return r.assertf("level_up subclass_track_count = %d, want %d", len(profile.GetSubclassTracks()), want)
+	}
+	if want := optionalString(step.Args, "expect_primary_subclass_rank", ""); want != "" {
+		rank, ok := findSubclassTrackRank(profile.GetSubclassTracks(), daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_PRIMARY)
+		if !ok {
+			return r.assertf("level_up missing primary subclass track")
+		}
+		if got := normalizeSubclassTrackRank(rank); got != normalizeScenarioKey(want) {
+			return r.assertf("level_up primary subclass rank = %q, want %q", got, normalizeScenarioKey(want))
+		}
+	}
+	if want := optionalString(step.Args, "expect_multiclass_subclass_id", ""); want != "" {
+		track, ok := findSubclassTrack(profile.GetSubclassTracks(), daggerheartv1.DaggerheartSubclassTrackOrigin_DAGGERHEART_SUBCLASS_TRACK_ORIGIN_MULTICLASS)
+		if !ok {
+			return r.assertf("level_up missing multiclass subclass track")
+		}
+		if track.GetSubclassId() != want {
+			return r.assertf("level_up multiclass subclass_id = %q, want %q", track.GetSubclassId(), want)
+		}
+	}
+	for _, want := range readStringSlice(step.Args, "expect_active_feature_ids") {
+		if !profileHasActiveSubclassFeature(profile, want) {
+			return r.assertf("level_up missing active subclass feature %q", want)
+		}
+	}
+	return nil
+}
+
+func (r *Runner) runClassFeatureStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureCampaign(state); err != nil {
+		return err
+	}
+	name := requiredString(step.Args, "target")
+	if name == "" {
+		return r.failf("class_feature target is required")
+	}
+	feature := normalizeScenarioKey(requiredString(step.Args, "feature"))
+	if feature == "" {
+		return r.failf("class_feature feature is required")
+	}
+	characterID, err := actorID(state, name)
+	if err != nil {
+		return err
+	}
+	expectedSpec, expectedBefore, err := r.captureExpectedDeltas(ctx, state, step.Args, name)
+	if err != nil {
+		return err
+	}
+	before, err := r.latestSeq(ctx, state)
+	if err != nil {
+		return err
+	}
+	req := &daggerheartv1.DaggerheartApplyClassFeatureRequest{
+		CampaignId:  state.campaignID,
+		CharacterId: characterID,
+		SessionId:   state.sessionID,
+		SceneId:     state.activeSceneID,
+	}
+	switch feature {
+	case "frontline_tank":
+		req.Feature = &daggerheartv1.DaggerheartApplyClassFeatureRequest_FrontlineTank{
+			FrontlineTank: &daggerheartv1.DaggerheartFrontlineTankFeature{},
+		}
+	case "rogues_dodge":
+		req.Feature = &daggerheartv1.DaggerheartApplyClassFeatureRequest_RoguesDodge{
+			RoguesDodge: &daggerheartv1.DaggerheartRoguesDodgeFeature{},
+		}
+	case "no_mercy":
+		req.Feature = &daggerheartv1.DaggerheartApplyClassFeatureRequest_NoMercy{
+			NoMercy: &daggerheartv1.DaggerheartNoMercyFeature{},
+		}
+	case "strange_patterns_choice":
+		number := optionalInt(step.Args, "number", 0)
+		if number < 1 || number > 12 {
+			return r.failf("class_feature strange_patterns_choice number must be in range 1..12")
+		}
+		req.Feature = &daggerheartv1.DaggerheartApplyClassFeatureRequest_StrangePatternsChoice{
+			StrangePatternsChoice: &daggerheartv1.DaggerheartStrangePatternsChoice{Number: int32(number)},
+		}
+	default:
+		return r.failf("unsupported class_feature %q", feature)
+	}
+
+	response, err := r.env.daggerheartClient.ApplyClassFeature(withSessionID(ctx, state.sessionID), req)
+	if err != nil {
+		return fmt.Errorf("class_feature: %w", err)
+	}
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeCharacterStatePatched); err != nil {
+		return err
+	}
+
+	currentState := response.GetState()
+	if currentState == nil {
+		var err error
+		currentState, err = r.getCharacterState(ctx, state, characterID)
+		if err != nil {
+			return err
+		}
+	}
+	if want, ok := readInt(step.Args, "expect_hope"); ok && int(currentState.GetHope()) != want {
+		return r.assertf("class_feature hope = %d, want %d", currentState.GetHope(), want)
+	}
+	if want, ok := readInt(step.Args, "expect_armor"); ok && int(currentState.GetArmor()) != want {
+		return r.assertf("class_feature armor = %d, want %d", currentState.GetArmor(), want)
+	}
+	classState := currentState.GetClassState()
+	if want, ok := readInt(step.Args, "expect_attack_bonus_until_rest"); ok && int(classState.GetAttackBonusUntilRest()) != want {
+		return r.assertf("class_feature attack_bonus_until_rest = %d, want %d", classState.GetAttackBonusUntilRest(), want)
+	}
+	if want, ok := readInt(step.Args, "expect_evasion_bonus_until_hit_or_rest"); ok && int(classState.GetEvasionBonusUntilHitOrRest()) != want {
+		return r.assertf("class_feature evasion_bonus_until_hit_or_rest = %d, want %d", classState.GetEvasionBonusUntilHitOrRest(), want)
+	}
+	if want, ok := readInt(step.Args, "expect_strange_patterns_number"); ok && int(classState.GetStrangePatternsNumber()) != want {
+		return r.assertf("class_feature strange_patterns_number = %d, want %d", classState.GetStrangePatternsNumber(), want)
+	}
+	return r.assertExpectedDeltasAfterState(expectedSpec, expectedBefore, currentState)
+}
+
+func findSubclassTrack(tracks []*daggerheartv1.DaggerheartSubclassTrack, origin daggerheartv1.DaggerheartSubclassTrackOrigin) (*daggerheartv1.DaggerheartSubclassTrack, bool) {
+	for _, track := range tracks {
+		if track.GetOrigin() == origin {
+			return track, true
+		}
+	}
+	return nil, false
+}
+
+func findSubclassTrackRank(tracks []*daggerheartv1.DaggerheartSubclassTrack, origin daggerheartv1.DaggerheartSubclassTrackOrigin) (daggerheartv1.DaggerheartSubclassTrackRank, bool) {
+	track, ok := findSubclassTrack(tracks, origin)
+	if !ok {
+		return daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_UNSPECIFIED, false
+	}
+	return track.GetRank(), true
+}
+
+func normalizeSubclassTrackRank(rank daggerheartv1.DaggerheartSubclassTrackRank) string {
+	switch rank {
+	case daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_FOUNDATION:
+		return "foundation"
+	case daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_SPECIALIZATION:
+		return "specialization"
+	case daggerheartv1.DaggerheartSubclassTrackRank_DAGGERHEART_SUBCLASS_TRACK_RANK_MASTERY:
+		return "mastery"
+	default:
+		return ""
+	}
+}
+
+func profileHasActiveSubclassFeature(profile *daggerheartv1.DaggerheartProfile, featureID string) bool {
+	want := normalizeScenarioKey(featureID)
+	for _, track := range profile.GetActiveSubclassFeatures() {
+		for _, feature := range track.GetFoundationFeatures() {
+			if normalizeScenarioKey(feature.GetId()) == want {
+				return true
+			}
+		}
+		for _, feature := range track.GetSpecializationFeatures() {
+			if normalizeScenarioKey(feature.GetId()) == want {
+				return true
+			}
+		}
+		for _, feature := range track.GetMasteryFeatures() {
+			if normalizeScenarioKey(feature.GetId()) == want {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func normalizeScenarioKey(value string) string {
+	return strings.ToLower(strings.TrimSpace(value))
 }
 
 func (r *Runner) runUpdateGoldStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -183,7 +363,10 @@ func (r *Runner) runSwapEquipmentStep(ctx context.Context, state *scenarioState,
 	if err != nil {
 		return fmt.Errorf("swap_equipment: %w", err)
 	}
-	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeEquipmentSwapped)
+	if err := r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeEquipmentSwapped); err != nil {
+		return err
+	}
+	return r.assertSwapEquipmentExpectations(ctx, state, characterID, step.Args)
 }
 
 func (r *Runner) runUseConsumableStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -256,4 +439,66 @@ func (r *Runner) runAcquireConsumableStep(ctx context.Context, state *scenarioSt
 		return fmt.Errorf("acquire_consumable: %w", err)
 	}
 	return r.requireDaggerheartEventTypesAfterSeq(ctx, state, before, daggerheart.EventTypeConsumableAcquired)
+}
+
+func (r *Runner) assertSwapEquipmentExpectations(ctx context.Context, state *scenarioState, characterID string, args map[string]any) error {
+	if !hasSwapEquipmentExpectations(args) {
+		return nil
+	}
+	profile, err := r.getDaggerheartProfile(ctx, state, characterID)
+	if err != nil {
+		return err
+	}
+	currentState, err := r.getCharacterState(ctx, state, characterID)
+	if err != nil {
+		return err
+	}
+
+	if want := optionalString(args, "expect_equipped_armor_id", ""); want != "" && profile.GetEquippedArmorId() != want {
+		return r.assertf("swap_equipment equipped_armor_id = %q, want %q", profile.GetEquippedArmorId(), want)
+	}
+	if want, ok := readInt(args, "expect_evasion"); ok && int(profile.GetEvasion().GetValue()) != want {
+		return r.assertf("swap_equipment evasion = %d, want %d", profile.GetEvasion().GetValue(), want)
+	}
+	if want, ok := readInt(args, "expect_major_threshold"); ok && int(profile.GetMajorThreshold().GetValue()) != want {
+		return r.assertf("swap_equipment major_threshold = %d, want %d", profile.GetMajorThreshold().GetValue(), want)
+	}
+	if want, ok := readInt(args, "expect_severe_threshold"); ok && int(profile.GetSevereThreshold().GetValue()) != want {
+		return r.assertf("swap_equipment severe_threshold = %d, want %d", profile.GetSevereThreshold().GetValue(), want)
+	}
+	if want, ok := readInt(args, "expect_armor_max"); ok && int(profile.GetArmorMax().GetValue()) != want {
+		return r.assertf("swap_equipment armor_max = %d, want %d", profile.GetArmorMax().GetValue(), want)
+	}
+	if want, ok := readInt(args, "expect_spellcast_roll_bonus"); ok && int(profile.GetSpellcastRollBonus().GetValue()) != want {
+		return r.assertf("swap_equipment spellcast_roll_bonus = %d, want %d", profile.GetSpellcastRollBonus().GetValue(), want)
+	}
+	if want, ok := readInt(args, "expect_agility"); ok && int(profile.GetAgility().GetValue()) != want {
+		return r.assertf("swap_equipment agility = %d, want %d", profile.GetAgility().GetValue(), want)
+	}
+	if want, ok := readInt(args, "expect_presence"); ok && int(profile.GetPresence().GetValue()) != want {
+		return r.assertf("swap_equipment presence = %d, want %d", profile.GetPresence().GetValue(), want)
+	}
+	if want, ok := readInt(args, "expect_armor"); ok && int(currentState.GetArmor()) != want {
+		return r.assertf("swap_equipment armor = %d, want %d", currentState.GetArmor(), want)
+	}
+	return nil
+}
+
+func hasSwapEquipmentExpectations(args map[string]any) bool {
+	for _, key := range []string{
+		"expect_equipped_armor_id",
+		"expect_evasion",
+		"expect_major_threshold",
+		"expect_severe_threshold",
+		"expect_armor_max",
+		"expect_spellcast_roll_bonus",
+		"expect_agility",
+		"expect_presence",
+		"expect_armor",
+	} {
+		if _, ok := args[key]; ok {
+			return true
+		}
+	}
+	return false
 }

@@ -4,17 +4,22 @@ import (
 	"testing"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/systems/daggerheart/workflowtransport"
 	"google.golang.org/grpc/codes"
+
+	validate "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/validate"
 )
 
 func TestValidateCampaignIDFromContext(t *testing.T) {
-	_, err := validateCampaignIDFromContext(testSessionContext("", "sess-1"))
+	ctx := testSessionContext("", "sess-1")
+	_, err := validate.RequiredID(grpcmeta.CampaignIDFromContext(ctx), "campaign id")
 	assertStatusCode(t, err, codes.InvalidArgument)
 
-	campaignID, err := validateCampaignIDFromContext(testSessionContext("camp-1", "sess-1"))
+	ctx = testSessionContext("camp-1", "sess-1")
+	campaignID, err := validate.RequiredID(grpcmeta.CampaignIDFromContext(ctx), "campaign id")
 	if err != nil {
-		t.Fatalf("validateCampaignIDFromContext returned error: %v", err)
+		t.Fatalf("validate.RequiredID returned error: %v", err)
 	}
 	if campaignID != "camp-1" {
 		t.Fatalf("campaignID = %q, want %q", campaignID, "camp-1")

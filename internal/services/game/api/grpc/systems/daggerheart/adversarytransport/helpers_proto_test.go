@@ -17,18 +17,18 @@ func TestAdversaryToProtoSession(t *testing.T) {
 		SessionID:   "sess-1",
 		HP:          4,
 		HPMax:       6,
-		Conditions:  []string{"hidden"},
+		Conditions:  []projectionstore.DaggerheartConditionState{{Standard: "hidden"}},
 		CreatedAt:   created,
 		UpdatedAt:   updated,
 	})
-	if proto.GetSessionId().GetValue() != "sess-1" {
-		t.Fatal("expected session id wrapper")
+	if proto.GetSessionId() != "sess-1" {
+		t.Fatal("expected session id")
 	}
 	if proto.GetCreatedAt().AsTime().UTC() != created {
 		t.Fatal("expected created time to map")
 	}
-	if len(proto.GetConditions()) != 1 {
-		t.Fatalf("expected conditions to map, got %v", proto.GetConditions())
+	if len(proto.GetConditionStates()) != 1 {
+		t.Fatalf("expected conditions to map, got %v", proto.GetConditionStates())
 	}
 }
 
@@ -45,10 +45,10 @@ func TestAdversaryToProtoNoSession(t *testing.T) {
 		Major:       7,
 		Severe:      14,
 		Armor:       2,
-		Conditions:  []string{"vulnerable"},
+		Conditions:  []projectionstore.DaggerheartConditionState{{Standard: "vulnerable"}},
 	})
-	if proto.GetSessionId() != nil {
-		t.Fatal("expected nil session id wrapper when no session")
+	if proto.GetSessionId() != "" {
+		t.Fatal("expected empty session id when no session")
 	}
 	if proto.GetId() != "adv-2" || proto.GetName() != "Shadow" {
 		t.Fatalf("proto metadata mismatch: %v", proto)

@@ -67,7 +67,7 @@ func (s *Service) ListCharacterProfiles(ctx context.Context, in *campaignv1.List
 
 	response.Profiles = make([]*campaignv1.CharacterProfile, 0, len(page.profiles))
 	for _, profile := range page.profiles {
-		response.Profiles = append(response.Profiles, DaggerheartProfileToProto(campaignID, profile.CharacterID, profile))
+		response.Profiles = append(response.Profiles, DaggerheartProfileToProto(campaignID, profile.CharacterID, profile, s.app.stores.DaggerheartContent))
 	}
 
 	return response, nil
@@ -96,7 +96,7 @@ func (s *Service) GetCharacterSheet(ctx context.Context, in *campaignv1.GetChara
 
 	return &campaignv1.GetCharacterSheetResponse{
 		Character: CharacterToProto(sheet.character),
-		Profile:   DaggerheartProfileToProto(campaignID, characterID, sheet.profile),
+		Profile:   DaggerheartProfileToProto(campaignID, characterID, sheet.profile, s.app.stores.DaggerheartContent),
 		State:     DaggerheartStateToProto(campaignID, characterID, sheet.state),
 	}, nil
 }

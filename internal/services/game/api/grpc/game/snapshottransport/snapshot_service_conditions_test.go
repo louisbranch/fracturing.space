@@ -10,6 +10,7 @@ import (
 
 	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/domainwriteexec"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/engine"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/event"
@@ -22,8 +23,8 @@ func TestApplyStressVulnerableCondition_AddsCondition(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	payload := daggerheart.ConditionChangedPayload{
 		CharacterID: "ch1",
-		Conditions:  []string{"vulnerable"},
-		Added:       []string{"vulnerable"},
+		Conditions:  []daggerheart.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
+		Added:       []daggerheart.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -87,8 +88,8 @@ func TestApplyStressVulnerableCondition_RemovesCondition(t *testing.T) {
 	now := time.Date(2026, 2, 14, 0, 0, 0, 0, time.UTC)
 	payload := daggerheart.ConditionChangedPayload{
 		CharacterID: "ch1",
-		Conditions:  []string{},
-		Removed:     []string{"vulnerable"},
+		Conditions:  nil,
+		Removed:     []daggerheart.ConditionState{mustStandardSnapshotCondition(t, "vulnerable")},
 	}
 	payloadJSON, err := json.Marshal(payload)
 	if err != nil {
@@ -202,11 +203,20 @@ func TestApplyStressVulnerableCondition_NoOpWhenAlreadyVulnerable(t *testing.T) 
 	}
 }
 
-func containsCondition(conditions []string, target string) bool {
+func containsCondition(conditions []projectionstore.DaggerheartConditionState, target string) bool {
 	for _, condition := range conditions {
-		if condition == target {
+		if condition.Code == target || condition.Standard == target || condition.ID == target {
 			return true
 		}
 	}
 	return false
+}
+
+func mustStandardSnapshotCondition(t *testing.T, code string) daggerheart.ConditionState {
+	t.Helper()
+	state, err := daggerheart.StandardConditionState(code)
+	if err != nil {
+		t.Fatalf("standard condition state %q: %v", code, err)
+	}
+	return state
 }

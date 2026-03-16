@@ -16,10 +16,16 @@ func TestEvaluateCreationProgress_NextStepAdvancesInOrder(t *testing.T) {
 	}
 
 	progress = EvaluateCreationProgress(CreationProfile{
-		ClassID:        "class.guardian",
-		SubclassID:     "subclass.stalwart",
-		AncestryID:     "heritage.clank",
-		CommunityID:    "heritage.farmer",
+		ClassID:                      "class.guardian",
+		SubclassID:                   "subclass.stalwart",
+		SubclassCreationRequirements: nil,
+		Heritage: CharacterHeritage{
+			FirstFeatureAncestryID:  "heritage.clank",
+			FirstFeatureID:          "heritage.clank.feature-1",
+			SecondFeatureAncestryID: "heritage.clank",
+			SecondFeatureID:         "heritage.clank.feature-2",
+			CommunityID:             "heritage.farmer",
+		},
 		TraitsAssigned: true,
 		Traits: daggerheartprofile.Traits{
 			Agility:   2,

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 )
 
@@ -28,6 +29,74 @@ func validateGMFearChangedPayload(raw json.RawMessage) error {
 	}
 	if payload.Value < GMFearMin || payload.Value > GMFearMax {
 		return fmt.Errorf("value must be in range %d..%d", GMFearMin, GMFearMax)
+	}
+	return nil
+}
+
+func validateGMMoveApplyPayload(raw json.RawMessage) error {
+	var payload GMMoveApplyPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if payload.FearSpent <= 0 {
+		return errors.New("fear_spent must be greater than zero")
+	}
+	return validateGMMoveTarget(payload.Target)
+}
+
+func validateGMMoveAppliedPayload(raw json.RawMessage) error {
+	var payload GMMoveAppliedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if payload.FearSpent <= 0 {
+		return errors.New("fear_spent must be greater than zero")
+	}
+	return validateGMMoveTarget(payload.Target)
+}
+
+func validateGMMoveTarget(target GMMoveTarget) error {
+	targetType, ok := NormalizeGMMoveTargetType(string(target.Type))
+	if !ok {
+		return errors.New("target type is unsupported")
+	}
+	switch targetType {
+	case GMMoveTargetTypeDirectMove:
+		if _, ok := NormalizeGMMoveKind(string(target.Kind)); !ok {
+			return errors.New("kind is unsupported")
+		}
+		if _, ok := NormalizeGMMoveShape(string(target.Shape)); !ok {
+			return errors.New("shape is unsupported")
+		}
+		if target.Shape == GMMoveShapeCustom && strings.TrimSpace(target.Description) == "" {
+			return errors.New("description is required for custom shape")
+		}
+		if target.Shape == GMMoveShapeSpotlightAdversary && strings.TrimSpace(target.AdversaryID.String()) == "" {
+			return errors.New("adversary_id is required for spotlight_adversary")
+		}
+	case GMMoveTargetTypeAdversaryFeature:
+		if strings.TrimSpace(target.AdversaryID.String()) == "" {
+			return errors.New("adversary_id is required")
+		}
+		if strings.TrimSpace(target.FeatureID) == "" {
+			return errors.New("feature_id is required")
+		}
+	case GMMoveTargetTypeEnvironmentFeature:
+		if strings.TrimSpace(target.EnvironmentEntityID.String()) == "" && strings.TrimSpace(target.EnvironmentID) == "" {
+			return errors.New("environment_entity_id is required")
+		}
+		if strings.TrimSpace(target.FeatureID) == "" {
+			return errors.New("feature_id is required")
+		}
+	case GMMoveTargetTypeAdversaryExperience:
+		if strings.TrimSpace(target.AdversaryID.String()) == "" {
+			return errors.New("adversary_id is required")
+		}
+		if strings.TrimSpace(target.ExperienceName) == "" {
+			return errors.New("experience_name is required")
+		}
+	default:
+		return errors.New("target type is unsupported")
 	}
 	return nil
 }
@@ -93,8 +162,220 @@ func validateCharacterStatePatchedPayload(raw json.RawMessage) error {
 		return errors.New("character_id is required")
 	}
 	if payload.HP == nil && payload.Hope == nil && payload.HopeMax == nil &&
-		payload.Stress == nil && payload.Armor == nil && payload.LifeState == nil {
+		payload.Stress == nil && payload.Armor == nil && payload.LifeState == nil &&
+		payload.ClassState == nil && payload.SubclassState == nil && payload.ImpenetrableUsedThisShortRest == nil {
 		return errors.New("character_state_patched must include at least one after field")
+	}
+	return nil
+}
+
+func validateClassFeatureApplyPayload(raw json.RawMessage) error {
+	var payload ClassFeatureApplyPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.ActorCharacterID.String()) == "" {
+		return errors.New("actor_character_id is required")
+	}
+	if strings.TrimSpace(payload.Feature) == "" {
+		return errors.New("feature is required")
+	}
+	if len(payload.Targets) == 0 {
+		return errors.New("class_feature apply requires at least one target")
+	}
+	for _, target := range payload.Targets {
+		if strings.TrimSpace(target.CharacterID.String()) == "" {
+			return errors.New("class_feature apply target character_id is required")
+		}
+		if !hasIntFieldChange(target.HPBefore, target.HPAfter) &&
+			!hasIntFieldChange(target.HopeBefore, target.HopeAfter) &&
+			!hasIntFieldChange(target.ArmorBefore, target.ArmorAfter) &&
+			!hasClassStateFieldChange(target.ClassStateBefore, target.ClassStateAfter) {
+			return errors.New("class_feature apply must change at least one field per target")
+		}
+	}
+	return nil
+}
+
+func validateSubclassFeatureApplyPayload(raw json.RawMessage) error {
+	var payload SubclassFeatureApplyPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.ActorCharacterID.String()) == "" {
+		return errors.New("actor_character_id is required")
+	}
+	if strings.TrimSpace(payload.Feature) == "" {
+		return errors.New("feature is required")
+	}
+	if len(payload.Targets) == 0 && len(payload.CharacterConditionTargets) == 0 && len(payload.AdversaryConditionTargets) == 0 {
+		return errors.New("subclass_feature apply requires at least one consequence")
+	}
+	hasMutation := len(payload.CharacterConditionTargets) > 0 || len(payload.AdversaryConditionTargets) > 0
+	for _, target := range payload.Targets {
+		if strings.TrimSpace(target.CharacterID.String()) == "" {
+			return errors.New("subclass_feature apply target character_id is required")
+		}
+		if !hasIntFieldChange(target.HPBefore, target.HPAfter) &&
+			!hasIntFieldChange(target.HopeBefore, target.HopeAfter) &&
+			!hasIntFieldChange(target.StressBefore, target.StressAfter) &&
+			!hasIntFieldChange(target.ArmorBefore, target.ArmorAfter) &&
+			!hasClassStateFieldChange(target.ClassStateBefore, target.ClassStateAfter) &&
+			!hasSubclassStateFieldChange(target.SubclassStateBefore, target.SubclassStateAfter) {
+			continue
+		}
+		hasMutation = true
+	}
+	if !hasMutation {
+		return errors.New("subclass_feature apply must change at least one field")
+	}
+	return nil
+}
+
+func validateBeastformTransformPayload(raw json.RawMessage) error {
+	var payload BeastformTransformPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.ActorCharacterID.String()) == "" {
+		return errors.New("actor_character_id is required")
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.BeastformID) == "" {
+		return errors.New("beastform_id is required")
+	}
+	if !hasIntFieldChange(payload.HopeBefore, payload.HopeAfter) &&
+		!hasIntFieldChange(payload.StressBefore, payload.StressAfter) &&
+		!hasClassStateFieldChange(payload.ClassStateBefore, payload.ClassStateAfter) {
+		return errors.New("beastform transform must change at least one field")
+	}
+	return nil
+}
+
+func validateBeastformDropPayload(raw json.RawMessage) error {
+	var payload BeastformDropPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.ActorCharacterID.String()) == "" {
+		return errors.New("actor_character_id is required")
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.BeastformID) == "" {
+		return errors.New("beastform_id is required")
+	}
+	if !hasClassStateFieldChange(payload.ClassStateBefore, payload.ClassStateAfter) {
+		return errors.New("beastform drop must change class state")
+	}
+	return nil
+}
+
+func validateBeastformTransformedPayload(raw json.RawMessage) error {
+	var payload BeastformTransformedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.BeastformID) == "" {
+		return errors.New("beastform_id is required")
+	}
+	if normalizedActiveBeastformPtr(payload.ActiveBeastform) == nil {
+		return errors.New("active_beastform is required")
+	}
+	return nil
+}
+
+func validateBeastformDroppedPayload(raw json.RawMessage) error {
+	var payload BeastformDroppedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.BeastformID) == "" {
+		return errors.New("beastform_id is required")
+	}
+	return nil
+}
+
+func validateCompanionExperienceBeginPayload(raw json.RawMessage) error {
+	var payload CompanionExperienceBeginPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.ActorCharacterID.String()) == "" {
+		return errors.New("actor_character_id is required")
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.ExperienceID) == "" {
+		return errors.New("experience_id is required")
+	}
+	if !hasCompanionStateFieldChange(payload.CompanionStateBefore, payload.CompanionStateAfter) {
+		return errors.New("companion begin must change companion state")
+	}
+	return nil
+}
+
+func validateCompanionReturnPayload(raw json.RawMessage) error {
+	var payload CompanionReturnPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.ActorCharacterID.String()) == "" {
+		return errors.New("actor_character_id is required")
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.Resolution) == "" {
+		return errors.New("resolution is required")
+	}
+	if !hasIntFieldChange(payload.StressBefore, payload.StressAfter) &&
+		!hasCompanionStateFieldChange(payload.CompanionStateBefore, payload.CompanionStateAfter) {
+		return errors.New("companion return must change at least one field")
+	}
+	return nil
+}
+
+func validateCompanionExperienceBegunPayload(raw json.RawMessage) error {
+	var payload CompanionExperienceBegunPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.ExperienceID) == "" {
+		return errors.New("experience_id is required")
+	}
+	if normalizedCompanionStatePtr(payload.CompanionState) == nil {
+		return errors.New("companion_state is required")
+	}
+	return nil
+}
+
+func validateCompanionReturnedPayload(raw json.RawMessage) error {
+	var payload CompanionReturnedPayload
+	if err := json.Unmarshal(raw, &payload); err != nil {
+		return err
+	}
+	if strings.TrimSpace(payload.CharacterID.String()) == "" {
+		return errors.New("character_id is required")
+	}
+	if strings.TrimSpace(payload.Resolution) == "" {
+		return errors.New("resolution is required")
+	}
+	if normalizedCompanionStatePtr(payload.CompanionState) == nil {
+		return errors.New("companion_state is required")
 	}
 	return nil
 }
@@ -166,7 +447,7 @@ func validateConditionChangedPayload(raw json.RawMessage) error {
 	if payload.Conditions == nil {
 		return errors.New("conditions_after is required")
 	}
-	if _, err := NormalizeConditions(payload.Conditions); err != nil {
+	if _, err := NormalizeConditionStates(payload.Conditions); err != nil {
 		return fmt.Errorf("conditions_after: %w", err)
 	}
 	return nil
@@ -208,13 +489,26 @@ func validateRestTakePayload(raw json.RawMessage) error {
 	if err := requireTrimmedValue(payload.RestType, "rest_type"); err != nil {
 		return err
 	}
-	if payload.LongTermCountdown != nil {
-		if err := validateRestLongTermCountdownPayload(*payload.LongTermCountdown); err != nil {
+	if len(payload.Participants) == 0 {
+		return errors.New("participants are required")
+	}
+	for _, participantID := range payload.Participants {
+		if err := requireTrimmedValue(participantID.String(), "participants.character_id"); err != nil {
+			return err
+		}
+	}
+	for _, update := range payload.CountdownUpdates {
+		if err := validateRestLongTermCountdownPayload(update); err != nil {
+			return err
+		}
+	}
+	for _, move := range payload.DowntimeMoves {
+		if err := validateDowntimeMoveAppliedPayloadFields(move); err != nil {
 			return err
 		}
 	}
 	if !hasRestTakeMutation(payload) {
-		return errors.New("rest.take must change at least one field")
+		return errors.New("rest.take must record at least one durable outcome")
 	}
 	return nil
 }
@@ -229,6 +523,9 @@ func validateRestTakenPayload(raw json.RawMessage) error {
 	}
 	if payload.GMFear < GMFearMin || payload.GMFear > GMFearMax {
 		return fmt.Errorf("gm_fear_after must be in range %d..%d", GMFearMin, GMFearMax)
+	}
+	if len(payload.Participants) == 0 {
+		return errors.New("participants are required")
 	}
 	return nil
 }
@@ -346,35 +643,35 @@ func validateAdversaryConditionChangedPayload(raw json.RawMessage) error {
 	if payload.Conditions == nil {
 		return errors.New("conditions_after is required")
 	}
-	if _, err := NormalizeConditions(payload.Conditions); err != nil {
+	if _, err := NormalizeConditionStates(payload.Conditions); err != nil {
 		return fmt.Errorf("conditions_after: %w", err)
 	}
 	return nil
 }
 
-func validateConditionSetPayload(before, after, added, removed []string) error {
-	normalizedAfter, _, err := normalizeConditionListField(after, "conditions_after", true)
+func validateConditionSetPayload(before, after, added, removed []ConditionState) error {
+	normalizedAfter, _, err := normalizeConditionStateListField(after, "conditions_after", true)
 	if err != nil {
 		return err
 	}
 
-	normalizedBefore, hasBefore, err := normalizeConditionListField(before, "conditions_before", false)
+	normalizedBefore, hasBefore, err := normalizeConditionStateListField(before, "conditions_before", false)
 	if err != nil {
 		return err
 	}
-	normalizedAdded, hasAdded, err := normalizeConditionListField(added, "added", false)
+	normalizedAdded, hasAdded, err := normalizeConditionStateListField(added, "added", false)
 	if err != nil {
 		return err
 	}
-	normalizedRemoved, hasRemoved, err := normalizeConditionListField(removed, "removed", false)
+	normalizedRemoved, hasRemoved, err := normalizeConditionStateListField(removed, "removed", false)
 	if err != nil {
 		return err
 	}
 
 	expectedAdded := normalizedAfter
-	expectedRemoved := []string{}
+	expectedRemoved := []ConditionState{}
 	if hasBefore {
-		expectedAdded, expectedRemoved = DiffConditions(normalizedBefore, normalizedAfter)
+		expectedAdded, expectedRemoved = DiffConditionStates(normalizedBefore, normalizedAfter)
 	}
 
 	if !hasBefore && hasRemoved && len(normalizedRemoved) > 0 {
@@ -382,7 +679,7 @@ func validateConditionSetPayload(before, after, added, removed []string) error {
 	}
 
 	if hasAdded {
-		if !ConditionsEqual(normalizedAdded, expectedAdded) {
+		if !ConditionStatesEqual(normalizedAdded, expectedAdded) {
 			if hasBefore {
 				return errors.New("added must match conditions_before and conditions_after diff")
 			}
@@ -390,7 +687,7 @@ func validateConditionSetPayload(before, after, added, removed []string) error {
 		}
 	}
 
-	if hasRemoved && !ConditionsEqual(normalizedRemoved, expectedRemoved) {
+	if hasRemoved && !ConditionStatesEqual(normalizedRemoved, expectedRemoved) {
 		if hasBefore {
 			return errors.New("removed must match conditions_before and conditions_after diff")
 		}
@@ -398,7 +695,7 @@ func validateConditionSetPayload(before, after, added, removed []string) error {
 	}
 
 	if hasBefore {
-		if ConditionsEqual(normalizedBefore, normalizedAfter) &&
+		if ConditionStatesEqual(normalizedBefore, normalizedAfter) &&
 			len(normalizedAdded) == 0 && len(normalizedRemoved) == 0 {
 			return errors.New("conditions must change")
 		}
@@ -409,7 +706,7 @@ func validateConditionSetPayload(before, after, added, removed []string) error {
 	return nil
 }
 
-func normalizeConditionListField(values []string, field string, required bool) ([]string, bool, error) {
+func normalizeConditionStateListField(values []ConditionState, field string, required bool) ([]ConditionState, bool, error) {
 	if values == nil {
 		if required {
 			return nil, false, fmt.Errorf("%s is required", field)
@@ -417,7 +714,7 @@ func normalizeConditionListField(values []string, field string, required bool) (
 		return nil, false, nil
 	}
 
-	normalized, err := NormalizeConditions(values)
+	normalized, err := NormalizeConditionStates(values)
 	if err != nil {
 		return nil, true, fmt.Errorf("%s: %w", field, err)
 	}
@@ -430,13 +727,52 @@ func hasCharacterStateChange(payload CharacterStatePatchPayload) bool {
 		hasIntFieldChange(payload.HopeMaxBefore, payload.HopeMaxAfter) ||
 		hasIntFieldChange(payload.StressBefore, payload.StressAfter) ||
 		hasIntFieldChange(payload.ArmorBefore, payload.ArmorAfter) ||
-		hasStringFieldChange(payload.LifeStateBefore, payload.LifeStateAfter)
+		hasStringFieldChange(payload.LifeStateBefore, payload.LifeStateAfter) ||
+		hasClassStateFieldChange(payload.ClassStateBefore, payload.ClassStateAfter) ||
+		hasSubclassStateFieldChange(payload.SubclassStateBefore, payload.SubclassStateAfter) ||
+		hasBoolFieldChange(payload.ImpenetrableUsedThisShortRestBefore, payload.ImpenetrableUsedThisShortRestAfter)
 }
 
-func hasRestCharacterStateMutation(payload RestCharacterStatePatch) bool {
-	return hasIntFieldChange(payload.HopeBefore, payload.HopeAfter) ||
-		hasIntFieldChange(payload.StressBefore, payload.StressAfter) ||
-		hasIntFieldChange(payload.ArmorBefore, payload.ArmorAfter)
+func hasClassStateFieldChange(before, after *CharacterClassState) bool {
+	if before == nil && after == nil {
+		return false
+	}
+	if before == nil || after == nil {
+		return true
+	}
+	return !reflect.DeepEqual(before.Normalized(), after.Normalized())
+}
+
+func hasCompanionStateFieldChange(before, after *CharacterCompanionState) bool {
+	if before == nil && after == nil {
+		return false
+	}
+	if before == nil || after == nil {
+		return true
+	}
+	return !reflect.DeepEqual(before.Normalized(), after.Normalized())
+}
+
+func hasSubclassStateFieldChange(before, after *CharacterSubclassState) bool {
+	if before == nil && after == nil {
+		return false
+	}
+	if before == nil || after == nil {
+		return true
+	}
+	return !reflect.DeepEqual(before.Normalized(), after.Normalized())
+}
+
+func hasConditionListMutation(before, after []string) bool {
+	beforeNormalized, err := NormalizeConditions(before)
+	if err != nil {
+		return true
+	}
+	afterNormalized, err := NormalizeConditions(after)
+	if err != nil {
+		return true
+	}
+	return !ConditionsEqual(beforeNormalized, afterNormalized)
 }
 
 func hasRestTakeMutation(payload RestTakePayload) bool {
@@ -444,15 +780,12 @@ func hasRestTakeMutation(payload RestTakePayload) bool {
 		payload.ShortRestsBefore != payload.ShortRestsAfter ||
 		payload.RefreshRest ||
 		payload.RefreshLongRest ||
-		payload.LongTermCountdown != nil {
+		payload.Interrupted ||
+		len(payload.CountdownUpdates) > 0 ||
+		len(payload.DowntimeMoves) > 0 {
 		return true
 	}
-	for _, patch := range payload.CharacterStates {
-		if hasRestCharacterStateMutation(patch) {
-			return true
-		}
-	}
-	return false
+	return len(payload.Participants) > 0
 }
 
 func validateRestLongTermCountdownPayload(payload CountdownUpdatePayload) error {
@@ -476,6 +809,16 @@ func hasIntFieldChange(before, after *int) bool {
 }
 
 func hasStringFieldChange(before, after *string) bool {
+	if after == nil {
+		return false
+	}
+	if before == nil {
+		return true
+	}
+	return *before != *after
+}
+
+func hasBoolFieldChange(before, after *bool) bool {
 	if after == nil {
 		return false
 	}

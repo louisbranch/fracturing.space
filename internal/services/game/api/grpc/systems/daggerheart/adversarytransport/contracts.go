@@ -4,6 +4,7 @@ import (
 	"context"
 
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/command"
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
@@ -30,6 +31,12 @@ type DaggerheartStore interface {
 	ListDaggerheartAdversaries(ctx context.Context, campaignID, sessionID string) ([]projectionstore.DaggerheartAdversary, error)
 }
 
+// ContentStore loads catalog-backed adversary definitions for runtime
+// adversary transport.
+type ContentStore interface {
+	GetDaggerheartAdversaryEntry(ctx context.Context, id string) (contentstore.DaggerheartAdversaryEntry, error)
+}
+
 // DomainCommandInput captures the command metadata needed by the write callback.
 type DomainCommandInput struct {
 	CampaignID      string
@@ -52,6 +59,7 @@ type Dependencies struct {
 	Gate     SessionGateStore
 
 	Daggerheart DaggerheartStore
+	Content     ContentStore
 
 	GenerateID           func() (string, error)
 	ExecuteDomainCommand func(ctx context.Context, in DomainCommandInput) error

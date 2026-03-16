@@ -65,7 +65,7 @@ func TestApplyCharacterCreationStep_RequiresNextStep(t *testing.T) {
 		SystemStep: &statev1.ApplyCharacterCreationStepRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartCreationStepInput{
 				Step: &daggerheartv1.DaggerheartCreationStepInput_HeritageInput{
-					HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: "heritage.ancestry.clank", CommunityId: "heritage.community.farmer"},
+					HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{Heritage: testCreationHeritageInput()},
 				},
 			},
 		},
@@ -118,8 +118,7 @@ func TestApplyCharacterCreationStep_TraitsRejectsInvalidDistribution(t *testing.
 		Evasion:     10,
 		ClassID:     "class.guardian",
 		SubclassID:  "subclass.stalwart",
-		AncestryID:  "heritage.ancestry.clank",
-		CommunityID: "heritage.community.farmer",
+		Heritage:    testProjectionHeritage(),
 	})
 
 	_, err := svc.ApplyCharacterCreationStep(gametest.ContextWithParticipantID("manager-1"), &statev1.ApplyCharacterCreationStepRequest{
@@ -148,8 +147,7 @@ func TestApplyCharacterCreationStep_EquipmentRejectsInvalidPotion(t *testing.T) 
 		SevereThreshold: 12,
 		ClassID:         "class.guardian",
 		SubclassID:      "subclass.stalwart",
-		AncestryID:      "heritage.ancestry.clank",
-		CommunityID:     "heritage.community.farmer",
+		Heritage:        testProjectionHeritage(),
 		TraitsAssigned:  true,
 		DetailsRecorded: true,
 		Agility:         2,
@@ -193,8 +191,7 @@ func TestApplyCharacterCreationStep_DomainCardsRejectsClassDomainMismatch(t *tes
 		ArmorMax:             0,
 		ClassID:              "class.guardian",
 		SubclassID:           "subclass.stalwart",
-		AncestryID:           "heritage.ancestry.clank",
-		CommunityID:          "heritage.community.farmer",
+		Heritage:             testProjectionHeritage(),
 		TraitsAssigned:       true,
 		DetailsRecorded:      true,
 		StartingWeaponIDs:    []string{"weapon.longsword"},
@@ -234,8 +231,7 @@ func TestResetCharacterCreationWorkflow_Success(t *testing.T) {
 		Evasion:              10,
 		ClassID:              "class.guardian",
 		SubclassID:           "subclass.stalwart",
-		AncestryID:           "heritage.clank",
-		CommunityID:          "heritage.farmer",
+		Heritage:             testProjectionHeritage(),
 		TraitsAssigned:       true,
 		DetailsRecorded:      true,
 		StartingWeaponIDs:    []string{"weapon.longsword"},
@@ -286,7 +282,7 @@ func TestApplyCharacterCreationWorkflow_Success(t *testing.T) {
 		SystemWorkflow: &statev1.ApplyCharacterCreationWorkflowRequest_Daggerheart{
 			Daggerheart: &daggerheartv1.DaggerheartCreationWorkflowInput{
 				ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{ClassId: "class.guardian", SubclassId: "subclass.stalwart"},
-				HeritageInput:      &daggerheartv1.DaggerheartCreationStepHeritageInput{AncestryId: "heritage.ancestry.clank", CommunityId: "heritage.community.farmer"},
+				HeritageInput:      &daggerheartv1.DaggerheartCreationStepHeritageInput{Heritage: testCreationHeritageInput()},
 				TraitsInput:        &daggerheartv1.DaggerheartCreationStepTraitsInput{Agility: 2, Strength: 1, Finesse: 1, Instinct: 0, Presence: 0, Knowledge: -1},
 				DetailsInput:       &daggerheartv1.DaggerheartCreationStepDetailsInput{Description: "A stalwart guardian of the realm."},
 				EquipmentInput:     &daggerheartv1.DaggerheartCreationStepEquipmentInput{WeaponIds: []string{"weapon.longsword"}, ArmorId: "armor.gambeson-armor", PotionItemId: "item.minor-health-potion"},
@@ -364,7 +360,15 @@ func newWorkflowCharacterService(t *testing.T, profile projectionstore.Daggerhea
 				"subclass.stalwart": {ID: "subclass.stalwart", ClassID: "class.guardian", Name: "Stalwart"},
 			},
 			heritages: map[string]contentstore.DaggerheartHeritage{
-				"heritage.ancestry.clank":   {ID: "heritage.ancestry.clank", Kind: "ancestry", Name: "Clank"},
+				"heritage.ancestry.clank": {
+					ID:   "heritage.ancestry.clank",
+					Kind: "ancestry",
+					Name: "Clank",
+					Features: []contentstore.DaggerheartFeature{
+						{ID: "heritage.ancestry.clank.feature-1", Name: "Clank One"},
+						{ID: "heritage.ancestry.clank.feature-2", Name: "Clank Two"},
+					},
+				},
 				"heritage.community.farmer": {ID: "heritage.community.farmer", Kind: "community", Name: "Farmer"},
 			},
 			weapons: map[string]contentstore.DaggerheartWeapon{
@@ -385,6 +389,24 @@ func newWorkflowCharacterService(t *testing.T, profile projectionstore.Daggerhea
 		},
 		Write: domainwriteexec.WritePath{Executor: domain, Runtime: testRuntime},
 	})
+}
+
+func testCreationHeritageInput() *daggerheartv1.DaggerheartCreationStepHeritageSelectionInput {
+	return &daggerheartv1.DaggerheartCreationStepHeritageSelectionInput{
+		FirstFeatureAncestryId:  "heritage.ancestry.clank",
+		SecondFeatureAncestryId: "heritage.ancestry.clank",
+		CommunityId:             "heritage.community.farmer",
+	}
+}
+
+func testProjectionHeritage() projectionstore.DaggerheartHeritageSelection {
+	return projectionstore.DaggerheartHeritageSelection{
+		FirstFeatureAncestryID:  "heritage.ancestry.clank",
+		FirstFeatureID:          "heritage.ancestry.clank.feature-1",
+		SecondFeatureAncestryID: "heritage.ancestry.clank",
+		SecondFeatureID:         "heritage.ancestry.clank.feature-2",
+		CommunityID:             "heritage.community.farmer",
+	}
 }
 
 type workflowContentStore struct {

@@ -13,6 +13,187 @@ message DaggerheartExperience {
   int32 modifier = 2;
 }
 
+// DaggerheartHeritageSelection captures the resolved ancestry/community choice
+// used for Daggerheart creation and read surfaces.
+message DaggerheartHeritageSelection {
+  string ancestry_label = 1;
+  string first_feature_ancestry_id = 2;
+  string first_feature_id = 3;
+  string second_feature_ancestry_id = 4;
+  string second_feature_id = 5;
+  string community_id = 6;
+}
+
+// DaggerheartCompanionSheet stores the static companion sheet selected during
+// Daggerheart character creation.
+message DaggerheartCompanionExperience {
+  string experience_id = 1;
+  string name = 2;
+  int32 modifier = 3;
+}
+
+message DaggerheartCompanionSheet {
+  string animal_kind = 1;
+  string name = 2;
+  int32 evasion = 3;
+  repeated DaggerheartCompanionExperience experiences = 4;
+  string attack_description = 5;
+  string attack_range = 6;
+  int32 damage_die_sides = 7;
+  string damage_type = 8;
+}
+
+message DaggerheartCompanionState {
+  string status = 1;
+  string active_experience_id = 2;
+}
+
+enum DaggerheartAdversaryFeatureStateStatus {
+  DAGGERHEART_ADVERSARY_FEATURE_STATE_STATUS_UNSPECIFIED = 0;
+  DAGGERHEART_ADVERSARY_FEATURE_STATE_STATUS_READY = 1;
+  DAGGERHEART_ADVERSARY_FEATURE_STATE_STATUS_ACTIVE = 2;
+  DAGGERHEART_ADVERSARY_FEATURE_STATE_STATUS_COOLDOWN = 3;
+  DAGGERHEART_ADVERSARY_FEATURE_STATE_STATUS_SPENT = 4;
+  DAGGERHEART_ADVERSARY_FEATURE_STATE_STATUS_STAGED = 5;
+}
+
+message DaggerheartAdversaryFeatureState {
+  string feature_id = 1;
+  DaggerheartAdversaryFeatureStateStatus status = 2;
+  string focused_target_id = 3;
+}
+
+message DaggerheartAdversaryPendingExperience {
+  string name = 1;
+  int32 modifier = 2;
+}
+
+message DaggerheartSubclassState {
+  bool battle_ritual_used_this_long_rest = 1;
+  int32 gifted_performer_relaxing_song_uses = 2;
+  int32 gifted_performer_epic_song_uses = 3;
+  int32 gifted_performer_heartbreaking_song_uses = 4;
+  int32 contacts_everywhere_uses_this_session = 5;
+  int32 contacts_everywhere_action_die_bonus = 6;
+  int32 contacts_everywhere_damage_dice_bonus_count = 7;
+  int32 sparing_touch_uses_this_long_rest = 8;
+  int32 elementalist_action_bonus = 9;
+  int32 elementalist_damage_bonus = 10;
+  bool transcendence_active = 11;
+  string transcendence_trait_bonus_target = 12;
+  int32 transcendence_trait_bonus_value = 13;
+  int32 transcendence_proficiency_bonus = 14;
+  int32 transcendence_evasion_bonus = 15;
+  int32 transcendence_severe_threshold_bonus = 16;
+  bool clarity_of_nature_used_this_long_rest = 17;
+  string elemental_channel = 18;
+  string nemesis_target_id = 19;
+  bool rousing_speech_used_this_long_rest = 20;
+  bool wardens_protection_used_this_long_rest = 21;
+}
+
+message DaggerheartUnstoppableState {
+  bool active = 1;
+  int32 current_value = 2;
+  int32 die_sides = 3;
+  bool used_this_long_rest = 4;
+}
+
+message DaggerheartBeastformAttackDie {
+  int32 count = 1;
+  int32 sides = 2;
+}
+
+message DaggerheartActiveBeastformState {
+  string beastform_id = 1;
+  string base_trait = 2;
+  string attack_trait = 3;
+  int32 trait_bonus = 4;
+  int32 evasion_bonus = 5;
+  string attack_range = 6;
+  repeated DaggerheartBeastformAttackDie damage_dice = 7;
+  int32 damage_bonus = 8;
+  string damage_type = 9;
+  string evolution_trait_override = 10;
+  bool drop_on_any_hp_mark = 11;
+}
+
+message DaggerheartClassState {
+  int32 attack_bonus_until_rest = 1;
+  int32 evasion_bonus_until_hit_or_rest = 2;
+  int32 difficulty_penalty_until_rest = 3;
+  string focus_target_id = 4;
+  DaggerheartActiveBeastformState active_beastform = 5;
+  reserved 6;
+  int32 strange_patterns_number = 7;
+  repeated int32 rally_dice = 8;
+  repeated int32 prayer_dice = 9;
+  DaggerheartUnstoppableState unstoppable = 10;
+  bool channel_raw_power_used_this_long_rest = 11;
+}
+
+// DaggerheartCreationCompanionInput applies companion-specific creation data
+// required by some subclasses.
+message DaggerheartCreationCompanionInput {
+  string animal_kind = 1;
+  string name = 2;
+  repeated string experience_ids = 3;
+  string attack_description = 4;
+  string damage_type = 5;
+}
+
+// DaggerheartCreationStepHeritageSelectionInput applies heritage selection in
+// creation step 2.
+message DaggerheartCreationStepHeritageSelectionInput {
+  string ancestry_label = 1;
+  string first_feature_ancestry_id = 2;
+  string second_feature_ancestry_id = 3;
+  string community_id = 4;
+}
+
+enum DaggerheartSubclassTrackOrigin {
+  DAGGERHEART_SUBCLASS_TRACK_ORIGIN_UNSPECIFIED = 0;
+  DAGGERHEART_SUBCLASS_TRACK_ORIGIN_PRIMARY = 1;
+  DAGGERHEART_SUBCLASS_TRACK_ORIGIN_MULTICLASS = 2;
+}
+
+enum DaggerheartSubclassTrackRank {
+  DAGGERHEART_SUBCLASS_TRACK_RANK_UNSPECIFIED = 0;
+  DAGGERHEART_SUBCLASS_TRACK_RANK_FOUNDATION = 1;
+  DAGGERHEART_SUBCLASS_TRACK_RANK_SPECIALIZATION = 2;
+  DAGGERHEART_SUBCLASS_TRACK_RANK_MASTERY = 3;
+}
+
+message DaggerheartSubclassTrack {
+  DaggerheartSubclassTrackOrigin origin = 1;
+  string class_id = 2;
+  string subclass_id = 3;
+  DaggerheartSubclassTrackRank rank = 4;
+  string domain_id = 5;
+}
+
+message DaggerheartActiveSubclassFeature {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 level = 4;
+}
+
+message DaggerheartActiveClassFeature {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  int32 level = 4;
+  bool hope_feature = 5;
+}
+
+message DaggerheartActiveSubclassTrackFeatures {
+  DaggerheartSubclassTrack track = 1;
+  repeated DaggerheartActiveSubclassFeature foundation_features = 2;
+  repeated DaggerheartActiveSubclassFeature specialization_features = 3;
+  repeated DaggerheartActiveSubclassFeature mastery_features = 4;
+}
+
 // DaggerheartProfile contains Daggerheart-specific character profile extensions.
 // These are static values configured at character creation.
 // Wrapper types allow distinguishing "not provided" from "set to zero" in patches.
@@ -60,11 +241,11 @@ message DaggerheartProfile {
   // Step 1: selected subclass content id.
   string subclass_id = 18;
 
-  // Step 2: selected ancestry heritage id.
-  string ancestry_id = 19;
+  // Step 1: subclass-scoped creation requirements resolved at apply time.
+  repeated string subclass_creation_requirements = 19;
 
-  // Step 2: selected community heritage id.
-  string community_id = 20;
+  // Step 2: selected ancestry/community heritage bundle.
+  DaggerheartHeritageSelection heritage = 20;
 
   // Step 3: whether traits were explicitly assigned during creation.
   google.protobuf.BoolValue traits_assigned = 21;
@@ -92,6 +273,24 @@ message DaggerheartProfile {
 
   // Step 7: free-form character description (appearance, personality, etc.).
   string description = 29;
+
+  // Step 1: static companion sheet required by some subclasses.
+  DaggerheartCompanionSheet companion_sheet = 30;
+
+  // Current equipped armor id used by runtime armor rules and swap flows.
+  string equipped_armor_id = 31;
+
+  // Current bonus applied to spellcast rolls by the equipped armor.
+  google.protobuf.Int32Value spellcast_roll_bonus = 32;
+
+  // Authoritative unlocked primary and multiclass subclass progression tracks.
+  repeated DaggerheartSubclassTrack subclass_tracks = 33;
+
+  // Derived active subclass features grouped by track and unlocked stage.
+  repeated DaggerheartActiveSubclassTrackFeatures active_subclass_features = 34;
+
+  // Derived active class features from the selected primary class.
+  repeated DaggerheartActiveClassFeature active_class_features = 35;
 }
 
 // DaggerheartCreationStepClassSubclassInput applies creation step 1
@@ -99,13 +298,13 @@ message DaggerheartProfile {
 message DaggerheartCreationStepClassSubclassInput {
   string class_id = 1;
   string subclass_id = 2;
+  DaggerheartCreationCompanionInput companion = 3;
 }
 
 // DaggerheartCreationStepHeritageInput applies creation step 2
 // (ancestry and community selection).
 message DaggerheartCreationStepHeritageInput {
-  string ancestry_id = 1;
-  string community_id = 2;
+  DaggerheartCreationStepHeritageSelectionInput heritage = 1;
 }
 
 // DaggerheartCreationStepTraitsInput applies creation step 3 (trait assignment).
@@ -188,6 +387,33 @@ enum DaggerheartCondition {
   DAGGERHEART_CONDITION_HIDDEN = 1;
   DAGGERHEART_CONDITION_RESTRAINED = 2;
   DAGGERHEART_CONDITION_VULNERABLE = 3;
+  DAGGERHEART_CONDITION_CLOAKED = 4;
+}
+
+enum DaggerheartConditionClass {
+  DAGGERHEART_CONDITION_CLASS_UNSPECIFIED = 0;
+  DAGGERHEART_CONDITION_CLASS_STANDARD = 1;
+  DAGGERHEART_CONDITION_CLASS_TAG = 2;
+  DAGGERHEART_CONDITION_CLASS_SPECIAL = 3;
+}
+
+enum DaggerheartConditionClearTrigger {
+  DAGGERHEART_CONDITION_CLEAR_TRIGGER_UNSPECIFIED = 0;
+  DAGGERHEART_CONDITION_CLEAR_TRIGGER_SHORT_REST = 1;
+  DAGGERHEART_CONDITION_CLEAR_TRIGGER_LONG_REST = 2;
+  DAGGERHEART_CONDITION_CLEAR_TRIGGER_SESSION_END = 3;
+  DAGGERHEART_CONDITION_CLEAR_TRIGGER_DAMAGE_TAKEN = 4;
+}
+
+message DaggerheartConditionState {
+  string id = 1;
+  DaggerheartConditionClass class = 2;
+  DaggerheartCondition standard = 3;
+  string code = 4;
+  string label = 5;
+  string source = 6;
+  string source_id = 7;
+  repeated DaggerheartConditionClearTrigger clear_triggers = 8;
 }
 
 // DaggerheartLifeState represents a character's life state.
@@ -220,12 +446,20 @@ message DaggerheartCharacterState {
   int32 stress = 4;
   // Current armor slots (0 to armor_max from profile).
   int32 armor = 5;
-  // Active conditions for the character.
-  repeated DaggerheartCondition conditions = 6;
+  // Active structured conditions for the character.
+  repeated DaggerheartConditionState condition_states = 6;
   // Current life state.
   DaggerheartLifeState life_state = 7;
   // Active temporary armor buckets.
   repeated DaggerheartTemporaryArmorBucket temporary_armor_buckets = 8;
+  // Whether the equipped armor's once-per-short-rest survival effect has been used.
+  bool impenetrable_used_this_short_rest = 9;
+  // Mutable class-owned runtime state.
+  DaggerheartClassState class_state = 10;
+  // Mutable companion-owned runtime state.
+  DaggerheartCompanionState companion_state = 11;
+  // Mutable subclass-owned runtime state.
+  DaggerheartSubclassState subclass_state = 12;
 }
 
 // DaggerheartTemporaryArmorBucket tracks a temporary armor source.
@@ -255,12 +489,10 @@ enum DaggerheartRestType {
   DAGGERHEART_REST_TYPE_LONG = 2;
 }
 
-enum DaggerheartDowntimeMove {
-  DAGGERHEART_DOWNTIME_MOVE_UNSPECIFIED = 0;
-  DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS = 1;
-  DAGGERHEART_DOWNTIME_MOVE_REPAIR_ALL_ARMOR = 2;
-  DAGGERHEART_DOWNTIME_MOVE_PREPARE = 3;
-  DAGGERHEART_DOWNTIME_MOVE_WORK_ON_PROJECT = 4;
+enum DaggerheartProjectAdvanceMode {
+  DAGGERHEART_PROJECT_ADVANCE_MODE_UNSPECIFIED = 0;
+  DAGGERHEART_PROJECT_ADVANCE_MODE_AUTO = 1;
+  DAGGERHEART_PROJECT_ADVANCE_MODE_GM_SET_DELTA = 2;
 }
 
 enum DaggerheartDamageType {
@@ -286,14 +518,62 @@ message DaggerheartDamageRequest {
 message DaggerheartRestRequest {
   DaggerheartRestType rest_type = 1;
   bool interrupted = 2;
-  int32 party_size = 3;
-  common.v1.RngRequest rng = 4;
-  string long_term_countdown_id = 5;
+  common.v1.RngRequest rng = 3;
+  string long_term_countdown_id = 4;
+  repeated DaggerheartRestParticipant participants = 5;
 }
 
-message DaggerheartDowntimeRequest {
-  DaggerheartDowntimeMove move = 1;
-  bool prepare_with_group = 2;
+message DaggerheartRestParticipant {
+  string character_id = 1;
+  repeated DaggerheartDowntimeSelection downtime_moves = 2;
+}
+
+message DaggerheartDowntimeSelection {
+  oneof move {
+    DaggerheartTendToWoundsMove tend_to_wounds = 1;
+    DaggerheartClearStressMove clear_stress = 2;
+    DaggerheartRepairArmorMove repair_armor = 3;
+    DaggerheartPrepareMove prepare = 4;
+    DaggerheartTendToAllWoundsMove tend_to_all_wounds = 5;
+    DaggerheartClearAllStressMove clear_all_stress = 6;
+    DaggerheartRepairAllArmorMove repair_all_armor = 7;
+    DaggerheartWorkOnProjectMove work_on_project = 8;
+  }
+}
+
+message DaggerheartTendToWoundsMove {
+  string target_character_id = 1;
+  common.v1.RngRequest rng = 2;
+}
+
+message DaggerheartClearStressMove {
+  common.v1.RngRequest rng = 1;
+}
+
+message DaggerheartRepairArmorMove {
+  string target_character_id = 1;
+  common.v1.RngRequest rng = 2;
+}
+
+message DaggerheartPrepareMove {
+  string group_id = 1;
+}
+
+message DaggerheartTendToAllWoundsMove {
+  string target_character_id = 1;
+}
+
+message DaggerheartClearAllStressMove {}
+
+message DaggerheartRepairAllArmorMove {
+  string target_character_id = 1;
+}
+
+message DaggerheartWorkOnProjectMove {
+  string countdown_id = 1;
+  DaggerheartProjectAdvanceMode advance_mode = 2;
+  int32 advance_delta = 3;
+  string reason = 4;
 }
 
 message DaggerheartLoadoutSwapRequest {

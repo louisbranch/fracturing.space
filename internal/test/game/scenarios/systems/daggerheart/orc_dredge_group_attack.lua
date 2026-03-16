@@ -17,8 +17,7 @@ scn:start_session("Group Attack")
 dh:gm_fear(1)
 
 -- Example: single group attack roll against Aragorn's Evasion.
--- Missing DSL: represent group attack roll and shared damage.
-dh:gm_spend_fear(1):spotlight("Orc Raiders")
+dh:gm_spend_fear(1):move("custom", { description = "The raiders surge forward in a coordinated rush." })
 dh:adversary_attack{
   actor = "Orc Raiders",
   target = "Aragorn",

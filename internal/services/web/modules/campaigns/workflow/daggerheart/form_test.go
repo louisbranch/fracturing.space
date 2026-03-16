@@ -2,6 +2,7 @@ package daggerheart
 
 import (
 	"net/url"
+	"strings"
 	"testing"
 
 	campaignapp "github.com/louisbranch/fracturing.space/internal/services/web/modules/campaigns/app"
@@ -34,18 +35,37 @@ func TestParseStepInputHappyPaths(t *testing.T) {
 			},
 		},
 		{
-			name: "step 2 ancestry and community",
+			name: "step 2 single ancestry and community",
 			step: 2,
-			body: "ancestry_id=elf&community_id=loreborne",
+			body: "first_feature_ancestry_id=elf&community_id=loreborne",
 			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
 				if input.Heritage == nil {
 					t.Fatal("Heritage is nil")
 				}
-				if input.Heritage.AncestryID != "elf" {
-					t.Fatalf("AncestryID = %q, want elf", input.Heritage.AncestryID)
+				if input.Heritage.Heritage.FirstFeatureAncestryID != "elf" {
+					t.Fatalf("FirstFeatureAncestryID = %q, want elf", input.Heritage.Heritage.FirstFeatureAncestryID)
 				}
-				if input.Heritage.CommunityID != "loreborne" {
-					t.Fatalf("CommunityID = %q, want loreborne", input.Heritage.CommunityID)
+				if input.Heritage.Heritage.SecondFeatureAncestryID != "elf" {
+					t.Fatalf("SecondFeatureAncestryID = %q, want elf", input.Heritage.Heritage.SecondFeatureAncestryID)
+				}
+				if input.Heritage.Heritage.CommunityID != "loreborne" {
+					t.Fatalf("CommunityID = %q, want loreborne", input.Heritage.Heritage.CommunityID)
+				}
+			},
+		},
+		{
+			name: "step 2 mixed ancestry with optional label",
+			step: 2,
+			body: "heritage_mode=mixed&first_feature_ancestry_id=elf&second_feature_ancestry_id=human&community_id=loreborne",
+			verify: func(t *testing.T, input *campaignapp.CampaignCharacterCreationStepInput) {
+				if input.Heritage == nil {
+					t.Fatal("Heritage is nil")
+				}
+				if input.Heritage.Heritage.AncestryLabel != "" {
+					t.Fatalf("AncestryLabel = %q, want empty", input.Heritage.Heritage.AncestryLabel)
+				}
+				if input.Heritage.Heritage.SecondFeatureAncestryID != "human" {
+					t.Fatalf("SecondFeatureAncestryID = %q, want human", input.Heritage.Heritage.SecondFeatureAncestryID)
 				}
 			},
 		},
@@ -231,7 +251,7 @@ func TestParseStepInputUsesLocalizationKeys(t *testing.T) {
 		{
 			name:    "step 2 missing community",
 			step:    2,
-			body:    "ancestry_id=elf",
+			body:    "first_feature_ancestry_id=elf",
 			wantKey: "error.web.message.character_creation_ancestry_and_community_are_required",
 		},
 		{
@@ -348,6 +368,47 @@ func TestParseStepInputUsesLocalizationKeys(t *testing.T) {
 			}
 			if got := apperrors.LocalizationKey(err); got != tt.wantKey {
 				t.Fatalf("LocalizationKey(err) = %q, want %q", got, tt.wantKey)
+			}
+		})
+	}
+}
+
+func TestParseStepInputRejectsInvalidMixedHeritageShapes(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		body       string
+		wantSubstr string
+	}{
+		{
+			name:       "missing second ancestry",
+			body:       "heritage_mode=mixed&first_feature_ancestry_id=elf&community_id=loreborne",
+			wantSubstr: "mixed heritage requires a second ancestry",
+		},
+		{
+			name:       "duplicate ancestry",
+			body:       "heritage_mode=mixed&first_feature_ancestry_id=elf&second_feature_ancestry_id=elf&community_id=loreborne",
+			wantSubstr: "mixed heritage requires two different ancestries",
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			form, err := url.ParseQuery(tt.body)
+			if err != nil {
+				t.Fatalf("ParseQuery() error = %v", err)
+			}
+
+			_, err = Workflow{}.ParseStepInput(form, 2)
+			if err == nil {
+				t.Fatal("expected error")
+			}
+			if !strings.Contains(err.Error(), tt.wantSubstr) {
+				t.Fatalf("error = %q, want substring %q", err.Error(), tt.wantSubstr)
 			}
 		})
 	}

@@ -53,8 +53,8 @@ type DomainCommandInput struct {
 type CharacterConditionsResult struct {
 	CharacterID string
 	State       projectionstore.DaggerheartCharacterState
-	Added       []string
-	Removed     []string
+	Added       []*ConditionStateView
+	Removed     []*ConditionStateView
 }
 
 // AdversaryConditionsResult is the updated state returned after applying
@@ -62,8 +62,8 @@ type CharacterConditionsResult struct {
 type AdversaryConditionsResult struct {
 	AdversaryID string
 	Adversary   projectionstore.DaggerheartAdversary
-	Added       []string
-	Removed     []string
+	Added       []*ConditionStateView
+	Removed     []*ConditionStateView
 }
 
 // Dependencies groups the exact read stores and write callbacks the condition

@@ -15,27 +15,27 @@ scn:pc("Frodo")
 scn:start_session("Equip Swap")
 dh:swap_equipment{
   target = "Frodo",
-  item_id = "shortsword_01",
-  item_type = "weapon",
-  from = "inventory",
-  to = "active",
-}
-
--- Swap weapon: move shortsword back to inventory.
-dh:swap_equipment{
-  target = "Frodo",
-  item_id = "shortsword_01",
+  item_id = "weapon.longsword",
   item_type = "weapon",
   from = "active",
   to = "inventory",
 }
 
--- Equip armor from none to active.
+-- Swap weapon: move longsword back to active.
 dh:swap_equipment{
   target = "Frodo",
-  item_id = "leather_armor_01",
+  item_id = "weapon.longsword",
+  item_type = "weapon",
+  from = "inventory",
+  to = "active",
+}
+
+-- Swap armor from inventory to active.
+dh:swap_equipment{
+  target = "Frodo",
+  item_id = "armor.leather-armor",
   item_type = "armor",
-  from = "none",
+  from = "inventory",
   to = "active",
 }
 

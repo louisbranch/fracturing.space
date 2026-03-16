@@ -94,20 +94,22 @@ func (s *projectionParticipantStore) ListParticipants(context.Context, string, i
 }
 
 type projectionDaggerheartStore struct {
-	profiles    map[string]projectionstore.DaggerheartCharacterProfile
-	states      map[string]projectionstore.DaggerheartCharacterState
-	snapshots   map[string]projectionstore.DaggerheartSnapshot
-	countdowns  map[string]projectionstore.DaggerheartCountdown
-	adversaries map[string]projectionstore.DaggerheartAdversary
+	profiles     map[string]projectionstore.DaggerheartCharacterProfile
+	states       map[string]projectionstore.DaggerheartCharacterState
+	snapshots    map[string]projectionstore.DaggerheartSnapshot
+	countdowns   map[string]projectionstore.DaggerheartCountdown
+	adversaries  map[string]projectionstore.DaggerheartAdversary
+	environments map[string]projectionstore.DaggerheartEnvironmentEntity
 }
 
 func newProjectionDaggerheartStore() *projectionDaggerheartStore {
 	return &projectionDaggerheartStore{
-		profiles:    make(map[string]projectionstore.DaggerheartCharacterProfile),
-		states:      make(map[string]projectionstore.DaggerheartCharacterState),
-		snapshots:   make(map[string]projectionstore.DaggerheartSnapshot),
-		countdowns:  make(map[string]projectionstore.DaggerheartCountdown),
-		adversaries: make(map[string]projectionstore.DaggerheartAdversary),
+		profiles:     make(map[string]projectionstore.DaggerheartCharacterProfile),
+		states:       make(map[string]projectionstore.DaggerheartCharacterState),
+		snapshots:    make(map[string]projectionstore.DaggerheartSnapshot),
+		countdowns:   make(map[string]projectionstore.DaggerheartCountdown),
+		adversaries:  make(map[string]projectionstore.DaggerheartAdversary),
+		environments: make(map[string]projectionstore.DaggerheartEnvironmentEntity),
 	}
 }
 
@@ -250,5 +252,44 @@ func (s *projectionDaggerheartStore) DeleteDaggerheartAdversary(_ context.Contex
 		return storage.ErrNotFound
 	}
 	delete(s.adversaries, key)
+	return nil
+}
+
+func (s *projectionDaggerheartStore) PutDaggerheartEnvironmentEntity(_ context.Context, environmentEntity projectionstore.DaggerheartEnvironmentEntity) error {
+	s.environments[environmentEntity.CampaignID+":"+environmentEntity.EnvironmentEntityID] = environmentEntity
+	return nil
+}
+
+func (s *projectionDaggerheartStore) GetDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error) {
+	environmentEntity, ok := s.environments[campaignID+":"+environmentEntityID]
+	if !ok {
+		return projectionstore.DaggerheartEnvironmentEntity{}, storage.ErrNotFound
+	}
+	return environmentEntity, nil
+}
+
+func (s *projectionDaggerheartStore) ListDaggerheartEnvironmentEntities(_ context.Context, campaignID, sessionID, sceneID string) ([]projectionstore.DaggerheartEnvironmentEntity, error) {
+	results := make([]projectionstore.DaggerheartEnvironmentEntity, 0)
+	for _, environmentEntity := range s.environments {
+		if environmentEntity.CampaignID != campaignID {
+			continue
+		}
+		if strings.TrimSpace(sessionID) != "" && environmentEntity.SessionID != sessionID {
+			continue
+		}
+		if strings.TrimSpace(sceneID) != "" && environmentEntity.SceneID != sceneID {
+			continue
+		}
+		results = append(results, environmentEntity)
+	}
+	return results, nil
+}
+
+func (s *projectionDaggerheartStore) DeleteDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) error {
+	key := campaignID + ":" + environmentEntityID
+	if _, ok := s.environments[key]; !ok {
+		return storage.ErrNotFound
+	}
+	delete(s.environments, key)
 	return nil
 }

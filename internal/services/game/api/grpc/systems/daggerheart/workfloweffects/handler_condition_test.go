@@ -3,6 +3,9 @@ package workfloweffects
 import (
 	"context"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
 )
 
 func TestApplyStressVulnerableCondition_NoThresholdCrossing(t *testing.T) {
@@ -46,7 +49,7 @@ func TestApplyStressVulnerableCondition_ExecutesRepair(t *testing.T) {
 		CampaignID:   "camp-1",
 		SessionID:    "sess-1",
 		CharacterID:  "char-1",
-		Conditions:   []string{"hidden"},
+		Conditions:   []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
 		StressBefore: 5,
 		StressAfter:  6,
 		StressMax:    6,
@@ -80,7 +83,7 @@ func TestApplyStressVulnerableCondition_SkipsWhenReplayAlreadyApplied(t *testing
 		CampaignID:   "camp-1",
 		SessionID:    "sess-1",
 		CharacterID:  "char-1",
-		Conditions:   []string{"hidden"},
+		Conditions:   []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
 		StressBefore: 5,
 		StressAfter:  6,
 		StressMax:    6,

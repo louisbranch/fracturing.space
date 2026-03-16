@@ -189,23 +189,38 @@ type adversaryFeatureRecord struct {
 	Cost        int    `json:"cost"`
 }
 
+type adversaryMinionRuleRecord struct {
+	SpilloverDamageStep int `json:"spillover_damage_step"`
+}
+
+type adversaryHordeRuleRecord struct {
+	BloodiedAttack adversaryAttackRecord `json:"bloodied_attack"`
+}
+
+type adversaryRelentlessRuleRecord struct {
+	MaxSpotlightsPerGMTurn int `json:"max_spotlights_per_gm_turn"`
+}
+
 type adversaryRecord struct {
-	ID              string                      `json:"id"`
-	Name            string                      `json:"name"`
-	Tier            int                         `json:"tier"`
-	Role            string                      `json:"role"`
-	Description     string                      `json:"description"`
-	Motives         string                      `json:"motives"`
-	Difficulty      int                         `json:"difficulty"`
-	MajorThreshold  int                         `json:"major_threshold"`
-	SevereThreshold int                         `json:"severe_threshold"`
-	HP              int                         `json:"hp"`
-	Stress          int                         `json:"stress"`
-	Armor           int                         `json:"armor"`
-	AttackModifier  int                         `json:"attack_modifier"`
-	StandardAttack  adversaryAttackRecord       `json:"standard_attack"`
-	Experiences     []adversaryExperienceRecord `json:"experiences"`
-	Features        []adversaryFeatureRecord    `json:"features"`
+	ID              string                         `json:"id"`
+	Name            string                         `json:"name"`
+	Tier            int                            `json:"tier"`
+	Role            string                         `json:"role"`
+	Description     string                         `json:"description"`
+	Motives         string                         `json:"motives"`
+	Difficulty      int                            `json:"difficulty"`
+	MajorThreshold  int                            `json:"major_threshold"`
+	SevereThreshold int                            `json:"severe_threshold"`
+	HP              int                            `json:"hp"`
+	Stress          int                            `json:"stress"`
+	Armor           int                            `json:"armor"`
+	AttackModifier  int                            `json:"attack_modifier"`
+	StandardAttack  adversaryAttackRecord          `json:"standard_attack"`
+	Experiences     []adversaryExperienceRecord    `json:"experiences"`
+	Features        []adversaryFeatureRecord       `json:"features"`
+	MinionRule      *adversaryMinionRuleRecord     `json:"minion_rule,omitempty"`
+	HordeRule       *adversaryHordeRuleRecord      `json:"horde_rule,omitempty"`
+	RelentlessRule  *adversaryRelentlessRuleRecord `json:"relentless_rule,omitempty"`
 }
 
 type beastformAttackRecord struct {

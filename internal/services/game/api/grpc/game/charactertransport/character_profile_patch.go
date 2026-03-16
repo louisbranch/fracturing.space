@@ -251,7 +251,7 @@ func rejectDaggerheartCreationWorkflowPatchFields(patch *daggerheartv1.Daggerhea
 	if patch.GetAgility() == nil && patch.GetStrength() == nil && patch.GetFinesse() == nil &&
 		patch.GetInstinct() == nil && patch.GetPresence() == nil && patch.GetKnowledge() == nil &&
 		strings.TrimSpace(patch.GetClassId()) == "" && strings.TrimSpace(patch.GetSubclassId()) == "" &&
-		strings.TrimSpace(patch.GetAncestryId()) == "" && strings.TrimSpace(patch.GetCommunityId()) == "" &&
+		len(patch.GetSubclassCreationRequirements()) == 0 && patch.GetHeritage() == nil && patch.GetCompanionSheet() == nil &&
 		patch.GetTraitsAssigned() == nil && patch.GetDetailsRecorded() == nil &&
 		len(patch.GetStartingWeaponIds()) == 0 && strings.TrimSpace(patch.GetStartingArmorId()) == "" &&
 		strings.TrimSpace(patch.GetStartingPotionItemId()) == "" &&

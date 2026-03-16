@@ -181,10 +181,10 @@ func normalizeCampaignCharacterDaggerheartSummary(summary *CampaignCharacterDagg
 		Level:         summary.Level,
 		ClassName:     strings.TrimSpace(summary.ClassName),
 		SubclassName:  strings.TrimSpace(summary.SubclassName),
-		AncestryName:  strings.TrimSpace(summary.AncestryName),
+		HeritageName:  strings.TrimSpace(summary.HeritageName),
 		CommunityName: strings.TrimSpace(summary.CommunityName),
 	}
-	if normalized.ClassName == "" || normalized.SubclassName == "" || normalized.AncestryName == "" || normalized.CommunityName == "" {
+	if normalized.ClassName == "" || normalized.SubclassName == "" || normalized.HeritageName == "" || normalized.CommunityName == "" {
 		return nil
 	}
 	return normalized

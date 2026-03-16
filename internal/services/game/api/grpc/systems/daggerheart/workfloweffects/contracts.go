@@ -33,7 +33,7 @@ type ApplyStressVulnerableConditionInput struct {
 	CampaignID    string
 	SessionID     string
 	CharacterID   string
-	Conditions    []string
+	Conditions    []projectionstore.DaggerheartConditionState
 	StressBefore  int
 	StressAfter   int
 	StressMax     int

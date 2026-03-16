@@ -362,7 +362,6 @@ func TestValidateLevelUp_RejectsMulticlassBeforeLevel5(t *testing.T) {
 			{Type: AdvMulticlass, Multiclass: &MulticlassChoice{
 				SecondaryClassID:    "warrior",
 				SecondarySubclassID: "slayer",
-				FoundationCardID:    "card-1",
 				SpellcastTrait:      "presence",
 				DomainID:            "blade",
 			}},
@@ -383,7 +382,6 @@ func TestValidateLevelUp_AcceptsMulticlassAtLevel5(t *testing.T) {
 			{Type: AdvMulticlass, Multiclass: &MulticlassChoice{
 				SecondaryClassID:    "warrior",
 				SecondarySubclassID: "slayer",
-				FoundationCardID:    "card-1",
 				SpellcastTrait:      "presence",
 				DomainID:            "blade",
 			}},
@@ -417,10 +415,9 @@ func TestValidateLevelUp_RejectsMulticlassMissingFields(t *testing.T) {
 		name string
 		mc   MulticlassChoice
 	}{
-		{"missing class", MulticlassChoice{SecondarySubclassID: "s", FoundationCardID: "f", DomainID: "d"}},
-		{"missing subclass", MulticlassChoice{SecondaryClassID: "c", FoundationCardID: "f", DomainID: "d"}},
-		{"missing foundation", MulticlassChoice{SecondaryClassID: "c", SecondarySubclassID: "s", DomainID: "d"}},
-		{"missing domain", MulticlassChoice{SecondaryClassID: "c", SecondarySubclassID: "s", FoundationCardID: "f"}},
+		{"missing class", MulticlassChoice{SecondarySubclassID: "s", DomainID: "d"}},
+		{"missing subclass", MulticlassChoice{SecondaryClassID: "c", DomainID: "d"}},
+		{"missing domain", MulticlassChoice{SecondaryClassID: "c", SecondarySubclassID: "s"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

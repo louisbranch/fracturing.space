@@ -65,13 +65,13 @@ func newTestHandler(deps Dependencies) *Handler {
 				CampaignID:  "camp-1",
 				CharacterID: "char-1",
 				LifeState:   daggerheart.LifeStateAlive,
-				Conditions:  []string{daggerheart.ConditionHidden},
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
 			},
 			adversary: projectionstore.DaggerheartAdversary{
 				CampaignID:  "camp-1",
 				AdversaryID: "adv-1",
 				SessionID:   "sess-1",
-				Conditions:  []string{daggerheart.ConditionHidden},
+				Conditions:  []projectionstore.DaggerheartConditionState{{Standard: daggerheart.ConditionHidden}},
 			},
 		}
 	}

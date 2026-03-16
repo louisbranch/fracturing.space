@@ -93,10 +93,21 @@ func countActiveCreationStepInputs(step *campaignapp.CampaignCharacterCreationSt
 
 // mapClassSubclassStep maps class/subclass selection to proto payload.
 func mapClassSubclassStep(step *campaignapp.CampaignCharacterCreationStepClassSubclass) *daggerheartv1.DaggerheartCreationStepInput {
+	var companion *daggerheartv1.DaggerheartCreationCompanionInput
+	if step.Companion != nil {
+		companion = &daggerheartv1.DaggerheartCreationCompanionInput{
+			AnimalKind:        strings.TrimSpace(step.Companion.AnimalKind),
+			Name:              strings.TrimSpace(step.Companion.Name),
+			ExperienceIds:     trimNonEmptyStepValues(step.Companion.ExperienceIDs),
+			AttackDescription: strings.TrimSpace(step.Companion.AttackDescription),
+			DamageType:        strings.TrimSpace(step.Companion.DamageType),
+		}
+	}
 	return &daggerheartv1.DaggerheartCreationStepInput{
 		Step: &daggerheartv1.DaggerheartCreationStepInput_ClassSubclassInput{ClassSubclassInput: &daggerheartv1.DaggerheartCreationStepClassSubclassInput{
 			ClassId:    strings.TrimSpace(step.ClassID),
 			SubclassId: strings.TrimSpace(step.SubclassID),
+			Companion:  companion,
 		}},
 	}
 }
@@ -105,8 +116,12 @@ func mapClassSubclassStep(step *campaignapp.CampaignCharacterCreationStepClassSu
 func mapHeritageStep(step *campaignapp.CampaignCharacterCreationStepHeritage) *daggerheartv1.DaggerheartCreationStepInput {
 	return &daggerheartv1.DaggerheartCreationStepInput{
 		Step: &daggerheartv1.DaggerheartCreationStepInput_HeritageInput{HeritageInput: &daggerheartv1.DaggerheartCreationStepHeritageInput{
-			AncestryId:  strings.TrimSpace(step.AncestryID),
-			CommunityId: strings.TrimSpace(step.CommunityID),
+			Heritage: &daggerheartv1.DaggerheartCreationStepHeritageSelectionInput{
+				AncestryLabel:           strings.TrimSpace(step.Heritage.AncestryLabel),
+				FirstFeatureAncestryId:  strings.TrimSpace(step.Heritage.FirstFeatureAncestryID),
+				SecondFeatureAncestryId: strings.TrimSpace(step.Heritage.SecondFeatureAncestryID),
+				CommunityId:             strings.TrimSpace(step.Heritage.CommunityID),
+			},
 		}},
 	}
 }

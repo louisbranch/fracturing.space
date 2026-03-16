@@ -1,0 +1,157 @@
+{
+  "version": 1,
+  "generated_at": "2026-03-15T16:21:15Z",
+  "reference_root": "/home/louis/code/daggerheart/reference-corpus/v1/reference",
+  "entry_count": 786,
+  "rule_clause_count": 367,
+  "counts_by_kind": [
+    {
+      "key": "ability",
+      "count": 189
+    },
+    {
+      "key": "adversary",
+      "count": 129
+    },
+    {
+      "key": "ancestry",
+      "count": 18
+    },
+    {
+      "key": "armor",
+      "count": 34
+    },
+    {
+      "key": "beastform",
+      "count": 24
+    },
+    {
+      "key": "class",
+      "count": 9
+    },
+    {
+      "key": "community",
+      "count": 9
+    },
+    {
+      "key": "consumable",
+      "count": 60
+    },
+    {
+      "key": "domain",
+      "count": 9
+    },
+    {
+      "key": "environment",
+      "count": 19
+    },
+    {
+      "key": "glossary",
+      "count": 7
+    },
+    {
+      "key": "item",
+      "count": 60
+    },
+    {
+      "key": "playbook",
+      "count": 4
+    },
+    {
+      "key": "rule",
+      "count": 5
+    },
+    {
+      "key": "subclass",
+      "count": 18
+    },
+    {
+      "key": "weapon",
+      "count": 192
+    }
+  ],
+  "counts_by_audit_area": [
+    {
+      "key": "adversaries",
+      "count": 129
+    },
+    {
+      "key": "character_creation",
+      "count": 55
+    },
+    {
+      "key": "character_model",
+      "count": 3
+    },
+    {
+      "key": "companions_beastforms",
+      "count": 24
+    },
+    {
+      "key": "death_scars",
+      "count": 1
+    },
+    {
+      "key": "domain_cards",
+      "count": 198
+    },
+    {
+      "key": "editorial_reference",
+      "count": 3
+    },
+    {
+      "key": "environments",
+      "count": 19
+    },
+    {
+      "key": "equipment_items",
+      "count": 346
+    },
+    {
+      "key": "gm_fear_moves",
+      "count": 3
+    },
+    {
+      "key": "multi_area",
+      "count": 3
+    },
+    {
+      "key": "recovery_downtime",
+      "count": 2
+    }
+  ],
+  "counts_by_normativity": [
+    {
+      "key": "content_instance",
+      "count": 770
+    },
+    {
+      "key": "normative_rule",
+      "count": 5
+    },
+    {
+      "key": "supporting_guidance",
+      "count": 11
+    }
+  ],
+  "counts_by_review_state": [
+    {
+      "key": "reviewed",
+      "count": 786
+    }
+  ],
+  "counts_by_final_status": [
+    {
+      "key": "covered",
+      "count": 345
+    },
+    {
+      "key": "gap",
+      "count": 438
+    },
+    {
+      "key": "not_applicable",
+      "count": 3
+    }
+  ]
+}

@@ -1,13 +1,55 @@
 package recoverytransport
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/internal/grpcerror"
+	systembridge "github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/bridge/daggerheart/projectionstore"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/ids"
+	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+func campaignSupportsDaggerheart(record storage.CampaignRecord) bool {
+	systemID, ok := systembridge.NormalizeSystemID(record.System.String())
+	return ok && systemID == systembridge.SystemIDDaggerheart
+}
+
+func requireDaggerheartSystem(record storage.CampaignRecord, unsupportedMessage string) error {
+	if campaignSupportsDaggerheart(record) {
+		return nil
+	}
+	return status.Error(codes.FailedPrecondition, unsupportedMessage)
+}
+
+func handleDomainError(err error) error {
+	return grpcerror.HandleDomainError(err)
+}
+
+func ensureNoOpenSessionGate(ctx context.Context, store SessionGateStore, campaignID, sessionID string) error {
+	if store == nil {
+		return status.Error(codes.Internal, "session gate store is not configured")
+	}
+	if strings.TrimSpace(campaignID) == "" || strings.TrimSpace(sessionID) == "" {
+		return nil
+	}
+	gate, err := store.GetOpenSessionGate(ctx, campaignID, sessionID)
+	if err == nil {
+		return status.Errorf(codes.FailedPrecondition, "session gate is open: %s", gate.GateID)
+	}
+	if errors.Is(err, storage.ErrNotFound) {
+		return nil
+	}
+	return grpcerror.Internal("load session gate", err)
+}
 
 func resolveSeed(rng *commonv1.RngRequest, seedFunc func() (int64, error), resolve func(*commonv1.RngRequest, func() (int64, error), func(commonv1.RollMode) bool) (int64, string, commonv1.RollMode, error)) (int64, error) {
 	seed, _, _, err := resolve(rng, seedFunc, func(mode commonv1.RollMode) bool { return mode == commonv1.RollMode_REPLAY })
@@ -40,35 +82,77 @@ func restTypeFromProto(t pb.DaggerheartRestType) (daggerheart.RestType, error) {
 	}
 }
 
-func downtimeMoveFromProto(m pb.DaggerheartDowntimeMove) (daggerheart.DowntimeMove, error) {
-	switch m {
-	case pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_UNSPECIFIED:
-		return daggerheart.DowntimePrepare, fmt.Errorf("downtime move is required")
-	case pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS:
-		return daggerheart.DowntimeClearAllStress, nil
-	case pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_REPAIR_ALL_ARMOR:
-		return daggerheart.DowntimeRepairAllArmor, nil
-	case pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_PREPARE:
-		return daggerheart.DowntimePrepare, nil
-	case pb.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_WORK_ON_PROJECT:
-		return daggerheart.DowntimeWorkOnProject, nil
+func downtimeSelectionFromProto(
+	selection *pb.DaggerheartDowntimeSelection,
+	resolve func(*commonv1.RngRequest, func() (int64, error), func(commonv1.RollMode) bool) (int64, string, commonv1.RollMode, error),
+	seedFunc func() (int64, error),
+) (daggerheart.DowntimeSelection, error) {
+	if selection == nil {
+		return daggerheart.DowntimeSelection{}, fmt.Errorf("downtime move is required")
+	}
+	switch move := selection.GetMove().(type) {
+	case *pb.DaggerheartDowntimeSelection_TendToWounds:
+		seed, err := resolveSeed(move.TendToWounds.GetRng(), seedFunc, resolve)
+		if err != nil {
+			return daggerheart.DowntimeSelection{}, grpcerror.Internal("failed to resolve tend_to_wounds seed", err)
+		}
+		return daggerheart.DowntimeSelection{
+			Move:              daggerheart.DowntimeMoveTendToWounds,
+			TargetCharacterID: ids.CharacterID(strings.TrimSpace(move.TendToWounds.GetTargetCharacterId())),
+			RollSeed:          &seed,
+		}, nil
+	case *pb.DaggerheartDowntimeSelection_ClearStress:
+		seed, err := resolveSeed(move.ClearStress.GetRng(), seedFunc, resolve)
+		if err != nil {
+			return daggerheart.DowntimeSelection{}, grpcerror.Internal("failed to resolve clear_stress seed", err)
+		}
+		return daggerheart.DowntimeSelection{Move: daggerheart.DowntimeMoveClearStress, RollSeed: &seed}, nil
+	case *pb.DaggerheartDowntimeSelection_RepairArmor:
+		seed, err := resolveSeed(move.RepairArmor.GetRng(), seedFunc, resolve)
+		if err != nil {
+			return daggerheart.DowntimeSelection{}, grpcerror.Internal("failed to resolve repair_armor seed", err)
+		}
+		return daggerheart.DowntimeSelection{
+			Move:              daggerheart.DowntimeMoveRepairArmor,
+			TargetCharacterID: ids.CharacterID(strings.TrimSpace(move.RepairArmor.GetTargetCharacterId())),
+			RollSeed:          &seed,
+		}, nil
+	case *pb.DaggerheartDowntimeSelection_Prepare:
+		return daggerheart.DowntimeSelection{
+			Move:    daggerheart.DowntimeMovePrepare,
+			GroupID: strings.TrimSpace(move.Prepare.GetGroupId()),
+		}, nil
+	case *pb.DaggerheartDowntimeSelection_TendToAllWounds:
+		return daggerheart.DowntimeSelection{
+			Move:              daggerheart.DowntimeMoveTendToAllWounds,
+			TargetCharacterID: ids.CharacterID(strings.TrimSpace(move.TendToAllWounds.GetTargetCharacterId())),
+		}, nil
+	case *pb.DaggerheartDowntimeSelection_ClearAllStress:
+		return daggerheart.DowntimeSelection{Move: daggerheart.DowntimeMoveClearAllStress}, nil
+	case *pb.DaggerheartDowntimeSelection_RepairAllArmor:
+		return daggerheart.DowntimeSelection{
+			Move:              daggerheart.DowntimeMoveRepairAllArmor,
+			TargetCharacterID: ids.CharacterID(strings.TrimSpace(move.RepairAllArmor.GetTargetCharacterId())),
+		}, nil
+	case *pb.DaggerheartDowntimeSelection_WorkOnProject:
+		return daggerheart.DowntimeSelection{
+			Move:                daggerheart.DowntimeMoveWorkOnProject,
+			CountdownID:         ids.CountdownID(strings.TrimSpace(move.WorkOnProject.GetCountdownId())),
+			ProjectAdvanceMode:  projectAdvanceModeFromProto(move.WorkOnProject.GetAdvanceMode()),
+			ProjectAdvanceDelta: int(move.WorkOnProject.GetAdvanceDelta()),
+			ProjectReason:       strings.TrimSpace(move.WorkOnProject.GetReason()),
+		}, nil
 	default:
-		return daggerheart.DowntimePrepare, fmt.Errorf("downtime move %v is invalid", m)
+		return daggerheart.DowntimeSelection{}, fmt.Errorf("downtime move is required")
 	}
 }
 
-func downtimeMoveToString(m daggerheart.DowntimeMove) string {
-	switch m {
-	case daggerheart.DowntimeClearAllStress:
-		return "clear_all_stress"
-	case daggerheart.DowntimeRepairAllArmor:
-		return "repair_all_armor"
-	case daggerheart.DowntimePrepare:
-		return "prepare"
-	case daggerheart.DowntimeWorkOnProject:
-		return "work_on_project"
+func projectAdvanceModeFromProto(mode pb.DaggerheartProjectAdvanceMode) string {
+	switch mode {
+	case pb.DaggerheartProjectAdvanceMode_DAGGERHEART_PROJECT_ADVANCE_MODE_GM_SET_DELTA:
+		return daggerheart.ProjectAdvanceModeGMSetDelta
 	default:
-		return "unknown"
+		return daggerheart.ProjectAdvanceModeAuto
 	}
 }
 

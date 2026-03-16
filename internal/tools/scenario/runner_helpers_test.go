@@ -763,6 +763,12 @@ func TestReadStringSlice(t *testing.T) {
 			t.Fatalf("expected empty, got %v", got)
 		}
 	})
+	t.Run("go_string_slice", func(t *testing.T) {
+		got := readStringSlice(map[string]any{"k": []string{"a", " b ", ""}}, "k")
+		if len(got) != 2 || got[0] != "a" || got[1] != "b" {
+			t.Fatalf("want [a,b], got %v", got)
+		}
+	})
 }
 
 func TestNormalizeModifierSource(t *testing.T) {
@@ -978,12 +984,12 @@ func TestParseCountdownDirection(t *testing.T) {
 func TestParseDowntimeMove(t *testing.T) {
 	tests := []struct {
 		input string
-		want  daggerheartv1.DaggerheartDowntimeMove
+		want  string
 	}{
-		{"clear_all_stress", daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_CLEAR_ALL_STRESS},
-		{"repair_all_armor", daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_REPAIR_ALL_ARMOR},
-		{"prepare", daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_PREPARE},
-		{"work_on_project", daggerheartv1.DaggerheartDowntimeMove_DAGGERHEART_DOWNTIME_MOVE_WORK_ON_PROJECT},
+		{"clear_all_stress", "clear_all_stress"},
+		{"repair_all_armor", "repair_all_armor"},
+		{"prepare", "prepare"},
+		{"work_on_project", "work_on_project"},
 	}
 	for _, tc := range tests {
 		got, err := parseDowntimeMove(tc.input)
@@ -1108,6 +1114,33 @@ func TestBuildActionRollModifiers(t *testing.T) {
 		}
 		if mods[1].Source != "modifier" || mods[1].Value != 3 {
 			t.Fatalf("flat modifier not forwarded: %+v", mods[1])
+		}
+	})
+}
+
+func TestBuildAdversaryRollModifiers(t *testing.T) {
+	t.Run("uses_explicit_modifiers_first", func(t *testing.T) {
+		mods := buildAdversaryRollModifiers(map[string]any{
+			"modifiers": []any{map[string]any{"source": "experience", "value": 2}},
+			"modifier":  1,
+		})
+		if len(mods) != 2 {
+			t.Fatalf("expected 2 modifiers, got %d", len(mods))
+		}
+		if mods[0].Source != "experience" || mods[0].Value != 2 {
+			t.Fatalf("mod 0 = %+v", mods[0])
+		}
+		if mods[1].Source != "modifier" || mods[1].Value != 1 {
+			t.Fatalf("mod 1 = %+v", mods[1])
+		}
+	})
+	t.Run("falls_back_to_attack_modifier", func(t *testing.T) {
+		mods := buildAdversaryRollModifiers(map[string]any{"attack_modifier": 3})
+		if len(mods) != 1 {
+			t.Fatalf("expected 1 modifier, got %d", len(mods))
+		}
+		if mods[0].Source != "attack_modifier" || mods[0].Value != 3 {
+			t.Fatalf("modifier = %+v", mods[0])
 		}
 	})
 }
@@ -1428,7 +1461,7 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	t.Run("defaults", func(t *testing.T) {
 		patchedProfile = nil
 		args := map[string]any{"name": "Frodo", "kind": "PC"}
-		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
+		_, err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1439,7 +1472,7 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	t.Run("custom_overrides", func(t *testing.T) {
 		patchedProfile = nil
 		args := map[string]any{"level": 5, "hp_max": 20, "armor_max": 3}
-		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
+		_, err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1459,7 +1492,7 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	t.Run("armor_max_overrides_armor", func(t *testing.T) {
 		patchedProfile = nil
 		args := map[string]any{"armor": 3, "armor_max": 5}
-		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
+		_, err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1473,7 +1506,7 @@ func TestApplyDefaultDaggerheartProfile(t *testing.T) {
 	t.Run("armor_only_skips_profile_patch", func(t *testing.T) {
 		patchedProfile = nil
 		args := map[string]any{"armor": 3}
-		err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
+		_, err := r.applyDefaultDaggerheartProfile(context.Background(), state, "char-1", args)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -1493,11 +1526,36 @@ func TestEnsureDaggerheartCharacterReadiness_UsesCatalogBackedEquipmentIDs(t *te
 			applyReq = in
 			return &gamev1.ApplyCharacterCreationWorkflowResponse{}, nil
 		},
+		getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			return &gamev1.GetCharacterSheetResponse{
+				Profile: &gamev1.CharacterProfile{
+					SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartProfile{
+							ClassId:    scenarioReadinessClassID,
+							SubclassId: scenarioReadinessSubclassID,
+						},
+					},
+				},
+				State: &gamev1.CharacterState{
+					SystemState: &gamev1.CharacterState_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+							Hp:      6,
+							HopeMax: 2,
+						},
+					},
+				},
+			}, nil
+		},
 	}
 	r := newTestRunner(scenarioEnv{characterClient: char})
 	state := &scenarioState{campaignID: "c-1"}
 
-	err := r.ensureDaggerheartCharacterReadiness(context.Background(), state, "char-1")
+	err := r.ensureDaggerheartCharacterReadiness(context.Background(), state, "char-1", map[string]any{
+		"equipment": map[string]any{
+			"armor_id":       "armor.chainmail-armor",
+			"potion_item_id": "item.minor-stamina-potion",
+		},
+	})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1508,17 +1566,67 @@ func TestEnsureDaggerheartCharacterReadiness_UsesCatalogBackedEquipmentIDs(t *te
 	if input == nil {
 		t.Fatal("expected daggerheart workflow input")
 	}
-	if got := input.GetEquipmentInput().GetArmorId(); got != scenarioReadinessArmorID {
-		t.Fatalf("armor_id = %q, want %q", got, scenarioReadinessArmorID)
-	}
-	if got := input.GetEquipmentInput().GetArmorId(); got == "armor.readiness-light" {
-		t.Fatalf("armor_id unexpectedly used removed seed id %q", got)
+	if got := input.GetEquipmentInput().GetArmorId(); got != "armor.chainmail-armor" {
+		t.Fatalf("armor_id = %q, want %q", got, "armor.chainmail-armor")
 	}
 	if got := input.GetEquipmentInput().GetWeaponIds(); len(got) != 1 || got[0] != scenarioReadinessWeaponID {
 		t.Fatalf("weapon_ids = %v, want [%q]", got, scenarioReadinessWeaponID)
 	}
-	if got := input.GetEquipmentInput().GetPotionItemId(); got != scenarioReadinessPotionItemID {
-		t.Fatalf("potion_item_id = %q, want %q", got, scenarioReadinessPotionItemID)
+	if got := input.GetEquipmentInput().GetPotionItemId(); got != "item.minor-stamina-potion" {
+		t.Fatalf("potion_item_id = %q, want %q", got, "item.minor-stamina-potion")
+	}
+}
+
+func TestEnsureDaggerheartCharacterReadinessWaitsForProjectedSheet(t *testing.T) {
+	calls := 0
+	char := &fakeCharacterClient{
+		applyWorkflow: func(_ context.Context, _ *gamev1.ApplyCharacterCreationWorkflowRequest, _ ...grpc.CallOption) (*gamev1.ApplyCharacterCreationWorkflowResponse, error) {
+			return &gamev1.ApplyCharacterCreationWorkflowResponse{}, nil
+		},
+		getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			calls++
+			if calls == 1 {
+				return &gamev1.GetCharacterSheetResponse{
+					Profile: &gamev1.CharacterProfile{
+						SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+							Daggerheart: &daggerheartv1.DaggerheartProfile{},
+						},
+					},
+					State: &gamev1.CharacterState{
+						SystemState: &gamev1.CharacterState_Daggerheart{
+							Daggerheart: &daggerheartv1.DaggerheartCharacterState{},
+						},
+					},
+				}, nil
+			}
+			return &gamev1.GetCharacterSheetResponse{
+				Profile: &gamev1.CharacterProfile{
+					SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartProfile{
+							ClassId:    scenarioReadinessClassID,
+							SubclassId: scenarioReadinessSubclassID,
+						},
+					},
+				},
+				State: &gamev1.CharacterState{
+					SystemState: &gamev1.CharacterState_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+							Hp:      6,
+							HopeMax: 2,
+						},
+					},
+				},
+			}, nil
+		},
+	}
+
+	r := newTestRunner(scenarioEnv{characterClient: char})
+	state := &scenarioState{campaignID: "c-1"}
+	if err := r.ensureDaggerheartCharacterReadiness(context.Background(), state, "char-1", nil); err != nil {
+		t.Fatalf("ensureDaggerheartCharacterReadiness: %v", err)
+	}
+	if calls < 2 {
+		t.Fatalf("getSheet calls = %d, want at least 2", calls)
 	}
 }
 
@@ -1526,7 +1634,7 @@ func TestApplyOptionalCharacterState_NoOp(t *testing.T) {
 	r := newTestRunner(scenarioEnv{})
 	state := &scenarioState{campaignID: "c-1"}
 
-	err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{})
+	_, err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1561,7 +1669,7 @@ func TestApplyOptionalCharacterState_MergesHP(t *testing.T) {
 	r := newTestRunner(scenarioEnv{characterClient: char, snapshotClient: snap})
 	state := &scenarioState{campaignID: "c-1"}
 
-	err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{"hp": 5})
+	_, err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{"hp": 5}, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -1574,11 +1682,109 @@ func TestApplyOptionalCharacterState_MergesHP(t *testing.T) {
 	}
 }
 
+func TestApplyOptionalCharacterState_AppliesHopeOverrides(t *testing.T) {
+	var patchedState *daggerheartv1.DaggerheartCharacterState
+	char := &fakeCharacterClient{
+		getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			return &gamev1.GetCharacterSheetResponse{
+				State: &gamev1.CharacterState{
+					SystemState: &gamev1.CharacterState_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+							Hp:        10,
+							Hope:      3,
+							HopeMax:   6,
+							Stress:    2,
+							Armor:     1,
+							LifeState: daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE,
+						},
+					},
+				},
+			}, nil
+		},
+	}
+	snap := &fakeSnapshotClient{
+		patchState: func(_ context.Context, in *gamev1.PatchCharacterStateRequest, _ ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error) {
+			patchedState = in.GetDaggerheart()
+			return &gamev1.PatchCharacterStateResponse{}, nil
+		},
+	}
+	r := newTestRunner(scenarioEnv{characterClient: char, snapshotClient: snap})
+	state := &scenarioState{campaignID: "c-1"}
+
+	_, err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{"hope": 1, "hope_max": 1}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if patchedState.Hope != 1 {
+		t.Fatalf("expected hope=1, got %d", patchedState.Hope)
+	}
+	if patchedState.HopeMax != 1 {
+		t.Fatalf("expected hope_max=1, got %d", patchedState.HopeMax)
+	}
+	if patchedState.Hp != 10 {
+		t.Fatalf("expected hp=10 (merged), got %d", patchedState.Hp)
+	}
+}
+
+func TestApplyOptionalCharacterState_ClampsToProfileCaps(t *testing.T) {
+	var patchedState *daggerheartv1.DaggerheartCharacterState
+	char := &fakeCharacterClient{
+		getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+			return &gamev1.GetCharacterSheetResponse{
+				State: &gamev1.CharacterState{
+					SystemState: &gamev1.CharacterState_Daggerheart{
+						Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+							Hp:        7,
+							Hope:      3,
+							HopeMax:   2,
+							Stress:    7,
+							Armor:     2,
+							LifeState: daggerheartv1.DaggerheartLifeState_DAGGERHEART_LIFE_STATE_ALIVE,
+						},
+					},
+				},
+			}, nil
+		},
+	}
+	snap := &fakeSnapshotClient{
+		patchState: func(_ context.Context, in *gamev1.PatchCharacterStateRequest, _ ...grpc.CallOption) (*gamev1.PatchCharacterStateResponse, error) {
+			patchedState = in.GetDaggerheart()
+			return &gamev1.PatchCharacterStateResponse{}, nil
+		},
+	}
+	r := newTestRunner(scenarioEnv{characterClient: char, snapshotClient: snap})
+	state := &scenarioState{campaignID: "c-1"}
+
+	_, err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{"hope": 2}, &daggerheartv1.DaggerheartProfile{
+		HpMax:     6,
+		StressMax: wrapperspb.Int32(6),
+		ArmorMax:  wrapperspb.Int32(1),
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if patchedState == nil {
+		t.Fatal("expected patched state")
+	}
+	if patchedState.GetHp() != 6 {
+		t.Fatalf("hp = %d, want 6", patchedState.GetHp())
+	}
+	if patchedState.GetStress() != 6 {
+		t.Fatalf("stress = %d, want 6", patchedState.GetStress())
+	}
+	if patchedState.GetArmor() != 1 {
+		t.Fatalf("armor = %d, want 1", patchedState.GetArmor())
+	}
+	if patchedState.GetHope() != 2 {
+		t.Fatalf("hope = %d, want 2", patchedState.GetHope())
+	}
+}
+
 func TestApplyOptionalCharacterState_InvalidLifeState(t *testing.T) {
 	r := newTestRunner(scenarioEnv{})
 	state := &scenarioState{campaignID: "c-1"}
 
-	err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{"life_state": "bad"})
+	_, err := r.applyOptionalCharacterState(context.Background(), state, "char-1", map[string]any{"life_state": "bad"}, nil)
 	if err == nil {
 		t.Fatal("expected error for invalid life_state")
 	}
@@ -1940,6 +2146,26 @@ func TestEnsureSessionStartReadinessCreatesMissingParticipantAndCharacter(t *tes
 				appliedWorkflows = append(appliedWorkflows, req)
 				return &gamev1.ApplyCharacterCreationWorkflowResponse{}, nil
 			},
+			getSheet: func(context.Context, *gamev1.GetCharacterSheetRequest, ...grpc.CallOption) (*gamev1.GetCharacterSheetResponse, error) {
+				return &gamev1.GetCharacterSheetResponse{
+					Profile: &gamev1.CharacterProfile{
+						SystemProfile: &gamev1.CharacterProfile_Daggerheart{
+							Daggerheart: &daggerheartv1.DaggerheartProfile{
+								ClassId:    scenarioReadinessClassID,
+								SubclassId: scenarioReadinessSubclassID,
+							},
+						},
+					},
+					State: &gamev1.CharacterState{
+						SystemState: &gamev1.CharacterState_Daggerheart{
+							Daggerheart: &daggerheartv1.DaggerheartCharacterState{
+								Hp:      6,
+								HopeMax: 2,
+							},
+						},
+					},
+				}, nil
+			},
 		},
 	})
 	state := &scenarioState{
@@ -2291,20 +2517,15 @@ func TestApplyAdversaryDamageSeverityDowngradeBeforeThresholds(t *testing.T) {
 		MajorThreshold:  2,
 		SevereThreshold: 4,
 	}
-	var updateReq *daggerheartv1.DaggerheartUpdateAdversaryRequest
+	var damageReq *daggerheartv1.DaggerheartApplyAdversaryDamageRequest
 	dhClient.getAdversary = func(_ context.Context, _ *daggerheartv1.DaggerheartGetAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartGetAdversaryResponse, error) {
 		snapshot := *current
 		return &daggerheartv1.DaggerheartGetAdversaryResponse{Adversary: &snapshot}, nil
 	}
-	dhClient.updateAdversary = func(_ context.Context, req *daggerheartv1.DaggerheartUpdateAdversaryRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartUpdateAdversaryResponse, error) {
-		updateReq = req
-		if req.GetHp() != nil {
-			current.Hp = req.GetHp().GetValue()
-		}
-		if req.GetArmor() != nil {
-			current.Armor = req.GetArmor().GetValue()
-		}
-		return &daggerheartv1.DaggerheartUpdateAdversaryResponse{Adversary: current}, nil
+	dhClient.applyAdversaryDamage = func(_ context.Context, req *daggerheartv1.DaggerheartApplyAdversaryDamageRequest, _ ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryDamageResponse, error) {
+		damageReq = req
+		current.Hp = 4
+		return &daggerheartv1.DaggerheartApplyAdversaryDamageResponse{AdversaryId: req.GetAdversaryId(), Adversary: current}, nil
 	}
 
 	runner := quietRunner(env)
@@ -2326,10 +2547,10 @@ func TestApplyAdversaryDamageSeverityDowngradeBeforeThresholds(t *testing.T) {
 	if !applied {
 		t.Fatal("expected damage to be applied")
 	}
-	if updateReq == nil || updateReq.GetHp() == nil {
-		t.Fatal("expected hp update request")
+	if damageReq == nil || damageReq.GetDamage() == nil {
+		t.Fatal("expected adversary damage request")
 	}
-	if got := updateReq.GetHp().GetValue(); got != 4 {
-		t.Fatalf("hp after = %d, want 4 with one-step severity downgrade", got)
+	if got := damageReq.GetDamage().GetAmount(); got != 4 {
+		t.Fatalf("damage amount = %d, want 4 with one-step severity downgrade", got)
 	}
 }

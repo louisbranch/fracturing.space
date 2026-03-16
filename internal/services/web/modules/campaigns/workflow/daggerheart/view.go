@@ -64,13 +64,22 @@ func domainLookupByID(domains []campaignworkflow.Domain) map[string]domainView {
 // newCreationView initializes template view state from normalized creation data.
 func newCreationView(creation catalogCreation) campaignworkflow.CharacterCreationView {
 	return campaignworkflow.CharacterCreationView{
-		Ready:                       creation.Progress.Ready,
-		NextStep:                    creation.Progress.NextStep,
-		UnmetReasons:                append([]string(nil), creation.Progress.UnmetReasons...),
-		ClassID:                     creation.Profile.ClassID,
-		SubclassID:                  creation.Profile.SubclassID,
-		AncestryID:                  creation.Profile.AncestryID,
-		CommunityID:                 creation.Profile.CommunityID,
+		Ready:                        creation.Progress.Ready,
+		NextStep:                     creation.Progress.NextStep,
+		UnmetReasons:                 append([]string(nil), creation.Progress.UnmetReasons...),
+		ClassID:                      creation.Profile.ClassID,
+		SubclassID:                   creation.Profile.SubclassID,
+		SubclassCreationRequirements: append([]string(nil), creation.Profile.SubclassCreationRequirements...),
+		Heritage: campaignworkflow.CreationHeritageSelectionView{
+			AncestryLabel:           creation.Profile.Heritage.AncestryLabel,
+			FirstFeatureAncestryID:  creation.Profile.Heritage.FirstFeatureAncestryID,
+			FirstFeatureID:          creation.Profile.Heritage.FirstFeatureID,
+			SecondFeatureAncestryID: creation.Profile.Heritage.SecondFeatureAncestryID,
+			SecondFeatureID:         creation.Profile.Heritage.SecondFeatureID,
+			CommunityID:             creation.Profile.Heritage.CommunityID,
+		},
+		CompanionSheet:              mapCreationCompanion(creation.Profile.CompanionSheet),
+		CompanionExperiences:        mapCreationCompanionExperiences(creation.CompanionExperiences),
 		Agility:                     creation.Profile.Agility,
 		Strength:                    creation.Profile.Strength,
 		Finesse:                     creation.Profile.Finesse,
@@ -199,6 +208,41 @@ func mapCreationExperiences(experiences []campaignworkflow.Experience) []campaig
 		mapped = append(mapped, campaignworkflow.CreationExperienceView{
 			Name:     exp.Name,
 			Modifier: exp.Modifier,
+		})
+	}
+	return mapped
+}
+
+// mapCreationCompanion maps the optional companion sheet into the workflow view
+// contract without leaking catalog-layer types into render assembly.
+func mapCreationCompanion(companion *campaignworkflow.CompanionSheet) *campaignworkflow.CreationCompanionView {
+	if companion == nil {
+		return nil
+	}
+	return &campaignworkflow.CreationCompanionView{
+		AnimalKind:        companion.AnimalKind,
+		Name:              companion.Name,
+		Evasion:           companion.Evasion,
+		Experiences:       mapCreationExperiences(companion.Experiences),
+		AttackDescription: companion.AttackDescription,
+		AttackRange:       companion.AttackRange,
+		DamageDieSides:    companion.DamageDieSides,
+		DamageType:        companion.DamageType,
+	}
+}
+
+// mapCreationCompanionExperiences adapts catalog-backed companion experience
+// choices into the creation page option rows.
+func mapCreationCompanionExperiences(experiences []campaignworkflow.CompanionExperience) []campaignworkflow.CreationCompanionExperienceOptionView {
+	if len(experiences) == 0 {
+		return nil
+	}
+	mapped := make([]campaignworkflow.CreationCompanionExperienceOptionView, 0, len(experiences))
+	for _, experience := range experiences {
+		mapped = append(mapped, campaignworkflow.CreationCompanionExperienceOptionView{
+			ID:          experience.ID,
+			Name:        experience.Name,
+			Description: experience.Description,
 		})
 	}
 	return mapped

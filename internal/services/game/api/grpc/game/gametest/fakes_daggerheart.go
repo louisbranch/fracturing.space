@@ -12,27 +12,29 @@ import (
 
 // FakeDaggerheartStore is a test double for projectionstore.Store.
 type FakeDaggerheartStore struct {
-	Profiles    map[string]map[string]projectionstore.DaggerheartCharacterProfile // campaignID -> characterID -> Profile
-	States      map[string]map[string]projectionstore.DaggerheartCharacterState   // campaignID -> characterID -> state
-	Snapshots   map[string]projectionstore.DaggerheartSnapshot                    // campaignID -> snapshot
-	Countdowns  map[string]map[string]projectionstore.DaggerheartCountdown        // campaignID -> countdownID -> countdown
-	Adversaries map[string]map[string]projectionstore.DaggerheartAdversary        // campaignID -> adversaryID -> adversary
-	StatePuts   map[string]int
-	SnapPuts    map[string]int
-	PutErr      error
-	GetErr      error
+	Profiles            map[string]map[string]projectionstore.DaggerheartCharacterProfile  // campaignID -> characterID -> Profile
+	States              map[string]map[string]projectionstore.DaggerheartCharacterState    // campaignID -> characterID -> state
+	Snapshots           map[string]projectionstore.DaggerheartSnapshot                     // campaignID -> snapshot
+	Countdowns          map[string]map[string]projectionstore.DaggerheartCountdown         // campaignID -> countdownID -> countdown
+	Adversaries         map[string]map[string]projectionstore.DaggerheartAdversary         // campaignID -> adversaryID -> adversary
+	EnvironmentEntities map[string]map[string]projectionstore.DaggerheartEnvironmentEntity // campaignID -> environmentEntityID -> entity
+	StatePuts           map[string]int
+	SnapPuts            map[string]int
+	PutErr              error
+	GetErr              error
 }
 
 // NewFakeDaggerheartStore returns a ready-to-use Daggerheart projection fake.
 func NewFakeDaggerheartStore() *FakeDaggerheartStore {
 	return &FakeDaggerheartStore{
-		Profiles:    make(map[string]map[string]projectionstore.DaggerheartCharacterProfile),
-		States:      make(map[string]map[string]projectionstore.DaggerheartCharacterState),
-		Snapshots:   make(map[string]projectionstore.DaggerheartSnapshot),
-		Countdowns:  make(map[string]map[string]projectionstore.DaggerheartCountdown),
-		Adversaries: make(map[string]map[string]projectionstore.DaggerheartAdversary),
-		StatePuts:   make(map[string]int),
-		SnapPuts:    make(map[string]int),
+		Profiles:            make(map[string]map[string]projectionstore.DaggerheartCharacterProfile),
+		States:              make(map[string]map[string]projectionstore.DaggerheartCharacterState),
+		Snapshots:           make(map[string]projectionstore.DaggerheartSnapshot),
+		Countdowns:          make(map[string]map[string]projectionstore.DaggerheartCountdown),
+		Adversaries:         make(map[string]map[string]projectionstore.DaggerheartAdversary),
+		EnvironmentEntities: make(map[string]map[string]projectionstore.DaggerheartEnvironmentEntity),
+		StatePuts:           make(map[string]int),
+		SnapPuts:            make(map[string]int),
 	}
 }
 
@@ -269,5 +271,67 @@ func (s *FakeDaggerheartStore) DeleteDaggerheartAdversary(_ context.Context, cam
 		return storage.ErrNotFound
 	}
 	delete(byID, adversaryID)
+	return nil
+}
+
+func (s *FakeDaggerheartStore) PutDaggerheartEnvironmentEntity(_ context.Context, entity projectionstore.DaggerheartEnvironmentEntity) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
+	if s.EnvironmentEntities[entity.CampaignID] == nil {
+		s.EnvironmentEntities[entity.CampaignID] = make(map[string]projectionstore.DaggerheartEnvironmentEntity)
+	}
+	s.EnvironmentEntities[entity.CampaignID][entity.EnvironmentEntityID] = entity
+	return nil
+}
+
+func (s *FakeDaggerheartStore) GetDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) (projectionstore.DaggerheartEnvironmentEntity, error) {
+	if s.GetErr != nil {
+		return projectionstore.DaggerheartEnvironmentEntity{}, s.GetErr
+	}
+	byID, ok := s.EnvironmentEntities[campaignID]
+	if !ok {
+		return projectionstore.DaggerheartEnvironmentEntity{}, storage.ErrNotFound
+	}
+	entity, ok := byID[environmentEntityID]
+	if !ok {
+		return projectionstore.DaggerheartEnvironmentEntity{}, storage.ErrNotFound
+	}
+	return entity, nil
+}
+
+func (s *FakeDaggerheartStore) ListDaggerheartEnvironmentEntities(_ context.Context, campaignID, sessionID, sceneID string) ([]projectionstore.DaggerheartEnvironmentEntity, error) {
+	if s.GetErr != nil {
+		return nil, s.GetErr
+	}
+	byID, ok := s.EnvironmentEntities[campaignID]
+	if !ok {
+		return nil, nil
+	}
+	result := make([]projectionstore.DaggerheartEnvironmentEntity, 0, len(byID))
+	for _, entity := range byID {
+		if strings.TrimSpace(sessionID) != "" && entity.SessionID != sessionID {
+			continue
+		}
+		if strings.TrimSpace(sceneID) != "" && entity.SceneID != sceneID {
+			continue
+		}
+		result = append(result, entity)
+	}
+	return result, nil
+}
+
+func (s *FakeDaggerheartStore) DeleteDaggerheartEnvironmentEntity(_ context.Context, campaignID, environmentEntityID string) error {
+	if s.PutErr != nil {
+		return s.PutErr
+	}
+	byID, ok := s.EnvironmentEntities[campaignID]
+	if !ok {
+		return storage.ErrNotFound
+	}
+	if _, ok := byID[environmentEntityID]; !ok {
+		return storage.ErrNotFound
+	}
+	delete(byID, environmentEntityID)
 	return nil
 }

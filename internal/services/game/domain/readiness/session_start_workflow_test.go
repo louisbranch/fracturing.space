@@ -144,11 +144,71 @@ func TestSessionStartWorkflowStart(t *testing.T) {
 		}
 	})
 
-	t.Run("default clock uses current time", func(t *testing.T) {
+	t.Run("draft campaign appends system bootstrap events", func(t *testing.T) {
+		systems := module.NewRegistry()
+		if err := systems.Register(stubBootstrapModule{events: []event.Event{{
+			Type:       event.Type("sys.stub.bootstrapped"),
+			EntityType: "campaign",
+			EntityID:   "camp-1",
+		}}}); err != nil {
+			t.Fatalf("register module: %v", err)
+		}
+
+		state := readyWorkflowState(campaign.StatusDraft)
+		state.Campaign.GameSystem = campaign.GameSystem("stub")
+		state.Systems = map[module.Key]any{
+			{ID: "stub", Version: "1.0.0"}: struct{}{},
+		}
+
+		decision := sessionStartWorkflow{systems: systems}.Start(
+			state,
+			startCommand,
+			func() time.Time { return now },
+		)
+
+		if len(decision.Rejections) != 0 {
+			t.Fatalf("rejections = %d, want 0", len(decision.Rejections))
+		}
+		if len(decision.Events) != 3 {
+			t.Fatalf("events = %d, want 3", len(decision.Events))
+		}
+		if decision.Events[2].Type != event.Type("sys.stub.bootstrapped") {
+			t.Fatalf("event 2 type = %s, want %s", decision.Events[2].Type, event.Type("sys.stub.bootstrapped"))
+		}
+	})
+
+	t.Run("bootstrap error rejects start", func(t *testing.T) {
+		systems := module.NewRegistry()
+		if err := systems.Register(stubBootstrapModule{err: errBootstrapBoom}); err != nil {
+			t.Fatalf("register module: %v", err)
+		}
+
+		state := readyWorkflowState(campaign.StatusDraft)
+		state.Campaign.GameSystem = campaign.GameSystem("stub")
+
+		decision := sessionStartWorkflow{systems: systems}.Start(
+			state,
+			startCommand,
+			func() time.Time { return now },
+		)
+
+		if len(decision.Events) != 0 {
+			t.Fatalf("events = %d, want 0", len(decision.Events))
+		}
+		if len(decision.Rejections) != 1 {
+			t.Fatalf("rejections = %d, want 1", len(decision.Rejections))
+		}
+		if decision.Rejections[0].Code != "SESSION_START_SYSTEM_BOOTSTRAP_FAILED" {
+			t.Fatalf("rejection code = %s, want %s", decision.Rejections[0].Code, "SESSION_START_SYSTEM_BOOTSTRAP_FAILED")
+		}
+	})
+
+	t.Run("provided clock stamps emitted event", func(t *testing.T) {
+		now := time.Date(2026, time.March, 14, 20, 0, 0, 0, time.UTC)
 		decision := sessionStartWorkflow{}.Start(
 			readyWorkflowState(campaign.StatusActive),
 			startCommand,
-			time.Now,
+			func() time.Time { return now },
 		)
 
 		if len(decision.Rejections) != 0 {
@@ -157,8 +217,8 @@ func TestSessionStartWorkflowStart(t *testing.T) {
 		if len(decision.Events) != 1 {
 			t.Fatalf("events = %d, want 1", len(decision.Events))
 		}
-		if decision.Events[0].Timestamp.IsZero() {
-			t.Fatal("expected default clock to stamp the emitted event")
+		if !decision.Events[0].Timestamp.Equal(now) {
+			t.Fatalf("timestamp = %v, want %v", decision.Events[0].Timestamp, now)
 		}
 	})
 }
@@ -244,6 +304,82 @@ func TestSessionStartWorkflowSystemReadinessGuardRails(t *testing.T) {
 	})
 }
 
+func TestSessionStartWorkflowSystemBootstrapEventsGuardRails(t *testing.T) {
+	now := time.Date(2026, 3, 10, 16, 30, 0, 0, time.UTC)
+	cmd := command.Command{CampaignID: "camp-1"}
+
+	t.Run("nil registry", func(t *testing.T) {
+		events, err := sessionStartWorkflow{}.systemBootstrapEvents(aggregate.State{}, cmd, now)
+		if err != nil {
+			t.Fatalf("systemBootstrapEvents returned error: %v", err)
+		}
+		if len(events) != 0 {
+			t.Fatalf("events = %d, want 0", len(events))
+		}
+	})
+
+	t.Run("blank system id", func(t *testing.T) {
+		events, err := sessionStartWorkflow{systems: module.NewRegistry()}.systemBootstrapEvents(aggregate.State{}, cmd, now)
+		if err != nil {
+			t.Fatalf("systemBootstrapEvents returned error: %v", err)
+		}
+		if len(events) != 0 {
+			t.Fatalf("events = %d, want 0", len(events))
+		}
+	})
+
+	t.Run("missing module", func(t *testing.T) {
+		events, err := sessionStartWorkflow{systems: module.NewRegistry()}.systemBootstrapEvents(aggregate.State{
+			Campaign: workflowCampaignState("missing"),
+		}, cmd, now)
+		if err != nil {
+			t.Fatalf("systemBootstrapEvents returned error: %v", err)
+		}
+		if len(events) != 0 {
+			t.Fatalf("events = %d, want 0", len(events))
+		}
+	})
+
+	t.Run("module without bootstrapper", func(t *testing.T) {
+		systems := module.NewRegistry()
+		if err := systems.Register(stubModuleWithoutReadiness{}); err != nil {
+			t.Fatalf("register module: %v", err)
+		}
+		events, err := sessionStartWorkflow{systems: systems}.systemBootstrapEvents(aggregate.State{
+			Campaign: workflowCampaignState("stub"),
+		}, cmd, now)
+		if err != nil {
+			t.Fatalf("systemBootstrapEvents returned error: %v", err)
+		}
+		if len(events) != 0 {
+			t.Fatalf("events = %d, want 0", len(events))
+		}
+	})
+
+	t.Run("delegates to bootstrapper", func(t *testing.T) {
+		systems := module.NewRegistry()
+		expected := event.Event{Type: event.Type("sys.stub.bootstrapped"), EntityType: "campaign", EntityID: "camp-1"}
+		if err := systems.Register(stubBootstrapModule{events: []event.Event{expected}}); err != nil {
+			t.Fatalf("register module: %v", err)
+		}
+		events, err := sessionStartWorkflow{systems: systems}.systemBootstrapEvents(aggregate.State{
+			Campaign: workflowCampaignState("stub"),
+			Systems: map[module.Key]any{
+				{ID: "stub", Version: "1.0.0"}: "state",
+			},
+		}, cmd, now)
+		if err != nil {
+			t.Fatalf("systemBootstrapEvents returned error: %v", err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("events = %d, want 1", len(events))
+		}
+		if events[0].Type != expected.Type {
+			t.Fatalf("event type = %s, want %s", events[0].Type, expected.Type)
+		}
+	})
+}
+
 func workflowCampaignState(systemID string) campaign.State {
 	return campaign.State{GameSystem: campaign.GameSystem(systemID)}
 }
@@ -299,4 +435,23 @@ func (m stubReadinessModule) Folder() module.Folder                    { return 
 func (m stubReadinessModule) StateFactory() module.StateFactory        { return nil }
 func (m stubReadinessModule) CharacterReady(any, character.State) (bool, string) {
 	return m.ready, m.reason
+}
+
+var errBootstrapBoom = json.Unmarshal([]byte("{"), &struct{}{})
+
+type stubBootstrapModule struct {
+	events []event.Event
+	err    error
+}
+
+func (m stubBootstrapModule) ID() string                               { return "stub" }
+func (m stubBootstrapModule) Version() string                          { return "1.0.0" }
+func (m stubBootstrapModule) RegisterCommands(*command.Registry) error { return nil }
+func (m stubBootstrapModule) RegisterEvents(*event.Registry) error     { return nil }
+func (m stubBootstrapModule) EmittableEventTypes() []event.Type        { return nil }
+func (m stubBootstrapModule) Decider() module.Decider                  { return nil }
+func (m stubBootstrapModule) Folder() module.Folder                    { return nil }
+func (m stubBootstrapModule) StateFactory() module.StateFactory        { return nil }
+func (m stubBootstrapModule) SessionStartBootstrap(any, map[ids.CharacterID]character.State, command.Command, time.Time) ([]event.Event, error) {
+	return m.events, m.err
 }

@@ -56,10 +56,13 @@ func decideAdversaryCreate(snapshotState SnapshotState, hasSnapshot bool, cmd co
 				}
 			}
 			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
+			p.AdversaryEntryID = strings.TrimSpace(p.AdversaryEntryID)
 			p.Name = strings.TrimSpace(p.Name)
 			p.Kind = strings.TrimSpace(p.Kind)
 			p.SessionID = ids.SessionID(strings.TrimSpace(p.SessionID.String()))
+			p.SceneID = ids.SceneID(strings.TrimSpace(p.SceneID.String()))
 			p.Notes = strings.TrimSpace(p.Notes)
+			p.SpotlightGateID = ids.GateID(strings.TrimSpace(p.SpotlightGateID.String()))
 			return nil
 		}, now)
 }
@@ -69,12 +72,72 @@ func decideAdversaryUpdate(cmd command.Command, now func() time.Time) command.De
 		func(p *AdversaryUpdatePayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
 		func(p *AdversaryUpdatePayload, _ func() time.Time) *command.Rejection {
 			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
+			p.AdversaryEntryID = strings.TrimSpace(p.AdversaryEntryID)
 			p.Name = strings.TrimSpace(p.Name)
 			p.Kind = strings.TrimSpace(p.Kind)
 			p.SessionID = ids.SessionID(strings.TrimSpace(p.SessionID.String()))
+			p.SceneID = ids.SceneID(strings.TrimSpace(p.SceneID.String()))
 			p.Notes = strings.TrimSpace(p.Notes)
+			p.SpotlightGateID = ids.GateID(strings.TrimSpace(p.SpotlightGateID.String()))
 			return nil
 		}, now)
+}
+
+func decideAdversaryFeatureApply(snapshotState SnapshotState, hasSnapshot bool, cmd command.Command, now func() time.Time) command.Decision {
+	return module.DecideFuncTransform(cmd, snapshotState, hasSnapshot,
+		EventTypeAdversaryUpdated, "adversary",
+		func(p *AdversaryFeatureApplyPayload) string { return strings.TrimSpace(p.AdversaryID.String()) },
+		func(s SnapshotState, hasState bool, p *AdversaryFeatureApplyPayload, _ func() time.Time) *command.Rejection {
+			if hasState && isAdversaryFeatureApplyNoMutation(s, *p) {
+				return &command.Rejection{
+					Code:    rejectionCodeAdversaryFeatureApplyNoMutation,
+					Message: "adversary feature apply is unchanged",
+				}
+			}
+			p.ActorAdversaryID = ids.AdversaryID(strings.TrimSpace(p.ActorAdversaryID.String()))
+			p.AdversaryID = ids.AdversaryID(strings.TrimSpace(p.AdversaryID.String()))
+			p.FeatureID = strings.TrimSpace(p.FeatureID)
+			p.TargetCharacterID = ids.CharacterID(strings.TrimSpace(p.TargetCharacterID.String()))
+			p.TargetAdversaryID = ids.AdversaryID(strings.TrimSpace(p.TargetAdversaryID.String()))
+			return nil
+		},
+		func(s SnapshotState, _ bool, p AdversaryFeatureApplyPayload) AdversaryUpdatedPayload {
+			current, _ := snapshotAdversaryState(s, p.AdversaryID)
+			updatedStress := current.Stress
+			if p.StressAfter != nil {
+				updatedStress = *p.StressAfter
+			}
+			updatedFeatureStates := current.FeatureStates
+			if p.FeatureStatesAfter != nil {
+				updatedFeatureStates = p.FeatureStatesAfter
+			}
+			updatedPendingExperience := current.PendingExperience
+			if p.PendingExperienceAfter != nil || p.PendingExperienceBefore != nil {
+				updatedPendingExperience = p.PendingExperienceAfter
+			}
+			return AdversaryUpdatedPayload{
+				AdversaryID:       current.AdversaryID,
+				AdversaryEntryID:  current.AdversaryEntryID,
+				Name:              current.Name,
+				Kind:              current.Kind,
+				SessionID:         current.SessionID,
+				SceneID:           current.SceneID,
+				Notes:             current.Notes,
+				HP:                current.HP,
+				HPMax:             current.HPMax,
+				Stress:            updatedStress,
+				StressMax:         current.StressMax,
+				Evasion:           current.Evasion,
+				Major:             current.Major,
+				Severe:            current.Severe,
+				Armor:             current.Armor,
+				FeatureStates:     updatedFeatureStates,
+				PendingExperience: updatedPendingExperience,
+				SpotlightGateID:   current.SpotlightGateID,
+				SpotlightCount:    current.SpotlightCount,
+			}
+		},
+		now)
 }
 
 func decideAdversaryDelete(cmd command.Command, now func() time.Time) command.Decision {
@@ -97,7 +160,7 @@ func isAdversaryConditionChangeNoMutation(snapshot SnapshotState, payload Advers
 	if err != nil {
 		return false
 	}
-	after, err := NormalizeConditions(payload.ConditionsAfter)
+	after, err := NormalizeConditions(ConditionCodes(payload.ConditionsAfter))
 	if err != nil {
 		return false
 	}
@@ -112,7 +175,7 @@ func hasMissingAdversaryConditionRemovals(snapshot SnapshotState, payload Advers
 	if !hasAdversary {
 		return false
 	}
-	return hasMissingConditionRemovals(adversary.Conditions, payload.Removed)
+	return hasMissingConditionRemovals(adversary.Conditions, ConditionCodes(payload.Removed))
 }
 
 func hasMissingConditionRemovals(current, removed []string) bool {
@@ -143,8 +206,10 @@ func isAdversaryCreateNoMutation(snapshot SnapshotState, payload AdversaryCreate
 		return false
 	}
 	return adversary.Name == strings.TrimSpace(payload.Name) &&
+		adversary.AdversaryEntryID == strings.TrimSpace(payload.AdversaryEntryID) &&
 		adversary.Kind == strings.TrimSpace(payload.Kind) &&
 		adversary.SessionID == ids.SessionID(strings.TrimSpace(payload.SessionID.String())) &&
+		adversary.SceneID == ids.SceneID(strings.TrimSpace(payload.SceneID.String())) &&
 		adversary.Notes == strings.TrimSpace(payload.Notes) &&
 		adversary.HP == payload.HP &&
 		adversary.HPMax == payload.HPMax &&
@@ -153,7 +218,28 @@ func isAdversaryCreateNoMutation(snapshot SnapshotState, payload AdversaryCreate
 		adversary.Evasion == payload.Evasion &&
 		adversary.Major == payload.Major &&
 		adversary.Severe == payload.Severe &&
-		adversary.Armor == payload.Armor
+		adversary.Armor == payload.Armor &&
+		equalAdversaryFeatureStates(adversary.FeatureStates, payload.FeatureStates) &&
+		equalAdversaryPendingExperience(adversary.PendingExperience, payload.PendingExperience) &&
+		adversary.SpotlightGateID == ids.GateID(strings.TrimSpace(payload.SpotlightGateID.String())) &&
+		adversary.SpotlightCount == payload.SpotlightCount
+}
+
+func isAdversaryFeatureApplyNoMutation(snapshot SnapshotState, payload AdversaryFeatureApplyPayload) bool {
+	adversary, hasAdversary := snapshotAdversaryState(snapshot, payload.AdversaryID)
+	if !hasAdversary {
+		return false
+	}
+	if hasIntFieldChange(payload.StressBefore, payload.StressAfter) {
+		return false
+	}
+	if !equalAdversaryFeatureStates(adversary.FeatureStates, payload.FeatureStatesAfter) {
+		return false
+	}
+	if !equalAdversaryPendingExperience(adversary.PendingExperience, payload.PendingExperienceAfter) {
+		return false
+	}
+	return true
 }
 
 func snapshotAdversaryState(snapshot SnapshotState, adversaryID ids.AdversaryID) (AdversaryState, bool) {

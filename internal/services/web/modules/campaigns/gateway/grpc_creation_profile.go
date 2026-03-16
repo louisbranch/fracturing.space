@@ -47,27 +47,77 @@ func mapCharacterCreationProfile(resp *statev1.GetCharacterSheetResponse) campai
 	primaryWeaponID, secondaryWeaponID := startingWeaponIDs(profile)
 
 	return campaignapp.CampaignCharacterCreationProfile{
-		CharacterName:     characterName,
-		ClassID:           strings.TrimSpace(profile.GetClassId()),
-		SubclassID:        strings.TrimSpace(profile.GetSubclassId()),
-		AncestryID:        strings.TrimSpace(profile.GetAncestryId()),
-		CommunityID:       strings.TrimSpace(profile.GetCommunityId()),
-		Agility:           int32ValueString(profile.GetAgility()),
-		Strength:          int32ValueString(profile.GetStrength()),
-		Finesse:           int32ValueString(profile.GetFinesse()),
-		Instinct:          int32ValueString(profile.GetInstinct()),
-		Presence:          int32ValueString(profile.GetPresence()),
-		Knowledge:         int32ValueString(profile.GetKnowledge()),
-		PrimaryWeaponID:   primaryWeaponID,
-		SecondaryWeaponID: secondaryWeaponID,
-		ArmorID:           strings.TrimSpace(profile.GetStartingArmorId()),
-		PotionItemID:      strings.TrimSpace(profile.GetStartingPotionItemId()),
-		Background:        strings.TrimSpace(profile.GetBackground()),
-		Description:       strings.TrimSpace(profile.GetDescription()),
-		Experiences:       mapProfileExperiences(profile.GetExperiences()),
-		DomainCardIDs:     trimNonEmptyProfileValues(profile.GetDomainCardIds()),
-		Connections:       strings.TrimSpace(profile.GetConnections()),
+		CharacterName:                characterName,
+		ClassID:                      strings.TrimSpace(profile.GetClassId()),
+		SubclassID:                   strings.TrimSpace(profile.GetSubclassId()),
+		SubclassCreationRequirements: trimNonEmptyProfileValues(profile.GetSubclassCreationRequirements()),
+		Heritage:                     mapProfileHeritage(profile.GetHeritage()),
+		CompanionSheet:               mapProfileCompanionSheet(profile.GetCompanionSheet()),
+		Agility:                      int32ValueString(profile.GetAgility()),
+		Strength:                     int32ValueString(profile.GetStrength()),
+		Finesse:                      int32ValueString(profile.GetFinesse()),
+		Instinct:                     int32ValueString(profile.GetInstinct()),
+		Presence:                     int32ValueString(profile.GetPresence()),
+		Knowledge:                    int32ValueString(profile.GetKnowledge()),
+		PrimaryWeaponID:              primaryWeaponID,
+		SecondaryWeaponID:            secondaryWeaponID,
+		ArmorID:                      strings.TrimSpace(profile.GetStartingArmorId()),
+		PotionItemID:                 strings.TrimSpace(profile.GetStartingPotionItemId()),
+		Background:                   strings.TrimSpace(profile.GetBackground()),
+		Description:                  strings.TrimSpace(profile.GetDescription()),
+		Experiences:                  mapProfileExperiences(profile.GetExperiences()),
+		DomainCardIDs:                trimNonEmptyProfileValues(profile.GetDomainCardIds()),
+		Connections:                  strings.TrimSpace(profile.GetConnections()),
 	}
+}
+
+// mapProfileHeritage projects structured heritage from the proto profile into the web DTO.
+func mapProfileHeritage(heritage *daggerheartv1.DaggerheartHeritageSelection) campaignapp.CampaignCharacterCreationHeritageSelection {
+	if heritage == nil {
+		return campaignapp.CampaignCharacterCreationHeritageSelection{}
+	}
+	return campaignapp.CampaignCharacterCreationHeritageSelection{
+		AncestryLabel:           strings.TrimSpace(heritage.GetAncestryLabel()),
+		FirstFeatureAncestryID:  strings.TrimSpace(heritage.GetFirstFeatureAncestryId()),
+		FirstFeatureID:          strings.TrimSpace(heritage.GetFirstFeatureId()),
+		SecondFeatureAncestryID: strings.TrimSpace(heritage.GetSecondFeatureAncestryId()),
+		SecondFeatureID:         strings.TrimSpace(heritage.GetSecondFeatureId()),
+		CommunityID:             strings.TrimSpace(heritage.GetCommunityId()),
+	}
+}
+
+// mapProfileCompanionSheet projects the stored companion sheet into the web DTO.
+func mapProfileCompanionSheet(sheet *daggerheartv1.DaggerheartCompanionSheet) *campaignapp.CampaignCharacterCreationCompanionSheet {
+	if sheet == nil {
+		return nil
+	}
+	return &campaignapp.CampaignCharacterCreationCompanionSheet{
+		AnimalKind:        strings.TrimSpace(sheet.GetAnimalKind()),
+		Name:              strings.TrimSpace(sheet.GetName()),
+		Evasion:           sheet.GetEvasion(),
+		Experiences:       mapProfileCompanionExperiences(sheet.GetExperiences()),
+		AttackDescription: strings.TrimSpace(sheet.GetAttackDescription()),
+		AttackRange:       strings.TrimSpace(sheet.GetAttackRange()),
+		DamageDieSides:    sheet.GetDamageDieSides(),
+		DamageType:        strings.TrimSpace(sheet.GetDamageType()),
+	}
+}
+
+// mapProfileCompanionExperiences preserves companion experience identity while
+// translating the gRPC profile shape into the app-owned creation DTO.
+func mapProfileCompanionExperiences(experiences []*daggerheartv1.DaggerheartCompanionExperience) []campaignapp.CampaignCharacterCreationExperience {
+	mapped := make([]campaignapp.CampaignCharacterCreationExperience, 0, len(experiences))
+	for _, experience := range experiences {
+		if experience == nil {
+			continue
+		}
+		mapped = append(mapped, campaignapp.CampaignCharacterCreationExperience{
+			ID:       strings.TrimSpace(experience.GetExperienceId()),
+			Name:     strings.TrimSpace(experience.GetName()),
+			Modifier: strconv.Itoa(int(experience.GetModifier())),
+		})
+	}
+	return mapped
 }
 
 // startingWeaponIDs extracts the first two starting weapon IDs as primary/secondary values.
