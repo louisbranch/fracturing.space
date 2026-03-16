@@ -174,19 +174,19 @@ func TestCreationViewResolvesClassImageURL(t *testing.T) {
 	t.Parallel()
 
 	creation := catalogCreation{
-		Classes: []campaignworkflow.Class{{ID: "class.bard", Name: "Bard"}},
+		Classes: []campaignworkflow.Class{{
+			ID:   "class.bard",
+			Name: "Bard",
+			Illustration: campaignworkflow.AssetReference{
+				URL:    "https://cdn.example.com/classes/bard.png",
+				Status: "mapped",
+			},
+		}},
 	}
 
-	// Without AssetBaseURL, ImageURL should be empty.
-	viewNoURL := New("").CreationView(creation)
-	if len(viewNoURL.Classes) != 1 || viewNoURL.Classes[0].ImageURL != "" {
-		t.Fatalf("expected empty ImageURL without AssetBaseURL, got %q", viewNoURL.Classes[0].ImageURL)
-	}
-
-	// With AssetBaseURL, ImageURL should be populated for a known class ID.
-	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
-	if len(viewWithURL.Classes) != 1 || viewWithURL.Classes[0].ImageURL == "" {
-		t.Fatalf("expected non-empty ImageURL with AssetBaseURL, got %q", viewWithURL.Classes[0].ImageURL)
+	view := New("").CreationView(creation)
+	if len(view.Classes) != 1 || view.Classes[0].ImageURL != "https://cdn.example.com/classes/bard.png" {
+		t.Fatalf("class image url = %q, want %q", view.Classes[0].ImageURL, "https://cdn.example.com/classes/bard.png")
 	}
 }
 
@@ -194,17 +194,20 @@ func TestCreationViewResolvesAncestryImageURL(t *testing.T) {
 	t.Parallel()
 
 	creation := catalogCreation{
-		Ancestries: []campaignworkflow.Heritage{{ID: "heritage.elf", Name: "Elf", Kind: "ancestry"}},
+		Ancestries: []campaignworkflow.Heritage{{
+			ID:   "heritage.elf",
+			Name: "Elf",
+			Kind: "ancestry",
+			Illustration: campaignworkflow.AssetReference{
+				URL:    "https://cdn.example.com/heritages/elf.png",
+				Status: "mapped",
+			},
+		}},
 	}
 
-	viewNoURL := New("").CreationView(creation)
-	if len(viewNoURL.Ancestries) != 1 || viewNoURL.Ancestries[0].ImageURL != "" {
-		t.Fatalf("expected empty ImageURL without AssetBaseURL, got %q", viewNoURL.Ancestries[0].ImageURL)
-	}
-
-	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
-	if len(viewWithURL.Ancestries) != 1 || viewWithURL.Ancestries[0].ImageURL == "" {
-		t.Fatalf("expected non-empty ImageURL with AssetBaseURL, got %q", viewWithURL.Ancestries[0].ImageURL)
+	view := New("").CreationView(creation)
+	if len(view.Ancestries) != 1 || view.Ancestries[0].ImageURL != "https://cdn.example.com/heritages/elf.png" {
+		t.Fatalf("ancestry image url = %q, want %q", view.Ancestries[0].ImageURL, "https://cdn.example.com/heritages/elf.png")
 	}
 }
 
@@ -212,17 +215,20 @@ func TestCreationViewResolvesCommunityImageURL(t *testing.T) {
 	t.Parallel()
 
 	creation := catalogCreation{
-		Communities: []campaignworkflow.Heritage{{ID: "heritage.loreborne", Name: "Loreborne", Kind: "community"}},
+		Communities: []campaignworkflow.Heritage{{
+			ID:   "heritage.loreborne",
+			Name: "Loreborne",
+			Kind: "community",
+			Illustration: campaignworkflow.AssetReference{
+				URL:    "https://cdn.example.com/heritages/loreborne.png",
+				Status: "mapped",
+			},
+		}},
 	}
 
-	viewNoURL := New("").CreationView(creation)
-	if len(viewNoURL.Communities) != 1 || viewNoURL.Communities[0].ImageURL != "" {
-		t.Fatalf("expected empty ImageURL without AssetBaseURL, got %q", viewNoURL.Communities[0].ImageURL)
-	}
-
-	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
-	if len(viewWithURL.Communities) != 1 || viewWithURL.Communities[0].ImageURL == "" {
-		t.Fatalf("expected non-empty ImageURL with AssetBaseURL, got %q", viewWithURL.Communities[0].ImageURL)
+	view := New("").CreationView(creation)
+	if len(view.Communities) != 1 || view.Communities[0].ImageURL != "https://cdn.example.com/heritages/loreborne.png" {
+		t.Fatalf("community image url = %q, want %q", view.Communities[0].ImageURL, "https://cdn.example.com/heritages/loreborne.png")
 	}
 }
 
@@ -232,14 +238,14 @@ func TestCreationViewAddsHeritagePrefetchURLsForClassStep(t *testing.T) {
 	creation := catalogCreation{
 		Progress: campaignworkflow.Progress{NextStep: 1},
 		Ancestries: []campaignworkflow.Heritage{
-			{ID: "heritage.elf", Name: "Elf", Kind: "ancestry"},
+			{ID: "heritage.elf", Name: "Elf", Kind: "ancestry", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/heritages/elf.png", Status: "mapped"}},
 		},
 		Communities: []campaignworkflow.Heritage{
-			{ID: "heritage.loreborne", Name: "Loreborne", Kind: "community"},
+			{ID: "heritage.loreborne", Name: "Loreborne", Kind: "community", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/heritages/loreborne.png", Status: "mapped"}},
 		},
 	}
 
-	view := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
+	view := New("").CreationView(creation)
 	if len(view.NextStepPrefetchURLs) != 2 {
 		t.Fatalf("len(NextStepPrefetchURLs) = %d, want 2", len(view.NextStepPrefetchURLs))
 	}
@@ -256,16 +262,16 @@ func TestCreationViewAddsEquipmentPrefetchURLsForTraitsStep(t *testing.T) {
 	creation := catalogCreation{
 		Progress: campaignworkflow.Progress{NextStep: 3},
 		PrimaryWeapons: []campaignworkflow.Weapon{
-			{ID: "weapon-1", Name: "Sword", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/weapon-1.png"}},
+			{ID: "weapon-1", Name: "Sword", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/weapon-1.png", Status: "mapped"}},
 		},
 		SecondaryWeapons: []campaignworkflow.Weapon{
-			{ID: "weapon-2", Name: "Dagger", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/weapon-2.png"}},
+			{ID: "weapon-2", Name: "Dagger", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/weapon-2.png", Status: "mapped"}},
 		},
 		Armor: []campaignworkflow.Armor{
-			{ID: "armor-1", Name: "Leather", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/armor-1.png"}},
+			{ID: "armor-1", Name: "Leather", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/armor-1.png", Status: "mapped"}},
 		},
 		PotionItems: []campaignworkflow.Item{
-			{ID: "item-1", Name: "Potion", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/item-1.png"}},
+			{ID: "item-1", Name: "Potion", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/item-1.png", Status: "mapped"}},
 		},
 	}
 
@@ -281,8 +287,8 @@ func TestCreationViewAddsDomainCardPrefetchURLsForExperiencesStep(t *testing.T) 
 	creation := catalogCreation{
 		Progress: campaignworkflow.Progress{NextStep: 5},
 		DomainCards: []campaignworkflow.DomainCard{
-			{ID: "card-1", Name: "Arcane Bolt", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/card-1.png"}},
-			{ID: "card-2", Name: "Arcane Shield", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/card-2.png"}},
+			{ID: "card-1", Name: "Arcane Bolt", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/card-1.png", Status: "mapped"}},
+			{ID: "card-2", Name: "Arcane Shield", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/card-2.png", Status: "mapped"}},
 		},
 	}
 
@@ -296,19 +302,20 @@ func TestCreationViewResolvesSubclassImageURL(t *testing.T) {
 	t.Parallel()
 
 	creation := catalogCreation{
-		Subclasses: []campaignworkflow.Subclass{{ID: "subclass.stalwart", Name: "Stalwart", ClassID: "class.guardian"}},
+		Subclasses: []campaignworkflow.Subclass{{
+			ID:      "subclass.stalwart",
+			Name:    "Stalwart",
+			ClassID: "class.guardian",
+			Illustration: campaignworkflow.AssetReference{
+				URL:    "https://cdn.example.com/subclasses/stalwart.png",
+				Status: "mapped",
+			},
+		}},
 	}
 
-	// Without AssetBaseURL, ImageURL should be empty.
-	viewNoURL := New("").CreationView(creation)
-	if len(viewNoURL.Subclasses) != 1 || viewNoURL.Subclasses[0].ImageURL != "" {
-		t.Fatalf("expected empty ImageURL without AssetBaseURL, got %q", viewNoURL.Subclasses[0].ImageURL)
-	}
-
-	// With AssetBaseURL, ImageURL should be populated for a known subclass ID.
-	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
-	if len(viewWithURL.Subclasses) != 1 || viewWithURL.Subclasses[0].ImageURL == "" {
-		t.Fatalf("expected non-empty ImageURL with AssetBaseURL, got %q", viewWithURL.Subclasses[0].ImageURL)
+	view := New("").CreationView(creation)
+	if len(view.Subclasses) != 1 || view.Subclasses[0].ImageURL != "https://cdn.example.com/subclasses/stalwart.png" {
+		t.Fatalf("subclass image url = %q, want %q", view.Subclasses[0].ImageURL, "https://cdn.example.com/subclasses/stalwart.png")
 	}
 }
 
@@ -320,21 +327,24 @@ func TestCreationViewUsesCatalogEquipmentIllustrationURLs(t *testing.T) {
 			ID:   "weapon.battleaxe",
 			Name: "Battleaxe",
 			Illustration: campaignworkflow.AssetReference{
-				URL: "https://cdn.example.com/weapons/battleaxe.png",
+				URL:    "https://cdn.example.com/weapons/battleaxe.png",
+				Status: "mapped",
 			},
 		}},
 		Armor: []campaignworkflow.Armor{{
 			ID:   "armor.chainmail-armor",
 			Name: "Chainmail Armor",
 			Illustration: campaignworkflow.AssetReference{
-				URL: "https://cdn.example.com/armor/chainmail.png",
+				URL:    "https://cdn.example.com/armor/chainmail.png",
+				Status: "mapped",
 			},
 		}},
 		PotionItems: []campaignworkflow.Item{{
 			ID:   "item.minor-health-potion",
 			Name: "Minor Health Potion",
 			Illustration: campaignworkflow.AssetReference{
-				URL: "https://cdn.example.com/items/minor-health-potion.png",
+				URL:    "https://cdn.example.com/items/minor-health-potion.png",
+				Status: "mapped",
 			},
 		}},
 	}
@@ -355,31 +365,31 @@ func TestCreationViewResolvesEquipmentImageURLFallback(t *testing.T) {
 	t.Parallel()
 
 	creation := catalogCreation{
-		PrimaryWeapons: []campaignworkflow.Weapon{{ID: "weapon.battleaxe", Name: "Battleaxe"}},
-		Armor:          []campaignworkflow.Armor{{ID: "armor.chainmail-armor", Name: "Chainmail Armor"}},
-		PotionItems:    []campaignworkflow.Item{{ID: "item.minor-health-potion", Name: "Minor Health Potion"}},
+		PrimaryWeapons: []campaignworkflow.Weapon{{ID: "weapon.battleaxe", Name: "Battleaxe", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/weapons/fallback-battleaxe.png", Status: "set_default"}}},
+		Armor:          []campaignworkflow.Armor{{ID: "armor.chainmail-armor", Name: "Chainmail Armor", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/armor/fallback-chainmail.png", Status: "set_default"}}},
+		PotionItems:    []campaignworkflow.Item{{ID: "item.minor-health-potion", Name: "Minor Health Potion", Illustration: campaignworkflow.AssetReference{URL: "https://cdn.example.com/items/fallback-minor-health-potion.png", Status: "set_default"}}},
 	}
 
 	viewNoURL := New("").CreationView(creation)
 	if len(viewNoURL.PrimaryWeapons) != 1 || viewNoURL.PrimaryWeapons[0].ImageURL != "" {
-		t.Fatalf("expected empty weapon image url without AssetBaseURL, got %q", viewNoURL.PrimaryWeapons[0].ImageURL)
+		t.Fatalf("expected empty weapon image url for set_default fallback, got %q", viewNoURL.PrimaryWeapons[0].ImageURL)
 	}
 	if len(viewNoURL.Armor) != 1 || viewNoURL.Armor[0].ImageURL != "" {
-		t.Fatalf("expected empty armor image url without AssetBaseURL, got %q", viewNoURL.Armor[0].ImageURL)
+		t.Fatalf("expected empty armor image url for set_default fallback, got %q", viewNoURL.Armor[0].ImageURL)
 	}
 	if len(viewNoURL.PotionItems) != 1 || viewNoURL.PotionItems[0].ImageURL != "" {
-		t.Fatalf("expected empty item image url without AssetBaseURL, got %q", viewNoURL.PotionItems[0].ImageURL)
+		t.Fatalf("expected empty item image url for set_default fallback, got %q", viewNoURL.PotionItems[0].ImageURL)
 	}
 
 	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
-	if len(viewWithURL.PrimaryWeapons) != 1 || viewWithURL.PrimaryWeapons[0].ImageURL == "" {
-		t.Fatalf("expected non-empty weapon image url with AssetBaseURL, got %q", viewWithURL.PrimaryWeapons[0].ImageURL)
+	if len(viewWithURL.PrimaryWeapons) != 1 || viewWithURL.PrimaryWeapons[0].ImageURL != "" {
+		t.Fatalf("expected empty weapon image url with set_default fallback, got %q", viewWithURL.PrimaryWeapons[0].ImageURL)
 	}
-	if len(viewWithURL.Armor) != 1 || viewWithURL.Armor[0].ImageURL == "" {
-		t.Fatalf("expected non-empty armor image url with AssetBaseURL, got %q", viewWithURL.Armor[0].ImageURL)
+	if len(viewWithURL.Armor) != 1 || viewWithURL.Armor[0].ImageURL != "" {
+		t.Fatalf("expected empty armor image url with set_default fallback, got %q", viewWithURL.Armor[0].ImageURL)
 	}
-	if len(viewWithURL.PotionItems) != 1 || viewWithURL.PotionItems[0].ImageURL == "" {
-		t.Fatalf("expected non-empty item image url with AssetBaseURL, got %q", viewWithURL.PotionItems[0].ImageURL)
+	if len(viewWithURL.PotionItems) != 1 || viewWithURL.PotionItems[0].ImageURL != "" {
+		t.Fatalf("expected empty item image url with set_default fallback, got %q", viewWithURL.PotionItems[0].ImageURL)
 	}
 }
 
@@ -442,7 +452,8 @@ func TestCreationViewUsesCatalogDomainCardIllustrationURL(t *testing.T) {
 				ID:   "domain_card.rune-ward",
 				Name: "Runeward",
 				Illustration: campaignworkflow.AssetReference{
-					URL: "https://cdn.example.com/domain-cards/runeward.png",
+					URL:    "https://cdn.example.com/domain-cards/runeward.png",
+					Status: "mapped",
 				},
 			},
 		},
@@ -465,17 +476,21 @@ func TestCreationViewResolvesDomainCardImageURLFallback(t *testing.T) {
 			{
 				ID:   "domain_card.rune-ward",
 				Name: "Runeward",
+				Illustration: campaignworkflow.AssetReference{
+					URL:    "https://cdn.example.com/domain-cards/fallback-runeward.png",
+					Status: "set_default",
+				},
 			},
 		},
 	}
 
 	viewNoURL := New("").CreationView(creation)
 	if len(viewNoURL.DomainCards) != 1 || viewNoURL.DomainCards[0].ImageURL != "" {
-		t.Fatalf("expected empty domain card image url without AssetBaseURL, got %q", viewNoURL.DomainCards[0].ImageURL)
+		t.Fatalf("expected empty domain card image url for set_default fallback, got %q", viewNoURL.DomainCards[0].ImageURL)
 	}
 
 	viewWithURL := New("https://res.cloudinary.com/test/image/upload").CreationView(creation)
-	if len(viewWithURL.DomainCards) != 1 || viewWithURL.DomainCards[0].ImageURL == "" {
-		t.Fatalf("expected non-empty domain card image url with AssetBaseURL, got %q", viewWithURL.DomainCards[0].ImageURL)
+	if len(viewWithURL.DomainCards) != 1 || viewWithURL.DomainCards[0].ImageURL != "" {
+		t.Fatalf("expected empty domain card image url with set_default fallback, got %q", viewWithURL.DomainCards[0].ImageURL)
 	}
 }

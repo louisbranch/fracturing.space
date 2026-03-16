@@ -394,12 +394,12 @@ templ creationSelectableOptionCard(
 			</div>
 		}
 		if showImageFrame {
-			<figure class="h-48 md:h-auto md:w-48 bg-base-300 shrink-0">
+			<figure class="h-48 md:h-[16.5rem] md:w-44 md:self-start bg-base-300 shrink-0">
 				@AppImage(AppImageView{
 					Src:        imageURL,
 					Alt:        name,
-					WidthPX:    3,
-					HeightPX:   4,
+					WidthPX:    2,
+					HeightPX:   3,
 					FrameClass: "h-full w-full",
 					ImageClass: "h-full w-full object-cover",
 				})
@@ -432,7 +432,7 @@ templ creationOptionCard(id string, name string, imageURL string, radioName stri
 		campaignCreationOptionSelected(id, selectedID),
 		true,
 		false,
-		strings.TrimSpace(imageURL) != "",
+		true,
 		"",
 		domainWatermarks,
 	) {
@@ -1111,7 +1111,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 									campaignCreationOptionSelected(weapon.ID, view.Creation.PrimaryWeaponID),
 									true,
 									false,
-									strings.TrimSpace(weapon.ImageURL) != "",
+									true,
 									"equipment-primary-weapon",
 									nil,
 								) {
@@ -1160,7 +1160,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 								strings.TrimSpace(view.Creation.SecondaryWeaponID) == "",
 								false,
 								false,
-								strings.TrimSpace(view.Creation.SecondaryWeaponNoneImageURL) != "",
+								true,
 								"equipment-secondary-weapon",
 								nil,
 							) {
@@ -1178,7 +1178,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 									campaignCreationOptionSelected(weapon.ID, view.Creation.SecondaryWeaponID),
 									false,
 									false,
-									strings.TrimSpace(weapon.ImageURL) != "",
+									true,
 									"equipment-secondary-weapon",
 									nil,
 								) {
@@ -1228,7 +1228,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 									campaignCreationOptionSelected(armor.ID, view.Creation.ArmorID),
 									true,
 									false,
-									strings.TrimSpace(armor.ImageURL) != "",
+									true,
 									"equipment-armor",
 									nil,
 								) {
@@ -1270,7 +1270,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 									campaignCreationOptionSelected(item.ID, view.Creation.PotionItemID),
 									true,
 									false,
-									strings.TrimSpace(item.ImageURL) != "",
+									true,
 									"equipment-potion",
 									nil,
 								) {

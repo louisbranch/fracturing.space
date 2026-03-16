@@ -127,6 +127,46 @@ func TestCreationStepClassSubclassSkipsWatermarkContainerWhenAllIconsMissing(t *
 	}
 }
 
+func TestCreationStepClassSubclassRendersSkeletonFrameWhenImageMissing(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			Classes: []CampaignCreationClassView{
+				{
+					ID:              "class.druid",
+					Name:            "Druid",
+					ImageURL:        "",
+					StartingHP:      6,
+					StartingEvasion: 10,
+				},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	err := creationStepClassSubclass(view, testLocalizer{}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render creationStepClassSubclass: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`data-image-frame="true"`,
+		`data-image-skeleton="true"`,
+		`style="aspect-ratio: 2 / 3;"`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("class-subclass output missing marker %q: %q", marker, got)
+		}
+	}
+	if strings.Contains(got, `<img`) {
+		t.Fatalf("class-subclass output unexpectedly rendered image tag for empty url: %q", got)
+	}
+}
+
 func TestCreationStepDomainCardsUsesSharedSelectableCardShell(t *testing.T) {
 	t.Parallel()
 
@@ -154,8 +194,12 @@ func TestCreationStepDomainCardsUsesSharedSelectableCardShell(t *testing.T) {
 	}
 	for _, marker := range []string{
 		`type="checkbox"`,
+		`<figure class="h-48 md:h-[16.5rem] md:w-44 md:self-start bg-base-300 shrink-0">`,
 		`class="relative overflow-hidden h-full w-full"`,
 		`class="skeleton absolute inset-0 z-0 pointer-events-none"`,
+		`style="aspect-ratio: 2 / 3;"`,
+		`width="2"`,
+		`height="3"`,
 		`border-primary ring-2 ring-primary/20`,
 	} {
 		if !strings.Contains(markup, marker) {
@@ -206,7 +250,7 @@ func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing
 				{ID: "armor-1", Name: "Chainmail"},
 			},
 			PotionItems: []CampaignCreationItemView{
-				{ID: "item-1", Name: "Minor Health Potion", ImageURL: "https://cdn.example.com/items/minor-health-potion.png"},
+				{ID: "item-1", Name: "Minor Health Potion"},
 			},
 		},
 	}
@@ -225,12 +269,17 @@ func TestCreationStepEquipmentUsesSharedSelectableCardShellForPotions(t *testing
 		`data-creation-option-kind="equipment-potion"`,
 		`name="potion_item_id"`,
 		`type="radio"`,
+		`<figure class="h-48 md:h-[16.5rem] md:w-44 md:self-start bg-base-300 shrink-0">`,
 		`data-image-frame="true"`,
 		`data-image-skeleton="true"`,
+		`style="aspect-ratio: 2 / 3;"`,
 	} {
 		if !strings.Contains(markup, marker) {
 			t.Fatalf("equipment output missing marker %q: %q", marker, markup)
 		}
+	}
+	if strings.Contains(markup, `<img`) {
+		t.Fatalf("equipment output unexpectedly rendered image tag for empty url: %q", markup)
 	}
 }
 
