@@ -50,7 +50,7 @@ export function PlayerHUDShell({
   );
 
   return (
-    <main aria-label="Player HUD shell" className="flex h-dvh w-full flex-col">
+    <main aria-label="Player HUD shell" className="play-density-hud flex h-dvh w-full flex-col">
       <HUDNavbar activeTab={activeTab} onTabChange={onTabChange} />
 
       <div className="flex min-h-0 flex-1">

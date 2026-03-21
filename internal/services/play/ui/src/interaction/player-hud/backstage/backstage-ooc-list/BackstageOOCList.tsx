@@ -35,7 +35,7 @@ export function BackstageOOCList({
   return (
     <div
       aria-label="Backstage OOC messages"
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-2"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 py-1.5"
     >
       {messages.map((message, index) => {
         const previous = messages[index - 1];
@@ -49,12 +49,12 @@ export function BackstageOOCList({
         return (
           <div key={message.id} className={`chat chat-${isViewer ? "end" : "start"}`}>
             <div className="chat-image avatar">
-              <div className={`w-10 rounded-full ${isLastInRun ? "bg-base-300" : ""}`}>
+              <div className={`w-8 rounded-full ${isLastInRun ? "bg-base-300" : ""}`}>
                 {isLastInRun ? (
                   participant?.avatarUrl ? (
                     <img src={participant.avatarUrl} alt={name.charAt(0)} />
                   ) : (
-                    <span className="flex h-full w-full items-center justify-center text-sm font-medium">
+                    <span className="flex h-full w-full items-center justify-center text-xs font-medium">
                       {name.charAt(0)}
                     </span>
                   )

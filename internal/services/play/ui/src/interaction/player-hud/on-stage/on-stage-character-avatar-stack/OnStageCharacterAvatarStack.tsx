@@ -21,11 +21,11 @@ export function OnStageCharacterAvatarStack({
   const accessibleLabel = ariaLabel ?? `Characters: ${characters.map((character) => character.name).join(", ")}`;
 
   return (
-    <div aria-label={accessibleLabel} className="flex items-center -space-x-3">
+    <div aria-label={accessibleLabel} className="flex items-center -space-x-2.5">
       {visibleCharacters.map((character) => (
         <div
           key={character.id}
-          className="relative h-9 w-9 overflow-hidden rounded-full border-2 border-base-100 bg-base-300 text-base-content shadow-sm"
+          className="relative h-8 w-8 overflow-hidden rounded-full border-2 border-base-100 bg-base-300 text-base-content shadow-sm"
         >
           {character.avatarUrl ? (
             <img src={character.avatarUrl} alt="" className="h-full w-full object-cover" />
@@ -37,7 +37,7 @@ export function OnStageCharacterAvatarStack({
         </div>
       ))}
       {characters.length > 3 ? (
-        <div className="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-base-100 bg-base-200 text-sm font-semibold text-base-content shadow-sm">
+        <div className="relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-base-100 bg-base-200 text-xs font-semibold text-base-content shadow-sm">
           <span aria-hidden="true">...</span>
         </div>
       ) : null}

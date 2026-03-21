@@ -42,7 +42,7 @@ export function ChatList({
   return (
     <div
       aria-label={ariaLabel}
-      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-2 py-2"
+      className="flex min-h-0 flex-1 flex-col overflow-y-auto px-1.5 py-1.5"
     >
       {messages.map((msg, i) => {
         const prev = messages[i - 1];

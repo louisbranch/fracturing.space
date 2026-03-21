@@ -22,10 +22,10 @@ export function ChatCompose({
   }
 
   return (
-    <div className="flex shrink-0 gap-2 border-t border-base-300 p-2">
+    <div className="flex shrink-0 gap-1.5 border-t border-base-300 p-1.5">
       <textarea
         aria-label={ariaLabel}
-        className="textarea textarea-bordered max-h-32 min-h-0 flex-1 resize-none leading-snug"
+        className="textarea textarea-bordered max-h-28 min-h-0 flex-1 resize-none text-sm leading-snug"
         style={{ fieldSizing: "content" } as React.CSSProperties}
         rows={1}
         value={draft}
@@ -36,7 +36,7 @@ export function ChatCompose({
       />
       <button
         type="button"
-        className="btn btn-primary self-end"
+        className="btn btn-sm btn-primary self-end"
         disabled={!canSend}
         onClick={onSend}
       >

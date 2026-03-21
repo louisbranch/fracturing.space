@@ -28,12 +28,12 @@ export function OnStageCompose({
   }
 
   return (
-    <section aria-label="On-stage actions" className="border-t border-base-300/70 bg-base-100/90 px-4 py-4">
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end">
+    <section aria-label="On-stage actions" className="border-t border-base-300/70 bg-base-100/90 px-3 py-3">
+      <div className="space-y-2">
+        <div className="flex flex-col gap-2 md:flex-row md:items-end">
           <textarea
             aria-label="On-stage action input"
-            className="textarea textarea-bordered min-h-28 w-full flex-1 resize-y leading-snug"
+            className="textarea textarea-bordered min-h-24 w-full flex-1 resize-y text-sm leading-snug"
             value={draft}
             disabled={inputDisabled}
             onChange={(event) => onDraftChange(event.target.value)}
@@ -45,11 +45,11 @@ export function OnStageCompose({
             aria-label="On-stage action controls"
             className="flex shrink-0 justify-end md:self-stretch"
           >
-            <div className="join join-vertical w-full md:w-48">
+            <div className="join join-vertical w-full md:w-44">
             {controls.canSubmit ? (
               <button
                 type="button"
-                className="btn join-item btn-primary btn-soft w-full"
+                className="btn btn-sm join-item btn-primary btn-soft w-full"
                 disabled={!canSend}
                 onClick={onSubmit}
               >
@@ -60,7 +60,7 @@ export function OnStageCompose({
             {controls.canSubmitAndYield ? (
               <button
                 type="button"
-                className="btn join-item btn-primary btn-soft w-full"
+                className="btn btn-sm join-item btn-primary btn-soft w-full"
                 disabled={!canSend}
                 onClick={onSubmitAndYield}
               >
@@ -71,7 +71,7 @@ export function OnStageCompose({
             {controls.canYield ? (
               <button
                 type="button"
-                className="btn join-item btn-secondary btn-soft w-full"
+                className="btn btn-sm join-item btn-secondary btn-soft w-full"
                 onClick={onYield}
               >
                 Yield
@@ -81,7 +81,7 @@ export function OnStageCompose({
             {controls.canUnyield ? (
               <button
                 type="button"
-                className="btn join-item btn-warning btn-soft w-full"
+                className="btn btn-sm join-item btn-warning btn-soft w-full"
                 onClick={onUnyield}
               >
                 Unyield

@@ -23,11 +23,11 @@ export function BackstageCompose({
   }
 
   return (
-    <section aria-label="Backstage actions" className="border-t border-base-300/70 bg-base-100/90 px-4 py-4">
-      <div className="flex flex-col gap-3 md:flex-row md:items-end">
+    <section aria-label="Backstage actions" className="border-t border-base-300/70 bg-base-100/90 px-3 py-3">
+      <div className="flex flex-col gap-2 md:flex-row md:items-end">
         <textarea
           aria-label="Backstage message input"
-          className="textarea textarea-bordered min-h-20 w-full flex-1 resize-y leading-snug"
+          className="textarea textarea-bordered min-h-16 w-full flex-1 resize-y text-sm leading-snug"
           value={draft}
           disabled={disabled}
           onChange={(event) => onDraftChange(event.target.value)}
@@ -39,10 +39,10 @@ export function BackstageCompose({
           aria-label="Backstage action controls"
           className="flex shrink-0 justify-end md:self-stretch"
         >
-          <div className="join join-vertical w-full md:w-40">
+          <div className="join join-vertical w-full md:w-36">
             <button
               type="button"
-              className="btn join-item btn-primary btn-soft w-full"
+              className="btn btn-sm join-item btn-primary btn-soft w-full"
               disabled={!canSend}
               onClick={onSend}
             >
@@ -50,7 +50,7 @@ export function BackstageCompose({
             </button>
             <button
               type="button"
-              className={`btn join-item w-full ${viewerReady ? "btn-warning btn-soft" : "btn-secondary btn-soft"}`}
+              className={`btn btn-sm join-item w-full ${viewerReady ? "btn-warning btn-soft" : "btn-secondary btn-soft"}`}
               disabled={disabled}
               onClick={onReadyToggle}
             >

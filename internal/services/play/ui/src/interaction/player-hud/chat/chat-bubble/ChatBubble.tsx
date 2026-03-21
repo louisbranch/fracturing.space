@@ -15,12 +15,12 @@ export function ChatBubble({
   return (
     <div className={`chat chat-${alignment}`}>
       <div className="chat-image avatar">
-        <div className={`w-10 rounded-full ${showAvatar ? "bg-base-300" : ""}`}>
+        <div className={`w-8 rounded-full ${showAvatar ? "bg-base-300" : ""}`}>
           {showAvatar &&
             (avatarUrl ? (
               <img src={avatarUrl} alt={avatarFallback ?? ""} />
             ) : (
-              <span className="flex h-full w-full items-center justify-center text-sm font-medium">
+              <span className="flex h-full w-full items-center justify-center text-xs font-medium">
                 {avatarFallback}
               </span>
             ))}
