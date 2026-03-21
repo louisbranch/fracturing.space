@@ -14,7 +14,7 @@ describe("ParticipantPortraitRail", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Backstage participants")).toBeInTheDocument();
+    expect(screen.getByLabelText("Backstage participants")).toHaveClass("bg-base-300");
     expect(screen.getByLabelText("Rhea: ready")).toBeInTheDocument();
     expect(screen.getByLabelText("Rhea status: Ready to resume")).toBeInTheDocument();
     expect(screen.getByLabelText("Guide: waiting")).toBeInTheDocument();

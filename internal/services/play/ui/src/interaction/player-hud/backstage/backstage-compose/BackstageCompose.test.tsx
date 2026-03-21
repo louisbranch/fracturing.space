@@ -15,6 +15,7 @@ describe("BackstageCompose", () => {
       />,
     );
 
+    expect(screen.getByLabelText("Backstage actions")).toHaveClass("bg-base-300");
     expect(screen.getByLabelText("Backstage message input")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Post" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Mark Ready" })).toBeEnabled();

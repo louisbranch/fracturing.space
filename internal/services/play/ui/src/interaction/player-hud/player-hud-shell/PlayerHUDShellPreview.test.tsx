@@ -31,6 +31,9 @@ describe("PlayerHUDShellPreview", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("heading", { name: "Rhea" })).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: "Aria" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Aria" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Mira" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Rowan" })).toBeInTheDocument();
 
     await user.click(
       within(dialog).getByRole("button", { name: "Close character inspector" }),

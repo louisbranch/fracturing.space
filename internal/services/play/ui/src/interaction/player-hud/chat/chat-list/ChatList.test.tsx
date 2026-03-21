@@ -14,7 +14,7 @@ describe("ChatList", () => {
     );
 
     const container = screen.getByLabelText("Side chat messages");
-    expect(container).toBeInTheDocument();
+    expect(container).toHaveClass("bg-base-200");
 
     // All message bodies are rendered.
     expect(screen.getByText("Ready when you are.")).toBeInTheDocument();
@@ -62,6 +62,7 @@ describe("ChatList", () => {
       />,
     );
 
+    expect(screen.getByLabelText("Side chat messages")).toHaveClass("bg-base-200");
     expect(screen.getByText("Nothing here yet")).toBeInTheDocument();
   });
 });

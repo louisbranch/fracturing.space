@@ -15,11 +15,20 @@ describe("HUDNavbar", () => {
       />,
     );
 
-    expect(screen.getByLabelText("Player HUD navigation")).toBeInTheDocument();
+    expect(screen.getByLabelText("Player HUD navigation")).toHaveClass("bg-base-300");
     expect(screen.getByRole("button", { name: "Open campaign sidebar" })).toBeInTheDocument();
     expect(screen.getByText("On Stage")).toBeInTheDocument();
     expect(screen.getByText("Backstage")).toBeInTheDocument();
     expect(screen.getByText("Side Chat")).toBeInTheDocument();
+    expect(screen.getByText("On Stage").closest(".tooltip")).toHaveAttribute("data-tip", "Play as your character.");
+    expect(screen.getByText("Backstage").closest(".tooltip")).toHaveAttribute(
+      "data-tip",
+      "Authoritative OOC pauses, rulings, and coordination.",
+    );
+    expect(screen.getByText("Side Chat").closest(".tooltip")).toHaveAttribute(
+      "data-tip",
+      "Optional non-authoritative session chat.",
+    );
     expect(screen.getByLabelText("Connection status: Connected")).toBeInTheDocument();
   });
 

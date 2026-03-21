@@ -61,7 +61,7 @@ export function PlayerHUDDrawerSidebar({
   return (
     <aside
       aria-label="Player HUD sidebar"
-      className="min-h-full w-80 max-w-[85vw] bg-base-200 text-base-content shadow-2xl"
+      className="min-h-full w-80 max-w-[85vw] bg-base-300 text-base-content shadow-2xl"
     >
       <div className="flex min-h-full flex-col gap-4 px-4 py-5">
         <section

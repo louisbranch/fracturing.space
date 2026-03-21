@@ -438,6 +438,9 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       : state.activeTab === "backstage"
         ? hudState.backstage.participants.find((entry) => entry.id === participantId)
         : hudState.sideChat.participants.find((entry) => entry.id === participantId);
+    const controller = hudState.campaignNavigation.characterControllers.find(
+      (entry) => entry.participantId === participantId,
+    );
     if (!participant) {
       console.warn("[play runtime inspect] missing participant", { participantId, activeTab: state.activeTab });
       return;
@@ -451,12 +454,12 @@ export function PlayRuntime({ shellConfig }: { shellConfig: PlayShellConfig }) {
       participantId,
       participantName: participant.name,
       activeTab: state.activeTab,
-      characterCount: participant.characters.length,
+      characterCount: controller?.characters.length || participant.characters.length,
     });
     openForParticipant({
-      name: participant.name,
-      characters: participant.characters,
-      isViewer: participant.id === viewerParticipantID,
+      name: controller?.participantName || participant.name,
+      characters: controller?.characters ?? participant.characters,
+      isViewer: controller?.isViewer ?? (participant.id === viewerParticipantID),
     });
   }
 

@@ -22,7 +22,7 @@ export function ChatCompose({
   }
 
   return (
-    <div className="flex shrink-0 gap-1.5 border-t border-base-300 p-1.5">
+    <div className="flex shrink-0 gap-1.5 border-t border-base-300 bg-base-300 p-1.5">
       <textarea
         aria-label={ariaLabel}
         className="textarea textarea-bordered max-h-28 min-h-0 flex-1 resize-none text-sm leading-snug"

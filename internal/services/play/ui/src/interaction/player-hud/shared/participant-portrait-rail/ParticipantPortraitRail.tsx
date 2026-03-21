@@ -83,7 +83,7 @@ export function ParticipantPortraitRail({
   return (
     <aside
       aria-label={ariaLabel}
-      className="flex w-24 shrink-0 flex-col items-center gap-3 border-l border-base-300/70 bg-base-200/25 px-2 py-3"
+      className="flex w-24 shrink-0 flex-col items-center gap-3 border-l border-base-300/70 bg-base-300 px-2 py-3"
     >
       {sortedParticipants.map((participant) => {
         const status = statusDisplay(participant.status);

@@ -13,6 +13,7 @@ describe("PlayerHUDDrawerSidebar", () => {
       />,
     );
 
+    expect(screen.getByLabelText("Player HUD sidebar")).toHaveClass("bg-base-300");
     const charactersButton = screen.getByRole("button", { name: "Characters" });
     expect(charactersButton).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("button", { name: "Inspect Aria" })).not.toBeInTheDocument();

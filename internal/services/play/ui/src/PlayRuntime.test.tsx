@@ -88,11 +88,44 @@ function runtimeBootstrap(): BootstrapResponse {
   };
 }
 
+function runtimeBootstrapWithMultipleCharacters(): BootstrapResponse {
+  return {
+    ...runtimeBootstrap(),
+    participants: [
+      {
+        id: "p1",
+        name: "Avery",
+        role: "player",
+        character_ids: [playerHUDCharacterCatalog.aria.id, playerHUDCharacterCatalog.mira.id],
+      },
+      { id: "p2", name: "Guide", role: "gm", character_ids: [] },
+    ],
+    character_inspection_catalog: {
+      [playerHUDCharacterCatalog.aria.id]: playerHUDCharacterInspectionCatalog[playerHUDCharacterCatalog.aria.id],
+      [playerHUDCharacterCatalog.mira.id]: playerHUDCharacterInspectionCatalog[playerHUDCharacterCatalog.mira.id],
+    },
+  };
+}
+
 function runtimeSnapshot(): WireRoomSnapshot {
   const bootstrap = runtimeBootstrap();
   return {
     interaction_state: bootstrap.interaction_state,
     participants: bootstrap.participants,
+    character_inspection_catalog: bootstrap.character_inspection_catalog,
+    chat: bootstrap.chat,
+    latest_game_sequence: 3,
+  };
+}
+
+function runtimeSnapshotWithoutParticipantCharacters(): WireRoomSnapshot {
+  const bootstrap = runtimeBootstrapWithMultipleCharacters();
+  return {
+    interaction_state: bootstrap.interaction_state,
+    participants: [
+      { id: "p1", name: "Avery", role: "player", character_ids: [] },
+      { id: "p2", name: "Guide", role: "gm", character_ids: [] },
+    ],
     character_inspection_catalog: bootstrap.character_inspection_catalog,
     chat: bootstrap.chat,
     latest_game_sequence: 3,
@@ -187,6 +220,40 @@ describe("PlayRuntime", () => {
     dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByRole("heading", { name: "Avery" })).toBeInTheDocument();
     expect(within(dialog).getByRole("heading", { name: "Aria" })).toBeInTheDocument();
+  });
+
+  it("uses campaign navigation characters when the participant rail snapshot omits character ids", async () => {
+    const user = userEvent.setup();
+    fetchBootstrapMock.mockResolvedValue(runtimeBootstrapWithMultipleCharacters());
+
+    render(
+      <PlayRuntime
+        shellConfig={{
+          campaignId: "c1",
+          bootstrapPath: "/api/campaigns/c1/bootstrap",
+          realtimePath: "/realtime",
+          backURL: "http://example.com/app/campaigns/c1",
+        }}
+      />,
+    );
+
+    await screen.findByLabelText("Player HUD shell");
+    await waitFor(() => expect(connectWebSocketMock).toHaveBeenCalledTimes(1));
+
+    const websocketOptions = connectWebSocketMock.mock.calls[0][0] as {
+      onEvent: (event: { type: "ready"; snapshot: WireRoomSnapshot }) => void;
+    };
+    act(() => {
+      websocketOptions.onEvent({ type: "ready", snapshot: runtimeSnapshotWithoutParticipantCharacters() });
+    });
+
+    await user.click(await screen.findByRole("button", { name: "Inspect Avery" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Avery" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("heading", { name: "Aria" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Aria" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "Mira" })).toBeInTheDocument();
   });
 
   it("submits on-stage actions with scene and character context", async () => {

@@ -221,18 +221,22 @@ export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewPro
         }}
         onParticipantInspect={(participantId) => {
           const participant = participantForActiveTab(participantId);
+          const controller = initialState.campaignNavigation.characterControllers.find(
+            (entry) => entry.participantId === participantId,
+          );
           if (!participant) {
             return;
           }
           openForParticipant({
-            name: participant.name,
-            characters: participant.characters,
-            isViewer:
+            name: controller?.participantName || participant.name,
+            characters: controller?.characters ?? participant.characters,
+            isViewer: controller?.isViewer ?? (
               activeTab === "on-stage"
                 ? participant.id === onStage.viewerParticipantId
                 : activeTab === "backstage"
                   ? participant.id === backstage.viewerParticipantId
-                  : participant.id === initialState.sideChat.viewerParticipantId,
+                  : participant.id === initialState.sideChat.viewerParticipantId
+            ),
           });
         }}
         backstage={backstage}
