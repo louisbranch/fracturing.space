@@ -156,6 +156,9 @@ func (a interactionApplication) SetActiveScene(ctx context.Context, campaignID s
 	if err != nil {
 		return nil, err
 	}
+	if err := requireSceneWritesUnblocked(currentInteraction); err != nil {
+		return nil, err
+	}
 	targetScene, err := a.stores.Scene.GetScene(ctx, campaignID, sceneID)
 	if err != nil {
 		return nil, err

@@ -9,44 +9,46 @@ import (
 )
 
 const (
-	CommandTypeStart              command.Type = "session.start"
-	CommandTypeEnd                command.Type = "session.end"
-	CommandTypeGateOpen           command.Type = "session.gate_open"
-	CommandTypeGateRespond        command.Type = "session.gate_record_response"
-	CommandTypeGateResolve        command.Type = "session.gate_resolve"
-	CommandTypeGateAbandon        command.Type = "session.gate_abandon"
-	CommandTypeSpotlightSet       command.Type = "session.spotlight_set"
-	CommandTypeSpotlightClear     command.Type = "session.spotlight_clear"
-	CommandTypeActiveSceneSet     command.Type = "session.active_scene.set"
-	CommandTypeGMAuthoritySet     command.Type = "session.gm_authority.set"
-	CommandTypeOOCPause           command.Type = "session.ooc.pause"
-	CommandTypeOOCPost            command.Type = "session.ooc.post"
-	CommandTypeOOCReadyMark       command.Type = "session.ooc.ready_mark"
-	CommandTypeOOCReadyClear      command.Type = "session.ooc.ready_clear"
-	CommandTypeOOCResume          command.Type = "session.ooc.resume"
-	CommandTypeAITurnQueue        command.Type = "session.ai_turn.queue"
-	CommandTypeAITurnStart        command.Type = "session.ai_turn.start"
-	CommandTypeAITurnFail         command.Type = "session.ai_turn.fail"
-	CommandTypeAITurnClear        command.Type = "session.ai_turn.clear"
-	EventTypeStarted              event.Type   = "session.started"
-	EventTypeEnded                event.Type   = "session.ended"
-	EventTypeGateOpened           event.Type   = "session.gate_opened"
-	EventTypeGateResponseRecorded event.Type   = "session.gate_response_recorded"
-	EventTypeGateResolved         event.Type   = "session.gate_resolved"
-	EventTypeGateAbandoned        event.Type   = "session.gate_abandoned"
-	EventTypeSpotlightSet         event.Type   = "session.spotlight_set"
-	EventTypeSpotlightCleared     event.Type   = "session.spotlight_cleared"
-	EventTypeActiveSceneSet       event.Type   = "session.active_scene_set"
-	EventTypeGMAuthoritySet       event.Type   = "session.gm_authority_set"
-	EventTypeOOCPaused            event.Type   = "session.ooc_paused"
-	EventTypeOOCPosted            event.Type   = "session.ooc_posted"
-	EventTypeOOCReadyMarked       event.Type   = "session.ooc_ready_marked"
-	EventTypeOOCReadyCleared      event.Type   = "session.ooc_ready_cleared"
-	EventTypeOOCResumed           event.Type   = "session.ooc_resumed"
-	EventTypeAITurnQueued         event.Type   = "session.ai_turn_queued"
-	EventTypeAITurnRunning        event.Type   = "session.ai_turn_running"
-	EventTypeAITurnFailed         event.Type   = "session.ai_turn_failed"
-	EventTypeAITurnCleared        event.Type   = "session.ai_turn_cleared"
+	CommandTypeStart                  command.Type = "session.start"
+	CommandTypeEnd                    command.Type = "session.end"
+	CommandTypeGateOpen               command.Type = "session.gate_open"
+	CommandTypeGateRespond            command.Type = "session.gate_record_response"
+	CommandTypeGateResolve            command.Type = "session.gate_resolve"
+	CommandTypeGateAbandon            command.Type = "session.gate_abandon"
+	CommandTypeSpotlightSet           command.Type = "session.spotlight_set"
+	CommandTypeSpotlightClear         command.Type = "session.spotlight_clear"
+	CommandTypeActiveSceneSet         command.Type = "session.active_scene.set"
+	CommandTypeGMAuthoritySet         command.Type = "session.gm_authority.set"
+	CommandTypeOOCPause               command.Type = "session.ooc.pause"
+	CommandTypeOOCPost                command.Type = "session.ooc.post"
+	CommandTypeOOCReadyMark           command.Type = "session.ooc.ready_mark"
+	CommandTypeOOCReadyClear          command.Type = "session.ooc.ready_clear"
+	CommandTypeOOCResume              command.Type = "session.ooc.resume"
+	CommandTypeOOCInterruptionResolve command.Type = "session.ooc.interruption_resolve"
+	CommandTypeAITurnQueue            command.Type = "session.ai_turn.queue"
+	CommandTypeAITurnStart            command.Type = "session.ai_turn.start"
+	CommandTypeAITurnFail             command.Type = "session.ai_turn.fail"
+	CommandTypeAITurnClear            command.Type = "session.ai_turn.clear"
+	EventTypeStarted                  event.Type   = "session.started"
+	EventTypeEnded                    event.Type   = "session.ended"
+	EventTypeGateOpened               event.Type   = "session.gate_opened"
+	EventTypeGateResponseRecorded     event.Type   = "session.gate_response_recorded"
+	EventTypeGateResolved             event.Type   = "session.gate_resolved"
+	EventTypeGateAbandoned            event.Type   = "session.gate_abandoned"
+	EventTypeSpotlightSet             event.Type   = "session.spotlight_set"
+	EventTypeSpotlightCleared         event.Type   = "session.spotlight_cleared"
+	EventTypeActiveSceneSet           event.Type   = "session.active_scene_set"
+	EventTypeGMAuthoritySet           event.Type   = "session.gm_authority_set"
+	EventTypeOOCPaused                event.Type   = "session.ooc_paused"
+	EventTypeOOCPosted                event.Type   = "session.ooc_posted"
+	EventTypeOOCReadyMarked           event.Type   = "session.ooc_ready_marked"
+	EventTypeOOCReadyCleared          event.Type   = "session.ooc_ready_cleared"
+	EventTypeOOCResumed               event.Type   = "session.ooc_resumed"
+	EventTypeOOCInterruptionResolved  event.Type   = "session.ooc_interruption_resolved"
+	EventTypeAITurnQueued             event.Type   = "session.ai_turn_queued"
+	EventTypeAITurnRunning            event.Type   = "session.ai_turn_running"
+	EventTypeAITurnFailed             event.Type   = "session.ai_turn_failed"
+	EventTypeAITurnCleared            event.Type   = "session.ai_turn_cleared"
 
 	rejectionCodeSessionIDRequired              = "SESSION_ID_REQUIRED"
 	rejectionCodeSessionNameRequired            = "SESSION_NAME_REQUIRED"
@@ -68,6 +70,7 @@ const (
 	rejectionCodeSessionGMAuthorityUnchanged    = "SESSION_GM_AUTHORITY_UNCHANGED"
 	rejectionCodeSessionOOCAlreadyOpen          = "SESSION_OOC_ALREADY_OPEN"
 	rejectionCodeSessionOOCNotOpen              = "SESSION_OOC_NOT_OPEN"
+	rejectionCodeSessionOOCResolutionNotPending = "SESSION_OOC_RESOLUTION_NOT_PENDING"
 	rejectionCodeSessionOOCPostIDRequired       = "SESSION_OOC_POST_ID_REQUIRED"
 	rejectionCodeSessionOOCParticipantRequired  = "SESSION_OOC_PARTICIPANT_REQUIRED"
 	rejectionCodeSessionOOCBodyRequired         = "SESSION_OOC_BODY_REQUIRED"
@@ -102,6 +105,7 @@ func RejectionCodes() []string {
 		rejectionCodeSessionGMAuthorityUnchanged,
 		rejectionCodeSessionOOCAlreadyOpen,
 		rejectionCodeSessionOOCNotOpen,
+		rejectionCodeSessionOOCResolutionNotPending,
 		rejectionCodeSessionOOCPostIDRequired,
 		rejectionCodeSessionOOCParticipantRequired,
 		rejectionCodeSessionOOCBodyRequired,
@@ -166,6 +170,9 @@ func Decide(state State, cmd command.Command, now func() time.Time) command.Deci
 
 	case CommandTypeOOCResume:
 		return decideOOCResume(state, cmd, now)
+
+	case CommandTypeOOCInterruptionResolve:
+		return decideOOCInterruptionResolve(state, cmd, now)
 
 	case CommandTypeAITurnQueue:
 		return decideAITurnQueue(state, cmd, now)

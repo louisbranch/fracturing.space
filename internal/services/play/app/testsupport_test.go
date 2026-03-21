@@ -157,6 +157,11 @@ func (f *recordingInteractionClient) RequestScenePlayerRevisions(_ context.Conte
 	return &gamev1.RequestScenePlayerRevisionsResponse{State: f.state}, f.mutationErr
 }
 
+func (f *recordingInteractionClient) ResolveScenePlayerPhaseReview(_ context.Context, req *gamev1.ResolveScenePlayerPhaseReviewRequest, _ ...gogrpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
+	f.record("ResolveScenePlayerPhaseReview", req.GetCampaignId())
+	return &gamev1.ResolveScenePlayerPhaseReviewResponse{State: f.state}, f.mutationErr
+}
+
 func (f *recordingInteractionClient) PauseSessionForOOC(_ context.Context, req *gamev1.PauseSessionForOOCRequest, _ ...gogrpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error) {
 	f.record("PauseSessionForOOC", req.GetCampaignId())
 	return &gamev1.PauseSessionForOOCResponse{State: f.state}, f.mutationErr
@@ -180,6 +185,11 @@ func (f *recordingInteractionClient) ClearOOCReadyToResume(_ context.Context, re
 func (f *recordingInteractionClient) ResumeFromOOC(_ context.Context, req *gamev1.ResumeFromOOCRequest, _ ...gogrpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
 	f.record("ResumeFromOOC", req.GetCampaignId())
 	return &gamev1.ResumeFromOOCResponse{State: f.state}, f.mutationErr
+}
+
+func (f *recordingInteractionClient) ResolveInterruptedScenePhase(_ context.Context, req *gamev1.ResolveInterruptedScenePhaseRequest, _ ...gogrpc.CallOption) (*gamev1.ResolveInterruptedScenePhaseResponse, error) {
+	f.record("ResolveInterruptedScenePhase", req.GetCampaignId())
+	return &gamev1.ResolveInterruptedScenePhaseResponse{State: f.state}, f.mutationErr
 }
 
 func (f *recordingInteractionClient) SetSessionGMAuthority(_ context.Context, req *gamev1.SetSessionGMAuthorityRequest, _ ...gogrpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error) {
@@ -394,6 +404,34 @@ func enrichedCharacterSheetResponse() *gamev1.GetCharacterSheetResponse {
 				Daggerheart: &daggerheartv1.DaggerheartProfile{
 					Level: 1,
 					HpMax: 10,
+					Heritage: &daggerheartv1.DaggerheartHeritageSelection{
+						AncestryName:  "Human",
+						CommunityName: "Slyborne",
+					},
+					ActiveClassFeatures: []*daggerheartv1.DaggerheartActiveClassFeature{
+						{
+							Name:        "Rogue's Dodge",
+							Description: "Spend 3 Hope to gain +2 Evasion until an attack succeeds against you.",
+							HopeFeature: true,
+						},
+						{
+							Name:        "Sneak Attack",
+							Description: "When you have advantage on a melee attack, deal an extra 1d8 damage.",
+						},
+					},
+					PrimaryWeapon: &daggerheartv1.DaggerheartSheetWeaponSummary{
+						Name:       "Sword",
+						Trait:      "Finesse",
+						Range:      "melee",
+						DamageDice: "1d8",
+						DamageType: "physical",
+						Feature:    "Versatile",
+					},
+					ActiveArmor: &daggerheartv1.DaggerheartSheetArmorSummary{
+						Name:      "Leather",
+						BaseScore: 2,
+						Feature:   "Quiet",
+					},
 				},
 			},
 		},

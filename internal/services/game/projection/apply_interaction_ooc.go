@@ -10,7 +10,7 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/services/game/storage"
 )
 
-func (a Applier) applySessionOOCPaused(ctx context.Context, evt event.Event, _ session.OOCPausedPayload) error {
+func (a Applier) applySessionOOCPaused(ctx context.Context, evt event.Event, payload session.OOCPausedPayload) error {
 	updatedAt, err := ensureTimestamp(evt.Timestamp)
 	if err != nil {
 		return err
@@ -20,6 +20,12 @@ func (a Applier) applySessionOOCPaused(ctx context.Context, evt event.Event, _ s
 		return err
 	}
 	current.OOCPaused = true
+	current.OOCRequestedByParticipantID = strings.TrimSpace(payload.RequestedByParticipantID.String())
+	current.OOCReason = strings.TrimSpace(payload.Reason)
+	current.OOCInterruptedSceneID = strings.TrimSpace(payload.InterruptedSceneID.String())
+	current.OOCInterruptedPhaseID = strings.TrimSpace(payload.InterruptedPhaseID)
+	current.OOCInterruptedPhaseStatus = strings.TrimSpace(payload.InterruptedPhaseStatus)
+	current.OOCResolutionPending = false
 	current.OOCPosts = []storage.SessionOOCPost{}
 	current.ReadyToResumeParticipantIDs = []string{}
 	current.UpdatedAt = updatedAt
@@ -89,6 +95,26 @@ func (a Applier) applySessionOOCResumed(ctx context.Context, evt event.Event, _ 
 	current.OOCPaused = false
 	current.OOCPosts = []storage.SessionOOCPost{}
 	current.ReadyToResumeParticipantIDs = []string{}
+	current.OOCResolutionPending = current.OOCInterruptedSceneID != "" && current.OOCInterruptedPhaseID != ""
+	current.UpdatedAt = updatedAt
+	return a.SessionInteraction.PutSessionInteraction(ctx, current)
+}
+
+func (a Applier) applySessionOOCInterruptionResolved(ctx context.Context, evt event.Event, _ session.OOCInterruptionResolvedPayload) error {
+	updatedAt, err := ensureTimestamp(evt.Timestamp)
+	if err != nil {
+		return err
+	}
+	current, err := loadSessionInteraction(ctx, a.SessionInteraction, string(evt.CampaignID), evt.SessionID.String())
+	if err != nil {
+		return err
+	}
+	current.OOCRequestedByParticipantID = ""
+	current.OOCReason = ""
+	current.OOCInterruptedSceneID = ""
+	current.OOCInterruptedPhaseID = ""
+	current.OOCInterruptedPhaseStatus = ""
+	current.OOCResolutionPending = false
 	current.UpdatedAt = updatedAt
 	return a.SessionInteraction.PutSessionInteraction(ctx, current)
 }

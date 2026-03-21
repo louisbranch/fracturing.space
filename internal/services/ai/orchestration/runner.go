@@ -17,6 +17,8 @@ const defaultMaxSteps = 8
 const defaultTurnTimeout = 2 * time.Minute
 const defaultToolResultMaxBytes = 32 * 1024
 const playerPhaseStartToolName = "interaction_scene_player_phase_start"
+const reviewResolveToolName = "interaction_scene_review_resolve"
+const interruptResolutionToolName = "interaction_scene_interrupt_resolution"
 
 type runner struct {
 	dialer             Dialer
@@ -159,14 +161,14 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	promptSpan.End()
 
 	var convo string
-	committed := false
+	committedOrResolved := false
 	var results []ProviderToolResult
 	commitReminderUsed := false
 	playerPhaseReminderUsed := false
 	var followUpPrompt string
 	var usage provider.Usage
 	lastCommitToolOrder := 0
-	lastPlayerPhaseStartToolOrder := 0
+	lastPlayerHandoffToolOrder := 0
 	toolOrder := 0
 
 	for i := 0; i < r.max; i++ {
@@ -210,7 +212,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				recordSpanError(span, err)
 				return Result{}, err
 			}
-			if !committed {
+			if !committedOrResolved {
 				if !commitReminderUsed && i+1 < r.max {
 					commitReminderUsed = true
 					results = nil
@@ -221,7 +223,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				recordSpanError(span, ErrNarrationNotCommitted)
 				return Result{}, ErrNarrationNotCommitted
 			}
-			if lastCommitToolOrder > 0 && lastPlayerPhaseStartToolOrder > 0 && lastCommitToolOrder > lastPlayerPhaseStartToolOrder {
+			if lastCommitToolOrder > 0 && lastPlayerHandoffToolOrder > 0 && lastCommitToolOrder > lastPlayerHandoffToolOrder {
 				if !playerPhaseReminderUsed && i+1 < r.max {
 					playerPhaseReminderUsed = true
 					results = nil
@@ -233,7 +235,7 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				recordSpanError(span, err)
 				return Result{}, err
 			}
-			span.SetAttributes(attribute.Bool("ai.orchestration.committed_output", committed))
+			span.SetAttributes(attribute.Bool("ai.orchestration.committed_output", committedOrResolved))
 			return Result{OutputText: text, Usage: usage}, nil
 		}
 
@@ -265,16 +267,17 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 				})
 				continue
 			}
-			if call.Name == r.commitToolName && !res.IsError {
-				committed = true
-			}
 			if !res.IsError {
+				if toolCommitsOrResolvesInteraction(strings.TrimSpace(call.Name), r.commitToolName) {
+					committedOrResolved = true
+				}
 				toolOrder++
-				switch call.Name {
-				case r.commitToolName:
+				switch strings.TrimSpace(call.Name) {
+				case strings.TrimSpace(r.commitToolName), reviewResolveToolName:
 					lastCommitToolOrder = toolOrder
-				case playerPhaseStartToolName:
-					lastPlayerPhaseStartToolOrder = toolOrder
+				}
+				if toolHandsControlBackToPlayers(strings.TrimSpace(call.Name)) {
+					lastPlayerHandoffToolOrder = toolOrder
 				}
 			}
 			outputText, truncated := truncateToolResultOutput(res.Output, r.toolResultMaxBytes)
@@ -300,8 +303,8 @@ func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 
 func buildCommitReminder(text string) string {
 	var b strings.Builder
-	b.WriteString("You returned narration without calling interaction_scene_gm_output_commit.\n")
-	b.WriteString("Convert that draft into an authoritative tool call before returning final text.\n")
+	b.WriteString("You returned narration without making the authoritative interaction update for this turn.\n")
+	b.WriteString("Use interaction_scene_gm_output_commit for standalone narration, interaction_scene_review_resolve for GM review, or interaction_scene_interrupt_resolution for post-OOC resolution before returning final text.\n")
 	b.WriteString("If there is no active scene, set one active first.\n")
 	if text != "" {
 		b.WriteString("Use this draft narration as the commit text unless you need a small correction:\n")
@@ -321,6 +324,24 @@ func buildPlayerPhaseStartReminder(text string) string {
 		b.WriteString(text)
 	}
 	return b.String()
+}
+
+func toolCommitsOrResolvesInteraction(name, configuredCommitTool string) bool {
+	switch strings.TrimSpace(name) {
+	case strings.TrimSpace(configuredCommitTool), reviewResolveToolName, interruptResolutionToolName:
+		return true
+	default:
+		return false
+	}
+}
+
+func toolHandsControlBackToPlayers(name string) bool {
+	switch strings.TrimSpace(name) {
+	case playerPhaseStartToolName, reviewResolveToolName, interruptResolutionToolName:
+		return true
+	default:
+		return false
+	}
 }
 
 func truncateToolResultOutput(text string, maxBytes int) (string, bool) {

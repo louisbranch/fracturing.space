@@ -82,7 +82,7 @@ func (r briefPromptRenderer) buildIntrinsicSections(brief SessionBrief, input Pr
 		ID:       "authority",
 		Priority: 100,
 		Label:    "Authority",
-		Content:  buildAuthorityText(brief.Bootstrap(), input),
+		Content:  buildAuthorityText(brief.TurnMode(), input),
 		Required: true,
 	})
 
@@ -113,26 +113,37 @@ func interactionContractText(instructions PromptInstructions) string {
 	return strings.Join([]string{
 		"You are the AI GM for this campaign turn. You manage narration and authoritative game-state changes together.",
 		"Keep in-character narration and out-of-character coordination separate.",
-		"Use interaction_scene_gm_output_commit for authoritative in-character narration.",
+		"Use interaction_scene_gm_output_commit for standalone in-character narration when framing a fresh beat outside GM review.",
+		"Use interaction_scene_review_resolve when the scene is waiting on GM review.",
+		"Use interaction_scene_interrupt_resolution when OOC has resumed but players are still blocked pending interaction resolution.",
 		"Use interaction_ooc_* tools for out-of-character rules guidance, coordination, pauses, and resumptions.",
 		"Use system_reference_search and system_reference_read before improvising Daggerheart rules or mechanics.",
 		"Use tools for authoritative state changes; do not rely on free-form narration to mutate game state.",
 	}, "\n")
 }
 
-func buildAuthorityText(bootstrap bool, input PromptInput) string {
+func buildAuthorityText(mode InteractionTurnMode, input PromptInput) string {
 	var b strings.Builder
 	b.WriteString("Campaign, session, and participant authority are fixed for this turn.")
 	if input.ParticipantID != "" {
 		b.WriteString("\nFixed participant authority:\n")
 		b.WriteString(input.ParticipantID)
 	}
-	if bootstrap {
+	switch mode {
+	case InteractionTurnModeBootstrap:
 		b.WriteString("\n\nBootstrap mode: there is no active scene yet.\n")
 		b.WriteString("You are responsible for creating or choosing the opening scene from campaign, participant, and character context, setting it active, and committing authoritative GM output.\n")
 		b.WriteString("If there are no suitable scenes yet, create one that fits the campaign theme and the player characters.\n")
-		b.WriteString("After the scene is active and narrated, start the first player phase when the acting characters are clear.")
-	} else {
+		b.WriteString("After the scene is active and narrated, start the first player phase when the acting characters are clear, or pause for OOC if table coordination is required.")
+	case InteractionTurnModeReviewResolution:
+		b.WriteString("\n\nReview-resolution mode: players have yielded and the scene is waiting on GM review.\n")
+		b.WriteString("Use interaction_scene_review_resolve to either commit narration and open the next player phase, or request revisions.\n")
+		b.WriteString("Do not leave the interaction in silent GM control.")
+	case InteractionTurnModeOOCResumeResolution:
+		b.WriteString("\n\nPost-OOC resolution mode: out-of-character discussion has resumed, but players are still blocked until you resolve the interrupted interaction.\n")
+		b.WriteString("Use interaction_scene_interrupt_resolution to resume the interrupted phase or replace it with a newly framed player phase.\n")
+		b.WriteString("If the interruption landed during GM review, interaction_scene_review_resolve is also valid.")
+	default:
 		b.WriteString("\n\nActive scene mode: continue the session from the current interaction state and use tools for authoritative changes.")
 		b.WriteString("\nWhen handing control back to players, commit the new GM narration first and then call interaction_scene_player_phase_start with explicit acting character_ids.")
 		b.WriteString("\nNever start a player phase before committing the narration that frames it.")

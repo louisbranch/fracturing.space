@@ -164,9 +164,21 @@ func decodeInteractionStateSnapshot(raw string) (InteractionStateSnapshot, error
 		ActiveScene struct {
 			SceneID string `json:"scene_id"`
 		} `json:"active_scene"`
+		PlayerPhase struct {
+			Status string `json:"status"`
+		} `json:"player_phase"`
+		OOC struct {
+			Open              bool `json:"open"`
+			ResolutionPending bool `json:"resolution_pending"`
+		} `json:"ooc"`
 	}
 	if err := json.Unmarshal([]byte(raw), &state); err != nil {
 		return InteractionStateSnapshot{}, err
 	}
-	return InteractionStateSnapshot{ActiveSceneID: state.ActiveScene.SceneID}, nil
+	return InteractionStateSnapshot{
+		ActiveSceneID:        state.ActiveScene.SceneID,
+		PlayerPhaseStatus:    state.PlayerPhase.Status,
+		OOCOpen:              state.OOC.Open,
+		OOCResolutionPending: state.OOC.ResolutionPending,
+	}, nil
 }

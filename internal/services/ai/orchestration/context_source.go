@@ -2,17 +2,43 @@ package orchestration
 
 import (
 	"context"
+	"strings"
 )
 
 // InteractionStateSnapshot carries the typed interaction facts the prompt
 // builder needs without re-parsing rendered prompt sections.
 type InteractionStateSnapshot struct {
-	ActiveSceneID string
+	ActiveSceneID        string
+	PlayerPhaseStatus    string
+	OOCOpen              bool
+	OOCResolutionPending bool
 }
 
 // Bootstrap reports whether the interaction state has no active scene yet.
 func (s InteractionStateSnapshot) Bootstrap() bool {
 	return s.ActiveSceneID == ""
+}
+
+type InteractionTurnMode string
+
+const (
+	InteractionTurnModeBootstrap           InteractionTurnMode = "bootstrap"
+	InteractionTurnModeReviewResolution    InteractionTurnMode = "review_resolution"
+	InteractionTurnModeOOCResumeResolution InteractionTurnMode = "ooc_resume_resolution"
+	InteractionTurnModeGMFrame             InteractionTurnMode = "gm_frame"
+)
+
+func (s InteractionStateSnapshot) TurnMode() InteractionTurnMode {
+	switch {
+	case s.Bootstrap():
+		return InteractionTurnModeBootstrap
+	case s.OOCResolutionPending:
+		return InteractionTurnModeOOCResumeResolution
+	case strings.TrimSpace(s.PlayerPhaseStatus) == "gm_review":
+		return InteractionTurnModeReviewResolution
+	default:
+		return InteractionTurnModeGMFrame
+	}
 }
 
 // BriefContribution is one source's contribution to the collected session
@@ -33,6 +59,13 @@ type SessionBrief struct {
 // mode with no active scene selected yet.
 func (b SessionBrief) Bootstrap() bool {
 	return b.InteractionState != nil && b.InteractionState.Bootstrap()
+}
+
+func (b SessionBrief) TurnMode() InteractionTurnMode {
+	if b.InteractionState == nil {
+		return InteractionTurnModeGMFrame
+	}
+	return b.InteractionState.TurnMode()
 }
 
 // ContextSourceFunc adapts a plain function to the ContextSource interface.

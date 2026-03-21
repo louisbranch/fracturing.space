@@ -1,12 +1,14 @@
 package charactertransport
 
 import (
+	"context"
 	"testing"
 	"time"
 
 	campaignv1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/character"
+	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/contentstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/mechanics"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/projectionstore"
 	"github.com/louisbranch/fracturing.space/internal/services/game/domain/systems/daggerheart/rules"
@@ -180,8 +182,173 @@ func TestDaggerheartProfileAndStateToProto(t *testing.T) {
 			Label:    rules.ConditionHidden,
 		}},
 		LifeState: daggerheartstate.LifeStateAlive,
+		TemporaryArmor: []projectionstore.DaggerheartTemporaryArmor{{
+			Source:   "spell",
+			SourceID: "spell.arcane-ward",
+			Duration: "short_rest",
+			Amount:   2,
+		}},
+		StatModifiers: []projectionstore.DaggerheartStatModifier{{
+			ID:            "mod-evasion-wall",
+			Target:        "evasion",
+			Delta:         3,
+			Label:         "Wall",
+			Source:        "domain_card",
+			ClearTriggers: []string{"SHORT_REST"},
+		}},
 	})
 	if state.GetDaggerheart().GetHp() != 10 || len(state.GetDaggerheart().GetConditionStates()) != 1 {
 		t.Fatalf("state = %+v", state.GetDaggerheart())
+	}
+	if len(state.GetDaggerheart().GetTemporaryArmorBuckets()) != 1 {
+		t.Fatalf("temporary armor buckets = %+v", state.GetDaggerheart().GetTemporaryArmorBuckets())
+	}
+	if len(state.GetDaggerheart().GetStatModifiers()) != 1 {
+		t.Fatalf("stat modifiers = %+v", state.GetDaggerheart().GetStatModifiers())
+	}
+}
+
+func TestDaggerheartSheetProfileToProtoAddsEquipmentSummaries(t *testing.T) {
+	profile := projectionstore.DaggerheartCharacterProfile{
+		StartingWeaponIDs: []string{"weapon.primary-blade", "weapon.side-knife"},
+		StartingArmorID:   "armor.leather",
+		EquippedArmorID:   "armor.scale",
+	}
+	content := workflowContentStore{
+		weapons: map[string]contentstore.DaggerheartWeapon{
+			"weapon.primary-blade": {
+				ID:         "weapon.primary-blade",
+				Name:       "Primary Blade",
+				Category:   "primary",
+				Trait:      "Agility",
+				Range:      "melee",
+				DamageDice: []contentstore.DaggerheartDamageDie{{Count: 1, Sides: 8}, {Count: 1, Sides: 4}},
+				DamageType: "physical",
+				Feature:    "Reliable",
+			},
+			"weapon.side-knife": {
+				ID:         "weapon.side-knife",
+				Name:       "Side Knife",
+				Category:   "secondary",
+				Trait:      "Finesse",
+				Range:      "very close",
+				DamageDice: []contentstore.DaggerheartDamageDie{{Count: 1, Sides: 6}},
+				DamageType: "physical",
+			},
+		},
+		armors: map[string]contentstore.DaggerheartArmor{
+			"armor.scale":   {ID: "armor.scale", Name: "Scale", ArmorScore: 3, Feature: "Bulky"},
+			"armor.leather": {ID: "armor.leather", Name: "Leather", ArmorScore: 1, Feature: "Quiet"},
+		},
+	}
+
+	got := DaggerheartSheetProfileToProto(context.Background(), "camp-1", "char-1", profile, content).GetDaggerheart()
+	if got == nil {
+		t.Fatal("sheet profile = nil")
+	}
+	if got.GetPrimaryWeapon().GetName() != "Primary Blade" {
+		t.Fatalf("primary weapon = %#v", got.GetPrimaryWeapon())
+	}
+	if got.GetPrimaryWeapon().GetDamageDice() != "1d8 + 1d4" {
+		t.Fatalf("primary damage dice = %q, want %q", got.GetPrimaryWeapon().GetDamageDice(), "1d8 + 1d4")
+	}
+	if got.GetSecondaryWeapon().GetName() != "Side Knife" {
+		t.Fatalf("secondary weapon = %#v", got.GetSecondaryWeapon())
+	}
+	if got.GetActiveArmor().GetName() != "Scale" {
+		t.Fatalf("active armor = %#v", got.GetActiveArmor())
+	}
+	if got.GetActiveArmor().GetBaseScore() != 3 {
+		t.Fatalf("active armor base score = %d, want 3", got.GetActiveArmor().GetBaseScore())
+	}
+}
+
+func TestDaggerheartSheetProfileToProtoAddsHeritageDisplayNames(t *testing.T) {
+	profile := projectionstore.DaggerheartCharacterProfile{
+		Heritage: projectionstore.DaggerheartHeritageSelection{
+			FirstFeatureAncestryID:  "heritage.ancestry.clank",
+			SecondFeatureAncestryID: "heritage.ancestry.orc",
+			CommunityID:             "heritage.community.farmer",
+		},
+	}
+	content := workflowContentStore{
+		heritages: map[string]contentstore.DaggerheartHeritage{
+			"heritage.ancestry.clank":   {ID: "heritage.ancestry.clank", Kind: "ancestry", Name: "Clank"},
+			"heritage.ancestry.orc":     {ID: "heritage.ancestry.orc", Kind: "ancestry", Name: "Orc"},
+			"heritage.community.farmer": {ID: "heritage.community.farmer", Kind: "community", Name: "Farmer"},
+		},
+	}
+
+	got := DaggerheartSheetProfileToProto(context.Background(), "camp-1", "char-1", profile, content).GetDaggerheart()
+	if got == nil || got.GetHeritage() == nil {
+		t.Fatalf("sheet profile heritage = %#v", got)
+	}
+	if got.GetHeritage().GetAncestryName() != "Clank / Orc" {
+		t.Fatalf("heritage ancestry name = %q, want %q", got.GetHeritage().GetAncestryName(), "Clank / Orc")
+	}
+	if got.GetHeritage().GetCommunityName() != "Farmer" {
+		t.Fatalf("heritage community name = %q, want %q", got.GetHeritage().GetCommunityName(), "Farmer")
+	}
+}
+
+func TestDaggerheartSheetProfileToProtoPrefersAncestryLabelAndSkipsMissingHeritageContent(t *testing.T) {
+	profile := projectionstore.DaggerheartCharacterProfile{
+		Heritage: projectionstore.DaggerheartHeritageSelection{
+			AncestryLabel:           "Half-Clank",
+			FirstFeatureAncestryID:  "heritage.ancestry.clank",
+			SecondFeatureAncestryID: "heritage.ancestry.orc",
+			CommunityID:             "heritage.community.unknown",
+		},
+	}
+	content := workflowContentStore{
+		heritages: map[string]contentstore.DaggerheartHeritage{
+			"heritage.ancestry.clank": {ID: "heritage.ancestry.clank", Kind: "ancestry", Name: "Clank"},
+			"heritage.ancestry.orc":   {ID: "heritage.ancestry.orc", Kind: "ancestry", Name: "Orc"},
+		},
+	}
+
+	got := DaggerheartSheetProfileToProto(context.Background(), "camp-1", "char-1", profile, content).GetDaggerheart()
+	if got == nil || got.GetHeritage() == nil {
+		t.Fatalf("sheet profile heritage = %#v", got)
+	}
+	if got.GetHeritage().GetAncestryName() != "Half-Clank" {
+		t.Fatalf("heritage ancestry name = %q, want %q", got.GetHeritage().GetAncestryName(), "Half-Clank")
+	}
+	if got.GetHeritage().GetCommunityName() != "" {
+		t.Fatalf("heritage community name = %q, want empty", got.GetHeritage().GetCommunityName())
+	}
+}
+
+func TestDaggerheartSheetProfileToProtoFallsBackToStartingArmorAndSkipsMissingContent(t *testing.T) {
+	profile := projectionstore.DaggerheartCharacterProfile{
+		StartingWeaponIDs: []string{"weapon.unknown", "weapon.side-knife"},
+		StartingArmorID:   "armor.leather",
+	}
+	content := workflowContentStore{
+		weapons: map[string]contentstore.DaggerheartWeapon{
+			"weapon.side-knife": {
+				ID:         "weapon.side-knife",
+				Name:       "Side Knife",
+				Category:   "secondary",
+				DamageDice: []contentstore.DaggerheartDamageDie{{Count: 1, Sides: 6}},
+			},
+		},
+		armors: map[string]contentstore.DaggerheartArmor{
+			"armor.leather": {ID: "armor.leather", Name: "Leather", ArmorScore: 1},
+		},
+	}
+
+	got := DaggerheartSheetProfileToProto(context.Background(), "camp-1", "char-1", profile, content).GetDaggerheart()
+	if got == nil {
+		t.Fatal("sheet profile = nil")
+	}
+	if got.GetPrimaryWeapon() != nil {
+		t.Fatalf("primary weapon = %#v, want nil when lookup is missing", got.GetPrimaryWeapon())
+	}
+	if got.GetSecondaryWeapon().GetName() != "Side Knife" {
+		t.Fatalf("secondary weapon = %#v", got.GetSecondaryWeapon())
+	}
+	if got.GetActiveArmor().GetName() != "Leather" {
+		t.Fatalf("active armor = %#v, want starting armor fallback", got.GetActiveArmor())
 	}
 }

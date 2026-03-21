@@ -33,11 +33,13 @@ func TestInteractionRoutesExposeExpectedMutationSurface(t *testing.T) {
 		"POST /api/campaigns/{campaignID}/interaction/commit-scene-gm-output",
 		"POST /api/campaigns/{campaignID}/interaction/accept-scene-player-phase",
 		"POST /api/campaigns/{campaignID}/interaction/request-scene-player-revisions",
+		"POST /api/campaigns/{campaignID}/interaction/resolve-scene-player-phase-review",
 		"POST /api/campaigns/{campaignID}/interaction/pause-session-for-ooc",
 		"POST /api/campaigns/{campaignID}/interaction/post-session-ooc",
 		"POST /api/campaigns/{campaignID}/interaction/mark-ooc-ready-to-resume",
 		"POST /api/campaigns/{campaignID}/interaction/clear-ooc-ready-to-resume",
 		"POST /api/campaigns/{campaignID}/interaction/resume-from-ooc",
+		"POST /api/campaigns/{campaignID}/interaction/resolve-interrupted-scene-phase",
 		"POST /api/campaigns/{campaignID}/interaction/set-session-gm-authority",
 		"POST /api/campaigns/{campaignID}/interaction/retry-ai-gm-turn",
 	}

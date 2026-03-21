@@ -77,6 +77,7 @@ type testStoresBuilder struct {
 	Event       *gametest.FakeEventStore
 	Character   *gametest.FakeCharacterStore
 	Daggerheart *gametest.FakeDaggerheartStore
+	Content     contentstore.DaggerheartContentReadStore
 
 	domain       handler.Domain
 	writeRuntime bool
@@ -128,6 +129,9 @@ func (b *testStoresBuilder) build() Deps {
 	}
 	if b.writeRuntime {
 		d.Write.Runtime = testRuntime
+	}
+	if b.Content != nil {
+		d.DaggerheartContent = b.Content
 	}
 	return d
 }

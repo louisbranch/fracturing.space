@@ -52,7 +52,7 @@ describe("CharacterSheet", () => {
 
     const defense = screen.getByLabelText("Defense");
     expect(within(defense).getByText("10")).toBeInTheDocument();
-    expect(within(defense).getByText("4/5")).toBeInTheDocument();
+    expect(within(defense).getByText("4/4")).toBeInTheDocument();
   });
 
   it("renders hope section with diamonds and feature", () => {

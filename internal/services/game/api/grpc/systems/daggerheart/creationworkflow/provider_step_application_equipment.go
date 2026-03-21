@@ -154,8 +154,10 @@ func applyEquipmentInput(ctx context.Context, content contentstore.DaggerheartCo
 	profile.StartingWeaponIDs = normalizedWeaponIDs
 	profile.StartingArmorID = armorID
 	profile.StartingPotionItemID = potionItemID
+	profile.EquippedArmorID = armorID
 	profile.Proficiency = daggerheartprofile.PCProficiency
 	profile.ArmorScore = armor.ArmorScore
+	profile.ArmorMax = armor.ArmorScore
 	if profile.Level == 0 {
 		profile.Level = daggerheartprofile.PCLevelDefault
 	}

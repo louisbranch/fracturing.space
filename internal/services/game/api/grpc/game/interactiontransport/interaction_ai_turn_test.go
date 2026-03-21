@@ -154,6 +154,17 @@ func TestAITurnEligibilityRequiresAIBindingAndAIGMAuthority(t *testing.T) {
 			wantOK: true,
 		},
 		{
+			name:     "gm authority bootstrap without active scene is eligible",
+			campaign: storage.CampaignRecord{ID: "camp-1", GmMode: campaign.GmModeAI, AIAgentID: "agent-1"},
+			interaction: storage.SessionInteraction{
+				CampaignID:               "camp-1",
+				SessionID:                "sess-1",
+				GMAuthorityParticipantID: "gm-ai",
+			},
+			source: "session.gm_authority_set",
+			wantOK: true,
+		},
+		{
 			name:     "gm review is eligible",
 			campaign: storage.CampaignRecord{ID: "camp-1", GmMode: campaign.GmModeAI, AIAgentID: "agent-1"},
 			interaction: storage.SessionInteraction{

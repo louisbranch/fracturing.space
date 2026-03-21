@@ -25,31 +25,6 @@ func TestIntegrationOutboxEventsForEventBuildsAIGMTurnRequests(t *testing.T) {
 		wantSourcePhase string
 	}{
 		{
-			name: "session started",
-			evt: event.Event{
-				CampaignID: ids.CampaignID("camp-1"),
-				SessionID:  ids.SessionID("sess-1"),
-				Type:       session.EventTypeStarted,
-				Timestamp:  now,
-			},
-			wantSourceType: string(session.EventTypeStarted),
-		},
-		{
-			name: "active scene set",
-			evt: event.Event{
-				CampaignID: ids.CampaignID("camp-1"),
-				SessionID:  ids.SessionID("sess-1"),
-				Type:       session.EventTypeActiveSceneSet,
-				Timestamp:  now,
-				PayloadJSON: mustJSON(t, session.ActiveSceneSetPayload{
-					SessionID:     ids.SessionID("sess-1"),
-					ActiveSceneID: ids.SceneID("scene-1"),
-				}),
-			},
-			wantSourceType:  string(session.EventTypeActiveSceneSet),
-			wantSourceScene: "scene-1",
-		},
-		{
 			name: "gm authority set",
 			evt: event.Event{
 				CampaignID: ids.CampaignID("camp-1"),

@@ -60,11 +60,13 @@ type interactionClient interface {
 	CommitSceneGMOutput(context.Context, *gamev1.CommitSceneGMOutputRequest, ...gogrpc.CallOption) (*gamev1.CommitSceneGMOutputResponse, error)
 	AcceptScenePlayerPhase(context.Context, *gamev1.AcceptScenePlayerPhaseRequest, ...gogrpc.CallOption) (*gamev1.AcceptScenePlayerPhaseResponse, error)
 	RequestScenePlayerRevisions(context.Context, *gamev1.RequestScenePlayerRevisionsRequest, ...gogrpc.CallOption) (*gamev1.RequestScenePlayerRevisionsResponse, error)
+	ResolveScenePlayerPhaseReview(context.Context, *gamev1.ResolveScenePlayerPhaseReviewRequest, ...gogrpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error)
 	PauseSessionForOOC(context.Context, *gamev1.PauseSessionForOOCRequest, ...gogrpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error)
 	PostSessionOOC(context.Context, *gamev1.PostSessionOOCRequest, ...gogrpc.CallOption) (*gamev1.PostSessionOOCResponse, error)
 	MarkOOCReadyToResume(context.Context, *gamev1.MarkOOCReadyToResumeRequest, ...gogrpc.CallOption) (*gamev1.MarkOOCReadyToResumeResponse, error)
 	ClearOOCReadyToResume(context.Context, *gamev1.ClearOOCReadyToResumeRequest, ...gogrpc.CallOption) (*gamev1.ClearOOCReadyToResumeResponse, error)
 	ResumeFromOOC(context.Context, *gamev1.ResumeFromOOCRequest, ...gogrpc.CallOption) (*gamev1.ResumeFromOOCResponse, error)
+	ResolveInterruptedScenePhase(context.Context, *gamev1.ResolveInterruptedScenePhaseRequest, ...gogrpc.CallOption) (*gamev1.ResolveInterruptedScenePhaseResponse, error)
 	SetSessionGMAuthority(context.Context, *gamev1.SetSessionGMAuthorityRequest, ...gogrpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error)
 	RetryAIGMTurn(context.Context, *gamev1.RetryAIGMTurnRequest, ...gogrpc.CallOption) (*gamev1.RetryAIGMTurnResponse, error)
 }

@@ -334,6 +334,39 @@ func (r *Runner) waitForDaggerheartCharacterProjection(
 	return fmt.Errorf("daggerheart readiness did not project for %s", characterID)
 }
 
+func (r *Runner) waitForDaggerheartStatModifierProjection(
+	ctx context.Context,
+	state *scenarioState,
+	characterID string,
+	expected []*daggerheartv1.DaggerheartStatModifier,
+) error {
+	const (
+		maxAttempts = 200
+		retryDelay  = 25 * time.Millisecond
+	)
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		sheet, err := r.env.characterClient.GetCharacterSheet(ctx, &gamev1.GetCharacterSheetRequest{
+			CampaignId:  state.campaignID,
+			CharacterId: characterID,
+		})
+		if err != nil {
+			return fmt.Errorf("get character sheet after stat modifier change: %w", err)
+		}
+		current := sheet.GetState().GetDaggerheart()
+		if current != nil && daggerheartStatModifiersMatch(current.GetStatModifiers(), expected) {
+			return nil
+		}
+		if attempt < maxAttempts-1 {
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(retryDelay):
+			}
+		}
+	}
+	return fmt.Errorf("daggerheart stat modifiers did not project for %s", characterID)
+}
+
 func daggerheartProfileMatches(actual, expected *daggerheartv1.DaggerheartProfile) bool {
 	if expected == nil {
 		return true
@@ -377,6 +410,40 @@ func daggerheartCharacterStateMatches(actual, expected *daggerheartv1.Daggerhear
 		actual.GetStress() == expected.GetStress() &&
 		actual.GetArmor() == expected.GetArmor() &&
 		actual.GetLifeState() == expected.GetLifeState()
+}
+
+func daggerheartStatModifiersMatch(actual, expected []*daggerheartv1.DaggerheartStatModifier) bool {
+	if len(actual) != len(expected) {
+		return false
+	}
+	actualKeys := make([]string, 0, len(actual))
+	for _, modifier := range actual {
+		actualKeys = append(actualKeys, daggerheartStatModifierKey(modifier))
+	}
+	expectedKeys := make([]string, 0, len(expected))
+	for _, modifier := range expected {
+		expectedKeys = append(expectedKeys, daggerheartStatModifierKey(modifier))
+	}
+	sort.Strings(actualKeys)
+	sort.Strings(expectedKeys)
+	return reflect.DeepEqual(actualKeys, expectedKeys)
+}
+
+func daggerheartStatModifierKey(modifier *daggerheartv1.DaggerheartStatModifier) string {
+	if modifier == nil {
+		return ""
+	}
+	triggers := append([]daggerheartv1.DaggerheartConditionClearTrigger(nil), modifier.GetClearTriggers()...)
+	sort.Slice(triggers, func(i, j int) bool { return triggers[i] < triggers[j] })
+	return fmt.Sprintf(
+		"%s|%s|%d|%s|%s|%v",
+		strings.TrimSpace(modifier.GetId()),
+		strings.TrimSpace(modifier.GetTarget()),
+		modifier.GetDelta(),
+		strings.TrimSpace(modifier.GetLabel()),
+		strings.TrimSpace(modifier.GetSource()),
+		triggers,
+	)
 }
 
 func optionalInt32Matches(actual, expected *wrapperspb.Int32Value) bool {

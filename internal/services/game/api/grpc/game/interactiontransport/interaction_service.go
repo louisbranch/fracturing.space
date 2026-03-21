@@ -173,6 +173,21 @@ func (s *InteractionService) RequestScenePlayerRevisions(ctx context.Context, in
 	return &campaignv1.RequestScenePlayerRevisionsResponse{State: state}, nil
 }
 
+func (s *InteractionService) ResolveScenePlayerPhaseReview(ctx context.Context, in *campaignv1.ResolveScenePlayerPhaseReviewRequest) (*campaignv1.ResolveScenePlayerPhaseReviewResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "resolve scene player phase review request is required")
+	}
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+	state, err := s.app.ResolveScenePlayerPhaseReview(ctx, campaignID, in)
+	if err != nil {
+		return nil, err
+	}
+	return &campaignv1.ResolveScenePlayerPhaseReviewResponse{State: state}, nil
+}
+
 func (s *InteractionService) PauseSessionForOOC(ctx context.Context, in *campaignv1.PauseSessionForOOCRequest) (*campaignv1.PauseSessionForOOCResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "pause session for ooc request is required")
@@ -246,6 +261,21 @@ func (s *InteractionService) ResumeFromOOC(ctx context.Context, in *campaignv1.R
 		return nil, err
 	}
 	return &campaignv1.ResumeFromOOCResponse{State: state}, nil
+}
+
+func (s *InteractionService) ResolveInterruptedScenePhase(ctx context.Context, in *campaignv1.ResolveInterruptedScenePhaseRequest) (*campaignv1.ResolveInterruptedScenePhaseResponse, error) {
+	if in == nil {
+		return nil, status.Error(codes.InvalidArgument, "resolve interrupted scene phase request is required")
+	}
+	campaignID, err := validate.RequiredID(in.GetCampaignId(), "campaign id")
+	if err != nil {
+		return nil, err
+	}
+	state, err := s.app.ResolveInterruptedScenePhase(ctx, campaignID, in)
+	if err != nil {
+		return nil, err
+	}
+	return &campaignv1.ResolveInterruptedScenePhaseResponse{State: state}, nil
 }
 
 func (s *InteractionService) SetSessionGMAuthority(ctx context.Context, in *campaignv1.SetSessionGMAuthorityRequest) (*campaignv1.SetSessionGMAuthorityResponse, error) {

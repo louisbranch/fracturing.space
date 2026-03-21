@@ -271,6 +271,64 @@ func (r *Runner) runInteractionRequestRevisionsStep(ctx context.Context, state *
 	return nil
 }
 
+func (r *Runner) runInteractionResolveReviewStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	client, err := r.requireInteractionClient()
+	if err != nil {
+		return err
+	}
+	sceneID, err := resolveInteractionSceneID(state, step.Args, false)
+	if err != nil {
+		return err
+	}
+	req := &gamev1.ResolveScenePlayerPhaseReviewRequest{
+		CampaignId: state.campaignID,
+		SceneId:    sceneID,
+	}
+	if _, ok := step.Args["revisions"]; ok {
+		revisions, err := parseScenePlayerRevisionRequests(state, step.Args, "revisions")
+		if err != nil {
+			return err
+		}
+		if len(revisions) == 0 {
+			return r.failf("interaction_resolve_review revisions are required")
+		}
+		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions{
+			RequestRevisions: &gamev1.ResolveScenePlayerPhaseReviewRequestRevisions{Revisions: revisions},
+		}
+	} else {
+		frameText := strings.TrimSpace(optionalString(step.Args, "frame_text", optionalString(step.Args, "next_frame_text", "")))
+		if frameText == "" {
+			return r.failf("interaction_resolve_review frame_text is required when not requesting revisions")
+		}
+		gmOutputText := strings.TrimSpace(optionalString(step.Args, "gm_output_text", ""))
+		if gmOutputText == "" {
+			return r.failf("interaction_resolve_review gm_output_text is required when advancing to players")
+		}
+		characterIDs, err := resolveCharacterList(state, step.Args, "characters")
+		if err != nil {
+			return err
+		}
+		if len(characterIDs) == 0 {
+			return r.failf("interaction_resolve_review characters are required when advancing to players")
+		}
+		req.Resolution = &gamev1.ResolveScenePlayerPhaseReviewRequest_AdvanceToPlayers{
+			AdvanceToPlayers: &gamev1.ResolveScenePlayerPhaseReviewAdvanceToPlayers{
+				GmOutputText:     gmOutputText,
+				NextFrameText:    frameText,
+				NextCharacterIds: characterIDs,
+			},
+		}
+	}
+	_, err = client.ResolveScenePlayerPhaseReview(ctx, req)
+	if err != nil {
+		return fmt.Errorf("interaction_resolve_review: %w", err)
+	}
+	return nil
+}
+
 func (r *Runner) runInteractionPauseOOCStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureSession(ctx, state); err != nil {
 		return err
@@ -356,6 +414,47 @@ func (r *Runner) runInteractionResumeOOCStep(ctx context.Context, state *scenari
 	return nil
 }
 
+func (r *Runner) runInteractionResolveInterruptedPhaseStep(ctx context.Context, state *scenarioState, step Step) error {
+	if err := r.ensureSession(ctx, state); err != nil {
+		return err
+	}
+	client, err := r.requireInteractionClient()
+	if err != nil {
+		return err
+	}
+	req := &gamev1.ResolveInterruptedScenePhaseRequest{CampaignId: state.campaignID}
+	if optionalBool(step.Args, "resume_original_phase", false) {
+		req.Resolution = &gamev1.ResolveInterruptedScenePhaseRequest_ResumeOriginalPhase{
+			ResumeOriginalPhase: &gamev1.ResolveInterruptedScenePhaseResumeOriginal{},
+		}
+	} else {
+		characterIDs, err := resolveCharacterList(state, step.Args, "characters")
+		if err != nil {
+			return err
+		}
+		if len(characterIDs) == 0 {
+			return r.failf("interaction_resolve_interrupted_phase characters are required unless resume_original_phase is true")
+		}
+		sceneID, err := resolveInteractionSceneID(state, step.Args, false)
+		if err != nil {
+			return err
+		}
+		req.Resolution = &gamev1.ResolveInterruptedScenePhaseRequest_ReplaceWithPlayerPhase{
+			ReplaceWithPlayerPhase: &gamev1.ResolveInterruptedScenePhaseReplaceWithPlayerPhase{
+				SceneId:      sceneID,
+				GmOutputText: strings.TrimSpace(optionalString(step.Args, "gm_output_text", "")),
+				FrameText:    strings.TrimSpace(optionalString(step.Args, "frame_text", "")),
+				CharacterIds: characterIDs,
+			},
+		}
+	}
+	_, err = client.ResolveInterruptedScenePhase(ctx, req)
+	if err != nil {
+		return fmt.Errorf("interaction_resolve_interrupted_phase: %w", err)
+	}
+	return nil
+}
+
 func (r *Runner) runInteractionExpectStep(ctx context.Context, state *scenarioState, step Step) error {
 	if err := r.ensureCampaign(state); err != nil {
 		return err
@@ -429,6 +528,34 @@ func (r *Runner) runInteractionExpectStep(ctx context.Context, state *scenarioSt
 	}
 	if expectedOpen, ok := readBool(step.Args, "ooc_open"); ok && stateProto.GetOoc().GetOpen() != expectedOpen {
 		return r.assertf("interaction ooc_open = %v, want %v", stateProto.GetOoc().GetOpen(), expectedOpen)
+	}
+	if expectedPending, ok := readBool(step.Args, "ooc_resolution_pending"); ok && stateProto.GetOoc().GetResolutionPending() != expectedPending {
+		return r.assertf("interaction ooc_resolution_pending = %v, want %v", stateProto.GetOoc().GetResolutionPending(), expectedPending)
+	}
+	if _, ok := step.Args["ooc_requested_by"]; ok {
+		expectedID, err := participantID(state, requiredString(step.Args, "ooc_requested_by"))
+		if err != nil {
+			return err
+		}
+		if stateProto.GetOoc().GetRequestedByParticipantId() != expectedID {
+			return r.assertf("interaction ooc_requested_by = %q, want %q", stateProto.GetOoc().GetRequestedByParticipantId(), expectedID)
+		}
+	}
+	if expectedInterruptedScene, ok := step.Args["ooc_interrupted_scene"]; ok {
+		expectedSceneID, err := resolveInteractionSceneID(state, map[string]any{"scene": expectedInterruptedScene}, true)
+		if err != nil {
+			return err
+		}
+		if stateProto.GetOoc().GetInterruptedSceneId() != expectedSceneID {
+			return r.assertf("interaction ooc_interrupted_scene = %q, want %q", stateProto.GetOoc().GetInterruptedSceneId(), expectedSceneID)
+		}
+	}
+	if expectedInterruptedStatus, ok := step.Args["ooc_interrupted_phase_status"]; ok {
+		actualStatus := normalizeScenePhaseStatus(stateProto.GetOoc().GetInterruptedPhaseStatus())
+		wantStatus := normalizeScenePhaseStatusString(fmt.Sprint(expectedInterruptedStatus))
+		if actualStatus != wantStatus {
+			return r.assertf("interaction ooc_interrupted_phase_status = %q, want %q", actualStatus, wantStatus)
+		}
 	}
 	if _, ok := step.Args["ooc_ready"]; ok {
 		expectedIDs, err := resolveParticipantList(state, step.Args, "ooc_ready")

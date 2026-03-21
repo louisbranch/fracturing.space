@@ -146,6 +146,12 @@ type SessionInteraction struct {
 	ActiveSceneID               string
 	GMAuthorityParticipantID    string
 	OOCPaused                   bool
+	OOCRequestedByParticipantID string
+	OOCReason                   string
+	OOCInterruptedSceneID       string
+	OOCInterruptedPhaseID       string
+	OOCInterruptedPhaseStatus   string
+	OOCResolutionPending        bool
 	OOCPosts                    []SessionOOCPost
 	ReadyToResumeParticipantIDs []string
 	AITurn                      SessionAITurn

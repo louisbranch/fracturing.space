@@ -33,6 +33,7 @@ const (
 	SessionOOCReadyMark            command.Type = "session.ooc.ready_mark"
 	SessionOOCReadyClear           command.Type = "session.ooc.ready_clear"
 	SessionOOCResume               command.Type = "session.ooc.resume"
+	SessionOOCInterruptionResolve  command.Type = "session.ooc.interruption_resolve"
 	SessionAITurnQueue             command.Type = "session.ai_turn.queue"
 	SessionAITurnStart             command.Type = "session.ai_turn.start"
 	SessionAITurnFail              command.Type = "session.ai_turn.fail"

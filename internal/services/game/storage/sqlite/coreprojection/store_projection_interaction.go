@@ -41,15 +41,23 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 	_, err = s.projectionQueryable().ExecContext(ctx,
 		`INSERT INTO session_interactions (
 			campaign_id, session_id, active_scene_id, gm_authority_participant_id,
-			ooc_paused, ooc_posts_json, ready_to_resume_json,
+			ooc_paused, ooc_requested_by_participant_id, ooc_reason,
+			ooc_interrupted_scene_id, ooc_interrupted_phase_id, ooc_interrupted_phase_status,
+			ooc_resolution_pending, ooc_posts_json, ready_to_resume_json,
 			ai_turn_status, ai_turn_token, ai_turn_owner_participant_id,
 			ai_turn_source_event_type, ai_turn_source_scene_id, ai_turn_source_phase_id, ai_turn_last_error,
 			updated_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (campaign_id, session_id) DO UPDATE SET
 			active_scene_id = excluded.active_scene_id,
 			gm_authority_participant_id = excluded.gm_authority_participant_id,
 			ooc_paused = excluded.ooc_paused,
+			ooc_requested_by_participant_id = excluded.ooc_requested_by_participant_id,
+			ooc_reason = excluded.ooc_reason,
+			ooc_interrupted_scene_id = excluded.ooc_interrupted_scene_id,
+			ooc_interrupted_phase_id = excluded.ooc_interrupted_phase_id,
+			ooc_interrupted_phase_status = excluded.ooc_interrupted_phase_status,
+			ooc_resolution_pending = excluded.ooc_resolution_pending,
 			ooc_posts_json = excluded.ooc_posts_json,
 			ready_to_resume_json = excluded.ready_to_resume_json,
 			ai_turn_status = excluded.ai_turn_status,
@@ -65,6 +73,12 @@ func (s *Store) PutSessionInteraction(ctx context.Context, interaction storage.S
 		interaction.ActiveSceneID,
 		interaction.GMAuthorityParticipantID,
 		boolToInt(interaction.OOCPaused),
+		interaction.OOCRequestedByParticipantID,
+		interaction.OOCReason,
+		interaction.OOCInterruptedSceneID,
+		interaction.OOCInterruptedPhaseID,
+		interaction.OOCInterruptedPhaseStatus,
+		boolToInt(interaction.OOCResolutionPending),
 		oocPostsJSON,
 		readyJSON,
 		string(interaction.AITurn.Status),
@@ -98,22 +112,31 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 	}
 
 	var (
-		activeSceneID            string
-		gmAuthorityParticipantID string
-		oocPaused                int64
-		oocPostsJSON             []byte
-		readyJSON                []byte
-		aiTurnStatus             string
-		aiTurnToken              string
-		aiTurnOwnerParticipantID string
-		aiTurnSourceEventType    string
-		aiTurnSourceSceneID      string
-		aiTurnSourcePhaseID      string
-		aiTurnLastError          string
-		updatedAt                int64
+		activeSceneID               string
+		gmAuthorityParticipantID    string
+		oocPaused                   int64
+		oocRequestedByParticipantID string
+		oocReason                   string
+		oocInterruptedSceneID       string
+		oocInterruptedPhaseID       string
+		oocInterruptedPhaseStatus   string
+		oocResolutionPending        int64
+		oocPostsJSON                []byte
+		readyJSON                   []byte
+		aiTurnStatus                string
+		aiTurnToken                 string
+		aiTurnOwnerParticipantID    string
+		aiTurnSourceEventType       string
+		aiTurnSourceSceneID         string
+		aiTurnSourcePhaseID         string
+		aiTurnLastError             string
+		updatedAt                   int64
 	)
 	err := s.projectionQueryable().QueryRowContext(ctx,
-		`SELECT active_scene_id, gm_authority_participant_id, ooc_paused, ooc_posts_json, ready_to_resume_json,
+		`SELECT active_scene_id, gm_authority_participant_id, ooc_paused,
+		        ooc_requested_by_participant_id, ooc_reason, ooc_interrupted_scene_id,
+		        ooc_interrupted_phase_id, ooc_interrupted_phase_status, ooc_resolution_pending,
+		        ooc_posts_json, ready_to_resume_json,
 		        ai_turn_status, ai_turn_token, ai_turn_owner_participant_id, ai_turn_source_event_type,
 		        ai_turn_source_scene_id, ai_turn_source_phase_id, ai_turn_last_error, updated_at
 		 FROM session_interactions
@@ -124,6 +147,12 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 		&activeSceneID,
 		&gmAuthorityParticipantID,
 		&oocPaused,
+		&oocRequestedByParticipantID,
+		&oocReason,
+		&oocInterruptedSceneID,
+		&oocInterruptedPhaseID,
+		&oocInterruptedPhaseStatus,
+		&oocResolutionPending,
 		&oocPostsJSON,
 		&readyJSON,
 		&aiTurnStatus,
@@ -160,6 +189,12 @@ func (s *Store) GetSessionInteraction(ctx context.Context, campaignID, sessionID
 		ActiveSceneID:               activeSceneID,
 		GMAuthorityParticipantID:    gmAuthorityParticipantID,
 		OOCPaused:                   intToBool(oocPaused),
+		OOCRequestedByParticipantID: oocRequestedByParticipantID,
+		OOCReason:                   oocReason,
+		OOCInterruptedSceneID:       oocInterruptedSceneID,
+		OOCInterruptedPhaseID:       oocInterruptedPhaseID,
+		OOCInterruptedPhaseStatus:   oocInterruptedPhaseStatus,
+		OOCResolutionPending:        intToBool(oocResolutionPending),
 		OOCPosts:                    posts,
 		ReadyToResumeParticipantIDs: ready,
 		AITurn: storage.SessionAITurn{

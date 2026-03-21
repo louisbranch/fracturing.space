@@ -34,6 +34,9 @@ service InteractionService {
   rpc AcceptScenePlayerPhase(AcceptScenePlayerPhaseRequest) returns (AcceptScenePlayerPhaseResponse);
   // Returns one or more participant slots for correction while preserving the current phase state.
   rpc RequestScenePlayerRevisions(RequestScenePlayerRevisionsRequest) returns (RequestScenePlayerRevisionsResponse);
+  // Resolves a GM-review player phase by either reframing the next player beat
+  // or returning one or more slots for revision.
+  rpc ResolveScenePlayerPhaseReview(ResolveScenePlayerPhaseReviewRequest) returns (ResolveScenePlayerPhaseReviewResponse);
   // Opens a session-level OOC pause over the active scene.
   rpc PauseSessionForOOC(PauseSessionForOOCRequest) returns (PauseSessionForOOCResponse);
   // Posts one append-only OOC message while the session is paused.
@@ -44,6 +47,8 @@ service InteractionService {
   rpc ClearOOCReadyToResume(ClearOOCReadyToResumeRequest) returns (ClearOOCReadyToResumeResponse);
   // Resumes scene play from the current OOC pause.
   rpc ResumeFromOOC(ResumeFromOOCRequest) returns (ResumeFromOOCResponse);
+  // Resolves the scene interaction that was interrupted by a completed OOC pause.
+  rpc ResolveInterruptedScenePhase(ResolveInterruptedScenePhaseRequest) returns (ResolveInterruptedScenePhaseResponse);
   // Sets which GM participant currently owns the next GM decision for the active session.
   rpc SetSessionGMAuthority(SetSessionGMAuthorityRequest) returns (SetSessionGMAuthorityResponse);
   // Re-queues the current failed AI GM turn when the session is still eligible.
@@ -138,6 +143,12 @@ message OOCState {
   bool open = 1;
   repeated OOCPost posts = 2;
   repeated string ready_to_resume_participant_ids = 3;
+  string requested_by_participant_id = 4;
+  string reason = 5;
+  string interrupted_scene_id = 6;
+  string interrupted_phase_id = 7;
+  ScenePhaseStatus interrupted_phase_status = 8;
+  bool resolution_pending = 9;
 }
 
 enum AITurnStatus {
@@ -274,6 +285,29 @@ message RequestScenePlayerRevisionsResponse {
   InteractionState state = 1;
 }
 
+message ResolveScenePlayerPhaseReviewAdvanceToPlayers {
+  string gm_output_text = 1;
+  string next_frame_text = 2;
+  repeated string next_character_ids = 3;
+}
+
+message ResolveScenePlayerPhaseReviewRequestRevisions {
+  repeated ScenePlayerRevisionRequest revisions = 1;
+}
+
+message ResolveScenePlayerPhaseReviewRequest {
+  string campaign_id = 1;
+  string scene_id = 2;
+  oneof resolution {
+    ResolveScenePlayerPhaseReviewAdvanceToPlayers advance_to_players = 3;
+    ResolveScenePlayerPhaseReviewRequestRevisions request_revisions = 4;
+  }
+}
+
+message ResolveScenePlayerPhaseReviewResponse {
+  InteractionState state = 1;
+}
+
 message PauseSessionForOOCRequest {
   string campaign_id = 1;
   string reason = 2;
@@ -313,6 +347,27 @@ message ResumeFromOOCRequest {
 }
 
 message ResumeFromOOCResponse {
+  InteractionState state = 1;
+}
+
+message ResolveInterruptedScenePhaseResumeOriginal {}
+
+message ResolveInterruptedScenePhaseReplaceWithPlayerPhase {
+  string scene_id = 1;
+  string gm_output_text = 2;
+  string frame_text = 3;
+  repeated string character_ids = 4;
+}
+
+message ResolveInterruptedScenePhaseRequest {
+  string campaign_id = 1;
+  oneof resolution {
+    ResolveInterruptedScenePhaseResumeOriginal resume_original_phase = 2;
+    ResolveInterruptedScenePhaseReplaceWithPlayerPhase replace_with_player_phase = 3;
+  }
+}
+
+message ResolveInterruptedScenePhaseResponse {
   InteractionState state = 1;
 }
 

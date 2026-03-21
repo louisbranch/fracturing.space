@@ -407,6 +407,9 @@ func (f fakePlayInteractionClient) AcceptScenePlayerPhase(context.Context, *game
 func (f fakePlayInteractionClient) RequestScenePlayerRevisions(context.Context, *gamev1.RequestScenePlayerRevisionsRequest, ...grpc.CallOption) (*gamev1.RequestScenePlayerRevisionsResponse, error) {
 	return nil, nil
 }
+func (f fakePlayInteractionClient) ResolveScenePlayerPhaseReview(context.Context, *gamev1.ResolveScenePlayerPhaseReviewRequest, ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
+	return nil, nil
+}
 func (f fakePlayInteractionClient) PauseSessionForOOC(context.Context, *gamev1.PauseSessionForOOCRequest, ...grpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error) {
 	return nil, nil
 }
@@ -420,6 +423,9 @@ func (f fakePlayInteractionClient) ClearOOCReadyToResume(context.Context, *gamev
 	return nil, nil
 }
 func (f fakePlayInteractionClient) ResumeFromOOC(context.Context, *gamev1.ResumeFromOOCRequest, ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error) {
+	return nil, nil
+}
+func (f fakePlayInteractionClient) ResolveInterruptedScenePhase(context.Context, *gamev1.ResolveInterruptedScenePhaseRequest, ...grpc.CallOption) (*gamev1.ResolveInterruptedScenePhaseResponse, error) {
 	return nil, nil
 }
 func (f fakePlayInteractionClient) SetSessionGMAuthority(context.Context, *gamev1.SetSessionGMAuthorityRequest, ...grpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error) {

@@ -44,7 +44,7 @@ export const characterSheetFixtures: CharacterSheetFixtures = {
     severeThreshold: 8,
 
     evasion: 10,
-    armor: { current: 4, max: 5 },
+    armor: { current: 4, max: 4 },
 
     hope: { current: 2, max: 6 },
     hopeFeature: "Rogue's Dodge — Spend 3 Hope to gain +2 Evasion until an attack succeeds against you; otherwise it lasts until your next rest.",
@@ -125,7 +125,7 @@ export const characterSheetFixtures: CharacterSheetFixtures = {
     severeThreshold: 8,
 
     evasion: 10,
-    armor: { current: 0, max: 5 },
+    armor: { current: 0, max: 4 },
 
     hope: { current: 0, max: 6 },
     hopeFeature: "Rogue's Dodge — Spend 3 Hope to gain +2 Evasion until an attack succeeds against you; otherwise it lasts until your next rest.",

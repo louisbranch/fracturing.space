@@ -186,6 +186,58 @@ func TestRunnerRunsToolLoopWithCuratedTools(t *testing.T) {
 	}
 }
 
+func TestRunnerAcceptsReviewResolverAsCommittedTurn(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{
+			{Name: reviewResolveToolName},
+		},
+		resources: baseSessionResources("gm-1", "scene-1"),
+		results: map[string]ToolResult{
+			reviewResolveToolName: {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-2","status":"players"}}`},
+		},
+	}
+	sess.resources["campaign://camp-1/interaction"] = `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"scene-1"},"player_phase":{"phase_id":"phase-1","status":"gm_review"}}`
+
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-1",
+					Name:      reviewResolveToolName,
+					Arguments: `{"scene_id":"scene-1","advance_to_players":{"gm_output_text":"The lantern light catches on wet rope.","next_frame_text":"The shed door stands open. What do you do?","next_character_ids":["char-1"]}}`,
+				}},
+			},
+			{
+				ConversationID: "resp-2",
+				OutputText:     "The lantern light catches on wet rope.",
+			},
+		},
+	}
+
+	res, err := newTestRunner(&fakeDialer{sess: sess}, 4).Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-1",
+		Input:            "Resolve the review.",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "The lantern light catches on wet rope." {
+		t.Fatalf("output = %q", res.OutputText)
+	}
+	if !reflect.DeepEqual(sess.calls, []string{reviewResolveToolName}) {
+		t.Fatalf("tool calls = %#v", sess.calls)
+	}
+	if len(provider.calls) != 2 || strings.TrimSpace(provider.calls[1].FollowUpPrompt) != "" {
+		t.Fatalf("provider calls = %#v", provider.calls)
+	}
+}
+
 func TestRunnerRejectsFinalOutputWithoutNarrationCommit(t *testing.T) {
 	sess := &fakeSession{
 		tools:     []Tool{{Name: "campaign"}},

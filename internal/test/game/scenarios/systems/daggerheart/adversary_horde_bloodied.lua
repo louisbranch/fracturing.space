@@ -8,7 +8,7 @@ scn:campaign{
   theme = "adversary_rules"
 }
 
-scn:pc("Frodo")
+scn:pc("Frodo", { armor = 0 })
 scn:pc("Sam", { armor = 1 })
 dh:adversary("Swarm of Rats", { adversary_entry_id = "adversary.swarm-of-rats" })
 
@@ -20,7 +20,7 @@ dh:adversary_attack{
   difficulty = 0,
   seed = 17,
   damage_type = "physical",
-  expect_hp_delta = -2,
+  expect_hp_delta = -3,
   expect_armor_delta = 0
 }
 

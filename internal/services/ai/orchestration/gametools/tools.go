@@ -177,21 +177,20 @@ func newProductionToolRegistry() productionToolRegistry {
 		},
 		{
 			Tool: orchestration.Tool{
-				Name:        "interaction_scene_player_phase_accept",
-				Description: "Accepts the active scene player phase after GM review and returns authority to the GM",
+				Name:        "interaction_scene_review_resolve",
+				Description: "Resolves the active scene GM review by either opening the next player phase or requesting revisions",
 				InputSchema: schemaObject(map[string]schemaProperty{
 					"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
-				}),
-			},
-			Execute: (*DirectSession).interactionAcceptScenePlayerPhase,
-		},
-		{
-			Tool: orchestration.Tool{
-				Name:        "interaction_scene_player_revisions_request",
-				Description: "Requests revisions for one or more participant slots in the active scene player phase",
-				InputSchema: schemaObject(map[string]schemaProperty{
-					"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
-					"revisions": {
+					"advance_to_players": {
+						Type:        "object",
+						Description: "commit narration and open the next player phase",
+						Properties: map[string]schemaProperty{
+							"gm_output_text":     {Type: "string", Description: "authoritative GM narration to commit before the next player phase"},
+							"next_frame_text":    {Type: "string", Description: "the next player-facing frame text"},
+							"next_character_ids": {Type: "array", Description: "acting character identifiers for the next player phase", Items: &schemaProperty{Type: "string"}},
+						},
+					},
+					"request_revisions": {
 						Type:        "array",
 						Description: "participant-scoped revision requests",
 						Items: &schemaProperty{
@@ -205,18 +204,7 @@ func newProductionToolRegistry() productionToolRegistry {
 					},
 				}),
 			},
-			Execute: (*DirectSession).interactionRequestScenePlayerRevisions,
-		},
-		{
-			Tool: orchestration.Tool{
-				Name:        "interaction_scene_player_phase_end",
-				Description: "Ends the active scene player phase early under GM control",
-				InputSchema: schemaObject(map[string]schemaProperty{
-					"scene_id": {Type: "string", Description: "scene identifier (defaults to active scene)"},
-					"reason":   {Type: "string", Description: "optional GM-supplied reason"},
-				}),
-			},
-			Execute: (*DirectSession).interactionEndScenePlayerPhase,
+			Execute: (*DirectSession).interactionResolveScenePlayerPhaseReview,
 		},
 		{
 			Tool: orchestration.Tool{
@@ -238,6 +226,26 @@ func newProductionToolRegistry() productionToolRegistry {
 				}),
 			},
 			Execute: (*DirectSession).interactionPauseOOC,
+		},
+		{
+			Tool: orchestration.Tool{
+				Name:        "interaction_scene_interrupt_resolution",
+				Description: "Resolves a scene phase that was interrupted by OOC by resuming it or replacing it with a newly framed player phase",
+				InputSchema: schemaObject(map[string]schemaProperty{
+					"resume_original_phase": {Type: "boolean", Description: "set true to restore the interrupted phase for players"},
+					"replace_with_player_phase": {
+						Type:        "object",
+						Description: "replace the interrupted phase with a new player-facing frame",
+						Properties: map[string]schemaProperty{
+							"scene_id":       {Type: "string", Description: "target scene identifier; defaults to the interrupted scene"},
+							"gm_output_text": {Type: "string", Description: "optional authoritative GM narration to commit before the new player phase"},
+							"frame_text":     {Type: "string", Description: "player-facing frame text for the replacement phase"},
+							"character_ids":  {Type: "array", Description: "acting character identifiers for the replacement phase", Items: &schemaProperty{Type: "string"}},
+						},
+					},
+				}),
+			},
+			Execute: (*DirectSession).interactionResolveInterruptedScenePhase,
 		},
 		{
 			Tool: orchestration.Tool{

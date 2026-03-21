@@ -31,8 +31,8 @@ func (a interactionApplication) StartScenePlayerPhase(ctx context.Context, campa
 	if err != nil {
 		return nil, err
 	}
-	if sessionInteraction.OOCPaused {
-		return nil, status.Error(codes.FailedPrecondition, "session is paused for out-of-character discussion")
+	if err := requireSceneWritesUnblocked(sessionInteraction); err != nil {
+		return nil, err
 	}
 	if strings.TrimSpace(sessionInteraction.ActiveSceneID) != sceneID {
 		return nil, status.Error(codes.FailedPrecondition, "scene is not the active scene")
@@ -78,8 +78,8 @@ func (a interactionApplication) SubmitScenePlayerPost(ctx context.Context, campa
 	if err != nil {
 		return nil, err
 	}
-	if sessionInteraction.OOCPaused {
-		return nil, status.Error(codes.FailedPrecondition, "session is paused for out-of-character discussion")
+	if err := requireSceneWritesUnblocked(sessionInteraction); err != nil {
+		return nil, err
 	}
 	sceneRecord, sceneInteraction, err := a.requireActiveScenePhase(ctx, campaignID, activeSession.ID, sceneID, sessionInteraction)
 	if err != nil {
@@ -123,6 +123,9 @@ func (a interactionApplication) YieldScenePlayerPhase(ctx context.Context, campa
 	if err != nil {
 		return nil, err
 	}
+	if err := requireSceneWritesUnblocked(currentSessionInteraction); err != nil {
+		return nil, err
+	}
 	_, currentSceneInteraction, err := a.requireActiveScenePhase(ctx, campaignID, activeSession.ID, sceneID, currentSessionInteraction)
 	if err != nil {
 		return nil, err
@@ -144,6 +147,9 @@ func (a interactionApplication) UnyieldScenePlayerPhase(ctx context.Context, cam
 	}
 	activeSession, currentSessionInteraction, err := a.requireActiveSessionInteraction(ctx, campaignID)
 	if err != nil {
+		return nil, err
+	}
+	if err := requireSceneWritesUnblocked(currentSessionInteraction); err != nil {
 		return nil, err
 	}
 	_, currentSceneInteraction, err := a.requireActiveScenePhase(ctx, campaignID, activeSession.ID, sceneID, currentSessionInteraction)
@@ -180,6 +186,9 @@ func (a interactionApplication) EndScenePlayerPhase(ctx context.Context, campaig
 	if err != nil {
 		return nil, err
 	}
+	if err := requireSceneWritesUnblocked(currentSessionInteraction); err != nil {
+		return nil, err
+	}
 	_, currentSceneInteraction, err := a.requireActiveScenePhase(ctx, campaignID, activeSession.ID, sceneID, currentSessionInteraction)
 	if err != nil {
 		return nil, err
@@ -212,6 +221,9 @@ func (a interactionApplication) CommitSceneGMOutput(ctx context.Context, campaig
 	}
 	activeSession, currentSessionInteraction, err := a.requireActiveSessionInteraction(ctx, campaignID)
 	if err != nil {
+		return nil, err
+	}
+	if err := requireSceneWritesUnblocked(currentSessionInteraction); err != nil {
 		return nil, err
 	}
 	if err := requireAuthoritativeGMActor(actor, currentSessionInteraction); err != nil {
@@ -251,6 +263,9 @@ func (a interactionApplication) AcceptScenePlayerPhase(ctx context.Context, camp
 	if err != nil {
 		return nil, err
 	}
+	if err := requireSceneWritesUnblocked(currentSessionInteraction); err != nil {
+		return nil, err
+	}
 	if err := requireAuthoritativeGMActor(actor, currentSessionInteraction); err != nil {
 		return nil, err
 	}
@@ -284,6 +299,9 @@ func (a interactionApplication) RequestScenePlayerRevisions(ctx context.Context,
 	if err != nil {
 		return nil, err
 	}
+	if err := requireSceneWritesUnblocked(currentSessionInteraction); err != nil {
+		return nil, err
+	}
 	if err := requireAuthoritativeGMActor(actor, currentSessionInteraction); err != nil {
 		return nil, err
 	}
@@ -303,5 +321,108 @@ func (a interactionApplication) RequestScenePlayerRevisions(ctx context.Context,
 	if err := a.executeSceneCommand(ctx, commandTypeScenePlayerPhaseRequestRevisions, campaignID, activeSession.ID, sceneID, payload, "scene.player_phase.request_revisions"); err != nil {
 		return nil, err
 	}
+	return a.GetInteractionState(ctx, campaignID)
+}
+
+func (a interactionApplication) ResolveScenePlayerPhaseReview(ctx context.Context, campaignID string, in *campaignv1.ResolveScenePlayerPhaseReviewRequest) (*campaignv1.InteractionState, error) {
+	sceneID, err := validate.RequiredID(in.GetSceneId(), "scene id")
+	if err != nil {
+		return nil, err
+	}
+	campaignRecord, actor, err := a.loadViewerCampaign(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	if err := campaign.ValidateCampaignOperation(campaignRecord.Status, campaign.CampaignOpSessionAction); err != nil {
+		return nil, err
+	}
+	activeSession, currentSessionInteraction, err := a.requireActiveSessionInteraction(ctx, campaignID)
+	if err != nil {
+		return nil, err
+	}
+	if currentSessionInteraction.OOCPaused {
+		return nil, status.Error(codes.FailedPrecondition, errSessionOOCPaused)
+	}
+	if err := requireAuthoritativeGMActor(actor, currentSessionInteraction); err != nil {
+		return nil, err
+	}
+	sceneRecord, currentSceneInteraction, err := a.requireActiveScenePhase(ctx, campaignID, activeSession.ID, sceneID, currentSessionInteraction)
+	if err != nil {
+		return nil, err
+	}
+	if currentSceneInteraction.PhaseStatus != scene.PlayerPhaseStatusGMReview {
+		return nil, status.Error(codes.FailedPrecondition, "scene player phase is not waiting for gm review")
+	}
+
+	switch resolution := in.GetResolution().(type) {
+	case *campaignv1.ResolveScenePlayerPhaseReviewRequest_AdvanceToPlayers:
+		advance := resolution.AdvanceToPlayers
+		if advance == nil {
+			return nil, status.Error(codes.InvalidArgument, "advance_to_players is required")
+		}
+		gmOutputText := strings.TrimSpace(advance.GetGmOutputText())
+		if gmOutputText == "" {
+			return nil, status.Error(codes.InvalidArgument, "gm_output_text is required")
+		}
+		actingCharacterIDs, actingParticipantIDs, err := a.resolveActingSet(ctx, campaignID, sceneRecord, advance.GetNextCharacterIds())
+		if err != nil {
+			return nil, err
+		}
+		commitPayload := scene.GMOutputCommittedPayload{
+			SceneID:       ids.SceneID(sceneID),
+			ParticipantID: ids.ParticipantID(actor.ID),
+			Text:          gmOutputText,
+		}
+		if err := a.executeSceneCommand(ctx, commandTypeSceneGMOutputCommit, campaignID, activeSession.ID, sceneID, commitPayload, "scene.gm_output.commit"); err != nil {
+			return nil, err
+		}
+		acceptPayload := scene.PlayerPhaseAcceptedPayload{
+			SceneID: ids.SceneID(sceneID),
+			PhaseID: currentSceneInteraction.PhaseID,
+		}
+		if err := a.executeSceneCommand(ctx, commandTypeScenePlayerPhaseAccept, campaignID, activeSession.ID, sceneID, acceptPayload, "scene.player_phase.accept"); err != nil {
+			return nil, err
+		}
+		phaseID, err := a.idGenerator()
+		if err != nil {
+			return nil, grpcerror.Internal("generate scene phase id", err)
+		}
+		startPayload := scene.PlayerPhaseStartedPayload{
+			SceneID:              ids.SceneID(sceneID),
+			PhaseID:              phaseID,
+			FrameText:            strings.TrimSpace(advance.GetNextFrameText()),
+			ActingCharacterIDs:   actingCharacterIDs,
+			ActingParticipantIDs: actingParticipantIDs,
+		}
+		if err := a.executeSceneCommand(ctx, commandTypeScenePlayerPhaseStart, campaignID, activeSession.ID, sceneID, startPayload, "scene.player_phase.start"); err != nil {
+			return nil, err
+		}
+		if err := a.clearOOCResolutionIfPending(ctx, campaignID, activeSession.ID, currentSessionInteraction, "review_advanced_to_players"); err != nil {
+			return nil, err
+		}
+	case *campaignv1.ResolveScenePlayerPhaseReviewRequest_RequestRevisions:
+		request := resolution.RequestRevisions
+		if request == nil {
+			return nil, status.Error(codes.InvalidArgument, "request_revisions is required")
+		}
+		revisions, err := a.resolveRevisionRequests(ctx, campaignID, sceneRecord, currentSceneInteraction, request.GetRevisions())
+		if err != nil {
+			return nil, err
+		}
+		payload := scene.PlayerPhaseRevisionsRequestedPayload{
+			SceneID:   ids.SceneID(sceneID),
+			PhaseID:   currentSceneInteraction.PhaseID,
+			Revisions: revisions,
+		}
+		if err := a.executeSceneCommand(ctx, commandTypeScenePlayerPhaseRequestRevisions, campaignID, activeSession.ID, sceneID, payload, "scene.player_phase.request_revisions"); err != nil {
+			return nil, err
+		}
+		if err := a.clearOOCResolutionIfPending(ctx, campaignID, activeSession.ID, currentSessionInteraction, "review_requested_revisions"); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, status.Error(codes.InvalidArgument, "review resolution is required")
+	}
+
 	return a.GetInteractionState(ctx, campaignID)
 }

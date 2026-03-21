@@ -112,11 +112,13 @@ type fakeInteractionClient struct {
 	endPlayerPhase     func(context.Context, *gamev1.EndScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.EndScenePlayerPhaseResponse, error)
 	acceptPlayerPhase  func(context.Context, *gamev1.AcceptScenePlayerPhaseRequest, ...grpc.CallOption) (*gamev1.AcceptScenePlayerPhaseResponse, error)
 	requestRevisions   func(context.Context, *gamev1.RequestScenePlayerRevisionsRequest, ...grpc.CallOption) (*gamev1.RequestScenePlayerRevisionsResponse, error)
+	resolveReview      func(context.Context, *gamev1.ResolveScenePlayerPhaseReviewRequest, ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error)
 	pauseOOC           func(context.Context, *gamev1.PauseSessionForOOCRequest, ...grpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error)
 	postOOC            func(context.Context, *gamev1.PostSessionOOCRequest, ...grpc.CallOption) (*gamev1.PostSessionOOCResponse, error)
 	markOOCReady       func(context.Context, *gamev1.MarkOOCReadyToResumeRequest, ...grpc.CallOption) (*gamev1.MarkOOCReadyToResumeResponse, error)
 	clearOOCReady      func(context.Context, *gamev1.ClearOOCReadyToResumeRequest, ...grpc.CallOption) (*gamev1.ClearOOCReadyToResumeResponse, error)
 	resumeOOC          func(context.Context, *gamev1.ResumeFromOOCRequest, ...grpc.CallOption) (*gamev1.ResumeFromOOCResponse, error)
+	resolveInterrupted func(context.Context, *gamev1.ResolveInterruptedScenePhaseRequest, ...grpc.CallOption) (*gamev1.ResolveInterruptedScenePhaseResponse, error)
 	setGMAuthority     func(context.Context, *gamev1.SetSessionGMAuthorityRequest, ...grpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error)
 	retryAITurn        func(context.Context, *gamev1.RetryAIGMTurnRequest, ...grpc.CallOption) (*gamev1.RetryAIGMTurnResponse, error)
 }
@@ -191,6 +193,13 @@ func (f *fakeInteractionClient) RequestScenePlayerRevisions(ctx context.Context,
 	return nil, unimplemented("RequestScenePlayerRevisions")
 }
 
+func (f *fakeInteractionClient) ResolveScenePlayerPhaseReview(ctx context.Context, in *gamev1.ResolveScenePlayerPhaseReviewRequest, opts ...grpc.CallOption) (*gamev1.ResolveScenePlayerPhaseReviewResponse, error) {
+	if f.resolveReview != nil {
+		return f.resolveReview(ctx, in, opts...)
+	}
+	return nil, unimplemented("ResolveScenePlayerPhaseReview")
+}
+
 func (f *fakeInteractionClient) PauseSessionForOOC(ctx context.Context, in *gamev1.PauseSessionForOOCRequest, opts ...grpc.CallOption) (*gamev1.PauseSessionForOOCResponse, error) {
 	if f.pauseOOC != nil {
 		return f.pauseOOC(ctx, in, opts...)
@@ -224,6 +233,13 @@ func (f *fakeInteractionClient) ResumeFromOOC(ctx context.Context, in *gamev1.Re
 		return f.resumeOOC(ctx, in, opts...)
 	}
 	return nil, unimplemented("ResumeFromOOC")
+}
+
+func (f *fakeInteractionClient) ResolveInterruptedScenePhase(ctx context.Context, in *gamev1.ResolveInterruptedScenePhaseRequest, opts ...grpc.CallOption) (*gamev1.ResolveInterruptedScenePhaseResponse, error) {
+	if f.resolveInterrupted != nil {
+		return f.resolveInterrupted(ctx, in, opts...)
+	}
+	return nil, unimplemented("ResolveInterruptedScenePhase")
 }
 
 func (f *fakeInteractionClient) SetSessionGMAuthority(ctx context.Context, in *gamev1.SetSessionGMAuthorityRequest, opts ...grpc.CallOption) (*gamev1.SetSessionGMAuthorityResponse, error) {
@@ -497,6 +513,7 @@ type fakeDaggerheartClient struct {
 	applyAdversaryAttackOutcome func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryAttackOutcomeResponse, error)
 	applyReactionOutcome        func(context.Context, *daggerheartv1.DaggerheartApplyReactionOutcomeRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyReactionOutcomeResponse, error)
 	applyLevelUp                func(context.Context, *daggerheartv1.DaggerheartApplyLevelUpRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyLevelUpResponse, error)
+	applyStatModifiers          func(context.Context, *daggerheartv1.DaggerheartApplyStatModifiersRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyStatModifiersResponse, error)
 	applyClassFeature           func(context.Context, *daggerheartv1.DaggerheartApplyClassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyClassFeatureResponse, error)
 	applyAdversaryFeature       func(context.Context, *daggerheartv1.DaggerheartApplyAdversaryFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyAdversaryFeatureResponse, error)
 	applySubclassFeature        func(context.Context, *daggerheartv1.DaggerheartApplySubclassFeatureRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplySubclassFeatureResponse, error)
@@ -870,7 +887,10 @@ func (f *fakeDaggerheartClient) ApplyCharacterStatePatch(context.Context, *dagge
 	return nil, unimplemented("ApplyCharacterStatePatch")
 }
 
-func (f *fakeDaggerheartClient) ApplyStatModifiers(context.Context, *daggerheartv1.DaggerheartApplyStatModifiersRequest, ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyStatModifiersResponse, error) {
+func (f *fakeDaggerheartClient) ApplyStatModifiers(ctx context.Context, in *daggerheartv1.DaggerheartApplyStatModifiersRequest, opts ...grpc.CallOption) (*daggerheartv1.DaggerheartApplyStatModifiersResponse, error) {
+	if f.applyStatModifiers != nil {
+		return f.applyStatModifiers(ctx, in, opts...)
+	}
 	return nil, unimplemented("ApplyStatModifiers")
 }
 

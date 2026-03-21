@@ -14,41 +14,43 @@ import (
 )
 
 var coreStepKinds = map[string]struct{}{
-	"campaign":                        {},
-	"participant":                     {},
-	"start_session":                   {},
-	"end_session":                     {},
-	"character":                       {},
-	"prefab":                          {},
-	"set_spotlight":                   {},
-	"clear_spotlight":                 {},
-	"create_scene":                    {},
-	"end_scene":                       {},
-	"scene_add_character":             {},
-	"scene_remove_character":          {},
-	"scene_transfer_character":        {},
-	"scene_transition":                {},
-	"scene_gate_open":                 {},
-	"scene_gate_resolve":              {},
-	"scene_gate_abandon":              {},
-	"scene_set_spotlight":             {},
-	"scene_clear_spotlight":           {},
-	"update_scene":                    {},
-	"interaction_set_gm_authority":    {},
-	"interaction_set_active_scene":    {},
-	"interaction_start_player_phase":  {},
-	"interaction_post":                {},
-	"interaction_yield":               {},
-	"interaction_unyield":             {},
-	"interaction_end_player_phase":    {},
-	"interaction_accept_player_phase": {},
-	"interaction_request_revisions":   {},
-	"interaction_pause_ooc":           {},
-	"interaction_post_ooc":            {},
-	"interaction_ready_ooc":           {},
-	"interaction_clear_ready_ooc":     {},
-	"interaction_resume_ooc":          {},
-	"interaction_expect":              {},
+	"campaign":                              {},
+	"participant":                           {},
+	"start_session":                         {},
+	"end_session":                           {},
+	"character":                             {},
+	"prefab":                                {},
+	"set_spotlight":                         {},
+	"clear_spotlight":                       {},
+	"create_scene":                          {},
+	"end_scene":                             {},
+	"scene_add_character":                   {},
+	"scene_remove_character":                {},
+	"scene_transfer_character":              {},
+	"scene_transition":                      {},
+	"scene_gate_open":                       {},
+	"scene_gate_resolve":                    {},
+	"scene_gate_abandon":                    {},
+	"scene_set_spotlight":                   {},
+	"scene_clear_spotlight":                 {},
+	"update_scene":                          {},
+	"interaction_set_gm_authority":          {},
+	"interaction_set_active_scene":          {},
+	"interaction_start_player_phase":        {},
+	"interaction_post":                      {},
+	"interaction_yield":                     {},
+	"interaction_unyield":                   {},
+	"interaction_end_player_phase":          {},
+	"interaction_accept_player_phase":       {},
+	"interaction_request_revisions":         {},
+	"interaction_resolve_review":            {},
+	"interaction_pause_ooc":                 {},
+	"interaction_post_ooc":                  {},
+	"interaction_ready_ooc":                 {},
+	"interaction_clear_ready_ooc":           {},
+	"interaction_resume_ooc":                {},
+	"interaction_resolve_interrupted_phase": {},
+	"interaction_expect":                    {},
 }
 
 func (r *Runner) runStep(ctx context.Context, state *scenarioState, step Step) error {
@@ -219,6 +221,8 @@ func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Ste
 		return r.runInteractionAcceptPlayerPhaseStep(ctx, state, step)
 	case "interaction_request_revisions":
 		return r.runInteractionRequestRevisionsStep(ctx, state, step)
+	case "interaction_resolve_review":
+		return r.runInteractionResolveReviewStep(ctx, state, step)
 	case "interaction_pause_ooc":
 		return r.runInteractionPauseOOCStep(ctx, state, step)
 	case "interaction_post_ooc":
@@ -229,6 +233,8 @@ func (r *Runner) runCoreStep(ctx context.Context, state *scenarioState, step Ste
 		return r.runInteractionClearReadyOOCStep(ctx, state)
 	case "interaction_resume_ooc":
 		return r.runInteractionResumeOOCStep(ctx, state)
+	case "interaction_resolve_interrupted_phase":
+		return r.runInteractionResolveInterruptedPhaseStep(ctx, state, step)
 	case "interaction_expect":
 		return r.runInteractionExpectStep(ctx, state, step)
 	default:

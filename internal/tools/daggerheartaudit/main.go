@@ -242,7 +242,7 @@ func runGenerate(args []string) error {
 		Clauses:       clauses,
 	}
 	summary := buildSummary(referenceRoot, rows, clauses)
-	epics, backlogMarkdown, err := buildEpicCatalog(referenceRoot, rows)
+	epics, _, err := buildEpicCatalog(referenceRoot, rows)
 	if err != nil {
 		return err
 	}
@@ -263,9 +263,6 @@ func runGenerate(args []string) error {
 		return err
 	}
 	if err := writeJSON(filepath.Join(outDir, "epics.json"), epics); err != nil {
-		return err
-	}
-	if err := writeText(filepath.Join(outDir, "remediation_backlog.md"), backlogMarkdown); err != nil {
 		return err
 	}
 	return nil
@@ -358,9 +355,6 @@ func runCheck(args []string) error {
 	}
 	if err := validateEpicCatalog(epics, matrix.Rows); err != nil {
 		return err
-	}
-	if _, err := os.Stat(filepath.Join(outDir, "remediation_backlog.md")); err != nil {
-		return fmt.Errorf("read remediation_backlog.md: %w", err)
 	}
 	return nil
 }
@@ -1037,13 +1031,6 @@ func writeJSON(path string, value any) error {
 	}
 	data = append(data, '\n')
 	if err := os.WriteFile(path, data, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", path, err)
-	}
-	return nil
-}
-
-func writeText(path string, content string) error {
-	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("write %s: %w", path, err)
 	}
 	return nil

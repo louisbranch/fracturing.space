@@ -30,11 +30,13 @@ func TestInteractionMutationHandlersProxyRequests(t *testing.T) {
 		{name: "commit scene gm output", path: "/api/campaigns/c1/interaction/commit-scene-gm-output", body: `{}`, wantMethod: "CommitSceneGMOutput"},
 		{name: "accept scene player phase", path: "/api/campaigns/c1/interaction/accept-scene-player-phase", body: `{}`, wantMethod: "AcceptScenePlayerPhase"},
 		{name: "request scene player revisions", path: "/api/campaigns/c1/interaction/request-scene-player-revisions", body: `{}`, wantMethod: "RequestScenePlayerRevisions"},
+		{name: "resolve scene player phase review", path: "/api/campaigns/c1/interaction/resolve-scene-player-phase-review", body: `{}`, wantMethod: "ResolveScenePlayerPhaseReview"},
 		{name: "pause session for ooc", path: "/api/campaigns/c1/interaction/pause-session-for-ooc", body: `{}`, wantMethod: "PauseSessionForOOC"},
 		{name: "post session ooc", path: "/api/campaigns/c1/interaction/post-session-ooc", body: `{}`, wantMethod: "PostSessionOOC"},
 		{name: "mark ooc ready", path: "/api/campaigns/c1/interaction/mark-ooc-ready-to-resume", wantMethod: "MarkOOCReadyToResume"},
 		{name: "clear ooc ready", path: "/api/campaigns/c1/interaction/clear-ooc-ready-to-resume", wantMethod: "ClearOOCReadyToResume"},
 		{name: "resume from ooc", path: "/api/campaigns/c1/interaction/resume-from-ooc", wantMethod: "ResumeFromOOC"},
+		{name: "resolve interrupted scene phase", path: "/api/campaigns/c1/interaction/resolve-interrupted-scene-phase", body: `{}`, wantMethod: "ResolveInterruptedScenePhase"},
 		{name: "set gm authority", path: "/api/campaigns/c1/interaction/set-session-gm-authority", body: `{}`, wantMethod: "SetSessionGMAuthority"},
 		{name: "retry ai gm turn", path: "/api/campaigns/c1/interaction/retry-ai-gm-turn", body: `{}`, wantMethod: "RetryAIGMTurn"},
 	}
@@ -177,6 +179,45 @@ func TestInteractionMutationResponseKeepsParticipantAndCharacterEnrichment(t *te
 	}
 	if got := payload.CharacterInspectionCatalog["char-1"].System; got != "daggerheart" {
 		t.Fatalf("character_inspection_catalog[char-1].system = %q, want %q", got, "daggerheart")
+	}
+	card, ok := payload.CharacterInspectionCatalog["char-1"].Card.(map[string]any)
+	if !ok {
+		t.Fatalf("character_inspection_catalog[char-1].card type = %T, want object", payload.CharacterInspectionCatalog["char-1"].Card)
+	}
+	daggerheartCard, ok := card["daggerheart"].(map[string]any)
+	if !ok {
+		t.Fatalf("character_inspection_catalog[char-1].card.daggerheart = %#v", card["daggerheart"])
+	}
+	cardSummary, ok := daggerheartCard["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("character_inspection_catalog[char-1].card.daggerheart.summary = %#v", daggerheartCard["summary"])
+	}
+	if got := cardSummary["ancestryName"]; got != "Human" {
+		t.Fatalf("character_inspection_catalog[char-1].card.summary.ancestryName = %#v", got)
+	}
+	if got := cardSummary["communityName"]; got != "Slyborne" {
+		t.Fatalf("character_inspection_catalog[char-1].card.summary.communityName = %#v", got)
+	}
+	sheet, ok := payload.CharacterInspectionCatalog["char-1"].Sheet.(map[string]any)
+	if !ok {
+		t.Fatalf("character_inspection_catalog[char-1].sheet type = %T, want object", payload.CharacterInspectionCatalog["char-1"].Sheet)
+	}
+	if got := sheet["ancestryName"]; got != "Human" {
+		t.Fatalf("character_inspection_catalog[char-1].sheet.ancestryName = %#v", got)
+	}
+	if got := sheet["communityName"]; got != "Slyborne" {
+		t.Fatalf("character_inspection_catalog[char-1].sheet.communityName = %#v", got)
+	}
+	if got := sheet["hopeFeature"]; got != "Rogue's Dodge: Spend 3 Hope to gain +2 Evasion until an attack succeeds against you." {
+		t.Fatalf("character_inspection_catalog[char-1].sheet.hopeFeature = %#v", got)
+	}
+	primaryWeapon, ok := sheet["primaryWeapon"].(map[string]any)
+	if !ok || primaryWeapon["name"] != "Sword" {
+		t.Fatalf("character_inspection_catalog[char-1].sheet.primaryWeapon = %#v", sheet["primaryWeapon"])
+	}
+	activeArmor, ok := sheet["activeArmor"].(map[string]any)
+	if !ok || activeArmor["name"] != "Leather" {
+		t.Fatalf("character_inspection_catalog[char-1].sheet.activeArmor = %#v", sheet["activeArmor"])
 	}
 	if participants.lastUserID != "user-1" || characters.lastUserID != "user-1" {
 		t.Fatalf("auth metadata = participant:%q character:%q, want user-1", participants.lastUserID, characters.lastUserID)
