@@ -1,3 +1,4 @@
+import { Shield, ShieldOff } from "lucide-react";
 import { StatIcon } from "../character-card/CharacterCard";
 import type {
   CharacterSheetProps,
@@ -9,6 +10,12 @@ import type {
   DaggerheartTrait,
   DaggerheartWeapon,
 } from "./contract";
+import {
+  armorDisplayModel,
+  ARMOR_GRID_COLUMNS,
+  evasionDisplayModel,
+  type ArmorShieldState,
+} from "./defense-view-models";
 
 // CharacterSheet is a read-only, display-oriented view of a Daggerheart
 // character that follows the official paper sheet layout while using DaisyUI
@@ -19,7 +26,7 @@ export function CharacterSheet({ character }: CharacterSheetProps) {
       <SheetIdentity character={character} />
 
       {/* Row 1: Defense (25%) | Traits (75%) — mirrors PDF silhouette + trait columns */}
-      <div className="grid grid-cols-[1fr_3fr] border-b border-base-300/60" aria-label="Character traits and defense">
+      <div className="grid border-b border-base-300/60 sm:grid-cols-[1fr_3fr]" aria-label="Character traits and defense">
         <SheetDefense character={character} />
         <SheetTraits traits={character.traits} />
       </div>
@@ -141,28 +148,77 @@ function SheetPortrait({ character }: { character: DaggerheartCharacterSheetData
 // ---------------------------------------------------------------------------
 
 function SheetDefense({ character }: { character: DaggerheartCharacterSheetData }) {
+  const evasion = evasionDisplayModel(character.evasion);
+  const armor = armorDisplayModel(character.armor);
+
+  if (!evasion && !armor) {
+    return <section aria-label="Defense" className="border-b border-base-300/60 p-4 sm:border-b-0 sm:border-r" />;
+  }
+
   return (
     <section
       aria-label="Defense"
-      className="flex items-center justify-center gap-3 border-r border-base-300/60 p-4"
+      className="grid grid-cols-2 items-stretch divide-x divide-base-300/60 border-b border-base-300/60 sm:border-b-0 sm:border-r"
     >
-      {character.evasion !== undefined ? (
-        <div className="flex flex-col items-center gap-0.5">
-          <StatIcon name="evasion" />
-          <span className="font-display text-xl font-bold text-base-content">{character.evasion}</span>
-          <span className="sheet-field-label">Evasion</span>
-        </div>
-      ) : null}
-      {character.armor !== undefined ? (
-        <div className="flex flex-col items-center gap-0.5">
-          <StatIcon name="armor" />
-          <span className="font-display text-xl font-bold text-base-content">
-            {character.armor.current}/{character.armor.max}
-          </span>
-          <span className="sheet-field-label">Armor</span>
-        </div>
-      ) : null}
+      {evasion ? <EvasionDisplay value={evasion.value} /> : null}
+      {armor ? <ArmorDisplay armor={armor} /> : null}
     </section>
+  );
+}
+
+function EvasionDisplay({ value }: { value: number }) {
+  return (
+    <div className="flex min-h-32 flex-col px-3 py-3">
+      <div className="flex items-center justify-center gap-2 text-base-content/60">
+        <StatIcon name="evasion" />
+        <span className="sheet-field-label">Evasion</span>
+      </div>
+      <div className="flex flex-1 items-center justify-center">
+        <span className="font-display text-5xl leading-none text-base-content">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function ArmorDisplay({ armor }: { armor: NonNullable<ReturnType<typeof armorDisplayModel>> }) {
+  return (
+    <div className="flex min-h-32 flex-col px-3 py-3">
+      <div className="flex items-center justify-center gap-2 text-base-content/60">
+        <StatIcon name="armor" />
+        <span className="sheet-field-label">Armor</span>
+      </div>
+      <div className="grid flex-1 grid-cols-[auto_1fr] items-center gap-3">
+        <span className="font-display text-5xl leading-none text-base-content">{armor.value}</span>
+        <div
+          aria-label={`Armor grid: ${armor.summary}`}
+          className="grid gap-px"
+          style={{ gridTemplateColumns: `repeat(${ARMOR_GRID_COLUMNS}, minmax(0, 1fr))` }}
+        >
+          {armor.cells.map((cell) => (
+            <ArmorShieldCell key={cell.index} state={cell.state} />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ArmorShieldCell({ state }: { state: ArmorShieldState }) {
+  const className = {
+    filled: "text-base-content/85",
+    spent: "text-base-content/55",
+    muted: "text-base-content/20",
+  } satisfies Record<ArmorShieldState, string>;
+  const Icon = state === "spent" ? ShieldOff : Shield;
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`flex h-4 w-4 items-center justify-center ${className[state]}`}
+      data-armor-state={state}
+    >
+      <Icon className="h-3.5 w-3.5" strokeWidth={1.9} />
+    </span>
   );
 }
 
