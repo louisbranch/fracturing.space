@@ -14,26 +14,14 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-export const PlayerTurn: Story = {
-  args: {
-    initialState: playerHUDShellFixtures.playerTurn,
-  },
+export const OnStage: Story = {
+  args: { initialState: playerHUDShellFixtures.onStage },
 };
 
-export const OOCPaused: Story = {
-  args: {
-    initialState: playerHUDShellFixtures.oocPaused,
-  },
+export const Backstage: Story = {
+  args: { initialState: playerHUDShellFixtures.backstage },
 };
 
-export const Reconnecting: Story = {
-  args: {
-    initialState: playerHUDShellFixtures.reconnecting,
-  },
-};
-
-export const CollapsedComposer: Story = {
-  args: {
-    initialState: playerHUDShellFixtures.collapsed,
-  },
+export const SideChat: Story = {
+  args: { initialState: playerHUDShellFixtures.sideChat },
 };

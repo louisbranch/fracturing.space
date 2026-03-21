@@ -3,7 +3,7 @@ import { PlayerComposerPreview } from "./PlayerComposerPreview";
 import { playerComposerFixtures } from "./fixtures";
 
 const meta = {
-  title: "Interaction/Player HUD/Composer",
+  title: "Interaction/Legacy Player HUD/Composer",
   component: PlayerComposerPreview,
   parameters: {
     layout: "fullscreen",

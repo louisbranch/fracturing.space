@@ -1,5 +1,5 @@
-import type { PlayerHUDState } from "../shared/contract";
-import { usePlayerComposerPreviewState } from "../player-composer/usePlayerComposerPreviewState";
+import { useState } from "react";
+import type { HUDNavbarTab, PlayerHUDState } from "../shared/contract";
 import { PlayerHUDShell } from "./PlayerHUDShell";
 
 type PlayerHUDShellPreviewProps = {
@@ -7,7 +7,17 @@ type PlayerHUDShellPreviewProps = {
 };
 
 export function PlayerHUDShellPreview({ initialState }: PlayerHUDShellPreviewProps) {
-  const { actions, state: composerState } = usePlayerComposerPreviewState(initialState.composer);
+  const [activeTab, setActiveTab] = useState<HUDNavbarTab>(initialState.activeTab);
+  const [draft, setDraft] = useState("");
 
-  return <PlayerHUDShell composerActions={actions} state={{ ...initialState, composer: composerState }} />;
+  return (
+    <PlayerHUDShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      sideChat={initialState.sideChat}
+      sideChatDraft={draft}
+      onSideChatDraftChange={setDraft}
+      onSideChatSend={() => setDraft("")}
+    />
+  );
 }

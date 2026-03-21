@@ -1,59 +1,31 @@
-// PlayerConnectionState captures the browser-side realtime state displayed in
-// the HUD header.
-export type PlayerConnectionState =
-  | "connecting"
-  | "connected"
-  | "reconnecting"
-  | "disconnected";
+// HUDNavbarTab identifies the three top-level navigation surfaces in the v2
+// player HUD.
+export type HUDNavbarTab = "on-stage" | "backstage" | "side-chat";
 
-// PlayerComposerMode identifies the four drafting surfaces in the player HUD.
-export type PlayerComposerMode = "scratch" | "scene" | "ooc" | "chat";
-
-// PlayerComposerDrafts keeps each composer mode's text isolated so switching
-// modes does not overwrite another draft.
-export type PlayerComposerDrafts = Record<PlayerComposerMode, string>;
-
-// PlayerStageState captures the stage viewport's placeholder and sample
-// content without coupling to future runtime renderers.
-export type PlayerStageState = {
-  eyebrow?: string;
-  title?: string;
-  description?: string;
-  content: string[];
-  emptyMessage: string;
+// SideChatParticipant represents a user in the side chat conversation.
+export type SideChatParticipant = {
+  id: string;
+  name: string;
+  avatarUrl?: string;
 };
 
-// PlayerSceneComposerState captures whether the player can submit to the active
-// scene and whether they have already yielded.
-export type PlayerSceneComposerState = {
-  enabled: boolean;
-  reason?: string;
-  yielded: boolean;
+// SideChatMessage is a single message in the side chat.
+export type SideChatMessage = {
+  id: string;
+  participantId: string;
+  body: string;
+  sentAt: string; // ISO timestamp, rendered as hh:mm
 };
 
-// PlayerOOCComposerState captures the pause state and helper copy for the OOC
-// composer mode.
-export type PlayerOOCComposerState = {
-  open: boolean;
-  helperText?: string;
+// SideChatState holds the full state for the side chat panel.
+export type SideChatState = {
+  viewerParticipantId: string;
+  participants: SideChatParticipant[];
+  messages: SideChatMessage[];
 };
 
-// PlayerComposerState keeps the HUD's local UI state explicit for Storybook and
-// future runtime adapters.
-export type PlayerComposerState = {
-  activeMode: PlayerComposerMode;
-  minimized: boolean;
-  drafts: PlayerComposerDrafts;
-  scene: PlayerSceneComposerState;
-  ooc: PlayerOOCComposerState;
-};
-
-// PlayerHUDState is the composition-level fixture contract used by the player
-// HUD shell and its child slices.
+// PlayerHUDState is the minimal top-level state for the v2 player HUD shell.
 export type PlayerHUDState = {
-  campaignName: string;
-  backURL: string;
-  connection: PlayerConnectionState;
-  stage: PlayerStageState;
-  composer: PlayerComposerState;
+  activeTab: HUDNavbarTab;
+  sideChat: SideChatState;
 };

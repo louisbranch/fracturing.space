@@ -1,7 +1,10 @@
-import type { PlayerComposerActionHandlers } from "../player-composer/contract";
-import type { PlayerHUDState } from "../shared/contract";
+import type { HUDNavbarTab, SideChatState } from "../shared/contract";
 
 export type PlayerHUDShellProps = {
-  state: PlayerHUDState;
-  composerActions?: PlayerComposerActionHandlers;
+  activeTab: HUDNavbarTab;
+  onTabChange: (tab: HUDNavbarTab) => void;
+  sideChat: SideChatState;
+  sideChatDraft: string;
+  onSideChatDraftChange: (value: string) => void;
+  onSideChatSend: () => void;
 };
