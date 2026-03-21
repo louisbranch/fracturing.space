@@ -1,9 +1,12 @@
 import type { PlayerHUDState, SideChatMessage, SideChatParticipant, SideChatState } from "./contract";
+import { participantAvatarPreviewAssets } from "../../../storybook/preview-assets/fixtures";
+
+const [viewerAvatar, corinAvatar, gmAvatar] = participantAvatarPreviewAssets;
 
 export const sideChatParticipants: SideChatParticipant[] = [
-  { id: "p-viewer", name: "Aria" },
-  { id: "p-corin", name: "Corin", avatarUrl: undefined },
-  { id: "p-gm", name: "GM Sable" },
+  { id: "p-viewer", name: "Aria", avatarUrl: viewerAvatar?.imageUrl },
+  { id: "p-corin", name: "Corin", avatarUrl: corinAvatar?.imageUrl },
+  { id: "p-gm", name: "GM Sable", avatarUrl: gmAvatar?.imageUrl },
 ];
 
 export const sideChatMessages: SideChatMessage[] = [

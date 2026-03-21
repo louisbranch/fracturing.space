@@ -85,6 +85,9 @@ Keep concerns separate inside each component slice:
 
 - Keep component inputs explicit and prop-driven.
 - Reuse canonical fixtures instead of scattering inline mock objects.
+- Source Storybook avatar and campaign-cover imagery from the checked-in asset
+  manifests under `internal/platform/assets/catalog/data/` instead of embedding
+  one-off Cloudinary URLs in fixture files.
 - When a component is derived from an existing product surface, document that
   source in story descriptions and fixture comments.
 - Let Storybook own navigation; do not rebuild fixture or variant selectors inside the component canvas.
