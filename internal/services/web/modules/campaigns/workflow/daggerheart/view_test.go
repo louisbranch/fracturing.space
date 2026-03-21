@@ -364,6 +364,46 @@ func TestCreationViewUsesCatalogEquipmentIllustrationURLs(t *testing.T) {
 	}
 }
 
+func TestCreationViewGroupsWeaponsByDisplayGroup(t *testing.T) {
+	t.Parallel()
+
+	creation := catalogCreation{
+		PrimaryWeapons: []campaignworkflow.Weapon{
+			{ID: "weapon.blade", Name: "Blade", DisplayGroup: "physical"},
+			{ID: "weapon.orb", Name: "Orb", DisplayGroup: "magic"},
+			{ID: "weapon.chair", Name: "Wheelchair Ram", DisplayGroup: "combat_wheelchair"},
+		},
+		SecondaryWeapons: []campaignworkflow.Weapon{
+			{ID: "weapon.focus", Name: "Focus", DisplayGroup: "magic"},
+			{ID: "weapon.knife", Name: "Knife", DisplayGroup: "physical"},
+		},
+	}
+
+	view := New("").CreationView(creation)
+
+	if len(view.PrimaryWeaponGroups) != 3 {
+		t.Fatalf("primary weapon groups = %d, want 3", len(view.PrimaryWeaponGroups))
+	}
+	if view.PrimaryWeaponGroups[0].Key != "physical" || view.PrimaryWeaponGroups[0].Weapons[0].ID != "weapon.blade" {
+		t.Fatalf("primary group[0] = %#v, want physical/blade", view.PrimaryWeaponGroups[0])
+	}
+	if view.PrimaryWeaponGroups[1].Key != "magic" || view.PrimaryWeaponGroups[1].Weapons[0].ID != "weapon.orb" {
+		t.Fatalf("primary group[1] = %#v, want magic/orb", view.PrimaryWeaponGroups[1])
+	}
+	if view.PrimaryWeaponGroups[2].Key != "combat_wheelchair" || view.PrimaryWeaponGroups[2].Weapons[0].ID != "weapon.chair" {
+		t.Fatalf("primary group[2] = %#v, want combat_wheelchair/chair", view.PrimaryWeaponGroups[2])
+	}
+	if len(view.SecondaryWeaponGroups) != 2 {
+		t.Fatalf("secondary weapon groups = %d, want 2", len(view.SecondaryWeaponGroups))
+	}
+	if view.SecondaryWeaponGroups[0].Key != "physical" || view.SecondaryWeaponGroups[0].Weapons[0].ID != "weapon.knife" {
+		t.Fatalf("secondary group[0] = %#v, want physical/knife", view.SecondaryWeaponGroups[0])
+	}
+	if view.SecondaryWeaponGroups[1].Key != "magic" || view.SecondaryWeaponGroups[1].Weapons[0].ID != "weapon.focus" {
+		t.Fatalf("secondary group[1] = %#v, want magic/focus", view.SecondaryWeaponGroups[1])
+	}
+}
+
 func TestCreationViewResolvesEquipmentImageURLFallback(t *testing.T) {
 	t.Parallel()
 

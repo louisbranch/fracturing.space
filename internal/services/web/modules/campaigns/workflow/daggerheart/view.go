@@ -26,6 +26,8 @@ func (w Workflow) CreationView(creation catalogCreation) campaignworkflow.Charac
 	view.Communities = mapCreationHeritages(creation.Communities, catalog.DaggerheartEntityTypeCommunity, catalog.DaggerheartAssetTypeCommunityIllustration, cdn)
 	view.PrimaryWeapons = mapCreationWeapons(creation.PrimaryWeapons, cdn)
 	view.SecondaryWeapons = mapCreationWeapons(creation.SecondaryWeapons, cdn)
+	view.PrimaryWeaponGroups = groupCreationWeapons(view.PrimaryWeapons)
+	view.SecondaryWeaponGroups = groupCreationWeapons(view.SecondaryWeapons)
 	view.SecondaryWeaponNoneImageURL = creationSecondaryNoneImageURL(cdn)
 	view.Armor = mapCreationArmor(creation.Armor, cdn)
 	view.PotionItems = mapCreationItems(creation.PotionItems, cdn)
@@ -102,6 +104,8 @@ func newCreationView(creation catalogCreation) campaignworkflow.CharacterCreatio
 		Communities:                 nil,
 		PrimaryWeapons:              nil,
 		SecondaryWeapons:            nil,
+		PrimaryWeaponGroups:         nil,
+		SecondaryWeaponGroups:       nil,
 		SecondaryWeaponNoneImageURL: "",
 		Armor:                       nil,
 		PotionItems:                 nil,
@@ -371,17 +375,50 @@ func mapCreationWeapons(weapons []campaignworkflow.Weapon, cdn imagecdn.ImageCDN
 	mapped := make([]campaignworkflow.CreationWeaponView, 0, len(weapons))
 	for _, weapon := range weapons {
 		mapped = append(mapped, campaignworkflow.CreationWeaponView{
-			ID:       weapon.ID,
-			Name:     weapon.Name,
-			ImageURL: mappedAssetURL(weapon.Illustration),
-			Burden:   weapon.Burden,
-			Trait:    weapon.Trait,
-			Range:    weapon.Range,
-			Damage:   weapon.Damage,
-			Feature:  weapon.Feature,
+			ID:           weapon.ID,
+			Name:         weapon.Name,
+			ImageURL:     mappedAssetURL(weapon.Illustration),
+			Burden:       weapon.Burden,
+			Trait:        weapon.Trait,
+			Range:        weapon.Range,
+			Damage:       weapon.Damage,
+			Feature:      weapon.Feature,
+			DisplayGroup: weapon.DisplayGroup,
 		})
 	}
 	return mapped
+}
+
+func groupCreationWeapons(weapons []campaignworkflow.CreationWeaponView) []campaignworkflow.CreationWeaponGroupView {
+	if len(weapons) == 0 {
+		return nil
+	}
+
+	groupOrder := []string{"physical", "magic", "combat_wheelchair"}
+	grouped := map[string][]campaignworkflow.CreationWeaponView{
+		"physical":          {},
+		"magic":             {},
+		"combat_wheelchair": {},
+	}
+	for _, weapon := range weapons {
+		key := weapon.DisplayGroup
+		if key == "" {
+			key = "physical"
+		}
+		grouped[key] = append(grouped[key], weapon)
+	}
+
+	result := make([]campaignworkflow.CreationWeaponGroupView, 0, len(groupOrder))
+	for _, key := range groupOrder {
+		if len(grouped[key]) == 0 {
+			continue
+		}
+		result = append(result, campaignworkflow.CreationWeaponGroupView{
+			Key:     key,
+			Weapons: append([]campaignworkflow.CreationWeaponView(nil), grouped[key]...),
+		})
+	}
+	return result
 }
 
 // mapCreationArmor maps armor catalog entries to template rows.

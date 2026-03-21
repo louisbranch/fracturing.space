@@ -226,6 +226,20 @@ func daggerheartWeaponCategoryLabel(category daggerheartv1.DaggerheartWeaponCate
 	}
 }
 
+// daggerheartWeaponDisplayGroupLabel centralizes this web behavior in one helper seam.
+func daggerheartWeaponDisplayGroupLabel(group daggerheartv1.DaggerheartWeaponDisplayGroup) string {
+	switch group {
+	case daggerheartv1.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_PHYSICAL:
+		return "physical"
+	case daggerheartv1.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_MAGIC:
+		return "magic"
+	case daggerheartv1.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_COMBAT_WHEELCHAIR:
+		return "combat_wheelchair"
+	default:
+		return ""
+	}
+}
+
 // daggerheartDomainCardTypeLabel maps the proto domain card type to a display label.
 func daggerheartDomainCardTypeLabel(t daggerheartv1.DaggerheartDomainCardType) string {
 	switch t {

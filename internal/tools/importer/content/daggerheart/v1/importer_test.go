@@ -687,12 +687,71 @@ func TestUpsertWeapons(t *testing.T) {
 		Trait: "agility", Range: "melee",
 		DamageDice: []damageDieRecord{{Sides: 6, Count: 1}},
 		DamageType: "physical", Burden: 1, Feature: "Quick draw",
+		DisplayOrder: 12,
 	}}
 	if err := upsertWeapons(context.Background(), store, items, "en-US", true, time.Now()); err != nil {
 		t.Fatalf("upsertWeapons: %v", err)
 	}
 	if w := store.weapons["weap-1"]; len(w.DamageDice) != 1 {
 		t.Errorf("damage dice = %v", w.DamageDice)
+	} else {
+		if w.DisplayOrder != 12 {
+			t.Fatalf("display order = %d, want 12", w.DisplayOrder)
+		}
+		if w.DisplayGroup != contentstore.DaggerheartWeaponDisplayGroupPhysical {
+			t.Fatalf("display group = %q, want %q", w.DisplayGroup, contentstore.DaggerheartWeaponDisplayGroupPhysical)
+		}
+	}
+}
+
+func TestDeriveWeaponDisplayGroup(t *testing.T) {
+	tests := []struct {
+		name string
+		item weaponRecord
+		want contentstore.DaggerheartWeaponDisplayGroup
+	}{
+		{
+			name: "explicit group wins",
+			item: weaponRecord{
+				Name:         "Wheelchair Wand",
+				DamageType:   "physical",
+				DisplayGroup: "magic",
+			},
+			want: contentstore.DaggerheartWeaponDisplayGroupMagic,
+		},
+		{
+			name: "wheelchair fallback",
+			item: weaponRecord{
+				Name:       "Combat Wheelchair Lance",
+				DamageType: "physical",
+			},
+			want: contentstore.DaggerheartWeaponDisplayGroupCombatWheelchair,
+		},
+		{
+			name: "magic fallback",
+			item: weaponRecord{
+				Name:       "Arcane Staff",
+				DamageType: "magic",
+			},
+			want: contentstore.DaggerheartWeaponDisplayGroupMagic,
+		},
+		{
+			name: "physical fallback",
+			item: weaponRecord{
+				Name:       "Longsword",
+				DamageType: "physical",
+			},
+			want: contentstore.DaggerheartWeaponDisplayGroupPhysical,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := deriveWeaponDisplayGroup(tt.item)
+			if got != tt.want {
+				t.Fatalf("deriveWeaponDisplayGroup(%+v) = %q, want %q", tt.item, got, tt.want)
+			}
+		})
 	}
 }
 

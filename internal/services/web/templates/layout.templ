@@ -676,7 +676,7 @@ templ AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, heade
 		</head>
 		<body class="min-h-[100dvh] flex flex-col" data-layout="app">
 			@sharedtemplates.LucideSprite()
-			<header class="navbar bg-base-200 fixed top-0 w-full z-50">
+			<header class="navbar bg-base-200 fixed top-0 w-full z-50" data-app-navbar="true">
 				<div class="navbar-start w-auto">
 					<a href={ routepath.AppDashboard } class="text-lg font-bold">Fracturing.Space</a>
 				</div>

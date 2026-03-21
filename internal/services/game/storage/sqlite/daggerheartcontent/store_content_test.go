@@ -632,18 +632,20 @@ func TestDaggerheartWeaponCRUD(t *testing.T) {
 	now := time.Date(2026, 2, 3, 14, 0, 0, 0, time.UTC)
 
 	expected := contentstore.DaggerheartWeapon{
-		ID:         "wpn-longsword",
-		Name:       "Longsword",
-		Category:   "martial",
-		Tier:       1,
-		Trait:      "Finesse",
-		Range:      "melee",
-		DamageDice: []contentstore.DaggerheartDamageDie{{Sides: 8, Count: 1}, {Sides: 6, Count: 1}},
-		DamageType: "physical",
-		Burden:     2,
-		Feature:    "Versatile",
-		CreatedAt:  now,
-		UpdatedAt:  now,
+		ID:           "wpn-longsword",
+		Name:         "Longsword",
+		Category:     "martial",
+		Tier:         1,
+		Trait:        "Finesse",
+		Range:        "melee",
+		DamageDice:   []contentstore.DaggerheartDamageDie{{Sides: 8, Count: 1}, {Sides: 6, Count: 1}},
+		DamageType:   "physical",
+		Burden:       2,
+		Feature:      "Versatile",
+		DisplayOrder: 4,
+		DisplayGroup: contentstore.DaggerheartWeaponDisplayGroupPhysical,
+		CreatedAt:    now,
+		UpdatedAt:    now,
 	}
 
 	if err := store.PutDaggerheartWeapon(context.Background(), expected); err != nil {
@@ -666,6 +668,9 @@ func TestDaggerheartWeaponCRUD(t *testing.T) {
 	if got.DamageType != expected.DamageType || got.Burden != expected.Burden {
 		t.Fatalf("expected damage type/burden to match")
 	}
+	if got.DisplayOrder != expected.DisplayOrder || got.DisplayGroup != expected.DisplayGroup {
+		t.Fatalf("expected display metadata to match, got order=%d group=%q", got.DisplayOrder, got.DisplayGroup)
+	}
 
 	list, err := store.ListDaggerheartWeapons(context.Background())
 	if err != nil {
@@ -674,6 +679,9 @@ func TestDaggerheartWeaponCRUD(t *testing.T) {
 	if len(list) != 1 {
 		t.Fatalf("expected 1 weapon, got %d", len(list))
 	}
+	if list[0].DisplayOrder != expected.DisplayOrder || list[0].DisplayGroup != expected.DisplayGroup {
+		t.Fatalf("list display metadata = order %d group %q, want order %d group %q", list[0].DisplayOrder, list[0].DisplayGroup, expected.DisplayOrder, expected.DisplayGroup)
+	}
 
 	if err := store.DeleteDaggerheartWeapon(context.Background(), "wpn-longsword"); err != nil {
 		t.Fatalf("delete weapon: %v", err)
@@ -681,6 +689,53 @@ func TestDaggerheartWeaponCRUD(t *testing.T) {
 	_, err = store.GetDaggerheartWeapon(context.Background(), "wpn-longsword")
 	if err == nil || !errors.Is(err, storage.ErrNotFound) {
 		t.Fatalf("expected not found after delete")
+	}
+}
+
+func TestListDaggerheartWeaponsOrdersByDisplayOrder(t *testing.T) {
+	store := openTestContentStore(t)
+	now := time.Date(2026, 2, 3, 14, 0, 0, 0, time.UTC)
+
+	weapons := []contentstore.DaggerheartWeapon{
+		{
+			ID:           "wpn-zeta",
+			Name:         "Zeta Blade",
+			Category:     "primary",
+			Tier:         1,
+			DamageType:   "physical",
+			DisplayOrder: 2,
+			DisplayGroup: contentstore.DaggerheartWeaponDisplayGroupPhysical,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		},
+		{
+			ID:           "wpn-alpha",
+			Name:         "Alpha Wand",
+			Category:     "primary",
+			Tier:         1,
+			DamageType:   "magic",
+			DisplayOrder: 1,
+			DisplayGroup: contentstore.DaggerheartWeaponDisplayGroupMagic,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+		},
+	}
+
+	for _, weapon := range weapons {
+		if err := store.PutDaggerheartWeapon(context.Background(), weapon); err != nil {
+			t.Fatalf("put weapon %s: %v", weapon.ID, err)
+		}
+	}
+
+	list, err := store.ListDaggerheartWeapons(context.Background())
+	if err != nil {
+		t.Fatalf("list weapons: %v", err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("expected 2 weapons, got %d", len(list))
+	}
+	if list[0].ID != "wpn-alpha" || list[1].ID != "wpn-zeta" {
+		t.Fatalf("list order = [%s %s], want [wpn-alpha wpn-zeta]", list[0].ID, list[1].ID)
 	}
 }
 

@@ -655,16 +655,85 @@ func TestCreationStepEquipmentRendersBurdenMarkersAndInlineSecondaryNoneHelper(t
 	}
 	for _, marker := range []string{
 		`function selectedPrimaryBurden()`,
+		`var sectionOrder = ['weapon_primary_id', 'weapon_secondary_id', 'armor_id', 'potion_item_id'];`,
+		`function focusSection(sectionName) {`,
+		`function focusNextSection(sectionName) {`,
+		`function runAfterInputSelection(callback) {`,
 		`function syncSectionSelectedState(section)`,
-		`function syncSecondaryAvailability()`,
+		`function syncSecondaryAvailability(shouldFocus)`,
 		`input[name="weapon_secondary_id"][value=""]`,
 		`card.classList.toggle('border-primary', input.checked);`,
-		`setSecondaryOptionDisabled(input, twoHanded);`,
+		`setSecondaryOptionDisabled(noneOption, !twoHanded);`,
+		`window.requestAnimationFrame(callback);`,
+		`if (!twoHanded && checkedSecondary && checkedSecondary.value === '') {`,
+		`if (selectedPrimaryBurden() === 2) {`,
+		`collapseSection('weapon_secondary_id', false);`,
+		`expandSection('weapon_secondary_id', false);`,
+		`focusNextSection('weapon_secondary_id');`,
+		`focusSection('weapon_secondary_id');`,
 		`secondaryNoneLockedCopy.classList.toggle('hidden', !twoHanded);`,
 	} {
 		if !strings.Contains(got, marker) {
 			t.Fatalf("equipment script missing marker %q: %q", marker, got)
 		}
+	}
+}
+
+func TestCreationStepEquipmentRendersWeaponGroupsAndKeepsSecondaryNoneFirst(t *testing.T) {
+	t.Parallel()
+
+	view := CharacterCreationPageView{
+		CampaignID:  "campaign-1",
+		CharacterID: "character-1",
+		Creation: CampaignCharacterCreationView{
+			PrimaryWeapons: []CampaignCreationWeaponView{
+				{ID: "weapon.blade", Name: "Blade", DisplayGroup: "physical"},
+				{ID: "weapon.orb", Name: "Orb", DisplayGroup: "magic"},
+			},
+			SecondaryWeapons: []CampaignCreationWeaponView{
+				{ID: "weapon.focus", Name: "Focus", DisplayGroup: "magic"},
+				{ID: "weapon.chair", Name: "Wheelchair Ram", DisplayGroup: "combat_wheelchair"},
+			},
+			PrimaryWeaponGroups: []CampaignCreationWeaponGroupView{
+				{Key: "physical", Weapons: []CampaignCreationWeaponView{{ID: "weapon.blade", Name: "Blade", DisplayGroup: "physical"}}},
+				{Key: "magic", Weapons: []CampaignCreationWeaponView{{ID: "weapon.orb", Name: "Orb", DisplayGroup: "magic"}}},
+			},
+			SecondaryWeaponGroups: []CampaignCreationWeaponGroupView{
+				{Key: "magic", Weapons: []CampaignCreationWeaponView{{ID: "weapon.focus", Name: "Focus", DisplayGroup: "magic"}}},
+				{Key: "combat_wheelchair", Weapons: []CampaignCreationWeaponView{{ID: "weapon.chair", Name: "Wheelchair Ram", DisplayGroup: "combat_wheelchair"}}},
+			},
+		},
+	}
+
+	var buf bytes.Buffer
+	err := creationStepEquipment(view, testLocalizer{
+		"game.character_creation.value.none":                           "None",
+		"game.character_creation.weapon_group.physical":                "Physical",
+		"game.character_creation.weapon_group.magic":                   "Magic",
+		"game.character_creation.weapon_group.combat_wheelchair":       "Combat Wheelchair",
+		"game.character_creation.field.primary_weapon":                 "Primary Weapon",
+		"game.character_creation.field.secondary_weapon":               "Secondary Weapon",
+		"game.character_creation.action_change":                        "Change",
+		"game.character_creation.secondary_weapon_disabled_two_handed": "Disabled for two-handed",
+	}).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render creationStepEquipment: %v", err)
+	}
+
+	got := strings.SplitN(buf.String(), "<script>", 2)[0]
+	for _, marker := range []string{"Physical", "Magic", "Combat Wheelchair"} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("equipment output missing group label %q: %q", marker, got)
+		}
+	}
+	noneIdx := strings.Index(got, `data-equip-card-name="None"`)
+	focusIdx := strings.Index(got, `data-equip-card-name="Focus"`)
+	chairIdx := strings.Index(got, `data-equip-card-name="Wheelchair Ram"`)
+	if noneIdx == -1 || focusIdx == -1 || chairIdx == -1 {
+		t.Fatalf("expected none and grouped secondary weapons in markup: %q", got)
+	}
+	if noneIdx > focusIdx || noneIdx > chairIdx {
+		t.Fatalf("secondary none card should render before grouped secondary weapons: %q", got)
 	}
 }
 

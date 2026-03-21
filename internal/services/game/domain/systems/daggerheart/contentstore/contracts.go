@@ -343,19 +343,30 @@ type DaggerheartDomainCard struct {
 }
 
 // DaggerheartWeapon stores reusable weapon catalog rows.
+type DaggerheartWeaponDisplayGroup string
+
+const (
+	DaggerheartWeaponDisplayGroupPhysical         DaggerheartWeaponDisplayGroup = "physical"
+	DaggerheartWeaponDisplayGroupMagic            DaggerheartWeaponDisplayGroup = "magic"
+	DaggerheartWeaponDisplayGroupCombatWheelchair DaggerheartWeaponDisplayGroup = "combat_wheelchair"
+)
+
+// DaggerheartWeapon stores reusable weapon catalog rows.
 type DaggerheartWeapon struct {
-	ID         string
-	Name       string
-	Category   string
-	Tier       int
-	Trait      string
-	Range      string
-	DamageDice []DaggerheartDamageDie
-	DamageType string
-	Burden     int
-	Feature    string
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID           string
+	Name         string
+	Category     string
+	Tier         int
+	Trait        string
+	Range        string
+	DamageDice   []DaggerheartDamageDie
+	DamageType   string
+	Burden       int
+	Feature      string
+	DisplayOrder int
+	DisplayGroup DaggerheartWeaponDisplayGroup
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // DaggerheartArmor stores reusable armor catalog rows.

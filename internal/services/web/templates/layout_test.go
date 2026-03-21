@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	sharedtemplates "github.com/louisbranch/fracturing.space/internal/services/shared/templates"
+	"github.com/louisbranch/fracturing.space/internal/services/web/module"
 )
 
 func TestAppSideMenuItemSubItemsFiltersInvalidSubItems(t *testing.T) {
@@ -216,5 +217,26 @@ func TestAppMainContentWithLayoutLeavesHeaderClassOffWithoutBackgroundImages(t *
 	}
 	if !strings.Contains(got, `class="mb-0 text-3xl"`) {
 		t.Fatalf("AppMainContentWithLayout output missing default h1 class: %q", got)
+	}
+}
+
+func TestAppLayoutMarksFixedNavbarForSharedScrollOffset(t *testing.T) {
+	t.Parallel()
+
+	var buf bytes.Buffer
+	err := AppLayout("Dashboard", module.Viewer{}, "en-US", nil).Render(context.Background(), &buf)
+	if err != nil {
+		t.Fatalf("render AppLayout: %v", err)
+	}
+
+	got := buf.String()
+	for _, marker := range []string{
+		`data-app-navbar="true"`,
+		`src="/static/app-shell.js"`,
+		`href="/static/theme.css"`,
+	} {
+		if !strings.Contains(got, marker) {
+			t.Fatalf("AppLayout output missing marker %q: %q", marker, got)
+		}
 	}
 }

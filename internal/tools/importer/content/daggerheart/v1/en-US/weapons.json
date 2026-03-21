@@ -14,7 +14,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 2
     },
     {
       "id": "weapon.shortbow",
@@ -26,7 +27,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 13
     },
     {
       "id": "weapon.dagger",
@@ -38,7 +40,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 7
     },
     {
       "id": "weapon.spear",
@@ -50,7 +53,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 12
     },
     {
       "id": "weapon.quarterstaff",
@@ -62,7 +66,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 8
     },
     {
       "id": "weapon.mace",
@@ -74,7 +79,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 5
     },
     {
       "id": "weapon.broadsword",
@@ -86,7 +92,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Reliable: +1 to attack rolls."
+      "feature": "Reliable: +1 to attack rolls.",
+      "display_order": 1
     },
     {
       "id": "weapon.battleaxe",
@@ -98,7 +105,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 3
     },
     {
       "id": "weapon.greatsword",
@@ -110,7 +118,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +3."
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +3.",
+      "display_order": 4
     },
     {
       "id": "weapon.warhammer",
@@ -122,7 +131,8 @@
       "damage_dice": [{"sides": 12, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Heavy: -1 to Evasion. Damage bonus +3."
+      "feature": "Heavy: -1 to Evasion. Damage bonus +3.",
+      "display_order": 6
     },
     {
       "id": "weapon.cutlass",
@@ -134,7 +144,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 9
     },
     {
       "id": "weapon.rapier",
@@ -146,7 +157,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range."
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range.",
+      "display_order": 10
     },
     {
       "id": "weapon.halberd",
@@ -158,7 +170,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +2."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +2.",
+      "display_order": 11
     },
     {
       "id": "weapon.crossbow",
@@ -170,7 +183,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 14
     },
     {
       "id": "weapon.longbow",
@@ -182,7 +196,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +3."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +3.",
+      "display_order": 15
     },
     {
       "id": "weapon.arcane-gauntlets",
@@ -194,7 +209,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 16
     },
     {
       "id": "weapon.hallowed-axe",
@@ -206,7 +222,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 17
     },
     {
       "id": "weapon.glowing-rings",
@@ -218,7 +235,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +2."
+      "feature": "Damage bonus +2.",
+      "display_order": 18
     },
     {
       "id": "weapon.hand-runes",
@@ -230,7 +248,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "No special feature."
+      "feature": "No special feature.",
+      "display_order": 19
     },
     {
       "id": "weapon.returning-blade",
@@ -242,7 +261,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack."
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack.",
+      "display_order": 20
     },
     {
       "id": "weapon.shortstaff",
@@ -254,7 +274,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 21
     },
     {
       "id": "weapon.dualstaff",
@@ -266,7 +287,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 22
     },
     {
       "id": "weapon.scepter",
@@ -278,7 +300,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage."
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage.",
+      "display_order": 23
     },
     {
       "id": "weapon.wand",
@@ -290,7 +313,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 24
     },
     {
       "id": "weapon.greatstaff",
@@ -302,7 +326,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result.",
+      "display_order": 25
     },
     {
       "id": "weapon.broadsword-improved",
@@ -314,7 +339,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +3."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +3.",
+      "display_order": 26
     },
     {
       "id": "weapon.longsword-improved",
@@ -326,7 +352,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 27
     },
     {
       "id": "weapon.battleaxe-improved",
@@ -338,7 +365,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 28
     },
     {
       "id": "weapon.greatsword-improved",
@@ -350,7 +378,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6."
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6.",
+      "display_order": 29
     },
     {
       "id": "weapon.mace-improved",
@@ -362,7 +391,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +4."
+      "feature": "Damage bonus +4.",
+      "display_order": 30
     },
     {
       "id": "weapon.warhammer-improved",
@@ -374,7 +404,8 @@
       "damage_dice": [{"sides": 12, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Heavy: -1 to Evasion. Damage bonus +6."
+      "feature": "Heavy: -1 to Evasion. Damage bonus +6.",
+      "display_order": 31
     },
     {
       "id": "weapon.dagger-improved",
@@ -386,7 +417,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +4."
+      "feature": "Damage bonus +4.",
+      "display_order": 32
     },
     {
       "id": "weapon.quarterstaff-improved",
@@ -398,7 +430,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 33
     },
     {
       "id": "weapon.cutlass-improved",
@@ -410,7 +443,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +4."
+      "feature": "Damage bonus +4.",
+      "display_order": 34
     },
     {
       "id": "weapon.rapier-improved",
@@ -422,7 +456,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +3."
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +3.",
+      "display_order": 35
     },
     {
       "id": "weapon.halberd-improved",
@@ -434,7 +469,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +5."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +5.",
+      "display_order": 36
     },
     {
       "id": "weapon.spear-improved",
@@ -446,7 +482,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 37
     },
     {
       "id": "weapon.shortbow-improved",
@@ -458,7 +495,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 38
     },
     {
       "id": "weapon.crossbow-improved",
@@ -470,7 +508,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +4."
+      "feature": "Damage bonus +4.",
+      "display_order": 39
     },
     {
       "id": "weapon.longbow-improved",
@@ -482,7 +521,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +6."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +6.",
+      "display_order": 40
     },
     {
       "id": "weapon.gilded-falchion",
@@ -494,7 +534,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +4."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +4.",
+      "display_order": 41
     },
     {
       "id": "weapon.knuckle-blades",
@@ -506,7 +547,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +6."
+      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +6.",
+      "display_order": 42
     },
     {
       "id": "weapon.urok-broadsword",
@@ -518,7 +560,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Deadly: When you deal severe damage, the target must mark an additional HP. Damage bonus +3."
+      "feature": "Deadly: When you deal severe damage, the target must mark an additional HP. Damage bonus +3.",
+      "display_order": 43
     },
     {
       "id": "weapon.bladed-whip",
@@ -530,7 +573,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +3."
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +3.",
+      "display_order": 44
     },
     {
       "id": "weapon.steelforged-halberd",
@@ -542,7 +586,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Scary: On a successful attack, the target must mark a Stress. Damage bonus +4."
+      "feature": "Scary: On a successful attack, the target must mark a Stress. Damage bonus +4.",
+      "display_order": 45
     },
     {
       "id": "weapon.war-scythe",
@@ -554,7 +599,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +5."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +5.",
+      "display_order": 46
     },
     {
       "id": "weapon.blunderbuss",
@@ -566,7 +612,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +6."
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +6.",
+      "display_order": 47
     },
     {
       "id": "weapon.greatbow",
@@ -578,7 +625,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6.",
+      "display_order": 48
     },
     {
       "id": "weapon.finehair-bow",
@@ -590,7 +638,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +5."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +5.",
+      "display_order": 49
     },
     {
       "id": "weapon.arcane-gauntlets-improved",
@@ -602,7 +651,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 50
     },
     {
       "id": "weapon.hallowed-axe-improved",
@@ -614,7 +664,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +4."
+      "feature": "Damage bonus +4.",
+      "display_order": 51
     },
     {
       "id": "weapon.glowing-rings-improved",
@@ -626,7 +677,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +5."
+      "feature": "Damage bonus +5.",
+      "display_order": 52
     },
     {
       "id": "weapon.hand-runes-improved",
@@ -638,7 +690,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 53
     },
     {
       "id": "weapon.improved-returning-blade",
@@ -650,7 +703,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +3."
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +3.",
+      "display_order": 54
     },
     {
       "id": "weapon.shortstaff-improved",
@@ -662,7 +716,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +4."
+      "feature": "Damage bonus +4.",
+      "display_order": 55
     },
     {
       "id": "weapon.dualstaff-improved",
@@ -674,7 +729,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 56
     },
     {
       "id": "weapon.scepter-improved",
@@ -686,7 +742,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +3."
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +3.",
+      "display_order": 57
     },
     {
       "id": "weapon.wand-improved",
@@ -698,7 +755,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +4."
+      "feature": "Damage bonus +4.",
+      "display_order": 58
     },
     {
       "id": "weapon.greatstaff-improved",
@@ -710,7 +768,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +3."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +3.",
+      "display_order": 59
     },
     {
       "id": "weapon.casting-sword",
@@ -722,7 +781,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Versatile: You can also use it as Knowledge, far range, d6 damage. Damage bonus +4."
+      "feature": "Versatile: You can also use it as Knowledge, far range, d6 damage. Damage bonus +4.",
+      "display_order": 61
     },
     {
       "id": "weapon.devouring-dagger",
@@ -734,7 +794,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Scary: On a successful attack, the target must mark a Stress. Damage bonus +4."
+      "feature": "Scary: On a successful attack, the target must mark a Stress. Damage bonus +4.",
+      "display_order": 62
     },
     {
       "id": "weapon.hammer-of-exota",
@@ -746,7 +807,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Eruptive: On a successful melee attack, all other adversaries within very close range must succeed on a reaction roll (14) or take half damage. Damage bonus +6."
+      "feature": "Eruptive: On a successful melee attack, all other adversaries within very close range must succeed on a reaction roll (14) or take half damage. Damage bonus +6.",
+      "display_order": 63
     },
     {
       "id": "weapon.yutari-bloodbow",
@@ -758,7 +820,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +4."
+      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +4.",
+      "display_order": 64
     },
     {
       "id": "weapon.elder-bow",
@@ -770,7 +833,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +4."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +4.",
+      "display_order": 65
     },
     {
       "id": "weapon.ego-blade",
@@ -782,7 +846,8 @@
       "damage_dice": [{"sides": 12, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Pompous: You must have Presence of 0 or lower to use this weapon."
+      "feature": "Pompous: You must have Presence of 0 or lower to use this weapon.",
+      "display_order": 60
     },
     {
       "id": "weapon.scepter-of-elias",
@@ -794,7 +859,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Invigorating: On a successful attack, roll a d4. On a 4, clear a Stress. Damage bonus +3."
+      "feature": "Invigorating: On a successful attack, roll a d4. On a 4, clear a Stress. Damage bonus +3.",
+      "display_order": 66
     },
     {
       "id": "weapon.wand-of-enthrallment",
@@ -806,7 +872,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Persuasive: Before you make a Presence roll, you can mark a Stress to gain +2 to the result. Damage bonus +4."
+      "feature": "Persuasive: Before you make a Presence roll, you can mark a Stress to gain +2 to the result. Damage bonus +4.",
+      "display_order": 67
     },
     {
       "id": "weapon.keeper-s-staff",
@@ -818,7 +885,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +4."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +4.",
+      "display_order": 68
     },
     {
       "id": "weapon.broadsword-advanced",
@@ -830,7 +898,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +6."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +6.",
+      "display_order": 69
     },
     {
       "id": "weapon.longsword-advanced",
@@ -842,7 +911,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 70
     },
     {
       "id": "weapon.battleaxe-advanced",
@@ -854,7 +924,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 71
     },
     {
       "id": "weapon.greatsword-advanced",
@@ -866,7 +937,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9."
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9.",
+      "display_order": 72
     },
     {
       "id": "weapon.mace-advanced",
@@ -878,7 +950,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 73
     },
     {
       "id": "weapon.warhammer-advanced",
@@ -890,7 +963,8 @@
       "damage_dice": [{"sides": 12, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Heavy: -1 to Evasion. Damage bonus +9."
+      "feature": "Heavy: -1 to Evasion. Damage bonus +9.",
+      "display_order": 74
     },
     {
       "id": "weapon.dagger-advanced",
@@ -902,7 +976,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 75
     },
     {
       "id": "weapon.quarterstaff-advanced",
@@ -914,7 +989,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 76
     },
     {
       "id": "weapon.cutlass-advanced",
@@ -926,7 +1002,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 77
     },
     {
       "id": "weapon.rapier-advanced",
@@ -938,7 +1015,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +6."
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +6.",
+      "display_order": 78
     },
     {
       "id": "weapon.halberd-advanced",
@@ -950,7 +1028,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +8."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +8.",
+      "display_order": 79
     },
     {
       "id": "weapon.spear-advanced",
@@ -962,7 +1041,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 80
     },
     {
       "id": "weapon.shortbow-advanced",
@@ -974,7 +1054,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 81
     },
     {
       "id": "weapon.crossbow-advanced",
@@ -986,7 +1067,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 82
     },
     {
       "id": "weapon.longbow-advanced",
@@ -998,7 +1080,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +9."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +9.",
+      "display_order": 83
     },
     {
       "id": "weapon.flickerfly-blade",
@@ -1010,7 +1093,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Sharpwing: Gain a bonus to your damage rolls equal to your Agility. Damage bonus +5."
+      "feature": "Sharpwing: Gain a bonus to your damage rolls equal to your Agility. Damage bonus +5.",
+      "display_order": 84
     },
     {
       "id": "weapon.bravesword",
@@ -1022,7 +1106,8 @@
       "damage_dice": [{"sides": 12, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Brave: -1 to Evasion; +3 to severe damage threshold. Damage bonus +7."
+      "feature": "Brave: -1 to Evasion; +3 to severe damage threshold. Damage bonus +7.",
+      "display_order": 85
     },
     {
       "id": "weapon.hammer-of-wrath",
@@ -1034,7 +1119,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Devastating: Before you make an attack roll, you can mark a Stress to use a d20 as your damage die. Damage bonus +7."
+      "feature": "Devastating: Before you make an attack roll, you can mark a Stress to use a d20 as your damage die. Damage bonus +7.",
+      "display_order": 86
     },
     {
       "id": "weapon.labrys-axe",
@@ -1046,7 +1132,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Protective: +1 to Armor Score. Damage bonus +7."
+      "feature": "Protective: +1 to Armor Score. Damage bonus +7.",
+      "display_order": 87
     },
     {
       "id": "weapon.meridian-cutlass",
@@ -1058,7 +1145,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Dueling: When no other creatures are within close range of the target, gain advantage on your attack roll against them. Damage bonus +5."
+      "feature": "Dueling: When no other creatures are within close range of the target, gain advantage on your attack roll against them. Damage bonus +5.",
+      "display_order": 88
     },
     {
       "id": "weapon.retractable-saber",
@@ -1070,7 +1158,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Retractable: The blade can be hidden in the hilt to avoid detection. Damage bonus +7."
+      "feature": "Retractable: The blade can be hidden in the hilt to avoid detection. Damage bonus +7.",
+      "display_order": 89
     },
     {
       "id": "weapon.double-flail",
@@ -1082,7 +1171,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +8."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +8.",
+      "display_order": 90
     },
     {
       "id": "weapon.talon-blades",
@@ -1094,7 +1184,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +7."
+      "feature": "Brutal: When you roll the maximum value on a damage die, roll an additional damage die. Damage bonus +7.",
+      "display_order": 91
     },
     {
       "id": "weapon.black-powder-revolver",
@@ -1106,7 +1197,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +8."
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +8.",
+      "display_order": 92
     },
     {
       "id": "weapon.spiked-bow",
@@ -1118,7 +1210,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Versatile: You can also use it as Agility, melee range, d10 damage. Damage bonus +7."
+      "feature": "Versatile: You can also use it as Agility, melee range, d10 damage. Damage bonus +7.",
+      "display_order": 93
     },
     {
       "id": "weapon.arcane-gauntlets-advanced",
@@ -1130,7 +1223,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 94
     },
     {
       "id": "weapon.hallowed-axe-advanced",
@@ -1142,7 +1236,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 95
     },
     {
       "id": "weapon.glowing-rings-advanced",
@@ -1154,7 +1249,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +8."
+      "feature": "Damage bonus +8.",
+      "display_order": 96
     },
     {
       "id": "weapon.hand-runes-advanced",
@@ -1166,7 +1262,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +6."
+      "feature": "Damage bonus +6.",
+      "display_order": 97
     },
     {
       "id": "weapon.advanced-returning-blade",
@@ -1178,7 +1275,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +6."
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +6.",
+      "display_order": 98
     },
     {
       "id": "weapon.shortstaff-advanced",
@@ -1190,7 +1288,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 99
     },
     {
       "id": "weapon.dualstaff-advanced",
@@ -1202,7 +1301,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 100
     },
     {
       "id": "weapon.scepter-advanced",
@@ -1214,7 +1314,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +6."
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +6.",
+      "display_order": 101
     },
     {
       "id": "weapon.wand-advanced",
@@ -1226,7 +1327,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 102
     },
     {
       "id": "weapon.greatstaff-advanced",
@@ -1238,7 +1340,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +6.",
+      "display_order": 103
     },
     {
       "id": "weapon.axe-of-fortunis",
@@ -1250,7 +1353,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Lucky: On a failed attack, you can mark a Stress to reroll it. Damage bonus +8."
+      "feature": "Lucky: On a failed attack, you can mark a Stress to reroll it. Damage bonus +8.",
+      "display_order": 104
     },
     {
       "id": "weapon.blessed-anlace",
@@ -1262,7 +1366,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Healing: During downtime, automatically clear a Hit Point. Damage bonus +6."
+      "feature": "Healing: During downtime, automatically clear a Hit Point. Damage bonus +6.",
+      "display_order": 105
     },
     {
       "id": "weapon.ghostblade",
@@ -1274,7 +1379,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "mixed",
       "burden": 1,
-      "feature": "Otherworldly: On a successful attack, you can deal physical or magic damage. Damage bonus +7."
+      "feature": "Otherworldly: On a successful attack, you can deal physical or magic damage. Damage bonus +7.",
+      "display_order": 106
     },
     {
       "id": "weapon.runes-of-ruination",
@@ -1286,7 +1392,8 @@
       "damage_dice": [{"sides": 20, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Painful: Each time you make a successful attack, you must mark a Stress. Damage bonus +4."
+      "feature": "Painful: Each time you make a successful attack, you must mark a Stress. Damage bonus +4.",
+      "display_order": 107
     },
     {
       "id": "weapon.widogast-pendant",
@@ -1298,7 +1405,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Timebending: You can choose the target of your attack after making the roll. Damage bonus +5."
+      "feature": "Timebending: You can choose the target of your attack after making the roll. Damage bonus +5.",
+      "display_order": 108
     },
     {
       "id": "weapon.gilded-bow",
@@ -1310,7 +1418,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Self-Correcting: When you roll a 1 on a damage die, it deals 6 damage instead. Damage bonus +7."
+      "feature": "Self-Correcting: When you roll a 1 on a damage die, it deals 6 damage instead. Damage bonus +7.",
+      "display_order": 109
     },
     {
       "id": "weapon.firestaff",
@@ -1322,7 +1431,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Burning: When you roll a 6 on a damage die, the target must mark a Stress. Damage bonus +7."
+      "feature": "Burning: When you roll a 6 on a damage die, the target must mark a Stress. Damage bonus +7.",
+      "display_order": 110
     },
     {
       "id": "weapon.mage-orb",
@@ -1334,7 +1444,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +7."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +7.",
+      "display_order": 111
     },
     {
       "id": "weapon.ilmari-s-rifle",
@@ -1346,7 +1457,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +6."
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +6.",
+      "display_order": 112
     },
     {
       "id": "weapon.broadsword-legendary",
@@ -1358,7 +1470,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +9."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +9.",
+      "display_order": 113
     },
     {
       "id": "weapon.longsword-legendary",
@@ -1370,7 +1483,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +12."
+      "feature": "Damage bonus +12.",
+      "display_order": 114
     },
     {
       "id": "weapon.battleaxe-legendary",
@@ -1382,7 +1496,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +12."
+      "feature": "Damage bonus +12.",
+      "display_order": 115
     },
     {
       "id": "weapon.greatsword-legendary",
@@ -1394,7 +1509,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +12."
+      "feature": "Massive: -1 to Evasion; on a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +12.",
+      "display_order": 116
     },
     {
       "id": "weapon.mace-legendary",
@@ -1406,7 +1522,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +10."
+      "feature": "Damage bonus +10.",
+      "display_order": 117
     },
     {
       "id": "weapon.warhammer-legendary",
@@ -1418,7 +1535,8 @@
       "damage_dice": [{"sides": 12, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Heavy: -1 to Evasion. Damage bonus +12."
+      "feature": "Heavy: -1 to Evasion. Damage bonus +12.",
+      "display_order": 118
     },
     {
       "id": "weapon.dagger-legendary",
@@ -1430,7 +1548,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +10."
+      "feature": "Damage bonus +10.",
+      "display_order": 119
     },
     {
       "id": "weapon.quarterstaff-legendary",
@@ -1442,7 +1561,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +12."
+      "feature": "Damage bonus +12.",
+      "display_order": 120
     },
     {
       "id": "weapon.cutlass-legendary",
@@ -1454,7 +1574,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +10."
+      "feature": "Damage bonus +10.",
+      "display_order": 121
     },
     {
       "id": "weapon.rapier-legendary",
@@ -1466,7 +1587,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +9."
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +9.",
+      "display_order": 122
     },
     {
       "id": "weapon.halberd-legendary",
@@ -1478,7 +1600,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +11."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +11.",
+      "display_order": 123
     },
     {
       "id": "weapon.spear-legendary",
@@ -1490,7 +1613,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +12."
+      "feature": "Damage bonus +12.",
+      "display_order": 124
     },
     {
       "id": "weapon.shortbow-legendary",
@@ -1502,7 +1626,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Damage bonus +12."
+      "feature": "Damage bonus +12.",
+      "display_order": 125
     },
     {
       "id": "weapon.crossbow-legendary",
@@ -1514,7 +1639,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +10."
+      "feature": "Damage bonus +10.",
+      "display_order": 126
     },
     {
       "id": "weapon.longbow-legendary",
@@ -1526,7 +1652,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Cumbersome: -1 to Finesse. Damage bonus +12."
+      "feature": "Cumbersome: -1 to Finesse. Damage bonus +12.",
+      "display_order": 127
     },
     {
       "id": "weapon.dual-ended-sword",
@@ -1538,7 +1665,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +9."
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +9.",
+      "display_order": 128
     },
     {
       "id": "weapon.impact-gauntlet",
@@ -1550,7 +1678,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Concussive: On a successful attack, you can spend a Hope to knock the target back to far range. Damage bonus +11."
+      "feature": "Concussive: On a successful attack, you can spend a Hope to knock the target back to far range. Damage bonus +11.",
+      "display_order": 129
     },
     {
       "id": "weapon.sledge-axe",
@@ -1562,7 +1691,8 @@
       "damage_dice": [{"sides": 12, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Destructive: -1 to Agility; on a successful attack, all adversaries within very close range must mark a Stress. Damage bonus +13."
+      "feature": "Destructive: -1 to Agility; on a successful attack, all adversaries within very close range must mark a Stress. Damage bonus +13.",
+      "display_order": 130
     },
     {
       "id": "weapon.curved-dagger",
@@ -1574,7 +1704,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Serrated: When you roll a 1 on a damage die, it deals 8 damage instead. Damage bonus +9."
+      "feature": "Serrated: When you roll a 1 on a damage die, it deals 8 damage instead. Damage bonus +9.",
+      "display_order": 131
     },
     {
       "id": "weapon.extended-polearm",
@@ -1586,7 +1717,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Long: This weapon's attack targets all adversaries in a line within range. Damage bonus +10."
+      "feature": "Long: This weapon's attack targets all adversaries in a line within range. Damage bonus +10.",
+      "display_order": 132
     },
     {
       "id": "weapon.swinging-ropeblade",
@@ -1598,7 +1730,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Grappling: On a successful attack, you can spend a Hope to Restrain the target or pull them into melee range with you. Damage bonus +9."
+      "feature": "Grappling: On a successful attack, you can spend a Hope to Restrain the target or pull them into melee range with you. Damage bonus +9.",
+      "display_order": 133
     },
     {
       "id": "weapon.ricochet-axes",
@@ -1610,7 +1743,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Bouncing: Mark 1 or more Stress to hit that many targets in range of the attack. Damage bonus +11."
+      "feature": "Bouncing: Mark 1 or more Stress to hit that many targets in range of the attack. Damage bonus +11.",
+      "display_order": 134
     },
     {
       "id": "weapon.aantari-bow",
@@ -1622,7 +1756,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 2,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +11."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +11.",
+      "display_order": 135
     },
     {
       "id": "weapon.hand-cannon",
@@ -1634,7 +1769,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +12."
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +12.",
+      "display_order": 136
     },
     {
       "id": "weapon.arcane-gauntlets-legendary",
@@ -1646,7 +1782,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +12."
+      "feature": "Damage bonus +12.",
+      "display_order": 137
     },
     {
       "id": "weapon.hallowed-axe-legendary",
@@ -1658,7 +1795,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +10."
+      "feature": "Damage bonus +10.",
+      "display_order": 138
     },
     {
       "id": "weapon.glowing-rings-legendary",
@@ -1670,7 +1808,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +11."
+      "feature": "Damage bonus +11.",
+      "display_order": 139
     },
     {
       "id": "weapon.hand-runes-legendary",
@@ -1682,7 +1821,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +9."
+      "feature": "Damage bonus +9.",
+      "display_order": 140
     },
     {
       "id": "weapon.legendary-returning-blade",
@@ -1694,7 +1834,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +9."
+      "feature": "Returning: When this weapon is thrown within its range, it appears in your hand after the attack. Damage bonus +9.",
+      "display_order": 141
     },
     {
       "id": "weapon.shortstaff-legendary",
@@ -1706,7 +1847,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +10."
+      "feature": "Damage bonus +10.",
+      "display_order": 142
     },
     {
       "id": "weapon.dualstaff-legendary",
@@ -1718,7 +1860,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Damage bonus +12."
+      "feature": "Damage bonus +12.",
+      "display_order": 143
     },
     {
       "id": "weapon.scepter-legendary",
@@ -1730,7 +1873,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +9."
+      "feature": "Versatile: You can also use it as Presence, melee range, d8 damage. Damage bonus +9.",
+      "display_order": 144
     },
     {
       "id": "weapon.wand-legendary",
@@ -1742,7 +1886,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Damage bonus +10."
+      "feature": "Damage bonus +10.",
+      "display_order": 145
     },
     {
       "id": "weapon.greatstaff-legendary",
@@ -1754,7 +1899,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9.",
+      "display_order": 146
     },
     {
       "id": "weapon.sword-of-light-and-flame",
@@ -1766,7 +1912,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Hot: This weapon cuts through solid material. Damage bonus +11."
+      "feature": "Hot: This weapon cuts through solid material. Damage bonus +11.",
+      "display_order": 147
     },
     {
       "id": "weapon.siphoning-gauntlets",
@@ -1778,7 +1925,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Lifestealing: On a successful attack, roll a d6. On a 6, clear a Hit Point or clear a Stress. Damage bonus +9."
+      "feature": "Lifestealing: On a successful attack, roll a d6. On a 6, clear a Hit Point or clear a Stress. Damage bonus +9.",
+      "display_order": 148
     },
     {
       "id": "weapon.midas-scythe",
@@ -1790,7 +1938,8 @@
       "damage_dice": [{"sides": 10, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Greedy: Spend a handful of gold to gain +1 to your Proficiency on a damage roll. Damage bonus +9."
+      "feature": "Greedy: Spend a handful of gold to gain +1 to your Proficiency on a damage roll. Damage bonus +9.",
+      "display_order": 149
     },
     {
       "id": "weapon.floating-bladeshards",
@@ -1802,7 +1951,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9."
+      "feature": "Powerful: On a successful attack, roll an additional damage die and discard the lowest result. Damage bonus +9.",
+      "display_order": 150
     },
     {
       "id": "weapon.bloodstaff",
@@ -1814,7 +1964,8 @@
       "damage_dice": [{"sides": 20, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Painful: Each time you make a successful attack, you must mark a Stress. Damage bonus +7."
+      "feature": "Painful: Each time you make a successful attack, you must mark a Stress. Damage bonus +7.",
+      "display_order": 151
     },
     {
       "id": "weapon.thistlebow",
@@ -1826,7 +1977,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Reliable: +1 to attack rolls. Damage bonus +13."
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +13.",
+      "display_order": 152
     },
     {
       "id": "weapon.wand-of-essek",
@@ -1838,7 +1990,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Timebending: You can choose the target of your attack after making the roll. Damage bonus +13."
+      "feature": "Timebending: You can choose the target of your attack after making the roll. Damage bonus +13.",
+      "display_order": 153
     },
     {
       "id": "weapon.magus-revolver",
@@ -1850,7 +2003,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 1,
-      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +13."
+      "feature": "Reloading: After you make an attack, roll a d6. On a 1, you must mark a Stress to reload this weapon before you can fire it again. Damage bonus +13.",
+      "display_order": 154
     },
     {
       "id": "weapon.fusion-gloves",
@@ -1862,7 +2016,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "magic",
       "burden": 2,
-      "feature": "Bonded: Gain a bonus to your damage rolls equal to your level. Damage bonus +9."
+      "feature": "Bonded: Gain a bonus to your damage rolls equal to your level. Damage bonus +9.",
+      "display_order": 155
     },
     {
       "id": "weapon.shortsword",
@@ -1874,7 +2029,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +2 to primary weapon damage against targets within melee range."
+      "feature": "Paired: +2 to primary weapon damage against targets within melee range.",
+      "display_order": 156
     },
     {
       "id": "weapon.round-shield",
@@ -1886,7 +2042,8 @@
       "damage_dice": [{"sides": 4, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Protective: +1 to Armor Score."
+      "feature": "Protective: +1 to Armor Score.",
+      "display_order": 157
     },
     {
       "id": "weapon.tower-shield",
@@ -1898,7 +2055,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Barrier: +2 to Armor Score; -1 to Evasion."
+      "feature": "Barrier: +2 to Armor Score; -1 to Evasion.",
+      "display_order": 158
     },
     {
       "id": "weapon.small-dagger",
@@ -1910,7 +2068,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +2 to primary weapon damage against targets within melee range."
+      "feature": "Paired: +2 to primary weapon damage against targets within melee range.",
+      "display_order": 159
     },
     {
       "id": "weapon.whip",
@@ -1922,7 +2081,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range."
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range.",
+      "display_order": 160
     },
     {
       "id": "weapon.grappler",
@@ -1934,7 +2094,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Hooked: On a successful attack, you can pull the target into melee range."
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range.",
+      "display_order": 161
     },
     {
       "id": "weapon.hand-crossbow",
@@ -1946,7 +2107,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +1."
+      "feature": "Damage bonus +1.",
+      "display_order": 162
     },
     {
       "id": "weapon.shortsword-improved",
@@ -1958,7 +2120,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +3 to primary weapon damage against targets within melee range. Damage bonus +2."
+      "feature": "Paired: +3 to primary weapon damage against targets within melee range. Damage bonus +2.",
+      "display_order": 163
     },
     {
       "id": "weapon.round-shield-improved",
@@ -1970,7 +2133,8 @@
       "damage_dice": [{"sides": 4, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Protective: +2 to Armor Score. Damage bonus +2."
+      "feature": "Protective: +2 to Armor Score. Damage bonus +2.",
+      "display_order": 164
     },
     {
       "id": "weapon.tower-shield-improved",
@@ -1982,7 +2146,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Barrier: +3 to Armor Score; -1 to Evasion. Damage bonus +2."
+      "feature": "Barrier: +3 to Armor Score; -1 to Evasion. Damage bonus +2.",
+      "display_order": 165
     },
     {
       "id": "weapon.small-dagger-improved",
@@ -1994,7 +2159,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +3 to primary weapon damage against targets within melee range. Damage bonus +2."
+      "feature": "Paired: +3 to primary weapon damage against targets within melee range. Damage bonus +2.",
+      "display_order": 166
     },
     {
       "id": "weapon.whip-improved",
@@ -2006,7 +2172,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +2."
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +2.",
+      "display_order": 167
     },
     {
       "id": "weapon.grappler-improved",
@@ -2018,7 +2185,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +2."
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +2.",
+      "display_order": 168
     },
     {
       "id": "weapon.hand-crossbow-improved",
@@ -2030,7 +2198,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +3."
+      "feature": "Damage bonus +3.",
+      "display_order": 169
     },
     {
       "id": "weapon.spiked-shield",
@@ -2042,7 +2211,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Double Duty: +1 to Armor Score; +1 to primary weapon damage within melee range. Damage bonus +2."
+      "feature": "Double Duty: +1 to Armor Score; +1 to primary weapon damage within melee range. Damage bonus +2.",
+      "display_order": 170
     },
     {
       "id": "weapon.parrying-dagger",
@@ -2054,7 +2224,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Parry: When you are attacked, roll this weapon's damage dice. If any of the attacker's damage dice match your results, discard the matching dice before totaling the damage you take. Damage bonus +2."
+      "feature": "Parry: When you are attacked, roll this weapon's damage dice. If any of the attacker's damage dice match your results, discard the matching dice before totaling the damage you take. Damage bonus +2.",
+      "display_order": 171
     },
     {
       "id": "weapon.returning-axe",
@@ -2066,7 +2237,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Returning: When thrown within its range, it appears in your hand after the attack. Damage bonus +4."
+      "feature": "Returning: When thrown within its range, it appears in your hand after the attack. Damage bonus +4.",
+      "display_order": 172
     },
     {
       "id": "weapon.shortsword-advanced",
@@ -2078,7 +2250,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +4 to primary weapon damage against targets within melee range. Damage bonus +4."
+      "feature": "Paired: +4 to primary weapon damage against targets within melee range. Damage bonus +4.",
+      "display_order": 173
     },
     {
       "id": "weapon.round-shield-advanced",
@@ -2090,7 +2263,8 @@
       "damage_dice": [{"sides": 4, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Protective: +3 to Armor Score. Damage bonus +4."
+      "feature": "Protective: +3 to Armor Score. Damage bonus +4.",
+      "display_order": 174
     },
     {
       "id": "weapon.tower-shield-advanced",
@@ -2102,7 +2276,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Barrier: +4 to Armor Score; -1 to Evasion. Damage bonus +4."
+      "feature": "Barrier: +4 to Armor Score; -1 to Evasion. Damage bonus +4.",
+      "display_order": 175
     },
     {
       "id": "weapon.small-dagger-advanced",
@@ -2114,7 +2289,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +4 to primary weapon damage against targets within melee range. Damage bonus +4."
+      "feature": "Paired: +4 to primary weapon damage against targets within melee range. Damage bonus +4.",
+      "display_order": 176
     },
     {
       "id": "weapon.whip-advanced",
@@ -2126,7 +2302,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +4."
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +4.",
+      "display_order": 177
     },
     {
       "id": "weapon.grappler-advanced",
@@ -2138,7 +2315,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +4."
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +4.",
+      "display_order": 178
     },
     {
       "id": "weapon.hand-crossbow-advanced",
@@ -2150,7 +2328,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +5."
+      "feature": "Damage bonus +5.",
+      "display_order": 179
     },
     {
       "id": "weapon.buckler",
@@ -2162,7 +2341,8 @@
       "damage_dice": [{"sides": 4, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Deflecting: When you are attacked, you can mark an Armor Slot to gain an Evasion bonus equal to your available Armor Score against the attack. Damage bonus +4."
+      "feature": "Deflecting: When you are attacked, you can mark an Armor Slot to gain an Evasion bonus equal to your available Armor Score against the attack. Damage bonus +4.",
+      "display_order": 180
     },
     {
       "id": "weapon.powered-gauntlet",
@@ -2174,7 +2354,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Charged: Mark a Stress to gain +1 to your Proficiency on a primary weapon attack. Damage bonus +4."
+      "feature": "Charged: Mark a Stress to gain +1 to your Proficiency on a primary weapon attack. Damage bonus +4.",
+      "display_order": 181
     },
     {
       "id": "weapon.hand-sling",
@@ -2186,7 +2367,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Versatile: You can also use it as Finesse, close range, d8 with damage bonus +4. Damage bonus +4."
+      "feature": "Versatile: You can also use it as Finesse, close range, d8 with damage bonus +4. Damage bonus +4.",
+      "display_order": 182
     },
     {
       "id": "weapon.shortsword-legendary",
@@ -2198,7 +2380,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +5 to primary weapon damage against targets within melee range. Damage bonus +6."
+      "feature": "Paired: +5 to primary weapon damage against targets within melee range. Damage bonus +6.",
+      "display_order": 183
     },
     {
       "id": "weapon.round-shield-legendary",
@@ -2210,7 +2393,8 @@
       "damage_dice": [{"sides": 4, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Protective: +4 to Armor Score. Damage bonus +6."
+      "feature": "Protective: +4 to Armor Score. Damage bonus +6.",
+      "display_order": 184
     },
     {
       "id": "weapon.tower-shield-legendary",
@@ -2222,7 +2406,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Barrier: +5 to Armor Score; -1 to Evasion. Damage bonus +6."
+      "feature": "Barrier: +5 to Armor Score; -1 to Evasion. Damage bonus +6.",
+      "display_order": 185
     },
     {
       "id": "weapon.small-dagger-legendary",
@@ -2234,7 +2419,8 @@
       "damage_dice": [{"sides": 8, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Paired: +5 to primary weapon damage against targets within melee range. Damage bonus +6."
+      "feature": "Paired: +5 to primary weapon damage against targets within melee range. Damage bonus +6.",
+      "display_order": 186
     },
     {
       "id": "weapon.whip-legendary",
@@ -2246,7 +2432,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +6."
+      "feature": "Startling: Mark a Stress to crack the whip and force all adversaries within melee range back to close range. Damage bonus +6.",
+      "display_order": 187
     },
     {
       "id": "weapon.grappler-legendary",
@@ -2258,7 +2445,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +6."
+      "feature": "Hooked: On a successful attack, you can pull the target into melee range. Damage bonus +6.",
+      "display_order": 188
     },
     {
       "id": "weapon.hand-crossbow-legendary",
@@ -2270,7 +2458,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Damage bonus +7."
+      "feature": "Damage bonus +7.",
+      "display_order": 189
     },
     {
       "id": "weapon.braveshield",
@@ -2282,7 +2471,8 @@
       "damage_dice": [{"sides": 4, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Sheltering: When you mark an Armor Slot, it reduces damage for you and all allies within melee range who took the same damage. Damage bonus +6."
+      "feature": "Sheltering: When you mark an Armor Slot, it reduces damage for you and all allies within melee range who took the same damage. Damage bonus +6.",
+      "display_order": 190
     },
     {
       "id": "weapon.knuckle-claws",
@@ -2294,7 +2484,8 @@
       "damage_dice": [{"sides": 6, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Doubled Up: When you make a primary weapon attack, you can deal damage to another target within melee range. Damage bonus +8."
+      "feature": "Doubled Up: When you make a primary weapon attack, you can deal damage to another target within melee range. Damage bonus +8.",
+      "display_order": 191
     },
     {
       "id": "weapon.primer-shard",
@@ -2306,7 +2497,176 @@
       "damage_dice": [{"sides": 4, "count": 1}],
       "damage_type": "physical",
       "burden": 1,
-      "feature": "Locked On: On a successful attack, your next primary weapon attack against the same target automatically succeeds."
+      "feature": "Locked On: On a successful attack, your next primary weapon attack against the same target automatically succeeds.",
+      "display_order": 192
+    },
+    {
+      "id": "weapon.light-frame-wheelchair",
+      "name": "Light-Frame Wheelchair",
+      "category": "primary",
+      "tier": 1,
+      "trait": "Agility",
+      "range": "melee",
+      "damage_dice": [{"sides": 8, "count": 1}],
+      "damage_type": "physical",
+      "burden": 1,
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range.",
+      "display_order": 193,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.light-frame-wheelchair-improved",
+      "name": "Improved Light-Frame Wheelchair",
+      "category": "primary",
+      "tier": 2,
+      "trait": "Agility",
+      "range": "melee",
+      "damage_dice": [{"sides": 8, "count": 1}],
+      "damage_type": "physical",
+      "burden": 1,
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +3.",
+      "display_order": 194,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.light-frame-wheelchair-advanced",
+      "name": "Advanced Light-Frame Wheelchair",
+      "category": "primary",
+      "tier": 3,
+      "trait": "Agility",
+      "range": "melee",
+      "damage_dice": [{"sides": 8, "count": 1}],
+      "damage_type": "physical",
+      "burden": 1,
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +6.",
+      "display_order": 195,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.light-frame-wheelchair-legendary",
+      "name": "Legendary Light-Frame Wheelchair",
+      "category": "primary",
+      "tier": 4,
+      "trait": "Agility",
+      "range": "melee",
+      "damage_dice": [{"sides": 8, "count": 1}],
+      "damage_type": "physical",
+      "burden": 1,
+      "feature": "Quick: When you make an attack, you can mark a Stress to target another creature within range. Damage bonus +9.",
+      "display_order": 196,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.heavy-frame-wheelchair",
+      "name": "Heavy-Frame Wheelchair",
+      "category": "primary",
+      "tier": 1,
+      "trait": "Strength",
+      "range": "melee",
+      "damage_dice": [{"sides": 12, "count": 1}],
+      "damage_type": "physical",
+      "burden": 2,
+      "feature": "Heavy: -1 to Evasion. Damage bonus +3.",
+      "display_order": 197,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.heavy-frame-wheelchair-improved",
+      "name": "Improved Heavy-Frame Wheelchair",
+      "category": "primary",
+      "tier": 2,
+      "trait": "Strength",
+      "range": "melee",
+      "damage_dice": [{"sides": 12, "count": 1}],
+      "damage_type": "physical",
+      "burden": 2,
+      "feature": "Heavy: -1 to Evasion. Damage bonus +6.",
+      "display_order": 198,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.heavy-frame-wheelchair-advanced",
+      "name": "Advanced Heavy-Frame Wheelchair",
+      "category": "primary",
+      "tier": 3,
+      "trait": "Strength",
+      "range": "melee",
+      "damage_dice": [{"sides": 12, "count": 1}],
+      "damage_type": "physical",
+      "burden": 2,
+      "feature": "Heavy: -1 to Evasion. Damage bonus +9.",
+      "display_order": 199,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.heavy-frame-wheelchair-legendary",
+      "name": "Legendary Heavy-Frame Wheelchair",
+      "category": "primary",
+      "tier": 4,
+      "trait": "Strength",
+      "range": "melee",
+      "damage_dice": [{"sides": 12, "count": 1}],
+      "damage_type": "physical",
+      "burden": 2,
+      "feature": "Heavy: -1 to Evasion. Damage bonus +12.",
+      "display_order": 200,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.arcane-frame-wheelchair",
+      "name": "Arcane-Frame Wheelchair",
+      "category": "primary",
+      "tier": 1,
+      "trait": "Spellcast",
+      "range": "far",
+      "damage_dice": [{"sides": 6, "count": 1}],
+      "damage_type": "magic",
+      "burden": 1,
+      "feature": "Reliable: +1 to attack rolls.",
+      "display_order": 201,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.arcane-frame-wheelchair-improved",
+      "name": "Improved Arcane-Frame Wheelchair",
+      "category": "primary",
+      "tier": 2,
+      "trait": "Spellcast",
+      "range": "far",
+      "damage_dice": [{"sides": 6, "count": 1}],
+      "damage_type": "magic",
+      "burden": 1,
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +3.",
+      "display_order": 202,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.arcane-frame-wheelchair-advanced",
+      "name": "Advanced Arcane-Frame Wheelchair",
+      "category": "primary",
+      "tier": 3,
+      "trait": "Spellcast",
+      "range": "far",
+      "damage_dice": [{"sides": 6, "count": 1}],
+      "damage_type": "magic",
+      "burden": 1,
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +6.",
+      "display_order": 203,
+      "display_group": "combat_wheelchair"
+    },
+    {
+      "id": "weapon.arcane-frame-wheelchair-legendary",
+      "name": "Legendary Arcane-Frame Wheelchair",
+      "category": "primary",
+      "tier": 4,
+      "trait": "Spellcast",
+      "range": "far",
+      "damage_dice": [{"sides": 6, "count": 1}],
+      "damage_type": "magic",
+      "burden": 1,
+      "feature": "Reliable: +1 to attack rolls. Damage bonus +9.",
+      "display_order": 204,
+      "display_group": "combat_wheelchair"
     }
   ]
 }

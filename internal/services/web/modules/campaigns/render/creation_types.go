@@ -54,14 +54,21 @@ type CampaignCreationHeritageView struct {
 
 // CampaignCreationWeaponView carries one weapon choice.
 type CampaignCreationWeaponView struct {
-	ID       string
-	Name     string
-	ImageURL string
-	Burden   int32
-	Trait    string
-	Range    string
-	Damage   string
-	Feature  string
+	ID           string
+	Name         string
+	ImageURL     string
+	Burden       int32
+	Trait        string
+	Range        string
+	Damage       string
+	Feature      string
+	DisplayGroup string
+}
+
+// CampaignCreationWeaponGroupView carries one ordered render-time weapon group.
+type CampaignCreationWeaponGroupView struct {
+	Key     string
+	Weapons []CampaignCreationWeaponView
 }
 
 // CampaignCreationArmorView carries one armor choice.
@@ -165,6 +172,8 @@ type CampaignCharacterCreationView struct {
 	Communities                  []CampaignCreationHeritageView
 	PrimaryWeapons               []CampaignCreationWeaponView
 	SecondaryWeapons             []CampaignCreationWeaponView
+	PrimaryWeaponGroups          []CampaignCreationWeaponGroupView
+	SecondaryWeaponGroups        []CampaignCreationWeaponGroupView
 	SecondaryWeaponNoneImageURL  string
 	Armor                        []CampaignCreationArmorView
 	PotionItems                  []CampaignCreationItemView

@@ -24,16 +24,18 @@ func toProtoDaggerheartLootEntries(entries []contentstore.DaggerheartLootEntry) 
 
 func toProtoDaggerheartWeapon(weapon contentstore.DaggerheartWeapon) *pb.DaggerheartWeapon {
 	return &pb.DaggerheartWeapon{
-		Id:         weapon.ID,
-		Name:       weapon.Name,
-		Category:   weaponCategoryToProto(weapon.Category),
-		Tier:       int32(weapon.Tier),
-		Trait:      weapon.Trait,
-		Range:      weapon.Range,
-		DamageDice: toProtoDaggerheartDamageDice(weapon.DamageDice),
-		DamageType: damageTypeToProto(weapon.DamageType),
-		Burden:     int32(weapon.Burden),
-		Feature:    weapon.Feature,
+		Id:           weapon.ID,
+		Name:         weapon.Name,
+		Category:     weaponCategoryToProto(weapon.Category),
+		Tier:         int32(weapon.Tier),
+		Trait:        weapon.Trait,
+		Range:        weapon.Range,
+		DamageDice:   toProtoDaggerheartDamageDice(weapon.DamageDice),
+		DamageType:   damageTypeToProto(weapon.DamageType),
+		Burden:       int32(weapon.Burden),
+		Feature:      weapon.Feature,
+		DisplayOrder: int32(weapon.DisplayOrder),
+		DisplayGroup: weaponDisplayGroupToProto(string(weapon.DisplayGroup)),
 	}
 }
 

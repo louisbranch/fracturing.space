@@ -496,12 +496,12 @@ DELETE FROM daggerheart_domain_cards WHERE id = ?;
 SELECT * FROM daggerheart_weapons WHERE id = ?;
 
 -- name: ListDaggerheartWeapons :many
-SELECT * FROM daggerheart_weapons ORDER BY name ASC, id ASC;
+SELECT * FROM daggerheart_weapons ORDER BY display_order ASC, id ASC;
 
 -- name: PutDaggerheartWeapon :exec
 INSERT INTO daggerheart_weapons (
-    id, name, category, tier, trait, range, damage_dice_json, damage_type, burden, feature, created_at, updated_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    id, name, category, tier, trait, range, damage_dice_json, damage_type, burden, feature, display_order, display_group, created_at, updated_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     name = excluded.name,
     category = excluded.category,
@@ -512,6 +512,8 @@ ON CONFLICT(id) DO UPDATE SET
     damage_type = excluded.damage_type,
     burden = excluded.burden,
     feature = excluded.feature,
+    display_order = excluded.display_order,
+    display_group = excluded.display_group,
     created_at = excluded.created_at,
     updated_at = excluded.updated_at;
 

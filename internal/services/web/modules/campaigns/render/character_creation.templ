@@ -352,6 +352,140 @@ func creationWeaponHandednessLabel(loc Localizer, burden int32) string {
 	}
 }
 
+func creationWeaponGroupLabel(loc Localizer, key string) string {
+	switch strings.TrimSpace(key) {
+	case "magic":
+		return T(loc, "game.character_creation.weapon_group.magic")
+	case "combat_wheelchair":
+		return T(loc, "game.character_creation.weapon_group.combat_wheelchair")
+	default:
+		return T(loc, "game.character_creation.weapon_group.physical")
+	}
+}
+
+func creationWeaponGroups(groups []CampaignCreationWeaponGroupView, fallback []CampaignCreationWeaponView) []CampaignCreationWeaponGroupView {
+	if len(groups) > 0 {
+		return groups
+	}
+	if len(fallback) == 0 {
+		return nil
+	}
+	bucketed := map[string][]CampaignCreationWeaponView{
+		"physical":          {},
+		"magic":             {},
+		"combat_wheelchair": {},
+	}
+	for _, weapon := range fallback {
+		key := strings.TrimSpace(weapon.DisplayGroup)
+		if key == "" {
+			key = "physical"
+		}
+		bucketed[key] = append(bucketed[key], weapon)
+	}
+	ordered := []string{"physical", "magic", "combat_wheelchair"}
+	result := make([]CampaignCreationWeaponGroupView, 0, len(ordered))
+	for _, key := range ordered {
+		if len(bucketed[key]) == 0 {
+			continue
+		}
+		result = append(result, CampaignCreationWeaponGroupView{
+			Key:     key,
+			Weapons: append([]CampaignCreationWeaponView(nil), bucketed[key]...),
+		})
+	}
+	return result
+}
+
+templ creationPrimaryWeaponGroups(view CharacterCreationPageView, loc Localizer) {
+	for _, group := range creationWeaponGroups(view.Creation.PrimaryWeaponGroups, view.Creation.PrimaryWeapons) {
+		<div class="mt-4">
+			<div class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] opacity-60">{ creationWeaponGroupLabel(loc, group.Key) }</div>
+			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+				for _, weapon := range group.Weapons {
+					<div data-equip-card data-equip-card-name={ weapon.Name } data-weapon-burden={ fmt.Sprintf("%d", weapon.Burden) }>
+						@creationSelectableOptionCard(
+							weapon.ID,
+							weapon.Name,
+							weapon.ImageURL,
+							"weapon_primary_id",
+							"radio",
+							campaignCreationOptionSelected(weapon.ID, view.Creation.PrimaryWeaponID),
+							true,
+							false,
+							true,
+							"equipment-primary-weapon",
+							nil,
+						) {
+							<div class="flex flex-wrap gap-2 text-xs">
+								if creationWeaponHandednessLabel(loc, weapon.Burden) != "" {
+									<span class="badge badge-secondary badge-sm">{ creationWeaponHandednessLabel(loc, weapon.Burden) }</span>
+								}
+								if weapon.Damage != "" {
+									<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
+								}
+								if weapon.Range != "" {
+									<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
+								}
+								if weapon.Trait != "" {
+									<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
+								}
+							</div>
+							if weapon.Feature != "" {
+								<p class="text-xs opacity-60 mt-1">@creationCatalogInlineMarkdown(weapon.Feature)</p>
+							}
+						}
+					</div>
+				}
+			</div>
+		</div>
+	}
+}
+
+templ creationSecondaryWeaponGroups(view CharacterCreationPageView, loc Localizer) {
+	for _, group := range creationWeaponGroups(view.Creation.SecondaryWeaponGroups, view.Creation.SecondaryWeapons) {
+		<div class="mt-4">
+			<div class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] opacity-60">{ creationWeaponGroupLabel(loc, group.Key) }</div>
+			<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+				for _, weapon := range group.Weapons {
+					<div data-equip-card data-equip-card-name={ weapon.Name }>
+						@creationSelectableOptionCard(
+							weapon.ID,
+							weapon.Name,
+							weapon.ImageURL,
+							"weapon_secondary_id",
+							"radio",
+							campaignCreationOptionSelected(weapon.ID, view.Creation.SecondaryWeaponID),
+							false,
+							false,
+							true,
+							"equipment-secondary-weapon",
+							nil,
+						) {
+							<div class="flex flex-wrap gap-2 text-xs">
+								if creationWeaponHandednessLabel(loc, weapon.Burden) != "" {
+									<span class="badge badge-secondary badge-sm">{ creationWeaponHandednessLabel(loc, weapon.Burden) }</span>
+								}
+								if weapon.Damage != "" {
+									<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
+								}
+								if weapon.Range != "" {
+									<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
+								}
+								if weapon.Trait != "" {
+									<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
+								}
+							</div>
+							if weapon.Feature != "" {
+								<p class="text-xs opacity-60 mt-1">@creationCatalogInlineMarkdown(weapon.Feature)</p>
+							}
+						}
+					</div>
+				}
+			</div>
+		</div>
+	}
+}
+
 func creationStepExperiencesReady(view CampaignCharacterCreationView) bool {
 	if len(view.Experiences) < 2 {
 		return false
@@ -1556,43 +1690,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 			<div class={ creationClassGridHidden(view.Creation.PrimaryWeaponID) } data-equip-grid>
 				<div class="form-control">
 					<label class="label"><span class="label-text font-medium">{ T(loc, "game.character_creation.field.primary_weapon") }</span></label>
-					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-						for _, weapon := range view.Creation.PrimaryWeapons {
-							<div data-equip-card data-equip-card-name={ weapon.Name } data-weapon-burden={ fmt.Sprintf("%d", weapon.Burden) }>
-								@creationSelectableOptionCard(
-									weapon.ID,
-									weapon.Name,
-									weapon.ImageURL,
-									"weapon_primary_id",
-									"radio",
-									campaignCreationOptionSelected(weapon.ID, view.Creation.PrimaryWeaponID),
-									true,
-									false,
-									true,
-									"equipment-primary-weapon",
-									nil,
-								) {
-									<div class="flex flex-wrap gap-2 text-xs">
-										if creationWeaponHandednessLabel(loc, weapon.Burden) != "" {
-											<span class="badge badge-secondary badge-sm">{ creationWeaponHandednessLabel(loc, weapon.Burden) }</span>
-										}
-										if weapon.Damage != "" {
-											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
-										}
-										if weapon.Range != "" {
-											<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
-										}
-										if weapon.Trait != "" {
-											<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
-										}
-									</div>
-									if weapon.Feature != "" {
-										<p class="text-xs opacity-60 mt-1">@creationCatalogInlineMarkdown(weapon.Feature)</p>
-									}
-								}
-							</div>
-						}
-					</div>
+					@creationPrimaryWeaponGroups(view, loc)
 				</div>
 			</div>
 		</div>
@@ -1606,7 +1704,7 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 			<div data-equip-grid>
 				<div class="divider">{ T(loc, "game.character_creation.field.secondary_weapon") }</div>
 				<div class="form-control">
-					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+					<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3 mb-4">
 						<div data-equip-card data-equip-card-name={ T(loc, "game.character_creation.value.none") }>
 							@creationSelectableOptionCard(
 								"",
@@ -1624,42 +1722,8 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 								<p class={ "text-xs opacity-60 mt-1 " + creationConditionalHidden(creationTwoHandedPrimarySelected(view.Creation)) } data-secondary-none-locked-copy>{ T(loc, "game.character_creation.secondary_weapon_disabled_two_handed") }</p>
 							}
 						</div>
-						for _, weapon := range view.Creation.SecondaryWeapons {
-							<div data-equip-card data-equip-card-name={ weapon.Name }>
-								@creationSelectableOptionCard(
-									weapon.ID,
-									weapon.Name,
-									weapon.ImageURL,
-									"weapon_secondary_id",
-									"radio",
-									campaignCreationOptionSelected(weapon.ID, view.Creation.SecondaryWeaponID),
-									false,
-									false,
-									true,
-									"equipment-secondary-weapon",
-									nil,
-								) {
-									<div class="flex flex-wrap gap-2 text-xs">
-										if creationWeaponHandednessLabel(loc, weapon.Burden) != "" {
-											<span class="badge badge-secondary badge-sm">{ creationWeaponHandednessLabel(loc, weapon.Burden) }</span>
-										}
-										if weapon.Damage != "" {
-											<span class="badge badge-outline badge-sm">{ weapon.Damage }</span>
-										}
-										if weapon.Range != "" {
-											<span class="badge badge-outline badge-sm">{ weapon.Range }</span>
-										}
-										if weapon.Trait != "" {
-											<span class="badge badge-ghost badge-sm">{ weapon.Trait }</span>
-										}
-									</div>
-									if weapon.Feature != "" {
-										<p class="text-xs opacity-60 mt-1">@creationCatalogInlineMarkdown(weapon.Feature)</p>
-									}
-								}
-							</div>
-						}
 					</div>
+					@creationSecondaryWeaponGroups(view, loc)
 				</div>
 			</div>
 		</div>
@@ -1750,10 +1814,9 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 			var form = document.querySelector('[data-character-creation-form-step="4"]');
 			if (!form) return;
 			var sections = form.querySelectorAll('[data-equip-section]');
+			var sectionOrder = ['weapon_primary_id', 'weapon_secondary_id', 'armor_id', 'potion_item_id'];
 			var nextButton = form.querySelector('[data-character-creation-next]');
 			var secondarySection = form.querySelector('[data-equip-section="weapon_secondary_id"]');
-			var secondarySummary = secondarySection ? secondarySection.querySelector('[data-equip-selected]') : null;
-			var secondaryGrid = secondarySection ? secondarySection.querySelector('[data-equip-grid]') : null;
 			var secondaryNoneLockedCopy = form.querySelector('[data-secondary-none-locked-copy]');
 
 			function selectedPrimaryBurden() {
@@ -1766,13 +1829,39 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 			}
 
 			function setSecondaryOptionDisabled(input, disabled) {
-				if (!input || input.value === '') return;
+				if (!input) return;
 				input.disabled = disabled;
 				var card = input.closest('label');
 				if (!card) return;
 				card.classList.toggle('opacity-60', disabled);
 				card.classList.toggle('cursor-not-allowed', disabled);
 				card.classList.toggle('pointer-events-none', disabled);
+			}
+
+			function sectionForName(sectionName) {
+				return form.querySelector('[data-equip-section="' + sectionName + '"]');
+			}
+
+			function focusSection(sectionName) {
+				var section = sectionForName(sectionName);
+				if (!section) return;
+				var grid = section.querySelector('[data-equip-grid]');
+				if (!grid || grid.classList.contains('hidden')) return;
+				grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+
+			function focusNextSection(sectionName) {
+				var start = sectionOrder.indexOf(sectionName);
+				for (var i = start + 1; i < sectionOrder.length; i++) {
+					var next = sectionOrder[i];
+					var nextSection = sectionForName(next);
+					if (!nextSection) continue;
+					var nextGrid = nextSection.querySelector('[data-equip-grid]');
+					if (nextGrid && !nextGrid.classList.contains('hidden')) {
+						nextGrid.scrollIntoView({ behavior: 'smooth', block: 'start' });
+						return;
+					}
+				}
 			}
 
 			function syncSectionSelectedState(section) {
@@ -1788,18 +1877,58 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 				});
 			}
 
-			function syncSecondaryAvailability() {
+			function collapseSection(sectionName, shouldFocusNext) {
+				var section = sectionForName(sectionName);
+				if (!section) return;
+				var inputName = section.dataset.equipSection;
+				var summary = section.querySelector('[data-equip-selected]');
+				var nameEl = section.querySelector('[data-equip-selected-name]');
+				var grid = section.querySelector('[data-equip-grid]');
+				if (!inputName || !summary || !grid) return;
+				var checked = section.querySelector('input[name="' + inputName + '"]:checked');
+				if (!checked) return;
+				var card = checked.closest('[data-equip-card]');
+				if (card && nameEl) nameEl.textContent = card.dataset.equipCardName;
+				syncSectionSelectedState(section);
+				grid.classList.add('hidden');
+				summary.classList.remove('hidden');
+				if (shouldFocusNext) focusNextSection(sectionName);
+				updateNextButton();
+			}
+
+			function expandSection(sectionName, shouldFocus) {
+				var section = sectionForName(sectionName);
+				if (!section) return;
+				var summary = section.querySelector('[data-equip-selected]');
+				var grid = section.querySelector('[data-equip-grid]');
+				if (!summary || !grid) return;
+				syncSectionSelectedState(section);
+				grid.classList.remove('hidden');
+				summary.classList.add('hidden');
+				if (shouldFocus) focusSection(sectionName);
+				updateNextButton();
+			}
+
+			function syncSecondaryAvailability(shouldFocus) {
 				var burden = selectedPrimaryBurden();
 				var twoHanded = burden === 2;
 				var noneOption = form.querySelector('input[name="weapon_secondary_id"][value=""]');
 				var checkedSecondary = form.querySelector('input[name="weapon_secondary_id"]:checked');
 
-				if (twoHanded && checkedSecondary && checkedSecondary.value !== '' && noneOption) {
+				if (twoHanded && noneOption) {
 					noneOption.checked = true;
 					checkedSecondary = noneOption;
 				}
+				if (!twoHanded && checkedSecondary && checkedSecondary.value === '') {
+					checkedSecondary.checked = false;
+					checkedSecondary = null;
+				}
 
+				if (noneOption) {
+					setSecondaryOptionDisabled(noneOption, !twoHanded);
+				}
 				form.querySelectorAll('input[name="weapon_secondary_id"]').forEach(function(input) {
+					if (input.value === '') return;
 					setSecondaryOptionDisabled(input, twoHanded);
 				});
 
@@ -1807,10 +1936,13 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 					secondaryNoneLockedCopy.classList.toggle('hidden', !twoHanded);
 				}
 				syncSectionSelectedState(secondarySection);
-				if (twoHanded && secondarySummary && secondaryGrid) {
-					secondarySummary.classList.add('hidden');
-					secondaryGrid.classList.remove('hidden');
+				if (twoHanded) {
+					collapseSection('weapon_secondary_id', false);
+					if (shouldFocus) focusNextSection('weapon_secondary_id');
+					return;
 				}
+				expandSection('weapon_secondary_id', false);
+				if (shouldFocus) focusSection('weapon_secondary_id');
 			}
 
 			function updateNextButton() {
@@ -1827,50 +1959,65 @@ templ creationStepEquipment(view CharacterCreationPageView, loc Localizer) {
 				nextButton.disabled = !ready;
 			}
 
+			function runAfterInputSelection(callback) {
+				if (typeof callback !== 'function') return;
+				if (typeof window.requestAnimationFrame === 'function') {
+					window.requestAnimationFrame(callback);
+					return;
+				}
+				window.setTimeout(callback, 0);
+			}
+
 			sections.forEach(function(section) {
 				var inputName = section.dataset.equipSection;
-				var summary = section.querySelector('[data-equip-selected]');
-				var nameEl = section.querySelector('[data-equip-selected-name]');
-				var grid = section.querySelector('[data-equip-grid]');
 				var changeBtn = section.querySelector('[data-equip-change]');
-
-				function collapse() {
-					var checked = section.querySelector('input[name="' + inputName + '"]:checked');
-					if (!checked) return;
-					var card = checked.closest('[data-equip-card]');
-					if (card) nameEl.textContent = card.dataset.equipCardName;
-					syncSectionSelectedState(section);
-					grid.classList.add('hidden');
-					summary.classList.remove('hidden');
-					updateNextButton();
-				}
-
-				function expand() {
-					syncSectionSelectedState(section);
-					grid.classList.remove('hidden');
-					summary.classList.add('hidden');
-					updateNextButton();
-				}
 
 				// Collapse on selection (click fires even when re-selecting same option)
 				section.querySelectorAll('input[name="' + inputName + '"]').forEach(function(r) {
-					r.addEventListener('click', collapse);
+					r.addEventListener('click', function() {
+						runAfterInputSelection(function() {
+							if (inputName === 'weapon_primary_id') {
+								collapseSection(inputName, false);
+								syncSecondaryAvailability(true);
+								return;
+							}
+							if (inputName === 'weapon_secondary_id') {
+								if (selectedPrimaryBurden() === 2) {
+									collapseSection(inputName, true);
+									return;
+								}
+								if (selectedPrimaryBurden() !== 1) return;
+								collapseSection(inputName, true);
+								return;
+							}
+							if (inputName === 'armor_id') {
+								collapseSection(inputName, true);
+								return;
+							}
+							collapseSection(inputName, false);
+						});
+					});
 				});
 
-				if (changeBtn) changeBtn.addEventListener('click', expand);
+				if (changeBtn) {
+					changeBtn.addEventListener('click', function() {
+						expandSection(inputName, false);
+					});
+				}
 
 				// Collapse on load if already selected
 				var checked = section.querySelector('input[name="' + inputName + '"]:checked');
 				syncSectionSelectedState(section);
-				if (checked && checked.value !== '') collapse();
+				if (inputName === 'weapon_secondary_id') return;
+				if (checked && checked.value !== '') collapseSection(inputName, false);
 			});
 			form.querySelectorAll('input[name="weapon_primary_id"], input[name="weapon_secondary_id"]').forEach(function(input) {
 				input.addEventListener('change', function() {
-					syncSecondaryAvailability();
+					syncSecondaryAvailability(false);
 					updateNextButton();
 				});
 			});
-			syncSecondaryAvailability();
+			syncSecondaryAvailability(false);
 			updateNextButton();
 		})();
 	</script>

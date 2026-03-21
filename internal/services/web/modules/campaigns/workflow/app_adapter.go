@@ -279,6 +279,8 @@ func mapWeapons(weapons []campaignapp.CatalogWeapon) []Weapon {
 			Range:        weapon.Range,
 			Damage:       weapon.Damage,
 			Feature:      weapon.Feature,
+			DisplayOrder: weapon.DisplayOrder,
+			DisplayGroup: weapon.DisplayGroup,
 			Illustration: mapAssetReference(weapon.Illustration),
 		})
 	}

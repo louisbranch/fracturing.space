@@ -1620,7 +1620,7 @@ func AppLayoutWithMainHeaderAndLayout(title string, viewer module.Viewer, header
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "<header class=\"navbar bg-base-200 fixed top-0 w-full z-50\"><div class=\"navbar-start w-auto\"><a href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 84, "<header class=\"navbar bg-base-200 fixed top-0 w-full z-50\" data-app-navbar=\"true\"><div class=\"navbar-start w-auto\"><a href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

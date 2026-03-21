@@ -57,14 +57,21 @@ type CreationHeritageView struct {
 
 // CreationWeaponView carries one weapon choice.
 type CreationWeaponView struct {
-	ID       string
-	Name     string
-	ImageURL string
-	Burden   int32
-	Trait    string
-	Range    string
-	Damage   string
-	Feature  string
+	ID           string
+	Name         string
+	ImageURL     string
+	Burden       int32
+	Trait        string
+	Range        string
+	Damage       string
+	Feature      string
+	DisplayGroup string
+}
+
+// CreationWeaponGroupView carries one ordered weapon display group.
+type CreationWeaponGroupView struct {
+	Key     string
+	Weapons []CreationWeaponView
 }
 
 // CreationArmorView carries one armor choice.
@@ -170,6 +177,8 @@ type CharacterCreationView struct {
 	Communities                  []CreationHeritageView
 	PrimaryWeapons               []CreationWeaponView
 	SecondaryWeapons             []CreationWeaponView
+	PrimaryWeaponGroups          []CreationWeaponGroupView
+	SecondaryWeaponGroups        []CreationWeaponGroupView
 	SecondaryWeaponNoneImageURL  string
 	Armor                        []CreationArmorView
 	PotionItems                  []CreationItemView

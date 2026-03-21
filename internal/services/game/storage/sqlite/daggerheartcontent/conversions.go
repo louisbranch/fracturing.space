@@ -227,17 +227,19 @@ func dbDaggerheartDomainCardToStorage(row db.DaggerheartDomainCard) contentstore
 
 func dbDaggerheartWeaponToStorage(row db.DaggerheartWeapon) (contentstore.DaggerheartWeapon, error) {
 	weapon := contentstore.DaggerheartWeapon{
-		ID:         row.ID,
-		Name:       row.Name,
-		Category:   row.Category,
-		Tier:       int(row.Tier),
-		Trait:      row.Trait,
-		Range:      row.Range,
-		DamageType: row.DamageType,
-		Burden:     int(row.Burden),
-		Feature:    row.Feature,
-		CreatedAt:  sqliteutil.FromMillis(row.CreatedAt),
-		UpdatedAt:  sqliteutil.FromMillis(row.UpdatedAt),
+		ID:           row.ID,
+		Name:         row.Name,
+		Category:     row.Category,
+		Tier:         int(row.Tier),
+		Trait:        row.Trait,
+		Range:        row.Range,
+		DamageType:   row.DamageType,
+		Burden:       int(row.Burden),
+		Feature:      row.Feature,
+		DisplayOrder: int(row.DisplayOrder),
+		DisplayGroup: contentstore.DaggerheartWeaponDisplayGroup(row.DisplayGroup),
+		CreatedAt:    sqliteutil.FromMillis(row.CreatedAt),
+		UpdatedAt:    sqliteutil.FromMillis(row.UpdatedAt),
 	}
 	if err := unmarshalOptionalJSON(row.DamageDiceJson, &weapon.DamageDice, "daggerheart weapon damage dice"); err != nil {
 		return contentstore.DaggerheartWeapon{}, err

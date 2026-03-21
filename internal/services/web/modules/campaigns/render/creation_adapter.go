@@ -38,6 +38,8 @@ func NewCharacterCreationView(view campaignworkflow.CharacterCreationView) Campa
 		Communities:                  mapHeritageViews(view.Communities),
 		PrimaryWeapons:               mapWeaponViews(view.PrimaryWeapons),
 		SecondaryWeapons:             mapWeaponViews(view.SecondaryWeapons),
+		PrimaryWeaponGroups:          mapWeaponGroupViews(view.PrimaryWeaponGroups),
+		SecondaryWeaponGroups:        mapWeaponGroupViews(view.SecondaryWeaponGroups),
 		SecondaryWeaponNoneImageURL:  view.SecondaryWeaponNoneImageURL,
 		Armor:                        mapArmorViews(view.Armor),
 		PotionItems:                  mapItemViews(view.PotionItems),
@@ -162,14 +164,27 @@ func mapWeaponViews(weapons []campaignworkflow.CreationWeaponView) []CampaignCre
 	mapped := make([]CampaignCreationWeaponView, 0, len(weapons))
 	for _, weapon := range weapons {
 		mapped = append(mapped, CampaignCreationWeaponView{
-			ID:       weapon.ID,
-			Name:     weapon.Name,
-			ImageURL: weapon.ImageURL,
-			Burden:   weapon.Burden,
-			Trait:    weapon.Trait,
-			Range:    weapon.Range,
-			Damage:   weapon.Damage,
-			Feature:  weapon.Feature,
+			ID:           weapon.ID,
+			Name:         weapon.Name,
+			ImageURL:     weapon.ImageURL,
+			Burden:       weapon.Burden,
+			Trait:        weapon.Trait,
+			Range:        weapon.Range,
+			Damage:       weapon.Damage,
+			Feature:      weapon.Feature,
+			DisplayGroup: weapon.DisplayGroup,
+		})
+	}
+	return mapped
+}
+
+// mapWeaponGroupViews copies workflow weapon groups into the template seam.
+func mapWeaponGroupViews(groups []campaignworkflow.CreationWeaponGroupView) []CampaignCreationWeaponGroupView {
+	mapped := make([]CampaignCreationWeaponGroupView, 0, len(groups))
+	for _, group := range groups {
+		mapped = append(mapped, CampaignCreationWeaponGroupView{
+			Key:     group.Key,
+			Weapons: mapWeaponViews(group.Weapons),
 		})
 	}
 	return mapped

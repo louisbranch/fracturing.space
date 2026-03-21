@@ -346,18 +346,20 @@ func upsertWeapons(ctx context.Context, store contentstore.DaggerheartContentSto
 		}
 		if isBase {
 			weapon := contentstore.DaggerheartWeapon{
-				ID:         item.ID,
-				Name:       item.Name,
-				Category:   item.Category,
-				Tier:       item.Tier,
-				Trait:      item.Trait,
-				Range:      item.Range,
-				DamageDice: toStorageDamageDice(item.DamageDice),
-				DamageType: item.DamageType,
-				Burden:     item.Burden,
-				Feature:    item.Feature,
-				CreatedAt:  now,
-				UpdatedAt:  now,
+				ID:           item.ID,
+				Name:         item.Name,
+				Category:     item.Category,
+				Tier:         item.Tier,
+				Trait:        item.Trait,
+				Range:        item.Range,
+				DamageDice:   toStorageDamageDice(item.DamageDice),
+				DamageType:   item.DamageType,
+				Burden:       item.Burden,
+				Feature:      item.Feature,
+				DisplayOrder: item.DisplayOrder,
+				DisplayGroup: deriveWeaponDisplayGroup(item),
+				CreatedAt:    now,
+				UpdatedAt:    now,
 			}
 			if err := store.PutDaggerheartWeapon(ctx, weapon); err != nil {
 				return fmt.Errorf("put weapon %s: %w", item.ID, err)
@@ -368,6 +370,32 @@ func upsertWeapons(ctx context.Context, store contentstore.DaggerheartContentSto
 		}
 	}
 	return nil
+}
+
+func deriveWeaponDisplayGroup(item weaponRecord) contentstore.DaggerheartWeaponDisplayGroup {
+	if explicit := normalizeWeaponDisplayGroup(item.DisplayGroup); explicit != "" {
+		return explicit
+	}
+	if strings.Contains(strings.ToLower(strings.TrimSpace(item.Name)), "wheelchair") {
+		return contentstore.DaggerheartWeaponDisplayGroupCombatWheelchair
+	}
+	if strings.EqualFold(strings.TrimSpace(item.DamageType), "magic") {
+		return contentstore.DaggerheartWeaponDisplayGroupMagic
+	}
+	return contentstore.DaggerheartWeaponDisplayGroupPhysical
+}
+
+func normalizeWeaponDisplayGroup(raw string) contentstore.DaggerheartWeaponDisplayGroup {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case string(contentstore.DaggerheartWeaponDisplayGroupPhysical):
+		return contentstore.DaggerheartWeaponDisplayGroupPhysical
+	case string(contentstore.DaggerheartWeaponDisplayGroupMagic):
+		return contentstore.DaggerheartWeaponDisplayGroupMagic
+	case string(contentstore.DaggerheartWeaponDisplayGroupCombatWheelchair):
+		return contentstore.DaggerheartWeaponDisplayGroupCombatWheelchair
+	default:
+		return ""
+	}
 }
 
 func upsertArmor(ctx context.Context, store contentstore.DaggerheartContentStore, items []armorRecord, locale string, isBase bool, now time.Time) error {

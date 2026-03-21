@@ -30,6 +30,19 @@ func weaponCategoryToProto(kind string) pb.DaggerheartWeaponCategory {
 	}
 }
 
+func weaponDisplayGroupToProto(kind string) pb.DaggerheartWeaponDisplayGroup {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "physical":
+		return pb.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_PHYSICAL
+	case "magic":
+		return pb.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_MAGIC
+	case "combat_wheelchair":
+		return pb.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_COMBAT_WHEELCHAIR
+	default:
+		return pb.DaggerheartWeaponDisplayGroup_DAGGERHEART_WEAPON_DISPLAY_GROUP_UNSPECIFIED
+	}
+}
+
 func itemRarityToProto(kind string) pb.DaggerheartItemRarity {
 	switch strings.ToLower(strings.TrimSpace(kind)) {
 	case "common":

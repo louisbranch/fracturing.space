@@ -895,6 +895,13 @@ enum DaggerheartWeaponCategory {
   DAGGERHEART_WEAPON_CATEGORY_SECONDARY = 2;
 }
 
+enum DaggerheartWeaponDisplayGroup {
+  DAGGERHEART_WEAPON_DISPLAY_GROUP_UNSPECIFIED = 0;
+  DAGGERHEART_WEAPON_DISPLAY_GROUP_PHYSICAL = 1;
+  DAGGERHEART_WEAPON_DISPLAY_GROUP_MAGIC = 2;
+  DAGGERHEART_WEAPON_DISPLAY_GROUP_COMBAT_WHEELCHAIR = 3;
+}
+
 message DaggerheartWeapon {
   string id = 1;
   string name = 2;
@@ -906,6 +913,8 @@ message DaggerheartWeapon {
   DaggerheartDamageType damage_type = 8;
   int32 burden = 9;
   string feature = 10;
+  int32 display_order = 11;
+  DaggerheartWeaponDisplayGroup display_group = 12;
 }
 
 enum DaggerheartArmorAutomationStatus {

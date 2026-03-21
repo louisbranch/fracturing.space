@@ -1,5 +1,14 @@
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Space+Grotesk:wght@400;500;600&display=swap");
 
+:root {
+  --app-fixed-header-height: 5rem;
+  --app-scroll-offset: calc(var(--app-fixed-header-height) + 1rem);
+}
+
+html {
+  scroll-padding-top: var(--app-scroll-offset);
+}
+
 body {
   font-family: "Space Grotesk", "Avenir Next", "Trebuchet MS", sans-serif;
 }

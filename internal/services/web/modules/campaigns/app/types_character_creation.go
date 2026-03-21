@@ -81,6 +81,8 @@ type CatalogWeapon struct {
 	Range        string                `json:"range"`
 	Damage       string                `json:"damage"`
 	Feature      string                `json:"feature"`
+	DisplayOrder int32                 `json:"displayOrder"`
+	DisplayGroup string                `json:"displayGroup"`
 	Illustration CatalogAssetReference `json:"illustration"`
 }
 

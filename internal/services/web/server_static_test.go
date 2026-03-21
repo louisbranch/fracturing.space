@@ -29,6 +29,16 @@ func TestStaticThemeServedByWeb(t *testing.T) {
 	if ct := rr.Header().Get("Content-Type"); !strings.Contains(ct, "text/css") {
 		t.Fatalf("content-type = %q, want text/css", ct)
 	}
+	body := rr.Body.String()
+	for _, marker := range []string{
+		`--app-scroll-offset`,
+		`--app-fixed-header-height`,
+		`scroll-padding-top: var(--app-scroll-offset);`,
+	} {
+		if !strings.Contains(body, marker) {
+			t.Fatalf("theme.css missing scroll offset marker %q", marker)
+		}
+	}
 }
 
 func TestStaticPasskeyAuthScriptIncludesBusyStateGuard(t *testing.T) {
@@ -152,6 +162,9 @@ func TestStaticAppShellScriptIncludesRouteMetadataContract(t *testing.T) {
 		`data-app-route-area`,
 		`campaignWorkspaceRouteArea`,
 		`isCampaignWorkspaceMetadata`,
+		`data-app-navbar`,
+		`syncAppScrollOffset`,
+		`--app-scroll-offset`,
 	} {
 		if !strings.Contains(body, marker) {
 			t.Fatalf("app-shell.js missing route metadata marker %q", marker)

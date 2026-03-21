@@ -40,6 +40,8 @@ func (s *Store) PutDaggerheartWeapon(ctx context.Context, weapon contentstore.Da
 		DamageType:     weapon.DamageType,
 		Burden:         int64(weapon.Burden),
 		Feature:        weapon.Feature,
+		DisplayOrder:   int64(weapon.DisplayOrder),
+		DisplayGroup:   string(weapon.DisplayGroup),
 		CreatedAt:      toMillis(weapon.CreatedAt),
 		UpdatedAt:      toMillis(weapon.UpdatedAt),
 	})
