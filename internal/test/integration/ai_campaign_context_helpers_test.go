@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"slices"
@@ -32,7 +33,7 @@ const (
 	daggerheartReferenceRoot            = "/home/louis/code/daggerheart/reference-corpus/v1/reference"
 	aiGMBootstrapScenarioName           = "ai_gm_campaign_context_bootstrap"
 	aiGMBootstrapFixtureFile            = "ai_gm_campaign_context_bootstrap_replay.json"
-	aiGMBootstrapPrompt                 = "Open the session, consult the Fear reference first, and remember the harbor debt."
+	aiGMBootstrapPrompt                 = "Open the session, consult the Fear reference first, and update memory.md with session notes about the harbor debt."
 	aiGMBootstrapStorySeed              = "Starter seed: The Black Lantern warns of a debt collected at dawn."
 	aiGMBootstrapMemorySeed             = "Remember: the harbor master owes the party a favor."
 	integrationOpenAIAPIKeyEnv          = "INTEGRATION_OPENAI_API_KEY"
@@ -241,13 +242,14 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 		Participant: participantClient,
 		Character:   characterClient,
 		Session:     sessionClient,
+		Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
 		Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
 		Artifact:    aiv1.NewCampaignArtifactServiceClient(aiInternalConn),
 		Reference:   aiv1.NewSystemReferenceServiceClient(aiInternalConn),
 	})
 	runner := orchestration.NewRunner(orchestration.RunnerConfig{
 		Dialer:   dialer,
-		MaxSteps: 12,
+		MaxSteps: 16,
 	})
 	runResp, err := runner.Run(context.Background(), orchestration.Input{
 		CampaignID:       campaignID,
@@ -363,12 +365,16 @@ func writeOpenAIReplayFixture(t *testing.T, name string, fixture openAIReplayFix
 }
 
 // bootstrapPromptContains captures the minimum context strings that must survive prompt assembly.
+// These must be emitted by the default (degraded) prompt builder, which has no
+// pre-loaded instruction content — so they come from artifacts, context sources,
+// and the inline interaction contract fallback.
 func bootstrapPromptContains() []string {
 	return []string{
 		"story.md:",
 		aiGMBootstrapStorySeed,
 		"memory.md:",
 		aiGMBootstrapMemorySeed,
+		"Bootstrap mode",
 	}
 }
 
@@ -412,27 +418,63 @@ func replayFixtureFinalOutputText(t *testing.T, fixture openAIReplayFixture) str
 }
 
 // replayFixtureMemoryContent returns the most recent memory.md write encoded in the replay fixture.
+// It accepts either campaign_artifact_upsert (full doc write) or campaign_memory_section_update
+// (section-level write) as valid memory write tools.
 func replayFixtureMemoryContent(t *testing.T, fixture openAIReplayFixture) string {
 	t.Helper()
 	for stepIndex := len(fixture.Steps) - 1; stepIndex >= 0; stepIndex-- {
 		step := fixture.Steps[stepIndex]
 		for callIndex := len(step.ToolCalls) - 1; callIndex >= 0; callIndex-- {
 			call := step.ToolCalls[callIndex]
-			if strings.TrimSpace(call.Name) != "campaign_artifact_upsert" {
-				continue
+			name := strings.TrimSpace(call.Name)
+			switch name {
+			case "campaign_artifact_upsert":
+				if strings.TrimSpace(asString(call.Arguments["path"])) != "memory.md" {
+					continue
+				}
+				content := strings.TrimSpace(asString(call.Arguments["content"]))
+				if content == "" {
+					t.Fatal("replay fixture memory.md write is missing content")
+				}
+				return content
+			case "campaign_memory_section_update":
+				content := strings.TrimSpace(asString(call.Arguments["content"]))
+				if content == "" {
+					t.Fatal("replay fixture memory section update is missing content")
+				}
+				return content
 			}
-			if strings.TrimSpace(asString(call.Arguments["path"])) != "memory.md" {
-				continue
-			}
-			content := strings.TrimSpace(asString(call.Arguments["content"]))
-			if content == "" {
-				t.Fatal("replay fixture memory.md write is missing content")
-			}
-			return content
 		}
 	}
-	t.Fatal("replay fixture is missing a memory.md upsert")
+	t.Fatal("replay fixture is missing a memory.md write (artifact_upsert or memory_section_update)")
 	return ""
+}
+
+// replayFixtureMemoryWriteIsSectionUpdate reports whether the replay fixture
+// used a section-level memory write rather than a full-document upsert.
+func replayFixtureMemoryWriteIsSectionUpdate(fixture openAIReplayFixture) bool {
+	for stepIndex := len(fixture.Steps) - 1; stepIndex >= 0; stepIndex-- {
+		step := fixture.Steps[stepIndex]
+		for callIndex := len(step.ToolCalls) - 1; callIndex >= 0; callIndex-- {
+			call := step.ToolCalls[callIndex]
+			name := strings.TrimSpace(call.Name)
+			switch name {
+			case "campaign_memory_section_update":
+				return true
+			case "campaign_artifact_upsert":
+				if strings.TrimSpace(asString(call.Arguments["path"])) == "memory.md" {
+					return false
+				}
+			}
+		}
+	}
+	return false
+}
+
+// newHTTPClient returns a reasonably-configured client for the live capture proxy.
+func newHTTPClient(t *testing.T) *http.Client {
+	t.Helper()
+	return &http.Client{Timeout: 60 * time.Second}
 }
 
 // envEnabled standardizes the small opt-in flags used by the manual live-capture lane.
@@ -445,7 +487,7 @@ func envEnabled(name string) bool {
 func liveAIModel() string {
 	model := strings.TrimSpace(os.Getenv(integrationAIModelEnv))
 	if model == "" {
-		return "gpt-5.4"
+		return "gpt-5-mini"
 	}
 	return model
 }
@@ -454,7 +496,7 @@ func liveAIModel() string {
 func liveAIReasoningEffort() string {
 	effort := strings.TrimSpace(os.Getenv(integrationAIReasoningEffortEnv))
 	if effort == "" {
-		return "medium"
+		return ""
 	}
 	return effort
 }

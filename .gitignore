@@ -1,6 +1,7 @@
 coverage.*
 coverage-*
-data/
+data/*
+!data/instructions/
 !internal/platform/assets/catalog/data/
 !internal/platform/assets/catalog/data/daggerheart_assets.v1.json
 !internal/services/discovery/catalog/data/

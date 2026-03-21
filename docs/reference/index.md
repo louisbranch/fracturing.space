@@ -13,6 +13,7 @@ Exact runtime and contributor-facing contracts.
 
 - AI orchestration tools: [ai-tools.md](ai-tools.md)
 - AI orchestration resources: [ai-resources.md](ai-resources.md)
+- AI model comparison: [ai-model-comparison.md](ai-model-comparison.md)
 
 ## Additional references
 

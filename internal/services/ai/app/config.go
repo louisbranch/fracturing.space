@@ -32,6 +32,7 @@ type serverEnv struct {
 	OrchestrationMaxSteps    int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_MAX_STEPS" envDefault:"8"`
 	ToolResultMaxBytes       int           `env:"FRACTURING_SPACE_AI_ORCHESTRATION_TOOL_RESULT_MAX_BYTES" envDefault:"32768"`
 	DaggerheartReferenceRoot string        `env:"FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT"`
+	InstructionsRoot         string        `env:"FRACTURING_SPACE_AI_INSTRUCTIONS_ROOT"`
 }
 
 // runtimeConfig is the normalized startup configuration used by the AI runtime.
@@ -46,6 +47,7 @@ type runtimeConfig struct {
 	OrchestrationMaxSteps    int
 	ToolResultMaxBytes       int
 	DaggerheartReferenceRoot string
+	InstructionsRoot         string
 	SessionGrantConfig       *aisessiongrant.Config
 }
 
@@ -109,6 +111,7 @@ func loadRuntimeConfigFromEnv() (runtimeConfig, error) {
 		OrchestrationMaxSteps:    srvEnv.OrchestrationMaxSteps,
 		ToolResultMaxBytes:       srvEnv.ToolResultMaxBytes,
 		DaggerheartReferenceRoot: strings.TrimSpace(srvEnv.DaggerheartReferenceRoot),
+		InstructionsRoot:         strings.TrimSpace(srvEnv.InstructionsRoot),
 		SessionGrantConfig:       sessionGrantConfig,
 	}
 	if err := cfg.Validate(); err != nil {

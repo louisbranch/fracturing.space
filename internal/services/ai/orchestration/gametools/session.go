@@ -20,6 +20,7 @@ type Clients struct {
 	Participant statev1.ParticipantServiceClient
 	Character   statev1.CharacterServiceClient
 	Session     statev1.SessionServiceClient
+	Snapshot    statev1.SnapshotServiceClient
 	Daggerheart pb.DaggerheartServiceClient
 	Artifact    aiv1.CampaignArtifactServiceClient
 	Reference   aiv1.SystemReferenceServiceClient
@@ -37,7 +38,7 @@ func NewDirectSession(clients Clients, sc sessionContext) *DirectSession {
 	return &DirectSession{clients: clients, sc: sc}
 }
 
-// ListTools returns the 23 production tool definitions as static data.
+// ListTools returns the 30 production tool definitions as static data.
 func (s *DirectSession) ListTools(_ context.Context) ([]orchestration.Tool, error) {
 	return productionTools(), nil
 }
@@ -92,8 +93,13 @@ func (s *DirectSession) toolHandler(name string) (toolFunc, bool) {
 		"interaction_ooc_ready_mark":                 s.interactionMarkOOCReady,
 		"interaction_ooc_ready_clear":                s.interactionClearOOCReady,
 		"interaction_ooc_resume":                     s.interactionResumeOOC,
-		// Scene tools (1)
-		"scene_create": s.sceneCreate,
+		// Scene tools (6)
+		"scene_create":           s.sceneCreate,
+		"scene_update":           s.sceneUpdate,
+		"scene_end":              s.sceneEnd,
+		"scene_transition":       s.sceneTransition,
+		"scene_add_character":    s.sceneAddCharacter,
+		"scene_remove_character": s.sceneRemoveCharacter,
 		// Daggerheart tools (6)
 		"duality_action_roll":   s.dualityActionRoll,
 		"roll_dice":             s.rollDice,
@@ -105,6 +111,9 @@ func (s *DirectSession) toolHandler(name string) (toolFunc, bool) {
 		"campaign_artifact_list":   s.artifactList,
 		"campaign_artifact_get":    s.artifactGet,
 		"campaign_artifact_upsert": s.artifactUpsert,
+		// Memory section tools (2)
+		"campaign_memory_section_read":   s.memorySectionRead,
+		"campaign_memory_section_update": s.memorySectionUpdate,
 		// Reference tools (2)
 		"system_reference_search": s.referenceSearch,
 		"system_reference_read":   s.referenceRead,

@@ -111,6 +111,8 @@ func baseSessionResources(participantID string, activeSceneID string) map[string
 		"campaign://camp-1/sessions":               `{"sessions":[{"id":"sess-1","status":"ACTIVE"}]}`,
 		"campaign://camp-1/sessions/sess-1/scenes": `{"scenes":[{"scene_id":"scene-1"}]}`,
 		"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"` + activeSceneID + `"}}`,
+		"daggerheart://rules/version":              `{"system":"Daggerheart","module":"duality","rules_version":"1.0","dice_model":"2d12","total_formula":"hope+fear+modifier","crit_rule":"doubles","difficulty_rule":"total >= difficulty","outcomes":["CRITICAL_SUCCESS","SUCCESS_WITH_HOPE","SUCCESS_WITH_FEAR","FAILURE"]}`,
+		"daggerheart://campaign/camp-1/snapshot":   `{"gm_fear":3,"consecutive_short_rests":0,"characters":[{"character_id":"char-1","hp":10,"hope":3,"hope_max":6,"stress":2,"armor":1,"life_state":"ALIVE"}]}`,
 	}
 }
 

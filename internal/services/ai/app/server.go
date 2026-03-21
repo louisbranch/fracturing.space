@@ -139,7 +139,9 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	if modelAdapter, ok := openAIAdapter.(aiservice.ProviderModelAdapter); ok {
 		providerModelAdapters[provider.OpenAI] = modelAdapter
 	}
+	instructionLoader := campaigncontext.NewInstructionLoader(cfg.InstructionsRoot)
 	campaignArtifactManager := campaigncontext.NewManager(store, nil)
+	campaignArtifactManager.SetInstructionLoader(instructionLoader)
 	service := aiservice.NewService(aiservice.ServiceConfig{
 		CredentialStore:            store,
 		AgentStore:                 store,
@@ -215,11 +217,15 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 			Participant: gamev1.NewParticipantServiceClient(gameConn),
 			Character:   gamev1.NewCharacterServiceClient(gameConn),
 			Session:     gamev1.NewSessionServiceClient(gameConn),
+			Snapshot:    gamev1.NewSnapshotServiceClient(gameConn),
 			Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
 			Artifact:    artifactClientAdapter{server: campaignArtifactHandlers},
 			Reference:   referenceClientAdapter{server: systemReferenceHandlers},
 		})
-		service.SetCampaignTurnRunner(orchestration.NewRunner(cfg.campaignTurnRunnerConfig(dialer)))
+		promptBuilder := buildPromptBuilder(instructionLoader)
+		runnerCfg := cfg.campaignTurnRunnerConfig(dialer)
+		runnerCfg.PromptBuilder = promptBuilder
+		service.SetCampaignTurnRunner(orchestration.NewRunner(runnerCfg))
 	}
 
 	healthServer := health.NewServer()
@@ -363,6 +369,39 @@ func decodeBase64Key(value string) ([]byte, error) {
 		return key, nil
 	}
 	return nil, rawErr
+}
+
+// buildPromptBuilder loads instruction files and creates a configured prompt
+// builder. If instruction loading fails, it returns a builder with no
+// pre-loaded instructions (the builder falls back to inline defaults).
+func buildPromptBuilder(loader *campaigncontext.InstructionLoader) orchestration.PromptBuilder {
+	if loader == nil {
+		return nil
+	}
+	skills, err := loader.LoadSkills(campaigncontext.DaggerheartSystem)
+	if err != nil {
+		log.Printf("ai: load skills instructions: %v (using inline fallback)", err)
+		return nil
+	}
+	interaction, err := loader.LoadCoreInteraction()
+	if err != nil {
+		log.Printf("ai: load interaction instructions: %v (using inline fallback)", err)
+		return nil
+	}
+
+	reg := orchestration.NewContextSourceRegistry()
+	for _, src := range orchestration.CoreContextSources() {
+		reg.Register(src)
+	}
+	for _, src := range orchestration.DaggerheartContextSources() {
+		reg.Register(src)
+	}
+
+	return orchestration.NewPromptBuilder(orchestration.PromptBuilderConfig{
+		Skills:              skills,
+		InteractionContract: interaction,
+		ContextSources:      reg,
+	})
 }
 
 func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {
