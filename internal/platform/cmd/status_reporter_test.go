@@ -197,7 +197,7 @@ func TestStartStatusReporterSkipsDialWhenStatusAddrBlank(t *testing.T) {
 		return reporter
 	}
 
-	stop := StartStatusReporter(context.Background(), "mcp", "   ")
+	stop := StartStatusReporter(context.Background(), "game", "   ")
 	stop()
 
 	if dialCalled {

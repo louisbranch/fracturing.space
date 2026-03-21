@@ -146,11 +146,11 @@ Readiness is enforced at two boundaries:
 
 This keeps transport-level readiness surfaces consistent with domain decisions.
 
-## MCP contract alignment
+## AI tool contract alignment
 
-MCP readiness and import flows use `character_creation_workflow_apply` for
+AI readiness and import flows use `character_creation_workflow_apply` for
 workflow fields. `character_profile_patch` is limited to non-workflow profile
-fields. These are broader MCP/domain contracts, not part of the GM-safe
+fields. These are broader AI orchestration contracts, not part of the GM-safe
 production AI bridge profile.
 
 ## Implementation map
@@ -161,4 +161,4 @@ production AI bridge profile.
 - Profile adapter/reset handling: `internal/services/game/domain/systems/daggerheart/internal/adapter/profile.go`
 - Session-start readiness evaluator: `internal/services/game/domain/readiness/session_start.go`
 - Campaign readiness RPC: `internal/services/game/api/grpc/game/campaigntransport/campaign_readiness_service.go`
-- MCP DTO/handlers: `internal/services/mcp/domain/campaign.go`, `internal/services/mcp/domain/character_handlers.go`
+- AI tool handlers: `internal/services/ai/orchestration/gametools/`

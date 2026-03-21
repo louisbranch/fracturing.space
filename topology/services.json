@@ -64,16 +64,6 @@
       ]
     },
     {
-      "name": "mcp",
-      "http_port": 8085,
-      "public_routes": [
-        {
-          "host_prefix": "mcp",
-          "http_port": 8085
-        }
-      ]
-    },
-    {
       "name": "notifications",
       "grpc_port": 8088
     },

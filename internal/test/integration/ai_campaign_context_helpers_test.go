@@ -17,10 +17,12 @@ import (
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	commonv1 "github.com/louisbranch/fracturing.space/api/gen/go/common/v1"
 	gamev1 "github.com/louisbranch/fracturing.space/api/gen/go/game/v1"
+	pb "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
+	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiapp "github.com/louisbranch/fracturing.space/internal/services/ai/app"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	openaiprovider "github.com/louisbranch/fracturing.space/internal/services/ai/provider/openai"
-	mcpservice "github.com/louisbranch/fracturing.space/internal/services/mcp/service"
 	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -88,9 +90,6 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 	t.Setenv("FRACTURING_SPACE_AI_OPENAI_RESPONSES_URL", strings.TrimSpace(opts.ResponsesURL))
 	t.Setenv("FRACTURING_SPACE_AI_DAGGERHEART_REFERENCE_ROOT", daggerheartReferenceRoot)
 
-	mcpAddr := pickUnusedAddress(t)
-	t.Setenv("FRACTURING_SPACE_AI_MCP_URL", "http://"+mcpAddr+"/mcp")
-
 	aiCtx, cancelAI := context.WithCancel(context.Background())
 	aiServer, err := aiapp.NewWithAddrContext(aiCtx, aiAddr)
 	if err != nil {
@@ -114,32 +113,17 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 	})
 	waitForGRPCHealth(t, aiAddr)
 
-	mcpCtx, cancelMCP := context.WithCancel(context.Background())
-	mcpErr := make(chan error, 1)
-	go func() {
-		mcpErr <- mcpservice.Run(mcpCtx, mcpservice.Config{
-			GRPCAddr: fixture.grpcAddr,
-			AIAddr:   aiAddr,
-			HTTPAddr: mcpAddr,
-		})
-	}()
-	t.Cleanup(func() {
-		cancelMCP()
-		select {
-		case err := <-mcpErr:
-			if err != nil && !strings.Contains(strings.ToLower(err.Error()), "context canceled") {
-				t.Fatalf("mcp server error: %v", err)
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatal("timed out waiting for mcp server to stop")
-		}
-	})
-	waitForHTTPHealth(t, newHTTPClient(t), "http://"+mcpAddr+"/mcp/health")
-
 	gameConn := dialGRPCForIntegration(t, fixture.grpcAddr)
 	defer gameConn.Close()
 	aiConn := dialGRPCForIntegration(t, aiAddr)
 	defer aiConn.Close()
+	// The DirectDialer's artifact and reference clients go over the wire to the
+	// AI server, which requires a service identity header for campaign context
+	// validation.  In production the server uses in-process adapters that bypass
+	// gRPC interceptors; in the integration test we need a connection that
+	// carries the service identity so the campaign context validator passes.
+	aiInternalConn := dialGRPCWithServiceID(t, aiAddr, serviceaddr.ServiceAI)
+	defer aiInternalConn.Close()
 
 	credentialClient := aiv1.NewCredentialServiceClient(aiConn)
 	agentClient := aiv1.NewAgentServiceClient(aiConn)
@@ -250,11 +234,19 @@ func runAIGMCampaignContextBootstrapScenario(t *testing.T, opts aiGMBootstrapSce
 	provider := openaiprovider.NewInvokeAdapter(openaiprovider.InvokeConfig{
 		ResponsesURL: strings.TrimSpace(opts.ResponsesURL),
 	})
+	dialer := gametools.NewDirectDialer(gametools.Clients{
+		Interaction: gamev1.NewInteractionServiceClient(gameConn),
+		Scene:       gamev1.NewSceneServiceClient(gameConn),
+		Campaign:    campaignClient,
+		Participant: participantClient,
+		Character:   characterClient,
+		Session:     sessionClient,
+		Daggerheart: pb.NewDaggerheartServiceClient(gameConn),
+		Artifact:    aiv1.NewCampaignArtifactServiceClient(aiInternalConn),
+		Reference:   aiv1.NewSystemReferenceServiceClient(aiInternalConn),
+	})
 	runner := orchestration.NewRunner(orchestration.RunnerConfig{
-		Dialer: orchestration.NewMCPDialer(orchestration.MCPDialerConfig{
-			URL:        "http://" + mcpAddr + "/mcp",
-			HTTPClient: newHTTPClient(t),
-		}),
+		Dialer:   dialer,
 		MaxSteps: 12,
 	})
 	runResp, err := runner.Run(context.Background(), orchestration.Input{

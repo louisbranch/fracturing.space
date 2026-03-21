@@ -32,7 +32,7 @@ check sequence.
 | Change agent, credential, provider-grant, or access-request domain rules | `internal/services/ai/agent/`, `internal/services/ai/credential/`, `internal/services/ai/providergrant/`, `internal/services/ai/accessrequest/` |
 | Change provider identity or provider-reported usage contracts | `internal/services/ai/provider/` |
 | Change OpenAI OAuth, invocation, model listing, or Responses API adapters | `internal/services/ai/provider/openai/` |
-| Change campaign-turn orchestration, prompt assembly, MCP dial/runtime policy, or provider step aggregation | `internal/services/ai/orchestration/` |
+| Change campaign-turn orchestration, prompt assembly, tool dispatch, or provider step aggregation | `internal/services/ai/orchestration/`, `internal/services/ai/orchestration/gametools/` |
 | Change campaign artifact bootstrapping or reference lookup logic | `internal/services/ai/campaigncontext/`, `internal/services/ai/api/grpc/ai/*artifact*`, `internal/services/ai/api/grpc/ai/*reference*` |
 | Change SQLite persistence or migration-backed storage contracts | `internal/services/ai/storage/sqlite/`, `internal/services/ai/storage/` |
 | Change cross-service campaign-turn or replay/integration coverage | `internal/test/integration/`, `internal/services/worker/domain/` |
@@ -57,7 +57,7 @@ check sequence.
 | Provider adapter request/response translation | `internal/services/ai/provider/openai/*_test.go` | Keep provider HTTP/Responses API behavior outside transport tests. |
 | Campaign-turn loop, prompt assembly, timeout, or usage aggregation | `internal/services/ai/orchestration/*_test.go` | Orchestration has its own seam and should carry its own runtime coverage. |
 | SQLite storage behavior | `internal/services/ai/storage/sqlite/*_test.go` | SQL and persistence invariants belong with the concrete adapter. |
-| Cross-service AI GM flows | `internal/test/integration/` and worker-domain tests | Use integration only when game, AI, MCP, and worker behavior must line up. |
+| Cross-service AI GM flows | `internal/test/integration/` and worker-domain tests | Use integration only when game, AI, and worker behavior must line up. |
 
 ## Verification
 
@@ -68,7 +68,7 @@ check sequence.
 Add these when applicable:
 
 - `make proto` for `api/proto/ai/v1/service.proto` changes
-- `go test ./internal/test/integration -tags=integration -run 'TestAIGM|TestMCPHTTPBlackbox'` for AI/MCP contract changes
+- `go test ./internal/test/integration -tags=integration -run 'TestAIGM|TestGameEndToEnd'` for AI orchestration contract changes
 
 ## Related docs
 

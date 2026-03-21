@@ -6,10 +6,6 @@ variable "GAME_IMAGE" {
   default = "ghcr.io/fracturing-space/game:dev"
 }
 
-variable "MCP_IMAGE" {
-  default = "ghcr.io/fracturing-space/mcp:dev"
-}
-
 variable "ADMIN_IMAGE" {
   default = "ghcr.io/fracturing-space/admin:dev"
 }
@@ -39,7 +35,7 @@ variable "WORKER_IMAGE" {
 }
 
 group "default" {
-  targets = ["game", "mcp", "admin", "auth", "social", "discovery", "web", "notifications", "worker"]
+  targets = ["game", "admin", "auth", "social", "discovery", "web", "notifications", "worker"]
 }
 
 target "base" {
@@ -54,12 +50,6 @@ target "game" {
   inherits = ["base"]
   target   = "game"
   tags     = ["${GAME_IMAGE}"]
-}
-
-target "mcp" {
-  inherits = ["base"]
-  target   = "mcp"
-  tags     = ["${MCP_IMAGE}"]
 }
 
 target "admin" {

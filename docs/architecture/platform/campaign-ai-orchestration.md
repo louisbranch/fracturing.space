@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-14"
+last_reviewed: "2026-03-17"
 ---
 
 # Campaign AI Orchestration
@@ -24,7 +24,7 @@ credentials, game-owned interaction authority, and AI execution.
 - Chat may carry human transcript traffic, but it is not part of AI pacing,
   turn submission, or AI response relay.
 - AI validates grants, resolves the live backing runtime, and executes the
-  provider + MCP orchestration loop.
+  provider + tool orchestration loop via direct gRPC calls to the game service.
 
 ## Internal API Boundary
 
@@ -39,7 +39,7 @@ Game active-play pacing remains on `game.v1.InteractionService`.
 AI exposes `ai.v1.CampaignOrchestrationService.RunCampaignTurn` as the
 campaign-only execution path. It is intentionally separate from the user-facing
 `ai.v1.InvocationService.InvokeAgent` RPC so campaign turns can enforce grant
-validation, MCP augmentation, and provider tool policy.
+validation, tool augmentation, and provider tool policy.
 
 Both RPCs now accept an optional `reasoning_effort` override for providers that
 support explicit reasoning levels, and both responses can carry provider usage
@@ -76,23 +76,23 @@ an `active` agent plus a ready credential/provider-grant reference.
 3. Game interaction reaches an AI-owned decision point, including
    `session.started` bootstrap turns before an active scene exists.
 4. Game/worker requests a session grant for the active campaign session.
-5. AI validates the grant, checks live auth state, opens an internal MCP bridge
+5. AI validates the grant, checks live auth state, opens a direct gRPC
    session with fixed campaign/session/participant authority, rebuilds a fresh
    session brief, and executes provider work against the curated tool set.
 6. The model must commit authoritative GM narration through interaction-owned
-   MCP tools before the turn succeeds.
+   tools before the turn succeeds.
 7. Worker completes the AI turn only after those authoritative writes land;
    otherwise it records failure in game-owned lifecycle state.
 
-## Initial AI MCP Policy
+## Tool Policy
 
-The MVP orchestration path is OpenAI-first and MCP-backed. The prompt brief is
-rebuilt from authoritative MCP resources on every turn, MCP authority is fixed
-per session, and the model receives only the GM-safe subset of MCP tools needed
-for scene bootstrap, interaction pacing, GM narration commit, campaign
-artifacts, and Daggerheart rules/reference support. Campaign lifecycle,
-participant CRUD, fork, and other non-GM mutations are intentionally excluded
-from the production bridge profile.
+The orchestration path is OpenAI-first with direct gRPC tool dispatch. The
+prompt brief is rebuilt from authoritative game resources on every turn,
+session authority is fixed per turn, and the model receives only the GM-safe
+subset of tools needed for scene bootstrap, interaction pacing, GM narration
+commit, campaign artifacts, and Daggerheart rules/reference support. Campaign
+lifecycle, participant CRUD, fork, and other non-GM mutations are intentionally
+excluded from the production tool profile.
 
 Exact prompt-brief inputs and bootstrap behavior live in
 [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md). Human chat
@@ -105,7 +105,7 @@ through committed interaction state.
 - Stale epoch/session/participant mismatch: AI rejects as stale precondition.
 - Missing binding or inactive session: game refuses grant issuance and no AI
   turn runs for that interaction state.
-- Provider/MCP/orchestration errors after the turn starts: worker records the
+- Provider/orchestration errors after the turn starts: worker records the
   turn as failed through `FailAIGMTurn`; retries then flow through explicit
   game-owned retry behavior rather than duplicate outbox handling.
 
@@ -122,7 +122,7 @@ session-readiness blocker codes and session start must remain blocked.
 ## Extensibility
 
 - Built-in first-party AI can use the same campaign-scoped grant contract.
-- Provider-specific orchestration (prompt policy, subagents, MCP tools, audit)
+- Provider-specific orchestration (prompt policy, subagents, tools, audit)
   remains AI-service owned and does not leak into game/chat boundaries.
 - Any future AI debug/thought-stream surface stays AI-service owned,
   dev/operator only, and separate from the human transcript.

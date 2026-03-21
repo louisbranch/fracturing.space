@@ -31,7 +31,6 @@ func TestDefaultHTTPAddr(t *testing.T) {
 		ServiceAuth:   "auth:8084",
 		ServiceWeb:    "web:8080",
 		ServiceAdmin:  "admin:8081",
-		ServiceMCP:    "mcp:8085",
 		ServicePlay:   "play:8094",
 		ServiceJaeger: "jaeger:16686",
 	}

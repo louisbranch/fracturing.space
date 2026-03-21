@@ -11,9 +11,8 @@ Exact runtime and contributor-facing contracts.
 
 ## Start here
 
-- MCP bridge overview: [mcp.md](mcp.md)
-- MCP production tools: [mcp-tools.md](mcp-tools.md)
-- MCP production resources: [mcp-resources.md](mcp-resources.md)
+- AI orchestration tools: [ai-tools.md](ai-tools.md)
+- AI orchestration resources: [ai-resources.md](ai-resources.md)
 
 ## Additional references
 

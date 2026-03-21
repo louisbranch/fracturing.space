@@ -85,7 +85,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -203,7 +203,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -321,7 +321,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -439,7 +439,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -558,7 +558,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -678,7 +678,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -800,7 +800,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -918,7 +918,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1038,7 +1038,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1163,7 +1163,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1288,7 +1288,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1409,7 +1409,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1532,7 +1532,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1655,7 +1655,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1776,7 +1776,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -1901,7 +1901,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2029,7 +2029,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2147,7 +2147,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2275,7 +2275,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2403,7 +2403,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2532,7 +2532,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2653,7 +2653,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2779,7 +2779,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -2905,7 +2905,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3028,7 +3028,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3151,7 +3151,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3269,7 +3269,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3390,7 +3390,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3510,7 +3510,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3633,7 +3633,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3755,7 +3755,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3876,7 +3876,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -3997,7 +3997,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4118,7 +4118,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4239,7 +4239,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4357,7 +4357,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4480,7 +4480,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4603,7 +4603,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4728,7 +4728,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4848,7 +4848,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -4969,7 +4969,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5097,7 +5097,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5216,7 +5216,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5342,7 +5342,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5461,7 +5461,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5579,7 +5579,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5702,7 +5702,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5823,7 +5823,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -5941,7 +5941,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6061,7 +6061,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6182,7 +6182,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6305,7 +6305,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6430,7 +6430,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6548,7 +6548,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6664,7 +6664,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6780,7 +6780,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -6901,7 +6901,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7022,7 +7022,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7143,7 +7143,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7264,7 +7264,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7382,7 +7382,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7503,7 +7503,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7619,7 +7619,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7739,7 +7739,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7855,7 +7855,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -7973,7 +7973,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8094,7 +8094,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8212,7 +8212,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8340,7 +8340,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8468,7 +8468,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8589,7 +8589,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8708,7 +8708,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8831,7 +8831,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -8952,7 +8952,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9075,7 +9075,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9195,7 +9195,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9318,7 +9318,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9441,7 +9441,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9561,7 +9561,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9684,7 +9684,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9802,7 +9802,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -9923,7 +9923,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10043,7 +10043,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10163,7 +10163,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10286,7 +10286,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10409,7 +10409,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10535,7 +10535,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10655,7 +10655,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10776,7 +10776,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -10894,7 +10894,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11014,7 +11014,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11137,7 +11137,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11253,7 +11253,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11371,7 +11371,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11494,7 +11494,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11620,7 +11620,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11738,7 +11738,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11858,7 +11858,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -11984,7 +11984,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12104,7 +12104,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12222,7 +12222,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12340,7 +12340,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12460,7 +12460,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12589,7 +12589,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12715,7 +12715,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12841,7 +12841,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -12964,7 +12964,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13085,7 +13085,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13208,7 +13208,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13327,7 +13327,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13445,7 +13445,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13564,7 +13564,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13687,7 +13687,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13805,7 +13805,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -13928,7 +13928,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14048,7 +14048,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14164,7 +14164,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14282,7 +14282,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14403,7 +14403,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14524,7 +14524,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14652,7 +14652,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14773,7 +14773,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -14894,7 +14894,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15010,7 +15010,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15128,7 +15128,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15249,7 +15249,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15369,7 +15369,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15488,7 +15488,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15608,7 +15608,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15726,7 +15726,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15844,7 +15844,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -15969,7 +15969,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16089,7 +16089,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16215,7 +16215,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16333,7 +16333,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16451,7 +16451,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16567,7 +16567,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16688,7 +16688,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16808,7 +16808,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -16927,7 +16927,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17045,7 +17045,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17167,7 +17167,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17290,7 +17290,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17413,7 +17413,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17536,7 +17536,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17659,7 +17659,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17780,7 +17780,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -17901,7 +17901,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18022,7 +18022,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18142,7 +18142,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18261,7 +18261,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18382,7 +18382,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18510,7 +18510,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18636,7 +18636,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18754,7 +18754,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -18882,7 +18882,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19005,7 +19005,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19123,7 +19123,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19244,7 +19244,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19367,7 +19367,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19486,7 +19486,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19604,7 +19604,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19720,7 +19720,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19845,7 +19845,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -19971,7 +19971,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20094,7 +20094,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20212,7 +20212,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20333,7 +20333,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20452,7 +20452,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20572,7 +20572,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20691,7 +20691,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20809,7 +20809,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -20929,7 +20929,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21048,7 +21048,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21168,7 +21168,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21288,7 +21288,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21408,7 +21408,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21533,7 +21533,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21655,7 +21655,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21776,7 +21776,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -21900,7 +21900,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22021,7 +22021,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22146,7 +22146,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22270,7 +22270,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22396,7 +22396,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22514,7 +22514,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22632,7 +22632,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22748,7 +22748,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22871,7 +22871,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -22994,7 +22994,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23117,7 +23117,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23240,7 +23240,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23363,7 +23363,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23486,7 +23486,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23609,7 +23609,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23732,7 +23732,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23855,7 +23855,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -23977,7 +23977,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24100,7 +24100,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24223,7 +24223,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24346,7 +24346,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24469,7 +24469,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24591,7 +24591,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24713,7 +24713,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24835,7 +24835,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -24957,7 +24957,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25080,7 +25080,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25203,7 +25203,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25326,7 +25326,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25449,7 +25449,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25572,7 +25572,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25695,7 +25695,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25818,7 +25818,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -25941,7 +25941,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26064,7 +26064,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26187,7 +26187,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26310,7 +26310,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26433,7 +26433,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26555,7 +26555,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26678,7 +26678,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26801,7 +26801,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -26924,7 +26924,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27047,7 +27047,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27170,7 +27170,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27293,7 +27293,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27416,7 +27416,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27539,7 +27539,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27662,7 +27662,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27785,7 +27785,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -27908,7 +27908,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28031,7 +28031,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28154,7 +28154,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28277,7 +28277,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28400,7 +28400,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28523,7 +28523,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28645,7 +28645,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28768,7 +28768,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -28891,7 +28891,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29014,7 +29014,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29137,7 +29137,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29260,7 +29260,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29382,7 +29382,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29505,7 +29505,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29628,7 +29628,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29751,7 +29751,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29874,7 +29874,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -29996,7 +29996,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30119,7 +30119,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30242,7 +30242,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30365,7 +30365,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30488,7 +30488,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30611,7 +30611,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30734,7 +30734,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30857,7 +30857,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -30980,7 +30980,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31103,7 +31103,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31225,7 +31225,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31348,7 +31348,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31471,7 +31471,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31593,7 +31593,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31716,7 +31716,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31839,7 +31839,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -31962,7 +31962,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32085,7 +32085,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32208,7 +32208,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32331,7 +32331,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32453,7 +32453,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32576,7 +32576,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32699,7 +32699,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32822,7 +32822,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -32945,7 +32945,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33068,7 +33068,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33191,7 +33191,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33314,7 +33314,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33437,7 +33437,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33560,7 +33560,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33683,7 +33683,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33806,7 +33806,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -33929,7 +33929,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34052,7 +34052,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34175,7 +34175,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34298,7 +34298,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34421,7 +34421,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34543,7 +34543,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34666,7 +34666,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34788,7 +34788,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -34910,7 +34910,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35033,7 +35033,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35156,7 +35156,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35279,7 +35279,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35402,7 +35402,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35525,7 +35525,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35648,7 +35648,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35771,7 +35771,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -35893,7 +35893,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36015,7 +36015,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36138,7 +36138,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36260,7 +36260,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36383,7 +36383,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36506,7 +36506,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36629,7 +36629,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36752,7 +36752,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36875,7 +36875,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -36998,7 +36998,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37121,7 +37121,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37243,7 +37243,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37366,7 +37366,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37489,7 +37489,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37612,7 +37612,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37735,7 +37735,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37858,7 +37858,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -37981,7 +37981,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38104,7 +38104,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38226,7 +38226,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38349,7 +38349,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38472,7 +38472,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38595,7 +38595,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38718,7 +38718,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38845,7 +38845,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -38968,7 +38968,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39091,7 +39091,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39214,7 +39214,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39337,7 +39337,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39460,7 +39460,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39583,7 +39583,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39706,7 +39706,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39829,7 +39829,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -39952,7 +39952,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40075,7 +40075,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40198,7 +40198,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40321,7 +40321,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40444,7 +40444,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40567,7 +40567,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40690,7 +40690,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40813,7 +40813,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -40936,7 +40936,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41055,7 +41055,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41185,7 +41185,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41315,7 +41315,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41445,7 +41445,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41575,7 +41575,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41705,7 +41705,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41835,7 +41835,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -41965,7 +41965,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -42095,7 +42095,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -42225,7 +42225,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -42355,7 +42355,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -42485,7 +42485,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -42615,7 +42615,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -42745,7 +42745,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -42875,7 +42875,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43005,7 +43005,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43135,7 +43135,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43265,7 +43265,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43395,7 +43395,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43525,7 +43525,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43655,7 +43655,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43785,7 +43785,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -43915,7 +43915,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44045,7 +44045,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44175,7 +44175,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44305,7 +44305,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44435,7 +44435,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44565,7 +44565,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44695,7 +44695,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44825,7 +44825,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -44955,7 +44955,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45085,7 +45085,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45215,7 +45215,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45335,7 +45335,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45448,7 +45448,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45572,7 +45572,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45696,7 +45696,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45820,7 +45820,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -45944,7 +45944,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46068,7 +46068,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46192,7 +46192,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46316,7 +46316,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46440,7 +46440,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46564,7 +46564,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46688,7 +46688,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46812,7 +46812,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -46936,7 +46936,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47060,7 +47060,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47184,7 +47184,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47308,7 +47308,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47432,7 +47432,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47556,7 +47556,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47680,7 +47680,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47804,7 +47804,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -47928,7 +47928,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -48052,7 +48052,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -48176,7 +48176,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -48300,7 +48300,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -48410,7 +48410,7 @@
           "state": "expected"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "expected"
         },
         {
@@ -48433,7 +48433,7 @@
         "internal/services/game/domain/systems/daggerheart/creation_workflow.go",
         "internal/services/game/api/grpc/systems/daggerheart/creationworkflow/provider.go",
         "internal/services/web/modules/campaigns/workflow/daggerheart/form.go",
-        "internal/services/mcp/domain/character_handlers.go",
+        "internal/services/ai/orchestration/gametools/",
         "api/proto/systems/daggerheart/v1/state.proto"
       ],
       "evidence_tests": [
@@ -48535,7 +48535,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -48661,7 +48661,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -48787,7 +48787,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -48913,7 +48913,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49039,7 +49039,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49165,7 +49165,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49291,7 +49291,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49417,7 +49417,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49543,7 +49543,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49669,7 +49669,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49792,7 +49792,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -49915,7 +49915,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50038,7 +50038,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50161,7 +50161,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50284,7 +50284,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50407,7 +50407,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50530,7 +50530,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50653,7 +50653,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50767,7 +50767,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50882,7 +50882,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -50997,7 +50997,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51114,7 +51114,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51230,7 +51230,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51345,7 +51345,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51462,7 +51462,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51577,7 +51577,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51691,7 +51691,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51806,7 +51806,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -51923,7 +51923,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52038,7 +52038,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52155,7 +52155,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52270,7 +52270,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52387,7 +52387,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52502,7 +52502,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52619,7 +52619,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52734,7 +52734,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52849,7 +52849,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -52964,7 +52964,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53079,7 +53079,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53194,7 +53194,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53310,7 +53310,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53425,7 +53425,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53540,7 +53540,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53657,7 +53657,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53772,7 +53772,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -53888,7 +53888,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54003,7 +54003,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54118,7 +54118,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54235,7 +54235,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54351,7 +54351,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54467,7 +54467,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54583,7 +54583,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54699,7 +54699,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54815,7 +54815,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -54931,7 +54931,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55047,7 +55047,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55163,7 +55163,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55279,7 +55279,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55395,7 +55395,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55511,7 +55511,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55626,7 +55626,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55741,7 +55741,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55856,7 +55856,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -55973,7 +55973,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56088,7 +56088,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56203,7 +56203,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56318,7 +56318,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56434,7 +56434,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56550,7 +56550,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56665,7 +56665,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56781,7 +56781,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -56898,7 +56898,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57015,7 +57015,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57131,7 +57131,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57248,7 +57248,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57364,7 +57364,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57479,7 +57479,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57593,7 +57593,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57666,9 +57666,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -57694,7 +57694,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57770,9 +57770,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -57798,7 +57798,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -57917,7 +57917,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58033,7 +58033,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58149,7 +58149,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58265,7 +58265,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58381,7 +58381,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58497,7 +58497,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58613,7 +58613,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58729,7 +58729,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58845,7 +58845,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -58962,7 +58962,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59080,7 +59080,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59198,7 +59198,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59317,7 +59317,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59436,7 +59436,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59555,7 +59555,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59674,7 +59674,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59793,7 +59793,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -59912,7 +59912,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60031,7 +60031,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60150,7 +60150,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60269,7 +60269,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60388,7 +60388,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60507,7 +60507,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60626,7 +60626,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60745,7 +60745,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60864,7 +60864,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -60983,7 +60983,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61102,7 +61102,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61169,9 +61169,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -61197,7 +61197,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61266,9 +61266,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -61294,7 +61294,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61362,9 +61362,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -61390,7 +61390,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61462,9 +61462,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -61490,7 +61490,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61566,9 +61566,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -61594,7 +61594,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61671,7 +61671,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61725,9 +61725,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -61753,7 +61753,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61835,7 +61835,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -61941,7 +61941,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62060,7 +62060,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62179,7 +62179,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62298,7 +62298,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62417,7 +62417,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62536,7 +62536,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62657,7 +62657,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62775,7 +62775,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -62896,7 +62896,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63015,7 +63015,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63134,7 +63134,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63253,7 +63253,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63373,7 +63373,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63492,7 +63492,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63611,7 +63611,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63730,7 +63730,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63849,7 +63849,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -63969,7 +63969,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64088,7 +64088,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64208,7 +64208,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64327,7 +64327,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64446,7 +64446,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64565,7 +64565,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64685,7 +64685,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64804,7 +64804,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -64923,7 +64923,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65042,7 +65042,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65161,7 +65161,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65280,7 +65280,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65399,7 +65399,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65518,7 +65518,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65636,7 +65636,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65754,7 +65754,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65875,7 +65875,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -65994,7 +65994,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66113,7 +66113,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66233,7 +66233,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66352,7 +66352,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66470,7 +66470,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66588,7 +66588,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66707,7 +66707,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66828,7 +66828,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -66949,7 +66949,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67070,7 +67070,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67191,7 +67191,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67311,7 +67311,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67430,7 +67430,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67549,7 +67549,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67668,7 +67668,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67790,7 +67790,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -67909,7 +67909,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68028,7 +68028,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68147,7 +68147,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68266,7 +68266,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68387,7 +68387,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68506,7 +68506,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68625,7 +68625,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68743,7 +68743,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68862,7 +68862,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -68983,7 +68983,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69051,9 +69051,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -69079,7 +69079,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69151,9 +69151,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -69179,7 +69179,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69251,9 +69251,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -69279,7 +69279,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69356,7 +69356,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69416,9 +69416,9 @@
           ]
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "paths": [
-            "internal/services/mcp/domain/"
+            "internal/services/ai/orchestration/gametools/"
           ]
         }
       ],
@@ -69444,7 +69444,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69570,7 +69570,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69702,7 +69702,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69834,7 +69834,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -69966,7 +69966,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -70098,7 +70098,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -70229,7 +70229,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -70361,7 +70361,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -70493,7 +70493,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -70625,7 +70625,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -70756,7 +70756,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -70887,7 +70887,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71018,7 +71018,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71149,7 +71149,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71281,7 +71281,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71413,7 +71413,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71544,7 +71544,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71676,7 +71676,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71807,7 +71807,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -71934,7 +71934,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72053,7 +72053,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72172,7 +72172,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72291,7 +72291,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72410,7 +72410,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72529,7 +72529,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72648,7 +72648,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72767,7 +72767,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -72886,7 +72886,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73005,7 +73005,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73124,7 +73124,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73243,7 +73243,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73362,7 +73362,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73481,7 +73481,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73600,7 +73600,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73719,7 +73719,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73838,7 +73838,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -73957,7 +73957,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74076,7 +74076,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74195,7 +74195,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74314,7 +74314,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74433,7 +74433,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74552,7 +74552,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74671,7 +74671,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74790,7 +74790,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -74909,7 +74909,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75028,7 +75028,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75147,7 +75147,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75266,7 +75266,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75385,7 +75385,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75504,7 +75504,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75623,7 +75623,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75742,7 +75742,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75861,7 +75861,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -75980,7 +75980,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76098,7 +76098,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76217,7 +76217,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76336,7 +76336,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76455,7 +76455,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76573,7 +76573,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76691,7 +76691,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76809,7 +76809,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -76927,7 +76927,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77045,7 +77045,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77163,7 +77163,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77282,7 +77282,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77400,7 +77400,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77519,7 +77519,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77637,7 +77637,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77755,7 +77755,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77874,7 +77874,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -77993,7 +77993,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78112,7 +78112,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78230,7 +78230,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78349,7 +78349,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78468,7 +78468,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78587,7 +78587,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78706,7 +78706,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78824,7 +78824,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -78943,7 +78943,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79062,7 +79062,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79181,7 +79181,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79299,7 +79299,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79418,7 +79418,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79537,7 +79537,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79656,7 +79656,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79774,7 +79774,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -79892,7 +79892,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80010,7 +80010,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80128,7 +80128,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80246,7 +80246,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80365,7 +80365,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80484,7 +80484,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80603,7 +80603,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80722,7 +80722,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80841,7 +80841,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -80960,7 +80960,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81079,7 +81079,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81198,7 +81198,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81317,7 +81317,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81436,7 +81436,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81555,7 +81555,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81674,7 +81674,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81793,7 +81793,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -81912,7 +81912,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82031,7 +82031,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82150,7 +82150,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82269,7 +82269,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82388,7 +82388,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82507,7 +82507,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82626,7 +82626,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82745,7 +82745,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82864,7 +82864,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -82983,7 +82983,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83102,7 +83102,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83221,7 +83221,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83340,7 +83340,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83459,7 +83459,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83578,7 +83578,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83697,7 +83697,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83816,7 +83816,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -83935,7 +83935,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84054,7 +84054,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84173,7 +84173,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84292,7 +84292,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84411,7 +84411,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84530,7 +84530,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84649,7 +84649,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84768,7 +84768,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -84887,7 +84887,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85006,7 +85006,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85125,7 +85125,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85244,7 +85244,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85363,7 +85363,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85482,7 +85482,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85601,7 +85601,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85720,7 +85720,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85839,7 +85839,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -85958,7 +85958,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86077,7 +86077,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86196,7 +86196,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86315,7 +86315,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86434,7 +86434,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86553,7 +86553,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86672,7 +86672,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86791,7 +86791,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -86910,7 +86910,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87029,7 +87029,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87148,7 +87148,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87267,7 +87267,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87386,7 +87386,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87505,7 +87505,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87624,7 +87624,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87743,7 +87743,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87862,7 +87862,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -87981,7 +87981,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88100,7 +88100,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88219,7 +88219,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88338,7 +88338,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88457,7 +88457,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88576,7 +88576,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88695,7 +88695,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88814,7 +88814,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -88933,7 +88933,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89052,7 +89052,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89171,7 +89171,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89290,7 +89290,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89409,7 +89409,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89527,7 +89527,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89645,7 +89645,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89763,7 +89763,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -89882,7 +89882,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90001,7 +90001,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90120,7 +90120,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90239,7 +90239,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90358,7 +90358,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90477,7 +90477,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90596,7 +90596,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90714,7 +90714,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90832,7 +90832,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -90951,7 +90951,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91070,7 +91070,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91189,7 +91189,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91308,7 +91308,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91427,7 +91427,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91546,7 +91546,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91664,7 +91664,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91783,7 +91783,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -91901,7 +91901,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92019,7 +92019,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92137,7 +92137,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92256,7 +92256,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92375,7 +92375,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92494,7 +92494,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92612,7 +92612,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92731,7 +92731,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92850,7 +92850,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -92969,7 +92969,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93088,7 +93088,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93207,7 +93207,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93326,7 +93326,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93444,7 +93444,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93563,7 +93563,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93682,7 +93682,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93800,7 +93800,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -93919,7 +93919,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -94038,7 +94038,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -94157,7 +94157,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -94275,7 +94275,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -94393,7 +94393,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -94512,7 +94512,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {
@@ -94631,7 +94631,7 @@
           "state": "conditional"
         },
         {
-          "surface": "mcp",
+          "surface": "ai",
           "state": "conditional"
         },
         {

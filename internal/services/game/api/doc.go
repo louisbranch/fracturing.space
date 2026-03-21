@@ -10,5 +10,5 @@
 //   - grpc/metadata: request metadata helpers and interceptors
 //   - grpc/interceptors: cross-cutting gRPC middleware
 //
-// MCP tools call these gRPC services through internal/services/mcp/service.
+// AI orchestration tools call these gRPC services through internal/services/ai/orchestration/gametools.
 package api

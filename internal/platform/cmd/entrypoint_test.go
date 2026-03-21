@@ -97,7 +97,7 @@ func TestRunServiceMainPassesArgsToParseAndRun(t *testing.T) {
 	parseCalled := false
 	runCalled := false
 	err := RunServiceMain(ServiceMainOptions[testConfig]{
-		Service: ServiceMCP,
+		Service: ServiceGame,
 		FlagSet: flag.NewFlagSet("test", flag.ContinueOnError),
 		Args:    []string{"-addr", ":8081"},
 		ParseConfig: func(fs *flag.FlagSet, args []string) (testConfig, error) {
@@ -130,8 +130,8 @@ func TestRunServiceMainPassesArgsToParseAndRun(t *testing.T) {
 	if !runCalled {
 		t.Fatal("expected run to be called")
 	}
-	if got := log.Prefix(); got != "[MCP] " {
-		t.Fatalf("expected log prefix [MCP], got %q", got)
+	if got := log.Prefix(); got != "[GAME] " {
+		t.Fatalf("expected log prefix [GAME], got %q", got)
 	}
 }
 

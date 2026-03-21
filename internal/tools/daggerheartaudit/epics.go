@@ -146,13 +146,13 @@ var epicDefinitions = map[string]epicDefinition{
 			"internal/services/game/domain/systems/daggerheart/creation_workflow.go",
 			"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/",
 			"internal/services/web/modules/campaigns/workflow/daggerheart/",
-			"internal/services/mcp/domain/character_handlers.go",
+			"internal/services/ai/orchestration/gametools/tools_daggerheart.go",
 			"api/proto/systems/daggerheart/v1/state.proto",
 			"docs/reference/daggerheart-creation-workflow.md",
 		},
 		TestsRequired: []string{
 			"Domain tests for step ordering and readiness gating.",
-			"gRPC/web/MCP integration tests proving the same canonical sequence.",
+			"gRPC/web integration tests proving the same canonical sequence.",
 			"Doc-alignment tests or fixtures where ordering is surfaced in generated content.",
 		},
 		RemovalCriteria: []string{

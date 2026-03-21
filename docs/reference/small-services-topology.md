@@ -19,7 +19,6 @@ Runtime and ownership map for service processes outside `web`, `game`, and
 | AI | `cmd/ai` | `internal/cmd/ai` | `internal/services/ai/app` |
 | Auth | `cmd/auth` | `internal/cmd/auth` | `internal/services/auth/app` |
 | Discovery | `cmd/discovery` | `internal/cmd/discovery` | `internal/services/discovery/app` |
-| MCP | `cmd/mcp` | `internal/cmd/mcp` | `internal/services/mcp/service` |
 | Notifications | `cmd/notifications` | `internal/cmd/notifications` | `internal/services/notifications/app` |
 | Play | `cmd/play` | `internal/cmd/play` | `internal/services/play/app` |
 | Social | `cmd/social` | `internal/cmd/social` | `internal/services/social/app` |
@@ -46,11 +45,6 @@ Runtime and ownership map for service processes outside `web`, `game`, and
     typing/presence fanout without becoming gameplay authority
   - replaces the removed standalone chat runtime; transcript transport now
     lives inside `play`
-- MCP runtime role:
-  - internal HTTP bridge between AI orchestration and game/AI services
-  - not a public integrator or browser-facing surface
-  - production tool exposure is intentionally GM-safe
-
 ## Common first-edit seams
 
 - Command/flag or startup wiring changes: `internal/cmd/<service>`.

@@ -10,8 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
+	"net"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -23,20 +23,23 @@ import (
 	daggerheartv1 "github.com/louisbranch/fracturing.space/api/gen/go/systems/daggerheart/v1"
 	grpcmeta "github.com/louisbranch/fracturing.space/internal/services/game/api/grpc/metadata"
 	server "github.com/louisbranch/fracturing.space/internal/services/game/app"
-	"github.com/louisbranch/fracturing.space/internal/services/mcp/domain"
-	mcpservice "github.com/louisbranch/fracturing.space/internal/services/mcp/service"
+	grpcauthctx "github.com/louisbranch/fracturing.space/internal/services/shared/grpcauthctx"
 	"github.com/louisbranch/fracturing.space/internal/test/testkit"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-// integrationSuite shares resources across integration subtests.
+// integrationSuite bundles gRPC game clients and user identity for subtests.
 type integrationSuite struct {
-	client *mcp.ClientSession
-	userID string
+	conn        *grpc.ClientConn
+	campaign    statev1.CampaignServiceClient
+	participant statev1.ParticipantServiceClient
+	character   statev1.CharacterServiceClient
+	session     statev1.SessionServiceClient
+	fork        statev1.ForkServiceClient
+	userID      string
 }
 
 // suiteFixture provides shared startup/shutdown wiring for integration tests.
@@ -60,11 +63,37 @@ func (f *suiteFixture) newUserID(t *testing.T, username string) string {
 	return createAuthUser(t, f.authAddr, username)
 }
 
-func (f *suiteFixture) newMCPClientSession(t *testing.T) *mcp.ClientSession {
+func (f *suiteFixture) newGameSuite(t *testing.T, userID string) *integrationSuite {
 	t.Helper()
-	clientSession, closeClient := startMCPClient(t, f.grpcAddr)
-	t.Cleanup(closeClient)
-	return clientSession
+
+	conn, err := grpc.NewClient(
+		f.grpcAddr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.WaitForReady(true)),
+	)
+	if err != nil {
+		t.Fatalf("dial game gRPC: %v", err)
+	}
+	t.Cleanup(func() {
+		if closeErr := conn.Close(); closeErr != nil {
+			t.Logf("close game gRPC: %v", closeErr)
+		}
+	})
+
+	return &integrationSuite{
+		conn:        conn,
+		campaign:    statev1.NewCampaignServiceClient(conn),
+		participant: statev1.NewParticipantServiceClient(conn),
+		character:   statev1.NewCharacterServiceClient(conn),
+		session:     statev1.NewSessionServiceClient(conn),
+		fork:        statev1.NewForkServiceClient(conn),
+		userID:      userID,
+	}
+}
+
+// ctx returns a context with the suite's user identity attached as gRPC metadata.
+func (s *integrationSuite) ctx(parent context.Context) context.Context {
+	return withUserID(parent, s.userID)
 }
 
 var (
@@ -76,10 +105,6 @@ var (
 
 	sharedFixtureOnce sync.Once
 	sharedFixtureData suiteFixture
-
-	mcpBinaryOnce sync.Once
-	mcpBinaryPath string
-	mcpBinaryErr  error
 )
 
 const (
@@ -260,110 +285,11 @@ func startAuthServer(t *testing.T) (string, func()) {
 	return testkit.StartAuthServer(t)
 }
 
-const (
-	integrationMCPTransportEnv    = "INTEGRATION_MCP_TRANSPORT"
-	integrationMCPTransportHTTP   = "http"
-	integrationMCPTransportMemory = "inmemory"
-	integrationSharedFixtureEnv   = "INTEGRATION_SHARED_FIXTURE"
-)
+const integrationSharedFixtureEnv = "INTEGRATION_SHARED_FIXTURE"
 
 func integrationSharedFixtureEnabled() bool {
 	value := strings.ToLower(strings.TrimSpace(os.Getenv(integrationSharedFixtureEnv)))
 	return value == "1" || value == "true" || value == "yes" || value == "on"
-}
-
-// startMCPClient connects a test MCP client. Default transport is in-memory for
-// speed; set INTEGRATION_MCP_TRANSPORT=http to exercise the process HTTP boundary.
-func startMCPClient(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
-	t.Helper()
-
-	transport := strings.ToLower(strings.TrimSpace(os.Getenv(integrationMCPTransportEnv)))
-	if transport == "" || transport == integrationMCPTransportMemory {
-		return startMCPClientInMemory(t, grpcAddr)
-	}
-	if transport == integrationMCPTransportHTTP {
-		return startMCPClientHTTP(t, grpcAddr)
-	}
-	t.Fatalf("unsupported %s %q", integrationMCPTransportEnv, transport)
-	return nil, nil
-}
-
-func startMCPClientInMemory(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
-	t.Helper()
-
-	serverInstance, err := mcpservice.NewHarness(grpcAddr)
-	if err != nil {
-		t.Fatalf("new MCP server: %v", err)
-	}
-
-	serverTransport, clientTransport := mcp.NewInMemoryTransports()
-	serveCtx, serveCancel := context.WithCancel(context.Background())
-	serveErr := make(chan error, 1)
-	go func() {
-		serveErr <- serverInstance.ServeWithTransport(serveCtx, serverTransport)
-	}()
-
-	client := mcp.NewClient(&mcp.Implementation{Name: "integration-client", Version: "dev"}, nil)
-	connectCtx, connectCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer connectCancel()
-	clientSession, err := client.Connect(connectCtx, clientTransport, nil)
-	if err != nil {
-		serveCancel()
-		t.Fatalf("connect MCP in-memory client: %v", err)
-	}
-
-	closeClient := func() {
-		if closeErr := clientSession.Close(); closeErr != nil {
-			t.Fatalf("close MCP client: %v", closeErr)
-		}
-		serveCancel()
-		select {
-		case err := <-serveErr:
-			if err != nil {
-				t.Fatalf("MCP in-memory server error: %v", err)
-			}
-		case <-time.After(5 * time.Second):
-			t.Fatal("timed out waiting for MCP in-memory server to stop")
-		}
-	}
-
-	return clientSession, closeClient
-}
-
-func startMCPClientHTTP(t *testing.T, grpcAddr string) (*mcp.ClientSession, func()) {
-	t.Helper()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	httpAddr := pickUnusedAddress(t)
-	cmd, err := startMCPHarnessHTTPServer(ctx, t, grpcAddr, httpAddr)
-	if err != nil {
-		cancel()
-		t.Fatalf("start MCP HTTP server: %v", err)
-	}
-	baseURL := "http://" + httpAddr
-	waitForHTTPHealth(t, newHTTPClient(t), baseURL+"/mcp/health")
-
-	client := mcp.NewClient(&mcp.Implementation{Name: "integration-client", Version: "dev"}, nil)
-	connectCtx, connectCancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer connectCancel()
-	clientSession, err := client.Connect(connectCtx, &mcp.StreamableClientTransport{
-		Endpoint:   baseURL + "/mcp",
-		HTTPClient: newHTTPClient(t),
-	}, nil)
-	if err != nil {
-		stopMCPProcess(t, cancel, cmd)
-		t.Fatalf("connect MCP client: %v", err)
-	}
-
-	closeClient := func() {
-		closeErr := clientSession.Close()
-		if closeErr != nil {
-			t.Fatalf("close MCP client: %v", closeErr)
-		}
-		stopMCPProcess(t, cancel, cmd)
-	}
-
-	return clientSession, closeClient
 }
 
 func createAuthUser(t *testing.T, authAddr, username string) string {
@@ -435,41 +361,6 @@ func sanitizeTestToken(value string) string {
 	return sanitized
 }
 
-// mcpBinaryForTests builds the MCP binary once so integration tests control the
-// actual child process instead of the `go run` wrapper.
-func mcpBinaryForTests(t *testing.T) string {
-	t.Helper()
-
-	mcpBinaryOnce.Do(func() {
-		dir, err := os.MkdirTemp("", "mcp-integration-bin-*")
-		if err != nil {
-			mcpBinaryErr = fmt.Errorf("create temp dir: %w", err)
-			return
-		}
-
-		binaryName := "mcp-integration"
-		if runtime.GOOS == "windows" {
-			binaryName += ".exe"
-		}
-		mcpBinaryPath = filepath.Join(dir, binaryName)
-
-		cmd := exec.Command("go", "build", "-o", mcpBinaryPath, "./cmd/mcp")
-		cmd.Dir = repoRoot(t)
-		output, err := cmd.CombinedOutput()
-		if err != nil {
-			mcpBinaryErr = fmt.Errorf("build mcp binary: %w: %s", err, strings.TrimSpace(string(output)))
-		}
-	})
-
-	if mcpBinaryErr != nil {
-		t.Fatalf("prepare MCP binary: %v", mcpBinaryErr)
-	}
-	if strings.TrimSpace(mcpBinaryPath) == "" {
-		t.Fatal("prepare MCP binary: path is empty")
-	}
-	return mcpBinaryPath
-}
-
 func withUserID(ctx context.Context, userID string) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
@@ -518,131 +409,6 @@ func joinGrantToken(t *testing.T, campaignID, inviteID, userID string, now time.
 	signature := ed25519.Sign(joinGrantPrivateKey, []byte(signingInput))
 	encodedSig := base64.RawURLEncoding.EncodeToString(signature)
 	return signingInput + "." + encodedSig
-}
-
-func injectCampaignCreatorUserID(request map[string]any, userID string) {
-	if request == nil {
-		return
-	}
-	method, _ := request["method"].(string)
-	if method != "tools/call" {
-		return
-	}
-	params, ok := request["params"].(map[string]any)
-	if !ok {
-		return
-	}
-	toolName, _ := params["name"].(string)
-	if toolName != "campaign_create" {
-		return
-	}
-	arguments, ok := params["arguments"].(map[string]any)
-	if !ok {
-		return
-	}
-	if _, exists := arguments["user_id"]; !exists {
-		arguments["user_id"] = userID
-	}
-}
-
-// decodeStructuredContent decodes structured MCP content into the target type.
-func decodeStructuredContent[T any](t *testing.T, value any) T {
-	t.Helper()
-
-	data, err := json.Marshal(value)
-	if err != nil {
-		t.Fatalf("marshal structured content: %v", err)
-	}
-	var output T
-	if err := json.Unmarshal(data, &output); err != nil {
-		t.Fatalf("unmarshal structured content: %v", err)
-	}
-	return output
-}
-
-// parseCampaignListPayload decodes a campaign list JSON payload.
-func parseCampaignListPayload(t *testing.T, raw string) domain.CampaignListPayload {
-	t.Helper()
-
-	var payload domain.CampaignListPayload
-	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
-		t.Fatalf("unmarshal campaign list payload: %v", err)
-	}
-	return payload
-}
-
-// parseParticipantListPayload decodes a participant list JSON payload.
-func parseParticipantListPayload(t *testing.T, raw string) domain.ParticipantListPayload {
-	t.Helper()
-
-	var payload domain.ParticipantListPayload
-	if err := json.Unmarshal([]byte(raw), &payload); err != nil {
-		t.Fatalf("unmarshal participant list payload: %v", err)
-	}
-	return payload
-}
-
-// readParticipantList fetches the participant list resource for a campaign.
-func readParticipantList(t *testing.T, client *mcp.ClientSession, campaignID string) domain.ParticipantListPayload {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
-	defer cancel()
-
-	res, err := client.ReadResource(ctx, &mcp.ReadResourceParams{URI: fmt.Sprintf("campaign://%s/participants", campaignID)})
-	if err != nil {
-		t.Fatalf("read participants resource: %v", err)
-	}
-	if res == nil || len(res.Contents) == 0 || res.Contents[0].Text == "" {
-		t.Fatal("participants resource response missing content")
-	}
-
-	return parseParticipantListPayload(t, res.Contents[0].Text)
-}
-
-// setContext sets harness-only MCP context for campaign/participant identity.
-func setContext(t *testing.T, client *mcp.ClientSession, campaignID, participantID string) {
-	t.Helper()
-	setContextWithSession(t, client, campaignID, "", participantID)
-}
-
-// setContextWithSession sets harness-only MCP context including an optional session.
-func setContextWithSession(t *testing.T, client *mcp.ClientSession, campaignID, sessionID, participantID string) {
-	t.Helper()
-
-	ctx, cancel := context.WithTimeout(context.Background(), integrationTimeout())
-	defer cancel()
-
-	arguments := map[string]any{
-		"campaign_id": campaignID,
-	}
-	if sessionID != "" {
-		arguments["session_id"] = sessionID
-	}
-	if participantID != "" {
-		arguments["participant_id"] = participantID
-	}
-
-	result, err := client.CallTool(ctx, &mcp.CallToolParams{
-		Name:      "set_context",
-		Arguments: arguments,
-	})
-	if err != nil {
-		t.Fatalf("call set_context: %v", err)
-	}
-	if result == nil || result.IsError {
-		t.Fatalf("set_context failed: %+v", result)
-	}
-}
-
-// findCampaignByID searches for a campaign entry by ID.
-func findCampaignByID(payload domain.CampaignListPayload, id string) (domain.CampaignListEntry, bool) {
-	for _, campaign := range payload.Campaigns {
-		if campaign.ID == id {
-			return campaign, true
-		}
-	}
-	return domain.CampaignListEntry{}, false
 }
 
 // parseRFC3339 parses an RFC3339 timestamp string.
@@ -1006,4 +772,34 @@ func waitForGRPCHealth(t *testing.T, addr string) {
 // intPointer returns a pointer to the provided int value.
 func intPointer(value int) *int {
 	return &value
+}
+
+// dialGRPCWithServiceID dials a gRPC address with a service identity
+// interceptor so calls carry the x-fracturing-space-service-id header.
+func dialGRPCWithServiceID(t *testing.T, addr, serviceID string) *grpc.ClientConn {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	conn, err := grpc.DialContext(ctx, addr,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
+		grpc.WithChainUnaryInterceptor(grpcauthctx.ServiceIDUnaryClientInterceptor(serviceID)),
+		grpc.WithChainStreamInterceptor(grpcauthctx.ServiceIDStreamClientInterceptor(serviceID)),
+	)
+	if err != nil {
+		t.Fatalf("dial grpc (service-id=%s) %s: %v", serviceID, addr, err)
+	}
+	return conn
+}
+
+// pickUnusedAddress binds an ephemeral TCP port and returns its address.
+func pickUnusedAddress(t *testing.T) string {
+	t.Helper()
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("pick unused address: %v", err)
+	}
+	addr := l.Addr().String()
+	l.Close()
+	return addr
 }

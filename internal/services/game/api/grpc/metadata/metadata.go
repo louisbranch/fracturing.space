@@ -21,7 +21,7 @@ import (
 // RequestIDHeader is the gRPC metadata key for request correlation IDs.
 const RequestIDHeader = "x-fracturing-space-request-id"
 
-// InvocationIDHeader is the gRPC metadata key for MCP tool invocation IDs.
+// InvocationIDHeader is the gRPC metadata key for tool invocation IDs.
 const InvocationIDHeader = "x-fracturing-space-invocation-id"
 
 // ParticipantIDHeader is the gRPC metadata key for caller identity hints.
@@ -33,7 +33,7 @@ const ParticipantIDHeader = "x-fracturing-space-participant-id"
 const UserIDHeader = "x-fracturing-space-user-id"
 
 // CampaignIDHeader is the gRPC metadata key for campaign routing hints.
-// MCP and UI flows can pass this through for consistency and observability.
+// AI and UI flows can pass this through for consistency and observability.
 const CampaignIDHeader = "x-fracturing-space-campaign-id"
 
 // SessionIDHeader is the gRPC metadata key for session routing hints.

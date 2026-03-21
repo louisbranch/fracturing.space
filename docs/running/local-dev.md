@@ -35,7 +35,7 @@ watch-based runtime automatically after attach.
 - The catalog importer automatically retries transient SQLite busy/locked failures during startup.
 
 The default watcher set starts `status`, `game`, `auth`, `social`, `discovery`,
-`ai`, `notifications`, `userhub`, `worker`, `mcp`, `admin`, `play`,
+`ai`, `notifications`, `userhub`, `worker`, `admin`, `play`,
 and `web`.
 Game reports catalog-backed capabilities as degraded until import completes, then
 re-evaluates and promotes them to operational automatically.
@@ -67,7 +67,6 @@ Watcher logs:
 - `.tmp/dev/game.log`
 - `.tmp/dev/auth.log`
 - `.tmp/dev/social.log`
-- `.tmp/dev/mcp.log`
 - `.tmp/dev/admin.log`
 - `.tmp/dev/play.log`
 - `.tmp/dev/ai.log`
@@ -92,7 +91,6 @@ go run ./cmd/auth
 go run ./cmd/social
 go run ./cmd/notifications
 go run ./cmd/worker
-go run ./cmd/mcp
 go run ./cmd/admin
 go run ./cmd/play
 go run ./cmd/ai
@@ -120,7 +118,6 @@ AES key (16/24/32 bytes) before startup.
 - Auth gRPC: `localhost:8083`
 - Auth HTTP: `http://localhost:8084`
 - Social gRPC: `localhost:8090`
-- MCP bridge health: `http://localhost:8085/mcp/health`
 - Admin: `http://localhost:8081`
 - Play: `http://localhost:8094/up`
 - AI gRPC: `localhost:8087`

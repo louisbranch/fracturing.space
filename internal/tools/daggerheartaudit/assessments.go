@@ -30,7 +30,7 @@ var curatedAssessments = map[string]curatedAssessment{
 			"internal/services/game/domain/systems/daggerheart/creation_workflow.go",
 			"internal/services/game/api/grpc/systems/daggerheart/creationworkflow/provider.go",
 			"internal/services/web/modules/campaigns/workflow/daggerheart/form.go",
-			"internal/services/mcp/domain/character_handlers.go",
+			"internal/services/ai/orchestration/gametools/tools_daggerheart.go",
 			"api/proto/systems/daggerheart/v1/state.proto",
 		},
 		EvidenceTests: []string{

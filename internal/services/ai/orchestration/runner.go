@@ -25,7 +25,7 @@ type runner struct {
 	toolResultMaxBytes int
 }
 
-// NewRunner builds a campaign-turn runner over one MCP dialer and one explicit
+// NewRunner builds a campaign-turn runner over one dialer and one explicit
 // runtime policy.
 func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 	maxSteps := cfg.MaxSteps
@@ -53,7 +53,7 @@ func NewRunner(cfg RunnerConfig) CampaignTurnRunner {
 	}
 }
 
-// Run executes one MCP-backed provider turn.
+// Run executes one provider turn.
 func (r *runner) Run(ctx context.Context, input Input) (Result, error) {
 	ctx, span := tracer.Start(ctx, "ai.orchestration.run")
 	defer span.End()

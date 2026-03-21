@@ -11,7 +11,7 @@ import (
 
 // GetCampaign returns a campaign metadata record by ID.
 // Lifecycle validation and read-policy checks are enforced so one read model
-// can serve all transport surfaces (gRPC, MCP, and web).
+// can serve all transport surfaces (gRPC and web).
 func (s *CampaignService) GetCampaign(ctx context.Context, in *campaignv1.GetCampaignRequest) (*campaignv1.GetCampaignResponse, error) {
 	if in == nil {
 		return nil, status.Error(codes.InvalidArgument, "get campaign request is required")

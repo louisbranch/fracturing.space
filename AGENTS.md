@@ -125,7 +125,6 @@ Load the relevant skill when work enters one of these areas:
 | `error-handling` | Structured errors and i18n-friendly messaging | when adding/changing domain or transport error paths |
 | `schema` | Migration/proto change policy and compatibility decisions | when editing migrations, SQL schema, or proto contracts |
 | `game-system` | New game-system implementation workflow | when adding/changing game systems or manifest registration |
-| `mcp` | MCP transport boundaries and gRPC parity rules | when touching MCP tools/resources/handlers |
 | `web-server` | Web transport and feature-boundary conventions | when changing HTTP handlers, routes, or rendering flow |
 | `pr-issues` | PR review triage and merge workflow | when triaging/fixing review comments on an existing PR |
 | `playwright-cli` | Browser automation commands and workflows | when interacting with web UIs, screenshots, forms, or extraction |

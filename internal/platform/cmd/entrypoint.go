@@ -26,7 +26,6 @@ const (
 	ServiceDiscovery     = "discovery"
 	ServiceAuth          = "auth"
 	ServiceGame          = "game"
-	ServiceMCP           = "mcp"
 	ServicePlay          = "play"
 	ServiceNotifications = "notifications"
 	ServiceScenario      = "scenario"

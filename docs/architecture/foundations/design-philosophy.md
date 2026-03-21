@@ -133,5 +133,5 @@ easier to generalize later than to disentangle.
 - `storage/` implements domain contracts; it never defines domain behavior.
 - `projection/` applies events to stores; it imports domain types and
   storage contracts but never transport types.
-- Transport layers (gRPC, MCP, web) import domain, storage, and
-  projection but never each other.
+- Transport layers (gRPC, web) import domain, storage, and projection
+  but never each other.

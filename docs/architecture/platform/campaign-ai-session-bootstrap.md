@@ -18,9 +18,9 @@ campaign-scoped orchestration loop is stable.
 - A campaign AI turn can be queued from `session.started` even when the session
   has no active scene yet.
 - The AI orchestration runner rebuilds a fresh session brief on every turn from
-  authoritative MCP resources instead of carrying a private transcript cache.
+  authoritative game resources instead of carrying a private transcript cache.
 - The brief currently includes:
-  - current MCP context
+  - current session context
   - campaign metadata
   - campaign participants
   - campaign characters
@@ -46,7 +46,7 @@ campaign-scoped orchestration loop is stable.
 - Add campaign-owned writable memories for recurring facts, NPC state, table
   preferences, and unresolved hooks.
 - Add operator-managed imported source material such as `story.md`,
-  `session.md`, encounter notes, or tone briefs through campaign-owned MCP
+  `session.md`, encounter notes, or tone briefs through campaign-owned
   resources instead of direct filesystem access.
 - Add recap and summarization pipelines so long-running sessions can preload a
   compact summary plus recent deltas instead of replaying large interaction

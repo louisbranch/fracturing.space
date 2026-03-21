@@ -5,7 +5,7 @@
 //
 // Header constants include:
 //   - RequestIDHeader: correlates logs and events across service calls
-//   - InvocationIDHeader: tracks MCP tool invocations
+//   - InvocationIDHeader: tracks AI tool invocations
 //   - ParticipantIDHeader/UserIDHeader: identity hints for callers and impersonation
 //   - CampaignIDHeader/SessionIDHeader: routing and scoping hints
 package metadata

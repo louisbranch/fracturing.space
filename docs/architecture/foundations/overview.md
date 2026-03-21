@@ -37,7 +37,7 @@ Long-running campaigns suffer from fragmented records and single-GM continuity. 
 - Campaign, session, participant, and character management
 - Deterministic, server-side resolution of mechanics
 - Event journal with replayable state
-- gRPC APIs and an internal MCP bridge for AI orchestration
+- gRPC APIs for AI orchestration
 - Duality Dice as the initial rules system
 
 ## What it does not include (yet)

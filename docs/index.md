@@ -6,7 +6,7 @@ nav_order: 1
 # Fracturing.Space docs
 
 Fracturing.Space is a server-authoritative, event-sourced engine for tabletop
-RPG campaigns with gRPC APIs and an internal MCP bridge for AI orchestration.
+RPG campaigns with gRPC APIs for gameplay and AI orchestration.
 
 ## Start here
 
@@ -33,5 +33,5 @@ Choose the path that matches your goal.
 
 ## Reference
 
-- MCP bridge docs: [Reference](reference/index.md)
+- AI tools and resources: [Reference](reference/index.md)
 - Generated command/event catalogs: [Events index](events/index.md)

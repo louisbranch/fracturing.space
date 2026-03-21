@@ -195,7 +195,7 @@ func Run(ctx context.Context, cfg Config, out io.Writer, errOut io.Writer) error
 
 			return gen.Run(runCtx)
 		}
-		return seed.Run(runCtx, cfg.SeedConfig)
+		return fmt.Errorf("seed command requires -manifest or -generate flag")
 	})
 }
 
