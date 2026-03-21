@@ -7,6 +7,7 @@ import type { SideChatParticipant } from "./contract";
 // single badge view model instead of reassembling label/class/tooltip triplets.
 export type PlayerHUDStatusBadge = {
   className: string;
+  indicator?: "none" | "loading-bars";
   label: string;
   tooltip: string;
 };
@@ -39,6 +40,7 @@ export function backstageStatusBadge(
     return {
       className: "badge-ghost",
       label: "Backstage Idle",
+      indicator: "none",
       tooltip: "OOC is closed.",
     };
   }
@@ -47,6 +49,7 @@ export function backstageStatusBadge(
     return {
       className: "badge-info badge-soft",
       label: "Waiting on GM",
+      indicator: "loading-bars",
       tooltip: "All players are ready. Waiting for the GM to resume on-stage play.",
     };
   }
@@ -55,6 +58,7 @@ export function backstageStatusBadge(
     return {
       className: "badge-success badge-soft",
       label: "Ready",
+      indicator: "none",
       tooltip: "You are ready. Clear Ready if you need to continue the OOC discussion.",
     };
   }
@@ -62,6 +66,7 @@ export function backstageStatusBadge(
   return {
     className: "badge-warning badge-soft",
     label: "OOC Open",
+    indicator: "none",
     tooltip: "Awaiting player readiness.",
   };
 }
@@ -73,6 +78,7 @@ export function onStageStatusBadge(
     return {
       className: "badge-warning badge-soft",
       label: "OOC Open",
+      indicator: "none",
       tooltip: state.oocReason
         ? `Backstage is open for a rules pause: ${state.oocReason}`
         : "Backstage OOC is open. Resolve the ruling there before acting on-stage.",
@@ -83,6 +89,7 @@ export function onStageStatusBadge(
     return {
       className: "badge-warning badge-soft",
       label: "Changes Requested",
+      indicator: "none",
       tooltip: "GM asked you to tighten or revise your committed action.",
     };
   }
@@ -91,6 +98,7 @@ export function onStageStatusBadge(
     return {
       className: "badge-secondary badge-soft",
       label: "Yielded",
+      indicator: "none",
       tooltip:
         state.viewerControls.disabledReason
         ?? "You have already yielded. Unyield if you need to revise before the beat closes.",
@@ -101,6 +109,7 @@ export function onStageStatusBadge(
     return {
       className: "badge-primary badge-soft",
       label: "Your Beat",
+      indicator: "none",
       tooltip: "Commit the next action for your character and yield when you are ready.",
     };
   }
@@ -109,6 +118,7 @@ export function onStageStatusBadge(
     return {
       className: "badge-info badge-soft",
       label: "AI Thinking",
+      indicator: "loading-bars",
       tooltip: "The next beat is being framed. Hold position until the scene opens again.",
     };
   }
@@ -117,6 +127,7 @@ export function onStageStatusBadge(
     return {
       className: "badge-error badge-soft",
       label: "GM Delayed",
+      indicator: "none",
       tooltip: "The next beat is delayed while GM authority reorients.",
     };
   }
@@ -124,6 +135,7 @@ export function onStageStatusBadge(
   return {
     className: "badge-ghost",
     label: "Waiting",
+    indicator: "loading-bars",
     tooltip: state.viewerControls.disabledReason ?? "Waiting for the GM to frame the next beat.",
   };
 }

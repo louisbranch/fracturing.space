@@ -12,6 +12,7 @@ describe("BackstageContextCard", () => {
         status={{
           label: "OOC Open",
           className: "badge-warning badge-soft",
+          indicator: "none",
           tooltip: "Awaiting player readiness.",
         }}
       />,
@@ -33,10 +34,30 @@ describe("BackstageContextCard", () => {
         status={{
           label: "Backstage Idle",
           className: "badge-ghost",
+          indicator: "none",
           tooltip: "OOC is closed.",
         }}
       />,
     );
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("shows a loading bar for waiting-on-gm backstage status", () => {
+    render(
+      <BackstageContextCard
+        sceneName="Sealed Vault"
+        pausedPromptText="The ward crackles when either of you nears the seam. What do you do?"
+        status={{
+          label: "Waiting on GM",
+          className: "badge-info badge-soft",
+          indicator: "loading-bars",
+          tooltip: "All players are ready. Waiting for the GM to resume on-stage play.",
+        }}
+      />,
+    );
+
+    const status = screen.getByLabelText("Backstage status: Waiting on GM");
+    expect(status.querySelector(".loading.loading-bars")).not.toBeNull();
+    expect(screen.getByText("Waiting on GM")).toBeInTheDocument();
   });
 });

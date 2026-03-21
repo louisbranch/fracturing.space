@@ -32,7 +32,9 @@ describe("ParticipantPortraitRail", () => {
 
     expect(screen.getByLabelText("Side chat participants")).toBeInTheDocument();
     expect(screen.getByLabelText("Bryn: typing")).toBeInTheDocument();
-    expect(screen.getByLabelText("Bryn status: Typing")).toBeInTheDocument();
+    const typingStatus = screen.getByLabelText("Bryn status: Typing");
+    expect(typingStatus).toBeInTheDocument();
+    expect(within(typingStatus).getByText("", { selector: ".loading.loading-dots" })).toBeInTheDocument();
   });
 
   it("renders on-stage acting and revision states", () => {
