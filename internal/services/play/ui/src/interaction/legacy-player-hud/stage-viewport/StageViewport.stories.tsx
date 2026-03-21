@@ -3,7 +3,7 @@ import { StageViewport } from "./StageViewport";
 import { stageViewportFixtures } from "./fixtures";
 
 const meta = {
-  title: "Interaction/Player HUD/Stage Viewport",
+  title: "Interaction/Legacy Player HUD/Stage Viewport",
   component: StageViewport,
   tags: ["autodocs"],
   parameters: {

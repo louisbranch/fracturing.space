@@ -3,7 +3,7 @@ import { HUDHeader } from "./HUDHeader";
 import { hudHeaderFixtures } from "./fixtures";
 
 const meta = {
-  title: "Interaction/Player HUD/Header",
+  title: "Interaction/Legacy Player HUD/Header",
   component: HUDHeader,
   tags: ["autodocs"],
   parameters: {

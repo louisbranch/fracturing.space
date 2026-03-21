@@ -59,7 +59,8 @@ The Daggerheart reference slices live under:
 
 The active interaction workflow slices live under:
 
-- `internal/services/play/ui/src/interaction/player-hud/`
+- `internal/services/play/ui/src/interaction/player-hud/` (v2 — navbar shell)
+- `internal/services/play/ui/src/interaction/legacy-player-hud/` (v1 — composer-focused)
 - older interaction workflow slices that are pending removal now live under
   `internal/services/play/ui/src/interaction/legacy/`
 
@@ -115,7 +116,8 @@ When adding the next isolated component:
 
 1. create a system-owned component slice with its own contract, fixtures, and stories
    for Daggerheart reference surfaces, or an interaction-owned slice under
-   `src/interaction/player-hud/` for active HUD workflow surfaces
+   `src/interaction/player-hud/` for active HUD workflow surfaces (v2),
+   or `src/interaction/legacy-player-hud/` for v1 surfaces pending migration
 2. add Storybook stories that clearly separate overview, variants, and fixtures
 3. write component tests against the exported contract, not runtime internals
 4. remove temporary or superseded UI code instead of preserving compatibility by default
