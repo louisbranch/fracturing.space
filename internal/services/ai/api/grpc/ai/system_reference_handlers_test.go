@@ -8,6 +8,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 )
 
 func TestSystemReferenceHandlersRoundTrip(t *testing.T) {
@@ -27,7 +28,7 @@ func TestSystemReferenceHandlersRoundTrip(t *testing.T) {
 		t.Fatalf("write reference document: %v", err)
 	}
 
-	svc := NewSystemReferenceHandlers(campaigncontext.NewReferenceCorpus(root))
+	svc := NewSystemReferenceHandlers(referencecorpus.New(root))
 
 	searchResp, err := svc.SearchSystemReference(context.Background(), &aiv1.SearchSystemReferenceRequest{
 		System:     campaigncontext.DaggerheartSystem,

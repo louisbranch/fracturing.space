@@ -1,10 +1,17 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
+	"errors"
 	"net"
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 )
 
 func setAISessionGrantEnv(t *testing.T) {
@@ -201,5 +208,83 @@ func TestAISessionGrantConfigFromEnvBuildsConfigWhenComplete(t *testing.T) {
 	}
 	if cfg.Audience != "fracturing-space-ai" {
 		t.Fatalf("audience = %q", cfg.Audience)
+	}
+}
+
+func TestBuildPromptBuilderReturnsExplicitBuilderWithoutLoader(t *testing.T) {
+	builder := buildPromptBuilder(nil)
+	if builder == nil {
+		t.Fatal("expected explicit degraded prompt builder")
+	}
+
+	prompt, err := builder.Build(context.Background(), promptTestSession{resources: promptTestResources("scene-1")}, orchestration.PromptInput{
+		CampaignID: "camp-1",
+		SessionID:  "sess-1",
+	})
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if !strings.Contains(prompt, "Daggerheart duality rules") {
+		t.Fatalf("prompt missing configured context-source content: %q", prompt)
+	}
+}
+
+func TestLoadPromptInstructionsAllowsPartialInstructionLoad(t *testing.T) {
+	root := t.TempDir()
+	writePromptInstructionFile(t, filepath.Join(root, "v1/core/interaction.md"), "# Interaction Contract\nCommit output.")
+
+	instructions := loadPromptInstructions(instructionset.New(root))
+	if instructions.Skills != "" {
+		t.Fatalf("expected missing skills to degrade to empty, got %q", instructions.Skills)
+	}
+	if !strings.Contains(instructions.InteractionContract, "Interaction Contract") {
+		t.Fatalf("interaction contract = %q", instructions.InteractionContract)
+	}
+}
+
+type promptTestSession struct {
+	resources map[string]string
+}
+
+func (s promptTestSession) ListTools(context.Context) ([]orchestration.Tool, error) {
+	return nil, nil
+}
+
+func (s promptTestSession) CallTool(context.Context, string, any) (orchestration.ToolResult, error) {
+	return orchestration.ToolResult{}, nil
+}
+
+func (s promptTestSession) ReadResource(_ context.Context, uri string) (string, error) {
+	value, ok := s.resources[uri]
+	if !ok {
+		return "", errors.New("missing resource")
+	}
+	return value, nil
+}
+
+func (s promptTestSession) Close() error { return nil }
+
+func promptTestResources(activeSceneID string) map[string]string {
+	return map[string]string{
+		"context://current":                        `{"context":{"campaign_id":"camp-1","session_id":"sess-1","participant_id":"gm-1"}}`,
+		"campaign://camp-1":                        `{"campaign":{"id":"camp-1","name":"Ashes","theme_prompt":"Ruined empire"}}`,
+		"campaign://camp-1/participants":           `{"participants":[{"id":"gm-1","role":"GM"},{"id":"p-1","role":"PLAYER"}]}`,
+		"campaign://camp-1/characters":             `{"characters":[{"id":"char-1","name":"Theron"}]}`,
+		"campaign://camp-1/sessions":               `{"sessions":[{"id":"sess-1","status":"ACTIVE"}]}`,
+		"campaign://camp-1/sessions/sess-1/scenes": `{"scenes":[{"scene_id":"scene-1"}]}`,
+		"campaign://camp-1/interaction":            `{"campaign_id":"camp-1","active_session":{"session_id":"sess-1"},"active_scene":{"scene_id":"` + activeSceneID + `"}}`,
+		"campaign://camp-1/artifacts/memory.md":    "",
+		"daggerheart://rules/version":              `{"system":"Daggerheart","module":"duality"}`,
+		"daggerheart://campaign/camp-1/snapshot":   `{"gm_fear":3,"characters":[]}`,
+	}
+}
+
+func writePromptInstructionFile(t *testing.T, path string, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", path, err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
 	}
 }

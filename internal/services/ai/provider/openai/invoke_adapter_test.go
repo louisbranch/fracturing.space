@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
 )
@@ -28,7 +27,7 @@ func TestInvokeAdapterInvokeNon2xxReadError(t *testing.T) {
 		},
 	}}
 
-	_, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
+	_, err := adapter.Invoke(context.Background(), provider.InvokeInput{
 		Model:            "gpt-4o-mini",
 		Input:            "Say hello",
 		CredentialSecret: "sk-1",
@@ -76,12 +75,12 @@ func TestOpenAIBaseURLFromResponsesURL(t *testing.T) {
 func TestInvokeAdapterInvokeValidation(t *testing.T) {
 	tests := []struct {
 		name  string
-		input aiservice.ProviderInvokeInput
+		input provider.InvokeInput
 		want  string
 	}{
-		{name: "missing credential secret", input: aiservice.ProviderInvokeInput{Model: "gpt-4o-mini", Input: "hello"}, want: "credential secret is required"},
-		{name: "missing model", input: aiservice.ProviderInvokeInput{Input: "hello", CredentialSecret: "sk-1"}, want: "model is required"},
-		{name: "missing input", input: aiservice.ProviderInvokeInput{Model: "gpt-4o-mini", CredentialSecret: "sk-1"}, want: "input is required"},
+		{name: "missing credential secret", input: provider.InvokeInput{Model: "gpt-4o-mini", Input: "hello"}, want: "credential secret is required"},
+		{name: "missing model", input: provider.InvokeInput{Input: "hello", CredentialSecret: "sk-1"}, want: "model is required"},
+		{name: "missing input", input: provider.InvokeInput{Model: "gpt-4o-mini", CredentialSecret: "sk-1"}, want: "input is required"},
 	}
 
 	adapter := &invokeAdapter{cfg: InvokeConfig{
@@ -114,7 +113,7 @@ func TestInvokeAdapterInvokeProviderError(t *testing.T) {
 		},
 	}}
 
-	_, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
+	_, err := adapter.Invoke(context.Background(), provider.InvokeInput{
 		Model:            "gpt-4o-mini",
 		Input:            "Say hello",
 		CredentialSecret: "sk-1",
@@ -146,7 +145,7 @@ func TestInvokeAdapterInvokeDecodeAndOutputErrors(t *testing.T) {
 				},
 			}}
 
-			if _, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
+			if _, err := adapter.Invoke(context.Background(), provider.InvokeInput{
 				Model:            "gpt-4o-mini",
 				Input:            "Say hello",
 				CredentialSecret: "sk-1",
@@ -215,7 +214,7 @@ func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 	adapter := NewInvokeAdapter(InvokeConfig{
 		ResponsesURL: server.URL + "/v1/responses",
 	})
-	got, err := adapter.Invoke(context.Background(), aiservice.ProviderInvokeInput{
+	got, err := adapter.Invoke(context.Background(), provider.InvokeInput{
 		Model:            "gpt-4o-mini",
 		Input:            "Say hello",
 		Instructions:     "Stay in character.",
@@ -232,11 +231,11 @@ func TestInvokeAdapterInvokeAndListModels(t *testing.T) {
 		t.Fatalf("usage = %#v", got.Usage)
 	}
 
-	modelAdapter, ok := adapter.(aiservice.ProviderModelAdapter)
+	modelAdapter, ok := adapter.(provider.ModelAdapter)
 	if !ok {
-		t.Fatalf("adapter type %T does not implement ProviderModelAdapter", adapter)
+		t.Fatalf("adapter type %T does not implement provider.ModelAdapter", adapter)
 	}
-	models, err := modelAdapter.ListModels(context.Background(), aiservice.ProviderListModelsInput{CredentialSecret: "sk-1"})
+	models, err := modelAdapter.ListModels(context.Background(), provider.ListModelsInput{CredentialSecret: "sk-1"})
 	if err != nil {
 		t.Fatalf("list models: %v", err)
 	}
@@ -261,10 +260,10 @@ func TestInvokeAdapterListModelsValidationAndError(t *testing.T) {
 		},
 	}}
 
-	if _, err := adapter.ListModels(context.Background(), aiservice.ProviderListModelsInput{}); err == nil || !strings.Contains(err.Error(), "credential secret is required") {
+	if _, err := adapter.ListModels(context.Background(), provider.ListModelsInput{}); err == nil || !strings.Contains(err.Error(), "credential secret is required") {
 		t.Fatalf("error = %v, want missing credential secret", err)
 	}
-	if _, err := adapter.ListModels(context.Background(), aiservice.ProviderListModelsInput{CredentialSecret: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
+	if _, err := adapter.ListModels(context.Background(), provider.ListModelsInput{CredentialSecret: "sk-1"}); err == nil || !strings.Contains(err.Error(), "list models") {
 		t.Fatalf("error = %v, want list models provider error", err)
 	}
 }

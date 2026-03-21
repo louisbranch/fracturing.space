@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/louisbranch/fracturing.space/internal/platform/storage/sqliteutil"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/storage"
@@ -167,45 +166,6 @@ LIMIT ?
 	}
 	return page, nil
 }
-
-// RevokeCredential marks a credential as revoked.
-func (s *Store) RevokeCredential(ctx context.Context, ownerUserID string, credentialID string, revokedAt time.Time) error {
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-	if s == nil || s.sqlDB == nil {
-		return fmt.Errorf("storage is not configured")
-	}
-	ownerUserID = strings.TrimSpace(ownerUserID)
-	if ownerUserID == "" {
-		return fmt.Errorf("owner user id is required")
-	}
-	credentialID = strings.TrimSpace(credentialID)
-	if credentialID == "" {
-		return fmt.Errorf("credential id is required")
-	}
-
-	// Revocation is a lifecycle state change; ciphertext is retained for audit
-	// history and is no longer considered usable by service-level checks.
-	updatedAt := revokedAt.UTC()
-	res, err := s.sqlDB.ExecContext(ctx, `
-UPDATE ai_credentials
-SET status = 'revoked', updated_at = ?, revoked_at = ?
-WHERE owner_user_id = ? AND id = ?
-`, sqliteutil.ToMillis(updatedAt), sqliteutil.ToMillis(revokedAt.UTC()), ownerUserID, credentialID)
-	if err != nil {
-		return fmt.Errorf("revoke credential: %w", err)
-	}
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("revoke credential rows affected: %w", err)
-	}
-	if affected == 0 {
-		return storage.ErrNotFound
-	}
-	return nil
-}
-
 func scanCredentialRecord(scanner interface{ Scan(...any) error }) (storage.CredentialRecord, error) {
 	var rec storage.CredentialRecord
 	var createdAt int64

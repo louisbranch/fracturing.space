@@ -28,6 +28,7 @@ Exact runtime and contributor-facing contracts.
 - Core choice primitive contracts: [core-choice-primitive-contracts.md](core-choice-primitive-contracts.md)
 - Contributor map: [contributor-map.md](contributor-map.md)
 - AI service contributor map: [ai-service-contributor-map.md](ai-service-contributor-map.md)
+- AI service lifecycle terms: [ai-service-lifecycle-terms.md](ai-service-lifecycle-terms.md)
 - Game service contributor map: [game-service-contributor-map.md](game-service-contributor-map.md)
 - Play contributor map: [play-contributor-map.md](play-contributor-map.md)
 - Small services topology: [small-services-topology.md](small-services-topology.md)

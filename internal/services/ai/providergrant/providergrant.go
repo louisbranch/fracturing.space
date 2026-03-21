@@ -35,6 +35,8 @@ var (
 	ErrEmptyTokenCiphertext = errors.New("token ciphertext is required")
 	// ErrEmptyID indicates grant ID is required.
 	ErrEmptyID = errors.New("id is required")
+	// ErrEmptyRefreshError indicates refresh-failure detail is required.
+	ErrEmptyRefreshError = errors.New("refresh error is required")
 )
 
 // ProviderGrant stores provider OAuth grant metadata.
@@ -51,6 +53,7 @@ type ProviderGrant struct {
 
 	RefreshSupported bool
 	Status           Status
+	LastRefreshError string
 
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
@@ -167,6 +170,54 @@ func Revoke(grant ProviderGrant, now func() time.Time) (ProviderGrant, error) {
 	grant.Status = StatusRevoked
 	grant.RevokedAt = &revokedAt
 	grant.UpdatedAt = revokedAt
+	return grant, nil
+}
+
+// RecordRefreshSuccess applies one successful token refresh result.
+func RecordRefreshSuccess(grant ProviderGrant, tokenCiphertext string, expiresAt *time.Time, refreshedAt time.Time) (ProviderGrant, error) {
+	grant.ID = strings.TrimSpace(grant.ID)
+	if grant.ID == "" {
+		return ProviderGrant{}, ErrEmptyID
+	}
+	grant.OwnerUserID = strings.TrimSpace(grant.OwnerUserID)
+	if grant.OwnerUserID == "" {
+		return ProviderGrant{}, ErrEmptyOwnerUserID
+	}
+	tokenCiphertext = strings.TrimSpace(tokenCiphertext)
+	if tokenCiphertext == "" {
+		return ProviderGrant{}, ErrEmptyTokenCiphertext
+	}
+
+	refreshedAt = refreshedAt.UTC()
+	grant.TokenCiphertext = tokenCiphertext
+	grant.Status = StatusActive
+	grant.LastRefreshError = ""
+	grant.UpdatedAt = refreshedAt
+	grant.RefreshedAt = &refreshedAt
+	grant.ExpiresAt = expiresAt
+	return grant, nil
+}
+
+// RecordRefreshFailure marks the grant unusable until another refresh succeeds.
+func RecordRefreshFailure(grant ProviderGrant, refreshError string, refreshedAt time.Time) (ProviderGrant, error) {
+	grant.ID = strings.TrimSpace(grant.ID)
+	if grant.ID == "" {
+		return ProviderGrant{}, ErrEmptyID
+	}
+	grant.OwnerUserID = strings.TrimSpace(grant.OwnerUserID)
+	if grant.OwnerUserID == "" {
+		return ProviderGrant{}, ErrEmptyOwnerUserID
+	}
+	refreshError = strings.TrimSpace(refreshError)
+	if refreshError == "" {
+		return ProviderGrant{}, ErrEmptyRefreshError
+	}
+
+	refreshedAt = refreshedAt.UTC()
+	grant.Status = StatusRefreshFailed
+	grant.LastRefreshError = refreshError
+	grant.UpdatedAt = refreshedAt
+	grant.RefreshedAt = &refreshedAt
 	return grant, nil
 }
 

@@ -123,3 +123,58 @@ func TestStatusAndGrantHelpers(t *testing.T) {
 		t.Fatal("expected grant usability to reject wrong owner")
 	}
 }
+
+func TestRecordRefreshSuccess(t *testing.T) {
+	expiresAt := time.Date(2026, 3, 19, 1, 0, 0, 0, time.UTC)
+	refreshedAt := time.Date(2026, 3, 18, 23, 10, 0, 0, time.UTC)
+	got, err := RecordRefreshSuccess(ProviderGrant{
+		ID:               "grant-1",
+		OwnerUserID:      "user-1",
+		Provider:         provider.OpenAI,
+		TokenCiphertext:  "enc:old",
+		RefreshSupported: true,
+		Status:           StatusRefreshFailed,
+		LastRefreshError: "old error",
+	}, "enc:new", &expiresAt, refreshedAt)
+	if err != nil {
+		t.Fatalf("RecordRefreshSuccess error = %v", err)
+	}
+	if got.Status != StatusActive {
+		t.Fatalf("status = %q, want %q", got.Status, StatusActive)
+	}
+	if got.TokenCiphertext != "enc:new" {
+		t.Fatalf("token_ciphertext = %q, want %q", got.TokenCiphertext, "enc:new")
+	}
+	if got.LastRefreshError != "" {
+		t.Fatalf("last_refresh_error = %q, want empty", got.LastRefreshError)
+	}
+	if got.RefreshedAt == nil || !got.RefreshedAt.Equal(refreshedAt) {
+		t.Fatalf("refreshed_at = %v, want %v", got.RefreshedAt, refreshedAt)
+	}
+	if got.ExpiresAt == nil || !got.ExpiresAt.Equal(expiresAt) {
+		t.Fatalf("expires_at = %v, want %v", got.ExpiresAt, expiresAt)
+	}
+}
+
+func TestRecordRefreshFailure(t *testing.T) {
+	refreshedAt := time.Date(2026, 3, 18, 23, 12, 0, 0, time.UTC)
+	got, err := RecordRefreshFailure(ProviderGrant{
+		ID:              "grant-1",
+		OwnerUserID:     "user-1",
+		Provider:        provider.OpenAI,
+		TokenCiphertext: "enc:old",
+		Status:          StatusActive,
+	}, " provider error ", refreshedAt)
+	if err != nil {
+		t.Fatalf("RecordRefreshFailure error = %v", err)
+	}
+	if got.Status != StatusRefreshFailed {
+		t.Fatalf("status = %q, want %q", got.Status, StatusRefreshFailed)
+	}
+	if got.LastRefreshError != "provider error" {
+		t.Fatalf("last_refresh_error = %q, want %q", got.LastRefreshError, "provider error")
+	}
+	if got.RefreshedAt == nil || !got.RefreshedAt.Equal(refreshedAt) {
+		t.Fatalf("refreshed_at = %v, want %v", got.RefreshedAt, refreshedAt)
+	}
+}

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
-	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -13,11 +13,11 @@ import (
 type SystemReferenceHandlers struct {
 	aiv1.UnimplementedSystemReferenceServiceServer
 
-	systemReferenceCorpus *campaigncontext.ReferenceCorpus
+	systemReferenceCorpus *referencecorpus.Corpus
 }
 
 // NewSystemReferenceHandlers builds a system-reference RPC server with explicit deps.
-func NewSystemReferenceHandlers(corpus *campaigncontext.ReferenceCorpus) *SystemReferenceHandlers {
+func NewSystemReferenceHandlers(corpus *referencecorpus.Corpus) *SystemReferenceHandlers {
 	return &SystemReferenceHandlers{systemReferenceCorpus: corpus}
 }
 

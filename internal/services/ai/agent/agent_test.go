@@ -17,17 +17,17 @@ func TestNormalizeCreateInput(t *testing.T) {
 	}{
 		{
 			name:    "missing owner user id",
-			input:   CreateInput{OwnerUserID: "", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			input:   CreateInput{OwnerUserID: "", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", AuthReference: CredentialAuthReference("cred-1")},
 			wantErr: ErrEmptyOwnerUserID,
 		},
 		{
 			name:    "invalid provider",
-			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: "other", Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: "other", Model: "gpt-4o-mini", AuthReference: CredentialAuthReference("cred-1")},
 			wantErr: provider.ErrInvalid,
 		},
 		{
 			name:    "missing model",
-			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "", CredentialID: "cred-1"},
+			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "", AuthReference: CredentialAuthReference("cred-1")},
 			wantErr: ErrEmptyModel,
 		},
 		{
@@ -36,24 +36,24 @@ func TestNormalizeCreateInput(t *testing.T) {
 			wantErr: ErrMissingAuthReference,
 		},
 		{
-			name:    "multiple auth references",
-			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1", ProviderGrantID: "grant-1"},
-			wantErr: ErrMultipleAuthReferences,
+			name:    "invalid auth reference kind",
+			input:   CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", AuthReference: AuthReference{Kind: "other", ID: "cred-1"}},
+			wantErr: ErrInvalidAuthReference,
 		},
 		{
 			name:    "invalid label format",
-			input:   CreateInput{OwnerUserID: "user-1", Label: "Narrator Prime", Provider: provider.OpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			input:   CreateInput{OwnerUserID: "user-1", Label: "Narrator Prime", Provider: provider.OpenAI, Model: "gpt-4o-mini", AuthReference: CredentialAuthReference("cred-1")},
 			wantErr: ErrInvalidLabel,
 		},
 		{
 			name:  "normalizes fields",
-			input: CreateInput{OwnerUserID: " user-1 ", Label: " narrator ", Provider: provider.OpenAI, Model: "  gpt-4o-mini  ", CredentialID: " cred-1 "},
-			want:  CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", CredentialID: "cred-1"},
+			input: CreateInput{OwnerUserID: " user-1 ", Label: " narrator ", Provider: provider.OpenAI, Model: "  gpt-4o-mini  ", AuthReference: CredentialAuthReference(" cred-1 ")},
+			want:  CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", AuthReference: CredentialAuthReference("cred-1")},
 		},
 		{
 			name:  "normalizes provider grant auth reference",
-			input: CreateInput{OwnerUserID: " user-1 ", Label: " narrator ", Provider: provider.OpenAI, Model: "  gpt-4o-mini  ", ProviderGrantID: " grant-1 "},
-			want:  CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", ProviderGrantID: "grant-1"},
+			input: CreateInput{OwnerUserID: " user-1 ", Label: " narrator ", Provider: provider.OpenAI, Model: "  gpt-4o-mini  ", AuthReference: ProviderGrantAuthReference(" grant-1 ")},
+			want:  CreateInput{OwnerUserID: "user-1", Label: "narrator", Provider: provider.OpenAI, Model: "gpt-4o-mini", AuthReference: ProviderGrantAuthReference("grant-1")},
 		},
 	}
 
@@ -76,14 +76,36 @@ func TestNormalizeCreateInput(t *testing.T) {
 	}
 }
 
+func TestAuthReferenceFromIDs(t *testing.T) {
+	ref, err := AuthReferenceFromIDs(" cred-1 ", "", true)
+	if err != nil {
+		t.Fatalf("AuthReferenceFromIDs credential: %v", err)
+	}
+	if ref != CredentialAuthReference("cred-1") {
+		t.Fatalf("credential ref = %+v, want %+v", ref, CredentialAuthReference("cred-1"))
+	}
+
+	ref, err = AuthReferenceFromIDs("", " grant-1 ", true)
+	if err != nil {
+		t.Fatalf("AuthReferenceFromIDs provider grant: %v", err)
+	}
+	if ref != ProviderGrantAuthReference("grant-1") {
+		t.Fatalf("provider grant ref = %+v, want %+v", ref, ProviderGrantAuthReference("grant-1"))
+	}
+
+	if _, err := AuthReferenceFromIDs("cred-1", "grant-1", true); !errors.Is(err, ErrMultipleAuthReferences) {
+		t.Fatalf("AuthReferenceFromIDs mixed error = %v, want %v", err, ErrMultipleAuthReferences)
+	}
+}
+
 func TestCreateAgent(t *testing.T) {
 	fixedTime := time.Date(2026, 2, 15, 22, 40, 0, 0, time.UTC)
 	input := CreateInput{
-		OwnerUserID:     "user-1",
-		Label:           "narrator",
-		Provider:        provider.OpenAI,
-		Model:           "gpt-4o-mini",
-		ProviderGrantID: "grant-1",
+		OwnerUserID:   "user-1",
+		Label:         "narrator",
+		Provider:      provider.OpenAI,
+		Model:         "gpt-4o-mini",
+		AuthReference: ProviderGrantAuthReference("grant-1"),
 	}
 
 	_, err := Create(input, nil, func() (string, error) { return "", errors.New("id fail") })
@@ -105,14 +127,14 @@ func TestCreateAgent(t *testing.T) {
 	if created.CreatedAt != fixedTime || created.UpdatedAt != fixedTime {
 		t.Fatalf("timestamps = (%s,%s), want %s", created.CreatedAt, created.UpdatedAt, fixedTime)
 	}
-	if created.ProviderGrantID != "grant-1" {
-		t.Fatalf("ProviderGrantID = %q, want %q", created.ProviderGrantID, "grant-1")
+	if created.AuthReference.ProviderGrantID() != "grant-1" {
+		t.Fatalf("ProviderGrantID = %q, want %q", created.AuthReference.ProviderGrantID(), "grant-1")
 	}
 	if created.Label != "narrator" {
 		t.Fatalf("Label = %q, want %q", created.Label, "narrator")
 	}
-	if created.CredentialID != "" {
-		t.Fatalf("CredentialID = %q, want empty", created.CredentialID)
+	if created.AuthReference.CredentialID() != "" {
+		t.Fatalf("CredentialID = %q, want empty", created.AuthReference.CredentialID())
 	}
 }
 
@@ -123,14 +145,14 @@ func TestStatusAndAuthReferenceHelpers(t *testing.T) {
 	if ParseStatus("unknown") != "" {
 		t.Fatal("expected unknown status to normalize to empty")
 	}
-	if got := (Agent{CredentialID: "cred-1"}).AuthRefType(); got != "credential" {
+	if got := (Agent{AuthReference: CredentialAuthReference("cred-1")}).AuthRefType(); got != "credential" {
 		t.Fatalf("AuthRefType() = %q, want credential", got)
 	}
-	if got := (Agent{ProviderGrantID: "grant-1"}).AuthRefType(); got != "provider_grant" {
+	if got := (Agent{AuthReference: ProviderGrantAuthReference("grant-1")}).AuthRefType(); got != "provider_grant" {
 		t.Fatalf("AuthRefType() = %q, want provider_grant", got)
 	}
-	if got := (Agent{CredentialID: "cred-1", ProviderGrantID: "grant-1"}).AuthRefType(); got != "" {
-		t.Fatalf("AuthRefType() = %q, want empty for invalid mixed auth refs", got)
+	if got := (Agent{}).AuthRefType(); got != "" {
+		t.Fatalf("AuthRefType() = %q, want empty for zero auth ref", got)
 	}
 }
 
@@ -143,18 +165,18 @@ func TestNormalizeUpdateInput(t *testing.T) {
 	}{
 		{
 			name:    "missing agent id",
-			input:   UpdateInput{ID: "", OwnerUserID: "user-1", Label: "narrator", Model: "gpt-4o-mini", CredentialID: "cred-2"},
+			input:   UpdateInput{ID: "", OwnerUserID: "user-1", Label: "narrator", Model: "gpt-4o-mini", AuthReference: CredentialAuthReference("cred-2")},
 			wantErr: ErrEmptyID,
 		},
 		{
 			name:    "missing owner user id",
-			input:   UpdateInput{ID: "agent-1", OwnerUserID: "", Label: "narrator", Model: "gpt-4o-mini", CredentialID: "cred-2"},
+			input:   UpdateInput{ID: "agent-1", OwnerUserID: "", Label: "narrator", Model: "gpt-4o-mini", AuthReference: CredentialAuthReference("cred-2")},
 			wantErr: ErrEmptyOwnerUserID,
 		},
 		{
-			name:    "multiple auth references",
-			input:   UpdateInput{ID: "agent-1", OwnerUserID: "user-1", CredentialID: "cred-2", ProviderGrantID: "grant-1"},
-			wantErr: ErrMultipleAuthReferences,
+			name:    "invalid auth reference kind",
+			input:   UpdateInput{ID: "agent-1", OwnerUserID: "user-1", AuthReference: AuthReference{Kind: "other", ID: "cred-2"}},
+			wantErr: ErrInvalidAuthReference,
 		},
 		{
 			name:    "rejects invalid label",
@@ -163,8 +185,8 @@ func TestNormalizeUpdateInput(t *testing.T) {
 		},
 		{
 			name:  "normalizes optional fields",
-			input: UpdateInput{ID: " agent-1 ", OwnerUserID: " user-1 ", Label: " narrator ", Model: " gpt-4o ", ProviderGrantID: " grant-2 "},
-			want:  UpdateInput{ID: "agent-1", OwnerUserID: "user-1", Label: "narrator", Model: "gpt-4o", ProviderGrantID: "grant-2"},
+			input: UpdateInput{ID: " agent-1 ", OwnerUserID: " user-1 ", Label: " narrator ", Model: " gpt-4o ", AuthReference: ProviderGrantAuthReference(" grant-2 ")},
+			want:  UpdateInput{ID: "agent-1", OwnerUserID: "user-1", Label: "narrator", Model: "gpt-4o", AuthReference: ProviderGrantAuthReference("grant-2")},
 		},
 	}
 

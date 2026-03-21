@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 3
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-17"
+last_reviewed: "2026-03-19"
 ---
 
 # Campaign AI Orchestration
@@ -87,12 +87,27 @@ an `active` agent plus a ready credential/provider-grant reference.
 ## Tool Policy
 
 The orchestration path is OpenAI-first with direct gRPC tool dispatch. The
-prompt brief is rebuilt from authoritative game resources on every turn,
+prompt path now collects a typed session brief from authoritative game
+resources on every turn before rendering the final provider-facing prompt,
 session authority is fixed per turn, and the model receives only the GM-safe
 subset of tools needed for scene bootstrap, interaction pacing, GM narration
 commit, campaign artifacts, and Daggerheart rules/reference support. Campaign
 lifecycle, participant CRUD, fork, and other non-GM mutations are intentionally
 excluded from the production tool profile.
+
+The composition root chooses the concrete prompt render policy explicitly. AI
+startup loads instruction files, builds the context-source collector, and then
+constructs the prompt renderer with the canonical closing/interaction policy.
+When instruction files are partially unavailable, only the missing instruction
+field degrades to inline defaults; the typed brief collector and configured
+context-source registry remain active.
+
+Campaign-context support is split by ownership:
+
+- `campaigncontext` owns artifact defaults and artifact path policy
+- `campaigncontext/instructionset` owns instruction-file loading/composition
+- `campaigncontext/memorydoc` owns `memory.md` structure helpers
+- `campaigncontext/referencecorpus` owns read-only game-system reference search/read
 
 Exact prompt-brief inputs and bootstrap behavior live in
 [Campaign AI Session Bootstrap](campaign-ai-session-bootstrap.md). Human chat

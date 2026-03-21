@@ -1,6 +1,7 @@
-// Package provider defines shared AI provider identity values used across
-// domain packages. Keeping this in one place avoids transport packages having
-// to translate between duplicate provider enums.
+// Package provider defines the shared AI provider vocabulary.
+//
+// It owns provider identity values plus the shared OAuth, invoke, model, and
+// usage contracts that transport, domain, and concrete adapters consume.
 package provider
 
 import (

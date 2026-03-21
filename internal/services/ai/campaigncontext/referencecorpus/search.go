@@ -1,0 +1,131 @@
+package referencecorpus
+
+import (
+	"fmt"
+	"strings"
+)
+
+const supportedSystem = "daggerheart"
+
+func validateSystem(system string) error {
+	system = strings.TrimSpace(system)
+	if system == "" || strings.EqualFold(system, supportedSystem) {
+		return nil
+	}
+	return fmt.Errorf("system %q is not supported", system)
+}
+
+func metadataScore(entry indexEntry, queryLower string, queryTerms []string) int {
+	score := 0
+	idLower := strings.ToLower(strings.TrimSpace(entry.ID))
+	titleLower := strings.ToLower(strings.TrimSpace(entry.Title))
+	kindLower := strings.ToLower(strings.TrimSpace(entry.Kind))
+	pathLower := strings.ToLower(strings.TrimSpace(entry.Path))
+	switch {
+	case titleLower == queryLower:
+		score += 120
+	case strings.Contains(titleLower, queryLower):
+		score += 100
+	}
+	if idLower == queryLower {
+		score += 110
+	} else if strings.Contains(idLower, queryLower) {
+		score += 90
+	}
+	if kindLower == queryLower {
+		score += 60
+	} else if strings.Contains(kindLower, queryLower) {
+		score += 40
+	}
+	if strings.Contains(pathLower, queryLower) {
+		score += 35
+	}
+	for _, alias := range entry.Aliases {
+		aliasLower := strings.ToLower(strings.TrimSpace(alias))
+		if aliasLower == queryLower {
+			score += 105
+			continue
+		}
+		if strings.Contains(aliasLower, queryLower) {
+			score += 80
+		}
+	}
+	if score == 0 {
+		return 0
+	}
+	for _, term := range queryTerms {
+		if term == "" {
+			continue
+		}
+		if strings.Contains(titleLower, term) || strings.Contains(idLower, term) || strings.Contains(kindLower, term) || strings.Contains(pathLower, term) {
+			score += 10
+			continue
+		}
+		for _, alias := range entry.Aliases {
+			if strings.Contains(strings.ToLower(strings.TrimSpace(alias)), term) {
+				score += 10
+				break
+			}
+		}
+	}
+	return score
+}
+
+func metadataSnippet(entry indexEntry) string {
+	parts := make([]string, 0, 3)
+	if title := strings.TrimSpace(entry.Title); title != "" {
+		parts = append(parts, title)
+	}
+	if kind := strings.TrimSpace(entry.Kind); kind != "" {
+		parts = append(parts, "kind: "+kind)
+	}
+	if len(entry.Aliases) != 0 {
+		parts = append(parts, "aliases: "+strings.Join(entry.Aliases, ", "))
+	}
+	return strings.Join(parts, " | ")
+}
+
+func containsAllTerms(text string, terms []string) bool {
+	for _, term := range terms {
+		if term == "" {
+			continue
+		}
+		if !strings.Contains(text, term) {
+			return false
+		}
+	}
+	return true
+}
+
+func contentSnippet(content, queryLower string) string {
+	content = strings.TrimSpace(content)
+	if content == "" {
+		return ""
+	}
+	lower := strings.ToLower(content)
+	idx := strings.Index(lower, queryLower)
+	if idx < 0 {
+		const maxLen = 160
+		if len(content) <= maxLen {
+			return content
+		}
+		return content[:maxLen] + "..."
+	}
+	const radius = 72
+	start := idx - radius
+	if start < 0 {
+		start = 0
+	}
+	end := idx + len(queryLower) + radius
+	if end > len(content) {
+		end = len(content)
+	}
+	snippet := strings.TrimSpace(content[start:end])
+	if start > 0 {
+		snippet = "..." + snippet
+	}
+	if end < len(content) {
+		snippet += "..."
+	}
+	return snippet
+}

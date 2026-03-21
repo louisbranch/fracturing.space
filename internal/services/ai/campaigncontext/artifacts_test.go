@@ -11,9 +11,12 @@ import (
 )
 
 func TestManagerEnsureDefaultArtifactsSeedsDefaults(t *testing.T) {
-	store := aifakes.NewStore()
+	store := aifakes.NewCampaignArtifactStore()
 	now := time.Date(2026, 3, 14, 1, 30, 0, 0, time.UTC)
-	manager := NewManager(store, func() time.Time { return now })
+	manager := NewManager(ManagerConfig{
+		Store: store,
+		Clock: func() time.Time { return now },
+	})
 
 	records, err := manager.EnsureDefaultArtifacts(context.Background(), "campaign-1", " Starter story ")
 	if err != nil {
@@ -58,9 +61,12 @@ func TestManagerEnsureDefaultArtifactsSeedsDefaults(t *testing.T) {
 }
 
 func TestManagerUpsertArtifactValidatesWritablePaths(t *testing.T) {
-	store := aifakes.NewStore()
+	store := aifakes.NewCampaignArtifactStore()
 	now := time.Date(2026, 3, 14, 1, 31, 0, 0, time.UTC)
-	manager := NewManager(store, func() time.Time { return now })
+	manager := NewManager(ManagerConfig{
+		Store: store,
+		Clock: func() time.Time { return now },
+	})
 
 	if _, err := manager.UpsertArtifact(context.Background(), "campaign-1", SkillsArtifactPath, "nope"); err == nil || !strings.Contains(err.Error(), "read-only") {
 		t.Fatalf("UpsertArtifact(skills.md) error = %v, want read-only", err)
@@ -122,15 +128,39 @@ func TestNormalizeArtifactPath(t *testing.T) {
 }
 
 func TestManagerGetArtifactRequiresStoreAndCampaignID(t *testing.T) {
-	manager := NewManager(nil, nil)
+	manager := NewManager(ManagerConfig{})
 	if _, err := manager.GetArtifact(context.Background(), "campaign-1", StoryArtifactPath); err == nil {
 		t.Fatal("expected missing store error")
 	}
 
-	store := aifakes.NewStore()
-	manager = NewManager(store, nil)
+	store := aifakes.NewCampaignArtifactStore()
+	manager = NewManager(ManagerConfig{Store: store})
 	if _, err := manager.ListArtifacts(context.Background(), " "); err == nil {
 		t.Fatal("expected campaign id validation error")
+	}
+}
+
+func TestManagerEnsureDefaultArtifactsUsesConfiguredSkillsLoader(t *testing.T) {
+	store := aifakes.NewCampaignArtifactStore()
+	manager := NewManager(ManagerConfig{
+		Store: store,
+		SkillsLoader: stubSkillsLoader{
+			content: "# Custom Skills\nUse the loaded instruction set.",
+		},
+		DefaultSystem: "custom-system",
+	})
+
+	_, err := manager.EnsureDefaultArtifacts(context.Background(), "campaign-1", "")
+	if err != nil {
+		t.Fatalf("EnsureDefaultArtifacts() error = %v", err)
+	}
+
+	skills, err := store.GetCampaignArtifact(context.Background(), "campaign-1", SkillsArtifactPath)
+	if err != nil {
+		t.Fatalf("get skills artifact: %v", err)
+	}
+	if !strings.Contains(skills.Content, "Custom Skills") {
+		t.Fatalf("skills content = %q, want loaded skills", skills.Content)
 	}
 }
 
@@ -144,6 +174,15 @@ func TestEnsureArtifactIfMissingPropagatesStoreErrors(t *testing.T) {
 
 type artifactStoreStub struct {
 	getErr error
+}
+
+type stubSkillsLoader struct {
+	content string
+	err     error
+}
+
+func (s stubSkillsLoader) LoadSkills(string) (string, error) {
+	return s.content, s.err
 }
 
 func (s *artifactStoreStub) PutCampaignArtifact(context.Context, storage.CampaignArtifactRecord) error {

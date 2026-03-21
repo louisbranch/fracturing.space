@@ -16,6 +16,7 @@ type CampaignTurnRunner interface {
 type RunnerConfig struct {
 	Dialer             Dialer
 	PromptBuilder      PromptBuilder
+	ToolPolicy         ToolPolicy
 	MaxSteps           int
 	TurnTimeout        time.Duration
 	ToolResultMaxBytes int
@@ -23,7 +24,7 @@ type RunnerConfig struct {
 
 // PromptBuilder assembles the prompt for one campaign turn.
 type PromptBuilder interface {
-	Build(ctx context.Context, sess Session, input Input) (string, error)
+	Build(ctx context.Context, sess Session, input PromptInput) (string, error)
 }
 
 // Provider executes one provider step in the campaign-turn tool loop.
@@ -42,6 +43,15 @@ type Session interface {
 	CallTool(ctx context.Context, name string, args any) (ToolResult, error)
 	ReadResource(ctx context.Context, uri string) (string, error)
 	Close() error
+}
+
+// PromptInput contains only the prompt-relevant fields needed to assemble one
+// campaign turn brief.
+type PromptInput struct {
+	CampaignID    string
+	SessionID     string
+	ParticipantID string
+	TurnInput     string
 }
 
 // Input contains all data required to run one campaign turn.

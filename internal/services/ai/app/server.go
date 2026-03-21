@@ -19,6 +19,8 @@ import (
 	"github.com/louisbranch/fracturing.space/internal/platform/serviceaddr"
 	aiservice "github.com/louisbranch/fracturing.space/internal/services/ai/api/grpc/ai"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/instructionset"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/referencecorpus"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration/gametools"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/provider"
@@ -119,8 +121,8 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		grpc.ChainUnaryInterceptor(serviceIdentityValidationUnaryInterceptor(cfg.InternalServiceAllowlist)),
 		grpc.ChainStreamInterceptor(serviceIdentityValidationStreamInterceptor(cfg.InternalServiceAllowlist)),
 	)
-	providerOAuthAdapters := map[provider.Provider]aiservice.ProviderOAuthAdapter{
-		provider.OpenAI: openaiprovider.NewDefaultOAuthAdapter(),
+	providerOAuthAdapters := map[provider.Provider]provider.OAuthAdapter{
+		provider.OpenAI: newDefaultOpenAIOAuthAdapter(),
 	}
 	if cfg.OpenAIOAuthConfig != nil {
 		providerOAuthAdapters[provider.OpenAI] = openaiprovider.NewOAuthAdapter(*cfg.OpenAIOAuthConfig)
@@ -128,38 +130,26 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 	openAIAdapter := openaiprovider.NewInvokeAdapter(openaiprovider.InvokeConfig{
 		ResponsesURL: cfg.OpenAIResponsesURL,
 	})
-	providerInvocationAdapters := map[provider.Provider]aiservice.ProviderInvocationAdapter{
+	providerInvocationAdapters := map[provider.Provider]provider.InvocationAdapter{
 		provider.OpenAI: openAIAdapter,
 	}
 	providerToolAdapters := make(map[provider.Provider]orchestration.Provider, 1)
 	if toolAdapter, ok := openAIAdapter.(orchestration.Provider); ok {
 		providerToolAdapters[provider.OpenAI] = toolAdapter
 	}
-	providerModelAdapters := make(map[provider.Provider]aiservice.ProviderModelAdapter, 1)
-	if modelAdapter, ok := openAIAdapter.(aiservice.ProviderModelAdapter); ok {
+	providerModelAdapters := make(map[provider.Provider]provider.ModelAdapter, 1)
+	if modelAdapter, ok := openAIAdapter.(provider.ModelAdapter); ok {
 		providerModelAdapters[provider.OpenAI] = modelAdapter
 	}
-	instructionLoader := campaigncontext.NewInstructionLoader(cfg.InstructionsRoot)
-	campaignArtifactManager := campaigncontext.NewManager(store, nil)
-	campaignArtifactManager.SetInstructionLoader(instructionLoader)
-	service := aiservice.NewService(aiservice.ServiceConfig{
-		CredentialStore:            store,
-		AgentStore:                 store,
-		ProviderGrantStore:         store,
-		ConnectSessionStore:        store,
-		AccessRequestStore:         store,
-		AuditEventStore:            store,
-		CampaignArtifactStore:      store,
-		CampaignArtifactManager:    campaignArtifactManager,
-		ProviderOAuthAdapters:      providerOAuthAdapters,
-		ProviderInvocationAdapters: providerInvocationAdapters,
-		ProviderToolAdapters:       providerToolAdapters,
-		ProviderModelAdapters:      providerModelAdapters,
-		Sealer:                     sealer,
+	instructionLoader := instructionset.New(cfg.InstructionsRoot)
+	campaignArtifactManager := campaigncontext.NewManager(campaigncontext.ManagerConfig{
+		Store:         store,
+		SkillsLoader:  instructionLoader,
+		DefaultSystem: campaigncontext.DaggerheartSystem,
 	})
 	systemReferenceHandlers := aiservice.NewSystemReferenceHandlers(nil)
 	if strings.TrimSpace(cfg.DaggerheartReferenceRoot) != "" {
-		systemReferenceHandlers = aiservice.NewSystemReferenceHandlers(campaigncontext.NewReferenceCorpus(cfg.DaggerheartReferenceRoot))
+		systemReferenceHandlers = aiservice.NewSystemReferenceHandlers(referencecorpus.New(cfg.DaggerheartReferenceRoot))
 	}
 
 	var gameMc *platformgrpc.ManagedConn
@@ -182,7 +172,6 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		} else {
 			gameMc = mc
 			gameCampaignAIClient = gamev1.NewCampaignAIServiceClient(mc.Conn())
-			service.SetGameCampaignAIClient(gameCampaignAIClient)
 			gameAuthorizationClient = gamev1.NewAuthorizationServiceClient(mc.Conn())
 		}
 	}
@@ -205,9 +194,22 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		Sealer:                sealer,
 		ProviderOAuthAdapters: providerOAuthAdapters,
 	})
-	if cfg.SessionGrantConfig != nil {
-		service.SetAISessionGrantConfig(*cfg.SessionGrantConfig)
-	}
+	accessRequestHandlers := aiservice.NewAccessRequestHandlers(aiservice.AccessRequestHandlersConfig{
+		AgentStore:         store,
+		AccessRequestStore: store,
+		AuditEventStore:    store,
+	})
+	agentHandlers := aiservice.NewAgentHandlers(aiservice.AgentHandlersConfig{
+		CredentialStore:       store,
+		AgentStore:            store,
+		ProviderGrantStore:    store,
+		AccessRequestStore:    store,
+		ProviderOAuthAdapters: providerOAuthAdapters,
+		ProviderModelAdapters: providerModelAdapters,
+		GameCampaignAIClient:  gameCampaignAIClient,
+		Sealer:                sealer,
+	})
+	var campaignTurnRunner orchestration.CampaignTurnRunner
 	if gameMc != nil {
 		gameConn := gameMc.Conn()
 		dialer := gametools.NewDirectDialer(gametools.Clients{
@@ -225,18 +227,41 @@ func newServerWithRuntimeConfig(ctx context.Context, addr string, cfg runtimeCon
 		promptBuilder := buildPromptBuilder(instructionLoader)
 		runnerCfg := cfg.campaignTurnRunnerConfig(dialer)
 		runnerCfg.PromptBuilder = promptBuilder
-		service.SetCampaignTurnRunner(orchestration.NewRunner(runnerCfg))
+		runnerCfg.ToolPolicy = orchestration.NewStaticToolPolicy(gametools.ProductionToolNames())
+		campaignTurnRunner = orchestration.NewRunner(runnerCfg)
 	}
+	campaignOrchestrationHandlers := aiservice.NewCampaignOrchestrationHandlers(aiservice.CampaignOrchestrationHandlersConfig{
+		AgentStore:              store,
+		CredentialStore:         store,
+		ProviderGrantStore:      store,
+		CampaignArtifactManager: campaignArtifactManager,
+		GameCampaignAIClient:    gameCampaignAIClient,
+		ProviderOAuthAdapters:   providerOAuthAdapters,
+		ProviderToolAdapters:    providerToolAdapters,
+		CampaignTurnRunner:      campaignTurnRunner,
+		SessionGrantConfig:      cfg.SessionGrantConfig,
+		Sealer:                  sealer,
+	})
+	invocationHandlers := aiservice.NewInvocationHandlers(aiservice.InvocationHandlersConfig{
+		CredentialStore:            store,
+		AgentStore:                 store,
+		ProviderGrantStore:         store,
+		AccessRequestStore:         store,
+		AuditEventStore:            store,
+		ProviderOAuthAdapters:      providerOAuthAdapters,
+		ProviderInvocationAdapters: providerInvocationAdapters,
+		Sealer:                     sealer,
+	})
 
 	healthServer := health.NewServer()
 	aiv1.RegisterCredentialServiceServer(grpcServer, credentialHandlers)
-	aiv1.RegisterAgentServiceServer(grpcServer, service)
-	aiv1.RegisterInvocationServiceServer(grpcServer, service)
-	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, service)
+	aiv1.RegisterAgentServiceServer(grpcServer, agentHandlers)
+	aiv1.RegisterInvocationServiceServer(grpcServer, invocationHandlers)
+	aiv1.RegisterCampaignOrchestrationServiceServer(grpcServer, campaignOrchestrationHandlers)
 	aiv1.RegisterCampaignArtifactServiceServer(grpcServer, campaignArtifactHandlers)
 	aiv1.RegisterSystemReferenceServiceServer(grpcServer, systemReferenceHandlers)
 	aiv1.RegisterProviderGrantServiceServer(grpcServer, providerGrantHandlers)
-	aiv1.RegisterAccessRequestServiceServer(grpcServer, service)
+	aiv1.RegisterAccessRequestServiceServer(grpcServer, accessRequestHandlers)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 	healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	healthServer.SetServingStatus("ai.v1.CredentialService", grpc_health_v1.HealthCheckResponse_SERVING)
@@ -372,23 +397,16 @@ func decodeBase64Key(value string) ([]byte, error) {
 }
 
 // buildPromptBuilder loads instruction files and creates a configured prompt
-// builder. If instruction loading fails, it returns a builder with no
-// pre-loaded instructions (the builder falls back to inline defaults).
-func buildPromptBuilder(loader *campaigncontext.InstructionLoader) orchestration.PromptBuilder {
-	if loader == nil {
-		return nil
-	}
-	skills, err := loader.LoadSkills(campaigncontext.DaggerheartSystem)
-	if err != nil {
-		log.Printf("ai: load skills instructions: %v (using inline fallback)", err)
-		return nil
-	}
-	interaction, err := loader.LoadCoreInteraction()
-	if err != nil {
-		log.Printf("ai: load interaction instructions: %v (using inline fallback)", err)
-		return nil
-	}
+// builder. Missing instruction content degrades explicitly to inline renderer
+// defaults while preserving the full context-source registry.
+func buildPromptBuilder(loader *instructionset.Loader) orchestration.PromptBuilder {
+	return orchestration.NewPromptBuilder(orchestration.PromptBuilderConfig{
+		Collector: buildPromptContextSources(),
+		Renderer:  buildPromptRenderer(loader),
+	})
+}
 
+func buildPromptContextSources() *orchestration.ContextSourceRegistry {
 	reg := orchestration.NewContextSourceRegistry()
 	for _, src := range orchestration.CoreContextSources() {
 		reg.Register(src)
@@ -396,12 +414,38 @@ func buildPromptBuilder(loader *campaigncontext.InstructionLoader) orchestration
 	for _, src := range orchestration.DaggerheartContextSources() {
 		reg.Register(src)
 	}
+	return reg
+}
 
-	return orchestration.NewPromptBuilder(orchestration.PromptBuilderConfig{
-		Skills:              skills,
-		InteractionContract: interaction,
-		ContextSources:      reg,
+func buildPromptRenderer(loader *instructionset.Loader) orchestration.PromptRenderer {
+	policy := orchestration.DefaultPromptRenderPolicy()
+	policy.Instructions = loadPromptInstructions(loader)
+	return orchestration.NewBriefPromptRenderer(orchestration.BriefPromptRendererConfig{
+		Policy: policy,
 	})
+}
+
+func loadPromptInstructions(loader *instructionset.Loader) orchestration.PromptInstructions {
+	if loader == nil {
+		return orchestration.PromptInstructions{}
+	}
+
+	var instructions orchestration.PromptInstructions
+	skills, err := loader.LoadSkills(campaigncontext.DaggerheartSystem)
+	if err != nil {
+		log.Printf("ai: load skills instructions: %v (using inline fallback)", err)
+	} else {
+		instructions.Skills = skills
+	}
+
+	interaction, err := loader.LoadCoreInteraction()
+	if err != nil {
+		log.Printf("ai: load interaction instructions: %v (using inline fallback)", err)
+	} else {
+		instructions.InteractionContract = interaction
+	}
+
+	return instructions
 }
 
 func closeManagedConn(mc *platformgrpc.ManagedConn, name string) {

@@ -1,5 +1,6 @@
-// Package ai provides gRPC adapters for AI credentials, agents, and invokes.
+// Package ai provides the AI service gRPC transport layer.
 //
-// These adapters translate proto contracts into service-domain objects so callers
-// stay decoupled from persistence and crypto implementation details.
+// The package is organized around dedicated handler roots plus a small set of
+// shared seams for auth-token resolution, shared-access policy, and audit writes
+// so contributors do not have to recover behavior from one catch-all server type.
 package ai

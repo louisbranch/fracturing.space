@@ -1,5 +1,7 @@
-// Package storage defines persistence contracts for AI credentials, agents, and grants.
+// Package storage defines persistence contracts and record types for AI
+// aggregates.
 //
-// These interfaces keep service orchestration separate from storage technology and
-// allow the AI domain model to evolve without changing gRPC handlers.
+// The package groups interfaces by workflow or aggregate boundary so callers
+// can depend on the smallest repository seam they need while concrete adapters
+// remain free to share one runtime root underneath.
 package storage

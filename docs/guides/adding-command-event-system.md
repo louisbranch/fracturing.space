@@ -46,7 +46,7 @@ Canonical how-to for system-extension changes.
 
 1. Add tool handlers in `internal/services/ai/orchestration/gametools/`.
 2. Register the tool in the `tools.go` definition list and add dispatch in `session.go`.
-3. If the production tool surface changes, update `internal/services/shared/mcpbridge/profile.go` and the AI reference docs together.
+3. If the production tool surface changes, update `internal/services/ai/orchestration/gametools/tools.go`, `internal/services/ai/orchestration/tool_policy.go`, and the AI reference docs together.
 4. Add/update tool-focused tests.
 
 ## 5. Startup validation debugging

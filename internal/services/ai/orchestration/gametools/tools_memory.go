@@ -7,6 +7,7 @@ import (
 
 	aiv1 "github.com/louisbranch/fracturing.space/api/gen/go/ai/v1"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext"
+	"github.com/louisbranch/fracturing.space/internal/services/ai/campaigncontext/memorydoc"
 	"github.com/louisbranch/fracturing.space/internal/services/ai/orchestration"
 )
 
@@ -53,7 +54,7 @@ func (s *DirectSession) memorySectionRead(ctx context.Context, argsJSON []byte) 
 	if err != nil {
 		return orchestration.ToolResult{}, fmt.Errorf("get memory artifact: %w", err)
 	}
-	body, found := campaigncontext.MemorySectionRead(resp.GetArtifact().GetContent(), input.Heading)
+	body, found := memorydoc.SectionRead(resp.GetArtifact().GetContent(), input.Heading)
 	return toolResultJSON(memorySectionResult{
 		CampaignID: campaignID,
 		Heading:    input.Heading,
@@ -82,7 +83,7 @@ func (s *DirectSession) memorySectionUpdate(ctx context.Context, argsJSON []byte
 		return orchestration.ToolResult{}, fmt.Errorf("get memory artifact: %w", err)
 	}
 
-	merged := campaigncontext.MemorySectionUpdate(resp.GetArtifact().GetContent(), input.Heading, input.Content)
+	merged := memorydoc.SectionUpdate(resp.GetArtifact().GetContent(), input.Heading, input.Content)
 
 	if _, err := s.clients.Artifact.UpsertCampaignArtifact(callCtx, &aiv1.UpsertCampaignArtifactRequest{
 		CampaignId: campaignID,

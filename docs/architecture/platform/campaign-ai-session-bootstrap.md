@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 12
 status: draft
 owner: engineering
-last_reviewed: "2026-03-13"
+last_reviewed: "2026-03-19"
 ---
 
 # Campaign AI Session Bootstrap
@@ -17,8 +17,9 @@ campaign-scoped orchestration loop is stable.
 
 - A campaign AI turn can be queued from `session.started` even when the session
   has no active scene yet.
-- The AI orchestration runner rebuilds a fresh session brief on every turn from
-  authoritative game resources instead of carrying a private transcript cache.
+- The AI orchestration runner rebuilds a fresh typed session brief on every
+  turn from authoritative game resources instead of carrying a private
+  transcript cache.
 - The brief currently includes:
   - current session context
   - campaign metadata
@@ -30,6 +31,10 @@ campaign-scoped orchestration loop is stable.
 - The model receives a curated GM tool surface, including `scene_create`,
   `interaction_active_scene_set`, `interaction_scene_player_phase_start`, and
   `interaction_scene_gm_output_commit`.
+- Prompt assembly is split into brief collection and rendering. AI startup
+  selects the concrete render policy explicitly, and missing instruction files
+  degrade only the affected instruction field instead of disabling the full
+  prompt path.
 - On a bootstrap turn with no active scene, the AI GM is expected to:
   - understand who is participating and which GM seat it controls
   - choose or create an opening scene
@@ -41,8 +46,6 @@ campaign-scoped orchestration loop is stable.
 
 ## Future improvements
 
-- Add a first-class orchestrator-owned session brief model instead of embedding
-  raw resource JSON into the prompt.
 - Add campaign-owned writable memories for recurring facts, NPC state, table
   preferences, and unresolved hooks.
 - Add operator-managed imported source material such as `story.md`,

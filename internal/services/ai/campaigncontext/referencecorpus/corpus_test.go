@@ -1,4 +1,4 @@
-package campaigncontext
+package referencecorpus
 
 import (
 	"context"
@@ -8,17 +8,17 @@ import (
 	"testing"
 )
 
-func TestReferenceCorpusSearchAndRead(t *testing.T) {
+func TestCorpusSearchAndRead(t *testing.T) {
 	root := t.TempDir()
-	writeReferenceFixture(t, root, `[
+	writeFixture(t, root, `[
   {"id":"moves","title":"Fear Moves","kind":"rule","path":"moves.md","aliases":["gm moves"]},
   {"id":"combat","title":"Combat Flow","kind":"guide","path":"combat.md","aliases":["initiative"]}
 ]`)
-	writeReferenceFile(t, root, "moves.md", "# Fear Moves\nEscalate fear when the table stalls.")
-	writeReferenceFile(t, root, "combat.md", "# Combat Flow\nUse action tracker and spotlight order.")
+	writeFile(t, root, "moves.md", "# Fear Moves\nEscalate fear when the table stalls.")
+	writeFile(t, root, "combat.md", "# Combat Flow\nUse action tracker and spotlight order.")
 
-	corpus := NewReferenceCorpus(root)
-	results, err := corpus.Search(context.Background(), DaggerheartSystem, "gm moves", 2)
+	corpus := New(root)
+	results, err := corpus.Search(context.Background(), supportedSystem, "gm moves", 2)
 	if err != nil {
 		t.Fatalf("Search() error = %v", err)
 	}
@@ -29,7 +29,7 @@ func TestReferenceCorpusSearchAndRead(t *testing.T) {
 		t.Fatalf("metadata snippet = %q, want alias snippet", results[0].Snippet)
 	}
 
-	results, err = corpus.Search(context.Background(), DaggerheartSystem, "spotlight", 1)
+	results, err = corpus.Search(context.Background(), supportedSystem, "spotlight", 1)
 	if err != nil {
 		t.Fatalf("Search(content fallback) error = %v", err)
 	}
@@ -40,7 +40,7 @@ func TestReferenceCorpusSearchAndRead(t *testing.T) {
 		t.Fatalf("content snippet = %q, want spotlight", results[0].Snippet)
 	}
 
-	document, err := corpus.Read(context.Background(), DaggerheartSystem, "combat")
+	document, err := corpus.Read(context.Background(), supportedSystem, "combat")
 	if err != nil {
 		t.Fatalf("Read() error = %v", err)
 	}
@@ -48,7 +48,7 @@ func TestReferenceCorpusSearchAndRead(t *testing.T) {
 		t.Fatalf("document content = %q, want combat content", document.Content)
 	}
 
-	document, err = corpus.Read(context.Background(), DaggerheartSystem, "moves.md")
+	document, err = corpus.Read(context.Background(), supportedSystem, "moves.md")
 	if err != nil {
 		t.Fatalf("Read(path) error = %v", err)
 	}
@@ -57,35 +57,35 @@ func TestReferenceCorpusSearchAndRead(t *testing.T) {
 	}
 }
 
-func TestReferenceCorpusValidationAndPathSafety(t *testing.T) {
-	corpus := NewReferenceCorpus("")
-	if _, err := corpus.Search(context.Background(), DaggerheartSystem, "fear", 0); err == nil || !strings.Contains(err.Error(), "reference root is not configured") {
+func TestCorpusValidationAndPathSafety(t *testing.T) {
+	corpus := New("")
+	if _, err := corpus.Search(context.Background(), supportedSystem, "fear", 0); err == nil || !strings.Contains(err.Error(), "reference root is not configured") {
 		t.Fatalf("Search() error = %v, want missing root", err)
 	}
 	if _, err := corpus.Search(context.Background(), "other", "fear", 0); err == nil || !strings.Contains(err.Error(), "not supported") {
 		t.Fatalf("Search(unsupported) error = %v", err)
 	}
-	if _, err := corpus.Search(context.Background(), DaggerheartSystem, " ", 0); err == nil || !strings.Contains(err.Error(), "query is required") {
+	if _, err := corpus.Search(context.Background(), supportedSystem, " ", 0); err == nil || !strings.Contains(err.Error(), "query is required") {
 		t.Fatalf("Search(blank query) error = %v", err)
 	}
-	if _, err := corpus.Read(context.Background(), DaggerheartSystem, " "); err == nil || !strings.Contains(err.Error(), "document id is required") {
+	if _, err := corpus.Read(context.Background(), supportedSystem, " "); err == nil || !strings.Contains(err.Error(), "document id is required") {
 		t.Fatalf("Read(blank document id) error = %v", err)
 	}
 
 	root := t.TempDir()
-	writeReferenceFixture(t, root, `[{"id":"escape","title":"Escape","kind":"rule","path":"../escape.md"}]`)
-	corpus = NewReferenceCorpus(root)
-	if _, err := corpus.Read(context.Background(), DaggerheartSystem, "escape"); err == nil || !strings.Contains(err.Error(), "escapes root") {
+	writeFixture(t, root, `[{"id":"escape","title":"Escape","kind":"rule","path":"../escape.md"}]`)
+	corpus = New(root)
+	if _, err := corpus.Read(context.Background(), supportedSystem, "escape"); err == nil || !strings.Contains(err.Error(), "escapes root") {
 		t.Fatalf("Read(escape) error = %v, want escape error", err)
 	}
 }
 
-func writeReferenceFixture(t *testing.T, root string, contents string) {
+func writeFixture(t *testing.T, root, contents string) {
 	t.Helper()
-	writeReferenceFile(t, root, "index.json", contents)
+	writeFile(t, root, "index.json", contents)
 }
 
-func writeReferenceFile(t *testing.T, root string, path string, contents string) {
+func writeFile(t *testing.T, root, path, contents string) {
 	t.Helper()
 	fullPath := filepath.Join(root, path)
 	if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {

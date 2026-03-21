@@ -26,6 +26,8 @@ const (
 )
 
 var (
+	// ErrEmptyID indicates one credential ID is required.
+	ErrEmptyID = errors.New("id is required")
 	// ErrEmptyOwnerUserID indicates owner user ID is required.
 	ErrEmptyOwnerUserID = errors.New("owner user id is required")
 	// ErrEmptyLabel indicates credential label is required.
@@ -113,6 +115,28 @@ func Create(input CreateInput, now func() time.Time, idGenerator func() (string,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
 	}, nil
+}
+
+// Revoke marks a credential as revoked while preserving ciphertext for audit
+// history and future administrative inspection.
+func Revoke(input Credential, now func() time.Time) (Credential, error) {
+	if now == nil {
+		now = time.Now
+	}
+	input.ID = strings.TrimSpace(input.ID)
+	if input.ID == "" {
+		return Credential{}, ErrEmptyID
+	}
+	input.OwnerUserID = strings.TrimSpace(input.OwnerUserID)
+	if input.OwnerUserID == "" {
+		return Credential{}, ErrEmptyOwnerUserID
+	}
+
+	revokedAt := now().UTC()
+	input.Status = StatusRevoked
+	input.UpdatedAt = revokedAt
+	input.RevokedAt = &revokedAt
+	return input, nil
 }
 
 // ParseStatus trims and normalizes one persisted credential status.

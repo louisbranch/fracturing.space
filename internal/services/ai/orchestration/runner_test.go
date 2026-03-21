@@ -84,9 +84,11 @@ func (f *fakeProvider) Run(ctx context.Context, input ProviderInput) (ProviderOu
 type fakePromptBuilder struct {
 	prompt string
 	err    error
+	inputs []PromptInput
 }
 
-func (f fakePromptBuilder) Build(context.Context, Session, Input) (string, error) {
+func (f *fakePromptBuilder) Build(_ context.Context, _ Session, input PromptInput) (string, error) {
+	f.inputs = append(f.inputs, input)
 	if f.err != nil {
 		return "", f.err
 	}
@@ -255,6 +257,110 @@ func TestRunnerRejectsToolCallsOutsideCuratedAllowlist(t *testing.T) {
 	}
 	if !provider.calls[1].Results[0].IsError || !strings.Contains(provider.calls[1].Results[0].Output, "not allowed") {
 		t.Fatalf("tool result = %#v", provider.calls[1].Results[0])
+	}
+}
+
+func TestRunnerFiltersSessionToolsThroughConfiguredPolicy(t *testing.T) {
+	sess := &fakeSession{
+		tools: []Tool{
+			{Name: "scene_create"},
+			{Name: "campaign_create"},
+			{Name: "interaction_scene_gm_output_commit"},
+		},
+		resources: baseSessionResources("gm-1", "scene-1"),
+		results: map[string]ToolResult{
+			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+		},
+	}
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-1",
+					Name:      "interaction_scene_gm_output_commit",
+					Arguments: `{"scene_id":"scene-1","text":"The scene opens."}`,
+				}},
+			},
+			{ConversationID: "resp-2", OutputText: "The scene opens."},
+		},
+	}
+
+	runner := NewRunner(RunnerConfig{
+		Dialer:     &fakeDialer{sess: sess},
+		MaxSteps:   4,
+		ToolPolicy: NewStaticToolPolicy([]string{"scene_create", "interaction_scene_gm_output_commit"}),
+	})
+	res, err := runner.Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-1",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if res.OutputText != "The scene opens." {
+		t.Fatalf("output = %q", res.OutputText)
+	}
+	if got := toolNames(provider.calls[0].Tools); !reflect.DeepEqual(got, []string{"scene_create", "interaction_scene_gm_output_commit"}) {
+		t.Fatalf("filtered tools = %#v", got)
+	}
+}
+
+func TestRunnerPassesPromptSpecificInputToPromptBuilder(t *testing.T) {
+	sess := &fakeSession{
+		tools:     []Tool{{Name: "interaction_scene_gm_output_commit"}},
+		resources: baseSessionResources("gm-1", "scene-1"),
+		results: map[string]ToolResult{
+			"interaction_scene_gm_output_commit": {Output: `{"campaign_id":"camp-1","active_scene":{"scene_id":"scene-1"}}`},
+		},
+	}
+	builder := &fakePromptBuilder{prompt: "Prompt"}
+	provider := &fakeProvider{
+		steps: []ProviderOutput{
+			{
+				ConversationID: "resp-1",
+				ToolCalls: []ProviderToolCall{{
+					CallID:    "call-1",
+					Name:      "interaction_scene_gm_output_commit",
+					Arguments: `{"scene_id":"scene-1","text":"The scene opens."}`,
+				}},
+			},
+			{ConversationID: "resp-2", OutputText: "The scene opens."},
+		},
+	}
+
+	runner := NewRunner(RunnerConfig{
+		Dialer:        &fakeDialer{sess: sess},
+		PromptBuilder: builder,
+		MaxSteps:      4,
+	})
+	_, err := runner.Run(context.Background(), Input{
+		CampaignID:       "camp-1",
+		SessionID:        "sess-1",
+		ParticipantID:    "gm-1",
+		Input:            "Advance the scene.",
+		Model:            "gpt-4.1-mini",
+		CredentialSecret: "sk-1",
+		Provider:         provider,
+		Instructions:     "provider-only instructions",
+	})
+	if err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if len(builder.inputs) != 1 {
+		t.Fatalf("prompt builder calls = %d, want 1", len(builder.inputs))
+	}
+	if builder.inputs[0] != (PromptInput{
+		CampaignID:    "camp-1",
+		SessionID:     "sess-1",
+		ParticipantID: "gm-1",
+		TurnInput:     "Advance the scene.",
+	}) {
+		t.Fatalf("prompt input = %#v", builder.inputs[0])
 	}
 }
 
@@ -434,7 +540,7 @@ func TestRunnerWrapsPromptBuildFailures(t *testing.T) {
 	sess := &fakeSession{tools: []Tool{{Name: "interaction_scene_gm_output_commit"}}}
 	_, err := NewRunner(RunnerConfig{
 		Dialer:        &fakeDialer{sess: sess},
-		PromptBuilder: fakePromptBuilder{err: errors.New("boom")},
+		PromptBuilder: &fakePromptBuilder{err: errors.New("boom")},
 		MaxSteps:      4,
 	}).Run(context.Background(), Input{
 		CampaignID:       "camp-1",

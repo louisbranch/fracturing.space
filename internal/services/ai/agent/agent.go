@@ -36,6 +36,8 @@ var (
 	ErrMissingAuthReference = errors.New("agent auth reference is required")
 	// ErrMultipleAuthReferences indicates auth references are mutually exclusive.
 	ErrMultipleAuthReferences = errors.New("exactly one agent auth reference is allowed")
+	// ErrInvalidAuthReference indicates one typed auth reference is malformed.
+	ErrInvalidAuthReference = errors.New("agent auth reference is invalid")
 	// ErrInvalidLabel indicates agent label failed validation rules.
 	ErrInvalidLabel = errors.New("agent label is invalid")
 )
@@ -44,39 +46,36 @@ var labelPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_-]{2,31}$`)
 
 // Agent is the phase 1 domain model for an AI profile configuration.
 type Agent struct {
-	ID              string
-	OwnerUserID     string
-	Label           string
-	Instructions    string
-	Provider        provider.Provider
-	Model           string
-	CredentialID    string
-	ProviderGrantID string
-	Status          Status
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID            string
+	OwnerUserID   string
+	Label         string
+	Instructions  string
+	Provider      provider.Provider
+	Model         string
+	AuthReference AuthReference
+	Status        Status
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // CreateInput captures user-provided fields for creating an agent.
 type CreateInput struct {
-	OwnerUserID     string
-	Label           string
-	Instructions    string
-	Provider        provider.Provider
-	Model           string
-	CredentialID    string
-	ProviderGrantID string
+	OwnerUserID   string
+	Label         string
+	Instructions  string
+	Provider      provider.Provider
+	Model         string
+	AuthReference AuthReference
 }
 
 // UpdateInput captures mutable fields for updating an existing agent.
 type UpdateInput struct {
-	ID              string
-	OwnerUserID     string
-	Label           string
-	Instructions    string
-	Model           string
-	CredentialID    string
-	ProviderGrantID string
+	ID            string
+	OwnerUserID   string
+	Label         string
+	Instructions  string
+	Model         string
+	AuthReference AuthReference
 }
 
 // NormalizeCreateInput validates and canonicalizes create input.
@@ -106,12 +105,11 @@ func NormalizeCreateInput(input CreateInput) (CreateInput, error) {
 		return CreateInput{}, ErrEmptyModel
 	}
 
-	credentialID, providerGrantID, err := normalizeAuthReference(input.CredentialID, input.ProviderGrantID, true)
+	authReference, err := NormalizeAuthReference(input.AuthReference, true)
 	if err != nil {
 		return CreateInput{}, err
 	}
-	input.CredentialID = credentialID
-	input.ProviderGrantID = providerGrantID
+	input.AuthReference = authReference
 
 	return input, nil
 }
@@ -136,12 +134,11 @@ func NormalizeUpdateInput(input UpdateInput) (UpdateInput, error) {
 	}
 	input.Instructions = strings.TrimSpace(input.Instructions)
 	input.Model = strings.TrimSpace(input.Model)
-	credentialID, providerGrantID, err := normalizeAuthReference(input.CredentialID, input.ProviderGrantID, false)
+	authReference, err := NormalizeAuthReference(input.AuthReference, false)
 	if err != nil {
 		return UpdateInput{}, err
 	}
-	input.CredentialID = credentialID
-	input.ProviderGrantID = providerGrantID
+	input.AuthReference = authReference
 
 	return input, nil
 }
@@ -167,17 +164,16 @@ func Create(input CreateInput, now func() time.Time, idGenerator func() (string,
 
 	createdAt := now().UTC()
 	return Agent{
-		ID:              agentID,
-		OwnerUserID:     normalized.OwnerUserID,
-		Label:           normalized.Label,
-		Instructions:    normalized.Instructions,
-		Provider:        normalized.Provider,
-		Model:           normalized.Model,
-		CredentialID:    normalized.CredentialID,
-		ProviderGrantID: normalized.ProviderGrantID,
-		Status:          StatusActive,
-		CreatedAt:       createdAt,
-		UpdatedAt:       createdAt,
+		ID:            agentID,
+		OwnerUserID:   normalized.OwnerUserID,
+		Label:         normalized.Label,
+		Instructions:  normalized.Instructions,
+		Provider:      normalized.Provider,
+		Model:         normalized.Model,
+		AuthReference: normalized.AuthReference,
+		Status:        StatusActive,
+		CreatedAt:     createdAt,
+		UpdatedAt:     createdAt,
 	}, nil
 }
 
@@ -198,36 +194,7 @@ func (s Status) IsActive() bool {
 
 // AuthRefType returns which auth reference shape the agent uses.
 func (a Agent) AuthRefType() string {
-	hasCredential := strings.TrimSpace(a.CredentialID) != ""
-	hasProviderGrant := strings.TrimSpace(a.ProviderGrantID) != ""
-	switch {
-	case hasCredential && !hasProviderGrant:
-		return "credential"
-	case hasProviderGrant && !hasCredential:
-		return "provider_grant"
-	default:
-		return ""
-	}
-}
-
-// normalizeAuthReference keeps agent auth references mutually exclusive to avoid
-// ambiguous runtime secret-resolution behavior.
-func normalizeAuthReference(credentialID string, providerGrantID string, require bool) (string, string, error) {
-	credentialID = strings.TrimSpace(credentialID)
-	providerGrantID = strings.TrimSpace(providerGrantID)
-
-	hasCredential := credentialID != ""
-	hasProviderGrant := providerGrantID != ""
-	if hasCredential && hasProviderGrant {
-		return "", "", ErrMultipleAuthReferences
-	}
-	if !hasCredential && !hasProviderGrant {
-		if require {
-			return "", "", ErrMissingAuthReference
-		}
-		return "", "", nil
-	}
-	return credentialID, providerGrantID, nil
+	return a.AuthReference.Type()
 }
 
 func validateLabel(value string) error {
