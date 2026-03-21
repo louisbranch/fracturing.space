@@ -1,9 +1,11 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-03-07T16:26:09+00:00",
+  "generated_at": "2026-03-18T17:34:37+00:00",
   "theme": "high_fantasy",
   "provider": "cloudinary",
   "batch_ids": [
+    "dh_adversary_t1_prompt_r4",
+    "dh_ancestry_prompt_r2",
     "dh_classes_try_r4",
     "dh_domain_card_r1",
     "dh_domain_card_r2",
@@ -11,10 +13,11 @@
     "dh_heritage_r1",
     "dh_starting_items_r1",
     "dh_subclass_r3",
+    "dh_ui_placeholder_r1",
     "hf_v1_r1"
   ],
   "filters": {
-    "uploaded_only": true
+    "uploaded_only": false
   },
   "campaign_scene": [
     {
@@ -1607,18 +1610,84 @@
         {
           "id": "daggerheart_adversary_set_v1",
           "asset_type": "daggerheart_adversary_illustration",
-          "asset_ids": []
+          "asset_ids": [
+            "acid_burrower",
+            "archer_guard",
+            "bear",
+            "bladed_guard",
+            "brawny_zombie",
+            "cave_ogre",
+            "construct",
+            "courtier",
+            "deeproot_defender",
+            "dire_wolf",
+            "giant_mosquitoes",
+            "giant_rat",
+            "giant_scorpion",
+            "glass_snake",
+            "green_ooze",
+            "harrier",
+            "head_guard",
+            "jagged_knife_bandit",
+            "jagged_knife_hexer",
+            "jagged_knife_kneebreaker",
+            "jagged_knife_lackey",
+            "jagged_knife_lieutenant",
+            "jagged_knife_shadow",
+            "jagged_knife_sniper",
+            "merchant",
+            "minor_chaos_elemental",
+            "minor_demon",
+            "minor_fire_elemental",
+            "minor_treant",
+            "patchwork_zombie_hulk",
+            "petty_noble",
+            "pirate_captain",
+            "pirate_raiders",
+            "pirate_tough",
+            "red_ooze",
+            "rotted_zombie",
+            "sellsword",
+            "shambling_zombie",
+            "skeleton_archer",
+            "skeleton_dredge",
+            "skeleton_knight",
+            "skeleton_warrior",
+            "spellblade",
+            "swarm_of_rats",
+            "sylvan_soldier",
+            "tangle_bramble",
+            "tangle_bramble_swarm",
+            "tiny_green_ooze",
+            "tiny_red_ooze",
+            "volcanic_dragon",
+            "weaponmaster",
+            "young_dryad",
+            "zombie_pack"
+          ]
         },
         {
           "id": "daggerheart_ancestry_set_v1",
           "asset_type": "daggerheart_ancestry_illustration",
           "asset_ids": [
+            "heritage_clank",
+            "heritage_drakona",
             "heritage_dwarf",
             "heritage_elf",
             "heritage_faerie",
+            "heritage_faun",
+            "heritage_firbolg",
+            "heritage_fungril",
+            "heritage_galapa",
+            "heritage_giant",
             "heritage_goblin",
+            "heritage_halfling",
             "heritage_human",
-            "heritage_orc"
+            "heritage_infernis",
+            "heritage_katari",
+            "heritage_orc",
+            "heritage_ribbet",
+            "heritage_simiah"
           ]
         },
         {
@@ -1821,6 +1890,391 @@
       ],
       "entity_asset_map": [
         {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.acid-burrower",
+          "entity_type": "adversary",
+          "asset_id": "acid_burrower"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.archer-guard",
+          "entity_type": "adversary",
+          "asset_id": "archer_guard"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.bear",
+          "entity_type": "adversary",
+          "asset_id": "bear"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.bladed-guard",
+          "entity_type": "adversary",
+          "asset_id": "bladed_guard"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.brawny-zombie",
+          "entity_type": "adversary",
+          "asset_id": "brawny_zombie"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.cave-ogre",
+          "entity_type": "adversary",
+          "asset_id": "cave_ogre"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.construct",
+          "entity_type": "adversary",
+          "asset_id": "construct"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.courtier",
+          "entity_type": "adversary",
+          "asset_id": "courtier"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.deeproot-defender",
+          "entity_type": "adversary",
+          "asset_id": "deeproot_defender"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.dire-wolf",
+          "entity_type": "adversary",
+          "asset_id": "dire_wolf"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.giant-mosquitoes",
+          "entity_type": "adversary",
+          "asset_id": "giant_mosquitoes"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.giant-rat",
+          "entity_type": "adversary",
+          "asset_id": "giant_rat"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.giant-scorpion",
+          "entity_type": "adversary",
+          "asset_id": "giant_scorpion"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.glass-snake",
+          "entity_type": "adversary",
+          "asset_id": "glass_snake"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.green-ooze",
+          "entity_type": "adversary",
+          "asset_id": "green_ooze"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.harrier",
+          "entity_type": "adversary",
+          "asset_id": "harrier"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.head-guard",
+          "entity_type": "adversary",
+          "asset_id": "head_guard"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.jagged-knife-bandit",
+          "entity_type": "adversary",
+          "asset_id": "jagged_knife_bandit"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.jagged-knife-hexer",
+          "entity_type": "adversary",
+          "asset_id": "jagged_knife_hexer"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.jagged-knife-kneebreaker",
+          "entity_type": "adversary",
+          "asset_id": "jagged_knife_kneebreaker"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.jagged-knife-lackey",
+          "entity_type": "adversary",
+          "asset_id": "jagged_knife_lackey"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.jagged-knife-lieutenant",
+          "entity_type": "adversary",
+          "asset_id": "jagged_knife_lieutenant"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.jagged-knife-shadow",
+          "entity_type": "adversary",
+          "asset_id": "jagged_knife_shadow"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.jagged-knife-sniper",
+          "entity_type": "adversary",
+          "asset_id": "jagged_knife_sniper"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.merchant",
+          "entity_type": "adversary",
+          "asset_id": "merchant"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.minor-chaos-elemental",
+          "entity_type": "adversary",
+          "asset_id": "minor_chaos_elemental"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.minor-demon",
+          "entity_type": "adversary",
+          "asset_id": "minor_demon"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.minor-fire-elemental",
+          "entity_type": "adversary",
+          "asset_id": "minor_fire_elemental"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.minor-treant",
+          "entity_type": "adversary",
+          "asset_id": "minor_treant"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.patchwork-zombie-hulk",
+          "entity_type": "adversary",
+          "asset_id": "patchwork_zombie_hulk"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.petty-noble",
+          "entity_type": "adversary",
+          "asset_id": "petty_noble"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.pirate-captain",
+          "entity_type": "adversary",
+          "asset_id": "pirate_captain"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.pirate-raiders",
+          "entity_type": "adversary",
+          "asset_id": "pirate_raiders"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.pirate-tough",
+          "entity_type": "adversary",
+          "asset_id": "pirate_tough"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.red-ooze",
+          "entity_type": "adversary",
+          "asset_id": "red_ooze"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.rotted-zombie",
+          "entity_type": "adversary",
+          "asset_id": "rotted_zombie"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.sellsword",
+          "entity_type": "adversary",
+          "asset_id": "sellsword"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.shambling-zombie",
+          "entity_type": "adversary",
+          "asset_id": "shambling_zombie"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.skeleton-archer",
+          "entity_type": "adversary",
+          "asset_id": "skeleton_archer"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.skeleton-dredge",
+          "entity_type": "adversary",
+          "asset_id": "skeleton_dredge"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.skeleton-knight",
+          "entity_type": "adversary",
+          "asset_id": "skeleton_knight"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.skeleton-warrior",
+          "entity_type": "adversary",
+          "asset_id": "skeleton_warrior"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.spellblade",
+          "entity_type": "adversary",
+          "asset_id": "spellblade"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.swarm-of-rats",
+          "entity_type": "adversary",
+          "asset_id": "swarm_of_rats"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.sylvan-soldier",
+          "entity_type": "adversary",
+          "asset_id": "sylvan_soldier"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.tangle-bramble",
+          "entity_type": "adversary",
+          "asset_id": "tangle_bramble"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.tangle-bramble-swarm",
+          "entity_type": "adversary",
+          "asset_id": "tangle_bramble_swarm"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.tiny-green-ooze",
+          "entity_type": "adversary",
+          "asset_id": "tiny_green_ooze"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.tiny-red-ooze",
+          "entity_type": "adversary",
+          "asset_id": "tiny_red_ooze"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.volcanic-dragon",
+          "entity_type": "adversary",
+          "asset_id": "volcanic_dragon"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.weaponmaster",
+          "entity_type": "adversary",
+          "asset_id": "weaponmaster"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.young-dryad",
+          "entity_type": "adversary",
+          "asset_id": "young_dryad"
+        },
+        {
+          "asset_type": "daggerheart_adversary_illustration",
+          "set_id": "daggerheart_adversary_set_v1",
+          "entity_id": "adversary.zombie-pack",
+          "entity_type": "adversary",
+          "asset_id": "zombie_pack"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.clank",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_clank"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.drakona",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_drakona"
+        },
+        {
           "asset_type": "daggerheart_ancestry_illustration",
           "set_id": "daggerheart_ancestry_set_v1",
           "entity_id": "heritage.dwarf",
@@ -1844,9 +2298,51 @@
         {
           "asset_type": "daggerheart_ancestry_illustration",
           "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.faun",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_faun"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.firbolg",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_firbolg"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.fungril",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_fungril"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.galapa",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_galapa"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.giant",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_giant"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
           "entity_id": "heritage.goblin",
           "entity_type": "ancestry",
           "asset_id": "heritage_goblin"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.halfling",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_halfling"
         },
         {
           "asset_type": "daggerheart_ancestry_illustration",
@@ -1858,9 +2354,37 @@
         {
           "asset_type": "daggerheart_ancestry_illustration",
           "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.infernis",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_infernis"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.katari",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_katari"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
           "entity_id": "heritage.orc",
           "entity_type": "ancestry",
           "asset_id": "heritage_orc"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.ribbet",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_ribbet"
+        },
+        {
+          "asset_type": "daggerheart_ancestry_illustration",
+          "set_id": "daggerheart_ancestry_set_v1",
+          "entity_id": "heritage.simiah",
+          "entity_type": "ancestry",
+          "asset_id": "heritage_simiah"
         },
         {
           "asset_type": "daggerheart_armor_illustration",
@@ -2782,8 +3306,1769 @@
       ]
     }
   },
-  "daggerheart_adversary_illustration": [],
+  "daggerheart_adversary_illustration": [
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.acid_burrower",
+      "request_slug": "acid_burrower",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "acid_burrower",
+      "output_id": "img_62b385248bbe",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "62b385248bbef4e1b7621595e83ba98ea6608920e4ab17a076575491d4b9b5c4",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/acid_burrower",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619554/high_fantasy/daggerheart_adversary_illustration/v1/acid_burrower.png",
+        "version": 1773619554,
+        "uploaded_at": "2026-03-16T00:05:55+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.acid-burrower",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.archer_guard",
+      "request_slug": "archer_guard",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "archer_guard",
+      "output_id": "img_6bcf82e2d6e3",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6bcf82e2d6e368209808c68ef2bab2d7e60710542fb1051c64a0aa5320715046",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/archer_guard",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619370/high_fantasy/daggerheart_adversary_illustration/v1/archer_guard.png",
+        "version": 1773619370,
+        "uploaded_at": "2026-03-16T00:02:51+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.archer-guard",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.bear",
+      "request_slug": "bear",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "bear",
+      "output_id": "img_af28c95dee17",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "af28c95dee174df4120f1adfe0c13ed809d142f008bef3f270a507d7ae59358a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/bear",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619373/high_fantasy/daggerheart_adversary_illustration/v1/bear.png",
+        "version": 1773619373,
+        "uploaded_at": "2026-03-16T00:02:54+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.bear",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.bladed_guard",
+      "request_slug": "bladed_guard",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "bladed_guard",
+      "output_id": "img_ba79fa9c71e6",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "ba79fa9c71e6efeb2bceff247a52bfba6610649c381dd819e3d26dd255e1ee63",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/bladed_guard",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619375/high_fantasy/daggerheart_adversary_illustration/v1/bladed_guard.png",
+        "version": 1773619375,
+        "uploaded_at": "2026-03-16T00:02:56+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.bladed-guard",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.brawny_zombie",
+      "request_slug": "brawny_zombie",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "brawny_zombie",
+      "output_id": "img_af27c4a280f0",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "af27c4a280f0e2c57d68e5b89458c323969ce77dcc0cbaf03a846158621a506c",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/brawny_zombie",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619379/high_fantasy/daggerheart_adversary_illustration/v1/brawny_zombie.png",
+        "version": 1773619379,
+        "uploaded_at": "2026-03-16T00:02:59+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.brawny-zombie",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.cave_ogre",
+      "request_slug": "cave_ogre",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "cave_ogre",
+      "output_id": "img_3b5407725695",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "3b5407725695164c3f4556ac92738c00555aae0eea037f7c627181c5d06a5a56",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/cave_ogre",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619384/high_fantasy/daggerheart_adversary_illustration/v1/cave_ogre.png",
+        "version": 1773619384,
+        "uploaded_at": "2026-03-16T00:03:06+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.cave-ogre",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.construct",
+      "request_slug": "construct",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "construct",
+      "output_id": "img_b22ad892049d",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "b22ad892049d28f60030bb4095fd46b1a147d5cf892ddb0caa1ee3c210917b90",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/construct",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619388/high_fantasy/daggerheart_adversary_illustration/v1/construct.png",
+        "version": 1773619388,
+        "uploaded_at": "2026-03-16T00:03:09+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.construct",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.courtier",
+      "request_slug": "courtier",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "courtier",
+      "output_id": "img_c29ade359742",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "c29ade35974230e47738db8129788b0904010e26ff9b1cde1957c3ee7e61d021",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/courtier",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619391/high_fantasy/daggerheart_adversary_illustration/v1/courtier.png",
+        "version": 1773619391,
+        "uploaded_at": "2026-03-16T00:03:11+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.courtier",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.deeproot_defender",
+      "request_slug": "deeproot_defender",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "deeproot_defender",
+      "output_id": "img_e73c9aeb7dad",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "e73c9aeb7dad0a4f5594f01b22b27d8af56906e3d7b508f2b696ea3efe615385",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/deeproot_defender",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619394/high_fantasy/daggerheart_adversary_illustration/v1/deeproot_defender.png",
+        "version": 1773619394,
+        "uploaded_at": "2026-03-16T00:03:15+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.deeproot-defender",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.dire_wolf",
+      "request_slug": "dire_wolf",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "dire_wolf",
+      "output_id": "img_6d9ef9d8ab89",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6d9ef9d8ab89a0f48b875a7cdd32a3e823475954b2133cb1e0645cb19fdf1f1b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/dire_wolf",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619398/high_fantasy/daggerheart_adversary_illustration/v1/dire_wolf.png",
+        "version": 1773619398,
+        "uploaded_at": "2026-03-16T00:03:19+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.dire-wolf",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.giant_mosquitoes",
+      "request_slug": "giant_mosquitoes",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "giant_mosquitoes",
+      "output_id": "img_6a5be76388ff",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6a5be76388ffb59e7b0ad54be61a1825978e7ed0810394cd797f77cc665d15aa",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/giant_mosquitoes",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619401/high_fantasy/daggerheart_adversary_illustration/v1/giant_mosquitoes.png",
+        "version": 1773619401,
+        "uploaded_at": "2026-03-16T00:03:22+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.giant-mosquitoes",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.giant_rat",
+      "request_slug": "giant_rat",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "giant_rat",
+      "output_id": "img_47e72261b9ed",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "47e72261b9edd0eda161840e90ce841a61d91b30bf99515ff566e5d816eebff1",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/giant_rat",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619404/high_fantasy/daggerheart_adversary_illustration/v1/giant_rat.png",
+        "version": 1773619404,
+        "uploaded_at": "2026-03-16T00:03:25+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.giant-rat",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.giant_scorpion",
+      "request_slug": "giant_scorpion",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "giant_scorpion",
+      "output_id": "img_1dab2327c143",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1dab2327c143a1a4e833bcf363b7f1870e0b4dc0414e3054b50afa31d6f72ac8",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/giant_scorpion",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619407/high_fantasy/daggerheart_adversary_illustration/v1/giant_scorpion.png",
+        "version": 1773619407,
+        "uploaded_at": "2026-03-16T00:03:28+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.giant-scorpion",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.glass_snake",
+      "request_slug": "glass_snake",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "glass_snake",
+      "output_id": "img_aad24d12bdc9",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "aad24d12bdc96b3730e23a6c9d13353b0b33cbc56ef0202d6251f0eb7af46a8f",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/glass_snake",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619410/high_fantasy/daggerheart_adversary_illustration/v1/glass_snake.png",
+        "version": 1773619410,
+        "uploaded_at": "2026-03-16T00:03:30+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.glass-snake",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.green_ooze",
+      "request_slug": "green_ooze",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "green_ooze",
+      "output_id": "img_f67a6d50952e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f67a6d50952e97a3cb3f28f3a9e1f9445f39b60ef95ab205c7bf2bed3ca5e64f",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/green_ooze",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619412/high_fantasy/daggerheart_adversary_illustration/v1/green_ooze.png",
+        "version": 1773619412,
+        "uploaded_at": "2026-03-16T00:03:33+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.green-ooze",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.harrier",
+      "request_slug": "harrier",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "harrier",
+      "output_id": "img_6e2e43124597",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6e2e431245973768526cc09b82114635a63c44523369d02a48b07fe9dc8d174c",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/harrier",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619415/high_fantasy/daggerheart_adversary_illustration/v1/harrier.png",
+        "version": 1773619415,
+        "uploaded_at": "2026-03-16T00:03:36+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.harrier",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.head_guard",
+      "request_slug": "head_guard",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "head_guard",
+      "output_id": "img_6128dd78c12b",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6128dd78c12b69e5329e781ca6f4f3f5ce100f8f81f777b04b1cfce362e0b72e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/head_guard",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619422/high_fantasy/daggerheart_adversary_illustration/v1/head_guard.png",
+        "version": 1773619422,
+        "uploaded_at": "2026-03-16T00:03:48+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.head-guard",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.jagged_knife_bandit",
+      "request_slug": "jagged_knife_bandit",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "jagged_knife_bandit",
+      "output_id": "img_23beb324979e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "23beb324979e64c12964416270247a84addad3b827c0ca5fdc5d80a0c77125d9",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_bandit",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619430/high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_bandit.png",
+        "version": 1773619430,
+        "uploaded_at": "2026-03-16T00:03:51+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.jagged-knife-bandit",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.jagged_knife_hexer",
+      "request_slug": "jagged_knife_hexer",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "jagged_knife_hexer",
+      "output_id": "img_9473f8d3116e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "9473f8d3116e73cdd57debb6d969e7f983ed5d435478a876b6947deaf2205019",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_hexer",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619433/high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_hexer.png",
+        "version": 1773619433,
+        "uploaded_at": "2026-03-16T00:03:54+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.jagged-knife-hexer",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.jagged_knife_kneebreaker",
+      "request_slug": "jagged_knife_kneebreaker",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "jagged_knife_kneebreaker",
+      "output_id": "img_1b716c7a7f49",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "1b716c7a7f49cd4e3081b8e56bfcef79e89155e52b2cfba0144d453f1ce47d1a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_kneebreaker",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619436/high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_kneebreaker.png",
+        "version": 1773619436,
+        "uploaded_at": "2026-03-16T00:03:57+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.jagged-knife-kneebreaker",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.jagged_knife_lackey",
+      "request_slug": "jagged_knife_lackey",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "jagged_knife_lackey",
+      "output_id": "img_19b5e6baeeb2",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "19b5e6baeeb27271f2838383ec0377f6dbf504861857419d723cee8b0f19f1d3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_lackey",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619439/high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_lackey.png",
+        "version": 1773619439,
+        "uploaded_at": "2026-03-16T00:03:59+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.jagged-knife-lackey",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.jagged_knife_lieutenant",
+      "request_slug": "jagged_knife_lieutenant",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "jagged_knife_lieutenant",
+      "output_id": "img_14178fbfb245",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "14178fbfb2455289f5b606d1b8c09cf2a82e8ee794d75cb1842d1ba7eff86944",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_lieutenant",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619441/high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_lieutenant.png",
+        "version": 1773619441,
+        "uploaded_at": "2026-03-16T00:04:01+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.jagged-knife-lieutenant",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.jagged_knife_shadow",
+      "request_slug": "jagged_knife_shadow",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "jagged_knife_shadow",
+      "output_id": "img_308c55a809d1",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "308c55a809d14bb61e619e2ebc4f00c18f5ac220db7eab82bb94606242f29577",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_shadow",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619443/high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_shadow.png",
+        "version": 1773619443,
+        "uploaded_at": "2026-03-16T00:04:04+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.jagged-knife-shadow",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.jagged_knife_sniper",
+      "request_slug": "jagged_knife_sniper",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "jagged_knife_sniper",
+      "output_id": "img_20c714185663",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "20c714185663d3b37c8965a1eb594319fd33e3963188158ecbb686ef2387dd4a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_sniper",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619446/high_fantasy/daggerheart_adversary_illustration/v1/jagged_knife_sniper.png",
+        "version": 1773619446,
+        "uploaded_at": "2026-03-16T00:04:07+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.jagged-knife-sniper",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.merchant",
+      "request_slug": "merchant",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "merchant",
+      "output_id": "img_679c7bf5f3e7",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "679c7bf5f3e797b5be45617871ab5c1702e473085fbb2ad9250ee94cf1cbc507",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/merchant",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619449/high_fantasy/daggerheart_adversary_illustration/v1/merchant.png",
+        "version": 1773619449,
+        "uploaded_at": "2026-03-16T00:04:10+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.merchant",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.minor_chaos_elemental",
+      "request_slug": "minor_chaos_elemental",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "minor_chaos_elemental",
+      "output_id": "img_513f3716f1c4",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "513f3716f1c4e0d692182f7489f89d4a818a3b955e22c88e27819b1978a75209",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/minor_chaos_elemental",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619451/high_fantasy/daggerheart_adversary_illustration/v1/minor_chaos_elemental.png",
+        "version": 1773619451,
+        "uploaded_at": "2026-03-16T00:04:12+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.minor-chaos-elemental",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.minor_demon",
+      "request_slug": "minor_demon",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "minor_demon",
+      "output_id": "img_f14fac9598ab",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f14fac9598ab25d2f481ab2dd96e2570545e104ae87793099ff4290ef93352af",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/minor_demon",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619454/high_fantasy/daggerheart_adversary_illustration/v1/minor_demon.png",
+        "version": 1773619454,
+        "uploaded_at": "2026-03-16T00:04:16+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.minor-demon",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.minor_fire_elemental",
+      "request_slug": "minor_fire_elemental",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "minor_fire_elemental",
+      "output_id": "img_643e9ca5f856",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "643e9ca5f8562ee8cb6f2cb928baf76251c6d934b81ed26fc8ba4f41eb222ea4",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/minor_fire_elemental",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619457/high_fantasy/daggerheart_adversary_illustration/v1/minor_fire_elemental.png",
+        "version": 1773619457,
+        "uploaded_at": "2026-03-16T00:04:18+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.minor-fire-elemental",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.minor_treant",
+      "request_slug": "minor_treant",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "minor_treant",
+      "output_id": "img_dcceb8f656dd",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "dcceb8f656dd5219de6a09a76e1b6b6f1054d462cdbf01aa4093e87ecdbe10d9",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/minor_treant",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619460/high_fantasy/daggerheart_adversary_illustration/v1/minor_treant.png",
+        "version": 1773619460,
+        "uploaded_at": "2026-03-16T00:04:20+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.minor-treant",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.patchwork_zombie_hulk",
+      "request_slug": "patchwork_zombie_hulk",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "patchwork_zombie_hulk",
+      "output_id": "img_f01784610303",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f0178461030353e76e0eb23c10a243d0e848d24e4911f892275d414073624e7e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/patchwork_zombie_hulk",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619463/high_fantasy/daggerheart_adversary_illustration/v1/patchwork_zombie_hulk.png",
+        "version": 1773619463,
+        "uploaded_at": "2026-03-16T00:04:25+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.patchwork-zombie-hulk",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.petty_noble",
+      "request_slug": "petty_noble",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "petty_noble",
+      "output_id": "img_db9ebb97205c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "db9ebb97205c972abaa11a7cabf338ebb36b4021193adf40b469c9f786417485",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/petty_noble",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619469/high_fantasy/daggerheart_adversary_illustration/v1/petty_noble.png",
+        "version": 1773619469,
+        "uploaded_at": "2026-03-16T00:04:31+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.petty-noble",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.pirate_captain",
+      "request_slug": "pirate_captain",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "pirate_captain",
+      "output_id": "img_43a9a2e1ab7e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "43a9a2e1ab7e91b3b05214a020c00b628d37d8aaf9968d78bafeb374592f88a9",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/pirate_captain",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619473/high_fantasy/daggerheart_adversary_illustration/v1/pirate_captain.png",
+        "version": 1773619473,
+        "uploaded_at": "2026-03-16T00:04:33+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.pirate-captain",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.pirate_raiders",
+      "request_slug": "pirate_raiders",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "pirate_raiders",
+      "output_id": "img_cc4aa00ff092",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "cc4aa00ff092ab8da783a81b15bfb877a943eb1c2f5a04a060bfbeb97adf3056",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/pirate_raiders",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619475/high_fantasy/daggerheart_adversary_illustration/v1/pirate_raiders.png",
+        "version": 1773619475,
+        "uploaded_at": "2026-03-16T00:04:36+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.pirate-raiders",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.pirate_tough",
+      "request_slug": "pirate_tough",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "pirate_tough",
+      "output_id": "img_ed0378d1aaa5",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "ed0378d1aaa517fae55f0cd341a07bd31b8d7e7fb4292d6997eb1283e8d10444",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/pirate_tough",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619478/high_fantasy/daggerheart_adversary_illustration/v1/pirate_tough.png",
+        "version": 1773619478,
+        "uploaded_at": "2026-03-16T00:04:39+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.pirate-tough",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.red_ooze",
+      "request_slug": "red_ooze",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "red_ooze",
+      "output_id": "img_6715da3adabf",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "6715da3adabf4671537359d26b75b968e9b02c677b4d6708a5f51db8a7b16ccc",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/red_ooze",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619481/high_fantasy/daggerheart_adversary_illustration/v1/red_ooze.png",
+        "version": 1773619481,
+        "uploaded_at": "2026-03-16T00:04:41+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.red-ooze",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.rotted_zombie",
+      "request_slug": "rotted_zombie",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "rotted_zombie",
+      "output_id": "img_60ec76137e6a",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "60ec76137e6a743cf34b4b3e487a60eaeeda4063e4db1517c6fb63ecc3931366",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/rotted_zombie",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619483/high_fantasy/daggerheart_adversary_illustration/v1/rotted_zombie.png",
+        "version": 1773619483,
+        "uploaded_at": "2026-03-16T00:04:43+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.rotted-zombie",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.sellsword",
+      "request_slug": "sellsword",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "sellsword",
+      "output_id": "img_9d92e5c7a01a",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "9d92e5c7a01a772edd7f7458d5fb4a59a5a9f093e3e0526bfba27a7fb9bbb790",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/sellsword",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619485/high_fantasy/daggerheart_adversary_illustration/v1/sellsword.png",
+        "version": 1773619485,
+        "uploaded_at": "2026-03-16T00:04:46+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.sellsword",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.shambling_zombie",
+      "request_slug": "shambling_zombie",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "shambling_zombie",
+      "output_id": "img_d1cbdb4c1bd4",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "d1cbdb4c1bd41bde066088d7777f6fa4b08d9741de5a3ba8bdf4950de1380ff3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/shambling_zombie",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619488/high_fantasy/daggerheart_adversary_illustration/v1/shambling_zombie.png",
+        "version": 1773619488,
+        "uploaded_at": "2026-03-16T00:04:48+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.shambling-zombie",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.skeleton_archer",
+      "request_slug": "skeleton_archer",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "skeleton_archer",
+      "output_id": "img_441fbf72e584",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "441fbf72e584f5992bdc9619aac15639a4e7d2402e445cd3d729fd7115be67d3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/skeleton_archer",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619491/high_fantasy/daggerheart_adversary_illustration/v1/skeleton_archer.png",
+        "version": 1773619491,
+        "uploaded_at": "2026-03-16T00:04:52+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.skeleton-archer",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.skeleton_dredge",
+      "request_slug": "skeleton_dredge",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "skeleton_dredge",
+      "output_id": "img_b0d46187e2f7",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "b0d46187e2f73d0edbdce8019e24c6d7b686795908bb00b61d530e220489c412",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/skeleton_dredge",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619494/high_fantasy/daggerheart_adversary_illustration/v1/skeleton_dredge.png",
+        "version": 1773619494,
+        "uploaded_at": "2026-03-16T00:04:54+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.skeleton-dredge",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.skeleton_knight",
+      "request_slug": "skeleton_knight",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "skeleton_knight",
+      "output_id": "img_fa21916bb7c4",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "fa21916bb7c42a6c1586919003895c96b3a54517246ace0cfb1783d740f8d9e8",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/skeleton_knight",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619496/high_fantasy/daggerheart_adversary_illustration/v1/skeleton_knight.png",
+        "version": 1773619496,
+        "uploaded_at": "2026-03-16T00:04:57+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.skeleton-knight",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.skeleton_warrior",
+      "request_slug": "skeleton_warrior",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "skeleton_warrior",
+      "output_id": "img_2d4688ec5bde",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2d4688ec5bde96e9e15e04bea2e128f2484b25ec75991a6711f5c1dd2698ca3b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/skeleton_warrior",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619501/high_fantasy/daggerheart_adversary_illustration/v1/skeleton_warrior.png",
+        "version": 1773619501,
+        "uploaded_at": "2026-03-16T00:05:05+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.skeleton-warrior",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.spellblade",
+      "request_slug": "spellblade",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "spellblade",
+      "output_id": "img_4f7e16c27289",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4f7e16c272893967210817a2e13b4b17491af1987e92e5dcda02f67184ac57c3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/spellblade",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619507/high_fantasy/daggerheart_adversary_illustration/v1/spellblade.png",
+        "version": 1773619507,
+        "uploaded_at": "2026-03-16T00:05:08+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.spellblade",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.swarm_of_rats",
+      "request_slug": "swarm_of_rats",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "swarm_of_rats",
+      "output_id": "img_40239bf8516c",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "40239bf8516cca27265f48167823372b4fcaa8fdb4da8744fb955dd4196cf54b",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/swarm_of_rats",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619509/high_fantasy/daggerheart_adversary_illustration/v1/swarm_of_rats.png",
+        "version": 1773619509,
+        "uploaded_at": "2026-03-16T00:05:10+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.swarm-of-rats",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.sylvan_soldier",
+      "request_slug": "sylvan_soldier",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "sylvan_soldier",
+      "output_id": "img_35c01129e846",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "35c01129e84687303bf45e062c54e08b73735ba8bc4802f28b8b30b642f34413",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/sylvan_soldier",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619512/high_fantasy/daggerheart_adversary_illustration/v1/sylvan_soldier.png",
+        "version": 1773619512,
+        "uploaded_at": "2026-03-16T00:05:15+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.sylvan-soldier",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.tangle_bramble",
+      "request_slug": "tangle_bramble",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "tangle_bramble",
+      "output_id": "img_4a2c21c623c2",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "4a2c21c623c27e7e8eb1786bf26fcaf12ea83ca19bc7683fd0b209b426a4ef6a",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/tangle_bramble",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619515/high_fantasy/daggerheart_adversary_illustration/v1/tangle_bramble.png",
+        "version": 1773619515,
+        "uploaded_at": "2026-03-16T00:05:18+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.tangle-bramble",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.tangle_bramble_swarm",
+      "request_slug": "tangle_bramble_swarm",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "tangle_bramble_swarm",
+      "output_id": "img_3e60cc785670",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "3e60cc78567060becf9b66ce1fce057285943ac5a47091e94b4e1a9ee91072f4",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/tangle_bramble_swarm",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619520/high_fantasy/daggerheart_adversary_illustration/v1/tangle_bramble_swarm.png",
+        "version": 1773619520,
+        "uploaded_at": "2026-03-16T00:05:22+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.tangle-bramble-swarm",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.tiny_green_ooze",
+      "request_slug": "tiny_green_ooze",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "tiny_green_ooze",
+      "output_id": "img_d4a8a67b8c63",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "d4a8a67b8c6317b7baa6f1769344ad600213c2a0937b8e2995dba1b9eaaf9d03",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/tiny_green_ooze",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619523/high_fantasy/daggerheart_adversary_illustration/v1/tiny_green_ooze.png",
+        "version": 1773619523,
+        "uploaded_at": "2026-03-16T00:05:26+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.tiny-green-ooze",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.tiny_red_ooze",
+      "request_slug": "tiny_red_ooze",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "tiny_red_ooze",
+      "output_id": "img_2fb918286947",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2fb918286947a439ade76834a1b107fe7efd89a7f1580c3bb9b05be2f8951586",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/tiny_red_ooze",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619527/high_fantasy/daggerheart_adversary_illustration/v1/tiny_red_ooze.png",
+        "version": 1773619527,
+        "uploaded_at": "2026-03-16T00:05:29+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.tiny-red-ooze",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.volcanic_dragon",
+      "request_slug": "volcanic_dragon",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "volcanic_dragon",
+      "output_id": "img_2d4971e3c0eb",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2d4971e3c0eb3b767077945063ce3369d48ee21906a4718cd2a65dccd6047d64",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/volcanic_dragon",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619530/high_fantasy/daggerheart_adversary_illustration/v1/volcanic_dragon.png",
+        "version": 1773619530,
+        "uploaded_at": "2026-03-16T00:05:35+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.volcanic-dragon",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.weaponmaster",
+      "request_slug": "weaponmaster",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "weaponmaster",
+      "output_id": "img_48518ea8d3eb",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "48518ea8d3eb8a337ef782ccdf67a7ca13e08d14520aa61a1119dfe4fc5fff3e",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/weaponmaster",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619533/high_fantasy/daggerheart_adversary_illustration/v1/weaponmaster.png",
+        "version": 1773619533,
+        "uploaded_at": "2026-03-16T00:05:34+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.weaponmaster",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.young_dryad",
+      "request_slug": "young_dryad",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "young_dryad",
+      "output_id": "img_5721b533111b",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5721b533111b94909f818dd41f29c8d15dde7c3460fb563425a4bd9fb8af026c",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/young_dryad",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619536/high_fantasy/daggerheart_adversary_illustration/v1/young_dryad.png",
+        "version": 1773619536,
+        "uploaded_at": "2026-03-16T00:05:38+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.young-dryad",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_adversary_illustration.zombie_pack",
+      "request_slug": "zombie_pack",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "batch_id": "dh_adversary_t1_prompt_r4",
+      "fs_asset_id": "zombie_pack",
+      "output_id": "img_deb4ad6c5cb3",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "deb4ad6c5cb35ea65caafa25541e9762edfb7e086203d66015d13ce4f5e20223",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-16T00:02:18+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_adversary_illustration/v1/zombie_pack",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773619538/high_fantasy/daggerheart_adversary_illustration/v1/zombie_pack.png",
+        "version": 1773619538,
+        "uploaded_at": "2026-03-16T00:05:40+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "adversary",
+        "entity_id": "adversary.zombie-pack",
+        "source_file": "adversaries.json"
+      },
+      "review_flags": []
+    }
+  ],
   "daggerheart_ancestry_illustration": [
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_clank",
+      "request_slug": "heritage_clank",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_clank",
+      "output_id": "img_5af5e32d1868",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5af5e32d1868b74739aca1ebcb5857a9ee64d0e63e6da4fa74db28d572fe7e55",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_clank",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855254/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_clank.png",
+        "version": 1773855254,
+        "uploaded_at": "2026-03-18T17:34:14+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.clank",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_drakona",
+      "request_slug": "heritage_drakona",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_drakona",
+      "output_id": "img_d7bf456b5cae",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "d7bf456b5cae5d6fc197d2b5b2c95901a63c1abd7e6fe8b817a6d2082a183a76",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_drakona",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855259/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_drakona.png",
+        "version": 1773855259,
+        "uploaded_at": "2026-03-18T17:34:20+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.drakona",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
     {
       "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_dwarf",
       "request_slug": "heritage_dwarf",
@@ -2798,13 +5083,13 @@
       "sha256": "89ce8c3bc28fc7e86c9f17e8bcd3d0f56002c0a16ef9015fd44a82b854f6c663",
       "width": 1024,
       "height": 1536,
-      "generated_at": "2026-03-05T18:22:11+00:00",
+      "generated_at": "2026-03-18T17:28:14+00:00",
       "cloudinary": {
         "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_dwarf",
         "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735473/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_dwarf.png",
         "version": 1772735473,
-        "uploaded_at": "2026-03-05T18:31:14+00:00"
+        "uploaded_at": "2026-03-18T17:34:19+00:00"
       },
       "catalog_ref": {
         "system_id": "daggerheart",
@@ -2830,13 +5115,13 @@
       "sha256": "6d5a0a70d3878ece554387854e0a2496998974bc99e869971ec65f9c4cef6372",
       "width": 1024,
       "height": 1536,
-      "generated_at": "2026-03-05T18:22:11+00:00",
+      "generated_at": "2026-03-18T17:28:14+00:00",
       "cloudinary": {
         "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_elf",
         "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735478/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_elf.png",
         "version": 1772735478,
-        "uploaded_at": "2026-03-05T18:31:19+00:00"
+        "uploaded_at": "2026-03-18T17:32:04+00:00"
       },
       "catalog_ref": {
         "system_id": "daggerheart",
@@ -2862,13 +5147,13 @@
       "sha256": "9585cf003babffaf3dbe1c63cfc31571aba20e90e3f9c8669a23157052ce2769",
       "width": 1024,
       "height": 1536,
-      "generated_at": "2026-03-05T18:22:11+00:00",
+      "generated_at": "2026-03-18T17:28:14+00:00",
       "cloudinary": {
         "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_faerie",
         "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735484/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_faerie.png",
         "version": 1772735484,
-        "uploaded_at": "2026-03-05T18:31:25+00:00"
+        "uploaded_at": "2026-03-18T17:32:06+00:00"
       },
       "catalog_ref": {
         "system_id": "daggerheart",
@@ -2876,6 +5161,166 @@
         "locale": "en-US",
         "entity_type": "ancestry",
         "entity_id": "heritage.faerie",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_faun",
+      "request_slug": "heritage_faun",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_faun",
+      "output_id": "img_2b2a0407d705",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2b2a0407d705047826ab2cf05195f7b2d5e42bb8c99d3675d54c68e8132549ad",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_faun",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855128/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_faun.png",
+        "version": 1773855128,
+        "uploaded_at": "2026-03-18T17:32:09+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.faun",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_firbolg",
+      "request_slug": "heritage_firbolg",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_firbolg",
+      "output_id": "img_65397ee80cd6",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "65397ee80cd6b73e5337c6d6e7528149d49b3ade7407a0e4269794e678bfb5cc",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_firbolg",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855131/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_firbolg.png",
+        "version": 1773855131,
+        "uploaded_at": "2026-03-18T17:32:12+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.firbolg",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_fungril",
+      "request_slug": "heritage_fungril",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_fungril",
+      "output_id": "img_abdddf8d8bb1",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "abdddf8d8bb10e1ac816d13af8088eb46a3a20513438b809568a139a2debe510",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_fungril",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855164/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_fungril.png",
+        "version": 1773855164,
+        "uploaded_at": "2026-03-18T17:32:44+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.fungril",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_galapa",
+      "request_slug": "heritage_galapa",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_galapa",
+      "output_id": "img_fba74a1c004f",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "fba74a1c004fc94f7e14dbdd35190a50e24ceaeac9a718edd7b91c7ad6d3aa56",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_galapa",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855167/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_galapa.png",
+        "version": 1773855167,
+        "uploaded_at": "2026-03-18T17:32:47+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.galapa",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_giant",
+      "request_slug": "heritage_giant",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_giant",
+      "output_id": "img_f4a2f3e804e9",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "f4a2f3e804e9abd79da402397b387b94517c035d4f316a59275e8e28c4b86375",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_giant",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855185/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_giant.png",
+        "version": 1773855185,
+        "uploaded_at": "2026-03-18T17:33:06+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.giant",
         "source_file": "heritages.json"
       },
       "review_flags": []
@@ -2894,13 +5339,13 @@
       "sha256": "c2d10c5f9fa0c4ebb08a098bc9a8e7709f1f52ebd6f23e31e2c4fc9f13ad44ad",
       "width": 1024,
       "height": 1536,
-      "generated_at": "2026-03-05T18:22:11+00:00",
+      "generated_at": "2026-03-18T17:28:14+00:00",
       "cloudinary": {
         "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_goblin",
         "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735490/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_goblin.png",
         "version": 1772735490,
-        "uploaded_at": "2026-03-05T18:31:31+00:00"
+        "uploaded_at": "2026-03-18T17:33:09+00:00"
       },
       "catalog_ref": {
         "system_id": "daggerheart",
@@ -2908,6 +5353,38 @@
         "locale": "en-US",
         "entity_type": "ancestry",
         "entity_id": "heritage.goblin",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_halfling",
+      "request_slug": "heritage_halfling",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_halfling",
+      "output_id": "img_5230a6ce86b5",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "5230a6ce86b58b9dc4dcaba04f39667125d1d41d9d8387b48016c833d194a5c8",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_halfling",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855192/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_halfling.png",
+        "version": 1773855192,
+        "uploaded_at": "2026-03-18T17:33:13+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.halfling",
         "source_file": "heritages.json"
       },
       "review_flags": []
@@ -2926,13 +5403,13 @@
       "sha256": "18b3a42c7606c68c6303d1b65f46a82e258aed9eb36385419871db3f40590c7c",
       "width": 1024,
       "height": 1536,
-      "generated_at": "2026-03-05T18:22:11+00:00",
+      "generated_at": "2026-03-18T17:28:14+00:00",
       "cloudinary": {
         "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_human",
         "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735498/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_human.png",
         "version": 1772735498,
-        "uploaded_at": "2026-03-05T18:31:39+00:00"
+        "uploaded_at": "2026-03-18T17:33:16+00:00"
       },
       "catalog_ref": {
         "system_id": "daggerheart",
@@ -2940,6 +5417,70 @@
         "locale": "en-US",
         "entity_type": "ancestry",
         "entity_id": "heritage.human",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_infernis",
+      "request_slug": "heritage_infernis",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_infernis",
+      "output_id": "img_a4a4220a7e04",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "a4a4220a7e04706b25956d25a1186bfa1b033d45e6fdc12370662525aa94f1d3",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_infernis",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855198/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_infernis.png",
+        "version": 1773855198,
+        "uploaded_at": "2026-03-18T17:33:18+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.infernis",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_katari",
+      "request_slug": "heritage_katari",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_katari",
+      "output_id": "img_2f5bf27d3c9e",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "2f5bf27d3c9e2b22398557adfc73a812da3da9d1e145da8265c7db12eeeee7c7",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_katari",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855207/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_katari.png",
+        "version": 1773855207,
+        "uploaded_at": "2026-03-18T17:33:27+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.katari",
         "source_file": "heritages.json"
       },
       "review_flags": []
@@ -2958,13 +5499,13 @@
       "sha256": "9f2728739727b4f89a6127543c7d5aea689be38d90c74b1dcbcbeb8e8b65d423",
       "width": 1024,
       "height": 1536,
-      "generated_at": "2026-03-05T18:22:11+00:00",
+      "generated_at": "2026-03-18T17:28:14+00:00",
       "cloudinary": {
         "status": "uploaded",
         "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_orc",
         "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1772735504/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_orc.png",
         "version": 1772735504,
-        "uploaded_at": "2026-03-05T18:31:45+00:00"
+        "uploaded_at": "2026-03-18T17:33:30+00:00"
       },
       "catalog_ref": {
         "system_id": "daggerheart",
@@ -2972,6 +5513,70 @@
         "locale": "en-US",
         "entity_type": "ancestry",
         "entity_id": "heritage.orc",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_ribbet",
+      "request_slug": "heritage_ribbet",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_ribbet",
+      "output_id": "img_fcf26008ac14",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "fcf26008ac1477b32eebf48e78a5ebed8014300a126fb0c52242280f0ebd47e7",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_ribbet",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855212/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_ribbet.png",
+        "version": 1773855212,
+        "uploaded_at": "2026-03-18T17:33:33+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.ribbet",
+        "source_file": "heritages.json"
+      },
+      "review_flags": []
+    },
+    {
+      "request_id": "high_fantasy.daggerheart_ancestry_illustration.heritage_simiah",
+      "request_slug": "heritage_simiah",
+      "request_status": "uploaded",
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "batch_id": "dh_ancestry_prompt_r2",
+      "fs_asset_id": "heritage_simiah",
+      "output_id": "img_af210a3ab686",
+      "provider": "imported",
+      "model": "imported",
+      "sha256": "af210a3ab686456579a204adf436b75d919f2da8d4d039f071bb87602e8496e8",
+      "width": 1024,
+      "height": 1536,
+      "generated_at": "2026-03-18T17:28:14+00:00",
+      "cloudinary": {
+        "status": "uploaded",
+        "public_id": "high_fantasy/daggerheart_ancestry_illustration/v1/heritage_simiah",
+        "secure_url": "https://res.cloudinary.com/fracturing-space/image/upload/v1773855216/high_fantasy/daggerheart_ancestry_illustration/v1/heritage_simiah.png",
+        "version": 1773855216,
+        "uploaded_at": "2026-03-18T17:33:36+00:00"
+      },
+      "catalog_ref": {
+        "system_id": "daggerheart",
+        "system_version": "v1",
+        "locale": "en-US",
+        "entity_type": "ancestry",
+        "entity_id": "heritage.simiah",
         "source_file": "heritages.json"
       },
       "review_flags": []

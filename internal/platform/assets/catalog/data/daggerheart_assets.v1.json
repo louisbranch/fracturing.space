@@ -8,18 +8,84 @@
     {
       "id": "daggerheart_adversary_set_v1",
       "asset_type": "daggerheart_adversary_illustration",
-      "asset_ids": []
+      "asset_ids": [
+        "acid_burrower",
+        "archer_guard",
+        "bear",
+        "bladed_guard",
+        "brawny_zombie",
+        "cave_ogre",
+        "construct",
+        "courtier",
+        "deeproot_defender",
+        "dire_wolf",
+        "giant_mosquitoes",
+        "giant_rat",
+        "giant_scorpion",
+        "glass_snake",
+        "green_ooze",
+        "harrier",
+        "head_guard",
+        "jagged_knife_bandit",
+        "jagged_knife_hexer",
+        "jagged_knife_kneebreaker",
+        "jagged_knife_lackey",
+        "jagged_knife_lieutenant",
+        "jagged_knife_shadow",
+        "jagged_knife_sniper",
+        "merchant",
+        "minor_chaos_elemental",
+        "minor_demon",
+        "minor_fire_elemental",
+        "minor_treant",
+        "patchwork_zombie_hulk",
+        "petty_noble",
+        "pirate_captain",
+        "pirate_raiders",
+        "pirate_tough",
+        "red_ooze",
+        "rotted_zombie",
+        "sellsword",
+        "shambling_zombie",
+        "skeleton_archer",
+        "skeleton_dredge",
+        "skeleton_knight",
+        "skeleton_warrior",
+        "spellblade",
+        "swarm_of_rats",
+        "sylvan_soldier",
+        "tangle_bramble",
+        "tangle_bramble_swarm",
+        "tiny_green_ooze",
+        "tiny_red_ooze",
+        "volcanic_dragon",
+        "weaponmaster",
+        "young_dryad",
+        "zombie_pack"
+      ]
     },
     {
       "id": "daggerheart_ancestry_set_v1",
       "asset_type": "daggerheart_ancestry_illustration",
       "asset_ids": [
+        "heritage_clank",
+        "heritage_drakona",
         "heritage_dwarf",
         "heritage_elf",
         "heritage_faerie",
+        "heritage_faun",
+        "heritage_firbolg",
+        "heritage_fungril",
+        "heritage_galapa",
+        "heritage_giant",
         "heritage_goblin",
+        "heritage_halfling",
         "heritage_human",
-        "heritage_orc"
+        "heritage_infernis",
+        "heritage_katari",
+        "heritage_orc",
+        "heritage_ribbet",
+        "heritage_simiah"
       ]
     },
     {
@@ -222,6 +288,391 @@
   ],
   "entity_asset_map": [
     {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.acid-burrower",
+      "entity_type": "adversary",
+      "asset_id": "acid_burrower"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.archer-guard",
+      "entity_type": "adversary",
+      "asset_id": "archer_guard"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.bear",
+      "entity_type": "adversary",
+      "asset_id": "bear"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.bladed-guard",
+      "entity_type": "adversary",
+      "asset_id": "bladed_guard"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.brawny-zombie",
+      "entity_type": "adversary",
+      "asset_id": "brawny_zombie"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.cave-ogre",
+      "entity_type": "adversary",
+      "asset_id": "cave_ogre"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.construct",
+      "entity_type": "adversary",
+      "asset_id": "construct"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.courtier",
+      "entity_type": "adversary",
+      "asset_id": "courtier"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.deeproot-defender",
+      "entity_type": "adversary",
+      "asset_id": "deeproot_defender"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.dire-wolf",
+      "entity_type": "adversary",
+      "asset_id": "dire_wolf"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.giant-mosquitoes",
+      "entity_type": "adversary",
+      "asset_id": "giant_mosquitoes"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.giant-rat",
+      "entity_type": "adversary",
+      "asset_id": "giant_rat"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.giant-scorpion",
+      "entity_type": "adversary",
+      "asset_id": "giant_scorpion"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.glass-snake",
+      "entity_type": "adversary",
+      "asset_id": "glass_snake"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.green-ooze",
+      "entity_type": "adversary",
+      "asset_id": "green_ooze"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.harrier",
+      "entity_type": "adversary",
+      "asset_id": "harrier"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.head-guard",
+      "entity_type": "adversary",
+      "asset_id": "head_guard"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.jagged-knife-bandit",
+      "entity_type": "adversary",
+      "asset_id": "jagged_knife_bandit"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.jagged-knife-hexer",
+      "entity_type": "adversary",
+      "asset_id": "jagged_knife_hexer"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.jagged-knife-kneebreaker",
+      "entity_type": "adversary",
+      "asset_id": "jagged_knife_kneebreaker"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.jagged-knife-lackey",
+      "entity_type": "adversary",
+      "asset_id": "jagged_knife_lackey"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.jagged-knife-lieutenant",
+      "entity_type": "adversary",
+      "asset_id": "jagged_knife_lieutenant"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.jagged-knife-shadow",
+      "entity_type": "adversary",
+      "asset_id": "jagged_knife_shadow"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.jagged-knife-sniper",
+      "entity_type": "adversary",
+      "asset_id": "jagged_knife_sniper"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.merchant",
+      "entity_type": "adversary",
+      "asset_id": "merchant"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.minor-chaos-elemental",
+      "entity_type": "adversary",
+      "asset_id": "minor_chaos_elemental"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.minor-demon",
+      "entity_type": "adversary",
+      "asset_id": "minor_demon"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.minor-fire-elemental",
+      "entity_type": "adversary",
+      "asset_id": "minor_fire_elemental"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.minor-treant",
+      "entity_type": "adversary",
+      "asset_id": "minor_treant"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.patchwork-zombie-hulk",
+      "entity_type": "adversary",
+      "asset_id": "patchwork_zombie_hulk"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.petty-noble",
+      "entity_type": "adversary",
+      "asset_id": "petty_noble"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.pirate-captain",
+      "entity_type": "adversary",
+      "asset_id": "pirate_captain"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.pirate-raiders",
+      "entity_type": "adversary",
+      "asset_id": "pirate_raiders"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.pirate-tough",
+      "entity_type": "adversary",
+      "asset_id": "pirate_tough"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.red-ooze",
+      "entity_type": "adversary",
+      "asset_id": "red_ooze"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.rotted-zombie",
+      "entity_type": "adversary",
+      "asset_id": "rotted_zombie"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.sellsword",
+      "entity_type": "adversary",
+      "asset_id": "sellsword"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.shambling-zombie",
+      "entity_type": "adversary",
+      "asset_id": "shambling_zombie"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.skeleton-archer",
+      "entity_type": "adversary",
+      "asset_id": "skeleton_archer"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.skeleton-dredge",
+      "entity_type": "adversary",
+      "asset_id": "skeleton_dredge"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.skeleton-knight",
+      "entity_type": "adversary",
+      "asset_id": "skeleton_knight"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.skeleton-warrior",
+      "entity_type": "adversary",
+      "asset_id": "skeleton_warrior"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.spellblade",
+      "entity_type": "adversary",
+      "asset_id": "spellblade"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.swarm-of-rats",
+      "entity_type": "adversary",
+      "asset_id": "swarm_of_rats"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.sylvan-soldier",
+      "entity_type": "adversary",
+      "asset_id": "sylvan_soldier"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.tangle-bramble",
+      "entity_type": "adversary",
+      "asset_id": "tangle_bramble"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.tangle-bramble-swarm",
+      "entity_type": "adversary",
+      "asset_id": "tangle_bramble_swarm"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.tiny-green-ooze",
+      "entity_type": "adversary",
+      "asset_id": "tiny_green_ooze"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.tiny-red-ooze",
+      "entity_type": "adversary",
+      "asset_id": "tiny_red_ooze"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.volcanic-dragon",
+      "entity_type": "adversary",
+      "asset_id": "volcanic_dragon"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.weaponmaster",
+      "entity_type": "adversary",
+      "asset_id": "weaponmaster"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.young-dryad",
+      "entity_type": "adversary",
+      "asset_id": "young_dryad"
+    },
+    {
+      "asset_type": "daggerheart_adversary_illustration",
+      "set_id": "daggerheart_adversary_set_v1",
+      "entity_id": "adversary.zombie-pack",
+      "entity_type": "adversary",
+      "asset_id": "zombie_pack"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.clank",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_clank"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.drakona",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_drakona"
+    },
+    {
       "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
       "entity_id": "heritage.dwarf",
@@ -245,9 +696,51 @@
     {
       "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.faun",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_faun"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.firbolg",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_firbolg"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.fungril",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_fungril"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.galapa",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_galapa"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.giant",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_giant"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
       "entity_id": "heritage.goblin",
       "entity_type": "ancestry",
       "asset_id": "heritage_goblin"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.halfling",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_halfling"
     },
     {
       "asset_type": "daggerheart_ancestry_illustration",
@@ -259,9 +752,37 @@
     {
       "asset_type": "daggerheart_ancestry_illustration",
       "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.infernis",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_infernis"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.katari",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_katari"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
       "entity_id": "heritage.orc",
       "entity_type": "ancestry",
       "asset_id": "heritage_orc"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.ribbet",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_ribbet"
+    },
+    {
+      "asset_type": "daggerheart_ancestry_illustration",
+      "set_id": "daggerheart_ancestry_set_v1",
+      "entity_id": "heritage.simiah",
+      "entity_type": "ancestry",
+      "asset_id": "heritage_simiah"
     },
     {
       "asset_type": "daggerheart_armor_illustration",
@@ -1085,13 +1606,6 @@
     {
       "asset_type": "daggerheart_weapon_illustration",
       "set_id": "daggerheart_weapon_set_v1",
-      "entity_id": "weapon.no-secondary",
-      "entity_type": "weapon",
-      "asset_id": "no_secondary_weapon"
-    },
-    {
-      "asset_type": "daggerheart_weapon_illustration",
-      "set_id": "daggerheart_weapon_set_v1",
       "entity_id": "weapon.quarterstaff",
       "entity_type": "weapon",
       "asset_id": "quarterstaff"
@@ -1186,6 +1700,13 @@
       "entity_id": "weapon.whip",
       "entity_type": "weapon",
       "asset_id": "whip"
+    },
+    {
+      "asset_type": "daggerheart_weapon_illustration",
+      "set_id": "daggerheart_weapon_set_v1",
+      "entity_id": "weapon.no-secondary",
+      "entity_type": "weapon",
+      "asset_id": "no_secondary_weapon"
     }
   ]
 }

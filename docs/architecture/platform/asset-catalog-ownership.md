@@ -4,7 +4,7 @@ parent: "Platform surfaces"
 nav_order: 8
 status: canonical
 owner: engineering
-last_reviewed: "2026-03-07"
+last_reviewed: "2026-03-18"
 ---
 
 # Asset Catalog Ownership and Runtime Strategy
@@ -42,6 +42,11 @@ A shared asset-catalog package will be used by both game and auth services. It m
 5. URL resolution from canonical IDs plus runtime config.
 
 The shared package does not own domain records or persistence.
+
+## Repository Source Files
+Checked-in runtime asset metadata lives under `internal/platform/assets/catalog/data/`: `campaign_covers.v1.json` and `avatars.v1.json` define shared selection behavior, `cloudinary_assets.high_fantasy.v1.json` is the embedded CDN lookup catalog, and `daggerheart_assets.v1.json` is the published Daggerheart entity-to-asset manifest.
+
+Root-level export files are temporary import inputs only. When a new export is dropped at repo root, promote its relevant data into the checked-in files above and remove the root copy in the same change.
 
 ## System Content Asset Mapping
 

@@ -25,6 +25,109 @@ func TestDaggerheartAssetsManifest_ResolvesSecondaryNoneWeaponCard(t *testing.T)
 	}
 }
 
+func TestDaggerheartAssetsManifest_ResolvesNewlyPublishedMappedAssets(t *testing.T) {
+	manifest := DaggerheartAssetsManifest()
+
+	tests := []struct {
+		name        string
+		entityType  string
+		entityID    string
+		assetType   string
+		wantSetID   string
+		wantAssetID string
+	}{
+		{
+			name:        "ancestry",
+			entityType:  DaggerheartEntityTypeAncestry,
+			entityID:    "heritage.clank",
+			assetType:   DaggerheartAssetTypeAncestryIllustration,
+			wantSetID:   "daggerheart_ancestry_set_v1",
+			wantAssetID: "heritage_clank",
+		},
+		{
+			name:        "adversary",
+			entityType:  DaggerheartEntityTypeAdversary,
+			entityID:    "adversary.acid-burrower",
+			assetType:   DaggerheartAssetTypeAdversaryIllustration,
+			wantSetID:   "daggerheart_adversary_set_v1",
+			wantAssetID: "acid_burrower",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resolved := manifest.ResolveEntityAsset(tc.entityType, tc.entityID, tc.assetType)
+
+			if resolved.Status != DaggerheartAssetResolutionStatusMapped {
+				t.Fatalf("status = %q, want %q", resolved.Status, DaggerheartAssetResolutionStatusMapped)
+			}
+			if resolved.SetID != tc.wantSetID {
+				t.Fatalf("set id = %q, want %q", resolved.SetID, tc.wantSetID)
+			}
+			if resolved.AssetID != tc.wantAssetID {
+				t.Fatalf("asset id = %q, want %q", resolved.AssetID, tc.wantAssetID)
+			}
+			if resolved.CDNAssetID == "" {
+				t.Fatal("expected non-empty cdn asset id")
+			}
+		})
+	}
+}
+
+func TestDaggerheartAssetsManifest_ResolvesRenamedDomainCardIDs(t *testing.T) {
+	manifest := DaggerheartAssetsManifest()
+
+	tests := []struct {
+		name        string
+		entityID    string
+		wantAssetID string
+	}{
+		{
+			name:        "book of ava",
+			entityID:    "domain_card.book-of-ava",
+			wantAssetID: "codex_book_of_ava",
+		},
+		{
+			name:        "rune ward",
+			entityID:    "domain_card.rune-ward",
+			wantAssetID: "arcana_runeward",
+		},
+		{
+			name:        "rain of blades",
+			entityID:    "domain_card.rain-of-blades",
+			wantAssetID: "midnight_rain_of_blades",
+		},
+		{
+			name:        "natures tongue",
+			entityID:    "domain_card.nature-s-tongue",
+			wantAssetID: "sage_natures_tongue",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resolved := manifest.ResolveEntityAsset(
+				DaggerheartEntityTypeDomainCard,
+				tc.entityID,
+				DaggerheartAssetTypeDomainCardIllustration,
+			)
+
+			if resolved.Status != DaggerheartAssetResolutionStatusMapped {
+				t.Fatalf("status = %q, want %q", resolved.Status, DaggerheartAssetResolutionStatusMapped)
+			}
+			if resolved.SetID != "daggerheart_domain_card_set_v1" {
+				t.Fatalf("set id = %q, want %q", resolved.SetID, "daggerheart_domain_card_set_v1")
+			}
+			if resolved.AssetID != tc.wantAssetID {
+				t.Fatalf("asset id = %q, want %q", resolved.AssetID, tc.wantAssetID)
+			}
+			if resolved.CDNAssetID == "" {
+				t.Fatal("expected non-empty cdn asset id")
+			}
+		})
+	}
+}
+
 func TestResolveEntityAsset_UsesMappedAssetWhenDeliverable(t *testing.T) {
 	manifest := mustDecodeDaggerheartAssetManifest(t, `{
 		"id": "daggerheart-assets-v1",
